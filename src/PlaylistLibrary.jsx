@@ -64,7 +64,7 @@ function PlaylistDetail({ detail, provider, back, act, busy, saved }) {
       <div className="playlist-hero-copy">
         <small className={`playlist-badge is-${source.tone}`}>{source.label}</small>
         <h3 title={playlist.name}>{playlist.name}</h3>
-        <p>{[playlist.creator, `${tracks.length} 首`, totalDuration(tracks)].filter(Boolean).join(' · ')}{detail.truncated ? ' · 已导入前 500 首' : ''}</p>
+        <p className="playlist-curator">{playlist.creator || '我的音乐收藏'}</p><div className="playlist-facts"><span><b>{tracks.length}</b> 首曲目</span>{totalDuration(tracks) && <span>{totalDuration(tracks)}</span>}<span>{saved ? '已在唱片架' : '尚未收藏'}</span></div>{detail.truncated && <p>已导入前 500 首</p>}
         {playlist.description && <p className="playlist-description" title={playlist.description}>{playlist.description}</p>}
         <div className="playlist-actions">
           <button type="button" className="pixel-button is-primary" disabled={busy || !tracks.length} onClick={() => act('play', 0)}><Play size={16}/>放上唱机</button>
@@ -74,7 +74,8 @@ function PlaylistDetail({ detail, provider, back, act, busy, saved }) {
         </div>
       </div>
     </header>
-    {tracks.length > 8 && <label className="playlist-filter"><Search size={15}/><input type="search" aria-label="在歌单中查找" placeholder="在歌单中查找歌名、歌手或专辑" value={query} onChange={(event) => setQuery(event.target.value)}/>{query && <small>{rows.length} / {tracks.length}</small>}</label>}
+    {tracks.length > 0 && <label className="playlist-filter"><Search size={15}/><input type="search" aria-label="在歌单中查找" placeholder="在歌单中查找歌名、歌手或专辑" value={query} onChange={(event) => setQuery(event.target.value)}/>{query && <small>{rows.length} / {tracks.length}</small>}</label>}
+    {rows.length > 0 && <div className="playlist-track-heading" aria-hidden="true"><span>#</span><span/><span>歌曲 / 歌手</span><span>专辑</span><span>时长</span></div>}
     {rows.length ? <ol className="playlist-tracks" aria-label={`${playlist.name} 曲目`}>{rows.map(({ track, index }) => <TrackRow key={`${index}-${track.title}`} track={track} index={index} play={(at) => act('play', at)}/>)}</ol>
       : <p className="playlist-empty">{tracks.length ? '没有找到匹配的歌曲。' : '这个歌单还没有歌曲。'}</p>}
     <p className="playlist-footnote">播放时先试平台原始曲目，再按歌名、歌手和版本匹配 QQ 音乐 / 网易云；不会用现场版或翻唱顶替。播放权限取决于平台账号、版权与地区。</p>

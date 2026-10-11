@@ -149,3 +149,6 @@
 .playlist-file-choices strong { flex: 1; overflow: hidden; text-overflow: ellipsis; }
 .playlist-file-choices small { color: var(--px-ink-dim); }
 .playlist-rail-tab:disabled { opacity: .65; cursor: progress; }
+
+.playlist-facts{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin:10px 0}.playlist-facts>span{padding:4px 8px;background:#ffffff09;border:1px solid #ffffff18;color:var(--px-ink-dim);font-size:12px}.playlist-facts b{font-size:16px;font-weight:400;color:var(--px-ink)}.playlist-hero{background:radial-gradient(ellipse at 20% 30%,#c8934920,transparent 65%)}.playlist-track-heading{display:grid;grid-template-columns:34px 34px minmax(0,1.4fr) minmax(0,1fr) 46px;gap:10px;padding:10px 10px 6px;color:var(--px-ink-faint);font-size:11px;border-bottom:1px solid #ffffff16}.playlist-track-heading>span:last-child{text-align:right}.playlist-tracks .playlist-track:nth-child(even){background:#ffffff03}
+@media(max-width:760px){.playlist-track-heading{grid-template-columns:30px 30px minmax(0,1fr) 40px}.playlist-track-heading>span:nth-child(4){display:none}}

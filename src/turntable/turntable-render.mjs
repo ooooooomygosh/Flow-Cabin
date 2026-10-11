@@ -36,6 +36,10 @@ export function paintDeck(create, { led = false } = {}) {
   // Inset top deck plate.
   px(ctx, 14, 12, width - 28, height - 27, PALETTE.shadow); px(ctx, 15, 13, width - 30, height - 29, PALETTE.deck);
   px(ctx, 15, 13, width - 30, 1, PALETTE.deckLight); px(ctx, 15, 13, 1, height - 29, PALETTE.deckLight);
+  // Recessed corner screws and a brushed-metal top edge, cached with the deck.
+  for (const [x, y] of [[18, 16], [width - 19, 16], [18, height - 18], [width - 19, height - 18]]) {
+    disc(ctx, x, y, 1.6, PALETTE.shadow); px(ctx, x - 1, y - 1, 2, 1, PALETTE.alloyDark); px(ctx, x, y - 1, 1, 1, PALETTE.alloyLight);
+  }
   // Platter: alloy rim with strobe dots, rubber mat, a darker bearing ring.
   disc(ctx, cx + 1, cy + 2, platterRadius + 2, 'rgba(0,0,0,.55)');
   disc(ctx, cx, cy, platterRadius + 1, PALETTE.shadow);

@@ -50,3 +50,5 @@
 .player-queue li button.player-queue-jump{display:flex;align-items:center;gap:6px;width:100%;min-width:0;padding:1px 2px;color:var(--pl-ink);text-align:left;font:inherit}.player-queue li button.player-queue-jump:hover{color:var(--pl-ink);background:#ffffff12}
 .player-queue-jump b{font-family:var(--px-font-en,monospace);font-size:9px;font-weight:400;color:var(--pl-dim)}
 .player-queue-more{display:block;margin:-2px 0 4px;font-size:10px;color:var(--pl-dim)}
+
+.player-queue ol.player-queue-albums{padding:0;max-height:150px;gap:5px;list-style:none}.player-queue-albums li{padding:5px 0;border-bottom:1px solid #ffffff12}.player-queue-albums img{width:28px;height:28px;object-fit:cover;border:1px solid var(--pl-border)}.player-queue-albums strong,.player-queue-albums small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:400}.player-queue-albums small{font-size:9px;color:var(--pl-dim)}.player-queue-albums .player-queue-promote{font:inherit;font-size:10px;white-space:nowrap;color:var(--pl-accent)}.player-queue-state{padding:4px 0;color:var(--pl-accent)}.player-queue-notice{display:block;margin-top:5px;color:var(--pl-good)}
