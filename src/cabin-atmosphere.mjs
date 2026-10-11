@@ -22,12 +22,14 @@ export function atmosphereFrame(seconds, look = 'warm', weather = 'snow') {
 }
 // A single bounded loop for both canvases and the composited light. Hidden windows
 // retain their last frame; reduced motion draws a steady representative frame.
-export function createAtmosphereLoop({ draw, request, cancel, now }) {
+// `fps` caps the paint rate: pixel scenes move in 4 px steps, so 12 fps reads the same as 24.
+export function createAtmosphereLoop({ draw, request, cancel, now, fps = 24 }) {
+  let interval = 1000 / fps;
   let handle = null, disposed = false, mode = '', elapsed = 0, previous = 0, lastPaint = -Infinity;
   function tick(timestamp) {
     handle = null; if (disposed || mode !== 'running') return;
     elapsed += Math.min(100, Math.max(0, timestamp - previous)); previous = timestamp;
-    if (timestamp - lastPaint >= 1000 / 24) { draw(elapsed / 1000); lastPaint = timestamp; }
+    if (timestamp - lastPaint >= interval - 1) { draw(elapsed / 1000); lastPaint = timestamp; }
     handle = request(tick);
   }
   return {
@@ -37,6 +39,7 @@ export function createAtmosphereLoop({ draw, request, cancel, now }) {
       if (next === 'reduced') draw(0);
       if (next === 'running') { previous = now(); lastPaint = -Infinity; handle = request(tick); }
     },
+    setFps(value) { interval = 1000 / Math.max(1, Math.min(60, Number(value) || 24)); },
     dispose() { disposed = true; if (handle !== null) cancel(handle); handle = null; }
   };
 }

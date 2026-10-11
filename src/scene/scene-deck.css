@@ -11,23 +11,17 @@
 /* Record drops onto the platter in four frames, then the lamp sheen orbits. */
 .scene-deck-record { animation: deck-record-seat 320ms steps(4, end) both; }
 @keyframes deck-record-seat { 0% { transform: translateY(-6px); opacity: 0; } 25% { opacity: 1; } 100% { transform: none; opacity: 1; } }
-.scene-deck-sheen { opacity: 0; }
-.scene-deck-sheen.sheen-0 { opacity: 1; }
-.scene-deck.is-playing .scene-deck-sheen { animation: deck-sheen 800ms steps(1, end) infinite; opacity: 0; }
-.scene-deck.is-playing .sheen-0 { animation-delay: -0ms; }
-.scene-deck.is-playing .sheen-1 { animation-delay: -700ms; }
-.scene-deck.is-playing .sheen-2 { animation-delay: -600ms; }
-.scene-deck.is-playing .sheen-3 { animation-delay: -500ms; }
-.scene-deck.is-playing .sheen-4 { animation-delay: -400ms; }
-.scene-deck.is-playing .sheen-5 { animation-delay: -300ms; }
-.scene-deck.is-playing .sheen-6 { animation-delay: -200ms; }
-.scene-deck.is-playing .sheen-7 { animation-delay: -100ms; }
-@keyframes deck-sheen { 0% { opacity: 1; } 12.5%, 100% { opacity: 0; } }
+.scene-deck-sheen-window { position: absolute; inset: 0; overflow: hidden; pointer-events: none; animation: deck-record-seat 320ms steps(4, end) both; }
+.scene-deck-sheen-strip { position: absolute; left: 0; top: 0; width: 800%; height: 100%; }
+.scene-deck-sheen-strip svg { display: block; width: 100%; height: 100%; overflow: visible; image-rendering: pixelated; }
+/* One composited animation: the strip steps one frame (1/8 of its width) every 100 ms. */
+.scene-deck.is-playing .scene-deck-sheen-strip { animation: deck-sheen 800ms steps(8, end) infinite; will-change: translate; }
+@keyframes deck-sheen { to { translate: -100% 0; } }
 .scene-deck-arm { display: none; }
 .scene-deck-arm.is-current { display: inline; }
-.scene-deck-led { fill: #57352a; }
-.scene-deck.is-playing .scene-deck-led { fill: #ffbb55; animation: deck-led 1.2s steps(2, end) infinite; }
-@keyframes deck-led { 50% { fill: #e0ad69; } }
+.scene-deck-led { position: absolute; left: calc(45 / 56 * 100%); top: calc(15 / 22 * 100%); width: calc(2 / 56 * 100%); height: calc(1 / 22 * 100%); background: #ffbb55; opacity: 0; pointer-events: none; }
+.scene-deck.is-playing .scene-deck-led { opacity: 1; animation: deck-led 1.2s steps(2, end) infinite; }
+@keyframes deck-led { 50% { opacity: .62; } }
 
 /* Lamp-warm halo behind the deck: brighter with the music's energy. */
 .scene-deck-glow { position: absolute; left: -18%; right: -18%; top: -55%; bottom: 5%; pointer-events: none; opacity: 0;
@@ -54,6 +48,6 @@
 .scene-deck.is-drop-target::after, .scene-deck-hit:focus-visible { outline: 2px dashed var(--px-focus, #ffd99c); outline-offset: 3px; }
 .scene-deck.is-drop-target::after { content: ''; position: absolute; inset: 0 -4%; background: #ffe1a01f; pointer-events: none; }
 
-@media (prefers-reduced-motion: reduce) { .scene-deck-record, .scene-deck.is-playing .scene-deck-sheen, .scene-deck.is-playing .scene-deck-notes i, .scene-deck.is-playing .scene-deck-led { animation: none !important; } .scene-deck.is-playing .sheen-0 { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .scene-deck-record, .scene-deck.is-playing .scene-deck-sheen-strip, .scene-deck.is-playing .scene-deck-notes i, .scene-deck.is-playing .scene-deck-led { animation: none !important; }  }
 html[data-desktop-reduce-motion='true'] .scene-deck * { animation: none !important; }
-html[data-desktop-reduce-motion='true'] .scene-deck.is-playing .sheen-0 { opacity: 1; }
+

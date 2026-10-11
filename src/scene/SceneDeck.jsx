@@ -45,10 +45,19 @@ export default function SceneDeck({ anchor, item, spinning = false, vinyl, readO
       <rect className="scene-deck-shadow" x="1" y={DECK_H - 3} width={DECK_W - 2} height="1" fill="#0d0805"/>
       <rect className="scene-deck-shadow" x="3" y={DECK_H - 2} width={DECK_W - 6} height="1" fill="#0d0805"/>
       <Rects list={DECK_BODY}/>
-      {record && <g className="scene-deck-record" key={item.id}><Rects list={record}/>{SHEEN_FRAMES.map((frame, i) => <Rects key={i} list={frame} className={`scene-deck-sheen sheen-${i}`}/>)}</g>}
-      {ARM_FRAMES.map((frame, i) => <Rects key={i} list={frame} className={`scene-deck-arm ${i === arm ? 'is-current' : ''}`}/>)}
-      <rect className="scene-deck-led" x="45" y="15" width="2" height="1"/>
+      {record && <g className="scene-deck-record" key={item.id}><Rects list={record}/></g>}
+      <rect x="45" y="15" width="2" height="1" fill="#57352a"/>
     </svg>
+    {/* Moving parts live outside the SVG: animations on SVG children can't be
+        composited and forced a full style recalculation every frame. The eight
+        sheen frames sit side by side in one strip that steps sideways. */}
+    {record && <span className="scene-deck-sheen-window" key={`sheen-${item.id}`} aria-hidden="true"><span className="scene-deck-sheen-strip"><svg viewBox={`0 0 ${DECK_W * SHEEN_FRAMES.length} ${DECK_H}`} preserveAspectRatio="none" shapeRendering="crispEdges">
+      {SHEEN_FRAMES.map((frame, i) => <g key={i} transform={`translate(${DECK_W * i} 0)`}><Rects list={frame}/></g>)}
+    </svg></span></span>}
+    <svg className="scene-deck-sprite scene-deck-arm-layer" viewBox={`0 0 ${DECK_W} ${DECK_H}`} preserveAspectRatio="none" shapeRendering="crispEdges" aria-hidden="true">
+      <Rects list={ARM_FRAMES[arm]} className="scene-deck-arm is-current"/>
+    </svg>
+    <span className="scene-deck-led" aria-hidden="true"/>
     <span className="scene-deck-notes" aria-hidden="true"><i/><i/><i/></span>
     {!readOnly && <button type="button" className="scene-deck-hit" aria-label={item ? (spinning ? `唱机：暂停《${item.title}》` : `唱机：播放《${item.title}》`) : '唱机：双击封面或把唱片拖到这里'} title={item ? '点一下播放 / 暂停' : '把唱片拖到唱机上'} onClick={onActivate}/>}
   </div>, host);

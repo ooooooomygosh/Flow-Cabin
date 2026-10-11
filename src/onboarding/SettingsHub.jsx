@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { PERFORMANCE_MODES, performanceMode, performanceLevel, setPerformanceMode, onPerformanceChange } from '../perf-profile.mjs';
 import Dialog from '../Dialog';
 import { RoomPickers } from '../RoomPersonalization';
 import { desktopCommand } from '../desktop-client';
@@ -83,11 +84,19 @@ function FocusSection({ focus, openDock, player }) {
   </div>;
 }
 
+function PerformanceRow() {
+  const [mode, setMode] = useState(performanceMode), [level, setLevel] = useState(performanceLevel);
+  useEffect(() => onPerformanceChange((detail) => { setLevel(detail.level); setMode(detail.mode); }), []);
+  return <Row title="流畅模式" hint={`电脑带不动时少画一些：减少飘尘、降低雪与炉火的刷新率、关掉模糊阴影。现在：${level === 'low' ? '流畅优先' : '完整画质'}${mode === 'auto' ? '（自动判断）' : ''}。`}>
+    <span className="segmented" role="radiogroup" aria-label="流畅模式">{PERFORMANCE_MODES.map(([id, label]) => <button type="button" role="radio" key={id} aria-checked={mode === id} onClick={() => { setLevel(setPerformanceMode(id)); setMode(id); }}>{label}</button>)}</span>
+  </Row>;
+}
 function DesktopSection({ env, desktop, pet }) {
   const [mode, setMode] = useState({ active: false, supported: true, reason: '' }), [busy, setBusy] = useState(false);
   useEffect(() => { let alive = true; const read = () => desktop.status().then((value) => alive && setMode(value)); read(); const off = desktop.subscribe(read); return () => { alive = false; off(); }; }, [desktop]);
   const toggle = async () => { setBusy(true); await (mode.active ? desktop.exit() : desktop.enter()); setBusy(false); setMode(await desktop.status()); };
   return <div className="hub-rows">
+    <PerformanceRow/>
     <Row title="沉入桌面" hint={mode.reason || '小屋沉到所有窗口下面变成动态桌面，唱机、时钟和专注成为桌面小组件。随时按 Ctrl/⌘+Alt+D 退出。'}>
       <label className="hub-toggle"><input type="checkbox" aria-label="沉入桌面" checked={mode.active} disabled={!mode.supported || busy || mode.busy} onChange={toggle}/><span>{mode.active ? '开' : '关'}</span></label>
     </Row>

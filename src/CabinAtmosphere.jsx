@@ -2,6 +2,7 @@ import React, { useEffect, useId, useRef } from 'react';
 import { ATMOSPHERE, atmosphereFrame, createAtmosphereLoop } from './cabin-atmosphere.mjs';
 import './cabin-atmosphere.css';
 import { createFirePainter } from './cabin-fire.mjs';
+import { performanceLevel, onPerformanceChange } from './perf-profile.mjs';
 
 const placement = ({ x, y, width, height }) => ({ left: `${x / 1448 * 100}%`, top: `${y / 1086 * 100}%`, width: `${width / 1448 * 100}%`, height: `${height / 1086 * 100}%` });
 function prepare(canvas, box, pixel) {
@@ -10,10 +11,17 @@ function prepare(canvas, box, pixel) {
   const ctx = canvas.getContext('2d'); if (!ctx) return null; ctx.imageSmoothingEnabled = !pixel; ctx.scale(canvas.width / box.width, canvas.height / box.height);
   return ctx;
 }
-function paintSnow(ctx, geometry, flakes, pixel, clean) {
+// The clean background behind snow / fire is cut out of the 1448×1086 artwork
+// once, at canvas resolution, instead of being resampled from it every frame.
+function crop(clean, box, ctx) {
+  const canvas = document.createElement('canvas'); canvas.width = ctx.canvas.width; canvas.height = ctx.canvas.height;
+  const c = canvas.getContext('2d'); c.imageSmoothingEnabled = ctx.imageSmoothingEnabled; c.drawImage(clean, box.x, box.y, box.width, box.height, 0, 0, canvas.width, canvas.height);
+  return canvas;
+}
+function paintSnow(ctx, geometry, flakes, pixel, backdrop) {
   const { width, height } = geometry.window; ctx.clearRect(0, 0, width, height); ctx.save(); ctx.beginPath();
   for (const pane of geometry.panes) ctx.rect(...pane); ctx.clip();
-  ctx.drawImage(clean, geometry.window.x, geometry.window.y, width, height, 0, 0, width, height);
+  ctx.drawImage(backdrop, 0, 0, width, height);
   for (const flake of flakes) {
     ctx.fillStyle = `rgba(226,239,255,${flake.alpha})`;
     if (pixel) ctx.fillRect(Math.round(flake.x / 4) * 4, Math.round(flake.y / 4) * 4, 4, 4);
@@ -21,10 +29,10 @@ function paintSnow(ctx, geometry, flakes, pixel, clean) {
   }
   ctx.restore();
 }
-function paintFire(ctx, geometry, seconds, clean, renderFire) {
+function paintFire(ctx, geometry, seconds, backdrop, renderFire) {
   const { width, height } = geometry.fire; ctx.clearRect(0, 0, width, height); ctx.save(); ctx.beginPath();
   geometry.opening.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.closePath(); ctx.clip();
-  ctx.drawImage(clean, geometry.fire.x, geometry.fire.y, width, height, 0, 0, width, height);
+  ctx.drawImage(backdrop, 0, 0, width, height);
   renderFire(ctx, width, height, seconds);
   ctx.restore();
 }
@@ -39,15 +47,25 @@ export default function CabinAtmosphere({ look, weather }) {
     const renderFire = createFirePainter(pixel);
     if (!renderFire) { element.dataset.motion = 'unavailable'; return; }
     const surfaces = [...light.current.querySelectorAll('[data-surface]')];
-    const clean = new Image(); let ready = false, disposed = false;
+    const clean = new Image(); let ready = false, disposed = false, windowBackdrop = null, fireBackdrop = null, lastLight = 0;
+    const shown = new Map();
     const draw = (seconds) => {
       if (!ready || disposed) return;
       const frame = atmosphereFrame(seconds, look, weather);
-      paintSnow(snowContext, geometry, frame.snow, pixel, clean); paintFire(fireContext, geometry, seconds, clean, renderFire);
-      for (const surface of surfaces) surface.style.opacity = frame.surfaces[surface.dataset.surface];
+      paintSnow(snowContext, geometry, frame.snow, pixel, windowBackdrop); paintFire(fireContext, geometry, seconds, fireBackdrop, renderFire);
+      // Firelight on the floor and hearth changes slowly; restyling these large
+      // SVG shapes repaints half the room, so only visible changes are applied.
+      if (seconds - lastLight < .16 && seconds > 0) return;
+      lastLight = seconds;
+      for (const surface of surfaces) {
+        const value = Math.round(frame.surfaces[surface.dataset.surface] * 400) / 400;
+        if (shown.get(surface) !== value) { shown.set(surface, value); surface.style.opacity = value; }
+      }
     };
     draw(0);
-    const loop = createAtmosphereLoop({ draw, request: requestAnimationFrame, cancel: cancelAnimationFrame, now: () => performance.now() });
+    const rate = () => pixel ? (performanceLevel() === 'low' ? 8 : 12) : (performanceLevel() === 'low' ? 12 : 24);
+    const loop = createAtmosphereLoop({ draw, request: requestAnimationFrame, cancel: cancelAnimationFrame, now: () => performance.now(), fps: rate() });
+    const offPerformance = onPerformanceChange(() => loop.setFps(rate()));
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
     let focused = document.hasFocus();
     const update = (event) => {
@@ -65,10 +83,10 @@ export default function CabinAtmosphere({ look, weather }) {
     const observer = new MutationObserver(update); observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-desktop-reduce-motion'] });
     media.addEventListener('change', update); document.addEventListener('visibilitychange', update); window.addEventListener('focus', update); window.addEventListener('blur', update);
     element.dataset.motion = 'loading';
-    clean.onload = () => { if (disposed) return; ready = true; draw(0); update(); };
+    clean.onload = () => { if (disposed) return; windowBackdrop = crop(clean, geometry.window, snowContext); fireBackdrop = crop(clean, geometry.fire, fireContext); ready = true; draw(0); update(); };
     clean.onerror = () => { if (!disposed) element.dataset.motion = 'unavailable'; };
     clean.src = `/room-scenes/${look}-cabin-clean.png`;
-    return () => { disposed = true; clean.onload = clean.onerror = null; loop.dispose(); observer.disconnect(); media.removeEventListener('change', update); document.removeEventListener('visibilitychange', update); window.removeEventListener('focus', update); window.removeEventListener('blur', update); };
+    return () => { disposed = true; clean.onload = clean.onerror = null; loop.dispose(); offPerformance(); observer.disconnect(); media.removeEventListener('change', update); document.removeEventListener('visibilitychange', update); window.removeEventListener('focus', update); window.removeEventListener('blur', update); };
   }, [look, weather, geometry]);
   return <div ref={root} className={`cabin-atmosphere atmosphere-${look}`} aria-hidden="true">
     {/* Edited illumination is sampled only on bare floor; all other original

@@ -13,7 +13,7 @@
     "desktop:test": "npm --prefix desktop test",
     "desktop:dist": "npm --prefix desktop run dist",
     "icons": "node scripts/generate-icons.mjs",
-    "test": "npm run desktop:test && node --test src/audio/lifecycle.test.mjs src/focus/focus-model.test.mjs src/onboarding/onboarding.test.mjs src/player/player.test.mjs src/player/seamless.test.mjs src/player/auto-match.test.mjs src/playlist-files.test.mjs src/desktop/widget-layout.test.mjs src/desktop/desktop-sink-client.test.mjs src/desktop/update-model.test.mjs src/study/study-model.test.mjs src/room-model.test.mjs",
+    "test": "npm run desktop:test && node --test src/perf-profile.test.mjs src/audio/lifecycle.test.mjs src/focus/focus-model.test.mjs src/onboarding/onboarding.test.mjs src/player/player.test.mjs src/player/seamless.test.mjs src/player/auto-match.test.mjs src/playlist-files.test.mjs src/desktop/widget-layout.test.mjs src/desktop/desktop-sink-client.test.mjs src/desktop/update-model.test.mjs src/study/study-model.test.mjs src/room-model.test.mjs",
     "test:browser": "node scripts/browser-smoke.mjs",
     "test:layout": "node scripts/cabin-layout-electron.mjs",
     "check": "npm test && npm run build",

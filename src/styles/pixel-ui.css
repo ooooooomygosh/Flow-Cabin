@@ -128,7 +128,7 @@ input[type=checkbox], input[type=radio] { accent-color: var(--px-accent); }
 .room-record.is-selected::after { content: ''; position: absolute; left: 50%; top: -12px; width: 10px; height: 6px; translate: -50% 0; z-index: 4;
   background: linear-gradient(var(--px-accent-hi) 0 0) 0 0 / 10px 2px no-repeat, linear-gradient(var(--px-accent-hi) 0 0) 2px 2px / 6px 2px no-repeat, linear-gradient(var(--px-accent-hi) 0 0) 4px 4px / 2px 2px no-repeat;
   animation: px-bob 960ms steps(2, end) infinite; filter: drop-shadow(1px 1px 0 var(--px-shadow)); }
-@keyframes px-bob { 50% { translate: -50% 2px; } }
+@keyframes px-bob { 0%, 100% { translate: -50% 0; } 50% { translate: -50% 2px; } }
 
 /* Empty shelf slots read as soft carved recesses, not UI tiles. */
 .cabin-empty-slot { opacity: .55; transition: opacity var(--px-dur-med) var(--px-ease); }

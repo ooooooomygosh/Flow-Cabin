@@ -1,0 +1,13 @@
+/* 流畅模式 (data-perf="low"): keep the room's look, drop what costs the most
+   on slow machines — filters re-rasterized on every update, half the dust,
+   decorative loops. The atmosphere canvas also slows itself (perf-profile). */
+html[data-perf='low'] .ambient-mote:nth-child(odd) { display: none; }
+html[data-perf='low'] .ambient-shaft { animation: none; opacity: var(--shaft, 0); }
+html[data-perf='low'] .scene-deck-notes { display: none; }
+html[data-perf='low'] .scene-deck-glow { transition: none; }
+html[data-perf='low'] :is(.room-turntable, .cabin-pixel .room-turntable, .pixel-clock, .pet-cat .pixel-cat, .room-record.is-selected::after) { filter: none !important; }
+html[data-perf='low'] :is(.desktop-widget, .app-titlebar, .cabin-toolbar-group, .room-empty, .cabin-room .cabin-toolbar) { backdrop-filter: none !important; }
+html[data-perf='low'] .desktop-widget { background: #1c120bf0; }
+html[data-perf='low'] .pixel-turntable { filter: drop-shadow(0 10px 0 #0d080566) !important; }
+html[data-perf='low'] :is(.corner-dust, .playlist-track, .widget-in) { animation: none !important; }
+html[data-perf='low'] .corner-lamp { transition: none; }
