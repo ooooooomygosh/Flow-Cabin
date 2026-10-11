@@ -24,13 +24,21 @@ export function resolveLevel(mode, detected, hint) {
 export function performanceLevel() { return resolveLevel(performanceMode(), read(DETECTED_KEY), hardwareHint()); }
 export function applyPerformance(root = globalThis.document?.documentElement) {
   const level = performanceLevel();
-  if (root && root.dataset.perf !== level) { root.dataset.perf = level; globalThis.dispatchEvent?.(new CustomEvent(EVENT, { detail: { level, mode: performanceMode() } })); }
+  const mode = performanceMode();
+  if (root && (root.dataset.perf !== level || root.dataset.perfMode !== mode)) { root.dataset.perf = level; root.dataset.perfMode = mode; globalThis.dispatchEvent?.(new CustomEvent(EVENT, { detail: { level, mode } })); }
   return level;
 }
 export function setPerformanceMode(mode) { write(PERFORMANCE_KEY, PERFORMANCE_MODES.some(([id]) => id === mode) ? mode : 'auto'); return applyPerformance(); }
 export function onPerformanceChange(callback) {
   const listener = (event) => callback(event.detail);
   globalThis.addEventListener?.(EVENT, listener); return () => globalThis.removeEventListener?.(EVENT, listener);
+}
+// Storage events reach other windows, including an already-open wallpaper.
+export function syncPerformance(win = globalThis.window) {
+  if (!win?.addEventListener) return () => {};
+  const changed = (event) => { if (event.key === null || [PERFORMANCE_KEY, DETECTED_KEY].includes(event.key)) applyPerformance(win.document.documentElement); };
+  win.addEventListener('storage', changed);
+  return () => win.removeEventListener('storage', changed);
 }
 // Frames per second over a sample of rAF timestamps (ignores the first frame).
 export function measuredFps(stamps) {
@@ -43,12 +51,17 @@ export function measuredFps(stamps) {
 export function startPerformanceProbe({ delay = 4000, duration = 2500, win = globalThis.window } = {}) {
   if (!win?.requestAnimationFrame) return () => {};
   let stopped = false, frame = 0;
+  // A background tab can suspend rAF for minutes. Never classify that gap as
+  // slow hardware, even when the window is visible again at the final frame.
+  const visibility = () => { if (win.document.hidden) { stopped = true; win.cancelAnimationFrame?.(frame); win.document.removeEventListener?.('visibilitychange', visibility); } };
+  win.document.addEventListener?.('visibilitychange', visibility);
   const timer = win.setTimeout(() => {
-    if (stopped || win.document.hidden) return;
+    if (stopped || win.document.hidden) { win.document.removeEventListener?.('visibilitychange', visibility); return; }
     const stamps = [];
     const tick = (time) => {
       if (stopped) return; stamps.push(time);
       if (time - stamps[0] < duration) { frame = win.requestAnimationFrame(tick); return; }
+      win.document.removeEventListener?.('visibilitychange', visibility);
       const fps = measuredFps(stamps), level = win.document.documentElement.dataset.perf;
       if (win.document.hidden) return;
       if (fps < 45) write(DETECTED_KEY, 'low');
@@ -57,5 +70,5 @@ export function startPerformanceProbe({ delay = 4000, duration = 2500, win = glo
     };
     frame = win.requestAnimationFrame(tick);
   }, delay);
-  return () => { stopped = true; win.clearTimeout(timer); win.cancelAnimationFrame?.(frame); };
+  return () => { stopped = true; win.clearTimeout(timer); win.cancelAnimationFrame?.(frame); win.document.removeEventListener?.('visibilitychange', visibility); };
 }

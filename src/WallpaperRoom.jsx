@@ -13,7 +13,8 @@ import './companion-room.css';
 import './wallpaper.css';
 import './styles/pixel-ui.css';
 import './styles/perf-low.css';
-import { applyPerformance } from './perf-profile.mjs';
+import { syncPerformance, applyPerformance } from './perf-profile.mjs';
+syncPerformance();
 applyPerformance(); // the wallpaper follows the main window's 流畅模式 (same profile storage)
 
 function WallpaperTimer({ focus }) {
