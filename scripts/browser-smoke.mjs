@@ -171,6 +171,11 @@ try {
   await page.getByRole('button', { name: '保存卡片', exact: true }).click();
   await page.getByRole('alert').filter({ hasText: '无法保存学习记录' }).waitFor();
   assert.equal(await page.getByLabel('编辑卡片背面').inputValue(), '短暂的；转瞬即逝');
+  await page.getByRole('button', { name: '删除卡片 ephemeral', exact: true }).click();
+  assert.equal(await page.getByLabel('编辑卡片背面').inputValue(), '短暂的；转瞬即逝');
+  await page.getByRole('button', { name: '删除卡组', exact: true }).click(); await page.getByRole('button', { name: '确认删除', exact: true }).click();
+  assert.equal(await page.getByLabel('编辑卡片背面').inputValue(), '短暂的；转瞬即逝');
+  await page.getByRole('button', { name: '取消', exact: true }).click();
   await page.evaluate(() => { Storage.prototype.setItem = window.__studySetItem; delete window.__studySetItem; });
   await page.getByRole('button', { name: '保存卡片', exact: true }).click();
   await page.getByText('卡片已保存，复习进度保持不变。').waitFor(); await page.getByLabel('查找这组全部卡片').fill('');
