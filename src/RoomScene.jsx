@@ -23,7 +23,7 @@ export default function RoomScene({ look = 'warm', items = [], selectedId, selec
       const rect = viewport.current.getBoundingClientRect();
       // Hidden bars (Zen mode) report empty boxes and must not shrink the room.
       const box = (element) => element && element.getClientRects().length ? element.getBoundingClientRect() : null;
-      const zen = document.documentElement.classList.contains('room-zen') || document.documentElement.classList.contains('room-desktop') || document.documentElement.dataset.desktopFullscreen === 'true', bar = box(toolbar), top = box(header), foot = box(room?.querySelector('.room-now-playing'));
+      const zen = (document.documentElement.classList.contains('room-zen') && !document.documentElement.classList.contains('room-zen-tools')) || document.documentElement.classList.contains('room-desktop'), bar = box(toolbar), top = box(header), foot = box(room?.querySelector('.room-now-playing'));
       const safeArea = room && !zen ? { top: Math.max(bar?.bottom || 0, top?.bottom || 0) - rect.top + 12, bottom: foot ? rect.bottom - foot.top + 12 : 12 } : undefined;
       // Narrow screens use an explicitly opened bottom sheet. Wide screens
       // avoid only the panel's rectangle; short tabs no longer reserve a rail.

@@ -14,3 +14,7 @@ Design references (ideas only, no code copied)
 - music-assistant/server (Apache-2.0): remote player control, already used through its HTTP API.
 
 The pixel cat, cabin overlays, ambience synthesis and lo-fi composer are original to this project.
+
+Study tools
+- ts-fsrs (MIT) — existing spaced-repetition scheduler, unchanged in this release. See ts-fsrs-LICENSE.txt.
+- The Daily life, Work communication and Music life starter books contain 6 words each. Their short Chinese teaching notes were written for Flow Cabin. They are not complete examination word lists. No scraped dictionary entries or third-party audio are bundled.

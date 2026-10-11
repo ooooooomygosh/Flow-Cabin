@@ -126,25 +126,19 @@ export default function DesktopWidgets({ mode = 'desktop', exit, ...music }) {
   </div>;
 }
 
-// Immersive mode and fullscreen hide every control. Moving the pointer to the
-// top edge shows a small way out; the cursor rests after a few still seconds.
-export function ImmersiveChrome({ zen, fullscreen, desktopClient, exitZen }) {
-  const [visible, setVisible] = useState(false);
+// A persistent, small recovery control: fullscreen never removes interaction.
+export function ImmersiveChrome({ zen, fullscreen, desktopClient, toggleZen, openStudy }) {
+  const [tools, setTools] = useState(false);
   useEffect(() => {
-    if (!zen && !fullscreen) return;
-    let rest, hide;
-    const root = document.documentElement;
-    const wake = (event) => {
-      root.classList.remove('cursor-resting'); clearTimeout(rest);
-      rest = setTimeout(() => { if (!document.querySelector('dialog[open], .listening-corner')) root.classList.add('cursor-resting'); }, 2600);
-      if (event?.clientY !== undefined && event.clientY < 56) { setVisible(true); clearTimeout(hide); hide = setTimeout(() => setVisible(false), 2400); }
-    };
-    wake(); document.addEventListener('pointermove', wake); document.addEventListener('pointerdown', wake);
-    return () => { clearTimeout(rest); clearTimeout(hide); root.classList.remove('cursor-resting'); document.removeEventListener('pointermove', wake); document.removeEventListener('pointerdown', wake); };
-  }, [zen, fullscreen]);
-  if (!fullscreen) return null; // immersive mode keeps its own exit control in the corner
-  return <div className={`immersive-exit ${visible ? 'is-visible' : ''}`} role="toolbar" aria-label="沉浸模式" onFocus={() => setVisible(true)} onBlur={() => setVisible(false)}>
-    {zen && <button type="button" onClick={exitZen}>退出沉浸 · Z</button>}
-    {desktopClient && <button type="button" onClick={() => window.open(`album-desktop://action/${fullscreen ? 'fullscreen-exit' : 'fullscreen'}`, '_blank')}>{fullscreen ? '退出全屏 · Esc' : '全屏 · F11'}</button>}
+    document.documentElement.classList.toggle('room-zen-tools', zen && tools);
+    window.dispatchEvent(new Event('resize'));
+    return () => document.documentElement.classList.remove('room-zen-tools');
+  }, [zen, tools]);
+  if (!zen && !fullscreen) return null;
+  return <div className="immersive-exit is-visible" role="toolbar" aria-label="全屏与沉浸工具">
+    <button type="button" aria-pressed={zen} onClick={toggleZen}>{zen ? '正常模式' : '沉浸模式'}</button>
+    {zen && <button type="button" aria-expanded={tools} onClick={() => setTools((value) => !value)}>{tools ? '收起工具' : '显示工具'}</button>}
+    {zen && tools && <button type="button" onClick={openStudy}>学习</button>}
+    {fullscreen && desktopClient && <button type="button" onClick={() => window.open('album-desktop://action/fullscreen-exit', '_blank')}>退出全屏</button>}
   </div>;
 }

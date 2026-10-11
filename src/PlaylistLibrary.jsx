@@ -209,7 +209,7 @@ export default function PlaylistLibrary({ items, close, onAdded }) {
   return <Dialog title="我的歌单" icon={<QueueList size={20}/>} close={close} wide className="playlist-dialog">
     <div className="playlist-shell">
       <nav className="playlist-rail" role="tablist" aria-label="歌单来源">{TABS.map((entry) => {
-        const connected = entry.id === 'netease' ? config?.neteaseLoggedIn : entry.id === 'qq' ? config?.qqLoggedIn : false;
+        const connected = (entry.id === 'netease' ? config?.neteaseLoggedIn : entry.id === 'qq' ? config?.qqLoggedIn : false) && lists[entry.id]?.loggedIn !== false;
         return <button type="button" role="tab" disabled={busy} key={entry.id} aria-selected={tab === entry.id} className={`playlist-rail-tab is-${entry.id}`} onClick={() => choose(entry.id)}>
           <span className="playlist-rail-glyph" aria-hidden="true">{entry.id === 'import' ? <Link size={16}/> : entry.id === 'apple' ? <Music2 size={16}/> : <b>{entry.id === 'qq' ? 'QQ' : '云'}</b>}</span>
           <span><strong>{entry.label}</strong><small>{connected ? '已登录' : entry.hint}</small></span>{connected && <i className="playlist-rail-dot" aria-label="已登录"/>}
@@ -217,6 +217,7 @@ export default function PlaylistLibrary({ items, close, onAdded }) {
       })}</nav>
       <section className="playlist-main" aria-live="polite">
         {error && <p className="playlist-error" role="alert">{error}</p>}
+        {!detail && state?.warning && <p className="playlist-error" role="alert">{state.warning}<button type="button" className="pixel-button" disabled={state.loading} onClick={() => loadList(listProvider, true)}>重试未读取的歌单</button></p>}
         {notice && <p className="playlist-notice" role="status"><Check size={15}/>{notice}</p>}
         {detail ? <PlaylistDetail detail={detail} provider={detail.provider} back={() => { cancelMore(); setDetail(null); setNotice(''); }} act={act} busy={busy} saved={Boolean(savedItem)} loadMore={loadMore} loadingMore={loadingMore} cancelMore={cancelMore}/>
           : tab === 'import' ? <><header className="playlist-main-head"><h3>从链接或文件导入</h3><p>公开歌单不需要登录：在平台里点「分享 › 复制链接」，粘贴到这里。</p></header><LinkAndFile key={tab} openDetail={openDetail} busy={busy} setBusy={setBusy} setError={setError}/></>
@@ -228,11 +229,11 @@ export default function PlaylistLibrary({ items, close, onAdded }) {
             <LinkAndFile key={tab} openDetail={openDetail} busy={busy} setBusy={setBusy} setError={setError} compact apple/>
           </>
           : !config ? <p className="playlist-loading"><Loading size={18} className="player-spin"/>正在检查登录状态…</p>
-          : !loggedIn ? <SignIn provider={tab} desktop={desktop} busy={signing === tab} signIn={() => signIn(tab)}/>
+          : (!loggedIn || state?.loggedIn === false) ? <SignIn provider={tab} desktop={desktop} busy={signing === tab} signIn={() => signIn(tab)}/>
           : state?.loading && !state.playlists ? <ul className="playlist-grid is-skeleton" aria-label="正在读取歌单">{Array.from({ length: 8 }, (_, index) => <li key={index}><span className="playlist-card"><span className="playlist-sleeve is-md"/><span className="playlist-card-copy"><strong>&nbsp;</strong><small>&nbsp;</small></span></span></li>)}</ul>
           : state?.error ? <div className="playlist-signin"><h3>歌单暂时读不出来</h3><p>{state.error}</p><button type="button" className="pixel-button is-primary" onClick={() => loadList(tab, true)}>重试</button><button type="button" className="pixel-button is-quiet" onClick={() => signIn(tab)}>重新登录</button></div>
           : state?.playlists?.length ? <><div className="playlist-toolbar"><span>{state.user ? `${state.user} · ` : ''}{state.playlists.length} 个歌单</span><button type="button" className="pixel-button is-quiet" onClick={() => loadList(tab, true)}><Loading size={14}/>刷新</button></div><PlaylistGrid playlists={state.playlists} open={openPlaylist} busyId={busyId}/></>
-          : state?.playlists ? <div className="playlist-signin"><h3>还没有歌单</h3><p>在{PLAYLIST_SOURCES[tab].label}里创建或收藏歌单后，点刷新。</p><button type="button" className="pixel-button" onClick={() => loadList(tab, true)}>刷新</button></div>
+          : state?.playlists ? <div className="playlist-signin"><h3>{state.warning ? '部分歌单未能读取' : '还没有歌单'}</h3><p>{state.warning ? '请重试，暂时无法确认完整歌单列表。' : `在${PLAYLIST_SOURCES[tab].label}里创建或收藏歌单后，点刷新。`}</p><button type="button" className="pixel-button" onClick={() => loadList(tab, true)}>刷新</button></div>
           : null}
       </section>
     </div>

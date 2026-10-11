@@ -1,9 +1,13 @@
+import { verifyFullscreenStudy } from './fullscreen-study-checks.mjs';
+import { hasViteLocalOrigin } from './vite-readiness.mjs';
+import { openRoomSettings, openMusicSettings, chooseSource } from './settings-actions.mjs';
 /** Offline renderer integration suite. Run: node scripts/browser-smoke.mjs
  * Requires root+desktop npm ci and Chromium (BROWSER_EXECUTABLE overrides path).
  * Native OS integration, real accounts, and live platform playback are NOT tested.
  * Fixtures never call external services or read a user's profile/collection.
  */
 import assert from 'node:assert/strict';
+import { verifyQQRegression } from './qq-regression-checks.mjs';
 import { verifyOnboarding } from './onboarding-checks.mjs';
 import { verifyCabinLayout, verifyCabinToolActions, verifyFocusLayout } from './cabin-layout-checks.mjs';
 import { verifyPlaylistPagination } from './playlist-pagination-checks.mjs';
@@ -32,9 +36,17 @@ let systemPlaying = true, localAlbumCalls = 0, neteaseLoggedIn = false; const sy
 const screenshot = async (name) => { await page.screenshot({ path: path.join(output, name + '.png'), animations: 'disabled' }); report.screenshots.push(name + '.png'); };
 const closeDialog = () => page.keyboard.press('Escape');
 try {
-  server = spawn(process.execPath, [path.join(root, 'node_modules/vite/bin/vite.js'), '--host', '127.0.0.1', '--port', String(port), '--strictPort'], { cwd: root, stdio: ['ignore', 'pipe', 'pipe'] });
+  server = spawn(process.execPath, [path.join(root, 'node_modules/vite/bin/vite.js'), '--host', '127.0.0.1', '--port', String(port), '--strictPort'], { cwd: root, env: { ...process.env, FLOW_CABIN_VITE_CACHE_DIR: path.join(output, 'vite-cache') }, stdio: ['ignore', 'pipe', 'pipe'] });
   let serverLog = ''; server.stdout.on('data', b => serverLog += b); server.stderr.on('data', b => serverLog += b);
-  for (let i = 0; i < 100; i++) { try { if ((await fetch(origin)).ok) break; } catch {} if (server.exitCode !== null) throw new Error(serverLog); if (i === 99) throw new Error('Vite startup timed out: ' + serverLog); await new Promise(r => setTimeout(r, 100)); }
+  for (let i = 0; i < 100; i++) {
+    if (server.exitCode !== null) throw new Error(serverLog);
+    // A response from an older process on this port is not readiness evidence.
+    if (hasViteLocalOrigin(serverLog, origin)) {
+      try { if ((await fetch(origin)).ok) break; } catch {}
+    }
+    if (i === 99) throw new Error('Vite startup timed out: ' + serverLog);
+    await new Promise(r => setTimeout(r, 100));
+  }
   browser = await chromium.launch({ executablePath: process.env.BROWSER_EXECUTABLE || (process.env.CI ? chromium.executablePath() : await fs.access('/usr/bin/chromium').then(() => true, () => false) ? '/usr/bin/chromium' : chromium.executablePath()), headless: true, args: ['--no-sandbox', '--autoplay-policy=no-user-gesture-required'] });
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1, locale: 'zh-CN', reducedMotion: 'reduce' });
   await context.addInitScript(() => { window.__desktopCommands = []; window.__cabinPlayback = []; window.addEventListener('cabin:playback', e => window.__cabinPlayback.push({ ...e.detail, at: performance.now() })); window.open = url => { window.__desktopCommands.push(String(url)); return null; }; window.albumDesktopAppearance = { client: true, reduceMotion: true }; const init = () => { document.documentElement.dataset.desktopClient = 'true'; document.documentElement.dataset.desktopReduceMotion = 'true'; }; if (document.documentElement) init(); else new MutationObserver((_, o) => { if (document.documentElement) { init(); o.disconnect(); } }).observe(document, { childList: true }); });
@@ -77,6 +89,8 @@ try {
   await context.route('**/*', routeHandler);
   const welcomeRoute = route => new URL(route.request().url()).pathname === '/api/items' ? route.fulfill({ json: { items: [] } }) : routeHandler(route);
   await verifyOnboarding({ browser, origin, routeHandler: welcomeRoute, evidence: output, output, check });
+  await verifyQQRegression({ browser, origin, check });
+  await verifyFullscreenStudy({ browser, origin, output, check });
   await verifyPlaylistPagination({ browser, origin, check });
   context.on('page', watched => { watched.on('pageerror', error => report.pageErrors.push(error.message)); watched.on('console', message => { if (message.type() === 'error') report.consoleErrors.push(message.text()); }); watched.on('requestfailed', request => { if (request.failure()?.errorText !== 'net::ERR_ABORTED') report.failedRequests.push({ url: request.url(), error: request.failure()?.errorText }); }); });
   page = await context.newPage(); page.setDefaultTimeout(12000); await page.clock.install({ time: new Date('2026-10-08T10:00:00Z') });
@@ -88,7 +102,7 @@ try {
   const { ROOM_SCENES } = await import('../src/scene-catalog.mjs');
   const { PETS } = await import('../src/pet/pet-catalog.mjs');
   assert.equal(ROOM_SCENES.length, 6); assert.equal(PETS.length, 5);
-  await page.getByRole('button', { name: '布置小屋', exact: true }).click();
+  await openRoomSettings(page);
   for (const scene of ROOM_SCENES) {
     await page.getByRole('button', { name: `选择场景 ${scene.label}`, exact: true }).click();
     assert.equal(await page.locator('.cabin-scene').getAttribute('data-room-look'), scene.id);
@@ -97,13 +111,13 @@ try {
   for (const pet of PETS) { await page.getByRole('button', { name: `选择桌宠 ${pet.name || pet.label}`, exact: true }).click(); assert.equal(await page.locator('.room-cat .pixel-cat').getAttribute('data-pet-id'), pet.id); }
   await screenshot('room-personalization');
   await page.setViewportSize({ width: 960, height: 600 }); await screenshot('room-personalization-960x600'); await page.getByRole('button', { name: '回到小屋', exact: true }).click();
-  for (const scene of ROOM_SCENES) { await page.getByRole('button', { name: '布置小屋', exact: true }).click(); await page.getByRole('button', { name: `选择场景 ${scene.label}`, exact: true }).click(); await closeDialog(); await screenshot(`scene-${scene.id}-960x600`); }
+  for (const scene of ROOM_SCENES) { await openRoomSettings(page); await page.getByRole('button', { name: `选择场景 ${scene.label}`, exact: true }).click(); await closeDialog(); await screenshot(`scene-${scene.id}-960x600`); }
   await page.reload(); await page.locator('.room-record').first().waitFor(); assert.equal(await page.locator('.cabin-scene').getAttribute('data-room-look'), ROOM_SCENES.at(-1).id); assert.equal(await page.locator('.room-cat .pixel-cat').getAttribute('data-pet-id'), PETS.at(-1).id); check('all-scenes-and-pets-select-and-persist');
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.getByRole('button', { name: '添加专辑', exact: true }).click(); await page.getByRole('tab', { name: '手动填写' }).click(); await page.getByLabel('专辑名', { exact: true }).fill('QA 新唱片'); await page.getByLabel('歌手', { exact: true }).fill('QA Artist'); await page.getByLabel('曲目', { exact: true }).fill('第一首\n第二首'); await page.getByRole('button', { name: '放上唱片架' }).click(); await page.getByText('《QA 新唱片》已放上唱片架。', { exact: true }).waitFor(); await closeDialog(); assert(items.some(i => i.title === 'QA 新唱片')); assert.match(items.find(i => i.title === 'QA 新唱片').cover, /^data:image\/png;base64,/, 'manual album without cover gets a pixel cover'); check('collection-create-manual');
   await page.locator('.room-record').first().click(); await page.getByRole('button', { name: '唱片卡片', exact: true }).click(); await page.getByLabel('我的笔记').fill('持久化测试笔记'); await page.getByLabel('我的笔记').blur(); await page.getByText('已保存在这台电脑', { exact: true }).waitFor(); assert(items.some(i => i.notes === '持久化测试笔记')); await page.getByRole('button', { name: '移除', exact: true }).click(); await page.getByRole('button', { name: '确认移除' }).click(); await page.getByRole('dialog').waitFor({ state: 'hidden' }); assert(!items.some(i => i.title === 'QA 新唱片')); check('collection-update-notes-and-delete');
   await page.getByRole('button', { name: '添加专辑', exact: true }).click(); await page.getByRole('searchbox').fill('测试'); await page.getByRole('button', { name: '搜索', exact: true }).click(); await page.locator('.add-results li').first().waitFor(); await screenshot('catalog-results'); await closeDialog(); check('catalog-search-fixture');
-  await page.locator('.room-record').first().dblclick(); await page.getByLabel('唱机音源', { exact: true }).selectOption('local'); await page.waitForFunction(() => { const a = document.querySelector('audio'); return a && !a.paused && a.currentTime > .2 && a.duration > 10; }); check('actual-generated-wav-decodes-and-plays'); await page.getByRole('button', { name: '下一首展示曲目' }).click(); await page.waitForFunction(() => document.querySelector('audio').src.endsWith('fedcba9876543210')); check('local-next-track-resolves-exact-id');
+  await page.locator('.room-record').first().dblclick(); await chooseSource(page, 'local'); await page.waitForFunction(() => { const a = document.querySelector('audio'); return a && !a.paused && a.currentTime > .2 && a.duration > 10; }); check('actual-generated-wav-decodes-and-plays'); await page.getByRole('button', { name: '下一首展示曲目' }).click(); await page.waitForFunction(() => document.querySelector('audio').src.endsWith('fedcba9876543210')); check('local-next-track-resolves-exact-id');
   await page.evaluate(() => window.dispatchEvent(new CustomEvent('cabin:player-command', { detail: { action: 'pause' } }))); await page.waitForFunction(() => document.querySelector('audio').paused);
   await page.evaluate(() => window.dispatchEvent(new CustomEvent('cabin:player-command', { detail: { action: 'play' } }))); await page.waitForFunction(() => !document.querySelector('audio').paused);
   await page.evaluate(() => window.dispatchEvent(new CustomEvent('cabin:player-command', { detail: { action: 'previous' } }))); await page.waitForFunction(() => document.querySelector('audio').src.endsWith('abcdef0123456789'));
@@ -155,16 +169,16 @@ try {
   await page.getByRole('button', { name: '恢复原封面' }).click(); await page.getByText('已恢复原封面。', { exact: true }).waitFor(); assert.equal(pixelled.cover, cover); await closeDialog();
   check('record-card-pixel-cover-preview-apply-and-restore');
   items = items.filter(i => !i.externalIds?.fileAlbum); await page.reload(); await page.locator('.room-record').first().waitFor(); // later checks count the 18 fixture albums
-  await page.getByLabel('唱机音源', { exact: true }).selectOption('system'); await page.locator('.turntable-track', { hasText: '系统测试歌曲' }).waitFor(); assert.equal(await page.locator('audio').getAttribute('src'), null); await page.getByRole('button', { name: '暂停系统播放器' }).click(); await page.getByRole('button', { name: '继续系统播放器' }).waitFor(); await page.getByRole('button', { name: '系统播放器下一首' }).click(); assert.deepEqual(systemCommands, ['toggle', 'next']); check('system-source-and-transport-mocked'); await page.getByLabel('唱机音源', { exact: true }).selectOption('visual');
-  await page.getByRole('button', { name: '音源设置', exact: true }).click(); await page.locator('.music-local-status', { hasText: '1 张专辑 · 2 首歌曲' }).waitFor(); await screenshot('music-settings'); const sourceBefore = await page.getByLabel('唱机音源', { exact: true }).inputValue(); await page.locator('.music-account', { hasText: 'QQ 音乐' }).getByRole('button', { name: '在唱机上用' }).click(); await page.getByLabel('唱机正在使用 QQ 音乐').waitFor(); await closeDialog(); assert.equal(await page.getByLabel('唱机音源', { exact: true }).inputValue(), 'qq'); await page.getByLabel('唱机音源', { exact: true }).selectOption(sourceBefore); check('music-settings-offline-account-and-local-status'); check('music-settings-use-source-on-deck');
+  await chooseSource(page, 'system'); await page.locator('.turntable-track', { hasText: '系统测试歌曲' }).waitFor(); assert.equal(await page.locator('audio').getAttribute('src'), null); await page.getByRole('button', { name: '暂停系统播放器' }).click(); await page.getByRole('button', { name: '继续系统播放器' }).waitFor(); await page.getByRole('button', { name: '系统播放器下一首' }).click(); assert.deepEqual(systemCommands, ['toggle', 'next']); check('system-source-and-transport-mocked'); await chooseSource(page, 'visual');
+  await openMusicSettings(page); await page.locator('.music-local-status', { hasText: '1 张专辑 · 2 首歌曲' }).waitFor(); await screenshot('music-settings'); const sourceBefore = await page.locator('.room-turntable').getAttribute('data-provider'); await page.locator('.music-account', { hasText: 'QQ 音乐' }).getByRole('button', { name: '在唱机上用' }).click(); await page.getByLabel('唱机正在使用 QQ 音乐').waitFor(); await closeDialog(); assert.equal(await page.locator('.room-turntable').getAttribute('data-provider'), 'qq'); await chooseSource(page, sourceBefore); check('music-settings-offline-account-and-local-status'); check('music-settings-use-source-on-deck');
   // Seamless playback: stored source fails → automatic rematch plays the best candidate (no picker), with the chosen quality shown honestly.
-  await page.getByRole('button', { name: '音源设置', exact: true }).click(); await page.getByLabel('音质', { exact: true }).selectOption('lossless'); await page.waitForFunction(() => document.querySelector('select[aria-label="音质"]')?.value === 'lossless'); await closeDialog(); assert.equal(quality, 'lossless');
-  rematch = 'vip'; rematchResolves.length = 0; await page.locator('.room-record').nth(1).dblclick(); await page.getByLabel('唱机音源', { exact: true }).selectOption('qq');
+  await openMusicSettings(page); await page.getByLabel('音质', { exact: true }).selectOption('lossless'); await page.waitForFunction(() => document.querySelector('select[aria-label="音质"]')?.value === 'lossless'); await closeDialog(); assert.equal(quality, 'lossless');
+  rematch = 'vip'; rematchResolves.length = 0; await page.locator('.room-record').nth(1).dblclick(); await chooseSource(page, 'qq');
   await page.waitForFunction(() => { const a = document.querySelector('audio'); return a && !a.paused && a.src.endsWith('fixture-stream'); }); assert.equal(await page.locator('.turntable-matches').count(), 0, 'no manual picker when a match plays');
   assert.deepEqual(rematchResolves.slice(0, 2), ['fixture-vip', 'fixture-stream']); assert(!rematchResolves.includes('fixture-live'), 'a live version is never auto-played');
   await page.locator('.turntable-status', { hasText: '320k MP3' }).waitFor(); check('qq-rematch-plays-best-candidate-automatically-and-shows-actual-quality');
   rematch = 'all-fail'; await page.getByRole('button', { name: '下一首展示曲目' }).click(); await page.getByRole('button', { name: '在 QQ 音乐中打开' }).click(); await page.locator('.turntable-local-app-notice', { hasText: '小屋不显示进度' }).waitFor(); assert.equal(localOpens[0].provider, 'qq'); assert.equal(await page.evaluate(() => document.querySelector('audio').paused), true, 'the hand-off never pretends the cabin is playing'); check('local-app-fallback-labelled-after-failure');
-  rematch = ''; await page.getByLabel('唱机音源', { exact: true }).selectOption(sourceBefore);
+  rematch = ''; await chooseSource(page, sourceBefore);
   await page.locator('.focus-badge').click(); await page.getByRole('tab', { name: '待办', exact: true }).click(); await page.getByLabel('新的待办').fill('浏览器测试待办'); await page.getByRole('button', { name: '添加待办' }).click(); await page.getByRole('checkbox', { name: '完成：浏览器测试待办' }).check(); assert.equal(await page.locator('.focus-task-list li.is-done').count(), 1); check('focus-tasks-create-and-complete');
   await page.getByRole('tab', { name: '随手记', exact: true }).click(); await page.getByLabel('随手记内容').fill('QA 随手记备份内容'); check('quick-notes-save-local-text');
   await page.getByRole('tab', { name: '番茄钟' }).click(); await page.getByRole('button', { name: '计时设置' }).click(); await page.getByLabel('专注（分）').fill('2'); await page.getByLabel('专注（分）').blur(); await page.getByRole('button', { name: '开始专注' }).click(); await page.clock.fastForward(121000); await page.locator('.focus-phase', { hasText: '短休息' }).waitFor(); await page.getByRole('tab', { name: '统计' }).click(); assert.match(await page.locator('.focus-stat-tiles').innerText(), /2 分钟/); await screenshot('focus-statistics'); check('focus-timer-completes-and-records-session'); await page.locator('.focus-dock-close').click();
@@ -347,7 +361,7 @@ try {
   const startFocus = page.getByRole('button', { name: '开始专注', exact: true }); if (await startFocus.count()) await startFocus.click();
   await page.getByRole('button', { name: '收起专注工具', exact: true }).click(); await page.locator('.room-cat-bubble').waitFor();
   for (const scene of ROOM_SCENES) {
-    await page.setViewportSize({ width: 1440, height: 900 }); await page.getByRole('button', { name: '布置小屋', exact: true }).click(); await page.getByRole('button', { name: `选择场景 ${scene.label}`, exact: true }).click(); await page.getByRole('button', { name: '回到小屋', exact: true }).click();
+    await page.setViewportSize({ width: 1440, height: 900 }); await openRoomSettings(page); await page.getByRole('button', { name: `选择场景 ${scene.label}`, exact: true }).click(); await page.getByRole('button', { name: '回到小屋', exact: true }).click();
     for (const [width, height] of [[1280, 720], [1280, 800], [1366, 768], [1440, 900], [1920, 1080]]) {
       await page.setViewportSize({ width, height }); await page.waitForTimeout(700);
       const issues = await layoutIssues('bubble');

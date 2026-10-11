@@ -1,3 +1,4 @@
+import { openRoomSettings, openMusicSettings, chooseSource } from './settings-actions.mjs';
 import assert from 'node:assert/strict';
 import { getRoomScene } from '../src/scene-catalog.mjs';
 
@@ -25,11 +26,14 @@ export async function verifyCabinLayout({ page, check = () => {} }) {
   const heading = await page.locator('.turntable-heading').boundingBox();
   const tools = await page.getByRole('navigation', { name: '小屋设置', exact: true }).boundingBox();
   assert(tools.y >= heading.y + heading.height - 1, 'room tools follow the turntable heading');
-  for (const name of ['筛选与唱片盒', '布置小屋', '音源设置']) {
+  for (const name of ['筛选与唱片盒']) {
     const button = page.getByRole('button', { name, exact: true });
     assert.equal(await button.count(), 1, `${name} must have one reachable entry`);
     assert.equal(await button.evaluate(e => Boolean(e.closest('.room-turntable')) && !e.closest('.turntable-drag-handle')), true);
   }
+  assert.equal(await page.locator('.room-turntable').getByLabel('唱机音源').count(), 0);
+  for (const name of ['布置小屋', '音源设置']) assert.equal(await page.getByRole('button', { name, exact:true }).count(), 0);
+  await page.getByRole('button', { name: '打开黑胶与专辑特写', exact:true }).waitFor();
   check('album-card-frame-alignment-background-alpha-and-console-tools');
   return measure;
 }
@@ -42,9 +46,9 @@ export async function verifyCabinToolActions({ page, check = () => {} }) {
   assert.match(await filter.textContent(), /0/); assert.match(await filter.getAttribute('class'), /is-active/);
   await page.getByLabel('筛选类型', { exact:true }).selectOption('all'); await page.locator('.room-record').first().waitFor();
   await filter.click(); assert.equal(await filter.getAttribute('aria-expanded'), 'false');
-  await page.getByRole('button', { name:'布置小屋',exact:true }).click(); await page.getByRole('dialog').waitFor();
+  await openRoomSettings(page); await page.getByRole('dialog').waitFor();
   await page.getByRole('button', { name:'回到小屋',exact:true }).click();
-  await page.getByRole('button', { name:'音源设置',exact:true }).click(); await page.getByRole('dialog').waitFor(); await page.keyboard.press('Escape');
+  await openMusicSettings(page); await page.getByRole('dialog').waitFor(); await page.keyboard.press('Escape');
   await page.getByRole('button', { name:'移动唱机',exact:true }).press('Home');
   assert.equal(await page.locator('.room-turntable').getAttribute('data-moving'), 'false', 'tool actions do not start a drag');
   check('relocated-tools-filter-state-and-dialog-actions');

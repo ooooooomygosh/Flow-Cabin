@@ -209,7 +209,7 @@ function createPlaylistLibrary({ upstream, cookies, fetch = globalThis.fetch, pl
       if (provider === 'qq') {
         const cookie = cookies('qq'); if (!cookie) return { loggedIn: false, provider, playlists: [] };
         const result = await upstream.handleQQUserPlaylists(cookie);
-        return { loggedIn: Boolean(result?.loggedIn), provider, playlists: (result?.playlists || []).map((entry) => normalizeSummary(entry, 'qq')).filter(Boolean) };
+        return { loggedIn: Boolean(result?.loggedIn), provider, warning: clean(result?.warning, 300), playlists: (result?.playlists || []).map((entry) => normalizeSummary(entry, 'qq')).filter(Boolean) };
       }
       if (provider === 'netease') {
         const cookie = cookies('netease'); if (!cookie) return { loggedIn: false, provider, playlists: [] };

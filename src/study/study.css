@@ -97,3 +97,18 @@
 
 .study-card-edit textarea, .study-card-search input { box-sizing: border-box; color: var(--px-ink); background: var(--px-surface-2); border: 2px solid var(--px-shadow); padding: 7px 8px; font: inherit; font-size: 12px; box-shadow: inset 2px 2px 0 #00000020; }
 .study-card-edit textarea:focus, .study-card-search input:focus { border-color: var(--px-accent); }
+
+.study-books { border:2px solid var(--px-shadow); background:var(--px-surface-2); padding:12px; display:grid; gap:10px; box-shadow:3px 3px 0 #0003; }
+.study-books label, .study-import label { display:grid; gap:5px; font-size:12px; }
+.study-books p { margin:0; font-size:12px; line-height:1.6; }
+.study-books small { display:block; opacity:.7; font-size:10px; }
+.study-books select, .study-import select { max-width:100%; font:inherit; padding:5px; color:var(--px-ink); background:var(--px-surface); border:1px solid var(--px-shadow); }
+.study-books summary, .study-guide summary, .study-import summary { cursor:pointer; font-size:12px; }
+.study-books ul, .study-import-preview { list-style:none; padding:0; display:grid; gap:6px; font-size:12px; }
+.study-books li, .study-import-preview li { display:grid; gap:2px; overflow-wrap:anywhere; }
+.study-books li span { opacity:.8; }
+.study-book-start { display:flex; gap:8px; align-items:end; flex-wrap:wrap; }
+.study-guide, .study-import { padding:10px; border:1px solid var(--px-shadow); font-size:12px; line-height:1.7; }
+.study-guide ol { padding-left:18px; }
+.study-import input[type=file] { max-width:100%; font-size:11px; }
+.study-import-columns { display:flex; flex-wrap:wrap; gap:8px; margin:8px 0; }

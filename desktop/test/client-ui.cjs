@@ -45,6 +45,47 @@ const check = (value) => report.checks.push(value);
   const shell = application.windows().find((page) => page.url().startsWith('album-desktop://shell'));
   await shell.locator('#zoom').fill('110'); await shell.locator('#zoom').dispatchEvent('change'); await shell.getByRole('button', { name: '完成', exact: true }).click();
   check('settings-open-and-save');
+  // Exercise the packaged native window and real renderer, without music accounts.
+  const nativeKey = keyCode => application.evaluate(({ webContents }, keyCode) => {
+    const contents = webContents.getAllWebContents().find(contents => contents.getURL().startsWith('https://album-circle.vercel.app'));
+    contents.sendInputEvent({ type: 'keyDown', keyCode }); contents.sendInputEvent({ type: 'keyUp', keyCode });
+  }, keyCode);
+  await site.getByRole('button', { name: '进入全屏模式', exact:true }).click();
+  await site.waitForFunction(() => document.documentElement.dataset.desktopFullscreen === 'true', null, { timeout: 20000 });
+  assert.equal(await application.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find(window => window.webContents.getURL().startsWith('album-desktop://shell')).isFullScreen()), true);
+  await site.getByRole('button', { name:'我的歌单', exact:true }).click();
+  await site.getByRole('dialog').waitFor(); await nativeKey('ESC'); await site.getByRole('dialog').waitFor({ state:'hidden' });
+  assert.equal(await site.evaluate(() => document.documentElement.dataset.desktopFullscreen), 'true');
+  await site.getByRole('button', { name:'沉浸模式', exact:true }).click();
+  await site.getByRole('button', { name:'显示工具', exact:true }).click();
+  await site.getByRole('button', { name:'学习', exact:true }).click(); await site.getByLabel('入门词书', { exact:true }).waitFor();
+  await site.screenshot({ path:path.join(output, 'native-fullscreen-study.png') });
+  await site.getByLabel('新卡组名称').fill('模板验收'); await site.getByRole('button',{name:'新建',exact:true}).click();
+  await site.locator('.study-decks li',{hasText:'模板验收'}).getByRole('button',{name:'编辑',exact:true}).click();
+  await site.getByText('导入本地词书',{exact:true}).click();
+  const templatePath = path.join(profile,'word-template.tsv');
+  await application.evaluate(({webContents}, savePath) => {
+    const contents = webContents.getAllWebContents().find(contents => contents.getURL().startsWith('https://album-circle.vercel.app'));
+    globalThis.__qaTemplateDownload = new Promise(resolve => contents.session.once('will-download', (_event,item) => {
+      item.setSavePath(savePath); item.once('done',(_event,state)=>resolve(state));
+    }));
+  },templatePath);
+  await site.getByRole('button',{name:'下载两列模板',exact:true}).click();
+  assert.equal(await application.evaluate(async()=>await globalThis.__qaTemplateDownload),'completed');
+  assert.equal(fs.readFileSync(templatePath,'utf8'),'word\tmeaning\nwindow\t窗户\n');
+  check('packaged-study-template-download-saves-exact-local-tsv');
+  await site.evaluate(() => document.activeElement?.blur()); await nativeKey('ESC');
+  await site.locator('.focus-dock').waitFor({state:'detached'});
+  assert.equal(await site.evaluate(()=>document.documentElement.classList.contains('room-zen')),true);
+  assert.equal(await site.evaluate(()=>document.documentElement.dataset.desktopFullscreen),'true');
+  check('packaged-escape-closes-study-tools-before-immersive-and-fullscreen');
+  await site.getByRole('button', { name:'收起工具', exact:true }).click();
+  await site.evaluate(() => document.activeElement?.blur()); await nativeKey('ESC');
+  await site.waitForFunction(() => !document.documentElement.classList.contains('room-zen'));
+  assert.equal(await site.evaluate(() => document.documentElement.dataset.desktopFullscreen), 'true');
+  await nativeKey('ESC'); await site.waitForFunction(() => document.documentElement.dataset.desktopFullscreen === 'false', null, { timeout:20000 });
+  check('packaged-native-fullscreen-normal-immersive-dialog-learning-and-escape');
+
   if (process.env.ALBUM_QA_SKIP_WALLPAPER !== '1') {
   await site.getByRole('button', { name: '沉入桌面', exact: true }).click();
   await site.getByRole('button', { name: '浮出桌面', exact: true }).waitFor({ timeout: 20000 });

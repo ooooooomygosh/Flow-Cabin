@@ -36,9 +36,10 @@ function createDesktopSink({ platform = process.platform, wallpaper, legacy, pet
         log('desktop-sink-fallback', reason);
         legacy.enter(); via = 'window';
       }
-      if (!pet.active) { try { await pet.start(); startedPet = true; } catch (error) { log('desktop-sink-pet', error.message); } }
+      if (!pet.active) { startedPet = true; try { await pet.start(); } catch (error) { if (token === generation) startedPet = false; log('desktop-sink-pet', error.message); } }
       if (token !== generation) return status();
       if (via === 'wallpaper') await mini.show().catch((error) => log('desktop-sink-mini', error.message));
+      if (token !== generation) return status();
       active = true;
       setLowPower(lowPower);
       log('desktop-sink-entered', via);
@@ -54,7 +55,7 @@ function createDesktopSink({ platform = process.platform, wallpaper, legacy, pet
     mini.hide();
     if (wallpaper.active || wallpaper.busy) wallpaper.stop();
     if (legacy.active) legacy.exit({ restore });
-    if (startedPet && pet.active) pet.stop();
+    if (startedPet) pet.stop();
     startedPet = false; via = '';
     if (restore) restoreMain();
     log('desktop-sink-exited');

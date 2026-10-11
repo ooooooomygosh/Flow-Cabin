@@ -1,5 +1,13 @@
 name: Desktop release
 on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'desktop/**'
+      - 'scripts/**'
+      - 'package*.json'
+      - 'vite.config.js'
+      - '.github/workflows/desktop-release.yml'
   push:
     tags: ['v*']
   workflow_dispatch:

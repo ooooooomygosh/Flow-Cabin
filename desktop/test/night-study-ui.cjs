@@ -1,3 +1,5 @@
+const chooseSource = (...args) => import('../../scripts/settings-actions.mjs').then(m => m.chooseSource(...args));
+const openMusicSettings = (...args) => import('../../scripts/settings-actions.mjs').then(m => m.openMusicSettings(...args));
 'use strict';
 const { _electron } = require('playwright'), fs = require('node:fs'), path = require('node:path'), assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
@@ -59,7 +61,7 @@ async function startWallpaper() {
   await host.evaluate(() => window.albumDesktop.settings('apply', { reduceMotion: true })); await site.locator('.study-writing[data-animation=still]').waitFor();
   const position = await site.locator('.study-writing-hand').evaluate(e => getComputedStyle(e).backgroundPosition); await site.waitForTimeout(350); assert.equal(await site.locator('.study-writing-hand').evaluate(e => getComputedStyle(e).backgroundPosition), position);
   await host.evaluate(() => window.albumDesktop.settings('apply', { reduceMotion: false })); check('writing-lift-spin-catch-poses-without-image-stretch-and-reduced-motion');
-  await site.locator('.room-record').first().dblclick(); await site.getByLabel('唱机音源', { exact: true }).selectOption('netease');
+  await site.locator('.room-record').first().dblclick(); await chooseSource(site, 'netease');
   await site.waitForFunction(() => document.querySelector('audio').currentTime > .2 && !document.querySelector('audio').paused);
   assert.deepEqual((await app.evaluate(() => globalThis.__qaMusicResolves)).slice(-2), ['99999', '12345']);
   await site.getByLabel('唱机展示曲目', { exact: true }).selectOption('1');
@@ -69,19 +71,20 @@ async function startWallpaper() {
   await site.waitForFunction(() => document.documentElement.dataset.desktopFullscreen === 'true');
   const full = await app.evaluate(({ BrowserWindow, screen }) => { const w = BrowserWindow.getAllWindows().find(w => w.webContents.getURL().includes('/shell/')); return { full: w.isFullScreen(), bounds: w.getBounds(), monitor: screen.getDisplayMatching(w.getBounds()).bounds }; });
   assert.equal(full.full, true); assert.deepEqual(full.bounds, full.monitor);
-  for (const selector of ['.app-titlebar', '.cabin-toolbar', '.room-turntable', '.room-now-playing', '.room-cat-bubble']) {
-    if (await site.locator(selector).count()) assert.equal(await site.locator(selector).evaluate(e => getComputedStyle(e).display), 'none');
+  for (const selector of ['.app-titlebar', '.cabin-toolbar', '.room-turntable', '.room-now-playing']) {
+    if (await site.locator(selector).count()) assert.equal(await site.locator(selector).isVisible(), true);
   }
   await site.screenshot({ path: path.join(output, 'night-study-fullscreen.png') });
-  await site.reload(); await site.waitForFunction(() => document.documentElement.dataset.desktopFullscreen === 'true' && document.querySelector('.cabin-toolbar') && getComputedStyle(document.querySelector('.cabin-toolbar')).display === 'none');
+  await site.reload(); await site.waitForFunction(() => document.documentElement.dataset.desktopFullscreen === 'true' && document.querySelector('.cabin-toolbar') && getComputedStyle(document.querySelector('.cabin-toolbar')).display !== 'none');
   await app.evaluate(({ webContents }) => { const contents = webContents.getAllWebContents().find(c => c.getURL().startsWith('https://album-circle.vercel.app')); contents.sendInputEvent({ type: 'keyDown', keyCode: 'ESC' }); contents.sendInputEvent({ type: 'keyUp', keyCode: 'ESC' }); });
-  await site.waitForFunction(() => document.documentElement.dataset.desktopFullscreen === 'false'); check('native-fullscreen-covers-monitor-hides-interface-survives-reload-and-escape-restores');
-  await site.getByRole('button', { name: '音源设置', exact: true }).click();
+  await site.waitForFunction(() => document.documentElement.dataset.desktopFullscreen === 'false'); check('native-fullscreen-covers-monitor-keeps-interaction-survives-reload-and-escape-restores');
+  await openMusicSettings(site);
   const musicDialog = site.getByRole('dialog', { name: '音源与账户', exact: true, includeHidden: true }); await musicDialog.waitFor();
   const nativeKey = keyCode => app.evaluate(({ webContents }, keyCode) => { const c = webContents.getAllWebContents().find(c => c.getURL().startsWith('https://album-circle.vercel.app')); c.sendInputEvent({ type: 'keyDown', keyCode }); c.sendInputEvent({ type: 'keyUp', keyCode }); }, keyCode);
   await nativeKey('F11'); await site.waitForFunction(() => document.documentElement.dataset.desktopFullscreen === 'true');
-  assert.equal(await musicDialog.evaluate(e => getComputedStyle(e).display), 'none'); assert.equal(await musicDialog.evaluate(e => getComputedStyle(e, '::backdrop').display), 'none');
-  await nativeKey('ESC'); await musicDialog.waitFor(); await musicDialog.getByRole('button', { name: '完成音源设置', exact: true }).click(); check('fullscreen-hides-open-dialog-and-backdrop-and-restores-on-escape');
+  assert.equal(await musicDialog.isVisible(), true);
+  await nativeKey('ESC'); await musicDialog.waitFor({ state: 'hidden' }); assert.equal(await site.evaluate(() => document.documentElement.dataset.desktopFullscreen), 'true');
+  await nativeKey('ESC'); await site.waitForFunction(() => document.documentElement.dataset.desktopFullscreen === 'false'); check('fullscreen-keeps-dialog-interactive-and-escape-closes-dialog-before-fullscreen');
   await startWallpaper();
   const native = await app.evaluate(({ app, BrowserWindow }) => { const rq = process.getBuiltinModule('module').createRequire(app.getAppPath() + '/main.cjs'), w = BrowserWindow.getAllWindows().find(w => w.webContents.getURL().includes('/wallpaper/wallpaper.html')), helper = app.isPackaged ? rq('node:path').join(process.resourcesPath, 'native/DesktopHost.exe') : app.getAppPath() + '/native/bin/DesktopHost.exe'; return JSON.parse(rq('node:child_process').execFileSync(helper, ['probe', w.getNativeWindowHandle().readBigUInt64LE().toString(), String(process.pid)], { windowsHide: true, encoding: 'utf8' })); });
   assert.equal(native.behindIcons, true); assert.equal(native.hasFrame, false); assert.equal(native.coversMonitor, true); check('native-wallpaper-behind-icons-no-border-covers-entire-monitor', native);

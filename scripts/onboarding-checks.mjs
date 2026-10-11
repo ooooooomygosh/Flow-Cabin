@@ -1,3 +1,4 @@
+import { openRoomSettings, openMusicSettings, chooseSource } from './settings-actions.mjs';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 
@@ -93,13 +94,13 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
     check('wizard-resumes-after-close-and-skip-is-remembered');
 
     // 5. Settings hub: shortcuts route to their section.
-    await button(page, '布置小屋').click(); await hubOf(page).waitFor();
+    await openRoomSettings(page); await hubOf(page).waitFor();
     assert.equal(await page.getByRole('tab', { name: '房间与桌宠' }).getAttribute('aria-selected'), 'true');
     await button(page, '选择场景 海边慢屋').click();
     assert.equal(await page.locator('.cabin-scene').getAttribute('data-room-look'), 'seaside');
     await page.screenshot({ path: path.join(evidence, 'settings-hub-room.png'), animations: 'disabled' });
     await button(page, '回到小屋').click(); await hubOf(page).waitFor({ state: 'hidden' });
-    await button(page, '音源设置').click();
+    await openMusicSettings(page);
     await page.getByRole('dialog', { name: '音源与账户', exact: true }).waitFor();
     await page.keyboard.press('Escape');
     await page.waitForFunction(() => !document.querySelector('dialog[open]'));
@@ -118,7 +119,7 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
   } finally { await context.close(); }
 
   // 6. 沉入桌面 API says unsupported: toggle disabled, reason shown.
-  ({ context, page, failures } = await fresh(() => { window.cabinDesktop = { getDesktopModeStatus: () => ({ active: false, supported: false, reason: '当前系统不支持沉入桌面' }), enterDesktopMode() {}, exitDesktopMode() {} }; localStorage.setItem('flow-cabin-welcome-v1', 'seen'); }));
+  ({ context, page, failures } = await fresh(() => { if (location.origin === 'null') return; window.cabinDesktop = { getDesktopModeStatus: () => ({ active: false, supported: false, reason: '当前系统不支持沉入桌面' }), enterDesktopMode() {}, exitDesktopMode() {} }; localStorage.setItem('flow-cabin-welcome-v1', 'seen'); }));
   try {
     await page.goto(origin); await button(page, '设置').click(); await page.getByRole('tab', { name: '桌面' }).click();
     await hubOf(page).getByText(/当前系统不支持沉入桌面|沉入桌面需要在心流小屋桌面客户端里使用/).first().waitFor(); // #14's installDesktopApi owns window.cabinDesktop in the page
@@ -143,7 +144,7 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
   const returning = await browser.newContext();
   try {
     await returning.route('**/*', routeHandler);
-    await returning.addInitScript(() => localStorage.setItem('album-circle-focus-dock-v1', JSON.stringify({ open: false, tab: 'timer' })));
+    await returning.addInitScript(() => { if (location.origin === 'null') return; localStorage.setItem('album-circle-focus-dock-v1', JSON.stringify({ open: false, tab: 'timer' })); });
     const page = await returning.newPage(); await page.goto(origin); await page.getByRole('button', { name: '添加第一张专辑' }).waitFor();
     assert.equal(await page.getByRole('dialog').count(), 0);
     check('returning-empty-collection-is-not-interrupted');

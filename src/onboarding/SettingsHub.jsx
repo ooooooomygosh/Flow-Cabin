@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { PERFORMANCE_MODES, performanceMode, performanceLevel, setPerformanceMode, onPerformanceChange } from '../perf-profile.mjs';
 import Dialog from '../Dialog';
 import { RoomPickers } from '../RoomPersonalization';
-import { desktopCommand } from '../desktop-client';
+import { desktopCommand, useDesktopFullscreen } from '../desktop-client';
 import { Check, Music2 } from '../icons';
 import { sourceOptions, providerFor } from './onboarding-model.mjs';
 import { version } from '../../package.json';
@@ -62,6 +62,7 @@ function MusicSection({ env, player, provider, useSource, openMusicSettings }) {
     {sources.map((source) => { const p = source.provider || providerFor(source.id); return <Row key={source.id} title={source.label} hint={source.available ? status[source.id]?.detail || source.hint : source.reason}>
       {source.available && (p && p === provider ? <span className="onboarding-ok"><Check size={14}/>唱机在用</span> : <button type="button" className="pixel-button" aria-label={`唱机改用 ${source.label}`} onClick={() => useSource(p)}>在唱机上用</button>)}
     </Row>; })}
+    <label className="turntable-source">音源<select aria-label="唱机音源" value={provider} onChange={(event) => useSource(event.target.value)}><option value="visual">仅动画展示</option><option value="auto" disabled={!env.desktop}>自动匹配可播放音源</option><option value="qq" disabled={!env.desktop}>QQ 音乐 · {env.desktop ? 'Simple Music' : '桌面客户端'}</option><option value="netease" disabled={!env.desktop}>网易云 · {env.desktop ? 'Simple Music' : '桌面客户端'}</option><option value="ma" disabled={!env.desktop}>Music Assistant · {env.desktop ? '服务器播放器' : '桌面客户端'}</option><option value="local" disabled={!env.desktop}>本地音乐 · {env.desktop ? '文件夹' : '桌面客户端'}</option>{env.mac && <option value="appleMusic" disabled={!env.desktop}>系统 Apple Music · {env.desktop ? '“音乐”App' : '桌面客户端'}</option>}<option value="system" disabled={!env.desktop}>系统正在播放 · {env.desktop ? '跟随播放器' : '桌面客户端'}</option></select></label>
     {/* Reserved: player teammate's 音质 setting (标准 / 高品质 / 无损, auto-downgrade). */}
     <Row title="音质" hint={quality?.options?.length ? '播放不了时会自动降一档。' : '标准 / 高品质 / 无损 · 等播放器更新后开放'}>
       {quality?.options?.length ? <select aria-label="音质" value={quality.current || ''} onChange={async (event) => { const id = event.target.value; if (await player.setQuality(id)) setQuality({ ...quality, current: id }); }}>{quality.options.map((option) => <option key={option.id ?? option} value={option.id ?? option}>{option.label ?? option}</option>)}</select> : <select aria-label="音质" disabled><option>自动</option></select>}
@@ -77,6 +78,7 @@ function FocusSection({ focus, openDock, player }) {
   return <div className="hub-rows">
     <Row title="番茄钟" hint="预设、时长、自动开始都在专注工具的「计时设置」里。"><button type="button" className="pixel-button" onClick={() => openDock('timer')}>打开番茄钟</button></Row>
     <Row title="待办与随手记"><button type="button" className="pixel-button" onClick={() => openDock('tasks')}>待办</button><button type="button" className="pixel-button" onClick={() => openDock('notes')}>随手记</button></Row>
+    <Row title="单词与学习卡" hint="复习学习卡、管理卡组、设置考试倒计时与每日目标。"><button type="button" className="pixel-button" onClick={() => openDock('study')}>打开学习</button></Row>
     <Row title="专注统计"><button type="button" className="pixel-button" onClick={() => openDock('stats')}>查看统计</button></Row>
     <Row title="结束提醒" hint={permission === 'denied' ? '系统通知已被拒绝，可在系统设置里打开。' : permission === 'unsupported' ? '这个环境不支持系统通知。' : '专注或休息结束时弹出系统通知。'}>
       <label className="hub-toggle"><input type="checkbox" aria-label="专注结束时通知" checked={notify} disabled={permission === 'unsupported'} onChange={async (event) => { const on = event.target.checked; if (on) setPermission(await player.requestPermission('notifications')); focus.settings({ notify: on }); }}/><span>{notify ? '开' : '关'}</span></label>
@@ -92,6 +94,7 @@ function PerformanceRow() {
   </Row>;
 }
 function DesktopSection({ env, desktop, pet }) {
+  const fullscreen = useDesktopFullscreen();
   const [mode, setMode] = useState({ active: false, supported: true, reason: '' }), [busy, setBusy] = useState(false);
   useEffect(() => { let alive = true; const read = () => desktop.status().then((value) => alive && setMode(value)); read(); const off = desktop.subscribe(read); return () => { alive = false; off(); }; }, [desktop]);
   const toggle = async () => { setBusy(true); await (mode.active ? desktop.exit() : desktop.enter()); setBusy(false); setMode(await desktop.status()); };
@@ -103,7 +106,7 @@ function DesktopSection({ env, desktop, pet }) {
     <Row title="伙伴出门（桌宠）" hint={env.desktop ? '伙伴会在桌面上散步，和小屋里选的是同一位。' : '需要心流小屋桌面版。'}>
       <button type="button" className="pixel-button" disabled={!env.desktop} onClick={() => desktopCommand(pet?.active ? 'pet-stop' : 'pet-start')}>{pet?.active ? '让伙伴回家' : '伙伴出门'}</button>
     </Row>
-    {env.desktop && <Row title="全屏" hint="F11 进入，Esc 退出。"><button type="button" className="pixel-button" onClick={() => desktopCommand('fullscreen')}>进入全屏</button></Row>}
+    {env.desktop && <Row title="交互全屏" hint="独立的全屏空间，照常听歌、操作唱片和学习。可在全屏里切换正常 / 沉浸模式。F11 切换；Esc 先关闭弹窗或沉浸，再退出全屏。"><button type="button" className="pixel-button" onClick={() => desktopCommand('fullscreen')}>{fullscreen ? '退出全屏' : '进入全屏'}</button></Row>}
     {env.desktop && <Row title="显示与字体" hint="界面缩放、字体、减少动态效果。"><button type="button" className="pixel-button" onClick={() => desktopCommand('settings')}>软件设置</button></Row>}
   </div>;
 }

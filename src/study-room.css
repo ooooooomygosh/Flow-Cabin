@@ -9,6 +9,3 @@
 .cabin-scene[data-room-look=night-study] .cabin-daylight{display:none}
 .cabin-scene[data-room-look=night-study] .cabin-weather{left:22.1%;top:11.3%;width:28.8%;height:31.4%;clip-path:inset(0)}
 .cabin-night-study .room-turntable{left:2%;bottom:10%;width:clamp(180px,16vw,280px)}
-/* Native fullscreen is an uncluttered scene. Escape/F11 restore the controls. */
-html[data-desktop-fullscreen=true] :is(.app-titlebar,.cabin-toolbar,.room-now-playing,.room-shelf-navigation,.room-turntable,.focus-dock,.shelf-filters,.room-empty,.wallpaper-error,.room-cat-bubble,dialog){display:none!important}
-html[data-desktop-fullscreen=true] dialog::backdrop{display:none!important}

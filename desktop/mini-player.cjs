@@ -44,6 +44,7 @@ function createMiniPlayer({ getSite, getAnchor, registerProtocol, helperPath, on
       webPreferences: { preload: path.join(__dirname, 'mini-preload.cjs'), partition: 'album-circle-mini', sandbox: true, contextIsolation: true, nodeIntegration: false, webSecurity: true, spellcheck: false } });
     window = created;
     if (!(await created.webContents.session.protocol.isProtocolHandled('album-desktop'))) registerProtocol(created.webContents.session.protocol);
+    if (window !== created || created.isDestroyed()) return;
     created.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
     created.webContents.on('will-navigate', (event) => event.preventDefault());
     created.webContents.session.setPermissionRequestHandler((_wc, _p, callback) => callback(false));

@@ -97,3 +97,17 @@ test('mini deck player relay forwards only known actions as the cabin:player-com
   assert.equal(relayPlayerCommand(site, 'rm -rf'), false); assert.equal(relayPlayerCommand(null, 'next'), false);
   assert.equal(scripts.length, 5); assert.match(scripts[3], /new CustomEvent\('cabin:player-command', \{ detail: \{ action: "next" \} \}\)/);
 });
+
+test('exit cancels an owned pet while its start promise is pending', async () => {
+  const f = fixture(); let finish;
+  f.pet.start = () => new Promise(resolve => { f.pet.active = true; finish = resolve; });
+  const entering = f.sink.enter(); await Promise.resolve();
+  f.sink.exit(); finish(); await entering;
+  assert.equal(f.pet.active, false); assert.equal(f.sink.active, false); assert.ok(!f.calls.includes('mini.show'));
+});
+test('exit while mini is loading cannot re-activate the sink', async () => {
+  let finish; const calls = [];
+  const sink = createDesktopSink({ platform: 'darwin', wallpaper: { active: true, start: async () => {}, stop() {} }, legacy: {}, pet: { active: true }, mini: { show: () => new Promise(resolve => { finish = resolve; }), hide: () => calls.push('hide') }, hideMain() {}, restoreMain() {} });
+  const entering = sink.enter(); await Promise.resolve(); sink.exit(); finish(); await entering;
+  assert.equal(sink.active, false); assert.equal(sink.busy, false); assert.deepEqual(calls, ['hide']);
+});

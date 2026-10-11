@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import * as model from './study-model.mjs';
+import { openWordBook, nextBookCard } from './word-books.mjs';
 
 const StudyContext = createContext(null);
 const MAX_BYTES = 2_000_000;
@@ -22,6 +23,8 @@ export function StudyProvider({ userId, children }) {
   }, [key]);
   const value = {
     state, error,
+    openBook: (id) => { const next = openWordBook(current.current, id); return next === current.current ? next.decks.some(deck => deck.id === id) : commit(next); },
+    nextBookCard: (id) => { const next = nextBookCard(current.current, id); return next !== current.current && commit(next); },
     addDeck: (name) => apply((s) => model.addDeck(s, name)),
     renameDeck: (id, name) => apply((s) => model.renameDeck(s, id, name)),
     removeDeck: (id) => commit(model.removeDeck(current.current, id)),
