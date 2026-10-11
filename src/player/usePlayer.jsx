@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { QUEUE_KEY, normalizeQueue, enqueue, playNext, dequeue, pruneQueue, cycleRepeat, nextStep, previousStep } from './player-queue.mjs';
+import { QUEUE_KEY, normalizeQueue, queueAddition, dequeue, pruneQueue, cycleRepeat, nextStep, previousStep } from './player-queue.mjs';
 import { createPlaybackBroadcaster, rmsEnergy, smoothEnergy, estimatedEnergy, ENERGY_INTERVAL_MS } from './playback-signal.mjs';
 import { analyserFor } from './audio-graph.mjs';
 import { trackNames } from '../room-model.mjs';
@@ -8,8 +8,14 @@ const readQueue = () => { try { return normalizeQueue(JSON.parse(localStorage.ge
 
 // Track order, the 待播 album queue, repeat and shuffle for the cabin deck.
 export function usePlayerQueue({ items, record, trackIndex, setTrackIndex, loadAlbum, playback, provider }) {
-  const [queue, setQueueState] = useState(readQueue);
-  const setQueue = (change) => setQueueState((old) => { const next = normalizeQueue(typeof change === 'function' ? change(old) : change); try { localStorage.setItem(QUEUE_KEY, JSON.stringify(next)); } catch {} return next; });
+  const [queue, setQueueState] = useState(readQueue), [queueError, setQueueError] = useState('');
+  const currentQueue = useRef(queue);
+  const setQueue = (change) => {
+    const next = normalizeQueue(typeof change === 'function' ? change(currentQueue.current) : change);
+    try { localStorage.setItem(QUEUE_KEY, JSON.stringify(next)); } catch { setQueueError('无法保存待播，请检查存储空间后重试。'); return false; }
+    currentQueue.current = next; setQueueState(next); setQueueError(''); return true;
+  };
+  const add = (id, first = false) => { const result = queueAddition(currentQueue.current, id, first); if (result.error) { setQueueError(result.error); return false; } return setQueue(result.queue); };
   const itemsSignature = items.map((item) => item.id).join('|');
   useEffect(() => { if (items.length) setQueue((old) => pruneQueue(old, items.map((item) => item.id))); }, [itemsSignature]);
   const trackCount = trackNames(record).length, audible = provider !== 'visual' && provider !== 'system';
@@ -19,19 +25,19 @@ export function usePlayerQueue({ items, record, trackIndex, setTrackIndex, loadA
   const go = (step) => {
     if (step.type === 'track') setTrackIndex(step.index);
     else if (step.type === 'restart') { if (audible) playback?.restart(); }
-    else if (step.type === 'album') { const item = items.find((entry) => entry.id === step.id); setQueue((old) => dequeue(old, step.id)); if (item) loadAlbum(item, 0); }
+    else if (step.type === 'album') { const item = items.find((entry) => entry.id === step.id); if (!setQueue((old) => dequeue(old, step.id))) return false; if (item) loadAlbum(item, 0); }
     return step.type !== 'stop';
   };
   const api = {
-    queue,
+    queue, queueError,
     canNext: Boolean(record) && nextStep({ trackIndex, trackCount, queue, manual: true, random: () => 0 }).type !== 'stop',
     canPrevious: Boolean(record) && (trackIndex > 0 || (audible && (playback?.position || 0) > 0)),
     next: (manual = true) => record && go(manual && upcoming.type === 'restart' ? nextStep({ trackIndex, trackCount, queue, manual }) : upcoming),
     canAdvance: Boolean(record) && upcoming.type !== 'stop',
     peekNext: () => upcoming.type === 'track' ? { item: record, index: upcoming.index } : upcoming.type === 'album' ? { item: items.find((entry) => entry.id === upcoming.id), index: 0 } : null,
     previous: () => record && go(previousStep({ trackIndex, position: audible ? playback?.position || 0 : 0 })),
-    enqueue: (id) => setQueue((old) => enqueue(old, id)),
-    playNext: (id) => setQueue((old) => playNext(old, id)),
+    enqueue: (id) => add(id),
+    playNext: (id) => add(id, true),
     remove: (id) => setQueue((old) => dequeue(old, id)),
     cycleRepeat: () => setQueue((old) => cycleRepeat(old)),
     toggleShuffle: () => setQueue((old) => ({ ...old, shuffle: !old.shuffle }))

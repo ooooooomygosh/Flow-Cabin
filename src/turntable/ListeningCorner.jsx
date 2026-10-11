@@ -62,7 +62,7 @@ export default function ListeningCorner({ item, items = [], vinyl, provider, spi
   const needle = query.normalize('NFKC').toLowerCase().trim();
   const matches = items.filter(entry => !needle || `${entry.title} ${entry.artist}`.normalize('NFKC').toLowerCase().includes(needle));
   const crate = matches.slice(0, 120);
-  const queueRecord = (entry, event) => { flyRecord({ from: event.currentTarget.closest('li')?.querySelector('img, .corner-crate-blank'), to: root.current?.querySelector('.corner-crate-status'), cover: entry.cover, mode: 'queue' }); player?.enqueue(entry.id); setNotice(`《${entry.title}》已加入待播`); };
+  const queueRecord = (entry, event) => { if (!player?.enqueue(entry.id)) { setNotice(''); return; } flyRecord({ from: event.currentTarget.closest('li')?.querySelector('img, .corner-crate-blank'), to: root.current?.querySelector('.corner-crate-status'), cover: entry.cover, mode: 'queue' }); setNotice(`《${entry.title}》已加入待播`); };
   return createPortal(<section ref={root} tabIndex={-1} className={`listening-corner is-${light}`} role="dialog" aria-modal="true" aria-label="唱机特写" data-playing={String(playing)} style={{ '--corner-energy': energy }}>
     <div className="corner-backdrop" aria-hidden="true"><span className="corner-lamp"/><span className="corner-window"/><span className="corner-dust"/></div>
     <header className="corner-bar">
@@ -101,6 +101,7 @@ export default function ListeningCorner({ item, items = [], vinyl, provider, spi
     </div>
     {items.length > 0 && <nav className="corner-crate" aria-label="唱片箱">
       <div className="corner-crate-tools"><label>唱片箱<input type="search" aria-label="查找唱片箱" placeholder="唱片或歌手" value={query} onChange={event => setQuery(event.target.value)}/></label><span className="corner-crate-status" role="status">{notice || `待播 ${player?.queue.ids.length || 0} 张 · ${matches.length} 张匹配`}</span></div>
+      {player?.queueError && <p role="alert">{player.queueError}</p>}
       {!matches.length && <p>没有找到匹配唱片，换个关键词试试。</p>}
       {matches.length > 120 && <small>显示前 120 张，搜索可以查找全部 {items.length} 张。</small>}
       <ul>{crate.map((entry) => <li key={entry.id}><button type="button" className={entry.id === item?.id ? 'is-current' : ''} aria-label={`放上《${entry.title}》`} title={`${entry.title} · ${entry.artist}`} onClick={(event) => pick(entry, event)}>

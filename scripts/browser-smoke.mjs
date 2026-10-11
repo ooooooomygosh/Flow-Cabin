@@ -228,9 +228,16 @@ try {
   assert.equal(await page.locator('.corner-tracks li').count(), 1);
   const cornerLoaded = await page.locator('.room-turntable').getAttribute('data-loaded-id');
   await page.getByLabel('查找唱片箱', { exact: true }).fill('测试唱片 3'); assert.equal(await page.locator('.corner-crate li').count(), 1);
-  await page.getByRole('button', { name: '加入待播 测试唱片 3', exact: true }).click(); await page.locator('.corner-crate-status', { hasText: '《测试唱片 3》已加入待播' }).waitFor();
+  await page.evaluate(() => { window.__queueSetItem = Storage.prototype.setItem; Storage.prototype.setItem = function(key, value) { if (key === 'album-circle-player-queue-v1') throw new Error('fixture quota'); return window.__queueSetItem.call(this, key, value); }; });
+  await page.getByRole('button', { name: '加入待播 测试唱片 3', exact: true }).click();
+  await page.locator('.corner-crate [role=alert]').filter({ hasText: '无法保存待播' }).waitFor();
+  assert.equal(await page.getByRole('button', { name: '加入待播 测试唱片 3', exact: true }).isDisabled(), false);
+  assert.doesNotMatch(await page.locator('.corner-crate-status').innerText(), /已加入待播/);
+  await page.evaluate(() => { Storage.prototype.setItem = window.__queueSetItem; delete window.__queueSetItem; });
+  await page.getByRole('button', { name: '加入待播 测试唱片 3', exact: true }).evaluate(button => { button.click(); button.click(); }); await page.locator('.corner-crate-status', { hasText: '《测试唱片 3》已加入待播' }).waitFor();
   assert.equal(await page.locator('.room-turntable').getAttribute('data-loaded-id'), cornerLoaded, 'enqueue keeps the current record playing');
   assert.equal(await page.getByRole('button', { name: '加入待播 测试唱片 3', exact: true }).isDisabled(), true);
+  assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('album-circle-player-queue-v1')).ids.filter(id => id === 'fixture-2').length), 1);
   await page.getByLabel('查找唱片箱', { exact: true }).fill(''); await screenshot('listening-corner-queue');
   await page.setViewportSize({ width: 960, height: 600 }); await screenshot('listening-corner-queue-960x600');
   for (const selector of ['.corner-bar-actions', '.corner-side', '.corner-crate-tools']) { const bounds = await page.locator(selector).boundingBox(); assert(bounds.x >= 0 && bounds.x + bounds.width <= 961 && bounds.y >= 0 && bounds.y + bounds.height <= 601, `${selector} must remain inside the compact viewport`); }

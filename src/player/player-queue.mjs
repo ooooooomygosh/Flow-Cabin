@@ -11,6 +11,14 @@ export function normalizeQueue(value) {
 }
 export const enqueue = (queue, id) => normalizeQueue({ ...queue, ids: [...queue.ids.filter((entry) => entry !== id), id] });
 export const playNext = (queue, id) => normalizeQueue({ ...queue, ids: [id, ...queue.ids.filter((entry) => entry !== id)] });
+// UI additions must report a full queue instead of silently dropping a record.
+export function queueAddition(queue, id, first = false) {
+  const current = normalizeQueue(queue);
+  if (typeof id !== 'string' || !id || id.length > 80) return { error: '这张唱片无法加入待播。' };
+  if (!current.ids.includes(id) && current.ids.length >= QUEUE_LIMIT) return { error: `待播已满（${QUEUE_LIMIT} 张），请先移除一张。` };
+  return { queue: first ? playNext(current, id) : enqueue(current, id) };
+}
+
 export const dequeue = (queue, id) => normalizeQueue({ ...queue, ids: queue.ids.filter((entry) => entry !== id) });
 export const pruneQueue = (queue, existingIds) => { const set = new Set(existingIds); return normalizeQueue({ ...queue, ids: queue.ids.filter((id) => set.has(id)) }); };
 export const cycleRepeat = (queue) => normalizeQueue({ ...queue, repeat: REPEAT_MODES[(REPEAT_MODES.indexOf(queue.repeat) + 1) % REPEAT_MODES.length] });

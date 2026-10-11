@@ -176,7 +176,7 @@ export default function PlaylistLibrary({ items, close, onAdded }) {
     try {
       const { item, refreshed } = await save();
       if (action === 'save') { setNotice(refreshed ? `《${item.title}》已同步为最新的 ${item.tracks.length} 首。` : `《${item.title}》已放上唱片架，可以像专辑一样双击放盘。`); return; }
-      if (action === 'queue') { window.dispatchEvent(new CustomEvent('cabin-enqueue', { detail: { id: item.id, item } })); setNotice(`《${item.title}》已加入待播，当前唱片放完后接着放。`); return; }
+      if (action === 'queue') { const request = { id: item.id, item, accepted: false }; window.dispatchEvent(new CustomEvent('cabin-enqueue', { detail: request })); if (!request.accepted) throw new Error('未能加入待播，请检查队列容量和本地存储后重试。'); setNotice(`《${item.title}》已加入待播，当前唱片放完后接着放。`); return; }
       window.dispatchEvent(new CustomEvent('cabin-play', { detail: { id: item.id, item, track: action === 'shuffle' ? Math.floor(Math.random() * item.tracks.length) : index, shuffle: action === 'shuffle' } }));
       close();
     } catch (cause) { setError(cause.message); } finally { setBusy(false); }

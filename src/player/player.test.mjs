@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { rmsEnergy, smoothEnergy, createPlaybackBroadcaster, PLAYBACK_EVENT, estimatedEnergy } from './playback-signal.mjs';
-import { normalizeQueue, enqueue, playNext, dequeue, pruneQueue, cycleRepeat, nextStep, previousStep, QUEUE_LIMIT } from './player-queue.mjs';
+import { normalizeQueue, enqueue, playNext, dequeue, pruneQueue, cycleRepeat, nextStep, previousStep, queueAddition, QUEUE_LIMIT } from './player-queue.mjs';
 import { proceduralGrid, quantize, readPalette, nearestIndex, gridToRgba, hexToRgb, GRID, PALETTE_TOKENS } from './pixel-cover.mjs';
 import { readId3, readFlac, readTags, parseFileName, groupAlbums } from './audio-tags.mjs';
 
@@ -123,4 +123,13 @@ test('local-music responses: {} and partial albums never crash readers', async (
   assert.equal(normalizeLocalAlbum(null), null);
   const item = localAlbumItem({ id: 'a' }); assert.deepEqual(item.tracks, []); assert.deepEqual(item.trackDetails, []); assert.equal(item.title, '未命名专辑');
   assert.doesNotThrow(() => localAlbumItem(undefined));
+});
+
+
+test('queue additions reject overflow without dropping existing records and deduplicate rapid calls', () => {
+  const full = normalizeQueue({ ids: Array.from({ length: QUEUE_LIMIT }, (_, i) => `r${i}`) });
+  for (const first of [false, true]) { const result = queueAddition(full, 'extra', first); assert.match(result.error, /50/); assert.equal(result.queue, undefined); }
+  const promoted = queueAddition(full, 'r49', true).queue; assert.equal(promoted.ids[0], 'r49'); assert.equal(promoted.ids.length, 50);
+  let q = normalizeQueue(); for (let i = 0; i < 10; i++) q = queueAddition(q, 'same').queue;
+  assert.deepEqual(q.ids, ['same']); assert.equal(full.ids[0], 'r0');
 });
