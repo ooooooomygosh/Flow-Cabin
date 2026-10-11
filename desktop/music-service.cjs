@@ -44,8 +44,9 @@ function createMusicService({ directory, safeStorage, login, logout, upstream = 
     const items = values.map((value) => candidate(value, provider)).filter((v) => v.id && v.title);
     cache.set(key, { time: Date.now(), items }); if (cache.size > 64) cache.delete(cache.keys().next().value); return items;
   }
-  async function resolve(body) {
+  async function resolve(body, requestActive = () => true) {
     const currentRevision = revision;
+    const ensureCurrent = () => { if (currentRevision !== revision || !requestActive()) throw new Error('播放请求或音源设置已更改，请重新播放。'); };
     const { provider } = body; const id = String(body.id || '');
     if (provider === 'ma') {
       if (!preferences.playerId) throw new Error('请先在音源设置中选择 Music Assistant 播放器。');
@@ -59,7 +60,18 @@ function createMusicService({ directory, safeStorage, login, logout, upstream = 
     }
     if (!id || id.length > 64 || (provider === 'qq' ? !/^[a-z\d]+$/i.test(id) : !/^\d+$/.test(id))) throw new Error('曲目 ID 无效，请重新搜索选择。');
     let result;
-    if (provider === 'qq') result = await upstream.handleQQSongUrl(decode(preferences.qq), id, String(body.mediaMid || '').slice(0, 64), quality(), body.fee);
+    if (provider === 'qq') {
+      const cookie = decode(preferences.qq);
+      let mediaMid = /^[a-z\d]{14}$/i.test(String(body.mediaMid || '')) ? String(body.mediaMid) : '';
+      if (!mediaMid && upstream.getQQMediaMid) {
+        try {
+          const found = await upstream.getQQMediaMid(cookie, id);
+          if (/^[a-z\d]{14}$/i.test(found || '')) mediaMid = found;
+        } catch { /* Keep the existing song-mid filename fallback when detail lookup is unavailable. */ }
+        ensureCurrent();
+      }
+      result = await upstream.handleQQSongUrl(cookie, id, mediaMid, quality(), body.fee);
+    }
     else if (provider === 'netease') {
       const cookie = decode(preferences.netease);
       const info = upstream.getNeteaseLoginInfo ? await upstream.getNeteaseLoginInfo(cookie) : { loggedIn: false };
@@ -67,7 +79,7 @@ function createMusicService({ directory, safeStorage, login, logout, upstream = 
       result = await upstream.handleSongUrl(id, info, quality(), cookie);
     }
     else throw new Error('不支持此音乐来源。');
-    if (currentRevision !== revision) throw new Error('音源设置已更改，请重新播放。');
+    ensureCurrent();
     if (!result?.url || result.playable === false) throw new Error(result.message || '此歌曲暂时不可播放，请检查登录、会员权限或地区限制。');
     // QQ can list a CDN outside our boundary first, followed by a supported
     // mirror for the same track. Keep the boundary and select a validated URL.
@@ -138,7 +150,7 @@ function createMusicService({ directory, safeStorage, login, logout, upstream = 
         return json(res, await guarded(async () => ({ ...(await playlists.tracks(String(url.searchParams.get('provider') || ''), String(url.searchParams.get('id') || ''), { offset })), revision })));
       }
       if (req.method === 'POST' && url.pathname === '/playlist/link') return json(res, await guarded(async () => ({ ...(await playlists.link(String((await body(req)).url || ''))), revision })));
-      if (req.method === 'POST' && url.pathname === '/resolve') return json(res, await resolve(await body(req)));
+      if (req.method === 'POST' && url.pathname === '/resolve') return json(res, await resolve(await body(req), () => !res.destroyed && !req.aborted));
       if (req.method === 'GET' && url.pathname.startsWith('/audio/')) return await stream(req, res, url.pathname.slice(7));
       if (req.method === 'GET' && url.pathname === '/now-playing') return json(res, nowPlaying ? await nowPlaying.get() : { available: false, active: false });
       if (req.method === 'POST' && url.pathname === '/now-playing/control') { if (!nowPlaying) throw new Error('系统正在播放不可用。'); return json(res, await nowPlaying.control(String((await body(req)).action || ''))); }

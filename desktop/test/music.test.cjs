@@ -149,3 +149,54 @@ test('playlist continuation rejects changed account revisions and in-flight acco
   await service.logout('netease'); finish();
   const rejected = await pending; assert.equal(rejected.status, 502); assert.match((await rejected.json()).error, /更改/);
 });
+
+test('legacy QQ collection resolves missing mediaMid by exact song id without changing the collection', async t => {
+  const id = '001n4C3p1yv0FU', media = '0025nWDH4PCVfs', calls = [];
+  const legacy = { provider: 'qq', id }, before = structuredClone(legacy);
+  const { request } = await fixture(t, {
+    getQQMediaMid: async (_cookie, mid) => { calls.push(['detail', mid]); return media; },
+    handleQQSongUrl: async (_cookie, mid, mediaMid) => { calls.push(['url', mid, mediaMid]); return mediaMid === media ? { url: 'https://ws.stream.qqmusic.qq.com/legacy.mp3', playable: true } : { playable: false, message: 'No file URL' }; }
+  });
+  const response = await request('/resolve', legacy); assert.equal(response.status, 200); assert.match((await response.json()).audioPath, /^\/desktop-music\/audio\//);
+  assert.deepEqual(calls, [['detail', id], ['url', id, media]]); assert.deepEqual(legacy, before);
+});
+
+test('QQ records with a valid mediaMid skip lookup; failed lookup keeps the original filename fallback', async t => {
+  const id = '001n4C3p1yv0FU', media = '0025nWDH4PCVfs'; let lookups = 0; const seen = [];
+  const { request } = await fixture(t, {
+    getQQMediaMid: async () => { lookups++; throw new Error('offline'); },
+    handleQQSongUrl: async (_cookie, mid, mediaMid) => { seen.push([mid, mediaMid]); return { url: 'https://ws.stream.qqmusic.qq.com/fallback.mp3', playable: true }; }
+  });
+  assert.equal((await request('/resolve', { provider: 'qq', id, mediaMid: media })).status, 200); assert.equal(lookups, 0);
+  assert.equal((await request('/resolve', { provider: 'qq', id })).status, 200); assert.equal(lookups, 1);
+  assert.deepEqual(seen, [[id, media], [id, '']]);
+});
+test('QQ media recovery never converts a permission denial into playable audio', async t => {
+  let calls = 0;
+  const { request } = await fixture(t, {
+    getQQMediaMid: async () => '0025nWDH4PCVfs',
+    handleQQSongUrl: async () => { calls++; return { playable: false, message: '需要平台权限' }; }
+  });
+  const denied = await request('/resolve', { provider: 'qq', id: '001n4C3p1yv0FU' }); assert.equal(denied.status, 502); assert.match((await denied.json()).error, /平台权限/); assert.equal(calls, 1);
+});
+test('logout during legacy QQ metadata lookup prevents the later vkey request', async t => {
+  let release, entered, calls = 0; const ready = new Promise(resolve => { entered = resolve; });
+  const { service, request } = await fixture(t, {
+    getQQMediaMid: async () => { entered(); return new Promise(resolve => { release = resolve; }); },
+    handleQQSongUrl: async () => { calls++; return { playable: false }; }
+  });
+  const pending = request('/resolve', { provider: 'qq', id: '001n4C3p1yv0FU' }); await ready; await service.logout('qq'); release('0025nWDH4PCVfs');
+  assert.equal((await pending).status, 502); assert.equal(calls, 0);
+});
+test('cancelling a legacy QQ resolve prevents a late metadata lookup from requesting audio', async t => {
+  let release, entered, calls = 0; const ready = new Promise(resolve => { entered = resolve; });
+  const { service, request } = await fixture(t, {
+    getQQMediaMid: async () => { entered(); return new Promise(resolve => { release = resolve; }); },
+    handleQQSongUrl: async () => { calls++; return { playable: false }; }
+  });
+  const controller = new AbortController();
+  const pending = service.proxy(new Request('https://album-circle.vercel.app/desktop-music/resolve', { method: 'POST', body: JSON.stringify({ provider: 'qq', id: '001n4C3p1yv0FU' }), signal: controller.signal }), '/resolve', fetch);
+  await ready; controller.abort(); await assert.rejects(pending, { name: 'AbortError' });
+  await request('/config'); // Process the closed loopback connection before releasing the held lookup.
+  release('0025nWDH4PCVfs'); await new Promise(resolve => setImmediate(resolve)); assert.equal(calls, 0);
+});
