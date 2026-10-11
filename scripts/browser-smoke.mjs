@@ -51,6 +51,7 @@ try {
       if (request.method() === 'DELETE') { items = items.filter(i => i.id !== id); return json({ ok: true }); }
     }
     if (p === '/api/search') return json({ candidates: [{ ...items[0], id: 'search-result', title: '搜索找到的专辑' }] });
+    if (p === '/desktop-music/apple/permission') return json({ available: true, granted: false, needsPermission: true, error: 'Fixture: automation permission not granted' });
     if (p === '/desktop-music/config') return json({ qqLoggedIn: false, neteaseLoggedIn, maURL: '', playerId: '', quality, qualities: [{ id: 'standard', label: '标准 · 128k' }, { id: 'exhigh', label: '高品质 · 320k' }, { id: 'lossless', label: '无损 · FLAC' }] });
     if (p === '/desktop-music/quality') { quality = body.quality; return json({ qqLoggedIn: false, neteaseLoggedIn, maURL: '', playerId: '', quality }); }
     if (p === '/desktop-music/open-local') { localOpens.push(body); return json({ opened: true, app: 'QQ 音乐', via: 'web', installed: false, playingInCabin: false }); }
