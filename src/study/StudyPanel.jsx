@@ -10,7 +10,7 @@ function Review({ deck, close }) {
   const study = useStudy(), [flipped, setFlipped] = useState(false), [done, setDone] = useState(0), [now, setNow] = useState(() => Date.now());
   const queue = useMemo(() => studyQueue(study.state, deck.id, now), [study.state, deck.id, now]);
   const card = queue.cards[0], labels = useMemo(() => card ? previews(card, Date.now()) : {}, [card?.id, card?.memory?.reps]);
-  const rate = (rating) => { if (!card || !flipped) return; study.review(card.id, rating); setFlipped(false); setDone((value) => value + 1); setNow(Date.now()); };
+  const rate = (rating) => { if (!card || !flipped) return; if (!study.review(card.id, rating)) return; setFlipped(false); setDone((value) => value + 1); setNow(Date.now()); };
   const root = useRef(null);
   useEffect(() => { root.current?.focus({ preventScroll: true }); }, []);
   useEffect(() => { if (!card && queue.upcoming && queue.upcoming - Date.now() < 30 * 60000) { const timer = setTimeout(() => setNow(Date.now()), Math.max(1000, queue.upcoming - Date.now())); return () => clearTimeout(timer); } }, [card?.id, queue.upcoming]);
@@ -31,12 +31,16 @@ function Review({ deck, close }) {
       {flipped ? <div className="study-ratings" role="group" aria-label="记得怎么样">{RATINGS.map((entry) => <button type="button" key={entry.rating} className={`is-${entry.tone}`} onClick={() => rate(entry.rating)}><b>{entry.label}</b><small>{labels[entry.rating]}</small><kbd>{entry.key}</kbd></button>)}</div>
         : <button type="button" className="pixel-button is-primary study-flip" onClick={() => setFlipped(true)}>翻面 · 空格</button>}
     </> : <div className="study-done"><Check size={22}/><strong>{done ? `今天这组复习完了，共 ${done} 张` : '这组现在没有要复习的卡片'}</strong><small>{queue.upcoming ? `下一张在 ${new Date(queue.upcoming).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })} 到期` : '添加新卡片，或明天再来。'}</small><button type="button" className="pixel-button" onClick={close}>回到卡组</button></div>}
+    {study.error && <p className="record-error" role="alert">{study.error}</p>}
   </div>;
 }
 
 function DeckEditor({ deck, close }) {
-  const study = useStudy(), [input, setInput] = useState(''), [message, setMessage] = useState(''), [confirming, setConfirming] = useState(false);
+  const study = useStudy(), [input, setInput] = useState(''), [message, setMessage] = useState(''), [confirming, setConfirming] = useState(false), [query, setQuery] = useState(''), [editing, setEditing] = useState(null);
   const cards = study.state.cards.filter((card) => card.deckId === deck.id), preview = parseCards(input);
+  const needle = query.normalize('NFKC').toLowerCase().trim();
+  const visible = cards.filter(card => !needle || [card.front, card.back].some(side => side.normalize('NFKC').toLowerCase().includes(needle)));
+  const saveCard = (event) => { event.preventDefault(); if (editing?.front.trim() && study.updateCard(editing.id, { front: editing.front, back: editing.back })) { setEditing(null); setMessage('卡片已保存，复习进度保持不变。'); } };
   const add = (event) => { event.preventDefault(); const added = study.addCards(deck.id, input); setMessage(added ? `添加了 ${added} 张卡片。` : '没有新卡片（可能都已经在这组里了）。'); if (added) setInput(''); };
   return <div className="study-editor">
     <header className="study-review-head"><button type="button" className="study-back" onClick={close}><ArrowLeft size={14}/>卡组</button><span>{deck.name} · {cards.length} 张</span></header>
@@ -45,9 +49,17 @@ function DeckEditor({ deck, close }) {
       <button type="submit" className="pixel-button is-primary" disabled={!preview.length}><Plus size={14}/>{preview.length ? `添加 ${preview.length} 张` : '添加卡片'}</button>
       {message && <small role="status">{message}</small>}
     </form>
-    <ul className="study-card-list" aria-label="这组卡片">{cards.slice(-60).reverse().map((card) => <li key={card.id}><span title={card.front}>{card.front}</span><small title={card.back}>{card.back}</small><button type="button" aria-label={`删除卡片 ${card.front}`} onClick={() => study.removeCard(card.id)}><Trash2 size={13}/></button></li>)}</ul>
-    {cards.length > 60 && <small className="study-more">只显示最近 60 张</small>}
-    {confirming ? <p className="study-danger">删除「{deck.name}」和其中 {cards.length} 张卡片？<button type="button" className="pixel-button is-danger" onClick={() => { study.removeDeck(deck.id); close(); }}>确认删除</button><button type="button" className="pixel-button is-quiet" onClick={() => setConfirming(false)}>取消</button></p>
+    {cards.length > 0 && <label className="study-card-search">查找卡片<input type="search" aria-label="查找这组全部卡片" placeholder="搜索正面或背面，包含较早的卡片" value={query} onChange={event => setQuery(event.target.value)}/><small>{visible.length} / {cards.length} 张</small></label>}
+    {editing && <form className="study-card-edit" aria-label="编辑学习卡片" onSubmit={saveCard}>
+      <label>正面<textarea aria-label="编辑卡片正面" maxLength={600} value={editing.front} onChange={event => setEditing({ ...editing, front: event.target.value })}/></label>
+      <label>背面<textarea aria-label="编辑卡片背面" maxLength={600} value={editing.back} onChange={event => setEditing({ ...editing, back: event.target.value })}/></label>
+      <div><button type="submit" className="pixel-button is-primary" disabled={!editing.front.trim()}>保存卡片</button><button type="button" className="pixel-button is-quiet" onClick={() => setEditing(null)}>取消编辑</button></div>
+    </form>}
+    <ul className="study-card-list" aria-label="这组卡片">{visible.slice(-60).reverse().map((card) => <li key={card.id}><span title={card.front}>{card.front}</span><small title={card.back}>{card.back}</small><button type="button" aria-label={`编辑卡片 ${card.front}`} onClick={() => { setEditing({ id: card.id, front: card.front, back: card.back }); setMessage(''); }}>编辑</button><button type="button" aria-label={`删除卡片 ${card.front}`} onClick={() => { if (study.removeCard(card.id) && editing?.id === card.id) setEditing(null); }}><Trash2 size={13}/></button></li>)}</ul>
+    {visible.length > 60 && <small className="study-more">显示最近 60 张匹配卡片，搜索可查找这组全部 {cards.length} 张。</small>}
+    {query && !visible.length && <p role="status">没有找到匹配卡片，试试正面或背面的关键词。</p>}
+    {study.error && <p className="record-error" role="alert">{study.error}</p>}
+    {confirming ? <p className="study-danger">删除「{deck.name}」和其中 {cards.length} 张卡片？<button type="button" className="pixel-button is-danger" onClick={() => { if (study.removeDeck(deck.id)) close(); }}>确认删除</button><button type="button" className="pixel-button is-quiet" onClick={() => setConfirming(false)}>取消</button></p>
       : <button type="button" className="pixel-button is-quiet study-delete-deck" onClick={() => setConfirming(true)}><Trash2 size={13}/>删除卡组</button>}
   </div>;
 }

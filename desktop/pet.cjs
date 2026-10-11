@@ -30,7 +30,9 @@ function createPet({ directory, getSite, getFocus, status, registerProtocol, res
   const validSender = (event) => window && !window.isDestroyed() && event.sender === window.webContents && event.senderFrame === window.webContents.mainFrame && event.senderFrame.url === URL;
 
   function defaultBounds() {
-    const { width, height } = windowSize(SIZES[prefs.size]), area = screen.getPrimaryDisplay().workArea;
+    const { width, height } = windowSize(SIZES[prefs.size]);
+    const owner = getSite?.();
+    const area = (owner && !owner.isDestroyed?.() && owner.getBounds ? screen.getDisplayMatching(owner.getBounds()) : screen.getPrimaryDisplay()).workArea;
     if (Number.isFinite(prefs.x) && Number.isFinite(prefs.y)) return clampToWorkArea({ x: prefs.x, y: prefs.y, width, height });
     return { x: area.x + area.width - width - 24, y: area.y + area.height - height + 10, width, height };
   }
@@ -67,10 +69,16 @@ function createPet({ directory, getSite, getFocus, status, registerProtocol, res
   const area = () => flightArea || screen.getDisplayMatching(window.getBounds()).workArea;
   const allowWalk = () => !latest?.reduceMotion && (!latest?.focus || latest.focus.phase === 'idle') && !latest?.musicPlaying;
   function publish(next) { if (next.mode !== motion.mode || next.facing !== motion.facing) { motion = { mode: next.mode, facing: next.facing }; window?.webContents.send('pet:update', payload()); } }
+  function resetMotion(bounds) {
+    clearTimeout(loop); loop = null; lastStep = 0; flightArea = null;
+    physics.reset(bounds); publish({ mode: 'idle', facing: physics.facing });
+  }
   function tick() {
     loop = null; if (!window || window.isDestroyed()) return;
     const time = Date.now(), dt = lastStep ? (time - lastStep) / 1000 : 1 / 60; lastStep = time;
-    const bounds = window.getBounds(), next = physics.step(bounds, area(), dt, { allowWalk: allowWalk() });
+    const bounds = window.getBounds();
+    if (latest?.reduceMotion) { resetMotion(bounds); prefs = { ...prefs, x: bounds.x, y: bounds.y }; save(); return; }
+    const next = physics.step(bounds, area(), dt, { allowWalk: allowWalk() });
     if (next.x !== bounds.x || next.y !== bounds.y) window.setBounds({ ...bounds, x: next.x, y: next.y });
     publish(next);
     if (physics.moving) loop = setTimeout(tick, 16);
@@ -78,10 +86,10 @@ function createPet({ directory, getSite, getFocus, status, registerProtocol, res
   }
   const animate = () => { if (!loop && window) { lastStep = 0; loop = setTimeout(tick, 16); } };
   function wander() { if (!window || physics.moving || physics.mode === 'drag') return; physics.step(window.getBounds(), area(), 0, { allowWalk: allowWalk() }); if (physics.moving) animate(); }
-  function stop() { clearTimeout(loop); loop = null; clearInterval(idleTimer); idleTimer = null; const old = window; window = null; poller.stop(); if (old && !old.isDestroyed()) old.destroy(); announce(); }
+  function stop() { if (window && !window.isDestroyed()) resetMotion(window.getBounds()); clearTimeout(loop); loop = null; clearInterval(idleTimer); idleTimer = null; const old = window; window = null; poller.stop(); if (old && !old.isDestroyed()) old.destroy(); announce(); }
   function resize(size) {
     if (!SIZES[size]) return; prefs.size = size; save();
-    if (window) { const bounds = window.getBounds(), next = windowSize(SIZES[size]); window.setBounds(clampToWorkArea({ x: bounds.x + Math.round((bounds.width - next.width) / 2), y: bounds.y + bounds.height - next.height, ...next })); window.webContents.send('pet:update', payload()); }
+    if (window) { const bounds = window.getBounds(), next = windowSize(SIZES[size]); window.setBounds(clampToWorkArea({ x: bounds.x + Math.round((bounds.width - next.width) / 2), y: bounds.y + bounds.height - next.height, ...next })); resetMotion(window.getBounds()); window.webContents.send('pet:update', payload()); }
     announce();
   }
   function menu() {
@@ -105,13 +113,13 @@ function createPet({ directory, getSite, getFocus, status, registerProtocol, res
   });
   ipcMain.on('pet:drag-end', (event) => {
     if (!validSender(event)) return;
-    flightArea = null; const bounds = window.getBounds(); flightArea = area(); const mode = physics.release(bounds, flightArea);
+    flightArea = null; const bounds = window.getBounds(); flightArea = area(); const mode = physics.release(bounds, flightArea, { reduceMotion: Boolean(latest?.reduceMotion) });
     publish({ mode, facing: physics.facing });
     if (physics.moving) animate(); else { prefs = { ...prefs, x: bounds.x, y: bounds.y }; save(); }
   });
   ipcMain.on('pet:menu', (event) => { if (validSender(event)) menu(); });
   ipcMain.on('pet:open', (event) => { if (validSender(event)) restoreMain(); });
   ipcMain.on('pet:command', (event, command) => { if (validSender(event)) sendCompanionCommand(getSite(), command); });
-  return { start, stop, resize, get active() { return Boolean(window); }, get window() { return window; }, get size() { return prefs.size; }, reposition() { if (window) window.setBounds(clampToWorkArea(window.getBounds())); } };
+  return { start, stop, resize, get active() { return Boolean(window); }, get window() { return window; }, get size() { return prefs.size; }, reposition() { if (window) { const bounds = clampToWorkArea(window.getBounds()); resetMotion(bounds); window.setBounds(bounds); prefs = { ...prefs, x: bounds.x, y: bounds.y }; save(); } } };
 }
 module.exports = { createPet, SIZES, windowSize, clampToWorkArea };
