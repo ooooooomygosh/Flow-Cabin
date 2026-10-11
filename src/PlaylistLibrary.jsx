@@ -159,7 +159,7 @@ export default function PlaylistLibrary({ items, close, onAdded }) {
   };
   const [accountEpoch, setAccountEpoch] = useState(0);
   useEffect(() => () => { generation.current++; moreRequest.current?.abort(); }, []);
-  const choose = (next) => { cancelMore(); setTab(next); setDetail(null); setError(''); setNotice(''); setBusyId(''); try { localStorage.setItem('album-circle-playlist-tab-v1', next); } catch {} };
+  const choose = (next) => { if (next === tab) return; cancelMore(); setTab(next); setDetail(null); setError(''); setNotice(''); setBusyId(''); try { localStorage.setItem('album-circle-playlist-tab-v1', next); } catch {} };
   const listProvider = tab === 'apple' ? 'apple-local' : tab;
   const loggedIn = tab === 'netease' ? config?.neteaseLoggedIn : tab === 'qq' ? config?.qqLoggedIn : false;
   const refreshConfig = async () => { try { setConfig(await musicRequest('/config')); } catch (cause) { setConfig({}); setError(cause.message); } };
