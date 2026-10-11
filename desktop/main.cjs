@@ -9,6 +9,7 @@ const { createSiteRouter } = require('./site-router.cjs');
 const { DEFAULT_SETTINGS, normalizeSettings, appearanceScript, listSystemFonts } = require('./settings.cjs');
 const { registerShellProtocol } = require('./shell-protocol.cjs');
 const { createWallpaper } = require('./wallpaper.cjs');
+const { createFullscreen } = require('./fullscreen.cjs');
 const { createDesktopMode } = require('./desktop-mode.cjs');
 const { createDesktopSink, migrateDesktopPreferences } = require('./desktop-sink.cjs');
 const { createMiniPlayer } = require('./mini-player.cjs');
@@ -139,22 +140,15 @@ async function saveAppearance(value) {
   return { settings: appearance, display: currentDisplay() };
 }
 
-// macOS uses simple fullscreen: instant, in the same Space, no slide animation —
-// better for a cabin left running on a screen. Windows keeps real fullscreen.
-function isFullscreen() { return Boolean(mainWindow && !mainWindow.isDestroyed() && (mainWindow.isFullScreen() || (process.platform === 'darwin' && mainWindow.isSimpleFullScreen()))); }
-function setFullscreen(on) {
-  if (!mainWindow || mainWindow.isDestroyed()) return;
-  if (on && desktopSink?.active) desktopSink.exit();
-  // Leaving: undo whichever kind is active (the green button enters native fullscreen).
-  if (!on) { if (mainWindow.isFullScreen()) mainWindow.setFullScreen(false); if (process.platform === 'darwin' && mainWindow.isSimpleFullScreen()) { mainWindow.setSimpleFullScreen(false); syncFullscreen(false); } return; }
-  if (process.platform === 'darwin') {
-    try { mainWindow.setSimpleFullScreen(true); syncFullscreen(true); return; } catch { /* fall back to native fullscreen */ }
-  }
-  mainWindow.setFullScreen(true);
-}
-const toggleFullscreen = () => setFullscreen(!isFullscreen());
+// Window state and the renderer's immersive state are independent.
+let fullscreenController;
+function isFullscreen() { return Boolean(fullscreenController?.active); }
+function setFullscreen(on) { fullscreenController?.set(on); }
+const toggleFullscreen = () => fullscreenController?.toggle();
 function syncFullscreen(fullscreen = isFullscreen()) {
   if (!mainWindow || mainWindow.isDestroyed()) return;
+  const menuItem = Menu.getApplicationMenu()?.getMenuItemById('cabin-fullscreen');
+  if (menuItem) menuItem.checked = fullscreen;
   // A fullscreen cabin is a screen to look at: keep the display awake meanwhile.
   if (fullscreen && awakeBlocker === null) awakeBlocker = powerSaveBlocker.start('prevent-display-sleep');
   else if (!fullscreen && awakeBlocker !== null) { powerSaveBlocker.stop(awakeBlocker); awakeBlocker = null; }
@@ -215,9 +209,9 @@ function openExternal(url) {
   }));
 }
 
-function exitFullscreenOnEscape(event, input) {
-  if (input.type === 'keyDown' && input.key === 'F11') { event.preventDefault(); toggleFullscreen(); return true; }
-  if (input.type === 'keyDown' && input.key === 'Escape' && isFullscreen()) {
+function exitFullscreenOnEscape(event, input, renderer = false) {
+  if (input.type === 'keyDown' && input.key === 'F11') { event.preventDefault(); if (!input.isAutoRepeat) toggleFullscreen(); return true; }
+  if (input.type === 'keyDown' && input.key === 'Escape' && !renderer && !settingsOpen && isFullscreen()) {
     event.preventDefault();
     setFullscreen(false);
     return true;
@@ -300,7 +294,7 @@ async function wireRemoteView() {
     writeLog('renderer-exited', details.reason);
   });
   contents.on('before-input-event', (event, input) => {
-    if (exitFullscreenOnEscape(event, input)) return;
+    if (exitFullscreenOnEscape(event, input, true)) return;
     if (input.type !== 'keyDown') return;
     if ((input.control || input.meta) && input.key.toLowerCase() === 'r') { event.preventDefault(); navigate(); }
     if (input.alt && input.key === 'ArrowLeft' && contents.navigationHistory.canGoBack()) { event.preventDefault(); contents.navigationHistory.goBack(); }
@@ -450,7 +444,7 @@ function createMenus() {
       { label: '放大', accelerator: 'CmdOrCtrl+Plus', click: () => saveAppearance({ ...appearance, zoom: appearance.zoom + 5 }).catch(() => {}) },
       { label: '缩小', accelerator: 'CmdOrCtrl+-', click: () => saveAppearance({ ...appearance, zoom: appearance.zoom - 5 }).catch(() => {}) },
       { label: '实际大小', accelerator: 'CmdOrCtrl+0', click: () => saveAppearance({ ...appearance, zoom: 100 }).catch(() => {}) },
-      { label: '全屏', accelerator: 'F11', click: toggleFullscreen },
+      { id: 'cabin-fullscreen', type: 'checkbox', checked: isFullscreen(), label: '交互全屏', accelerator: 'F11', click: toggleFullscreen },
       { label: '沉入桌面', accelerator: SINK_HOTKEY, registerAccelerator: false, click: () => desktopSink.toggle() }
     ]},
     { label: '帮助', submenu: [
@@ -517,9 +511,7 @@ async function createWindow() {
   mainWindow.webContents.on('will-navigate', (event) => event.preventDefault());
   mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   mainWindow.webContents.on('before-input-event', exitFullscreenOnEscape);
-  // Electron may emit the transition event before isFullScreen() changes.
-  mainWindow.on('enter-full-screen', () => syncFullscreen(true));
-  mainWindow.on('leave-full-screen', () => syncFullscreen(false));
+  fullscreenController = createFullscreen({ window: mainWindow, getSink: () => desktopSink, onChange: syncFullscreen });
   // Non-throttled child views retain Page Visibility/focus on host hide. Forward
   // standard DOM focus lifecycle for visual consumers; timers/audio stay live.
   // This exposes no new IPC channel or renderer method.
@@ -577,7 +569,7 @@ else {
     pet = createPet({ directory: app.getPath('userData'), getSite: () => siteView?.webContents, status: petStatus, registerProtocol: registerShellProtocol, restoreMain: restoreMainWindow, log: writeLog });
     miniPlayer = createMiniPlayer({ getSite: () => siteView?.webContents, getAnchor: () => mainWindow?.getBounds(), registerProtocol: registerShellProtocol, helperPath: desktopHelperPath(), onExit: () => desktopSink.exit(), log: writeLog });
     desktopSink = createDesktopSink({ wallpaper, legacy: desktopMode, pet, mini: miniPlayer, log: writeLog,
-      hideMain: () => { if (mainWindow && !mainWindow.isDestroyed()) { if (isFullscreen()) setFullscreen(false); mainWindow.hide(); } },
+      hideMain: () => { if (mainWindow && !mainWindow.isDestroyed()) { setFullscreen(false); mainWindow.hide(); } },
       restoreMain: restoreMainWindow,
       setLowPower: (on) => wallpaper.setFrameRate(on ? 10 : 30),
       onChange: (state) => { refreshTray(); notifySinkStatus(state); } });

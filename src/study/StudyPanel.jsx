@@ -3,16 +3,18 @@ import { useStudy } from './useStudy';
 import { RATINGS, studyQueue, previews, daysUntil, cardStage, parseCards } from './study-model.mjs';
 import { Plus, Trash2, ArrowLeft, Check, BookOpen, Clock } from '../icons';
 import './study.css';
+import { WORD_BOOKS, previewWordImport } from './word-books.mjs';
 
 // 学习: today's review in a deck (Space flips, 1–4 rates), a quick way to add
 // or paste many cards, and the countdowns that keep the goal in view.
 function Review({ deck, close }) {
   const study = useStudy(), [flipped, setFlipped] = useState(false), [done, setDone] = useState(0), [now, setNow] = useState(() => Date.now());
   const queue = useMemo(() => studyQueue(study.state, deck.id, now), [study.state, deck.id, now]);
+  useEffect(() => { if (!queue.cards.length) study.nextBookCard(deck.id); }, [study.state, deck.id, queue.cards.length]);
   const card = queue.cards[0], labels = useMemo(() => card ? previews(card, Date.now()) : {}, [card?.id, card?.memory?.reps]);
   const rate = (rating) => { if (!card || !flipped) return; if (!study.review(card.id, rating)) return; setFlipped(false); setDone((value) => value + 1); setNow(Date.now()); };
   const root = useRef(null);
-  useEffect(() => { root.current?.focus({ preventScroll: true }); }, []);
+  useEffect(() => { root.current?.focus({ preventScroll: true }); }, [card?.id]);
   useEffect(() => { if (!card && queue.upcoming && queue.upcoming - Date.now() < 30 * 60000) { const timer = setTimeout(() => setNow(Date.now()), Math.max(1000, queue.upcoming - Date.now())); return () => clearTimeout(timer); } }, [card?.id, queue.upcoming]);
   const key = (event) => {
     if (event.target.closest('input,textarea') || (event.target !== event.currentTarget && event.target.closest('button') && (event.key === ' ' || event.key === 'Enter'))) return; // a focused button does its own thing
@@ -44,6 +46,7 @@ function DeckEditor({ deck, close }) {
   const add = (event) => { event.preventDefault(); const added = study.addCards(deck.id, input); setMessage(added ? `添加了 ${added} 张卡片。` : '没有新卡片（可能都已经在这组里了）。'); if (added) setInput(''); };
   return <div className="study-editor">
     <header className="study-review-head"><button type="button" className="study-back" onClick={close}><ArrowLeft size={14}/>卡组</button><span>{deck.name} · {cards.length} 张</span></header>
+    <WordImport deck={deck} cards={cards}/>
     <form onSubmit={add} className="study-add">
       <label>每行一张：<span className="study-sample">正面 - 背面</span>，也可以粘贴 Anki / Excel 导出的两列文本<textarea rows={5} aria-label="新卡片" value={input} onChange={(event) => setInput(event.target.value)} placeholder={'ephemeral - 短暂的\n光合作用：植物利用光能把二氧化碳和水合成有机物'}/></label>
       <button type="submit" className="pixel-button is-primary" disabled={!preview.length}><Plus size={14}/>{preview.length ? `添加 ${preview.length} 张` : '添加卡片'}</button>
@@ -64,6 +67,28 @@ function DeckEditor({ deck, close }) {
   </div>;
 }
 
+function WordImport({ deck, cards }) {
+  const study = useStudy(), [text, setText] = useState(''), [format, setFormat] = useState('tsv'), [frontColumn, setFrontColumn] = useState(0), [backColumn, setBackColumn] = useState(1), [header, setHeader] = useState(false), [message, setMessage] = useState('');
+  const preview = previewWordImport(text, { format, frontColumn, backColumn, header }, cards);
+  const read = async event => {
+    const file = event.target.files?.[0]; if (!file) return;
+    event.target.value = '';
+    if (file.size > 500000) { setMessage('文件不能超过 500 KB，请拆分后导入。'); return; }
+    try { setText(await file.text()); setFormat(file.name.endsWith('.json') ? 'json' : 'tsv'); setMessage(''); } catch { setMessage('无法读取文件，请重试。'); }
+  };
+  return <details className="study-import"><summary>导入本地词书</summary>
+    <p>支持 UTF-8 的 TSV / Anki 两列纯文本，或 front、back 字段的 JSON 数组。追加词条，不覆盖已有复习进度。</p>
+    <label>选择词书文件<input aria-label="选择词书文件" type="file" accept=".tsv,.txt,.json" onChange={read}/></label>
+    <a download="小屋词书模板.tsv" href={'data:text/tab-separated-values;charset=utf-8,' + encodeURIComponent('word\tmeaning\nwindow\t窗户\n')}>下载两列模板</a>
+    {text && <><label>格式<select aria-label="词书导入格式" value={format} onChange={event => setFormat(event.target.value)}><option value="tsv">Tab 分隔文本</option><option value="json">JSON 数组</option></select></label>
+      {format === 'tsv' && <div className="study-import-columns">{[['正面列', frontColumn, setFrontColumn], ['背面列', backColumn, setBackColumn]].map(([label, value, update]) => <label key={label}>{label}<select aria-label={label} value={value} onChange={event => update(Number(event.target.value))}>{[0,1,2,3].map(index => <option key={index} value={index}>第 {index+1} 列</option>)}</select></label>)}<label><input type="checkbox" checked={header} onChange={event => setHeader(event.target.checked)}/>首行为标题</label></div>}
+      <p role="status">有效 {preview.cards.length} · 重复 {preview.duplicates} · 错误 {preview.errors}{preview.message && ` · ${preview.message}`}</p>
+      <ul className="study-import-preview">{preview.cards.slice(0,5).map(card => <li key={card.front}><b>{card.front}</b><span>{card.back}</span></li>)}</ul>
+      <button type="button" className="pixel-button" disabled={!preview.cards.length} onClick={() => { const added = study.addCards(deck.id, preview.cards); setMessage(`已追加 ${added} 张卡片；旧进度保持不变。`); if (added) setText(''); }}>确认追加 {preview.cards.length} 张</button></>}
+    {message && <p role="status">{message}</p>}
+  </details>;
+}
+
 function Countdowns() {
   const study = useStudy(), [title, setTitle] = useState(''), [date, setDate] = useState('');
   const list = study.state.countdowns.map((entry) => ({ ...entry, days: daysUntil(entry.date) }));
@@ -79,18 +104,26 @@ function Countdowns() {
 }
 
 export default function StudyPanel() {
-  const study = useStudy(), [view, setView] = useState({ mode: 'decks', deckId: '' }), [name, setName] = useState('');
+  const study = useStudy(), [view, setView] = useState({ mode: 'decks', deckId: '' }), [name, setName] = useState(''), [bookId, setBookId] = useState(WORD_BOOKS[0].id);
   if (!study) return null;
   const deck = study.state.decks.find((entry) => entry.id === view.deckId);
   if (view.mode === 'review' && deck) return <Review deck={deck} close={() => setView({ mode: 'decks' })}/>;
   if (view.mode === 'edit' && deck) return <DeckEditor deck={deck} close={() => setView({ mode: 'decks' })}/>;
+  const selectedBook = WORD_BOOKS.find(book => book.id === bookId);
   const totals = studyQueue(study.state, '', Date.now());
   return <div className="study-panel">
     <p className="study-summary"><BookOpen size={15}/>{totals.total ? <>今天要复习 <b>{totals.due}</b> 张 · 新卡 <b>{totals.fresh}</b> 张</> : '用闪卡记单词、公式和概念：按遗忘曲线安排复习（FSRS 算法）。'}</p>
+    <section className="study-books" aria-label="小屋词书架">
+      <label>选一本词书<select aria-label="入门词书" value={bookId} onChange={event => setBookId(event.target.value)}>{WORD_BOOKS.map(book => <option key={book.id} value={book.id}>{book.name} · {book.words.length} 词</option>)}</select></label>
+      <p>{selectedBook.description}<small>{selectedBook.source}</small></p>
+      <details><summary>预览 {selectedBook.words.length} 个词</summary><ul>{selectedBook.words.map(word => <li key={word.front}><b>{word.front}</b><span>{word.back}</span></li>)}</ul></details>
+      <div className="study-book-start"><label>每天新词<select aria-label="词书每日新词" value={[5,10,20].includes(study.state.newPerDay) ? study.state.newPerDay : 'custom'} onChange={event => study.setNewPerDay(Number(event.target.value))}><option value="5">5 个</option><option value="10">10 个</option><option value="20">20 个</option>{![5,10,20].includes(study.state.newPerDay) && <option value="custom">当前 {study.state.newPerDay} 个</option>}</select></label><button type="button" className="pixel-button is-primary" onClick={() => { if (study.openBook(bookId)) setView({ mode: 'review', deckId: bookId }); }}>开始学习 / 复习</button></div>
+    </section>
+    <details className="study-guide"><summary>怎么使用词书与复习？</summary><ol><li>选书并预览，设置每天新词数，再开始学习。已有卡组也可以直接打开。</li><li>先回忆，再按空格揭示答案。到期的旧词优先，新词遵守每日总额度。</li><li>忘记选「忘了」；费力想起选「模糊」；正常想起选「记得」；非常熟悉选「简单」。按钮下方显示下一次复习时间。</li><li>按 1–4 评分，Esc 返回词书架。切换词书保留已学进度。每天回来复习到期词。</li><li>新建卡组后可导入自己有权使用的 TSV、JSON 或 Anki 两列纯文本；不支持 .apkg 或导入第三方调度历史。</li></ol><p>当前采用开源 ts-fsrs（MIT）安排复习；内置 3 本小屋原创主题书，每本 6 词。更多内容可自行导入。</p></details>
     {study.state.decks.length > 0 && <ul className="study-decks">{study.state.decks.map((entry) => {
       const queue = studyQueue(study.state, entry.id, Date.now());
       return <li key={entry.id}>
-        <button type="button" className="study-deck-open" onClick={() => setView({ mode: queue.cards.length ? 'review' : 'edit', deckId: entry.id })}><strong>{entry.name}</strong><small>{queue.total} 张{queue.cards.length ? ` · 待复习 ${queue.due} · 新 ${queue.fresh}` : ' · 已完成'}</small></button>
+        <button type="button" className="study-deck-open" onClick={() => setView({ mode: queue.cards.length || WORD_BOOKS.some(book => book.id === entry.id) ? 'review' : 'edit', deckId: entry.id })}><strong>{entry.name}</strong><small>{queue.total} 张{queue.cards.length ? ` · 待复习 ${queue.due} · 新 ${queue.fresh}` : ' · 已完成'}</small></button>
         {queue.cards.length > 0 && <span className="study-deck-badge" aria-label={`待复习 ${queue.cards.length} 张`}>{queue.cards.length}</span>}
         <button type="button" className="study-deck-edit" onClick={() => setView({ mode: 'edit', deckId: entry.id })}>编辑</button>
       </li>;

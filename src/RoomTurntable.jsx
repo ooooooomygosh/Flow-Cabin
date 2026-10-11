@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { VinylDisc } from './RecordLibrary';
 import SceneDeck from './scene/SceneDeck';
 import { ChevronLeft, ChevronRight, Disc3, Pause, Play, X, Plus, Eye } from './icons';
 import { ROOM_DRAG_TYPE } from './RoomScene';
@@ -13,7 +14,7 @@ export default function RoomTurntable({ item, spinning, trackIndex = 0, style, i
   const [dragging, setDragging] = useState(false), names = trackNames(item), deckAnchor = useRef(null);
   const placement = useTurntablePosition(readOnly);
   const trackName = actualTrack || playback?.actualTrack || names[trackIndex] || (item ? '原始资料暂无曲目' : '双击封面，或将唱片拖到这里');
-  return <aside ref={placement.ref} style={placement.style} data-moving={String(placement.moving)} className={`room-turntable ${spinning ? 'is-spinning' : ''} ${dragging ? 'is-drop-target' : ''}`} aria-label="黑胶唱机" data-loaded-id={item?.id || ''} data-spinning={String(Boolean(spinning))} onDragOver={(event) => { if (!readOnly && event.dataTransfer.types.includes(ROOM_DRAG_TYPE)) { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; setDragging(true); } }} onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setDragging(false); }} onDrop={(event) => {
+  return <aside ref={placement.ref} style={placement.style} data-moving={String(placement.moving)} className={`room-turntable ${spinning ? 'is-spinning' : ''} ${dragging ? 'is-drop-target' : ''}`} aria-label="黑胶唱机" data-provider={provider} data-loaded-id={item?.id || ''} data-spinning={String(Boolean(spinning))} onDragOver={(event) => { if (!readOnly && event.dataTransfer.types.includes(ROOM_DRAG_TYPE)) { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; setDragging(true); } }} onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setDragging(false); }} onDrop={(event) => {
     event.preventDefault(); setDragging(false);
     const found = items.find((candidate) => candidate.id === event.dataTransfer.getData(ROOM_DRAG_TYPE)); if (found && !readOnly) load?.(found);
   }}>
@@ -25,10 +26,13 @@ export default function RoomTurntable({ item, spinning, trackIndex = 0, style, i
     <div className="turntable-side-cabinet">
       <span className="cabinet-side-face" aria-hidden="true"/><span className="cabinet-leg cabinet-leg-left" aria-hidden="true"/><span className="cabinet-leg cabinet-leg-right" aria-hidden="true"/>
       <div className="turntable-console">
-    <div className="turntable-heading">{readOnly ? <span><Disc3 size={15}/>木屋唱机</span> : <button type="button" className="turntable-drag-handle" aria-label="移动唱机" title="拖动移动唱机 · 方向键微调 · 双击或 Home 复位" {...placement.handle}><Disc3 size={15}/>木屋唱机 ⠿</button>}{!readOnly && <button type="button" className="turntable-closeup" aria-label="唱机特写" title="唱机特写 · T" onClick={() => window.dispatchEvent(new Event('cabin-open-corner'))}><Eye size={14}/></button>}<small>{{ visual: 'VISUAL EDITION', ma: 'MUSIC ASSISTANT', appleMusic: 'APPLE MUSIC', local: 'LOCAL FILES', system: 'NOW PLAYING' }[provider] || 'SIMPLE MUSIC'}</small></div>
+    <div className="turntable-heading">{readOnly ? <span><Disc3 size={15}/>木屋唱机</span> : <button type="button" className="turntable-drag-handle" aria-label="移动唱机" title="拖动移动唱机 · 方向键微调 · 双击或 Home 复位" {...placement.handle}><Disc3 size={15}/>木屋唱机 ⠿</button>}{!readOnly && <button type="button" className="turntable-closeup" aria-label="唱机特写" title="唱机特写 · T" onClick={() => window.dispatchEvent(new Event('cabin-open-corner'))}><Eye size={14}/></button>}<small>{{ visual: '仅展示', ma: '家庭播放器', appleMusic: 'Apple Music', local: '本地音乐', system: '系统播放', qq: 'QQ 音乐', netease: '网易云音乐' }[provider] || '自动匹配'}</small></div>
     {!readOnly && tools}
     {!readOnly && playback && <audio ref={playback.audio} {...playback.events} preload="metadata"/>}
-    {!readOnly && <label className="turntable-source">音源<select aria-label="唱机音源" value={provider} onChange={(event) => setProvider?.(event.target.value)}><option value="visual">仅动画展示</option><option value="auto" disabled={!desktopClient}>自动匹配可播放音源</option><option value="qq" disabled={!desktopClient}>QQ 音乐 · {desktopClient ? 'Simple Music' : '桌面客户端'}</option><option value="netease" disabled={!desktopClient}>网易云 · {desktopClient ? 'Simple Music' : '桌面客户端'}</option><option value="ma" disabled={!desktopClient}>Music Assistant · {desktopClient ? '服务器播放器' : '桌面客户端'}</option><option value="local" disabled={!desktopClient}>本地音乐 · {desktopClient ? '文件夹' : '桌面客户端'}</option>{isMacClient() && <option value="appleMusic" disabled={!desktopClient}>系统 Apple Music · {desktopClient ? '“音乐”App' : '桌面客户端'}</option>}<option value="system" disabled={!desktopClient}>系统正在播放 · {desktopClient ? '跟随播放器' : '桌面客户端'}</option></select></label>}
+    <button type="button" className="turntable-record-art" aria-label="打开黑胶与专辑特写" disabled={readOnly} onClick={() => window.dispatchEvent(new Event('cabin-open-corner'))}>
+      <span className="turntable-sleeve">{item?.cover ? <img src={item.cover} alt="" referrerPolicy="no-referrer"/> : <Disc3 size={32}/>}</span>
+      <VinylDisc item={item || undefined} value={style} className={spinning ? 'is-spinning' : ''}/><span className="turntable-needle" aria-hidden="true"/>
+    </button>
     <div className="turntable-copy"><strong title={item?.title}>{item?.title || '让收藏转起来'}</strong><span className="turntable-artist">{item?.type === 'playlist' ? `${trackArtist(item, trackIndex) || '歌单'} · 歌单` : item?.artist || '专辑库原始封面与曲目'}</span><p className="turntable-track" title={trackName}>{item && names.length ? `${String(trackIndex + 1).padStart(2, '0')} · ` : ''}{trackName}</p><small className="turntable-status" role="status">{statusText || (provider === 'system' ? system?.statusText : provider === 'visual' ? (item ? spinning ? '展示中 · 无音频' : '旋转已暂停 · 无音频' : '等待放盘 · 无音频') : playback?.statusText)}</small></div>
     {!readOnly && provider === 'system' && system && <div className="turntable-controls turntable-system-controls">
       <button type="button" aria-label="系统播放器上一首" disabled={!system.active} onClick={() => system.control('previous')}><ChevronLeft size={18}/></button>

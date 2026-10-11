@@ -872,7 +872,7 @@ export async function getQQLoginInfo(cookie: string): Promise<QQLoginInfo> {
     const body = rec(parseJSONText(text))
     const info = normalizeQQProfile(cookie, body, cookieObj)
     if (body && (body.code === 1000 || body.result === 301)) {
-      return { ...fallback, profileUnavailable: true }
+      return { ...fallback, loggedIn: false, profileUnavailable: true }
     }
     return info
   } catch (e) {
@@ -913,14 +913,36 @@ export async function handleQQUserPlaylists(cookie: string): Promise<Record<stri
     { headers: { Referer: 'https://y.qq.com/portal/profile.html' } }
   )
   const [createdRaw, collectRaw] = await Promise.allSettled([createdReq, collectReq])
-  const created =
-    createdRaw.status === 'fulfilled' && Array.isArray(rec(rec(createdRaw.value).data).disslist)
-      ? (rec(rec(createdRaw.value).data).disslist as unknown[]).map((pl) => mapQQPlaylist(pl, 'created'))
-      : []
-  const collected =
-    collectRaw.status === 'fulfilled' && Array.isArray(rec(rec(collectRaw.value).data).cdlist)
-      ? (rec(rec(collectRaw.value).data).cdlist as unknown[]).map((pl) => mapQQPlaylist(pl, 'collect'))
-      : []
+  // Keep confirmed categories usable, but never label failed categories as empty.
+  const warnings: string[] = []
+  let confirmed = 0
+  const readList = (result: PromiseSettledResult<unknown>, key: string, label: string): unknown[] => {
+    const body = result.status === 'fulfilled' ? rec(result.value) : {}, data = rec(body.data)
+    if (result.status !== 'fulfilled' ||
+        (body.code != null && Number(body.code) !== 0) ||
+        (body.result != null && Number(body.result) !== 0) || !Array.isArray(data[key])) {
+      warnings.push(`${label}未能读取`)
+      return []
+    }
+    confirmed++
+    return data[key] as unknown[]
+  }
+  const created = readList(createdRaw, 'disslist', '自建歌单').map((pl) => mapQQPlaylist(pl, 'created'))
+  const collected = readList(collectRaw, 'cdlist', '收藏歌单').map((pl) => mapQQPlaylist(pl, 'collect'))
+  // The created-list endpoint does not always include dirid 201. Resolve the
+  // same account's liked list explicitly; do not fabricate an empty favourite.
+  if (!created.concat(collected).some(pl => pl.id === QQ_LIKED_PLAYLIST_ID)) {
+    try {
+      const liked = await handleQQLikedPlaylist(cookie)
+      if (liked.loggedIn !== true || !liked.playlist) return { loggedIn: false, provider: 'qq', playlists: [] }
+      created.unshift({ ...rec(liked.playlist), kind: 'liked' } as unknown as QQPlaylist)
+      confirmed++
+    } catch (error) {
+      if (qqAuthErrorStatus(error)) return { loggedIn: false, provider: 'qq', playlists: [] }
+      warnings.push('我喜欢的音乐未能读取')
+    }
+  }
+  if (!confirmed) throw new Error('QQ 音乐歌单读取失败，请重试或重新登录。')
   const seen = new Set<string>()
   const playlists = created
     .concat(collected)
@@ -931,7 +953,7 @@ export async function handleQQUserPlaylists(cookie: string): Promise<Record<stri
       return true
     })
     .sort((a, b) => Number(b.id === QQ_LIKED_PLAYLIST_ID) - Number(a.id === QQ_LIKED_PLAYLIST_ID))
-  return { loggedIn: true, provider: 'qq', userId: uin, playlists }
+  return { loggedIn: true, provider: 'qq', userId: uin, playlists, warning: warnings.length ? `${warnings.join('；')}。已读取的歌单保留，请刷新重试。` : '' }
 }
 
 export async function handleQQRadarSong(cookie: string): Promise<Record<string, unknown>> {
@@ -1116,6 +1138,7 @@ async function fetchQQDissPage(
     )
   )
   const block = rec(json.playlist)
+  if (json.code != null && Number(json.code) !== 0) throw new Error('QQ_PLAYLIST_DETAIL_FAILED')
   if (!json.playlist || Number(block.code || 0) !== 0) {
     const code = Number(block.code || block.result || 0)
     const message = str(block.message || block.msg)
@@ -1131,6 +1154,7 @@ async function fetchQQDissPage(
     throw new Error(message || 'QQ_PLAYLIST_DETAIL_FAILED')
   }
   const data = rec(block.data)
+  if (!Array.isArray(data.songlist) || !data.dirinfo || typeof data.dirinfo !== 'object' || Array.isArray(data.dirinfo)) throw new Error('QQ_PLAYLIST_DETAIL_INVALID')
   return { data, detail: rec(data.dirinfo), rawTracks: arr(data.songlist) }
 }
 
@@ -1266,6 +1290,11 @@ export async function handleQQLikedPlaylist(cookie: string): Promise<Record<stri
     return { loggedIn: false, provider: 'qq', playlist: null }
   }
   const result = await fetchQQDissPage(cookie, { kind: 'liked', id: '201' }, 0, 1)
+  const identity = result.detail.dirid ?? result.detail.dirId
+  const title = str(result.detail.title || result.detail.name || result.detail.dissname || result.detail.diss_name).trim()
+  if ((identity != null && String(identity) !== '201') || (!title && String(identity ?? '') !== '201')) {
+    throw new Error('QQ_LIKED_PLAYLIST_IDENTITY_INVALID')
+  }
   const tracks = result.rawTracks
     .map(mapQQPlaylistTrack)
     .filter((track) => track.name && track.mid)

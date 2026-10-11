@@ -21,10 +21,10 @@
 @keyframes bubble-pop{from{scale:.7;opacity:0}to{scale:1;opacity:1}}
 
 /* Zen mode keeps only the room, the cat, the timer badge and an exit. */
-.room-zen .app-titlebar,.room-zen .cabin-room .room-now-playing,.room-zen .room-shelf-navigation,.room-zen .cabin-room .cabin-toolbar>:not(.zen-keep),.room-zen .shelf-filters{display:none!important}
-.room-zen .cabin-room .cabin-toolbar{top:14px;left:auto;right:16px;background:#27180d99}
-.room-zen .room-cat,.wallpaper-room .room-cat{bottom:28px}
-.room-zen .room-turntable{opacity:.08;transition:opacity .3s}.room-zen .room-turntable:hover,.room-zen .room-turntable:focus-within{opacity:1}
+.room-zen:not(.room-zen-tools) .app-titlebar,.room-zen:not(.room-zen-tools) .cabin-room .room-now-playing,.room-zen:not(.room-zen-tools) .room-shelf-navigation,.room-zen:not(.room-zen-tools) .cabin-room .cabin-toolbar>:not(.zen-keep),.room-zen:not(.room-zen-tools) .shelf-filters{display:none!important}
+.room-zen:not(.room-zen-tools) .cabin-room .cabin-toolbar{top:14px;left:auto;right:16px;background:#27180d99}
+.room-zen:not(.room-zen-tools) .room-cat,.wallpaper-room .room-cat{bottom:28px}
+.room-zen:not(.room-zen-tools) .room-turntable{opacity:.08;transition:opacity .3s}.room-zen:not(.room-zen-tools) .room-turntable:hover,.room-zen:not(.room-zen-tools) .room-turntable:focus-within{opacity:1}
 /* The focus dock covers the shelf buttons; the wheel and arrow keys still page. */
 .room-focus-open .room-shelf-navigation{display:none}
 .cabin-toolbar-group{display:flex;gap:8px;align-items:center}
@@ -48,3 +48,16 @@
 .cabin-scene[data-room-look=starlight] :is(.cabin-weather,.cabin-snow){left:5.94%;top:20.44%;width:19.75%;height:26.34%;clip-path:circle(48%)}
 
 .cabin-scene:not([data-weather=snow]) .cabin-snow{opacity:0}
+
+/* The console shares the collection's original vinyl material and album art. */
+.turntable-record-art { position:relative; display:block; width:100%; height:104px; margin:8px 0 10px; padding:0; background:#1c160f; border:1px solid #795737; overflow:hidden; cursor:pointer; }
+.turntable-sleeve { position:absolute; left:calc(50% - 74px); top:12px; width:78px; height:78px; display:grid; place-items:center; background:#a3794e; border:2px solid #2a1b13; box-shadow:3px 3px 0 #0007; z-index:2; }
+.turntable-sleeve img { width:100%;height:100%;object-fit:cover; }
+.turntable-record-art .custom-vinyl { position:absolute; width:86px; height:86px; left:calc(50% - 12px); top:8px; border-radius:50%; }
+.turntable-record-art .custom-vinyl.is-spinning { animation:room-spin 5s linear infinite; }
+.turntable-needle { position:absolute; right:9px; top:14px; width:5px; height:49px; border:1px solid #38251b; background:#d5bd91; transform:rotate(24deg); transform-origin:top; box-shadow:2px 2px #0008; }
+.turntable-needle:after { content:''; position:absolute; width:10px; height:6px; bottom:-2px; left:-3px; background:#ddd0ac; border:1px solid #38251b; }
+.player-visual-note { margin:8px 0 0; font-size:10px; line-height:1.6; opacity:.7; }
+:root[data-desktop-reduce-motion=true] .turntable-record-art .custom-vinyl { animation:none; }
+@media(prefers-reduced-motion:reduce) { .turntable-record-art .custom-vinyl { animation:none; } }
+@media(max-height:700px) { .turntable-record-art { height:76px; } .turntable-sleeve { width:56px;height:56px;top:8px;left:calc(50% - 53px); } .turntable-record-art .custom-vinyl { width:62px;height:62px;top:5px; } .turntable-needle { height:35px; } }

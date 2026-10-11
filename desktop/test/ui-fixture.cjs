@@ -76,7 +76,8 @@ async function chooseRoomScene(site, sceneId) {
   const { getRoomScene } = await import('../../src/scene-catalog.mjs');
   const scene = getRoomScene(sceneId);
   if (scene.id !== sceneId) throw new Error(`Unknown scene in test: ${sceneId}`);
-  await site.getByRole('button', { name: '布置小屋', exact: true }).click();
+  await site.getByRole('button', { name: '设置', exact: true }).click();
+  await site.getByRole('tab', { name: '房间与桌宠', exact: true }).click();
   const picker = site.getByRole('dialog', { name: '设置', exact: true }); // 布置小屋 opens 设置 › 房间与桌宠 (PR #16)
   await picker.getByRole('button', { name: `选择场景 ${scene.label}`, exact: true }).click();
   await picker.getByRole('button', { name: '回到小屋', exact: true }).click();

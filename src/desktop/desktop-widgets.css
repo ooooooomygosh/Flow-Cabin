@@ -77,3 +77,8 @@
 :root[data-desktop-reduce-motion=true] .desktop-widgets *, :root[data-desktop-reduce-motion=true] .immersive-exit { animation: none !important; transition: none !important; }
 @media (prefers-reduced-motion: reduce) { .desktop-widgets *, .immersive-exit { animation: none !important; transition: none !important; } }
 @media (max-width: 760px) { .desktop-widget { width: min(300px, calc(100vw - 32px)); } }
+
+/* Keep recovery discoverable without covering the top window controls. */
+.immersive-exit { top:68px; bottom:auto; max-width:calc(100vw - 24px); flex-wrap:wrap; justify-content:center; }
+
+.room-zen:not(.room-zen-tools) .immersive-exit { top:14px; }

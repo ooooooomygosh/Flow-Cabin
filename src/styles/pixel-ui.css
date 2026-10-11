@@ -216,14 +216,14 @@ html[data-desktop-reduce-motion='true'] :is(.cabin-scene-canvas, .cabin-night-st
 
 /* Immersive: the console is fully gone (not 8% ghost on the window art) and
    steps back in when the pointer comes near it (CabinRoom → data-console-near). */
-.room-zen .room-turntable { opacity: 0 !important; visibility: hidden; pointer-events: none;
+.room-zen:not(.room-zen-tools) .room-turntable { opacity: 0 !important; visibility: hidden; pointer-events: none;
   transition: opacity var(--px-dur-med) steps(3, end), visibility 0s linear var(--px-dur-med) !important; }
-.room-zen .room-turntable:focus-within, .room-zen[data-console-near='true'] .room-turntable, html.room-zen[data-console-near='true'] .room-turntable {
+.room-zen:not(.room-zen-tools) .room-turntable:focus-within, .room-zen[data-console-near='true'] .room-turntable, html.room-zen[data-console-near='true'] .room-turntable {
   opacity: 1 !important; visibility: visible; pointer-events: auto; transition: opacity var(--px-dur-med) steps(3, end), visibility 0s !important; }
-@media (prefers-reduced-motion: reduce) { .room-zen .room-turntable { transition: none !important; } }
+@media (prefers-reduced-motion: reduce) { .room-zen:not(.room-zen-tools) .room-turntable { transition: none !important; } }
 /* Room cat spot (useCatPlacement): floor x, or perched on the console top. */
 /* Moves are WAAPI hops/walks/fades (useCatPlacement.animateCatMove), not transitions.
    --cat-floor is the floor baseline the placement reads (zen/wallpaper sit lower). */
 .room-scene .room-cat { --cat-floor: 118px; left: var(--cat-x, 25%); bottom: var(--cat-floor); transform-origin: 50% 100%; }
-.room-zen .room-scene .room-cat, .wallpaper-room .room-scene .room-cat { --cat-floor: 28px; }
+.room-zen:not(.room-zen-tools) .room-scene .room-cat, .wallpaper-room .room-scene .room-cat { --cat-floor: 28px; }
 .room-scene .room-cat[data-perch='console'] { bottom: var(--cat-bottom); z-index: 21; }

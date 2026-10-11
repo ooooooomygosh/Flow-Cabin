@@ -262,6 +262,14 @@ var QQ_TOPLIST_PREFIX = "qq-toplist:";
 function isQQLikedPlaylistReference(value) {
   return String(value || "").trim() === QQ_LIKED_PLAYLIST_ID;
 }
+function qqAuthErrorStatus(error) {
+  const statusCode = Number(rec(error).statusCode);
+  if (statusCode === 401 || statusCode === 403) return statusCode;
+  const message = error instanceof Error ? error.message : str(error);
+  if (message === "AUTH_REQUIRED") return 401;
+  if (message === "AUTH_EXPIRED") return 403;
+  return null;
+}
 function isQQNumericPlaylistId(value) {
   const id = String(value ?? "").trim();
   return /^\d+$/.test(id) && Number.isSafeInteger(Number(id)) && Number(id) > 0;
@@ -486,7 +494,7 @@ async function getQQLoginInfo(cookie) {
     const body = rec(parseJSONText(text));
     const info = normalizeQQProfile(cookie, body, cookieObj);
     if (body && (body.code === 1e3 || body.result === 301)) {
-      return { ...fallback, profileUnavailable: true };
+      return { ...fallback, loggedIn: false, profileUnavailable: true };
     }
     return info;
   } catch (e) {
@@ -523,8 +531,31 @@ async function handleQQUserPlaylists(cookie) {
     { headers: { Referer: "https://y.qq.com/portal/profile.html" } }
   );
   const [createdRaw, collectRaw] = await Promise.allSettled([createdReq, collectReq]);
-  const created = createdRaw.status === "fulfilled" && Array.isArray(rec(rec(createdRaw.value).data).disslist) ? rec(rec(createdRaw.value).data).disslist.map((pl) => mapQQPlaylist(pl, "created")) : [];
-  const collected = collectRaw.status === "fulfilled" && Array.isArray(rec(rec(collectRaw.value).data).cdlist) ? rec(rec(collectRaw.value).data).cdlist.map((pl) => mapQQPlaylist(pl, "collect")) : [];
+  const warnings = [];
+  let confirmed = 0;
+  const readList = (result, key, label) => {
+    const body = result.status === "fulfilled" ? rec(result.value) : {}, data = rec(body.data);
+    if (result.status !== "fulfilled" || body.code != null && Number(body.code) !== 0 || body.result != null && Number(body.result) !== 0 || !Array.isArray(data[key])) {
+      warnings.push(`${label}\u672A\u80FD\u8BFB\u53D6`);
+      return [];
+    }
+    confirmed++;
+    return data[key];
+  };
+  const created = readList(createdRaw, "disslist", "\u81EA\u5EFA\u6B4C\u5355").map((pl) => mapQQPlaylist(pl, "created"));
+  const collected = readList(collectRaw, "cdlist", "\u6536\u85CF\u6B4C\u5355").map((pl) => mapQQPlaylist(pl, "collect"));
+  if (!created.concat(collected).some((pl) => pl.id === QQ_LIKED_PLAYLIST_ID)) {
+    try {
+      const liked = await handleQQLikedPlaylist(cookie);
+      if (liked.loggedIn !== true || !liked.playlist) return { loggedIn: false, provider: "qq", playlists: [] };
+      created.unshift({ ...rec(liked.playlist), kind: "liked" });
+      confirmed++;
+    } catch (error) {
+      if (qqAuthErrorStatus(error)) return { loggedIn: false, provider: "qq", playlists: [] };
+      warnings.push("\u6211\u559C\u6B22\u7684\u97F3\u4E50\u672A\u80FD\u8BFB\u53D6");
+    }
+  }
+  if (!confirmed) throw new Error("QQ \u97F3\u4E50\u6B4C\u5355\u8BFB\u53D6\u5931\u8D25\uFF0C\u8BF7\u91CD\u8BD5\u6216\u91CD\u65B0\u767B\u5F55\u3002");
   const seen = /* @__PURE__ */ new Set();
   const playlists = created.concat(collected).filter((pl) => {
     if (!pl.id || !pl.name || seen.has(pl.id)) return false;
@@ -532,7 +563,7 @@ async function handleQQUserPlaylists(cookie) {
     seen.add(pl.id);
     return true;
   }).sort((a, b) => Number(b.id === QQ_LIKED_PLAYLIST_ID) - Number(a.id === QQ_LIKED_PLAYLIST_ID));
-  return { loggedIn: true, provider: "qq", userId: uin, playlists };
+  return { loggedIn: true, provider: "qq", userId: uin, playlists, warning: warnings.length ? `${warnings.join("\uFF1B")}\u3002\u5DF2\u8BFB\u53D6\u7684\u6B4C\u5355\u4FDD\u7559\uFF0C\u8BF7\u5237\u65B0\u91CD\u8BD5\u3002` : "" };
 }
 var QQ_PLAYLIST_PAGE_SIZE = 100;
 var QQ_PLAYLIST_MAX_PAGES = 100;
@@ -578,6 +609,7 @@ async function fetchQQDissPage(cookie, ref, offset, num = QQ_PLAYLIST_PAGE_SIZE)
     )
   );
   const block = rec(json.playlist);
+  if (json.code != null && Number(json.code) !== 0) throw new Error("QQ_PLAYLIST_DETAIL_FAILED");
   if (!json.playlist || Number(block.code || 0) !== 0) {
     const code = Number(block.code || block.result || 0);
     const message = str(block.message || block.msg);
@@ -589,6 +621,7 @@ async function fetchQQDissPage(cookie, ref, offset, num = QQ_PLAYLIST_PAGE_SIZE)
     throw new Error(message || "QQ_PLAYLIST_DETAIL_FAILED");
   }
   const data = rec(block.data);
+  if (!Array.isArray(data.songlist) || !data.dirinfo || typeof data.dirinfo !== "object" || Array.isArray(data.dirinfo)) throw new Error("QQ_PLAYLIST_DETAIL_INVALID");
   return { data, detail: rec(data.dirinfo), rawTracks: arr(data.songlist) };
 }
 async function fetchQQToplistPage(cookie, topId, offset, num = QQ_PLAYLIST_PAGE_SIZE) {
@@ -613,6 +646,35 @@ async function fetchQQToplistPage(cookie, topId, offset, num = QQ_PLAYLIST_PAGE_
   }
   const data = rec(block.data);
   return { data, detail: rec(data.data), rawTracks: arr(data.songInfoList) };
+}
+async function handleQQLikedPlaylist(cookie) {
+  if (!qqHasLoginCookie(cookie)) {
+    return { loggedIn: false, provider: "qq", playlist: null };
+  }
+  const result = await fetchQQDissPage(cookie, { kind: "liked", id: "201" }, 0, 1);
+  const identity = result.detail.dirid ?? result.detail.dirId;
+  const title = str(result.detail.title || result.detail.name || result.detail.dissname || result.detail.diss_name).trim();
+  if (identity != null && String(identity) !== "201" || !title && String(identity ?? "") !== "201") {
+    throw new Error("QQ_LIKED_PLAYLIST_IDENTITY_INVALID");
+  }
+  const tracks = result.rawTracks.map(mapQQPlaylistTrack).filter((track) => track.name && track.mid);
+  const detail = result.detail;
+  return {
+    loggedIn: true,
+    provider: "qq",
+    playlist: {
+      provider: "qq",
+      source: "qq",
+      type: "playlist",
+      id: QQ_LIKED_PLAYLIST_ID,
+      name: str(detail.title || detail.name || detail.dissname || detail.diss_name) || "\u6211\u559C\u6B22\u7684\u97F3\u4E50",
+      cover: pickQQPlaylistCover(detail, tracks),
+      trackCount: qqPlaylistTotal(result.data, detail),
+      playCount: numOf(detail.listen_num || detail.visitnum || detail.play_count),
+      creator: str(detail.nick || detail.hostname || detail.creator) || "QQ \u97F3\u4E50",
+      tag: "\u6536\u85CF"
+    }
+  };
 }
 async function handleQQPlaylistTracks(cookie, id) {
   const ref = qqPlaylistReference(id);

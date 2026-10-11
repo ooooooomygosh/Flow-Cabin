@@ -90,3 +90,26 @@ test('study: valid FSRS schedules survive repeated JSON reloads for every rating
     }
   }
 });
+
+import { WORD_BOOKS, openWordBook, nextBookCard, previewWordImport } from './word-books.mjs';
+test('word books keep catalog separate, introduce one card, preserve memory across books and obey daily quota', () => {
+  let state = { ...normalizeStudy(), newPerDay: 1 };
+  state = openWordBook(state, WORD_BOOKS[0].id, T0); assert.equal(state.cards.length, 0);
+  state = nextBookCard(state, WORD_BOOKS[0].id, T0); assert.equal(state.cards.length, 1);
+  assert.equal(nextBookCard(state, WORD_BOOKS[0].id, T0), state);
+  state = review(state, state.cards[0].id, RATINGS[2].rating, T0);
+  const saved = structuredClone(state.cards[0]);
+  state = openWordBook(state, WORD_BOOKS[1].id, T0);
+  assert.equal(nextBookCard(state, WORD_BOOKS[1].id, T0), state);
+  assert.deepEqual(state.cards[0], saved); assert.equal(state.log[Object.keys(state.log)[0]].learned, 1);
+  state = nextBookCard(state, WORD_BOOKS[1].id, T0 + 86400000); assert.equal(state.cards.length, 2);
+  assert.deepEqual(normalizeStudy(state).cards[0], saved);
+});
+test('word book import maps columns, counts errors and duplicates without changing existing cards', () => {
+  const existing = [{ front: 'Window', back: 'saved', memory: { reps: 4 } }];
+  const snapshot = structuredClone(existing);
+  const result = previewWordImport('meaning\tword\n窗户\twindow\n音乐\tmusic\n\tbroken\n重复\tMUSIC', { header: true, frontColumn: 1, backColumn: 0 }, existing);
+  assert.deepEqual(result.cards, [{ front: 'music', back: '音乐' }]); assert.equal(result.duplicates, 2); assert.equal(result.errors, 1); assert.deepEqual(existing, snapshot);
+  assert.equal(previewWordImport('{"front":"word"}', { format: 'json' }).errors, 1);
+  assert.equal(previewWordImport('[null,{"front":23,"back":"x"},{"front":"x","back":"<b>plain text</b>"}]', { format: 'json' }).cards[0].back, '<b>plain text</b>');
+});
