@@ -120,3 +120,33 @@ test('Apple redirect loops stop after a bounded number of requests', async () =>
   await assert.rejects(() => library.link('https://music.apple.com/us/playlist/mix/pl.abcdef12'), /跳转过多/);
   assert.equal(requests, 5);
 });
+
+test('NetEase adapter requests one page, restores source order, retries failure and caps at 5000', async () => {
+  const { neteasePlaylistTracks } = require('../music-upstream.cjs');
+  let failed = false, total = 620; const offsets = [];
+  const request = async (method, args) => {
+    if (method === 'playlist_detail') return { status: 200, body: { code: 200, playlist: { name: 'Large', trackCount: total, updateTime: 10, trackIds: Array.from({ length: total }, (_, i) => ({ id: i + 1 })) } } };
+    assert.equal(method, 'playlist_track_all'); offsets.push(args.offset); assert.equal(args.limit, 500);
+    if (failed) return { status: 503, body: { code: 503 } };
+    const songs = Array.from({ length: Math.min(500, total - args.offset) }, (_, i) => ({ id: args.offset + i + 1, name: 'Song ' + (args.offset + i + 1), ar: [{ name: 'Artist' }], al: { name: 'Album' }, dt: 180000 }));
+    return { status: 200, body: { code: 200, songs: songs.reverse() } };
+  };
+  const first = await neteasePlaylistTracks('', '42', { request });
+  assert.equal(first.tracks.length, 500); assert.equal(first.tracks[0].id, '1'); assert.equal(first.page.nextOffset, 500);
+  failed = true; await assert.rejects(() => neteasePlaylistTracks('', '42', { request, offset: 500 }), /这一批歌曲读取失败/);
+  failed = false; const last = await neteasePlaylistTracks('', '42', { request, offset: 500 });
+  assert.equal(last.tracks.length, 120); assert.equal(last.tracks[119].id, '620'); assert.equal(last.page.nextOffset, null); assert.equal(last.page.snapshot, first.page.snapshot); assert.deepEqual(offsets, [0, 500, 500]);
+  total = 5200; const capped = await neteasePlaylistTracks('', '42', { request, offset: 4500 });
+  assert.equal(capped.page.capped, true); assert.equal(capped.page.nextOffset, null); assert.equal(capped.tracks.at(-1).id, '5000'); assert.notEqual(capped.page.snapshot, first.page.snapshot);
+  await assert.rejects(() => neteasePlaylistTracks('', '42', { request, offset: 5000 }), /页码无效/);
+});
+
+test('playlist library keeps pagination metadata and explains unsupported provider continuation', async () => {
+  const library = createPlaylistLibrary({ upstream: {
+    neteasePlaylistTracks: async (cookie, id, options) => { assert.equal(options.offset, 500); return { playlist: { id, name: 'Large', trackCount: 620 }, tracks: [{ id: '501', name: 'song' }], page: { offset: 500, nextOffset: null, snapshot: 'a' } }; },
+    handleQQPlaylistTracks: async () => ({ playlist: { id: '1', name: 'Large', trackCount: 620 }, tracks: Array.from({ length: 620 }, (_, i) => ({ name: 'song ' + i, mid: String(i + 1) })) })
+  }, cookies: () => '' });
+  const ncm = await library.tracks('netease', '1', { offset: 500 }); assert.equal(ncm.page.offset, 500);
+  const qq = await library.tracks('qq', '1'); assert.equal(qq.tracks.length, 500); assert.equal(qq.truncated, true); assert.match(qq.limitReason, /未提供已验证的继续读取/);
+  await assert.rejects(() => library.tracks('qq', '1', { offset: 500 }), /分页位置/);
+});

@@ -5,7 +5,7 @@ const fs = require('node:fs'), path = require('node:path'), vm = require('node:v
 const { EventEmitter } = require('node:events');
 function load(name, deps) {
   const module = { exports: {} };
-  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '..', name), 'utf8'), { module, exports: module.exports, require: id => { if (!(id in deps)) throw new Error('Unexpected dependency ' + id); return deps[id]; }, URL, Date, setInterval, clearInterval, setTimeout, clearTimeout, AbortController, console });
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '..', name), 'utf8'), { module, exports: module.exports, require: id => { if (id === 'node:crypto') return require(id); if (!(id in deps)) throw new Error('Unexpected dependency ' + id); return deps[id]; }, URL, Date, setInterval, clearInterval, setTimeout, clearTimeout, AbortController, console });
   return module.exports;
 }
 const tick = () => new Promise(resolve => setImmediate(resolve));

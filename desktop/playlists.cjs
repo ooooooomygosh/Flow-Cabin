@@ -47,7 +47,7 @@ function normalizeDetail(raw, provider) {
     if (tracks.length >= TRACK_LIMIT) break;
   }
   if (!playlist.cover) playlist.cover = tracks.find((track) => track.cover)?.cover || '';
-  return { playlist: { ...playlist, trackCount: Math.max(playlist.trackCount, tracks.length), description: clean(value.playlist?.description, 600) }, tracks, truncated: tracks.length >= TRACK_LIMIT && playlist.trackCount > TRACK_LIMIT };
+  return { playlist: { ...playlist, trackCount: Math.max(playlist.trackCount, tracks.length), description: clean(value.playlist?.description, 600) }, tracks, truncated: playlist.trackCount > tracks.length, ...(value.page ? { page: value.page } : {}), ...(!value.page && playlist.trackCount > tracks.length ? { limitReason: `此来源当前返回 ${tracks.length} / ${playlist.trackCount} 首，未提供已验证的继续读取方式；可导出歌单文件再导入。` } : {}) };
 }
 
 // Share links people actually paste: desktop, mobile and short forms.
@@ -222,7 +222,8 @@ function createPlaylistLibrary({ upstream, cookies, fetch = globalThis.fetch, pl
       }
       throw new Error('不支持此歌单来源。');
     },
-    async tracks(provider, id) {
+    async tracks(provider, id, { offset = 0 } = {}) {
+      if (!Number.isInteger(offset) || offset < 0 || offset >= 5000 || (offset && provider !== 'netease')) throw new Error('此来源不支持这个分页位置。');
       const value = clean(id, 80);
       if (provider === 'qq') {
         if (!/^(qq-liked:201|\d{1,20})$/.test(value)) throw new Error('QQ 音乐歌单 ID 无效。');
@@ -230,7 +231,7 @@ function createPlaylistLibrary({ upstream, cookies, fetch = globalThis.fetch, pl
         if (result?.error) throw new Error('QQ 音乐歌单读取失败，请稍后再试。');
         return normalizeDetail({ playlist: { ...result?.playlist, id: result?.playlist?.id || value }, tracks: (result?.tracks || []).map((track) => ({ ...track, id: track.mid })) }, 'qq');
       }
-      if (provider === 'netease') return normalizeDetail(await upstream.neteasePlaylistTracks(cookies('netease'), value), 'netease');
+      if (provider === 'netease') return normalizeDetail(await upstream.neteasePlaylistTracks(cookies('netease'), value, { offset }), 'netease');
       if (provider === 'apple-local') {
         if (!/^[A-F\d]{16}$/i.test(value)) throw new Error('「音乐」App 歌单 ID 无效。');
         const result = await musicApp(['tracks', value]);

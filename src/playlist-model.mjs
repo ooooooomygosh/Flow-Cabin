@@ -8,7 +8,7 @@ export const PLAYLIST_SOURCES = {
   'apple-local': { label: 'Apple Music', short: '音乐 App', tone: 'apple' },
   file: { label: '歌单文件', short: '文件', tone: 'file' }
 };
-export const PLAYLIST_TRACK_LIMIT = 500;
+export const PLAYLIST_TRACK_LIMIT = 5000;
 const clean = (value, max = 160) => String(value ?? '').replace(/[\x00-\x1f\x7f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max);
 
 export function formatDuration(millis) {
@@ -60,10 +60,25 @@ export function filterTracks(tracks, query) {
 }
 
 // Refresh source metadata without replacing the listener's notes or styling.
-export function playlistRefreshPatch(item, incoming) {
+export function playlistRefreshPatch(item, incoming, { incomplete = false } = {}) {
+  if (incomplete && (item?.tracks?.length || 0) > incoming.tracks.length) throw new Error('当前只读取了部分歌曲，不能覆盖已有的完整歌单；请继续读取后再同步。');
   const patch = {};
   for (const key of ['title', 'artist', 'tracks', 'trackDetails']) {
     if (JSON.stringify(item?.[key]) !== JSON.stringify(incoming[key])) patch[key] = incoming[key];
   }
   return patch;
+}
+
+
+// Merge only the expected page of the same source snapshot. No state mutates on failure.
+export function mergePlaylistPage(current, incoming) {
+  if (current.provider !== incoming.provider || playlistKey(current.provider, current.playlist.id) !== playlistKey(incoming.provider, incoming.playlist.id)) throw new Error('歌单来源已改变，请重新打开歌单。');
+  if (!current.page || !incoming.page || current.page.nextOffset !== incoming.page.offset || incoming.page.offset <= current.page.offset) throw new Error('收到重复或乱序的歌单页，请重试。');
+  if (current.revision !== incoming.revision || current.page.snapshot !== incoming.page.snapshot) throw new Error('账号或歌单内容已改变，请重新打开歌单。');
+  const key = track => track.providerId ? `${track.source}:${track.providerId}` : JSON.stringify([track.source, track.title, track.artist, track.album]);
+  const seen = new Set(current.tracks.map(key)), tracks = [...current.tracks];
+  for (const track of incoming.tracks || []) if (track.title && !seen.has(key(track))) { seen.add(key(track)); tracks.push(track); }
+  if (tracks.length === current.tracks.length) throw new Error('平台返回了重复页或空页，已读取的歌曲仍保留，请重试。');
+  if (tracks.length > PLAYLIST_TRACK_LIMIT) throw new Error(`单个歌单最多导入 ${PLAYLIST_TRACK_LIMIT} 首。`);
+  return { ...current, tracks, page: incoming.page, truncated: tracks.length < Math.max(incoming.playlist.trackCount || 0, tracks.length) };
 }

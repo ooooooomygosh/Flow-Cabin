@@ -1130,6 +1130,7 @@ async function handleSongUrl(id, loginInfo, qualityPreference, cookie) {
 }
 
 // music-upstream.ts
+var import_node_crypto = require("node:crypto");
 async function getNeteaseLoginInfo(cookie) {
   if (!cookie) return { loggedIn: false };
   for (const endpoint of ["login_status", "user_account"]) {
@@ -1144,7 +1145,7 @@ async function getNeteaseLoginInfo(cookie) {
   }
   return { loggedIn: false };
 }
-var NCM_PLAYLIST_LIMIT = 1e3;
+var NCM_PLAYLIST_LIMIT = 5e3;
 var NCM_PAGE = 500;
 var ok = (response) => response.status < 400 && (response.body?.code == null || Number(response.body.code) === 200);
 var httpsCover = (value) => asStr(value).replace(/^http:\/\//, "https://");
@@ -1173,20 +1174,26 @@ async function neteaseUserPlaylists(cookie) {
   }
   return { loggedIn: true, provider: "netease", user: asStr(info.nickname), playlists: playlists.filter((pl) => pl.id && pl.name) };
 }
-async function neteasePlaylistTracks(cookie, id) {
+async function neteasePlaylistTracks(cookie, id, options = {}) {
   if (!/^\d{1,20}$/.test(id)) throw new Error("\u7F51\u6613\u4E91\u6B4C\u5355 ID \u65E0\u6548\u3002");
-  const detail = await call("playlist_detail", { id, s: 0, cookie, timestamp: Date.now() });
+  const offset = options.offset ?? 0, request = options.request || call;
+  if (!Number.isInteger(offset) || offset < 0 || offset >= NCM_PLAYLIST_LIMIT) throw new Error("\u6B4C\u5355\u9875\u7801\u65E0\u6548\uFF0C\u8BF7\u91CD\u65B0\u6253\u5F00\u6B4C\u5355\u3002");
+  const detail = await request("playlist_detail", { id, s: 0, cookie, timestamp: Date.now() });
   if (!ok(detail)) throw new Error(Number(detail.body?.code) === 404 ? "\u627E\u4E0D\u5230\u8FD9\u4E2A\u7F51\u6613\u4E91\u6B4C\u5355\uFF0C\u53EF\u80FD\u5DF2\u5220\u9664\u6216\u8BBE\u4E3A\u79C1\u5BC6\u3002" : "\u7F51\u6613\u4E91\u6B4C\u5355\u8BFB\u53D6\u5931\u8D25\uFF0C\u8BF7\u7A0D\u540E\u518D\u8BD5\u3002");
-  const pl = asObj(detail.body.playlist), creator = asObj(pl.creator);
-  const total = Math.min(NCM_PLAYLIST_LIMIT, asNum(pl.trackCount) || asArr(pl.trackIds).length);
+  const pl = asObj(detail.body.playlist), creator = asObj(pl.creator), ids = asArr(pl.trackIds).map((raw) => asStr(asObj(raw).id));
+  const total = asNum(pl.trackCount) || ids.length, limit = Math.min(NCM_PAGE, NCM_PLAYLIST_LIMIT - offset);
+  const snapshot = (0, import_node_crypto.createHash)("sha256").update(JSON.stringify([pl.updateTime, total, ids.slice(0, NCM_PLAYLIST_LIMIT)])).digest("hex");
   const tracks = [];
-  for (let offset = 0; offset < total; offset += NCM_PAGE) {
-    const response = await call("playlist_track_all", { id, limit: NCM_PAGE, offset, cookie, timestamp: Date.now() });
-    if (!ok(response)) break;
+  if (total > offset) {
+    const response = await request("playlist_track_all", { id, limit, offset, cookie, timestamp: Date.now() });
+    if (!ok(response)) throw new Error("\u8FD9\u4E00\u6279\u6B4C\u66F2\u8BFB\u53D6\u5931\u8D25\uFF0C\u5DF2\u8BFB\u53D6\u7684\u5185\u5BB9\u4ECD\u4FDD\u7559\uFF0C\u53EF\u4EE5\u91CD\u8BD5\u3002");
     const privileges = new Map(asArr(response.body.privileges).map((p) => [asStr(asObj(p).id), asObj(p)]));
-    const songs = asArr(response.body.songs);
-    for (const raw of songs) {
-      const song = asObj(raw), mapped = mapSongRecord(song), privilege = privileges.get(asStr(song.id));
+    const rawSongs = asArr(response.body.songs).map(asObj), order = ids.slice(offset, offset + limit);
+    const byId = new Map(rawSongs.map((song) => [asStr(song.id), song]));
+    const songs = order.length ? order.map((key) => byId.get(key)).filter((song) => Boolean(song)) : rawSongs;
+    if (!songs.length) throw new Error("\u8FD9\u4E00\u6279\u6CA1\u6709\u8FD4\u56DE\u53EF\u8BFB\u53D6\u7684\u6B4C\u66F2\uFF0C\u8BF7\u68C0\u67E5\u5E73\u53F0\u6743\u9650\u6216\u7A0D\u540E\u91CD\u8BD5\u3002");
+    for (const song of songs) {
+      const mapped = mapSongRecord(song), privilege = privileges.get(asStr(song.id));
       tracks.push({
         id: asStr(mapped.id),
         name: asStr(mapped.name),
@@ -1198,9 +1205,14 @@ async function neteasePlaylistTracks(cookie, id) {
         playable: isNeteaseSongAvailable({ ...song, privilege })
       });
     }
-    if (songs.length < NCM_PAGE) break;
   }
-  return { provider: "netease", playlist: { provider: "netease", id, name: asStr(pl.name), cover: httpsCover(pl.coverImgUrl), trackCount: asNum(pl.trackCount) || tracks.length, creator: asStr(creator.nickname), description: asStr(pl.description).slice(0, 600) }, tracks };
+  const end = Math.min(total, offset + limit), nextOffset = end < Math.min(total, NCM_PLAYLIST_LIMIT) ? end : null;
+  return {
+    provider: "netease",
+    playlist: { provider: "netease", id, name: asStr(pl.name), cover: httpsCover(pl.coverImgUrl), trackCount: total, creator: asStr(creator.nickname), description: asStr(pl.description).slice(0, 600) },
+    tracks,
+    page: { offset, nextOffset, snapshot, total, limit: NCM_PLAYLIST_LIMIT, capped: total > NCM_PLAYLIST_LIMIT && nextOffset === null }
+  };
 }
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {

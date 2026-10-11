@@ -2,7 +2,7 @@
 // (.xml property list), .m3u / .m3u8 from almost any player, and plain text
 // ("歌名 - 歌手" per line, as copied from a web page or another app).
 // Parsed in the renderer; nothing is uploaded. Pure functions for tests.
-const LIMIT = 500;
+const LIMIT = 5000;
 const clean = (value, max = 160) => String(value ?? '').replace(/[\x00-\x1f\x7f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max);
 const entity = (value) => String(value).replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(Number(code))).replace(/&#x([\da-f]+);/gi, (_, code) => String.fromCodePoint(parseInt(code, 16))).replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&');
 const decodePath = value => { try { return decodeURIComponent(value); } catch { return value; } };
@@ -55,7 +55,7 @@ export function parseApplePlaylistXml(text) {
     id: clean(list['Playlist Persistent ID'] || list['Playlist ID'] || list.Name, 80), name: clean(list.Name) || '导入的歌单',
     tracks: list['Playlist Items'].map((item) => toTrack(item?.['Track ID'])).filter((track) => track?.title)
   })).filter((list) => list.tracks.length);
-  if (!playlists.length && Object.keys(tracks).length) playlists.push({ id: 'library', name: '导入的资料库', tracks: Object.keys(tracks).map(toTrack).filter((track) => track?.title).slice(0, LIMIT) });
+  if (!playlists.length && Object.keys(tracks).length) playlists.push({ id: 'library', name: '导入的资料库', tracks: Object.keys(tracks).map(toTrack).filter((track) => track?.title) });
   if (!playlists.length) throw new Error('文件里没有可导入的歌曲。');
   return playlists.map(list => ({ ...list, trackCount: list.tracks.length, truncated: list.tracks.length > LIMIT, tracks: list.tracks.slice(0, LIMIT) }));
 }
@@ -79,22 +79,21 @@ export function parseM3U(text, name = '') {
     const guess = fromName.match(/^(?:\d{1,3}[\s.\-_]+)?(.+?)\s+-\s+(.+)$/);
     tracks.push(pending?.title ? pending : guess ? { artist: clean(guess[1]), title: clean(guess[2]), duration: 0 } : { artist: '', title: clean(fromName), duration: 0 });
     pending = null;
-    if (tracks.length >= LIMIT) break;
   }
   const list = tracks.filter((track) => track.title).map((track) => ({ ...track, album: '', source: 'apple', providerId: '' }));
   if (!list.length) throw new Error('M3U 文件里没有歌曲。');
-  return [{ id: clean(name || 'm3u', 80), name: clean(basename(name)) || '导入的歌单', tracks: list }];
+  return [{ id: clean(name || 'm3u', 80), name: clean(basename(name)) || '导入的歌单', tracks: list.slice(0, LIMIT), trackCount: list.length, truncated: list.length > LIMIT }];
 }
 
 // One song per line: "歌名 - 歌手", "歌手 - 歌名" is ambiguous, so the cabin
 // keeps the common "title - artist" order used by most exports and copy-paste.
 export function parsePlainList(text, name = '') {
-  const tracks = String(text || '').split(/\r?\n/).map((line) => line.replace(/^\s*(?:\d{1,3}[.)、]\s*|[-*•]\s+)/, '').trim()).filter((line) => line && !/^#/.test(line)).slice(0, LIMIT).map((line) => {
+  const tracks = String(text || '').split(/\r?\n/).map((line) => line.replace(/^\s*(?:\d{1,3}[.)、]\s*|[-*•]\s+)/, '').trim()).filter((line) => line && !/^#/.test(line)).map((line) => {
     const parts = line.split(/\s+[-–—|]\s+|\t/);
     return parts.length >= 2 ? { title: clean(parts[0]), artist: clean(parts.slice(1).join(' / ')), album: '', duration: 0, source: 'apple', providerId: '' } : { title: clean(line), artist: '', album: '', duration: 0, source: 'apple', providerId: '' };
   }).filter((track) => track.title);
   if (!tracks.length) throw new Error('没有读到歌曲。每行写一首：歌名 - 歌手。');
-  return [{ id: clean(name || 'text', 80), name: clean(basename(name)) || '导入的歌单', tracks }];
+  return [{ id: clean(name || 'text', 80), name: clean(basename(name)) || '导入的歌单', tracks: tracks.slice(0, LIMIT), trackCount: tracks.length, truncated: tracks.length > LIMIT }];
 }
 
 export function parsePlaylistFile(text, name = '') {

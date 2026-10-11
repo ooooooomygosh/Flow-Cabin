@@ -131,3 +131,20 @@ test('system Apple Music and local app routes are explicit about what they do', 
   assert.match((await (await request('/apple/state')).json()).error, /macOS/);
   assert.match((await (await request('/open-local', { provider: 'qq', query: 'x' })).json()).error, /不可用/);
 });
+
+test('playlist continuation rejects changed account revisions and in-flight account changes', async t => {
+  let finish, calls = 0;
+  const { service, request } = await fixture(t, { neteasePlaylistTracks: async (_cookie, id, { offset }) => {
+    calls++; if (offset) await new Promise(resolve => { finish = resolve; });
+    return { playlist: { id, name: 'Large', trackCount: 620 }, tracks: [{ id: String(offset + 1), name: 'Song' }], page: { offset, nextOffset: offset ? null : 500, snapshot: 'a' } };
+  } });
+  const first = await (await request('/playlist?provider=netease&id=1')).json();
+  await service.logout('netease');
+  const stale = await request(`/playlist?provider=netease&id=1&offset=500&revision=${first.revision}`);
+  assert.equal(stale.status, 502); assert.match((await stale.json()).error, /更改/); assert.equal(calls, 1);
+  const fresh = await (await request('/playlist?provider=netease&id=1')).json();
+  const pending = request(`/playlist?provider=netease&id=1&offset=500&revision=${fresh.revision}`);
+  while (!finish) await new Promise(resolve => setImmediate(resolve));
+  await service.logout('netease'); finish();
+  const rejected = await pending; assert.equal(rejected.status, 502); assert.match((await rejected.json()).error, /更改/);
+});

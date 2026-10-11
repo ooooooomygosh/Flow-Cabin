@@ -132,8 +132,12 @@ function createMusicService({ directory, safeStorage, login, logout, upstream = 
       if (req.method === 'POST' && url.pathname === '/open-local') { if (!localApps) throw new Error('本机音乐 App 打开功能不可用。'); return json(res, await localApps.open(await body(req))); }
       if (req.method === 'GET' && url.pathname === '/search') return json(res, { candidates: await search(url.searchParams.get('provider'), String(url.searchParams.get('query') || '').slice(0, 300)) });
       if (req.method === 'GET' && url.pathname === '/playlists') return json(res, await guarded(() => playlists.list(String(url.searchParams.get('provider') || ''))));
-      if (req.method === 'GET' && url.pathname === '/playlist') return json(res, await guarded(() => playlists.tracks(String(url.searchParams.get('provider') || ''), String(url.searchParams.get('id') || ''))));
-      if (req.method === 'POST' && url.pathname === '/playlist/link') return json(res, await guarded(async () => playlists.link(String((await body(req)).url || ''))));
+      if (req.method === 'GET' && url.pathname === '/playlist') {
+        const offset = Number(url.searchParams.get('offset') || 0);
+        if (offset && url.searchParams.get('revision') !== String(revision)) throw new Error('平台登录或设置已更改，请重新打开歌单。');
+        return json(res, await guarded(async () => ({ ...(await playlists.tracks(String(url.searchParams.get('provider') || ''), String(url.searchParams.get('id') || ''), { offset })), revision })));
+      }
+      if (req.method === 'POST' && url.pathname === '/playlist/link') return json(res, await guarded(async () => ({ ...(await playlists.link(String((await body(req)).url || ''))), revision })));
       if (req.method === 'POST' && url.pathname === '/resolve') return json(res, await resolve(await body(req)));
       if (req.method === 'GET' && url.pathname.startsWith('/audio/')) return await stream(req, res, url.pathname.slice(7));
       if (req.method === 'GET' && url.pathname === '/now-playing') return json(res, nowPlaying ? await nowPlaying.get() : { available: false, active: false });

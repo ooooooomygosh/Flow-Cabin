@@ -6,7 +6,7 @@ import { musicRequest } from './room-playback.mjs';
 import { desktopCommand, useDesktopAppearance } from './desktop-client';
 import { generatedCover } from './player/pixel-cover.mjs';
 import { parsePlaylistFile } from './playlist-files.mjs';
-import { PLAYLIST_SOURCES, playlistItem, playlistKey, playlistRefreshPatch, filterTracks, formatDuration, totalDuration } from './playlist-model.mjs';
+import { PLAYLIST_SOURCES, playlistItem, playlistKey, playlistRefreshPatch, mergePlaylistPage, PLAYLIST_TRACK_LIMIT, filterTracks, formatDuration, totalDuration } from './playlist-model.mjs';
 import './playlist-library.css';
 
 // 「我的歌单」: account playlists from 网易云 / QQ 音乐 / Apple Music, public
@@ -54,9 +54,11 @@ function TrackRow({ track, index, play }) {
   </li>;
 }
 
-function PlaylistDetail({ detail, provider, back, act, busy, saved }) {
-  const [query, setQuery] = useState('');
+function PlaylistDetail({ detail, provider, back, act, busy, saved, loadMore, loadingMore, cancelMore }) {
+  const [query, setQuery] = useState(''), [viewPage, setViewPage] = useState(0);
+  useEffect(() => setViewPage(0), [query, detail.playlist.id]);
   const { playlist, tracks } = detail, rows = filterTracks(tracks, query), source = PLAYLIST_SOURCES[provider] || PLAYLIST_SOURCES.file;
+  const pages = Math.max(1, Math.ceil(rows.length / 100)), activePage = Math.min(viewPage, pages - 1), visibleRows = rows.slice(activePage * 100, (activePage + 1) * 100);
   return <div className="playlist-detail">
     <button type="button" className="playlist-back" onClick={back}><ArrowLeft size={15}/>全部歌单</button>
     <header className="playlist-hero">
@@ -64,20 +66,26 @@ function PlaylistDetail({ detail, provider, back, act, busy, saved }) {
       <div className="playlist-hero-copy">
         <small className={`playlist-badge is-${source.tone}`}>{source.label}</small>
         <h3 title={playlist.name}>{playlist.name}</h3>
-        <p className="playlist-curator">{playlist.creator || '我的音乐收藏'}</p><div className="playlist-facts"><span><b>{tracks.length}</b> 首曲目</span>{totalDuration(tracks) && <span>{totalDuration(tracks)}</span>}<span>{saved ? '已在唱片架' : '尚未收藏'}</span></div>{detail.truncated && <p>已导入前 500 首</p>}
+        <p className="playlist-curator">{playlist.creator || '我的音乐收藏'}</p><div className="playlist-facts"><span><b>{tracks.length}</b> 首曲目</span>{totalDuration(tracks) && <span>{totalDuration(tracks)}</span>}<span>{saved ? '已在唱片架' : '尚未收藏'}</span></div>{detail.truncated && <p>已读取 {tracks.length} / {playlist.trackCount || detail.page?.total || '未知'} 首；保存和播放只包含已读取部分。</p>}
         {playlist.description && <p className="playlist-description" title={playlist.description}>{playlist.description}</p>}
         <div className="playlist-actions">
-          <button type="button" className="pixel-button is-primary" disabled={busy || !tracks.length} onClick={() => act('play', 0)}><Play size={16}/>放上唱机</button>
-          <button type="button" className="pixel-button" disabled={busy || tracks.length < 2} onClick={() => act('shuffle')}><Shuffle size={16}/>随机播放</button>
-          <button type="button" className="pixel-button" disabled={busy || !tracks.length} onClick={() => act('queue')}><ListBullet size={16}/>加入待播</button>
-          <button type="button" className="pixel-button is-quiet" disabled={busy || !tracks.length} onClick={() => act('save')}>{saved ? <><Check size={16}/>已在唱片架 · 同步</> : <><Plus size={16}/>放上唱片架</>}</button>
+          <button type="button" className="pixel-button is-primary" disabled={busy || loadingMore || !tracks.length} onClick={() => act('play', 0)}><Play size={16}/>放上唱机</button>
+          <button type="button" className="pixel-button" disabled={busy || loadingMore || tracks.length < 2} onClick={() => act('shuffle')}><Shuffle size={16}/>随机播放</button>
+          <button type="button" className="pixel-button" disabled={busy || loadingMore || !tracks.length} onClick={() => act('queue')}><ListBullet size={16}/>加入待播</button>
+          <button type="button" className="pixel-button is-quiet" disabled={busy || loadingMore || !tracks.length} onClick={() => act('save')}>{saved ? <><Check size={16}/>已在唱片架 · 同步</> : <><Plus size={16}/>放上唱片架</>}</button>
         </div>
       </div>
     </header>
+    {(detail.page?.nextOffset != null || detail.truncated) && <div className="playlist-read-progress" role="status">
+      {loadingMore ? <><span>正在读取下一批，已读取 {tracks.length} 首…</span><button type="button" className="pixel-button" onClick={cancelMore}>取消读取</button></>
+        : detail.page?.nextOffset != null ? <><span>下一批最多 500 首 · 单个歌单最多 {PLAYLIST_TRACK_LIMIT} 首</span><button type="button" className="pixel-button" disabled={busy} onClick={loadMore}>继续读取下一批</button></>
+        : <span>{detail.limitReason || (tracks.length >= PLAYLIST_TRACK_LIMIT ? `已达到 ${PLAYLIST_TRACK_LIMIT} 首上限，请拆分导出文件后导入剩余歌曲。` : '平台没有返回全部歌曲，可能受访问权限或接口返回范围限制；可尝试导出歌单文件。')}</span>}
+    </div>}
     {tracks.length > 0 && <label className="playlist-filter"><Search size={15}/><input type="search" aria-label="在歌单中查找" placeholder="在歌单中查找歌名、歌手或专辑" value={query} onChange={(event) => setQuery(event.target.value)}/>{query && <small>{rows.length} / {tracks.length}</small>}</label>}
     {rows.length > 0 && <div className="playlist-track-heading" aria-hidden="true"><span>#</span><span/><span>歌曲 / 歌手</span><span>专辑</span><span>时长</span></div>}
-    {rows.length ? <ol className="playlist-tracks" aria-label={`${playlist.name} 曲目`}>{rows.map(({ track, index }) => <TrackRow key={`${index}-${track.title}`} track={track} index={index} play={(at) => act('play', at)}/>)}</ol>
+    {rows.length ? <ol className="playlist-tracks" aria-label={`${playlist.name} 曲目`}>{visibleRows.map(({ track, index }) => <TrackRow key={`${index}-${track.title}`} track={track} index={index} play={(at) => act('play', at)}/>)}</ol>
       : <p className="playlist-empty">{tracks.length ? '没有找到匹配的歌曲。' : '这个歌单还没有歌曲。'}</p>}
+    {pages > 1 && <nav className="playlist-page-nav" aria-label="歌单曲目分页"><button type="button" className="pixel-button" disabled={activePage === 0} onClick={() => setViewPage(activePage - 1)}>上一页曲目</button><span>第 {activePage + 1} / {pages} 页 · 每页 100 首</span><button type="button" className="pixel-button" disabled={activePage === pages - 1} onClick={() => setViewPage(activePage + 1)}>下一页曲目</button></nav>}
     <p className="playlist-footnote">播放时先试平台原始曲目，再按歌名、歌手和版本匹配 QQ 音乐 / 网易云；不会用现场版或翻唱顶替。播放权限取决于平台账号、版权与地区。</p>
   </div>;
 }
@@ -124,7 +132,7 @@ function LinkAndFile({ openDetail, busy, setBusy, setError, compact = false, app
     <button type="button" className="playlist-drop" onClick={() => file.current?.click()} onDragOver={(event) => { event.preventDefault(); event.currentTarget.classList.add('is-over'); }} onDragLeave={(event) => event.currentTarget.classList.remove('is-over')} onDrop={(event) => { event.preventDefault(); event.currentTarget.classList.remove('is-over'); readFile(event.dataTransfer.files?.[0]); }}>
       <DocumentArrow size={22}/><strong>导入歌单文件</strong><small>{apple ? '「音乐」App › 文件 › 资料库 › 导出播放列表… 存成 .xml' : 'Apple Music / iTunes 导出的 .xml、播放器的 .m3u / .m3u8，或每行「歌名 - 歌手」的 .txt'}</small>
     </button>
-    {imported && <section className="playlist-file-choices" aria-label="文件中的歌单"><h3>选择要导入的歌单</h3><p>{imported.name} · {imported.lists.length} 个歌单</p><ul>{imported.lists.map((list, index) => <li key={`${list.id}-${index}`}><button type="button" className="pixel-button" onClick={() => chooseFileList(list, imported.name)}><Music2 size={16}/><strong>{list.name}</strong><small>{list.trackCount || list.tracks.length} 首{list.truncated ? ' · 导入前 500 首' : ''}</small></button></li>)}</ul></section>}
+    {imported && <section className="playlist-file-choices" aria-label="文件中的歌单"><h3>选择要导入的歌单</h3><p>{imported.name} · {imported.lists.length} 个歌单</p><ul>{imported.lists.map((list, index) => <li key={`${list.id}-${index}`}><button type="button" className="pixel-button" onClick={() => chooseFileList(list, imported.name)}><Music2 size={16}/><strong>{list.name}</strong><small>{list.trackCount || list.tracks.length} 首{list.truncated ? ' · 导入前 5000 首' : ''}</small></button></li>)}</ul></section>}
     <input ref={file} type="file" hidden accept=".xml,.m3u,.m3u8,.txt,.csv,text/plain,application/xml" onChange={(event) => readFile(event.target.files?.[0])}/>
   </div>;
 }
@@ -133,10 +141,21 @@ export default function PlaylistLibrary({ items, close, onAdded }) {
   const desktop = useDesktopAppearance().client;
   const [tab, setTab] = useState(() => { try { const stored = localStorage.getItem('album-circle-playlist-tab-v1'); return TABS.some(t => t.id === stored) ? stored : 'netease'; } catch { return 'netease'; } });
   const [config, setConfig] = useState(null), [lists, setLists] = useState({}), [detail, setDetail] = useState(null), [busy, setBusy] = useState(false), [busyId, setBusyId] = useState(''), [error, setError] = useState(''), [notice, setNotice] = useState(''), [signing, setSigning] = useState('');
-  const generation = useRef(0);
+  const generation = useRef(0), moreRequest = useRef(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const cancelMore = () => { generation.current++; moreRequest.current?.abort(); moreRequest.current = null; setLoadingMore(false); };
+  const loadMore = async () => {
+    if (moreRequest.current || detail?.page?.nextOffset == null) return;
+    const controller = new AbortController(), current = generation.current, base = detail; moreRequest.current = controller; setLoadingMore(true); setError('');
+    try {
+      const next = await musicRequest(`/playlist?provider=${encodeURIComponent(base.provider)}&id=${encodeURIComponent(base.playlist.id)}&offset=${base.page.nextOffset}&revision=${encodeURIComponent(base.revision)}`, undefined, controller.signal);
+      if (current === generation.current && !controller.signal.aborted) setDetail(mergePlaylistPage(base, { ...next, provider: base.provider }));
+    } catch (cause) { if (current === generation.current && !controller.signal.aborted) setError(cause.message); }
+    finally { if (moreRequest.current === controller) { moreRequest.current = null; setLoadingMore(false); } }
+  };
   const [accountEpoch, setAccountEpoch] = useState(0);
-  useEffect(() => () => { generation.current++; }, []);
-  const choose = (next) => { generation.current++; setTab(next); setDetail(null); setError(''); setNotice(''); setBusyId(''); try { localStorage.setItem('album-circle-playlist-tab-v1', next); } catch {} };
+  useEffect(() => () => { generation.current++; moreRequest.current?.abort(); }, []);
+  const choose = (next) => { cancelMore(); setTab(next); setDetail(null); setError(''); setNotice(''); setBusyId(''); try { localStorage.setItem('album-circle-playlist-tab-v1', next); } catch {} };
   const listProvider = tab === 'apple' ? 'apple-local' : tab;
   const loggedIn = tab === 'netease' ? config?.neteaseLoggedIn : tab === 'qq' ? config?.qqLoggedIn : false;
   const refreshConfig = async () => { try { setConfig(await musicRequest('/config')); } catch (cause) { setConfig({}); setError(cause.message); } };
@@ -149,11 +168,11 @@ export default function PlaylistLibrary({ items, close, onAdded }) {
   };
   useEffect(() => { refreshConfig(); }, []);
   useEffect(() => {
-    const receive = (event) => { generation.current++; setSigning(''); setDetail(null); setBusyId(''); setLists({}); if (event.detail?.error) setError(event.detail.error); refreshConfig().then(() => setAccountEpoch(value => value + 1)); };
+    const receive = (event) => { cancelMore(); setSigning(''); setDetail(null); setBusyId(''); setLists({}); if (event.detail?.error) setError(event.detail.error); refreshConfig().then(() => setAccountEpoch(value => value + 1)); };
     window.addEventListener('album-music-account', receive); return () => window.removeEventListener('album-music-account', receive);
   }, []);
   useEffect(() => { if ((tab === 'netease' || tab === 'qq') && loggedIn) loadList(tab); }, [tab, loggedIn, accountEpoch]);
-  const openDetail = (value, provider) => { setDetail({ ...value, provider }); setNotice(''); setError(''); };
+  const openDetail = (value, provider) => { cancelMore(); setDetail({ ...value, provider }); setBusyId(''); setNotice(''); setError(''); };
   const openPlaylist = async (entry) => {
     if (busyId) return; const current = generation.current; setBusyId(entry.id); setError('');
     try { const value = await musicRequest(`/playlist?provider=${listProvider}&id=${encodeURIComponent(entry.id)}`); if (current === generation.current) openDetail(value, listProvider); }
@@ -166,20 +185,20 @@ export default function PlaylistLibrary({ items, close, onAdded }) {
     if (!value.cover) value.cover = generatedCover(value);
     const result = await addItem(value);
     let item = result.item;
-    const patch = playlistRefreshPatch(item, value);
+    const patch = playlistRefreshPatch(item, value, { incomplete: detail.truncated });
     if (result.duplicate && Object.keys(patch).length) item = (await updateItem(item.id, patch)).item;
     onAdded(item);
     return { item, refreshed: result.duplicate };
   };
   const act = async (action, index = 0) => {
-    if (busy) return; setBusy(true); setError(''); setNotice('');
+    if (busy || loadingMore) return; const current = generation.current; setBusy(true); setError(''); setNotice('');
     try {
-      const { item, refreshed } = await save();
+      const { item, refreshed } = await save(); if (current !== generation.current) return;
       if (action === 'save') { setNotice(refreshed ? `《${item.title}》已同步为最新的 ${item.tracks.length} 首。` : `《${item.title}》已放上唱片架，可以像专辑一样双击放盘。`); return; }
       if (action === 'queue') { const request = { id: item.id, item, accepted: false }; window.dispatchEvent(new CustomEvent('cabin-enqueue', { detail: request })); if (!request.accepted) throw new Error('未能加入待播，请检查队列容量和本地存储后重试。'); setNotice(`《${item.title}》已加入待播，当前唱片放完后接着放。`); return; }
       window.dispatchEvent(new CustomEvent('cabin-play', { detail: { id: item.id, item, track: action === 'shuffle' ? Math.floor(Math.random() * item.tracks.length) : index, shuffle: action === 'shuffle' } }));
       close();
-    } catch (cause) { setError(cause.message); } finally { setBusy(false); }
+    } catch (cause) { if (current === generation.current) setError(cause.message); } finally { setBusy(false); }
   };
   const state = lists[listProvider];
   const signIn = (provider) => { setSigning(provider); setError(''); desktopCommand('music-login', { provider }); };
@@ -195,7 +214,7 @@ export default function PlaylistLibrary({ items, close, onAdded }) {
       <section className="playlist-main" aria-live="polite">
         {error && <p className="playlist-error" role="alert">{error}</p>}
         {notice && <p className="playlist-notice" role="status"><Check size={15}/>{notice}</p>}
-        {detail ? <PlaylistDetail detail={detail} provider={detail.provider} back={() => { setDetail(null); setNotice(''); }} act={act} busy={busy} saved={Boolean(savedItem)}/>
+        {detail ? <PlaylistDetail detail={detail} provider={detail.provider} back={() => { cancelMore(); setDetail(null); setNotice(''); }} act={act} busy={busy} saved={Boolean(savedItem)} loadMore={loadMore} loadingMore={loadingMore} cancelMore={cancelMore}/>
           : tab === 'import' ? <><header className="playlist-main-head"><h3>从链接或文件导入</h3><p>公开歌单不需要登录：在平台里点「分享 › 复制链接」，粘贴到这里。</p></header><LinkAndFile key={tab} openDetail={openDetail} busy={busy} setBusy={setBusy} setError={setError}/></>
           : tab === 'apple' ? <>
             <header className="playlist-main-head"><h3>Apple Music</h3><p className="playlist-capability">当前支持歌单资料导入；尚未接入官方 MusicKit 登录与订阅播放。</p><p>{isMac ? '读取这台 Mac「音乐」App 里的歌单（登录 Apple Music 后的资料库），或粘贴公开歌单链接。' : '粘贴公开歌单链接，或导入 iTunes / Apple Music 导出的歌单文件。'}播放时按歌名与歌手匹配可播放的同版本。</p></header>
