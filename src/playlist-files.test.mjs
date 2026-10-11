@@ -87,7 +87,7 @@ test('large M3U, text and XML lists preserve 620 tracks and report the 5000 cap'
   for (const count of [620, 5001]) {
     const names = Array.from({ length: count }, (_, i) => `Song ${i + 1}`);
     const sources = [
-      ['large.txt', names.map(n => n + ' - Artist').join('\n')],
+      ['large.txt', names.map((n, i) => `${i + 1}. ${n} - Artist`).join('\n')],
       ['large.m3u', names.map(n => `#EXTINF:180,Artist - ${n}\n/x.mp3`).join('\n')],
       ['large.xml', `<plist><dict><key>Tracks</key><dict>${names.map((n, i) => `<key>${i}</key><dict><key>Name</key><string>${n}</string></dict>`).join('')}</dict></dict></plist>`]
     ];

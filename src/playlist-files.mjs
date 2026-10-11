@@ -51,19 +51,28 @@ export function parseApplePlaylistXml(text) {
     if (!entry || entry.Podcast || entry.Movie || entry['TV Show']) return null;
     return { title: clean(entry.Name), artist: clean(entry.Artist || entry['Album Artist']), album: clean(entry.Album), duration: Math.max(0, Number(entry['Total Time']) || 0), source: 'apple', providerId: '' };
   };
+  const collect = (ids) => {
+    const selected = []; let trackCount = 0;
+    for (const id of ids) {
+      const track = toTrack(id);
+      if (!track?.title) continue;
+      trackCount++; if (selected.length < LIMIT) selected.push(track);
+    }
+    return { tracks: selected, trackCount, truncated: trackCount > LIMIT };
+  };
   const playlists = pick.map((list) => ({
     id: clean(list['Playlist Persistent ID'] || list['Playlist ID'] || list.Name, 80), name: clean(list.Name) || '导入的歌单',
-    tracks: list['Playlist Items'].map((item) => toTrack(item?.['Track ID'])).filter((track) => track?.title)
+    ...collect(list['Playlist Items'].map(item => item?.['Track ID']))
   })).filter((list) => list.tracks.length);
-  if (!playlists.length && Object.keys(tracks).length) playlists.push({ id: 'library', name: '导入的资料库', tracks: Object.keys(tracks).map(toTrack).filter((track) => track?.title) });
+  if (!playlists.length && Object.keys(tracks).length) playlists.push({ id: 'library', name: '导入的资料库', ...collect(Object.keys(tracks)) });
   if (!playlists.length) throw new Error('文件里没有可导入的歌曲。');
-  return playlists.map(list => ({ ...list, trackCount: list.tracks.length, truncated: list.tracks.length > LIMIT, tracks: list.tracks.slice(0, LIMIT) }));
+  return playlists;
 }
 
 // "#EXTINF:215,Artist - Title" (or just paths: the file name becomes the title).
 export function parseM3U(text, name = '') {
   const tracks = [];
-  let pending = null;
+  let pending = null, trackCount = 0;
   for (const line of String(text || '').replace(/^﻿/, '').split(/\r?\n/)) {
     const value = line.trim();
     if (!value) continue;
@@ -77,23 +86,28 @@ export function parseM3U(text, name = '') {
     if (value.startsWith('#')) continue;
     const fromName = basename(decodePath(value.replace(/^file:\/\//i, '')));
     const guess = fromName.match(/^(?:\d{1,3}[\s.\-_]+)?(.+?)\s+-\s+(.+)$/);
-    tracks.push(pending?.title ? pending : guess ? { artist: clean(guess[1]), title: clean(guess[2]), duration: 0 } : { artist: '', title: clean(fromName), duration: 0 });
+    const track = pending?.title ? pending : guess ? { artist: clean(guess[1]), title: clean(guess[2]), duration: 0 } : { artist: '', title: clean(fromName), duration: 0 };
+    if (track.title) { trackCount++; if (tracks.length < LIMIT) tracks.push({ ...track, album: '', source: 'apple', providerId: '' }); }
     pending = null;
   }
-  const list = tracks.filter((track) => track.title).map((track) => ({ ...track, album: '', source: 'apple', providerId: '' }));
-  if (!list.length) throw new Error('M3U 文件里没有歌曲。');
-  return [{ id: clean(name || 'm3u', 80), name: clean(basename(name)) || '导入的歌单', tracks: list.slice(0, LIMIT), trackCount: list.length, truncated: list.length > LIMIT }];
+  if (!tracks.length) throw new Error('M3U 文件里没有歌曲。');
+  return [{ id: clean(name || 'm3u', 80), name: clean(basename(name)) || '导入的歌单', tracks, trackCount, truncated: trackCount > LIMIT }];
 }
 
 // One song per line: "歌名 - 歌手", "歌手 - 歌名" is ambiguous, so the cabin
 // keeps the common "title - artist" order used by most exports and copy-paste.
 export function parsePlainList(text, name = '') {
-  const tracks = String(text || '').split(/\r?\n/).map((line) => line.replace(/^\s*(?:\d{1,3}[.)、]\s*|[-*•]\s+)/, '').trim()).filter((line) => line && !/^#/.test(line)).map((line) => {
-    const parts = line.split(/\s+[-–—|]\s+|\t/);
-    return parts.length >= 2 ? { title: clean(parts[0]), artist: clean(parts.slice(1).join(' / ')), album: '', duration: 0, source: 'apple', providerId: '' } : { title: clean(line), artist: '', album: '', duration: 0, source: 'apple', providerId: '' };
-  }).filter((track) => track.title);
+  const tracks = []; let trackCount = 0;
+  for (const line of String(text || '').split(/\r?\n/)) {
+    const value = line.replace(/^\s*(?:\d{1,5}[.)、]\s*|[-*•]\s+)/, '').trim();
+    if (!value || /^#/.test(value)) continue;
+    const parts = value.split(/\s+[-–—|]\s+|\t/), title = clean(parts[0]);
+    if (!title) continue;
+    trackCount++;
+    if (tracks.length < LIMIT) tracks.push({ title, artist: clean(parts.slice(1).join(' / ')), album: '', duration: 0, source: 'apple', providerId: '' });
+  }
   if (!tracks.length) throw new Error('没有读到歌曲。每行写一首：歌名 - 歌手。');
-  return [{ id: clean(name || 'text', 80), name: clean(basename(name)) || '导入的歌单', tracks: tracks.slice(0, LIMIT), trackCount: tracks.length, truncated: tracks.length > LIMIT }];
+  return [{ id: clean(name || 'text', 80), name: clean(basename(name)) || '导入的歌单', tracks, trackCount, truncated: trackCount > LIMIT }];
 }
 
 export function parsePlaylistFile(text, name = '') {
