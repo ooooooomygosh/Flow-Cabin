@@ -39,10 +39,8 @@ export function animateCatMove(catEl, before, after, kind, { grounded = true } =
       { translate: at(1), scale: '.96 1.05', offset: .92, easing: 'steps(1, end)' },        // rebound
       { translate: at(1), scale: '1 1', offset: 1 }
     ];
-    // Once the supporting surface disappears, interpolate the flight continuously.
-    // Stepped airborne poses (including the landing rebound) can visibly hang
-    // between compositor frames on slower machines; grounded crouches stay stepped.
-    if (!grounded) { frames = frames.map(frame => ({ ...frame, easing: 'linear' })); frames[0].scale = '.88 1.16'; }
+    // Ungrounded takeoff is short (~60 ms): finer steps so even a 30 fps frame never repeats a mid-air pose.
+    if (!grounded) frames[0] = { ...frames[0], scale: '.88 1.16', easing: 'steps(4, start)' };
   }
   const animation = catEl.animate(frames, { duration, easing: 'linear' });
   catEl.__catMove = animation;
