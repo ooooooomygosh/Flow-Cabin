@@ -8,7 +8,7 @@ test('seamless: prefetched resolutions are used once and expire', () => {
   let time = 0; const cache = createResolutionCache({ now: () => time, ttl: 1000, limit: 2 });
   const item = { id: 'a', tracks: ['x', 'y'] };
   const key = resolutionKey('auto', item, 1);
-  assert.equal(key, 'auto|a|1|y');
+  assert.ok(key); assert.notEqual(key, resolutionKey('qq', item, 1));
   cache.put(key, { id: 'c' }, { audioPath: '/desktop-music/audio/1' });
   cache.put('remote', { id: 'r' }, { remote: true });
   assert.equal(cache.has('remote'), false, 'a remote (Music Assistant) start is never cached');
@@ -68,4 +68,15 @@ test('playlists: each track keeps its own artist, album and platform id', async 
   queries.length = 0;
   await findPlayableSource({ record: playlist, index: 2, provider: 'auto', request: async (path) => { queries.push(decodeURIComponent(path)); return { candidates: [] }; }, play: async () => {} });
   assert.deepEqual(queries, ['/search?provider=qq&query=Nujabes Aruarian Dance', '/search?provider=netease&query=Nujabes Aruarian Dance']);
+});
+
+
+test('seamless: metadata changes cannot consume another recording’s prefetched stream', () => {
+  const item = { id: 'p', type: 'playlist', tracks: ['Hello'], trackDetails: [{ artist: 'First singer', source: 'netease', providerId: '1' }] };
+  const cache = createResolutionCache(), key = resolutionKey('auto', item, 0);
+  cache.put(key, { id: '1' }, { audioPath: '/first-recording' });
+  const edited = { ...item, trackDetails: [{ artist: 'Second singer', source: 'netease', providerId: '2' }] };
+  assert.equal(cache.take(resolutionKey('auto', edited, 0)), null);
+  assert.equal(cache.take(key).result.audioPath, '/first-recording');
+  assert.equal(resolutionKey('auto', item, 99), '');
 });

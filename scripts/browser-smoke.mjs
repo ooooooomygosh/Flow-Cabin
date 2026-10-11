@@ -387,9 +387,14 @@ try {
   }
   await screenshot('settings-about-update'); await page.keyboard.press('Escape'); check('settings-about-shows-version-and-update-status');
   // Refreshing an existing same-title track must carry its new artist / ID.
-  playlistRevision = true;
+  neteaseLoggedIn = true; playlistRevision = false;
   await page.getByRole('button', { name: '我的歌单', exact: true }).click();
   await page.getByRole('tab', { name: /网易云音乐/ }).click();
+  await page.locator('.playlist-card', { hasText: '深夜写作' }).click();
+  await page.getByRole('button', { name: '放上唱片架', exact: true }).click();
+  await page.locator('.playlist-notice', { hasText: '已放上唱片架' }).waitFor();
+  playlistRevision = true;
+  await page.getByRole('button', { name: '全部歌单' }).click();
   await page.locator('.playlist-card', { hasText: '深夜写作' }).click();
   await page.getByRole('button', { name: '已在唱片架 · 同步' }).click();
   await page.locator('.playlist-notice', { hasText: '已同步' }).waitFor();
@@ -416,6 +421,26 @@ try {
   await page.locator('.playlist-hero h3', { hasText: '夜晚' }).waitFor();
   assert.match(await page.locator('.playlist-track').innerText(), /Second/);
   check('multi-playlist-xml-allows-selecting-second-list'); await closeDialog();
+  // A failed recording must advance even when natural endings repeat one.
+  const failurePage = await context.newPage();
+  await failurePage.addInitScript(() => {
+    localStorage.setItem('album-circle-room-player-v1', 'local');
+    localStorage.setItem('album-circle-player-queue-v1', JSON.stringify({ ids: [], repeat: 'one', shuffle: false }));
+  });
+  const failedAlbum = { id: 'skip-fixture', title: '失败跳过回归', artist: 'Fixture Artist', type: 'album', tracks: ['失败曲', '恢复曲'], trackDetails: [{ title: '失败曲', source: 'local', providerId: 'aaaaaaaaaaaaaaaa' }, { title: '恢复曲', source: 'local', providerId: 'bbbbbbbbbbbbbbbb' }] };
+  let failures = 0;
+  await failurePage.route('**/api/items', route => route.fulfill({ json: { items: [failedAlbum] } }));
+  await failurePage.route('**/desktop-music/search?*', route => route.fulfill({ json: { candidates: [] } }));
+  await failurePage.route('**/desktop-music/resolve', route => {
+    const { id } = route.request().postDataJSON();
+    if (id === 'aaaaaaaaaaaaaaaa') { failures++; return route.fulfill({ json: { error: '夹具：这首歌曲不可播放' } }); }
+    return route.fulfill({ json: { audioPath: '/desktop-music/local/audio/' + id } });
+  });
+  await failurePage.goto(origin); await failurePage.locator('.room-record').first().dblclick();
+  await failurePage.getByRole('button', { name: '播放模式：单曲循环', exact: true }).waitFor();
+  await failurePage.waitForFunction(() => { const audio = document.querySelector('audio'); return audio && !audio.paused && audio.src.endsWith('bbbbbbbbbbbbbbbb'); });
+  assert.equal(failures, 1, 'the failed recording was not retried by repeat-one');
+  await failurePage.close(); check('unplayable-track-advances-under-repeat-one');
   assert.deepEqual(report.pageErrors, []); assert.deepEqual(report.unexpectedRequests, []); assert.deepEqual(report.consoleErrors, []); assert.deepEqual(report.failedRequests, []);
   report.passed = true;
 } catch (error) { report.passed = false; report.error = error.stack || String(error); console.error(report.error); process.exitCode = 1; if (page && !page.isClosed()) { await screenshot('failure').catch(() => {}); await fs.writeFile(path.join(output, 'failure.html'), await page.content()).catch(() => {}); } }

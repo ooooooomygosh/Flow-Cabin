@@ -55,13 +55,21 @@ export function rankForAutoplay(candidates, want, threshold = AUTO_MATCH_THRESHO
 }
 
 // Remembers which candidate actually played for a track, so the next play
-// skips the search. Stored per record + track index + title; bounded.
+// skips the search. Recording metadata is part of the identity: edits or a
+// refreshed playlist must never reuse a same-title match from another artist.
 export const MATCH_MEMORY_KEY = 'flow-cabin-track-matches-v1';
 export const MATCH_MEMORY_LIMIT = 400;
 const KEEP = ['id', 'provider', 'title', 'artist', 'album', 'duration', 'mediaMid', 'fee'];
 export function matchKey(record, index) {
   const raw = record?.tracks?.[index], title = typeof raw === 'string' ? raw : raw?.title || raw?.name || '';
-  return record?.id && title ? `${record.id}|${index}|${title}` : '';
+  if (!record?.id || !title) return '';
+  const detail = record?.trackDetails?.[index] || {};
+  // JSON avoids delimiter collisions; old title-only keys cannot be reused.
+  return 'track-v2:' + JSON.stringify([record.id, index, title,
+    detail.artist || (record.type === 'playlist' ? '' : record.artist || ''),
+    detail.album || (record.type === 'playlist' ? '' : record.title || ''),
+    detail.lengthMillis || 0, detail.source || '', detail.providerId || '',
+    detail.mediaMid || '', record.type === 'song' ? record.externalIds?.qqSongMid || '' : '']);
 }
 export function createMatchMemory(storage = globalThis.localStorage, limit = MATCH_MEMORY_LIMIT) {
   let entries;

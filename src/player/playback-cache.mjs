@@ -1,3 +1,5 @@
+import { matchKey } from './auto-match.mjs';
+
 // Seamless playback helpers. Matching a track (search + resolve) is the slow
 // part of starting a song, so the deck resolves the *next* track while the
 // current one plays and keeps the answer for a few minutes. Pure / injectable
@@ -6,7 +8,7 @@ export const PREFETCH_TTL_MS = 8 * 60 * 1000;
 export const PREFETCH_LIMIT = 12;
 export const PREFETCH_PROVIDERS = new Set(['auto', 'qq', 'netease', 'local']);
 
-export const resolutionKey = (provider, item, index) => item?.id ? `${provider}|${item.id}|${index}|${item.tracks?.[index] ?? ''}` : '';
+export const resolutionKey = (provider, item, index) => { const key = matchKey(item, index); return key ? JSON.stringify([provider, key]) : ''; };
 
 export function createResolutionCache({ now = () => Date.now(), ttl = PREFETCH_TTL_MS, limit = PREFETCH_LIMIT } = {}) {
   const entries = new Map();

@@ -122,7 +122,7 @@ export default function useRoomPlayback(record, trackIndex, provider, onNext, op
   useEffect(() => {
     if (state.status === 'playing') { skips.current = 0; return; }
     if (!record || !shouldAutoSkip({ error: state.error, status: state.status, consecutive: skips.current, canNext: canNext() })) return;
-    const timer = setTimeout(() => { skips.current++; next.current?.(false); }, AUTO_SKIP_DELAY_MS);
+    const timer = setTimeout(() => { skips.current++; next.current?.(true); }, AUTO_SKIP_DELAY_MS);
     return () => clearTimeout(timer);
   }, [state.status, state.error, record?.id, trackIndex]);
   useEffect(() => { skips.current = 0; }, [record?.id, provider]);
