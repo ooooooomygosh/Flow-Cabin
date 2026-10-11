@@ -1,4 +1,5 @@
 export { handleQQSearch, handleQQSongUrl, getQQLoginInfo, parseCookieString, qqCookieUin, qqCookieMusicKey } from './vendor/simple-music/server/lib/qq-client';
+import { qqMusicRequest } from './vendor/simple-music/server/lib/qq-client';
 export { handleSearch, handleSongUrl, normalizeLoginInfo, call, audioProxyHeadersFor } from './vendor/simple-music/server/lib/netease-client';
 
 // Flow Cabin adapter: stored cookies are not proof of an authenticated account.
@@ -77,4 +78,19 @@ export async function neteasePlaylistTracks(cookie: string, id: string, options:
   const end = Math.min(total, offset + limit), nextOffset = end < Math.min(total, NCM_PLAYLIST_LIMIT) ? end : null;
   return { provider: 'netease', playlist: { provider: 'netease', id, name: asStr(pl.name), cover: httpsCover(pl.coverImgUrl), trackCount: total, creator: asStr(creator.nickname), description: asStr(pl.description).slice(0, 600) }, tracks,
     page: { offset, nextOffset, snapshot, total, missingPages: missingIds.length ? [{ offset, ids: missingIds }] : [], limit: NCM_PLAYLIST_LIMIT, capped: total > NCM_PLAYLIST_LIMIT && nextOffset === null } };
+}
+
+
+// Older shelf records may have a QQ song mid but no file media_mid. Resolve
+// only that exact recording; metadata is not a grant of playback permission.
+export async function getQQMediaMid(cookie: string, mid: string): Promise<string> {
+  if (!/^[a-z\d]{14}$/i.test(mid)) return '';
+  const json = asObj(await qqMusicRequest(cookie, {
+    comm: { ct: 24, cv: 0 },
+    songinfo: { module: 'music.pf_song_detail_svr', method: 'get_song_detail_yqq', param: { song_mid: mid } }
+  }, { cookie: true }));
+  const result = asObj(json.songinfo), track = asObj(asObj(result.data).track_info);
+  if (Number(json.code || 0) !== 0 || Number(result.code || 0) !== 0 || asStr(track.mid) !== mid) return '';
+  const mediaMid = asStr(asObj(track.file).media_mid);
+  return /^[a-z\d]{14}$/i.test(mediaMid) ? mediaMid : '';
 }

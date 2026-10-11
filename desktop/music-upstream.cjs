@@ -33,6 +33,7 @@ __export(music_upstream_exports, {
   call: () => call,
   getNeteaseLoginInfo: () => getNeteaseLoginInfo,
   getQQLoginInfo: () => getQQLoginInfo,
+  getQQMediaMid: () => getQQMediaMid,
   handleQQPlaylistTracks: () => handleQQPlaylistTracks,
   handleQQSearch: () => handleQQSearch,
   handleQQSongUrl: () => handleQQSongUrl,
@@ -1217,12 +1218,24 @@ async function neteasePlaylistTracks(cookie, id, options = {}) {
     page: { offset, nextOffset, snapshot, total, missingPages: missingIds.length ? [{ offset, ids: missingIds }] : [], limit: NCM_PLAYLIST_LIMIT, capped: total > NCM_PLAYLIST_LIMIT && nextOffset === null }
   };
 }
+async function getQQMediaMid(cookie, mid) {
+  if (!/^[a-z\d]{14}$/i.test(mid)) return "";
+  const json = asObj(await qqMusicRequest(cookie, {
+    comm: { ct: 24, cv: 0 },
+    songinfo: { module: "music.pf_song_detail_svr", method: "get_song_detail_yqq", param: { song_mid: mid } }
+  }, { cookie: true }));
+  const result = asObj(json.songinfo), track = asObj(asObj(result.data).track_info);
+  if (Number(json.code || 0) !== 0 || Number(result.code || 0) !== 0 || asStr(track.mid) !== mid) return "";
+  const mediaMid = asStr(asObj(track.file).media_mid);
+  return /^[a-z\d]{14}$/i.test(mediaMid) ? mediaMid : "";
+}
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   audioProxyHeadersFor,
   call,
   getNeteaseLoginInfo,
   getQQLoginInfo,
+  getQQMediaMid,
   handleQQPlaylistTracks,
   handleQQSearch,
   handleQQSongUrl,

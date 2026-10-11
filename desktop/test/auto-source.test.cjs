@@ -42,3 +42,9 @@ test('a browser gesture restriction stops matching instead of trying more record
   await assert.rejects(findPlayableSource({ record, index: 0, provider: 'netease', request: async path => path === '/resolve' ? {} : { candidates: [match('first'), match('second')] }, play: async () => { attempts++; const error = new Error('gesture required'); error.name = 'NotAllowedError'; throw error; } }), { name: 'NotAllowedError' });
   assert.equal(attempts, 1);
 });
+
+test('a recovered legacy QQ exact id plays without searching or changing the saved record', async () => {
+  const { findPlayableSource } = await playback, calls = [], before = structuredClone(record);
+  const result = await findPlayableSource({ record, index: 0, provider: 'qq', request: async (path, candidate) => { calls.push([path, candidate.provider, candidate.id, candidate.mediaMid]); return { audioPath: '/recovered.wav' }; }, play: async candidate => assert.equal(candidate.id, record.trackDetails[0].providerId) });
+  assert.equal(result.candidate.provider, 'qq'); assert.deepEqual(calls, [['/resolve', 'qq', record.trackDetails[0].providerId, '']]); assert.deepEqual(record, before);
+});
