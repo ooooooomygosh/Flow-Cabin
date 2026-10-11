@@ -121,13 +121,42 @@ function lookupTrack(entry) {
 
 function createPlaylistLibrary({ upstream, cookies, fetch = globalThis.fetch, platform = process.platform, execFileProcess = execFile }) {
   async function getText(url, { max = 4 * 1024 * 1024, accept = 'text/html' } = {}) {
-    const response = await fetch(url, { redirect: 'follow', signal: AbortSignal.timeout(15000), headers: { 'Accept': accept, 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15' } });
-    const final = new URL(response.url || url);
-    if (!['music.apple.com', 'itunes.apple.com'].includes(final.hostname)) throw new Error('Apple Music 链接跳转到了未知地址，已停止读取。');
-    if (response.status === 404) throw new Error('找不到这个 Apple Music 歌单，可能未公开分享或已删除。');
-    if (!response.ok) throw new Error('Apple Music 暂时无法访问，请稍后再试。');
-    const text = await response.text(); if (text.length > max) throw new Error('Apple Music 页面过大，无法读取。'); return text;
+    const allowed = (value) => {
+      const target = new URL(value);
+      if (target.protocol !== 'https:' || target.username || target.password || target.port || !['music.apple.com', 'itunes.apple.com'].includes(target.hostname)) throw new Error('Apple Music 链接跳转到了未知地址，已停止读取。');
+      return target.href;
+    };
+    let current = allowed(url);
+    const signal = AbortSignal.timeout(15000);
+    for (let hop = 0; hop <= 4; hop++) {
+      const response = await fetch(current, { redirect: 'manual', signal, headers: { Accept: accept, 'User-Agent': 'FlowCabin/1.12 playlist metadata' } });
+      if (response.url) allowed(response.url);
+      if ([301, 302, 303, 307, 308].includes(response.status)) {
+        await response.body?.cancel();
+        const location = response.headers?.get('location');
+        if (!location || hop === 4) throw new Error('Apple Music 链接跳转过多，已停止读取。');
+        current = allowed(new URL(location, current).href);
+        continue;
+      }
+      if (response.status === 404) { await response.body?.cancel(); throw new Error('找不到这个 Apple Music 歌单，可能未公开分享或已删除。'); }
+      if (!response.ok) { await response.body?.cancel(); throw new Error('Apple Music 暂时无法访问，请稍后再试。'); }
+      if (Number(response.headers?.get('content-length')) > max) { await response.body?.cancel(); throw new Error('Apple Music 页面过大，无法读取。'); }
+      if (!response.body?.getReader) {
+        const text = await response.text(); if (Buffer.byteLength(text) > max) throw new Error('Apple Music 页面过大，无法读取。'); return text;
+      }
+      const reader = response.body.getReader(), chunks = []; let size = 0;
+      try {
+        while (true) {
+          const { done, value } = await reader.read(); if (done) break;
+          size += value.byteLength;
+          if (size > max) { await reader.cancel(); throw new Error('Apple Music 页面过大，无法读取。'); }
+          chunks.push(Buffer.from(value));
+        }
+        return Buffer.concat(chunks).toString('utf8');
+      } finally { reader.releaseLock(); }
+    }
   }
+
   async function lookup(ids, country) {
     const tracks = new Map();
     for (let index = 0; index < ids.length; index += 150) {
@@ -164,7 +193,7 @@ function createPlaylistLibrary({ upstream, cookies, fetch = globalThis.fetch, pl
     }
     const list = Music.userPlaylists.whose({ persistentID: argv[1] })[0], tracks = list.tracks;
     const n = tracks.name(), a = tracks.artist(), al = tracks.album(), d = tracks.duration();
-    return JSON.stringify({ name: list.name(), tracks: n.slice(0, ${TRACK_LIMIT}).map((title, index) => ({ title: title, artist: a[index], album: al[index], duration: Math.round((Number(d[index]) || 0) * 1000) })) });
+    return JSON.stringify({ name: list.name(), trackCount: n.length, tracks: n.slice(0, ${TRACK_LIMIT}).map((title, index) => ({ title: title, artist: a[index], album: al[index], duration: Math.round((Number(d[index]) || 0) * 1000) })) });
   }`;
   const musicApp = (args) => new Promise((resolve, reject) => {
     if (platform !== 'darwin') return reject(new Error('读取「音乐」App 歌单需要 macOS。Windows 可在 iTunes / Apple Music 中导出歌单文件后导入。'));
@@ -205,7 +234,7 @@ function createPlaylistLibrary({ upstream, cookies, fetch = globalThis.fetch, pl
       if (provider === 'apple-local') {
         if (!/^[A-F\d]{16}$/i.test(value)) throw new Error('「音乐」App 歌单 ID 无效。');
         const result = await musicApp(['tracks', value]);
-        return normalizeDetail({ playlist: { id: value, name: result?.name, creator: '音乐 App' }, tracks: result?.tracks }, 'apple-local');
+        return normalizeDetail({ playlist: { id: value, name: result?.name, trackCount: result?.trackCount, creator: '音乐 App' }, tracks: result?.tracks }, 'apple-local');
       }
       throw new Error('不支持此歌单来源。');
     },

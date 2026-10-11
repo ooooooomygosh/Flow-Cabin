@@ -142,3 +142,10 @@
 }
 :root[data-desktop-reduce-motion=true] .playlist-dialog *, :root[data-desktop-reduce-motion=true] .playlist-dialog *::after { animation: none !important; transition: none !important; }
 @media (prefers-reduced-motion: reduce) { .playlist-dialog *, .playlist-dialog *::after { animation: none !important; transition: none !important; } }
+
+.playlist-capability { padding: 10px 12px; border-left: 3px solid var(--px-accent); background: var(--px-surface-2); line-height: 1.6; }
+.playlist-file-choices ul { display: grid; gap: 8px; list-style: none; margin: 0; padding: 0; }
+.playlist-file-choices button { width: 100%; display: flex; align-items: center; gap: 10px; text-align: left; }
+.playlist-file-choices strong { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+.playlist-file-choices small { color: var(--px-ink-dim); }
+.playlist-rail-tab:disabled { opacity: .65; cursor: progress; }

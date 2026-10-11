@@ -94,3 +94,29 @@ test('playlists: macOS Music.app playlists are read through JXA with validated i
   const denied = createPlaylistLibrary({ upstream: {}, cookies: () => '', platform: 'darwin', execFileProcess: (f, a, o, done) => done(new Error('Not authorized to send Apple events to Music. (-1743)')) });
   await assert.rejects(() => denied.list('apple-local'), /自动化/);
 });
+
+test('Apple redirect is validated before any request to an untrusted destination', async () => {
+  for (const location of ['https://evil.example/x', 'http://music.apple.com/x', 'https://music.apple.com:444/x', 'https://user:secret@music.apple.com/x', 'http://127.0.0.1/private']) {
+    const requests = [];
+    const library = createPlaylistLibrary({ upstream: {}, cookies: () => '', fetch: async (url, options) => {
+      requests.push(url); assert.equal(options.redirect, 'manual');
+      return new Response(null, { status: 302, headers: { location } });
+    } });
+    await assert.rejects(() => library.link('https://music.apple.com/us/playlist/mix/pl.abcdef12'), /未知地址/);
+    assert.equal(requests.length, 1);
+  }
+});
+test('Apple response stream stops at the byte budget before allocating the full body', async () => {
+  let cancelled = false;
+  const library = createPlaylistLibrary({ upstream: {}, cookies: () => '', fetch: async () => new Response(new ReadableStream({
+    pull(controller) { controller.enqueue(new Uint8Array(1024 * 1024)); }, cancel() { cancelled = true; }
+  })) });
+  await assert.rejects(() => library.link('https://music.apple.com/us/playlist/mix/pl.abcdef12'), /页面过大/);
+  assert.equal(cancelled, true);
+});
+test('Apple redirect loops stop after a bounded number of requests', async () => {
+  let requests = 0;
+  const library = createPlaylistLibrary({ upstream: {}, cookies: () => '', fetch: async () => { requests++; return new Response(null, { status: 302, headers: { location: '/us/playlist/mix/pl.abcdef12' } }); } });
+  await assert.rejects(() => library.link('https://music.apple.com/us/playlist/mix/pl.abcdef12'), /跳转过多/);
+  assert.equal(requests, 5);
+});

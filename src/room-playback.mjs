@@ -1,7 +1,7 @@
 import { playbackErrorMessage } from './player/playback-cache.mjs';
 import { rankForAutoplay, matchKey, AUTO_MATCH_ATTEMPTS } from './player/auto-match.mjs';
 // A playlist's tracks each have their own artist and album; an album's share the record's.
-export const trackArtist = (item, index) => item?.trackDetails?.[index]?.artist || item?.artist || '';
+export const trackArtist = (item, index) => item?.trackDetails?.[index]?.artist || (item?.type === 'playlist' ? '' : item?.artist || '');
 export const trackAlbum = (item, index) => item?.trackDetails?.[index]?.album || (item?.type === 'playlist' ? '' : item?.title || '');
 export function exactTrack(item, index, provider) {
   if (provider === 'netease') {
@@ -10,7 +10,7 @@ export function exactTrack(item, index, provider) {
   }
   if (provider === 'local') {
     const detail = item?.trackDetails?.[index];
-    return detail?.source === 'local' && /^[a-f\d]{16}$/.test(detail.providerId || '') ? { id: detail.providerId, provider: 'local', title: detail.title, artist: item.artist } : null;
+    return detail?.source === 'local' && /^[a-f\d]{16}$/.test(detail.providerId || '') ? { id: detail.providerId, provider: 'local', title: detail.title, artist: trackArtist(item, index), album: trackAlbum(item, index) } : null;
   }
   if (provider !== 'qq') return null;
   const detail = item?.trackDetails?.[index], mid = (['netease', 'apple', 'local'].includes(detail?.source) ? '' : detail?.providerId) || (item?.type === 'song' ? item.externalIds?.qqSongMid : '');
@@ -69,21 +69,23 @@ export function rankCandidates(candidates, record, index) {
 // `play` resolved; when nothing works the caller gets the candidates + error.
 export async function findPlayableSource({ record, index, provider, request, play, isCurrent = () => true, memory = null }) {
   const tried = new Set(), candidates = [];
-  let lastError = '', hadMatches = false;
+  let lastError = '', hadMatches = false, aborted = false;
+  const active = () => !aborted && isCurrent();
   const key = memory ? matchKey(record, index) : '';
   const attempt = async (candidate) => {
     const id = `${candidate.provider}:${candidate.id}`;
-    if (!isCurrent() || tried.has(id)) return false;
+    if (!active() || tried.has(id)) return false;
     tried.add(id); hadMatches = true;
     try {
       const result = await request('/resolve', candidate);
-      if (!isCurrent()) return false;
+      if (!active()) return false;
       await play(candidate, result);
-      if (!isCurrent()) return false;
+      if (!active()) return false;
       if (!result?.remote) memory?.put(key, candidate);
       return true;
     } catch (error) {
-      if (!isCurrent() || error.name === 'AbortError') return false;
+      if (error?.name === 'AbortError') aborted = true;
+      if (!active()) return false;
       lastError = playbackErrorMessage(error);
       // Browser gesture restrictions are not a reason to try unrelated recordings.
       if (error.name === 'NotAllowedError') throw error;
@@ -98,25 +100,25 @@ export async function findPlayableSource({ record, index, provider, request, pla
   const remembered = memory?.get(key);
   if (remembered && providers.includes(remembered.provider)) {
     if (await attempt(remembered)) return { candidate: remembered, candidates: [], remembered: true };
-    if (!isCurrent()) return null;
+    if (!active()) return null;
     memory.forget(key);
   }
   for (const source of providers) {
-    if (!isCurrent()) return null;
+    if (!active()) return null;
     const exact = exactTrack(record, index, source);
     if (exact && await attempt(exact)) return { candidate: exact, candidates: [] };
-    if (!isCurrent()) return null;
+    if (!active()) return null;
     try {
       const result = await request(`/search?provider=${source}&query=${encodeURIComponent(`${trackArtist(record, index)} ${name}`)}`);
-      if (!isCurrent()) return null;
+      if (!active()) return null;
       const found = Array.isArray(result.candidates) ? result.candidates : [];
       candidates.push(...found);
       for (const candidate of rankCandidates(found, record, index).slice(0, AUTO_MATCH_ATTEMPTS)) {
         if (await attempt(candidate)) return { candidate, candidates: [] };
-        if (!isCurrent()) return null;
+        if (!active()) return null;
       }
     } catch (error) {
-      if (!isCurrent() || error.name === 'AbortError') return null;
+      if (!active() || error.name === 'AbortError') return null;
       if (error.name === 'NotAllowedError') throw error;
       lastError = error.message;
     }

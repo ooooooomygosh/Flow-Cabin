@@ -77,3 +77,51 @@ test('onboarding API: list, status, permission, connect and test playback', asyn
   const bad = await testPlayback({ provider: 'qq', seconds: 0, createAudio: () => ({ ...audio, play: async () => { throw new Error('blocked'); } }), request: async (path) => path === '/resolve' ? { audioPath: '/a' } : { candidates: [c('t', { artist: '周杰伦' })] } });
   assert.equal(bad.ok, false, 'never reports success unless audio played');
 });
+
+
+test('match memory: same-title metadata edits invalidate the remembered recording', () => {
+  const playlist = { id: 'mix', type: 'playlist', title: 'Mix', artist: 'Curator', tracks: ['Hello'], trackDetails: [{ artist: 'Artist A', album: 'First', source: 'netease', providerId: '11', lengthMillis: 180000 }] };
+  const key = matchKey(playlist, 0), memory = createMatchMemory(memoryStore());
+  memory.put(key, { id: '11', provider: 'netease' });
+  for (const patch of [{ artist: 'Artist B' }, { album: 'Second' }, { providerId: '22' }, { source: 'apple' }, { lengthMillis: 200000 }, { mediaMid: '0039MnYb0qxYhV' }]) {
+    const edited = { ...playlist, trackDetails: [{ ...playlist.trackDetails[0], ...patch }] };
+    assert.notEqual(matchKey(edited, 0), key); assert.equal(memory.get(matchKey(edited, 0)), null);
+  }
+  assert.equal(matchKey({ ...playlist, artist: 'New curator', title: 'Renamed list' }, 0), key);
+  assert.equal(matchKey({ ...playlist, tracks: [{ title: 'Hello' }] }, 0), key);
+  assert.equal(matchKey(playlist, 1), ''); assert.equal(matchKey(null, 0), '');
+});
+test('playlists: a curator is never used as the missing song artist', async () => {
+  const { trackArtist, wantedTrack, exactTrack } = await import('../room-playback.mjs');
+  const playlist = { id: 'mix', type: 'playlist', title: 'Night', artist: 'Playlist owner', tracks: ['Hello'], trackDetails: [{ title: 'Hello', source: 'apple', artist: '', album: 'First' }] };
+  assert.equal(trackArtist(playlist, 0), '');
+  assert.deepEqual(wantedTrack(playlist, 0), { title: 'Hello', artist: '', album: 'First', duration: 0 });
+  const queries = [];
+  await findPlayableSource({ record: playlist, index: 0, provider: 'auto', request: async path => { queries.push(decodeURIComponent(path)); return { candidates: [] }; }, play: async () => {} });
+  assert.ok(queries.every(query => !query.includes('Playlist owner')));
+  assert.equal(trackArtist({ ...playlist, type: 'album' }, 0), 'Playlist owner');
+  assert.equal(exactTrack({ ...playlist, trackDetails: [{ title: 'Hello', artist: 'Actual artist', source: 'local', providerId: 'abcdef0123456789' }] }, 0, 'local').artist, 'Actual artist');
+});
+test('fallback: an aborted exact or remembered resolution never starts another request', async () => {
+  for (const remembered of [false, true]) {
+    const track = { ...record, trackDetails: [{ title: '晴天', source: 'netease', providerId: '186016' }] };
+    const memory = createMatchMemory(memoryStore());
+    if (remembered) memory.put(matchKey(track, 0), { id: 'saved', provider: 'netease', title: '晴天' });
+    const requests = [];
+    const result = await findPlayableSource({ record: track, index: 0, provider: 'auto', memory,
+      request: async (path, body) => { requests.push([path, body?.id]); throw Object.assign(new Error('cancelled'), { name: 'AbortError' }); },
+      play: async () => assert.fail('cancelled resolution must not play') });
+    assert.equal(result, null);
+    assert.deepEqual(requests, [['/resolve', remembered ? 'saved' : '186016']]);
+    if (remembered) assert.equal(memory.get(matchKey(track, 0)).id, 'saved');
+  }
+});
+test('fallback: superseded resolutions neither play nor update match memory', async () => {
+  let current = true;
+  const memory = createMatchMemory(memoryStore());
+  const track = { ...record, trackDetails: [{ title: '晴天', source: 'netease', providerId: '186016' }] };
+  const result = await findPlayableSource({ record: track, index: 0, provider: 'auto', memory, isCurrent: () => current,
+    request: async () => { current = false; return { audioPath: '/stale' }; },
+    play: async () => assert.fail('superseded resolution must not play') });
+  assert.equal(result, null); assert.equal(memory.size, 0);
+});

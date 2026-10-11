@@ -1,6 +1,6 @@
 # 功能与验收矩阵
 
-更新：2026-10-09。本表区分“代码存在”“有确定性用例”“模拟交互”和“真实环境已验收”。不以测试文件存在推断通过，不记录未经核实的测试数量、截图、PR 或 CI 结果。最新执行证据见 [验证汇总](verification-summary.md)、[macOS 原生验收](native-mac-acceptance-2026-10-09.md)与 [浏览器验证记录](browser-validation.md)，需求依据见 [产品审查](2026-10-product-review.md)。
+历史矩阵：2026-10-09。2026-10-11 的最新变更和实际验收请见 [整合验收](integration-2026-10-11.md)。本表区分“代码存在”“有确定性用例”“模拟交互”和“真实环境已验收”。不以测试文件存在推断通过，不记录未经核实的测试数量、截图、PR 或 CI 结果。最新执行证据见 [验证汇总](verification-summary.md)、[macOS 原生验收](native-mac-acceptance-2026-10-09.md)与 [浏览器验证记录](browser-validation.md)，需求依据见 [产品审查](2026-10-product-review.md)。
 
 ## 判读规则
 

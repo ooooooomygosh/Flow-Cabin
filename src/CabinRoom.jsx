@@ -78,7 +78,7 @@ export default function CabinRoom({ items, loading, openRecord, openAdd, firstVi
   const chooseProvider = (value) => { chosenProvider.current = true; setProvider(value); try { localStorage.setItem('album-circle-room-player-v1', value); } catch {} };
   const [musicSettings, setMusicSettings] = useState(false), [filtersOpen, setFiltersOpen] = useState(false);
   const queueRef = useRef(null);
-  const playback = useRoomPlayback(record, trackIndex, provider, () => queueRef.current?.current.next(false), { peekNext: () => queueRef.current?.current.peekNext(), canNext: () => Boolean(queueRef.current?.current.canAdvance) });
+  const playback = useRoomPlayback(record, trackIndex, provider, (manual = false) => queueRef.current?.current.next(manual), { peekNext: () => queueRef.current?.current.peekNext(), canNext: () => Boolean(queueRef.current?.current.canNext) });
   const system = useSystemNowPlaying(provider === 'system');
   const deckItem = provider === 'system' ? system.item : record;
   const effectiveSpin = provider === 'visual' ? spinning : provider === 'system' ? Boolean(system.active && system.playing) : playback.playing;

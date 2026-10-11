@@ -58,3 +58,12 @@ export function filterTracks(tracks, query) {
   if (!needle) return tracks.map((track, index) => ({ track, index }));
   return tracks.map((track, index) => ({ track, index })).filter(({ track }) => [track.title, track.artist, track.album].some((value) => fold(value).includes(needle)));
 }
+
+// Refresh source metadata without replacing the listener's notes or styling.
+export function playlistRefreshPatch(item, incoming) {
+  const patch = {};
+  for (const key of ['title', 'artist', 'tracks', 'trackDetails']) {
+    if (JSON.stringify(item?.[key]) !== JSON.stringify(incoming[key])) patch[key] = incoming[key];
+  }
+  return patch;
+}

@@ -1,5 +1,7 @@
 # Desktop dependency review
 
+Registry refresh on 2026-10-11 succeeded: root 0 findings; desktop 15 (9 moderate, 6 high). No dependency versions were changed. The bounded reachability analysis below remains historical; this refresh confirms current advisory counts, not a new proof of non-exploitability.
+
 Reviewed 2026-10-09 against the checked-in lockfile and installed dependency source. This is a bounded reachability review of the 15 desktop findings returned by the 2026-10-08 npm audit, not a new clean audit or a penetration test. The attempted registry refresh on 2026-10-09 did not complete because execution approval was cancelled; current registry availability of fixes is therefore unverified.
 
 ## Merge assessment
