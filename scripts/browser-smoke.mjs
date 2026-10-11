@@ -164,6 +164,9 @@ try {
   await page.getByRole('button', { name: '编辑卡片 ephemeral', exact: true }).click();
   await page.getByLabel('编辑卡片背面').fill('短暂的；转瞬即逝');
   await screenshot('study-card-editor');
+  await page.setViewportSize({ width: 960, height: 600 }); await page.getByLabel('编辑卡片背面').scrollIntoViewIfNeeded(); await screenshot('study-card-editor-960x600');
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+  await page.setViewportSize({ width: 1440, height: 900 });
   await page.evaluate(() => { window.__studySetItem = Storage.prototype.setItem; Storage.prototype.setItem = function(key, value) { if (key.startsWith('album-circle-study-v1:')) throw new Error('fixture quota'); return window.__studySetItem.call(this, key, value); }; });
   await page.getByRole('button', { name: '保存卡片', exact: true }).click();
   await page.getByRole('alert').filter({ hasText: '无法保存学习记录' }).waitFor();

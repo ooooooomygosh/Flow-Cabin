@@ -94,3 +94,6 @@
 .study-card-edit textarea { width: 100%; min-height: 64px; resize: vertical; }
 .study-card-edit > div { display: flex; gap: 8px; flex-wrap: wrap; }
 .study-card-list li { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto auto; }
+
+.study-card-edit textarea, .study-card-search input { box-sizing: border-box; color: var(--px-ink); background: var(--px-surface-2); border: 2px solid var(--px-shadow); padding: 7px 8px; font: inherit; font-size: 12px; box-shadow: inset 2px 2px 0 #00000020; }
+.study-card-edit textarea:focus, .study-card-search input:focus { border-color: var(--px-accent); }
