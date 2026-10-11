@@ -21,3 +21,12 @@ test('saved offscreen geometry does not strand the window on a disconnected moni
   assert.equal(recovered.x, undefined); assert.equal(recovered.y, undefined);
   assert.equal(recovered.width, 1920); assert.equal(recovered.height, 1080);
 });
+
+const { localDownloadType, SITE_ORIGIN } = require('../policy.cjs');
+test('study template download permits only the small named TSV from a local blob', () => {
+  const value = { url:`blob:${SITE_ORIGIN}/id`, filename:'小屋词书模板.tsv', bytes:32, mimeType:'text/tab-separated-values' };
+  assert.equal(localDownloadType(value),'tsv');
+  for (const change of [{url:'data:text/tab-separated-values,word'}, {url:'blob:https://evil.test/id'}, {url:`${SITE_ORIGIN}/template.tsv`}, {filename:'other.tsv'}, {filename:'小屋词书模板.tsv.exe'}, {bytes:4097}, {bytes:-1}, {mimeType:'text/html'}]) assert.equal(localDownloadType({...value,...change}),null);
+  for (const filename of ['wall.png','project.json']) assert(localDownloadType({...value,filename,bytes:6000000}));
+  assert.equal(localDownloadType({...value,filename:'wall.png',bytes:64*1024*1024+1}),null);
+});

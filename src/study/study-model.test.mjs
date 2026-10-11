@@ -113,3 +113,11 @@ test('word book import maps columns, counts errors and duplicates without changi
   assert.equal(previewWordImport('{"front":"word"}', { format: 'json' }).errors, 1);
   assert.equal(previewWordImport('[null,{"front":23,"back":"x"},{"front":"x","back":"<b>plain text</b>"}]', { format: 'json' }).cards[0].back, '<b>plain text</b>');
 });
+
+
+test('a full 5000-card collection cannot create a new word-book state or rewrite memory', () => {
+  const cards = Array.from({ length:5000 }, (_,i) => ({ id:`full-${i}`, deckId:'old', front:`word-${i}`, back:'kept', createdAt:T0+i, memory:null }));
+  const state = openWordBook(normalizeStudy({ decks:[{ id:'old', name:'Old cards' }], cards }), WORD_BOOKS[0].id, T0);
+  assert.equal(state.cards.length, 5000);
+  for (let i=0;i<10;i++) assert.equal(nextBookCard(state, WORD_BOOKS[0].id, T0), state);
+});

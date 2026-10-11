@@ -15,6 +15,10 @@ function createFullscreen({ window, getSink = () => null, onChange = () => {}, d
     const owned = pending !== null;
     actual = on; pending = null;
     if (!owned) desired = on; // green button / system window menu
+    if (on && desired) {
+      const sink = getSink();
+      if (sink?.active || sink?.busy) sink.exit();
+    }
     onChange(on);
     defer(apply); // Electron's getter can lag the native event.
   }

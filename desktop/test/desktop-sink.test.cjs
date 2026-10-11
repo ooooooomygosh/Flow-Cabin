@@ -107,7 +107,7 @@ test('exit cancels an owned pet while its start promise is pending', async () =>
 });
 test('exit while mini is loading cannot re-activate the sink', async () => {
   let finish; const calls = [];
-  const sink = createDesktopSink({ wallpaper: { active: true, start: async () => {}, stop() {} }, legacy: {}, pet: { active: true }, mini: { show: () => new Promise(resolve => { finish = resolve; }), hide: () => calls.push('hide') }, hideMain() {}, restoreMain() {} });
+  const sink = createDesktopSink({ platform: 'darwin', wallpaper: { active: true, start: async () => {}, stop() {} }, legacy: {}, pet: { active: true }, mini: { show: () => new Promise(resolve => { finish = resolve; }), hide: () => calls.push('hide') }, hideMain() {}, restoreMain() {} });
   const entering = sink.enter(); await Promise.resolve(); sink.exit(); finish(); await entering;
   assert.equal(sink.active, false); assert.equal(sink.busy, false); assert.deepEqual(calls, ['hide']);
 });

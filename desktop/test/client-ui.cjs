@@ -60,7 +60,26 @@ const check = (value) => report.checks.push(value);
   await site.getByRole('button', { name:'显示工具', exact:true }).click();
   await site.getByRole('button', { name:'学习', exact:true }).click(); await site.getByLabel('入门词书', { exact:true }).waitFor();
   await site.screenshot({ path:path.join(output, 'native-fullscreen-study.png') });
-  await site.locator('.focus-dock-close').click(); await site.getByRole('button', { name:'收起工具', exact:true }).click();
+  await site.getByLabel('新卡组名称').fill('模板验收'); await site.getByRole('button',{name:'新建',exact:true}).click();
+  await site.locator('.study-decks li',{hasText:'模板验收'}).getByRole('button',{name:'编辑',exact:true}).click();
+  await site.getByText('导入本地词书',{exact:true}).click();
+  const templatePath = path.join(profile,'word-template.tsv');
+  await application.evaluate(({webContents}, savePath) => {
+    const contents = webContents.getAllWebContents().find(contents => contents.getURL().startsWith('https://album-circle.vercel.app'));
+    globalThis.__qaTemplateDownload = new Promise(resolve => contents.session.once('will-download', (_event,item) => {
+      item.setSavePath(savePath); item.once('done',(_event,state)=>resolve(state));
+    }));
+  },templatePath);
+  await site.getByRole('button',{name:'下载两列模板',exact:true}).click();
+  assert.equal(await application.evaluate(async()=>await globalThis.__qaTemplateDownload),'completed');
+  assert.equal(fs.readFileSync(templatePath,'utf8'),'word\tmeaning\nwindow\t窗户\n');
+  check('packaged-study-template-download-saves-exact-local-tsv');
+  await site.evaluate(() => document.activeElement?.blur()); await nativeKey('ESC');
+  await site.locator('.focus-dock').waitFor({state:'detached'});
+  assert.equal(await site.evaluate(()=>document.documentElement.classList.contains('room-zen')),true);
+  assert.equal(await site.evaluate(()=>document.documentElement.dataset.desktopFullscreen),'true');
+  check('packaged-escape-closes-study-tools-before-immersive-and-fullscreen');
+  await site.getByRole('button', { name:'收起工具', exact:true }).click();
   await site.evaluate(() => document.activeElement?.blur()); await nativeKey('ESC');
   await site.waitForFunction(() => !document.documentElement.classList.contains('room-zen'));
   assert.equal(await site.evaluate(() => document.documentElement.dataset.desktopFullscreen), 'true');

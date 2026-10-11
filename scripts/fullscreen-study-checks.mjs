@@ -55,7 +55,11 @@ export async function verifyFullscreenStudy({ browser, origin, output, check }) 
     await page.locator('.app-titlebar').waitFor(); await page.getByRole('button', { name: '我的歌单', exact: true }).click(); await page.getByRole('dialog').waitFor(); await page.keyboard.press('Escape');
     await page.getByRole('button', { name: '学习', exact: true }).click(); await page.getByLabel('入门词书', { exact: true }).waitFor();
     await shot('fullscreen-immersive-tools-study'); check('immersive-drag-target-recovery-playlists-and-study');
-    await page.locator('.focus-dock-close').click(); await page.getByRole('button', { name: '收起工具', exact: true }).click();
+    await page.evaluate(() => document.activeElement?.blur()); await page.keyboard.press('Escape');
+    await page.locator('.focus-dock').waitFor({ state:'detached' });
+    assert.equal(await page.evaluate(() => document.documentElement.classList.contains('room-zen')),true);
+    assert.equal(await page.evaluate(() => window.__commands.some(x => x.endsWith('/fullscreen-exit'))),false);
+    await page.getByRole('button', { name: '收起工具', exact: true }).click();
     await page.evaluate(() => document.activeElement?.blur()); await page.keyboard.press('Escape');
     assert.equal(await page.evaluate(() => document.documentElement.classList.contains('room-zen')), false);
     assert.equal(await page.evaluate(() => window.__commands.some(x => x.endsWith('/fullscreen-exit'))), false);
@@ -76,6 +80,8 @@ export async function verifyFullscreenStudy({ browser, origin, output, check }) 
     await page.getByLabel('新卡组名称').fill('导入练习'); await page.getByRole('button', { name: '新建', exact: true }).click();
     await page.locator('.study-decks li', { hasText: '导入练习' }).getByRole('button', { name: '编辑', exact: true }).click();
     await page.getByText('导入本地词书', { exact: true }).click();
+    const templateDownload = page.waitForEvent('download'); await page.getByRole('button',{name:'下载两列模板',exact:true}).click();
+    const template = await templateDownload; assert.equal(template.suggestedFilename(),'小屋词书模板.tsv');
     await page.getByLabel('选择词书文件').setInputFiles({ name: 'example.tsv', mimeType: 'text/tab-separated-values', buffer: Buffer.from('word\tmeaning\nwindow\t窗户\nwindow\t重复\nbroken\t\n<script>plain</script>\t普通文本') });
     await page.getByLabel('首行为标题').check();
     await page.getByText('有效 2 · 重复 1 · 错误 1', { exact: true }).waitFor(); await shot('study-import-preview');
@@ -85,7 +91,19 @@ export async function verifyFullscreenStudy({ browser, origin, output, check }) 
     await page.reload(); await openStudy();
     assert.deepEqual((await studyState()).cards.find(card => card.id === saved.id), saved); check('wordbook-preview-review-switch-import-and-reload-preserve-progress');
     for (const size of [{width:960,height:600},{width:1280,height:800}]) { await page.setViewportSize(size); await state(true); await shot(`fullscreen-study-${size.width}x${size.height}`); assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)); }
-    check('fullscreen-study-small-screen-layout'); assert.deepEqual(errors, []);
+    check('fullscreen-study-small-screen-layout');
+    await page.addInitScript(() => {
+      if (location.origin === 'null') return;
+      const original = Storage.prototype.setItem;
+      Storage.prototype.setItem = function(key, value) { if (key === 'album-circle-study-v1:local-owner') window.__studyWrites = (window.__studyWrites || 0)+1; return original.call(this,key,value); };
+    });
+    await page.evaluate(() => localStorage.setItem('album-circle-study-v1:local-owner', JSON.stringify({ decks:[{id:'full',name:'满容量旧卡'}], cards:Array.from({length:5000},(_,i)=>({id:`full-${i}`,deckId:'full',front:`word-${i}`,back:'旧释义',createdAt:Date.now()+i,memory:null})), newPerDay:5, log:{} })));
+    await page.reload(); await openStudy(); await page.getByRole('button', {name:'开始学习 / 复习',exact:true}).click();
+    await page.getByText('学习卡已达 5,000 张上限；旧词仍可复习。整理不需要的卡片后再添加新词。', {exact:true}).waitFor();
+    await page.waitForTimeout(300);
+    assert.equal((await studyState()).cards.length,5000); assert.equal(await page.evaluate(()=>window.__studyWrites),1);
+    await shot('study-full-capacity'); check('full-capacity-wordbook-does-not-loop-or-rewrite-existing-cards');
+    assert.deepEqual(errors, []);
   } catch (error) { await shot('fullscreen-study-failure'); throw error; }
   finally { await context.close(); }
 }

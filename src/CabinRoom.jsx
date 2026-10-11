@@ -142,13 +142,13 @@ export default function CabinRoom({ items, loading, openRecord, openAdd, firstVi
       if (event.defaultPrevented || event.repeat || event.target?.closest?.('input,textarea,select,[contenteditable="true"]') || event.altKey || event.ctrlKey || event.metaKey || document.querySelector('dialog[open]')) return;
       if (event.key === 'z' || event.key === 'Z') { event.preventDefault(); setZen((value) => !value); }
       else if ((event.key === 't' || event.key === 'T') && !event.shiftKey) { event.preventDefault(); setCorner((value) => !value); }
-      else if (event.key === 'Escape' && !corner) {
+      else if (event.key === 'Escape' && !corner && !dock.open) {
         if (zen) setZen(false);
         else if (fullscreen && appearance.client) desktopCommand('fullscreen-exit');
       }
     };
     document.addEventListener('keydown', key); return () => document.removeEventListener('keydown', key);
-  }, [zen, corner, fullscreen, appearance.client]);
+  }, [zen, corner, dock.open, fullscreen, appearance.client]);
   useEffect(() => { const receive = (event) => { window.albumPetState = event.detail; setPet(event.detail || {}); }; window.addEventListener('album-pet-state', receive); return () => window.removeEventListener('album-pet-state', receive); }, []);
   useEffect(() => { sound?.setDucked(provider === 'system' ? Boolean(system.playing) : provider !== 'visual' && playback.playing); }, [provider, playback.playing, system.playing]);
   useEffect(() => {

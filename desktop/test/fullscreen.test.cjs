@@ -30,3 +30,15 @@ test('last request wins while leaving and system transitions synchronize state',
 test('destroyed windows do not dispatch or get shown', () => {
   const f = fixture(); f.window.isDestroyed = () => true; f.control.toggle(); assert.deepEqual(f.calls, []);
 });
+
+
+test('system native entry cancels pending desktop sink before its late completion', () => {
+  const f = fixture(); f.sink.busy = true; f.finish(true);
+  assert.deepEqual(f.calls,['sink.exit']); assert.equal(f.sink.busy,false);
+  assert.equal(f.control.active,true); assert.equal(f.control.requested,true);
+});
+test('a newer exit request keeps ownership when an older native entry completes', () => {
+  const f = fixture(); f.control.set(true); f.sink.busy = true; f.control.set(false);
+  f.finish(true); assert.equal(f.sink.busy,true); assert.equal(f.calls.includes('sink.exit'),false);
+  assert.deepEqual(f.calls.filter(x=>typeof x === 'boolean'),[true,false]);
+});

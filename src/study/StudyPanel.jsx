@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useStudy } from './useStudy';
-import { RATINGS, studyQueue, previews, daysUntil, cardStage, parseCards } from './study-model.mjs';
+import { RATINGS, LIMITS, studyQueue, previews, daysUntil, cardStage, parseCards } from './study-model.mjs';
 import { Plus, Trash2, ArrowLeft, Check, BookOpen, Clock } from '../icons';
 import './study.css';
 import { WORD_BOOKS, previewWordImport } from './word-books.mjs';
@@ -33,6 +33,7 @@ function Review({ deck, close }) {
       {flipped ? <div className="study-ratings" role="group" aria-label="记得怎么样">{RATINGS.map((entry) => <button type="button" key={entry.rating} className={`is-${entry.tone}`} onClick={() => rate(entry.rating)}><b>{entry.label}</b><small>{labels[entry.rating]}</small><kbd>{entry.key}</kbd></button>)}</div>
         : <button type="button" className="pixel-button is-primary study-flip" onClick={() => setFlipped(true)}>翻面 · 空格</button>}
     </> : <div className="study-done"><Check size={22}/><strong>{done ? `今天这组复习完了，共 ${done} 张` : '这组现在没有要复习的卡片'}</strong><small>{queue.upcoming ? `下一张在 ${new Date(queue.upcoming).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })} 到期` : '添加新卡片，或明天再来。'}</small><button type="button" className="pixel-button" onClick={close}>回到卡组</button></div>}
+    {study.state.cards.length >= LIMITS.cards && <p role="status">学习卡已达 5,000 张上限；旧词仍可复习。整理不需要的卡片后再添加新词。</p>}
     {study.error && <p className="record-error" role="alert">{study.error}</p>}
   </div>;
 }
@@ -79,7 +80,11 @@ function WordImport({ deck, cards }) {
   return <details className="study-import"><summary>导入本地词书</summary>
     <p>支持 UTF-8 的 TSV / Anki 两列纯文本，或 front、back 字段的 JSON 数组。追加词条，不覆盖已有复习进度。</p>
     <label>选择词书文件<input aria-label="选择词书文件" type="file" accept=".tsv,.txt,.json" onChange={read}/></label>
-    <a download="小屋词书模板.tsv" href={'data:text/tab-separated-values;charset=utf-8,' + encodeURIComponent('word\tmeaning\nwindow\t窗户\n')}>下载两列模板</a>
+    <button type="button" className="pixel-button is-quiet" onClick={() => {
+      const url = URL.createObjectURL(new Blob(['word\tmeaning\nwindow\t窗户\n'], { type:'text/tab-separated-values' }));
+      const link = document.createElement('a'); link.href = url; link.download = '小屋词书模板.tsv'; link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }}>下载两列模板</button>
     {text && <><label>格式<select aria-label="词书导入格式" value={format} onChange={event => setFormat(event.target.value)}><option value="tsv">Tab 分隔文本</option><option value="json">JSON 数组</option></select></label>
       {format === 'tsv' && <div className="study-import-columns">{[['正面列', frontColumn, setFrontColumn], ['背面列', backColumn, setBackColumn]].map(([label, value, update]) => <label key={label}>{label}<select aria-label={label} value={value} onChange={event => update(Number(event.target.value))}>{[0,1,2,3].map(index => <option key={index} value={index}>第 {index+1} 列</option>)}</select></label>)}<label><input type="checkbox" checked={header} onChange={event => setHeader(event.target.checked)}/>首行为标题</label></div>}
       <p role="status">有效 {preview.cards.length} · 重复 {preview.duplicates} · 错误 {preview.errors}{preview.message && ` · ${preview.message}`}</p>

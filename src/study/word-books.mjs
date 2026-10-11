@@ -21,7 +21,9 @@ export function nextBookCard(state, id, now = Date.now()) {
   if (cards.some(card => !card.memory)) return state;
   const existing = new Set(cards.map(card => card.front.toLowerCase()));
   const word = book.words.find(word => !existing.has(word.front.toLowerCase()));
-  return word ? addCards(state, id, [word], now).state : state;
+  if (!word) return state;
+  const result = addCards(state, id, [word], now);
+  return result.added ? result.state : state;
 }
 export function previewWordImport(text, { format = 'tsv', frontColumn = 0, backColumn = 1, header = false } = {}, existing = []) {
   const seen = new Set(existing.map(card => card.front.normalize('NFKC').trim().toLowerCase()));
