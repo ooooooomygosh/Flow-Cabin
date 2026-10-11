@@ -1,4 +1,5 @@
 import { verifyFullscreenStudy } from './fullscreen-study-checks.mjs';
+import { hasViteLocalOrigin } from './vite-readiness.mjs';
 import { openRoomSettings, openMusicSettings, chooseSource } from './settings-actions.mjs';
 /** Offline renderer integration suite. Run: node scripts/browser-smoke.mjs
  * Requires root+desktop npm ci and Chromium (BROWSER_EXECUTABLE overrides path).
@@ -40,7 +41,7 @@ try {
   for (let i = 0; i < 100; i++) {
     if (server.exitCode !== null) throw new Error(serverLog);
     // A response from an older process on this port is not readiness evidence.
-    if (serverLog.includes('Local:') && serverLog.includes(origin)) {
+    if (hasViteLocalOrigin(serverLog, origin)) {
       try { if ((await fetch(origin)).ok) break; } catch {}
     }
     if (i === 99) throw new Error('Vite startup timed out: ' + serverLog);
