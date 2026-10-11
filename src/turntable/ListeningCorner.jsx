@@ -33,7 +33,7 @@ export default function ListeningCorner({ item, items = [], vinyl, provider, spi
   const position = audible ? playback.position || 0 : visualSeconds;
   const { progress, gaps } = useMemo(() => sideProgress(lengths.length ? lengths : [0], trackIndex, position), [lengths.join(), trackIndex, Math.floor(position)]);
   const [speed, setSpeed] = useState(33), [light, setLight] = useState(() => { try { return localStorage.getItem('album-circle-corner-light-v1') || 'lamp'; } catch { return 'lamp'; } });
-  const [sounds, setSounds] = useState(deckSoundsEnabled), [energy, setEnergy] = useState(0);
+  const [sounds, setSounds] = useState(deckSoundsEnabled), [energy, setEnergy] = useState(0), [query, setQuery] = useState(''), [notice, setNotice] = useState('');
   const root = useRef(null), deckRef = useRef(null), list = useRef(null);
   useEffect(() => { setSpeed(33); }, [item?.id]);
   useEffect(() => {
@@ -59,7 +59,10 @@ export default function ListeningCorner({ item, items = [], vinyl, provider, spi
     flyRecord({ from: sleeve, to: deck, cover: entry.cover, mode: 'load' });
     load(entry, 0);
   };
-  const crate = items.slice(0, 120);
+  const needle = query.normalize('NFKC').toLowerCase().trim();
+  const matches = items.filter(entry => !needle || `${entry.title} ${entry.artist}`.normalize('NFKC').toLowerCase().includes(needle));
+  const crate = matches.slice(0, 120);
+  const queueRecord = (entry, event) => { if (!player?.enqueue(entry.id)) { setNotice(''); return; } flyRecord({ from: event.currentTarget.closest('li')?.querySelector('img, .corner-crate-blank'), to: root.current?.querySelector('.corner-crate-status'), cover: entry.cover, mode: 'queue' }); setNotice(`《${entry.title}》已加入待播`); };
   return createPortal(<section ref={root} tabIndex={-1} className={`listening-corner is-${light}`} role="dialog" aria-modal="true" aria-label="唱机特写" data-playing={String(playing)} style={{ '--corner-energy': energy }}>
     <div className="corner-backdrop" aria-hidden="true"><span className="corner-lamp"/><span className="corner-window"/><span className="corner-dust"/></div>
     <header className="corner-bar">
@@ -96,11 +99,15 @@ export default function ListeningCorner({ item, items = [], vinyl, provider, spi
         </> : <p className="corner-empty-side">唱机上还没有唱片。</p>}
       </aside>
     </div>
-    {crate.length > 0 && <nav className="corner-crate" aria-label="唱片箱">
+    {items.length > 0 && <nav className="corner-crate" aria-label="唱片箱">
+      <div className="corner-crate-tools"><label>唱片箱<input type="search" aria-label="查找唱片箱" placeholder="唱片或歌手" value={query} onChange={event => setQuery(event.target.value)}/></label><span className="corner-crate-status" role="status">{notice || `待播 ${player?.queue.ids.length || 0} 张 · ${matches.length} 张匹配`}</span></div>
+      {player?.queueError && <p role="alert">{player.queueError}</p>}
+      {!matches.length && <p>没有找到匹配唱片，换个关键词试试。</p>}
+      {matches.length > 120 && <small>显示前 120 张，搜索可以查找全部 {items.length} 张。</small>}
       <ul>{crate.map((entry) => <li key={entry.id}><button type="button" className={entry.id === item?.id ? 'is-current' : ''} aria-label={`放上《${entry.title}》`} title={`${entry.title} · ${entry.artist}`} onClick={(event) => pick(entry, event)}>
         {entry.cover ? <img src={entry.cover} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer"/> : <span className="corner-crate-blank"/>}
         <span className="corner-crate-copy">{entry.title}</span>
-      </button></li>)}</ul>
+      </button>{entry.id !== item?.id && player && <button type="button" className="corner-crate-queue" aria-label={`加入待播 ${entry.title}`} disabled={player.queue.ids.includes(entry.id)} onClick={event => queueRecord(entry, event)}>{player.queue.ids.includes(entry.id) ? '已入队' : '+ 待播'}</button>}</li>)}</ul>
     </nav>}
   </section>, document.querySelector('.cabin-room') || document.body);
 }

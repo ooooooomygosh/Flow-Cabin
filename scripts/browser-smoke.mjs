@@ -120,6 +120,16 @@ try {
   await page.locator('.room-record').nth(1).click(); await page.getByRole('button', { name: '加入待播' }).click(); await page.getByRole('button', { name: '已在待播' }).waitFor();
   await page.getByRole('button', { name: '待播唱片 1 张' }).click(); await page.locator('.player-queue li', { hasText: '测试唱片 2' }).waitFor(); await screenshot('player-queue'); await page.getByRole('button', { name: '待播唱片 1 张' }).click();
   check('queue-adds-selected-album');
+  await page.locator('.room-record').nth(2).click(); await page.getByRole('button', { name: '加入待播', exact: true }).click();
+  await page.getByRole('button', { name: '待播唱片 2 张', exact: true }).click();
+  await page.getByRole('button', { name: '下一张播 测试唱片 3', exact: true }).click();
+  assert.match(await page.locator('.player-queue-albums li').first().innerText(), /测试唱片 3/);
+  await page.getByRole('button', { name: '播放模式：顺序播放', exact: true }).click(); await page.getByRole('button', { name: '播放模式：整张循环', exact: true }).click();
+  await page.getByText('单曲循环中 · 切换为顺序播放后继续待播', { exact: true }).waitFor();
+  assert.equal(await page.locator('.player-queue-tracks').count(), 0);
+  await screenshot('queue-priority-and-repeat'); await page.getByRole('button', { name: '播放模式：单曲循环', exact: true }).click();
+  await page.getByRole('button', { name: '从待播移除 测试唱片 3', exact: true }).click(); await page.getByRole('button', { name: '待播唱片 1 张', exact: true }).click(); await page.locator('.room-record').nth(1).click();
+  check('queue-priority-and-repeat-state-match-playback');
   // Album import from picked files (session playback) + pixel covers.
   await page.getByRole('button', { name: '添加专辑', exact: true }).click(); await page.getByRole('tab', { name: '本地音乐' }).click();
   await page.getByRole('tab', { name: '手动填写' }).click(); await page.getByRole('tab', { name: '本地音乐' }).click(); // {} first, then a partial album
@@ -199,7 +209,8 @@ try {
   await page.getByRole('button', { name: '我的歌单', exact: true }).click();
   await page.getByRole('tab', { name: /网易云音乐/ }).click();
   await page.locator('.playlist-card', { hasText: '深夜写作' }).click(); await page.locator('.playlist-hero h3', { hasText: '深夜写作' }).waitFor();
-  assert.equal(await page.locator('.playlist-track').count(), 12); await screenshot('playlist-detail');
+  assert.equal(await page.locator('.playlist-track').count(), 12); await page.locator('.playlist-facts').getByText('尚未收藏', { exact: true }).waitFor(); await screenshot('playlist-detail');
+  await page.setViewportSize({ width: 960, height: 600 }); await screenshot('playlist-detail-960x600'); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true); await page.setViewportSize({ width: 1440, height: 900 });
   await page.getByLabel('在歌单中查找').fill('laufey'); assert.equal(await page.locator('.playlist-track').count(), 1); await page.getByLabel('在歌单中查找').fill('');
   await page.getByRole('button', { name: '放上唱片架' }).click(); await page.locator('.playlist-notice', { hasText: '已放上唱片架' }).waitFor();
   const savedPlaylist = items.find(i => i.type === 'playlist'); assert(savedPlaylist, 'playlist saved as a shelf record'); assert.equal(savedPlaylist.trackDetails[0].artist, 'Laufey'); assert.equal(savedPlaylist.trackDetails[0].source, 'netease'); assert.equal(savedPlaylist.externalIds.playlist, 'netease:9002');
@@ -215,6 +226,23 @@ try {
   await page.keyboard.press('t'); await page.locator('.listening-corner .pixel-turntable').waitFor(); await page.waitForTimeout(300); await screenshot('listening-corner');
   assert(await page.locator('.pixel-turntable').evaluate(c => { const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let lit = 0; for (let i = 3; i < d.length; i += 4) if (d[i]) lit++; return lit > c.width * c.height * .5; }), 'deck is painted');
   assert.equal(await page.locator('.corner-tracks li').count(), 1);
+  const cornerLoaded = await page.locator('.room-turntable').getAttribute('data-loaded-id');
+  await page.getByLabel('查找唱片箱', { exact: true }).fill('测试唱片 3'); assert.equal(await page.locator('.corner-crate li').count(), 1);
+  await page.evaluate(() => { window.__queueSetItem = Storage.prototype.setItem; Storage.prototype.setItem = function(key, value) { if (key === 'album-circle-player-queue-v1') throw new Error('fixture quota'); return window.__queueSetItem.call(this, key, value); }; });
+  await page.getByRole('button', { name: '加入待播 测试唱片 3', exact: true }).click();
+  await page.locator('.corner-crate [role=alert]').filter({ hasText: '无法保存待播' }).waitFor();
+  assert.equal(await page.getByRole('button', { name: '加入待播 测试唱片 3', exact: true }).isDisabled(), false);
+  assert.doesNotMatch(await page.locator('.corner-crate-status').innerText(), /已加入待播/);
+  await page.evaluate(() => { Storage.prototype.setItem = window.__queueSetItem; delete window.__queueSetItem; });
+  await page.getByRole('button', { name: '加入待播 测试唱片 3', exact: true }).evaluate(button => { button.click(); button.click(); }); await page.locator('.corner-crate-status', { hasText: '《测试唱片 3》已加入待播' }).waitFor();
+  assert.equal(await page.locator('.room-turntable').getAttribute('data-loaded-id'), cornerLoaded, 'enqueue keeps the current record playing');
+  assert.equal(await page.getByRole('button', { name: '加入待播 测试唱片 3', exact: true }).isDisabled(), true);
+  assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('album-circle-player-queue-v1')).ids.filter(id => id === 'fixture-2').length), 1);
+  await page.getByLabel('查找唱片箱', { exact: true }).fill(''); await screenshot('listening-corner-queue');
+  await page.setViewportSize({ width: 960, height: 600 }); await screenshot('listening-corner-queue-960x600');
+  for (const selector of ['.corner-bar-actions', '.corner-side', '.corner-crate-tools']) { const bounds = await page.locator(selector).boundingBox(); assert(bounds.x >= 0 && bounds.x + bounds.width <= 961 && bounds.y >= 0 && bounds.y + bounds.height <= 601, `${selector} must remain inside the compact viewport`); }
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true); await page.setViewportSize({ width: 1440, height: 900 });
+  check('listening-corner-search-and-enqueue-without-interrupting');
   await page.keyboard.press('Escape'); await page.locator('.listening-corner').waitFor({ state: 'detached' });
   check('listening-corner-opens-paints-and-closes');
   // 沉入桌面: one entry point; the page asks the shell and follows cabin:desktop-mode.

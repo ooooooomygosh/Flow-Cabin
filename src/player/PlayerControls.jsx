@@ -12,7 +12,7 @@ export const QUICK_SOURCES = [['auto', '自动匹配'], ['local', '本地音乐'
 // 待播 stack, repeat / shuffle, progress and volume, and errors that say what
 // to do next. Labels are stable — tests and screen readers depend on them.
 export default function PlayerControls({ item, items = [], provider, spinning, trackIndex, track, toggle, eject, playback, player, setProvider }) {
-  const [queueOpen, setQueueOpen] = useState(false), names = trackNames(item);
+  const [queueOpen, setQueueOpen] = useState(false), [queueNotice, setQueueNotice] = useState(''), names = trackNames(item);
   const visual = provider === 'visual', audible = !visual && playback;
   const busy = audible && ['loading', 'searching', 'buffering'].includes(playback.status);
   const playing = visual ? spinning : Boolean(playback?.playing);
@@ -32,12 +32,15 @@ export default function PlayerControls({ item, items = [], provider, spinning, t
       {!!names.length && <select aria-label="唱机展示曲目" value={trackIndex} onChange={(event) => track?.(Number(event.target.value))}>{names.map((name, index) => <option value={index} key={index}>{String(index + 1).padStart(2, '0')} · {name}</option>)}</select>}
     </div>
     {queueOpen && player && <div className="player-queue" aria-label="待播唱片">
-      {!player.queue.shuffle && names.length > trackIndex + 1 && <><small className="player-queue-title">接下来 · 本张</small><ol className="player-queue-tracks">{names.slice(trackIndex + 1, trackIndex + 6).map((name, offset) => <li key={offset}><button type="button" className="player-queue-jump" aria-label={`跳到第 ${trackIndex + offset + 2} 首 ${name}`} onClick={() => track?.(trackIndex + offset + 1)}><b>{String(trackIndex + offset + 2).padStart(2, '0')}</b><span title={name}>{name}</span></button></li>)}</ol>{names.length > trackIndex + 6 && <small className="player-queue-more">还有 {names.length - trackIndex - 6} 首</small>}</>}
-      {player.queue.shuffle && <small className="player-queue-title">本张随机播放中</small>}
+      {player.queue.repeat !== 'one' && !player.queue.shuffle && names.length > trackIndex + 1 && <><small className="player-queue-title">接下来 · 本张</small><ol className="player-queue-tracks">{names.slice(trackIndex + 1, trackIndex + 6).map((name, offset) => <li key={offset}><button type="button" className="player-queue-jump" aria-label={`跳到第 ${trackIndex + offset + 2} 首 ${name}`} onClick={() => track?.(trackIndex + offset + 1)}><b>{String(trackIndex + offset + 2).padStart(2, '0')}</b><span title={name}>{name}</span></button></li>)}</ol>{names.length > trackIndex + 6 && <small className="player-queue-more">还有 {names.length - trackIndex - 6} 首</small>}</>}
+      {player.queue.repeat === 'one' && <p className="player-queue-state">单曲循环中 · 切换为顺序播放后继续待播</p>}
+      {player.queue.repeat !== 'one' && player.queue.shuffle && <small className="player-queue-title">本张随机播放中 · 关闭随机后进入待播</small>}
       <small className="player-queue-title">待播唱片{queued.length ? ` · ${queued.length}` : ''}</small>
-      {queued.length ? <ol>{queued.map((entry) => <li key={entry.id}><span title={`${entry.title} · ${entry.artist}`}>{entry.type === 'playlist' ? '♫ ' : ''}{entry.title}</span><button type="button" aria-label={`从待播移除 ${entry.title}`} onClick={() => player.remove(entry.id)}><X size={12}/></button></li>)}</ol>
-        : <p>本张放完后停下。在唱片架选中一张，点「加入待播」，或在「我的歌单」里点「加入待播」，就会接着放。</p>}
+      {queued.length ? <ol className="player-queue-albums">{queued.map((entry, index) => <li key={entry.id}>{entry.cover ? <img src={entry.cover} alt="" referrerPolicy="no-referrer"/> : <Music2 size={20}/>}<span title={`${entry.title} · ${entry.artist}`}><strong>{entry.title}</strong><small>{index === 0 ? '下一张' : `第 ${index + 1} 张`} · {entry.artist}</small></span>{index > 0 && <button type="button" className="player-queue-promote" aria-label={`下一张播 ${entry.title}`} onClick={() => { if (!player.playNext(entry.id)) { setQueueNotice(''); return; } setQueueNotice(`《${entry.title}》已移到待播首位`); }}>置顶</button>}<button type="button" aria-label={`从待播移除 ${entry.title}`} onClick={() => player.remove(entry.id)}><X size={12}/></button></li>)}</ol>
+        : <p>待播里还没有唱片。在唱片架选中一张，点「加入待播」，或在「我的歌单」里点「加入待播」，就会接着放。</p>}
+      {queueNotice && <small className="player-queue-notice" role="status">{queueNotice}</small>}
     </div>}
+    {player?.queueError && <p className="player-error" role="alert">{player.queueError}</p>}
     {failed && <div className="player-error" role="alert"><span>{playback.error}</span><span className="player-error-actions"><button type="button" onClick={playback.retry}>重试</button><button type="button" onClick={() => window.dispatchEvent(new Event('cabin-open-music-settings'))}>音源设置</button></span></div>}
     {visual && item && setProvider && <div className="player-quick-source" aria-label="选择音源开始播放"><small>现在只转唱片、没有声音。想听就选一个音源：</small><span>{QUICK_SOURCES.map(([value, label]) => <button type="button" key={value} onClick={() => setProvider(value)}><Music2 size={13}/>{label}</button>)}</span></div>}
     {audible && provider !== 'ma' && item && <div className="turntable-audio-sliders">

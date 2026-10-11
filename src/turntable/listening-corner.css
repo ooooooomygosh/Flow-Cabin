@@ -91,3 +91,10 @@
 @media (max-height: 640px) { .corner-sleeve { width: 80px; } .corner-crate img, .corner-crate-blank { width: 56px; height: 56px; } .corner-crate button { width: 56px; } }
 :root[data-desktop-reduce-motion=true] .listening-corner, :root[data-desktop-reduce-motion=true] .listening-corner * { animation: none !important; transition: none !important; }
 @media (prefers-reduced-motion: reduce) { .listening-corner, .listening-corner * { animation: none !important; transition: none !important; } }
+
+.corner-crate-tools{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--px-ink-dim)}.corner-crate-tools label{display:flex;align-items:center;gap:10px}.corner-crate-tools input{width:160px;min-width:0;background:#1c120bcc;color:var(--px-ink);border:1px solid var(--px-border);padding:5px 8px;font:inherit}.corner-crate-status{color:var(--px-accent)}.corner-crate .corner-crate-queue{margin-top:6px;padding:4px 0;font:inherit;font-size:10px;color:var(--px-ink);background:#1c120bcc;border:1px solid var(--px-border)}.corner-crate .corner-crate-queue:hover{translate:none;background:#573721}.corner-crate .corner-crate-queue:disabled{opacity:.55;cursor:default;translate:none}.corner-crate-copy{position:static;display:block;opacity:1;max-width:74px;margin-top:5px}.corner-crate>p{font-size:12px;color:var(--px-ink-dim)}
+
+/* Keep the horizontal crate from defining the width of the immersive grid. */
+.listening-corner{grid-template-columns:minmax(0,1fr)}
+.corner-bar,.corner-stage,.corner-deck,.corner-side,.corner-crate{min-width:0}
+.corner-crate ul{min-width:0;max-width:100%}
