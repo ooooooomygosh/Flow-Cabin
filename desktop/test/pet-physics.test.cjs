@@ -65,3 +65,26 @@ test('pet physics: a sideways flick along the floor slides; an upward throw stop
   for (let i = 0; i < 400 && physics.mode !== 'idle'; i++) { time += 16; const next = physics.step(current, area, 1 / 60); current = { ...current, x: next.x, y: next.y }; top = Math.min(top, next.y); }
   assert(top >= area.y - 40, 'never leaves the top of the screen'); assert.equal(current.y, floor);
 });
+
+
+test('reduced motion keeps a released pet where the user placed it', () => {
+  const physics = createPetPhysics();
+  physics.drag(80, -20); physics.drag(80, -20);
+  const placed = { ...size, x: 500, y: 150 };
+  assert.equal(physics.release(placed, area, { reduceMotion: true }), 'idle');
+  assert.equal(physics.moving, false);
+  assert.deepEqual(physics.step(placed, area, .05), { x: 500, y: 150, mode: 'idle', facing: 1 });
+});
+test('display or size changes discard old flight momentum and coordinates', () => {
+  let time = 0; const physics = createPetPhysics({ now: () => time });
+  for (let i = 0; i < 6; i++) { time += 16; physics.drag(40, -10); }
+  const old = { ...size, x: 2000, y: 100 };
+  physics.release(old, { ...area, x: 1920 });
+  assert.equal(physics.moving, true);
+  const restored = { ...size, x: 600, y: 350 };
+  physics.reset(restored);
+  for (let i = 0; i < 120; i++) {
+    time += 16; const next = physics.step(restored, area, .016);
+    assert.equal(next.x, restored.x); assert.equal(next.y, restored.y); assert.equal(next.mode, 'idle');
+  }
+});

@@ -124,6 +124,7 @@ test('failed pet page load leaves no active invisible companion', async (t) => {
     constructor() { super(); created = this; this.destroyed = false; this.webContents = new EventEmitter(); Object.assign(this.webContents, { session: { protocol: { isProtocolHandled: async () => true }, setPermissionRequestHandler() {}, setPermissionCheckHandler() {} }, setWindowOpenHandler() {} }); }
     setAlwaysOnTop() {} setVisibleOnAllWorkspaces() {} setIgnoreMouseEvents() {}
     isDestroyed() { return this.destroyed; } destroy() { this.destroyed = true; this.emit('closed'); }
+    getBounds() { return { x: 0, y: 0, width: 100, height: 100 }; }
     async loadURL() { throw new Error('missing pet page'); }
   }
   require.cache[electron] = { exports: { BrowserWindow: Window, Menu: {}, ipcMain: { handle() {}, on() {} }, screen: { getPrimaryDisplay: () => ({ workArea: { x: 0, y: 0, width: 1000, height: 800 } }) } } };

@@ -17,7 +17,9 @@ function createPetPhysics({ random = Math.random, now = () => Date.now() } = {})
     get moving() { return mode === 'fall' || mode === 'walk' || mode === 'land'; },
     // The pointer moves the window; remember the last ~120 ms for the throw.
     drag(dx, dy) { mode = 'drag'; x = y = null; const time = now(); samples.push({ dx, dy, time }); samples = samples.filter((sample) => time - sample.time <= 120); },
-    release(bounds, area) {
+    reset(bounds) { mode = 'idle'; vx = vy = 0; x = bounds.x; y = bounds.y; samples = []; schedule(); },
+    release(bounds, area, { reduceMotion = false } = {}) {
+      if (reduceMotion) { this.reset(bounds); return mode; }
       const time = now(), recent = samples.filter((sample) => time - sample.time <= 120); samples = [];
       const span = recent.length > 1 ? Math.max(16, time - recent[0].time) : 0;
       vx = span ? clamp(recent.reduce((sum, sample) => sum + sample.dx, 0) / span * 1000, -MAX_SPEED, MAX_SPEED) : 0;

@@ -51,3 +51,42 @@ test('study: malformed storage is cleaned', () => {
   const state = normalizeStudy({ decks: [{ id: 'd', name: 'A' }, { name: '' }], cards: [{ deckId: 'd', front: 'x', memory: { state: 9, due: 'x' } }, { deckId: 'missing', front: 'y' }], countdowns: [{ title: 't', date: 'bad' }], log: { nope: 1 } });
   assert.equal(state.decks.length, 1); assert.equal(state.cards.length, 1); assert.equal(state.cards[0].memory.state, 0); assert.equal(state.countdowns.length, 0); assert.deepEqual(state.log, {});
 });
+
+
+test('study: damaged persisted scheduling memory recovers to a reviewable new card', () => {
+  const valid = { due: T0, stability: 2, difficulty: 5, elapsed_days: 1, scheduled_days: 1, reps: 1, lapses: 0, state: 2, last_review: T0 - 86400000 };
+  for (const memory of [
+    { ...valid, stability: 0 }, { ...valid, stability: null },
+    { ...valid, last_review: 0 }, { ...valid, last_review: 9e15 },
+    { ...valid, due: 9e15 },
+    { state: 1, due: T0 }, { state: 2, due: T0 }, { state: 3, due: T0 },
+  ]) {
+    const state = normalizeStudy(JSON.parse(JSON.stringify({
+      decks: [{ id: 'd', name: 'Vocabulary' }],
+      cards: [{ id: 'c', deckId: 'd', front: 'word', back: 'meaning', memory }],
+    })));
+    const card = state.cards[0];
+    assert.equal(card.memory, null, JSON.stringify(memory));
+    assert.equal(card.front, 'word'); assert.equal(card.back, 'meaning');
+    assert.equal(studyQueue(state, 'd', T0).fresh, 1);
+    for (const { rating } of RATINGS) {
+      assert.doesNotMatch(previews(card, T0)[rating], /NaN|Infinity/);
+      const next = review(state, 'c', rating, T0).cards[0].memory;
+      assert(Number.isFinite(next.due)); assert(next.due > T0);
+      assert(Number.isFinite(next.stability)); assert(next.stability > 0);
+    }
+  }
+});
+test('study: valid FSRS schedules survive repeated JSON reloads for every rating', () => {
+  for (const { rating } of RATINGS) {
+    let state = addDeck(normalizeStudy(), 'Vocabulary', T0);
+    state = addCards(state, state.decks[0].id, parseCards('word - meaning'), T0).state;
+    let now = T0;
+    for (let i = 0; i < 8; i++) {
+      state = review(state, state.cards[0].id, rating, now);
+      const saved = JSON.parse(JSON.stringify(state)); state = normalizeStudy(saved);
+      assert.deepEqual(state.cards[0].memory, saved.cards[0].memory);
+      assert(Number.isFinite(state.cards[0].memory.due)); now = state.cards[0].memory.due;
+    }
+  }
+});

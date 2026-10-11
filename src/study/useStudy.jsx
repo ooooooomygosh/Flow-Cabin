@@ -26,9 +26,9 @@ export function StudyProvider({ userId, children }) {
     renameDeck: (id, name) => apply((s) => model.renameDeck(s, id, name)),
     removeDeck: (id) => apply((s) => model.removeDeck(s, id)),
     addCards: (deckId, input) => apply((s) => model.addCards(s, deckId, Array.isArray(input) ? input : model.parseCards(input))).added || 0, // 0 when the save failed: the text stays
-    updateCard: (id, change) => apply((s) => model.updateCard(s, id, change)),
+    updateCard: (id, change) => commit(model.updateCard(current.current, id, change)),
     removeCard: (id) => apply((s) => model.removeCard(s, id)),
-    review: (id, rating) => apply((s) => model.review(s, id, rating, Date.now())),
+    review: (id, rating) => commit(model.review(current.current, id, rating, Date.now())),
     setNewPerDay: (count) => apply((s) => ({ ...s, newPerDay: count })),
     addCountdown: (title, date) => apply((s) => model.addCountdown(s, title, date)),
     removeCountdown: (id) => apply((s) => model.removeCountdown(s, id)),

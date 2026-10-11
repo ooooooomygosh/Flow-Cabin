@@ -85,3 +85,12 @@
 @keyframes study-flip { 0% { transform: scaleX(1); } 50% { transform: scaleX(.04); } 100% { transform: scaleX(1); } }
 :root[data-desktop-reduce-motion=true] .study-card { animation: none !important; }
 @media (prefers-reduced-motion: reduce) { .study-card { animation: none !important; } }
+
+.study-card-search { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 14px 0 8px; font-size: 12px; }
+.study-card-search input { flex: 1; min-width: 150px; }
+.study-card-search small { white-space: nowrap; color: var(--px-ink-dim); }
+.study-card-edit { display: grid; gap: 10px; padding: 12px; margin: 10px 0; border: 2px solid var(--px-accent); background: var(--px-surface-2); }
+.study-card-edit label { display: grid; gap: 4px; font-size: 12px; }
+.study-card-edit textarea { width: 100%; min-height: 64px; resize: vertical; }
+.study-card-edit > div { display: flex; gap: 8px; flex-wrap: wrap; }
+.study-card-list li { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto auto; }

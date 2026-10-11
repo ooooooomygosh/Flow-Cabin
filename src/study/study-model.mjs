@@ -30,7 +30,13 @@ function fromFsrs(card) {
 }
 function normalizeMemory(value) {
   if (!value || typeof value !== 'object') return null;
-  return { due: number(value.due, 0, 9e15, 0), stability: number(value.stability, 0, 1e6, 0), difficulty: number(value.difficulty, 0, 10, 0), elapsed_days: number(value.elapsed_days, 0, 1e5, 0), scheduled_days: number(value.scheduled_days, 0, 1e5, 0), reps: number(value.reps, 0, 1e6, 0), lapses: number(value.lapses, 0, 1e6, 0), state: [0, 1, 2, 3].includes(value.state) ? value.state : 0, last_review: number(value.last_review, 0, 9e15, 0) };
+  const memory = { due: number(value.due, 0, 9e15, 0), stability: number(value.stability, 0, 1e6, 0), difficulty: number(value.difficulty, 0, 10, 0), elapsed_days: number(value.elapsed_days, 0, 1e5, 0), scheduled_days: number(value.scheduled_days, 0, 1e5, 0), reps: number(value.reps, 0, 1e6, 0), lapses: number(value.lapses, 0, 1e6, 0), state: [0, 1, 2, 3].includes(value.state) ? value.state : 0, last_review: number(value.last_review, 0, 9e15, 0) };
+  // Invalid persisted schedules must not produce NaN intervals on the next review.
+  // Preserve card content and restart learning for incomplete reviewed cards.
+  if (!Number.isFinite(new Date(memory.due).getTime())
+    || (memory.state !== State.New && (memory.stability <= 0 || memory.last_review <= 0
+      || !Number.isFinite(new Date(memory.last_review).getTime())))) return null;
+  return memory;
 }
 function normalizeCard(value, decks) {
   if (!value || typeof value !== 'object') return null;

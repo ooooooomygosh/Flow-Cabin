@@ -160,6 +160,18 @@ try {
   await page.locator('.focus-badge').click(); await page.getByRole('tab', { name: '学习', exact: true }).click();
   await page.getByLabel('新卡组名称').fill('QA 单词'); await page.getByRole('button', { name: '新建', exact: true }).click();
   await page.getByRole('button', { name: '编辑', exact: true }).click(); await page.getByLabel('新卡片').fill('ephemeral - 短暂的\n光合作用：植物利用光能'); await page.getByRole('button', { name: '添加 2 张' }).click(); await page.getByText('添加了 2 张卡片。').waitFor();
+  await page.getByLabel('查找这组全部卡片').fill('ephemeral'); assert.equal(await page.locator('.study-card-list li').count(), 1);
+  await page.getByRole('button', { name: '编辑卡片 ephemeral', exact: true }).click();
+  await page.getByLabel('编辑卡片背面').fill('短暂的；转瞬即逝');
+  await screenshot('study-card-editor');
+  await page.evaluate(() => { window.__studySetItem = Storage.prototype.setItem; Storage.prototype.setItem = function(key, value) { if (key.startsWith('album-circle-study-v1:')) throw new Error('fixture quota'); return window.__studySetItem.call(this, key, value); }; });
+  await page.getByRole('button', { name: '保存卡片', exact: true }).click();
+  await page.getByRole('alert').filter({ hasText: '无法保存学习记录' }).waitFor();
+  assert.equal(await page.getByLabel('编辑卡片背面').inputValue(), '短暂的；转瞬即逝');
+  await page.evaluate(() => { Storage.prototype.setItem = window.__studySetItem; delete window.__studySetItem; });
+  await page.getByRole('button', { name: '保存卡片', exact: true }).click();
+  await page.getByText('卡片已保存，复习进度保持不变。').waitFor(); await page.getByLabel('查找这组全部卡片').fill('');
+  check('study-card-search-and-edit-save');
   await page.getByRole('button', { name: '卡组', exact: true }).click(); await page.locator('.study-deck-open', { hasText: 'QA 单词' }).click();
   await page.locator('.study-card-front', { hasText: 'ephemeral' }).waitFor(); await page.keyboard.press(' '); await page.locator('.study-card-back', { hasText: '短暂的' }).waitFor();
   assert.equal(await page.locator('.study-ratings button').count(), 4); await page.keyboard.press('4'); await page.locator('.study-card-front', { hasText: '光合作用' }).waitFor();
