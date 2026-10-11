@@ -62,3 +62,13 @@ test('picked-file albums de-duplicate and keep the original cover beside a pixel
   assert.equal(updated.cover, png); assert.equal(updated.originalCover, 'https://is1-ssl.mzstatic.com/a.jpg');
   assert.equal(store.update(first.item.id, { originalCover: 'javascript:alert(1)' }).item.originalCover, '');
 });
+
+test('large playlists persist track identities through update and restart with a 5000 cap', t => {
+  const directory = temp(t), store = createCollectionStore({ directory });
+  const tracks = Array.from({ length: 620 }, (_, i) => 'Song ' + i), trackDetails = tracks.map((title, i) => ({ title, artist: 'Artist', source: 'netease', providerId: String(i + 1) }));
+  const added = store.add({ type: 'playlist', title: 'Large', artist: 'Me', tracks, trackDetails, externalIds: { playlist: 'netease:42' } }).item;
+  store.update(added.id, { notes: 'keep' });
+  const [saved] = createCollectionStore({ directory }).list();
+  assert.deepEqual(saved.tracks, tracks); assert.equal(saved.trackDetails[619].providerId, '620'); assert.equal(saved.notes, 'keep');
+  assert.equal(normalizeItem({ ...saved, tracks: Array(5001).fill('song') }).tracks.length, 5000);
+});

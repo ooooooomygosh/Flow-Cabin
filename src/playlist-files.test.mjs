@@ -82,3 +82,53 @@ test('M3U paths with a literal percent sign do not abort an import', () => {
 test('M3U preserves plus signs in file names', () => {
   assert.equal(parsePlaylistFile('/Music/Love+Peace.mp3', 'test.m3u')[0].tracks[0].title, 'Love+Peace');
 });
+
+test('large M3U, text and XML lists preserve 620 tracks and report the 5000 cap', () => {
+  for (const count of [620, 5001]) {
+    const names = Array.from({ length: count }, (_, i) => `Song ${i + 1}`);
+    const sources = [
+      ['large.txt', names.map((n, i) => `${i + 1}. ${n} - Artist`).join('\n')],
+      ['large.m3u', names.map(n => `#EXTINF:180,Artist - ${n}\n/x.mp3`).join('\n')],
+      ['large.xml', `<plist><dict><key>Tracks</key><dict>${names.map((n, i) => `<key>${i}</key><dict><key>Name</key><string>${n}</string></dict>`).join('')}</dict></dict></plist>`]
+    ];
+    for (const [name, source] of sources) {
+      const [list] = parsePlaylistFile(source, name);
+      assert.equal(list.tracks.length, Math.min(count, 5000)); assert.equal(list.trackCount, count); assert.equal(list.truncated, count > 5000);
+      assert.deepEqual(list.tracks.map(t => t.title), names.slice(0, 5000));
+      const item = playlistItem({ playlist: list, tracks: list.tracks }, 'file'); assert.equal(item.trackDetails.length, list.tracks.length);
+    }
+  }
+});
+
+test('page merge preserves source ids and order beyond 500, deduplicating overlap', async () => {
+  const { mergePlaylistPage } = await import('./playlist-model.mjs');
+  const tracks = Array.from({ length: 620 }, (_, i) => ({ title: `Song ${i}`, providerId: String(i + 1), source: 'netease', artist: 'Artist' }));
+  const current = { provider: 'netease', revision: 7, playlist: { id: '1', trackCount: 620 }, page: { offset: 0, nextOffset: 500, snapshot: 'a' }, tracks: tracks.slice(0, 500) };
+  const incoming = { ...current, page: { offset: 500, nextOffset: null, snapshot: 'a' }, tracks: tracks.slice(499) };
+  const merged = mergePlaylistPage(current, incoming);
+  assert.deepEqual(merged.tracks, tracks); assert.equal(merged.truncated, false); assert.equal(current.tracks.length, 500);
+  assert.equal(playlistItem(merged, 'netease').trackDetails[619].providerId, '620');
+  for (const invalid of [{ ...incoming, revision: 8 }, { ...incoming, provider: 'qq' }, { ...incoming, playlist: { id: '2' } }, { ...incoming, page: { ...incoming.page, snapshot: 'b' } }, { ...incoming, page: current.page }, { ...incoming, tracks: current.tracks }]) assert.throws(() => mergePlaylistPage(current, invalid));
+  assert.equal(current.page.nextOffset, 500, 'a failed page remains retryable');
+  assert.deepEqual(mergePlaylistPage(current, incoming).tracks, tracks);
+});
+
+test('partial refresh cannot truncate a previously saved longer playlist', async () => {
+  const { playlistRefreshPatch } = await import('./playlist-model.mjs');
+  const before = { tracks: Array(620).fill('song'), notes: 'my notes' }, after = { tracks: Array(500).fill('song') };
+  assert.throws(() => playlistRefreshPatch(before, after, { incomplete: true }), /不能覆盖/);
+  assert.equal(before.tracks.length, 620); assert.equal(playlistRefreshPatch(before, after).tracks.length, 500, 'a complete shorter upstream playlist can still sync deliberate removals');
+});
+
+test('short successful pages remain retryable and fill missing ids in original order', async () => {
+  const { mergePlaylistPage } = await import('./playlist-model.mjs');
+  const all = Array.from({ length: 620 }, (_, i) => ({ title: `Song ${i}`, providerId: String(i + 1), source: 'netease', playlistIndex: i }));
+  const current = { provider: 'netease', revision: 1, playlist: { id: '1', trackCount: 620 }, page: { offset: 0, nextOffset: 500, snapshot: 'a', missingPages: [{ offset: 0, ids: ['250'] }] }, tracks: all.slice(0, 500).filter(t => t.providerId !== '250') };
+  const last = { ...current, page: { offset: 500, nextOffset: null, snapshot: 'a', missingPages: [{ offset: 500, ids: ['620'] }] }, tracks: all.slice(500, 619) };
+  const short = mergePlaylistPage(current, last); assert.equal(short.tracks.length, 618); assert.equal(short.page.missingPages.length, 2);
+  const unchanged = mergePlaylistPage(short, last); assert.deepEqual(unchanged.tracks, short.tracks); assert.equal(unchanged.page.missingPages.length, 2);
+  const earlier = mergePlaylistPage(unchanged, { ...current, tracks: all.slice(0, 500), page: { ...current.page, missingPages: [] } });
+  assert.equal(earlier.page.nextOffset, null, 'retry does not rewind the continuation cursor'); assert.equal(earlier.page.missingPages[0].offset, 500); assert.equal(earlier.tracks[249].providerId, '250');
+  const complete = mergePlaylistPage(earlier, { ...last, tracks: all.slice(500), page: { ...last.page, missingPages: [] } });
+  assert.deepEqual(complete.tracks, all); assert.deepEqual(complete.page.missingPages, []); assert.equal(complete.truncated, false);
+});

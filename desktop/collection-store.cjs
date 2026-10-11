@@ -22,7 +22,7 @@ function normalizeItem(body = {}, previous = {}) {
   if (!title || !artist) throw new Error('请填写专辑名和歌手。');
   const value = { ...previous, ...body };
   // Playlists carry their own per-track artist and may run longer than an album.
-  const type = ['song', 'playlist'].includes(value.type) ? value.type : 'album', trackLimit = type === 'playlist' ? 500 : 100;
+  const type = ['song', 'playlist'].includes(value.type) ? value.type : 'album', trackLimit = type === 'playlist' ? 5000 : 100;
   const tracks = list(value.tracks, 160, trackLimit);
   const externalIds = value.externalIds && typeof value.externalIds === 'object' ? Object.fromEntries(Object.entries(value.externalIds).slice(0, 12).map(([key, id]) => [text(key, 40), text(id, 180)]).filter(([key, id]) => key && id)) : {};
   return {

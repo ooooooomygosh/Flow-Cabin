@@ -6,6 +6,7 @@
 import assert from 'node:assert/strict';
 import { verifyOnboarding } from './onboarding-checks.mjs';
 import { verifyCabinLayout, verifyCabinToolActions, verifyFocusLayout } from './cabin-layout-checks.mjs';
+import { verifyPlaylistPagination } from './playlist-pagination-checks.mjs';
 import { neteasePlaylists, playlistDetail } from './playlist-fixture.mjs';
 import { createRequire } from 'node:module';
 import { spawn } from 'node:child_process';
@@ -76,6 +77,7 @@ try {
   await context.route('**/*', routeHandler);
   const welcomeRoute = route => new URL(route.request().url()).pathname === '/api/items' ? route.fulfill({ json: { items: [] } }) : routeHandler(route);
   await verifyOnboarding({ browser, origin, routeHandler: welcomeRoute, evidence: output, output, check });
+  await verifyPlaylistPagination({ browser, origin, check });
   context.on('page', watched => { watched.on('pageerror', error => report.pageErrors.push(error.message)); watched.on('console', message => { if (message.type() === 'error') report.consoleErrors.push(message.text()); }); watched.on('requestfailed', request => { if (request.failure()?.errorText !== 'net::ERR_ABORTED') report.failedRequests.push({ url: request.url(), error: request.failure()?.errorText }); }); });
   page = await context.newPage(); page.setDefaultTimeout(12000); await page.clock.install({ time: new Date('2026-10-08T10:00:00Z') });
   /* context captures errors across the main, wallpaper and pet renderers. */
