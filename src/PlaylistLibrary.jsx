@@ -6,7 +6,7 @@ import { musicRequest } from './room-playback.mjs';
 import { desktopCommand, useDesktopAppearance } from './desktop-client';
 import { generatedCover } from './player/pixel-cover.mjs';
 import { parsePlaylistFile } from './playlist-files.mjs';
-import { PLAYLIST_SOURCES, playlistItem, playlistKey, filterTracks, formatDuration, totalDuration } from './playlist-model.mjs';
+import { PLAYLIST_SOURCES, playlistItem, playlistKey, playlistRefreshPatch, filterTracks, formatDuration, totalDuration } from './playlist-model.mjs';
 import './playlist-library.css';
 
 // 「我的歌单」: account playlists from 网易云 / QQ 音乐 / Apple Music, public
@@ -94,20 +94,24 @@ function SignIn({ provider, desktop, busy, signIn }) {
 }
 
 function LinkAndFile({ openDetail, busy, setBusy, setError, compact = false, apple = false }) {
-  const [link, setLink] = useState(''), file = useRef(null);
+  const [link, setLink] = useState(''), [imported, setImported] = useState(null), file = useRef(null);
+  const mounted = useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  const chooseFileList = (list, name) => openDetail({ playlist: { id: `file:${list.id}`, name: list.name, creator: name.replace(/\.[^.]+$/, ''), trackCount: list.trackCount || list.tracks.length }, tracks: list.tracks, truncated: list.truncated }, 'file');
   const submit = async (event) => {
     event.preventDefault(); if (!link.trim() || busy) return;
     setBusy(true); setError('');
-    try { const detail = await musicRequest('/playlist/link', { url: link.trim() }); openDetail(detail, detail.provider); setLink(''); }
-    catch (error) { setError(error.message); } finally { setBusy(false); }
+    try { const detail = await musicRequest('/playlist/link', { url: link.trim() }); if (mounted.current) { openDetail(detail, detail.provider); setLink(''); } }
+    catch (error) { if (mounted.current) setError(error.message); } finally { if (mounted.current) setBusy(false); }
   };
   const readFile = async (picked) => {
-    if (!picked) return; setError('');
+    if (!picked || busy) return; setError('');
     if (picked.size > 12 * 1024 * 1024) { setError('文件太大了：歌单文件应小于 12 MB。'); return; }
     try {
       const lists = parsePlaylistFile(await picked.text(), picked.name);
-      const list = lists[0];
-      openDetail({ playlist: { id: `file:${list.id}`, name: list.name, creator: picked.name.replace(/\.[^.]+$/, ''), trackCount: list.tracks.length }, tracks: list.tracks, others: lists.slice(1) }, 'file');
+      if (!mounted.current) return;
+      if (lists.length === 1) chooseFileList(lists[0], picked.name);
+      else setImported({ lists, name: picked.name });
     } catch (error) { setError(error.message); }
     finally { if (file.current) file.current.value = ''; }
   };
@@ -119,15 +123,18 @@ function LinkAndFile({ openDetail, busy, setBusy, setError, compact = false, app
     <button type="button" className="playlist-drop" onClick={() => file.current?.click()} onDragOver={(event) => { event.preventDefault(); event.currentTarget.classList.add('is-over'); }} onDragLeave={(event) => event.currentTarget.classList.remove('is-over')} onDrop={(event) => { event.preventDefault(); event.currentTarget.classList.remove('is-over'); readFile(event.dataTransfer.files?.[0]); }}>
       <DocumentArrow size={22}/><strong>导入歌单文件</strong><small>{apple ? '「音乐」App › 文件 › 资料库 › 导出播放列表… 存成 .xml' : 'Apple Music / iTunes 导出的 .xml、播放器的 .m3u / .m3u8，或每行「歌名 - 歌手」的 .txt'}</small>
     </button>
+    {imported && <section className="playlist-file-choices" aria-label="文件中的歌单"><h3>选择要导入的歌单</h3><p>{imported.name} · {imported.lists.length} 个歌单</p><ul>{imported.lists.map((list, index) => <li key={`${list.id}-${index}`}><button type="button" className="pixel-button" onClick={() => chooseFileList(list, imported.name)}><Music2 size={16}/><strong>{list.name}</strong><small>{list.trackCount || list.tracks.length} 首{list.truncated ? ' · 导入前 500 首' : ''}</small></button></li>)}</ul></section>}
     <input ref={file} type="file" hidden accept=".xml,.m3u,.m3u8,.txt,.csv,text/plain,application/xml" onChange={(event) => readFile(event.target.files?.[0])}/>
   </div>;
 }
 
 export default function PlaylistLibrary({ items, close, onAdded }) {
   const desktop = useDesktopAppearance().client;
-  const [tab, setTab] = useState(() => { try { return localStorage.getItem('album-circle-playlist-tab-v1') || 'netease'; } catch { return 'netease'; } });
+  const [tab, setTab] = useState(() => { try { const stored = localStorage.getItem('album-circle-playlist-tab-v1'); return TABS.some(t => t.id === stored) ? stored : 'netease'; } catch { return 'netease'; } });
   const [config, setConfig] = useState(null), [lists, setLists] = useState({}), [detail, setDetail] = useState(null), [busy, setBusy] = useState(false), [busyId, setBusyId] = useState(''), [error, setError] = useState(''), [notice, setNotice] = useState(''), [signing, setSigning] = useState('');
   const generation = useRef(0);
+  const [accountEpoch, setAccountEpoch] = useState(0);
+  useEffect(() => () => { generation.current++; }, []);
   const choose = (next) => { generation.current++; setTab(next); setDetail(null); setError(''); setNotice(''); setBusyId(''); try { localStorage.setItem('album-circle-playlist-tab-v1', next); } catch {} };
   const listProvider = tab === 'apple' ? 'apple-local' : tab;
   const loggedIn = tab === 'netease' ? config?.neteaseLoggedIn : tab === 'qq' ? config?.qqLoggedIn : false;
@@ -141,10 +148,10 @@ export default function PlaylistLibrary({ items, close, onAdded }) {
   };
   useEffect(() => { refreshConfig(); }, []);
   useEffect(() => {
-    const receive = (event) => { setSigning(''); if (event.detail?.error) setError(event.detail.error); refreshConfig().then(() => setLists({})); };
+    const receive = (event) => { generation.current++; setSigning(''); setDetail(null); setBusyId(''); setLists({}); if (event.detail?.error) setError(event.detail.error); refreshConfig().then(() => setAccountEpoch(value => value + 1)); };
     window.addEventListener('album-music-account', receive); return () => window.removeEventListener('album-music-account', receive);
   }, []);
-  useEffect(() => { if ((tab === 'netease' || tab === 'qq') && loggedIn) loadList(tab); }, [tab, loggedIn]);
+  useEffect(() => { if ((tab === 'netease' || tab === 'qq') && loggedIn) loadList(tab); }, [tab, loggedIn, accountEpoch]);
   const openDetail = (value, provider) => { setDetail({ ...value, provider }); setNotice(''); setError(''); };
   const openPlaylist = async (entry) => {
     if (busyId) return; const current = generation.current; setBusyId(entry.id); setError('');
@@ -158,7 +165,8 @@ export default function PlaylistLibrary({ items, close, onAdded }) {
     if (!value.cover) value.cover = generatedCover(value);
     const result = await addItem(value);
     let item = result.item;
-    if (result.duplicate && JSON.stringify(item.tracks) !== JSON.stringify(value.tracks)) item = (await updateItem(item.id, { tracks: value.tracks, trackDetails: value.trackDetails, title: value.title })).item;
+    const patch = playlistRefreshPatch(item, value);
+    if (result.duplicate && Object.keys(patch).length) item = (await updateItem(item.id, patch)).item;
     onAdded(item);
     return { item, refreshed: result.duplicate };
   };
@@ -178,7 +186,7 @@ export default function PlaylistLibrary({ items, close, onAdded }) {
     <div className="playlist-shell">
       <nav className="playlist-rail" role="tablist" aria-label="歌单来源">{TABS.map((entry) => {
         const connected = entry.id === 'netease' ? config?.neteaseLoggedIn : entry.id === 'qq' ? config?.qqLoggedIn : false;
-        return <button type="button" role="tab" key={entry.id} aria-selected={tab === entry.id} className={`playlist-rail-tab is-${entry.id}`} onClick={() => choose(entry.id)}>
+        return <button type="button" role="tab" disabled={busy} key={entry.id} aria-selected={tab === entry.id} className={`playlist-rail-tab is-${entry.id}`} onClick={() => choose(entry.id)}>
           <span className="playlist-rail-glyph" aria-hidden="true">{entry.id === 'import' ? <Link size={16}/> : entry.id === 'apple' ? <Music2 size={16}/> : <b>{entry.id === 'qq' ? 'QQ' : '云'}</b>}</span>
           <span><strong>{entry.label}</strong><small>{connected ? '已登录' : entry.hint}</small></span>{connected && <i className="playlist-rail-dot" aria-label="已登录"/>}
         </button>;
@@ -187,13 +195,13 @@ export default function PlaylistLibrary({ items, close, onAdded }) {
         {error && <p className="playlist-error" role="alert">{error}</p>}
         {notice && <p className="playlist-notice" role="status"><Check size={15}/>{notice}</p>}
         {detail ? <PlaylistDetail detail={detail} provider={detail.provider} back={() => { setDetail(null); setNotice(''); }} act={act} busy={busy} saved={Boolean(savedItem)}/>
-          : tab === 'import' ? <><header className="playlist-main-head"><h3>从链接或文件导入</h3><p>公开歌单不需要登录：在平台里点「分享 › 复制链接」，粘贴到这里。</p></header><LinkAndFile openDetail={openDetail} busy={busy} setBusy={setBusy} setError={setError}/></>
+          : tab === 'import' ? <><header className="playlist-main-head"><h3>从链接或文件导入</h3><p>公开歌单不需要登录：在平台里点「分享 › 复制链接」，粘贴到这里。</p></header><LinkAndFile key={tab} openDetail={openDetail} busy={busy} setBusy={setBusy} setError={setError}/></>
           : tab === 'apple' ? <>
-            <header className="playlist-main-head"><h3>Apple Music</h3><p>{isMac ? '读取这台 Mac「音乐」App 里的歌单（登录 Apple Music 后的资料库），或粘贴公开歌单链接。' : '粘贴公开歌单链接，或导入 iTunes / Apple Music 导出的歌单文件。'}播放时按歌名与歌手匹配可播放的同版本。</p></header>
+            <header className="playlist-main-head"><h3>Apple Music</h3><p className="playlist-capability">当前支持歌单资料导入；尚未接入官方 MusicKit 登录与订阅播放。</p><p>{isMac ? '读取这台 Mac「音乐」App 里的歌单（登录 Apple Music 后的资料库），或粘贴公开歌单链接。' : '粘贴公开歌单链接，或导入 iTunes / Apple Music 导出的歌单文件。'}播放时按歌名与歌手匹配可播放的同版本。</p></header>
             {isMac && desktop && (state?.playlists ? <><div className="playlist-toolbar"><span>{state.playlists.length} 个歌单 · 音乐 App</span><button type="button" className="pixel-button is-quiet" onClick={() => loadList('apple-local', true)}><Loading size={14}/>刷新</button></div><PlaylistGrid playlists={state.playlists} open={openPlaylist} busyId={busyId}/></>
               : <button type="button" className="playlist-music-app" disabled={state?.loading} onClick={() => loadList('apple-local', true)}>{state?.loading ? <Loading size={22} className="player-spin"/> : <Music2 size={22}/>}<strong>{state?.loading ? '正在读取「音乐」App…' : '读取「音乐」App 歌单'}</strong><small>第一次读取时，macOS 会询问是否允许心流小屋控制「音乐」。</small></button>)}
             {state?.error && <p className="playlist-error" role="alert">{state.error}</p>}
-            <LinkAndFile openDetail={openDetail} busy={busy} setBusy={setBusy} setError={setError} compact apple/>
+            <LinkAndFile key={tab} openDetail={openDetail} busy={busy} setBusy={setBusy} setError={setError} compact apple/>
           </>
           : !config ? <p className="playlist-loading"><Loading size={18} className="player-spin"/>正在检查登录状态…</p>
           : !loggedIn ? <SignIn provider={tab} desktop={desktop} busy={signing === tab} signIn={() => signIn(tab)}/>

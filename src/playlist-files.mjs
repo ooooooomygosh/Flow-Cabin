@@ -5,6 +5,7 @@
 const LIMIT = 500;
 const clean = (value, max = 160) => String(value ?? '').replace(/[\x00-\x1f\x7f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max);
 const entity = (value) => String(value).replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(Number(code))).replace(/&#x([\da-f]+);/gi, (_, code) => String.fromCodePoint(parseInt(code, 16))).replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&');
+const decodePath = value => { try { return decodeURIComponent(value); } catch { return value; } };
 const basename = (value) => String(value || '').split(/[\\/]/).pop().replace(/\.[a-z\d]{2,5}$/i, '');
 
 // Minimal XML plist reader: dict / array / string / integer / real / true / false / date / data.
@@ -52,11 +53,11 @@ export function parseApplePlaylistXml(text) {
   };
   const playlists = pick.map((list) => ({
     id: clean(list['Playlist Persistent ID'] || list['Playlist ID'] || list.Name, 80), name: clean(list.Name) || '导入的歌单',
-    tracks: list['Playlist Items'].map((item) => toTrack(item?.['Track ID'])).filter((track) => track?.title).slice(0, LIMIT)
+    tracks: list['Playlist Items'].map((item) => toTrack(item?.['Track ID'])).filter((track) => track?.title)
   })).filter((list) => list.tracks.length);
   if (!playlists.length && Object.keys(tracks).length) playlists.push({ id: 'library', name: '导入的资料库', tracks: Object.keys(tracks).map(toTrack).filter((track) => track?.title).slice(0, LIMIT) });
   if (!playlists.length) throw new Error('文件里没有可导入的歌曲。');
-  return playlists;
+  return playlists.map(list => ({ ...list, trackCount: list.tracks.length, truncated: list.tracks.length > LIMIT, tracks: list.tracks.slice(0, LIMIT) }));
 }
 
 // "#EXTINF:215,Artist - Title" (or just paths: the file name becomes the title).
@@ -74,7 +75,7 @@ export function parseM3U(text, name = '') {
       continue;
     }
     if (value.startsWith('#')) continue;
-    const fromName = basename(decodeURIComponent(value.replace(/^file:\/\//i, '')).replace(/\+/g, ' '));
+    const fromName = basename(decodePath(value.replace(/^file:\/\//i, '')));
     const guess = fromName.match(/^(?:\d{1,3}[\s.\-_]+)?(.+?)\s+-\s+(.+)$/);
     tracks.push(pending?.title ? pending : guess ? { artist: clean(guess[1]), title: clean(guess[2]), duration: 0 } : { artist: '', title: clean(fromName), duration: 0 });
     pending = null;

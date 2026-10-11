@@ -26,6 +26,7 @@ let items = Array.from({ length: 18 }, (_, i) => ({ id: `fixture-${i}`, type: 'a
 const wav = Buffer.alloc(44 + 22050 * 2 * 15); wav.write('RIFF'); wav.writeUInt32LE(wav.length - 8, 4); wav.write('WAVEfmt ', 8); wav.writeUInt32LE(16, 16); wav.writeUInt16LE(1, 20); wav.writeUInt16LE(1, 22); wav.writeUInt32LE(22050, 24); wav.writeUInt32LE(44100, 28); wav.writeUInt16LE(2, 32); wav.writeUInt16LE(16, 34); wav.write('data', 36); wav.writeUInt32LE(wav.length - 44, 40);
 for (let i = 0; i < (wav.length - 44) / 2; i++) wav.writeInt16LE(Math.round(Math.sin(i * 2 * Math.PI * 220 / 22050) * 1200), 44 + i * 2);
 let quality = 'exhigh', rematch = '', localOpens = [], rematchResolves = [];
+let playlistRevision = false;
 let systemPlaying = true, localAlbumCalls = 0, neteaseLoggedIn = false; const systemCommands = [];
 const screenshot = async (name) => { await page.screenshot({ path: path.join(output, name + '.png'), animations: 'disabled' }); report.screenshots.push(name + '.png'); };
 const closeDialog = () => page.keyboard.press('Escape');
@@ -45,12 +46,13 @@ try {
     if (p === '/api/items/import') { let added = 0; for (const item of body.items || []) if (!items.some(i => i.id === item.id)) { items.push(item); added++; } return json({ added, total: items.length }); }
     if (p === '/api/items') {
       if (request.method() === 'GET') return json({ items });
-      if (request.method() === 'POST') { const item = { ...body, id: `added-${items.length}`, addedAt: new Date().toISOString() }; items.unshift(item); return json({ item }); }
+      if (request.method() === 'POST') { const duplicate = body.externalIds?.playlist && items.find(i => i.externalIds?.playlist === body.externalIds.playlist); if (duplicate) return json({ item: duplicate, duplicate: true }); const item = { ...body, id: `added-${items.length}`, addedAt: new Date().toISOString() }; items.unshift(item); return json({ item }); }
       const id = url.searchParams.get('id');
       if (request.method() === 'PATCH') { const item = items.find(i => i.id === id); if (!item) return route.fulfill({ status: 404, json: { error: 'Fixture album no longer exists' } }); Object.assign(item, body); return json({ item }); }
       if (request.method() === 'DELETE') { items = items.filter(i => i.id !== id); return json({ ok: true }); }
     }
     if (p === '/api/search') return json({ candidates: [{ ...items[0], id: 'search-result', title: '搜索找到的专辑' }] });
+    if (p === '/desktop-music/apple/permission') return json({ available: true, granted: false, needsPermission: true, error: 'Fixture: automation permission not granted' });
     if (p === '/desktop-music/config') return json({ qqLoggedIn: false, neteaseLoggedIn, maURL: '', playerId: '', quality, qualities: [{ id: 'standard', label: '标准 · 128k' }, { id: 'exhigh', label: '高品质 · 320k' }, { id: 'lossless', label: '无损 · FLAC' }] });
     if (p === '/desktop-music/quality') { quality = body.quality; return json({ qqLoggedIn: false, neteaseLoggedIn, maURL: '', playerId: '', quality }); }
     if (p === '/desktop-music/open-local') { localOpens.push(body); return json({ opened: true, app: 'QQ 音乐', via: 'web', installed: false, playingInCabin: false }); }
@@ -58,7 +60,7 @@ try {
     if (rematch && p === '/desktop-music/search') return json({ candidates: [{ id: 'fixture-vip', title: '晨光', artist: 'Fixture Artist', provider: url.searchParams.get('provider'), album: '晨光本地唱片' }, { id: 'fixture-stream', title: '晨光', artist: 'Fixture Artist', provider: url.searchParams.get('provider'), album: 'Fixture' }, { id: 'fixture-live', title: '晨光 (Live)', artist: 'Fixture Artist', provider: url.searchParams.get('provider') }] });
     if (p === '/desktop-music/playlists') return json({ loggedIn: true, provider: 'netease', user: 'Fixture', playlists: neteasePlaylists.map(({ cover, ...entry }) => entry) });
     const bare = (detail) => ({ ...detail, playlist: { ...detail.playlist, cover: '' }, tracks: detail.tracks.map(({ cover, ...track }) => track) });
-    if (p === '/desktop-music/playlist') return json(bare(playlistDetail(url.searchParams.get('id'))));
+    if (p === '/desktop-music/playlist') { const detail = bare(playlistDetail(url.searchParams.get('id'))); if (playlistRevision) detail.tracks[0] = { ...detail.tracks[0], artist: 'Updated Artist', providerId: '999001' }; return json(detail); }
     if (p === '/desktop-music/playlist/link') return json({ ...bare(playlistDetail('9003', 'qq')), provider: 'qq' });
     if (p === '/desktop-music/local/summary') return json({ folders: [{ name: 'Fixture Music', path: '/fixture/music' }], albumCount: 1, trackCount: 2 });
     if (p === '/desktop-music/local/albums') return json(localAlbumCalls++ % 2 ? { albums: [{ id: '0123456789abcdef', title: '残缺资料' }, null] } : {}); // malformed on purpose: {} then an album without tracks
@@ -384,6 +386,36 @@ try {
     await send({ status: 'downloaded', mode: 'install', latestVersion: '9.9.0', autoDownload: true }); await about.getByRole('button', { name: '重启安装' }).waitFor();
   }
   await screenshot('settings-about-update'); await page.keyboard.press('Escape'); check('settings-about-shows-version-and-update-status');
+  // Refreshing an existing same-title track must carry its new artist / ID.
+  playlistRevision = true;
+  await page.getByRole('button', { name: '我的歌单', exact: true }).click();
+  await page.getByRole('tab', { name: /网易云音乐/ }).click();
+  await page.locator('.playlist-card', { hasText: '深夜写作' }).click();
+  await page.getByRole('button', { name: '已在唱片架 · 同步' }).click();
+  await page.locator('.playlist-notice', { hasText: '已同步' }).waitFor();
+  assert.equal(items.find(i => i.externalIds?.playlist === 'netease:9002').trackDetails[0].providerId, '999001');
+  assert.equal(items.filter(i => i.externalIds?.playlist === 'netease:9002').length, 1);
+  check('playlist-sync-refreshes-same-title-source-id-without-duplicate');
+  const listCalls = report.apiCalls.filter(c => c.path === '/desktop-music/playlists').length;
+  await page.evaluate(() => window.dispatchEvent(new CustomEvent('album-music-account', { detail: { provider: 'netease' } })));
+  await page.locator('.playlist-card', { hasText: '深夜写作' }).waitFor();
+  assert(report.apiCalls.filter(c => c.path === '/desktop-music/playlists').length > listCalls, 'same logged-in state still refreshes account playlists');
+  check('playlist-account-change-clears-detail-and-refreshes-list');
+  await page.getByRole('tab', { name: /Apple Music/ }).click();
+  await page.getByText('当前支持歌单资料导入；尚未接入官方 MusicKit 登录与订阅播放。').waitFor();
+  check('apple-library-import-does-not-pretend-to-be-musickit');
+  await page.getByRole('tab', { name: /链接与文件/ }).click();
+  const xml = '<plist><dict><key>Tracks</key><dict><key>1</key><dict><key>Name</key><string>First</string><key>Artist</key><string>A</string></dict><key>2</key><dict><key>Name</key><string>Second</string><key>Artist</key><string>B</string></dict></dict><key>Playlists</key><array><dict><key>Name</key><string>早晨</string><key>Playlist ID</key><integer>1</integer><key>Playlist Items</key><array><dict><key>Track ID</key><integer>1</integer></dict></array></dict><dict><key>Name</key><string>夜晚</string><key>Playlist ID</key><integer>2</integer><key>Playlist Items</key><array><dict><key>Track ID</key><integer>2</integer></dict></array></dict></array></dict></plist>';
+  await page.locator('.playlist-import input[type=file]').setInputFiles({ name: 'library.xml', mimeType: 'application/xml', buffer: Buffer.from(xml) });
+  await page.getByRole('region', { name: '文件中的歌单' }).waitFor();
+  for (const [width, height] of [[1440, 900], [960, 600]]) {
+    await page.setViewportSize({ width, height }); await screenshot(`playlist-file-choice-${width}x${height}`);
+    assert(await page.locator('.playlist-dialog').evaluate(el => el.scrollWidth <= el.clientWidth), 'playlist import fits the dialog');
+  }
+  await page.getByRole('button', { name: '夜晚 1 首' }).click();
+  await page.locator('.playlist-hero h3', { hasText: '夜晚' }).waitFor();
+  assert.match(await page.locator('.playlist-track').innerText(), /Second/);
+  check('multi-playlist-xml-allows-selecting-second-list'); await closeDialog();
   assert.deepEqual(report.pageErrors, []); assert.deepEqual(report.unexpectedRequests, []); assert.deepEqual(report.consoleErrors, []); assert.deepEqual(report.failedRequests, []);
   report.passed = true;
 } catch (error) { report.passed = false; report.error = error.stack || String(error); console.error(report.error); process.exitCode = 1; if (page && !page.isClosed()) { await screenshot('failure').catch(() => {}); await fs.writeFile(path.join(output, 'failure.html'), await page.content()).catch(() => {}); } }

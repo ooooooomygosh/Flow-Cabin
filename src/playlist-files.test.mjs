@@ -66,3 +66,19 @@ test('playlist model: search and durations', () => {
   assert.equal(formatDuration(3723000), '1:02:03');
   assert.equal(totalDuration([{ duration: 3600000 }, { duration: 1500000 }]), '1 小时 25 分钟');
 });
+
+test('same-title playlist refresh updates source identity but preserves personal notes', async () => {
+  const { playlistRefreshPatch } = await import('./playlist-model.mjs');
+  const before = { title: 'Mix', artist: 'Me', tracks: ['Song'], trackDetails: [{ title: 'Song', artist: 'A', providerId: '1' }], notes: 'My listening notes' };
+  const after = { ...before, trackDetails: [{ title: 'Song', artist: 'B', providerId: '2' }], notes: 'Remote description' };
+  assert.deepEqual(playlistRefreshPatch(before, after), { trackDetails: after.trackDetails });
+  assert.deepEqual(playlistRefreshPatch(before, before), {});
+});
+test('M3U paths with a literal percent sign do not abort an import', () => {
+  const [list] = parsePlaylistFile('#EXTM3U\n#EXTINF:200,Artist - 100% Love\n/Music/100% Love.mp3', 'test.m3u');
+  assert.equal(list.tracks[0].title, '100% Love');
+});
+
+test('M3U preserves plus signs in file names', () => {
+  assert.equal(parsePlaylistFile('/Music/Love+Peace.mp3', 'test.m3u')[0].tracks[0].title, 'Love+Peace');
+});
