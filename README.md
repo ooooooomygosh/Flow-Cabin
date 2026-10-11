@@ -98,7 +98,7 @@
 <td valign="top">
 
 ### 🖥 动态桌面与全屏
-「沉入桌面」一键把窗口收起，小屋变成桌面背景（在图标后面），伙伴还能点、能拖，左下角的像素迷你唱机悬停出按钮；双击迷你唱机、托盘「浮出桌面」或 <kbd>Ctrl/⌘</kbd>+<kbd>Alt</kbd>+<kbd>D</kbd> 回到窗口。桌面版按全屏按钮或 <kbd>F11</kbd> 进入干净全屏：隐藏顶栏、工具栏、唱机和弹窗，只留场景；<kbd>Esc</kbd> / <kbd>F11</kbd> 返回。
+「沉入桌面」一键把窗口收起，小屋变成桌面背景（在图标后面），伙伴还能点、能拖，左下角的像素迷你唱机悬停出按钮；双击迷你唱机、托盘「浮出桌面」或 <kbd>Ctrl/⌘</kbd>+<kbd>Alt</kbd>+<kbd>D</kbd> 回到窗口。桌面版按全屏按钮或 <kbd>F11</kbd> 切换原生全屏（macOS 使用原生全屏空间）。全屏与普通 / 沉浸模式独立，唱片、歌单、桌宠和学习仍可操作；沉浸模式可用顶部「显示工具」找回工具。<kbd>Esc</kbd> 依次关闭对话框、工具、沉浸模式，最后退出全屏；<kbd>F11</kbd> 直接切换全屏。
 
 </td>
 <td valign="top">
@@ -240,7 +240,7 @@ album-web/
 
 - [x] 十二格唱片架、唱机、唱片卡片与专辑墙导出
 - [x] 番茄钟 / 待办 / 统计 / 声音 / 随手记一体化专注工具
-- [x] 六个像素场景（含月夜书桌）、五位像素伙伴、桌宠、动态桌面与干净全屏
+- [x] 六个像素场景（含月夜书桌）、五位像素伙伴、桌宠、动态桌面与交互全屏
 - [x] 自动匹配可播放音源
 - [x] 本地音乐、QQ / 网易云、系统播放、Music Assistant 接入
 - [x] 收藏与专注数据本机备份、导入
@@ -292,7 +292,7 @@ npm run check && npm run test:browser
 - **Sound** — procedurally synthesised rain, fire, wind, white noise and vinyl crackle, plus an offline Tone.js lo-fi radio that ducks when the turntable plays.
 - **Music** — local files, QQ Music / NetEase Cloud Music, the system's Now Playing, or Music Assistant. The turntable is animation-only until you pick a source; **auto match** finds a playable copy by title, artist and version (original track ID first, then QQ, then NetEase) and never swaps in a live version or cover.
 - **Scenes** — six pixel-art rooms: 像素小屋 Pixel Cabin (default), 琥珀小屋 Amber Cabin, 月夜书桌 Moonlit Study, 林间书屋 Forest Glade, 海边慢屋 Seaside and 星夜阁楼 Starry Night. In 月夜书桌 a girl at a moonlit window writes, lifts her pen and spins it, beside a nine-slot shelf whose covers are shaded by the desk lamp.
-- **Desktop** — set the room as a live wallpaper behind your desktop icons (it keeps running after the main window closes), or press F11 for a clean fullscreen that hides all chrome; Esc / F11 to return.
+- **Desktop** — set the room as a live wallpaper behind your desktop icons (it keeps running after the main window closes), or press F11 for native fullscreen. Fullscreen and immersive mode are independent; records, playlists and study tools remain interactive. Use “Show tools” in immersive mode. Esc closes the active dialog/tool before leaving immersive mode and fullscreen; F11 toggles fullscreen directly.
 - **Companions** — five pixel pals that breathe, react to pokes and bop to the music, a desktop pet and a live wallpaper. Reduced motion is respected.
 - **Look & feel** — one pixel style throughout: Fusion Pixel / Silkscreen fonts, notched pixel frames, `steps()` motion, dust motes and a time-of-day window light.
 - **Local-first** — collection, notes and focus data stay on your machine, with export/import backups.
