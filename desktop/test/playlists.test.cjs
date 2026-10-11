@@ -150,3 +150,11 @@ test('playlist library keeps pagination metadata and explains unsupported provid
   const qq = await library.tracks('qq', '1'); assert.equal(qq.tracks.length, 500); assert.equal(qq.truncated, true); assert.match(qq.limitReason, /未提供已验证的继续读取/);
   await assert.rejects(() => library.tracks('qq', '1', { offset: 500 }), /分页位置/);
 });
+
+test('successful short NetEase pages expose missing ids and preserve their playlist positions', async () => {
+  const { neteasePlaylistTracks } = require('../music-upstream.cjs');
+  const request = async method => method === 'playlist_detail' ? { status: 200, body: { playlist: { name: 'Large', trackCount: 620, trackIds: Array.from({ length: 620 }, (_, i) => ({ id: i + 1 })) } } } : { status: 200, body: { songs: Array.from({ length: 119 }, (_, i) => ({ id: i + 501, name: 'Song ' + (i + 501) })) } };
+  const raw = await neteasePlaylistTracks('', '42', { request, offset: 500 }), detail = normalizeDetail(raw, 'netease');
+  assert.equal(detail.tracks.length, 119); assert.equal(detail.page.nextOffset, null); assert.deepEqual(detail.page.missingPages, [{ offset: 500, ids: ['620'] }]);
+  assert.equal(detail.tracks[0].playlistIndex, 500); assert.equal(detail.tracks.at(-1).playlistIndex, 618);
+});

@@ -134,7 +134,7 @@ function createMusicService({ directory, safeStorage, login, logout, upstream = 
       if (req.method === 'GET' && url.pathname === '/playlists') return json(res, await guarded(() => playlists.list(String(url.searchParams.get('provider') || ''))));
       if (req.method === 'GET' && url.pathname === '/playlist') {
         const offset = Number(url.searchParams.get('offset') || 0);
-        if (offset && url.searchParams.get('revision') !== String(revision)) throw new Error('平台登录或设置已更改，请重新打开歌单。');
+        if ((offset || url.searchParams.has('revision')) && url.searchParams.get('revision') !== String(revision)) throw new Error('平台登录或设置已更改，请重新打开歌单。');
         return json(res, await guarded(async () => ({ ...(await playlists.tracks(String(url.searchParams.get('provider') || ''), String(url.searchParams.get('id') || ''), { offset })), revision })));
       }
       if (req.method === 'POST' && url.pathname === '/playlist/link') return json(res, await guarded(async () => ({ ...(await playlists.link(String((await body(req)).url || ''))), revision })));

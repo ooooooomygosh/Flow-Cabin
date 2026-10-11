@@ -73,12 +73,17 @@ export function playlistRefreshPatch(item, incoming, { incomplete = false } = {}
 // Merge only the expected page of the same source snapshot. No state mutates on failure.
 export function mergePlaylistPage(current, incoming) {
   if (current.provider !== incoming.provider || playlistKey(current.provider, current.playlist.id) !== playlistKey(incoming.provider, incoming.playlist.id)) throw new Error('歌单来源已改变，请重新打开歌单。');
-  if (!current.page || !incoming.page || current.page.nextOffset !== incoming.page.offset || incoming.page.offset <= current.page.offset) throw new Error('收到重复或乱序的歌单页，请重试。');
+  const retry = current.page?.missingPages?.some(page => page.offset === incoming.page?.offset);
+  if (!current.page || !incoming.page || (!retry && (current.page.nextOffset !== incoming.page.offset || incoming.page.offset <= current.page.offset))) throw new Error('收到重复或乱序的歌单页，请重试。');
   if (current.revision !== incoming.revision || current.page.snapshot !== incoming.page.snapshot) throw new Error('账号或歌单内容已改变，请重新打开歌单。');
   const key = track => track.providerId ? `${track.source}:${track.providerId}` : JSON.stringify([track.source, track.title, track.artist, track.album]);
   const seen = new Set(current.tracks.map(key)), tracks = [...current.tracks];
   for (const track of incoming.tracks || []) if (track.title && !seen.has(key(track))) { seen.add(key(track)); tracks.push(track); }
-  if (tracks.length === current.tracks.length) throw new Error('平台返回了重复页或空页，已读取的歌曲仍保留，请重试。');
+  if (!retry && tracks.length === current.tracks.length) throw new Error('平台返回了重复页或空页，已读取的歌曲仍保留，请重试。');
   if (tracks.length > PLAYLIST_TRACK_LIMIT) throw new Error(`单个歌单最多导入 ${PLAYLIST_TRACK_LIMIT} 首。`);
-  return { ...current, tracks, page: incoming.page, truncated: tracks.length < Math.max(incoming.playlist.trackCount || 0, tracks.length) };
+  if (tracks.every(track => Number.isInteger(track.playlistIndex))) tracks.sort((a, b) => a.playlistIndex - b.playlistIndex);
+  const knownIds = new Set(tracks.map(track => track.providerId));
+  const missingPages = [...(current.page.missingPages || []).filter(page => page.offset !== incoming.page.offset), ...(incoming.page.missingPages || [])].map(page => ({ ...page, ids: page.ids.filter(id => !knownIds.has(id)) })).filter(page => page.ids.length);
+  const page = { ...(retry ? current.page : incoming.page), missingPages };
+  return { ...current, tracks, page, truncated: tracks.length < Math.max(incoming.playlist.trackCount || 0, tracks.length) };
 }

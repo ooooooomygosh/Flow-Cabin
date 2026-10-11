@@ -76,10 +76,11 @@ function PlaylistDetail({ detail, provider, back, act, busy, saved, loadMore, lo
         </div>
       </div>
     </header>
-    {(detail.page?.nextOffset != null || detail.truncated) && <div className="playlist-read-progress" role="status">
-      {loadingMore ? <><span>正在读取下一批，已读取 {tracks.length} 首…</span><button type="button" className="pixel-button" onClick={cancelMore}>取消读取</button></>
-        : detail.page?.nextOffset != null ? <><span>下一批最多 500 首 · 单个歌单最多 {PLAYLIST_TRACK_LIMIT} 首</span><button type="button" className="pixel-button" disabled={busy} onClick={loadMore}>继续读取下一批</button></>
-        : <span>{detail.limitReason || (tracks.length >= PLAYLIST_TRACK_LIMIT ? `已达到 ${PLAYLIST_TRACK_LIMIT} 首上限，请拆分导出文件后导入剩余歌曲。` : '平台没有返回全部歌曲，可能受访问权限或接口返回范围限制；可尝试导出歌单文件。')}</span>}
+    {(detail.page?.nextOffset != null || detail.page?.missingPages?.length > 0 || detail.truncated) && <div className="playlist-read-progress" role="status">
+      {!loadingMore && detail.page?.missingPages?.length > 0 && <><span>平台暂未返回 {detail.page.missingPages.reduce((n, page) => n + page.ids.length, 0)} 首，原因尚未确认；可手动重试。</span><button type="button" className="pixel-button" disabled={busy} onClick={() => loadMore(detail.page.missingPages[0].offset)}>重试未返回曲目</button></>}
+      {loadingMore ? <><span>正在读取曲目，已读取 {tracks.length} 首…</span><button type="button" className="pixel-button" onClick={cancelMore}>取消读取</button></>
+        : detail.page?.nextOffset != null ? <><span>下一批最多 500 首 · 单个歌单最多 {PLAYLIST_TRACK_LIMIT} 首</span><button type="button" className="pixel-button" disabled={busy} onClick={() => loadMore()}>继续读取下一批</button></>
+        : detail.page?.missingPages?.length ? null : <span>{detail.limitReason || (tracks.length >= PLAYLIST_TRACK_LIMIT ? `已达到 ${PLAYLIST_TRACK_LIMIT} 首上限，请拆分导出文件后导入剩余歌曲。` : '平台没有返回全部歌曲，可能受访问权限或接口返回范围限制；可尝试导出歌单文件。')}</span>}
     </div>}
     {tracks.length > 0 && <label className="playlist-filter"><Search size={15}/><input type="search" aria-label="在歌单中查找" placeholder="在歌单中查找歌名、歌手或专辑" value={query} onChange={(event) => setQuery(event.target.value)}/>{query && <small>{rows.length} / {tracks.length}</small>}</label>}
     {rows.length > 0 && <div className="playlist-track-heading" aria-hidden="true"><span>#</span><span/><span>歌曲 / 歌手</span><span>专辑</span><span>时长</span></div>}
@@ -144,12 +145,15 @@ export default function PlaylistLibrary({ items, close, onAdded }) {
   const generation = useRef(0), moreRequest = useRef(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const cancelMore = () => { generation.current++; moreRequest.current?.abort(); moreRequest.current = null; setLoadingMore(false); };
-  const loadMore = async () => {
-    if (moreRequest.current || detail?.page?.nextOffset == null) return;
-    const controller = new AbortController(), current = generation.current, base = detail; moreRequest.current = controller; setLoadingMore(true); setError('');
+  const loadMore = async (offset = detail?.page?.nextOffset) => {
+    if (moreRequest.current || offset == null) return;
+    const controller = new AbortController(), current = generation.current, base = detail; moreRequest.current = controller; setLoadingMore(true); setError(''); setNotice('');
     try {
-      const next = await musicRequest(`/playlist?provider=${encodeURIComponent(base.provider)}&id=${encodeURIComponent(base.playlist.id)}&offset=${base.page.nextOffset}&revision=${encodeURIComponent(base.revision)}`, undefined, controller.signal);
-      if (current === generation.current && !controller.signal.aborted) setDetail(mergePlaylistPage(base, { ...next, provider: base.provider }));
+      const next = await musicRequest(`/playlist?provider=${encodeURIComponent(base.provider)}&id=${encodeURIComponent(base.playlist.id)}&offset=${offset}&revision=${encodeURIComponent(base.revision)}`, undefined, controller.signal);
+      if (current === generation.current && !controller.signal.aborted) {
+        const merged = mergePlaylistPage(base, { ...next, provider: base.provider }); setDetail(merged);
+        if (merged.tracks.length === base.tracks.length) setNotice('本次仍未返回缺少的曲目；已读取内容保留，可稍后手动重试。');
+      }
     } catch (cause) { if (current === generation.current && !controller.signal.aborted) setError(cause.message); }
     finally { if (moreRequest.current === controller) { moreRequest.current = null; setLoadingMore(false); } }
   };

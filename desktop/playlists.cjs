@@ -24,7 +24,7 @@ function normalizeTrack(raw, source) {
   if (!title) return null;
   const providerId = clean(value.providerId ?? value.mid ?? value.id, 64);
   const id = source === 'qq' ? (/^[a-z\d]{14}$/i.test(providerId) ? providerId : '') : source === 'netease' ? (/^\d{1,20}$/.test(providerId) ? providerId : '') : source === 'apple' ? (/^\d{1,20}$/.test(providerId) ? providerId : '') : '';
-  return { title, artist: clean(value.artist, 160), album: clean(value.album, 160), duration: count(value.duration), source, providerId: id,
+  return { ...(source === 'netease' && Number.isInteger(value.playlistIndex) && value.playlistIndex >= 0 && value.playlistIndex < 5000 ? { playlistIndex: value.playlistIndex } : {}), title, artist: clean(value.artist, 160), album: clean(value.album, 160), duration: count(value.duration), source, providerId: id,
     mediaMid: source === 'qq' && /^[a-z\d]{14}$/i.test(clean(value.mediaMid, 64)) ? clean(value.mediaMid, 64) : '', cover: httpsImage(value.cover), playable: value.playable !== false };
 }
 function normalizeSummary(raw, provider) {

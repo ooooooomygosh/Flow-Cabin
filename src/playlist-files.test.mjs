@@ -119,3 +119,16 @@ test('partial refresh cannot truncate a previously saved longer playlist', async
   assert.throws(() => playlistRefreshPatch(before, after, { incomplete: true }), /不能覆盖/);
   assert.equal(before.tracks.length, 620); assert.equal(playlistRefreshPatch(before, after).tracks.length, 500, 'a complete shorter upstream playlist can still sync deliberate removals');
 });
+
+test('short successful pages remain retryable and fill missing ids in original order', async () => {
+  const { mergePlaylistPage } = await import('./playlist-model.mjs');
+  const all = Array.from({ length: 620 }, (_, i) => ({ title: `Song ${i}`, providerId: String(i + 1), source: 'netease', playlistIndex: i }));
+  const current = { provider: 'netease', revision: 1, playlist: { id: '1', trackCount: 620 }, page: { offset: 0, nextOffset: 500, snapshot: 'a', missingPages: [{ offset: 0, ids: ['250'] }] }, tracks: all.slice(0, 500).filter(t => t.providerId !== '250') };
+  const last = { ...current, page: { offset: 500, nextOffset: null, snapshot: 'a', missingPages: [{ offset: 500, ids: ['620'] }] }, tracks: all.slice(500, 619) };
+  const short = mergePlaylistPage(current, last); assert.equal(short.tracks.length, 618); assert.equal(short.page.missingPages.length, 2);
+  const unchanged = mergePlaylistPage(short, last); assert.deepEqual(unchanged.tracks, short.tracks); assert.equal(unchanged.page.missingPages.length, 2);
+  const earlier = mergePlaylistPage(unchanged, { ...current, tracks: all.slice(0, 500), page: { ...current.page, missingPages: [] } });
+  assert.equal(earlier.page.nextOffset, null, 'retry does not rewind the continuation cursor'); assert.equal(earlier.page.missingPages[0].offset, 500); assert.equal(earlier.tracks[249].providerId, '250');
+  const complete = mergePlaylistPage(earlier, { ...last, tracks: all.slice(500), page: { ...last.page, missingPages: [] } });
+  assert.deepEqual(complete.tracks, all); assert.deepEqual(complete.page.missingPages, []); assert.equal(complete.truncated, false);
+});

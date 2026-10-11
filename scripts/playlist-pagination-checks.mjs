@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 export async function verifyPlaylistPagination({ browser, origin, check }) {
   const context = await browser.newContext({ viewport: { width: 960, height: 600 }, reducedMotion: 'reduce', locale: 'zh-CN' });
   let mode = 'fail', revision = 3, pending, items = [{ id: 'fixture-page-record', type: 'album', title: 'Fixture', artist: 'Test', tracks: [] }];
-  const errors = [], tracks = Array.from({ length: 620 }, (_, i) => ({ title: 'Page Song ' + (i + 1), artist: 'Fixture Artist', album: 'Fixture Album', source: 'netease', providerId: String(i + 1) }));
+  const errors = [], tracks = Array.from({ length: 620 }, (_, i) => ({ title: 'Page Song ' + (i + 1), artist: 'Fixture Artist', album: 'Fixture Album', source: 'netease', providerId: String(i + 1), playlistIndex: i }));
   const playlist = { id: '88001', name: '620 首离线歌单', trackCount: 620, kind: 'created' };
-  const detail = offset => ({ provider: 'netease', revision, playlist, tracks: offset ? mode === 'duplicate' ? tracks.slice(0, 500) : tracks.slice(499) : tracks.slice(0, 500), truncated: true, page: { offset, nextOffset: offset ? null : 500, snapshot: 'fixture-stable' } });
+  const detail = offset => ({ provider: 'netease', revision, playlist, tracks: offset ? mode === 'duplicate' ? tracks.slice(0, 500) : tracks.slice(499, mode === 'short' ? 619 : 620) : tracks.slice(0, 500), truncated: true, page: { offset, nextOffset: offset ? null : 500, snapshot: 'fixture-stable', missingPages: offset && mode === 'short' ? [{ offset, ids: ['620'] }] : [] } });
   await context.addInitScript(() => { window.albumDesktopAppearance = { client: true, reduceMotion: true }; });
   await context.route('**/*', async route => {
     const request = route.request(), url = new URL(request.url()), p = url.pathname;
@@ -70,7 +70,12 @@ export async function verifyPlaylistPagination({ browser, origin, check }) {
     await page.locator('.playlist-card', { hasText: playlist.name }).waitFor(); pending(); pending = null;
     mode = 'ok'; await open(); await count(500); await more().click(); await count(620);
     assert.equal(await page.locator('.playlist-dialog').evaluate(el => el.scrollWidth <= el.clientWidth), true);
-    assert.deepEqual(errors, []);
     check('large-playlist-account-switch-discards-late-page-and-can-reopen');
+    await page.getByRole('button', { name: '全部歌单' }).click(); await open(); mode = 'short'; await more().click(); await count(619);
+    const retryMissing = page.getByRole('button', { name: '重试未返回曲目' }); await retryMissing.waitFor(); assert.equal(await more().count(), 0);
+    await retryMissing.click(); await page.locator('.playlist-notice', { hasText: '本次仍未返回' }).waitFor(); await count(619);
+    mode = 'ok'; await retryMissing.click(); await count(620); assert.equal(await retryMissing.count(), 0);
+    check('short-successful-last-page-keeps-missing-id-retry-until-recovered');
+    assert.deepEqual(errors, []);
   } finally { pending?.(); await context.close(); }
 }

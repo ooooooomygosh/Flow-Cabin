@@ -66,13 +66,15 @@ export async function neteasePlaylistTracks(cookie: string, id: string, options:
     const byId = new Map(rawSongs.map(song => [asStr(song.id), song]));
     const songs = order.length ? order.map(key => byId.get(key)).filter((song): song is Record<string, unknown> => Boolean(song)) : rawSongs;
     if (!songs.length) throw new Error('这一批没有返回可读取的歌曲，请检查平台权限或稍后重试。');
-    for (const song of songs) {
+    for (const [index, song] of songs.entries()) {
       const mapped = mapSongRecord(song), privilege = privileges.get(asStr(song.id));
       tracks.push({ id: asStr(mapped.id), name: asStr(mapped.name), artist: mapped.artist, album: mapped.album, cover: httpsCover(mapped.cover), duration: mapped.duration, fee: mapped.fee,
-        playable: isNeteaseSongAvailable({ ...song, privilege }) });
+        playlistIndex: order.length ? offset + order.indexOf(asStr(song.id)) : offset + index, playable: isNeteaseSongAvailable({ ...song, privilege }) });
     }
   }
+  const returnedIds = new Set(tracks.filter(track => track.name).map(track => track.id));
+  const missingIds = ids.slice(offset, offset + limit).filter(key => !returnedIds.has(key));
   const end = Math.min(total, offset + limit), nextOffset = end < Math.min(total, NCM_PLAYLIST_LIMIT) ? end : null;
   return { provider: 'netease', playlist: { provider: 'netease', id, name: asStr(pl.name), cover: httpsCover(pl.coverImgUrl), trackCount: total, creator: asStr(creator.nickname), description: asStr(pl.description).slice(0, 600) }, tracks,
-    page: { offset, nextOffset, snapshot, total, limit: NCM_PLAYLIST_LIMIT, capped: total > NCM_PLAYLIST_LIMIT && nextOffset === null } };
+    page: { offset, nextOffset, snapshot, total, missingPages: missingIds.length ? [{ offset, ids: missingIds }] : [], limit: NCM_PLAYLIST_LIMIT, capped: total > NCM_PLAYLIST_LIMIT && nextOffset === null } };
 }

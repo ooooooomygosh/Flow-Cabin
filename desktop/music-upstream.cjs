@@ -1192,7 +1192,7 @@ async function neteasePlaylistTracks(cookie, id, options = {}) {
     const byId = new Map(rawSongs.map((song) => [asStr(song.id), song]));
     const songs = order.length ? order.map((key) => byId.get(key)).filter((song) => Boolean(song)) : rawSongs;
     if (!songs.length) throw new Error("\u8FD9\u4E00\u6279\u6CA1\u6709\u8FD4\u56DE\u53EF\u8BFB\u53D6\u7684\u6B4C\u66F2\uFF0C\u8BF7\u68C0\u67E5\u5E73\u53F0\u6743\u9650\u6216\u7A0D\u540E\u91CD\u8BD5\u3002");
-    for (const song of songs) {
+    for (const [index, song] of songs.entries()) {
       const mapped = mapSongRecord(song), privilege = privileges.get(asStr(song.id));
       tracks.push({
         id: asStr(mapped.id),
@@ -1202,16 +1202,19 @@ async function neteasePlaylistTracks(cookie, id, options = {}) {
         cover: httpsCover(mapped.cover),
         duration: mapped.duration,
         fee: mapped.fee,
+        playlistIndex: order.length ? offset + order.indexOf(asStr(song.id)) : offset + index,
         playable: isNeteaseSongAvailable({ ...song, privilege })
       });
     }
   }
+  const returnedIds = new Set(tracks.filter((track) => track.name).map((track) => track.id));
+  const missingIds = ids.slice(offset, offset + limit).filter((key) => !returnedIds.has(key));
   const end = Math.min(total, offset + limit), nextOffset = end < Math.min(total, NCM_PLAYLIST_LIMIT) ? end : null;
   return {
     provider: "netease",
     playlist: { provider: "netease", id, name: asStr(pl.name), cover: httpsCover(pl.coverImgUrl), trackCount: total, creator: asStr(creator.nickname), description: asStr(pl.description).slice(0, 600) },
     tracks,
-    page: { offset, nextOffset, snapshot, total, limit: NCM_PLAYLIST_LIMIT, capped: total > NCM_PLAYLIST_LIMIT && nextOffset === null }
+    page: { offset, nextOffset, snapshot, total, missingPages: missingIds.length ? [{ offset, ids: missingIds }] : [], limit: NCM_PLAYLIST_LIMIT, capped: total > NCM_PLAYLIST_LIMIT && nextOffset === null }
   };
 }
 // Annotate the CommonJS export names for ESM import in node:

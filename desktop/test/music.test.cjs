@@ -142,6 +142,7 @@ test('playlist continuation rejects changed account revisions and in-flight acco
   await service.logout('netease');
   const stale = await request(`/playlist?provider=netease&id=1&offset=500&revision=${first.revision}`);
   assert.equal(stale.status, 502); assert.match((await stale.json()).error, /更改/); assert.equal(calls, 1);
+  const staleFirst = await request(`/playlist?provider=netease&id=1&offset=0&revision=${first.revision}`); assert.equal(staleFirst.status, 502); assert.equal(calls, 1);
   const fresh = await (await request('/playlist?provider=netease&id=1')).json();
   const pending = request(`/playlist?provider=netease&id=1&offset=500&revision=${fresh.revision}`);
   while (!finish) await new Promise(resolve => setImmediate(resolve));
