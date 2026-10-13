@@ -94,7 +94,7 @@ jobs:
   publish:
     needs: build
     # A pushed v* tag publishes. So does a manual run on main given release_tag:
-    # gh release create then makes the tag at the tested commit.
+    # The source guard creates a new manual tag atomically at the tested commit.
     if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.release_tag != '' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     permissions:
@@ -112,14 +112,6 @@ jobs:
           DISPATCH_TAG: ${{ inputs.release_tag }}
         shell: bash
         run: |
-          if [ "$GITHUB_REF_TYPE" = tag ]; then
-            tag="$GITHUB_REF_NAME"; target=(--verify-tag)
-          else
-            tag="$DISPATCH_TAG"; target=(--target "$GITHUB_SHA")
-            version="v$(node -p "require('./desktop/package.json').version")"
-            [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "release_tag must look like v1.2.3"; exit 1; }
-            [ "$tag" = "$version" ] || { echo "release_tag $tag does not match desktop/package.json $version"; exit 1; }
-          fi
           node scripts/merge-mac-update-info.mjs release/latest-mac.yml release/latest-mac-arm64.yml release/latest-mac-x64.yml
           rm release/latest-mac-arm64.yml release/latest-mac-x64.yml
           # Never publish without the files the in-app updater reads.
@@ -128,4 +120,7 @@ jobs:
           cd release
           sha256sum *.exe *.dmg *.zip > SHA256SUMS.txt
           cd ..
-          gh release create "$tag" release/* --repo "$GITHUB_REPOSITORY" --title "心流小屋 Flow Cabin $tag · macOS & Windows" --notes-file desktop/RELEASE-NOTES.md "${target[@]}"
+          # Fail closed on existing manual tags or mismatched pushed tags, including
+          # annotated tags. Never let gh reuse a tag merely because its name exists.
+          tag="$(node scripts/release-source.mjs)"
+          gh release create "$tag" release/* --repo "$GITHUB_REPOSITORY" --title "心流小屋 Flow Cabin $tag · macOS & Windows" --notes-file desktop/RELEASE-NOTES.md --verify-tag
