@@ -72,7 +72,14 @@ test('invalid input and untested checkout are rejected before any API mutation',
     { env: { ...manual.env, DISPATCH_TAG: 'v1.14.0;touch injected' } },
     { env: { ...manual.env, GITHUB_SHA: 'main' } },
     { env: { ...manual.env, GITHUB_REPOSITORY: '../bad' } },
-  ]) await assert.rejects(prepareReleaseSource({ ...manual, ...change, api: () => assert.fail('API called for invalid input') }));
+    { env: { ...manual.env, GITHUB_REPOSITORY: './bad' } },
+    { env: { ...manual.env, GITHUB_REPOSITORY: 'owner/..' } },
+    { env: { ...manual.env, GITHUB_REPOSITORY: 'owner/.' } },
+  ]) {
+    let calls = 0;
+    await assert.rejects(prepareReleaseSource({ ...manual, ...change, api: () => { calls++; throw new Error('unexpected API call'); } }));
+    assert.equal(calls, 0, 'Invalid inputs must be rejected before any API request');
+  }
 });
 
 test('actual workflow command stops before gh release on a failed guard', { skip: process.platform === 'win32' }, () => {

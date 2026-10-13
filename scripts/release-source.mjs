@@ -9,7 +9,8 @@ const requireThat = (condition, message) => { if (!condition) throw new Error(me
 export async function prepareReleaseSource({ env, version, checkoutSha, api }) {
   const { GITHUB_EVENT_NAME: event, GITHUB_REF: ref, GITHUB_SHA: sha, GITHUB_REPOSITORY: repo } = env;
   requireThat(isSha(sha) && checkoutSha === sha, 'Checkout must match the exact tested GITHUB_SHA');
-  requireThat(/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repo || ''), 'Invalid repository');
+  requireThat(typeof repo === 'string' && /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repo)
+    && repo.split('/').every(part => part !== '.' && part !== '..'), 'Invalid repository');
   const pushedTag = event === 'push' && ref?.startsWith('refs/tags/');
   const dispatchedTag = event === 'workflow_dispatch' && ref?.startsWith('refs/tags/');
   const dispatchedMain = event === 'workflow_dispatch' && ref === 'refs/heads/main';
