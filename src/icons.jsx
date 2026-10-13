@@ -49,3 +49,24 @@ export const ShufflePixel = pixelGlyph('shuffle', pixels([
   '.........XX.',
   '.........X..'
 ]));
+// Pocket-player keys, same 12 × 12 pixel grid.
+export const PlayPixel = pixelGlyph('play', pixels([
+  '............', '...X........', '...XX.......', '...XXX......', '...XXXX.....', '...XXXXX....',
+  '...XXXXX....', '...XXXX.....', '...XXX......', '...XX.......', '...X........', '............'
+]));
+export const PausePixel = pixelGlyph('pause', pixels([
+  '............', '..XXX..XXX..', '..XXX..XXX..', '..XXX..XXX..', '..XXX..XXX..', '..XXX..XXX..',
+  '..XXX..XXX..', '..XXX..XXX..', '..XXX..XXX..', '..XXX..XXX..', '..XXX..XXX..', '............'
+]));
+export const PreviousPixel = pixelGlyph('previous', pixels([
+  '............', '............', '.XX....X...X', '.XX...XX..XX', '.XX..XXX.XXX', '.XX.XXXXXXXX',
+  '.XX.XXXXXXXX', '.XX..XXX.XXX', '.XX...XX..XX', '.XX....X...X', '............', '............'
+]));
+export const NextPixel = pixelGlyph('next', pixels([
+  '............', '............', 'X...X....XX.', 'XX..XX...XX.', 'XXX.XXX..XX.', 'XXXXXXXX.XX.',
+  'XXXXXXXX.XX.', 'XXX.XXX..XX.', 'XX..XX...XX.', 'X...X....XX.', '............', '............'
+]));
+export const EjectPixel = pixelGlyph('eject', pixels([
+  '............', '.....XX.....', '....XXXX....', '...XXXXXX...', '..XXXXXXXX..', '.XXXXXXXXXX.',
+  '.XXXXXXXXXX.', '............', '.XXXXXXXXXX.', '.XXXXXXXXXX.', '............', '............'
+]));
