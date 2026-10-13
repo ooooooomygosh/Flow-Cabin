@@ -64,12 +64,13 @@ export function rankCandidates(candidates, record, index) {
   return rankForAutoplay(candidates, wantedTrack(record, index));
 }
 
+const SOURCE_NAMES = { qq: 'QQ 音乐', netease: '网易云' };
 // Plays the first source that really starts. Order: the match that worked last
 // time (memory) → the record's own platform id → ranked search results, up to
 // AUTO_MATCH_ATTEMPTS per platform. Nothing is reported as playing unless
 // `play` resolved; when nothing works the caller gets the candidates + error.
 export async function findPlayableSource({ record, index, provider, request, play, isCurrent = () => true, memory = null }) {
-  const tried = new Set(), candidates = [], attempts = new Map();
+  const tried = new Set(), candidates = [], attempts = new Map(), searchErrors = new Map(), missing = [];
   const canAttempt = source => (attempts.get(source) || 0) < AUTO_MATCH_ATTEMPTS;
   let lastError = '', hadMatches = false, aborted = false;
   const active = () => !aborted && isCurrent();
@@ -115,11 +116,13 @@ export async function findPlayableSource({ record, index, provider, request, pla
     // a Taiwan Apple Music library Traditional. Try each written form until one
     // yields a playable match; later searches only run when earlier ones failed.
     const query = `${trackArtist(record, index)} ${name}`.trim(), seen = new Set();
+    let searched = false;
     for (const variant of [...new Set([toSimplified(query), query, toTraditional(query)])]) {
       if (!canAttempt(source)) break;
       try {
         const result = await request(`/search?provider=${source}&query=${encodeURIComponent(variant)}`);
         if (!active()) return null;
+        searched = true;
         const found = (Array.isArray(result.candidates) ? result.candidates : []).filter((candidate) => !seen.has(`${candidate.provider}:${candidate.id}`) && seen.add(`${candidate.provider}:${candidate.id}`));
         candidates.push(...found);
         for (const candidate of rankCandidates(found, record, index).slice(0, AUTO_MATCH_ATTEMPTS)) {
@@ -130,9 +133,13 @@ export async function findPlayableSource({ record, index, provider, request, pla
       } catch (error) {
         if (!active() || error.name === 'AbortError') return null;
         if (error.name === 'NotAllowedError') throw error;
-        lastError = error.message;
+        // The platform refused or could not be reached: the other spellings
+        // would only repeat the refusal, so move on to the next platform.
+        searchErrors.set(source, error.message);
+        break;
       }
     }
+    if (searched && !hadMatches && SOURCE_NAMES[source]) missing.push(SOURCE_NAMES[source]);
     // 系统 Apple Music plays library songs. A song the library lacks is taken
     // from Apple's catalogue (the record's own iTunes id, else a search) and
     // opened in Music.app, where the listener presses play.
@@ -153,7 +160,12 @@ export async function findPlayableSource({ record, index, provider, request, pla
       }
     }
   }
-  return { candidates, error: hadMatches ? `匹配的音源暂时不可播放。${lastError}` : lastError || (provider === 'local' ? '本地音乐里没有找到这首歌，请先在音源设置中添加文件夹。' : '未找到可播放的同版本音源，可切换音源或手动选择。') };
+  if (hadMatches) return { candidates, error: `匹配的音源暂时不可播放。${lastError}` };
+  // Say what each platform answered: one refusing searches is not the same as
+  // the song being absent, and an old error must not hide a later clean miss.
+  const refused = [...searchErrors.values()];
+  if (refused.length) return { candidates, error: [...refused, missing.length ? `${missing.join('、')}没有找到这首歌。` : ''].filter(Boolean).join(' ') };
+  return { candidates, error: lastError || (provider === 'local' ? '本地音乐里没有找到这首歌，请先在音源设置中添加文件夹。' : '未找到可播放的同版本音源，可切换音源或手动选择。') };
 }
 
 // Builds a collection item from a scanned local album. Track ids let the

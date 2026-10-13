@@ -38,6 +38,27 @@ export function nextStep({ trackIndex = 0, trackCount = 0, queue, manual = false
   return { type: 'stop' };
 }
 
+// Same, but steps over tracks already known to be unplayable (`blocked(index)`
+// is true when matching that track just failed), so the deck keeps playing
+// instead of stopping on a dead track. When every other track is blocked the
+// plain step is returned and the normal error / auto-skip path takes over.
+export function nextPlayableStep({ trackIndex = 0, trackCount = 0, queue, manual = false, random = Math.random, blocked = () => false }) {
+  const first = nextStep({ trackIndex, trackCount, queue, manual, random });
+  if (first.type !== 'track' || !blocked(first.index)) return first;
+  const { shuffle } = normalizeQueue(queue);
+  if (shuffle) {
+    const open = Array.from({ length: trackCount }, (_, index) => index).filter((index) => index !== trackIndex && !blocked(index));
+    return open.length ? { type: 'track', index: open[Math.floor(random() * open.length) % open.length] } : first;
+  }
+  let step = first;
+  for (let hops = 0; hops < trackCount && step.type === 'track' && blocked(step.index); hops++) {
+    const after = nextStep({ trackIndex: step.index, trackCount, queue, manual: true, random });
+    if (after.type === 'track' && after.index === trackIndex) return first; // went all the way round
+    step = after;
+  }
+  return step.type === 'stop' || (step.type === 'track' && blocked(step.index)) ? first : step;
+}
+
 // Like most players: past 3 s "previous" restarts the song.
 export function previousStep({ trackIndex = 0, position = 0 }) {
   if (position > 3 || trackIndex <= 0) return { type: 'restart' };

@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createResolutionCache, createFader, resolutionKey, shouldAutoSkip, playbackErrorMessage, AUTO_SKIP_LIMIT } from './playback-cache.mjs';
-import { nextStep } from './player-queue.mjs';
+import { nextStep, nextPlayableStep } from './player-queue.mjs';
+import { crossfadeSeconds, setCrossfadeSeconds, crossfadeStartsAt } from './crossfade.mjs';
 import { findPlayableSource, rankCandidates, exactTrack, trackArtist } from '../room-playback.mjs';
 
 test('seamless: prefetched resolutions are used once and expire', () => {
@@ -79,4 +80,34 @@ test('seamless: metadata changes cannot consume another recording’s prefetched
   assert.equal(cache.take(resolutionKey('auto', edited, 0)), null);
   assert.equal(cache.take(key).result.audioPath, '/first-recording');
   assert.equal(resolutionKey('auto', item, 99), '');
+});
+
+test('matching: a platform refusing searches is named, not hidden behind another platform\'s clean miss', async () => {
+  const record = { id: 'r', type: 'album', title: '黑色柳丁', artist: '陶喆', tracks: ['月亮代表誰的心'] };
+  const paths = [];
+  const request = async (path) => { paths.push(decodeURIComponent(path)); if (path.includes('provider=qq')) throw new Error('QQ 音乐搜索暂时不可用（2001），稍后会自动重试。'); return { candidates: [] }; };
+  const result = await findPlayableSource({ record, index: 0, provider: 'auto', request, play: async () => {} });
+  assert.equal(result.error, 'QQ 音乐搜索暂时不可用（2001），稍后会自动重试。 网易云没有找到这首歌。');
+  // After QQ refuses once, its other spellings are not searched again; 网易云 tries both.
+  assert.deepEqual(paths.filter((path) => path.includes('provider=qq')), ['/search?provider=qq&query=陶喆 月亮代表谁的心']);
+  assert.equal(paths.filter((path) => path.includes('provider=netease')).length, 2);
+});
+
+test('queue: tracks whose early match failed are stepped over, in order and in shuffle', () => {
+  const queue = { ids: [], repeat: 'off', shuffle: false };
+  assert.deepEqual(nextPlayableStep({ trackIndex: 0, trackCount: 4, queue, blocked: (index) => index === 1 }), { type: 'track', index: 2 });
+  assert.deepEqual(nextPlayableStep({ trackIndex: 0, trackCount: 4, queue, blocked: (index) => index > 0 }), { type: 'track', index: 1 }, 'nothing left: the plain step');
+  assert.deepEqual(nextPlayableStep({ trackIndex: 2, trackCount: 4, queue: { ...queue, repeat: 'all' }, blocked: (index) => index === 3 }), { type: 'track', index: 0 });
+  assert.deepEqual(nextPlayableStep({ trackIndex: 2, trackCount: 4, queue: { ...queue, ids: ['next-album'] }, blocked: (index) => index === 3 }), { type: 'album', id: 'next-album' });
+  assert.deepEqual(nextPlayableStep({ trackIndex: 0, trackCount: 4, queue: { ...queue, repeat: 'one' }, blocked: () => true }), { type: 'restart' });
+  const shuffled = nextPlayableStep({ trackIndex: 0, trackCount: 4, queue: { ...queue, shuffle: true }, random: () => 0, blocked: (index) => index === 1 });
+  assert.deepEqual(shuffled, { type: 'track', index: 2 });
+});
+
+test('crossfade: setting is stored, and short songs never overlap', () => {
+  const store = new Map(), storage = { getItem: (key) => store.get(key) ?? null, setItem: (key, value) => store.set(key, value) };
+  assert.equal(crossfadeSeconds(storage), 0);
+  assert.equal(setCrossfadeSeconds(6, storage), 6); assert.equal(crossfadeSeconds(storage), 6);
+  assert.equal(setCrossfadeSeconds(99, storage), 0, 'unknown values fall back to no overlap');
+  assert.equal(crossfadeStartsAt(200, 6), 194); assert.equal(crossfadeStartsAt(15, 6), Infinity); assert.equal(crossfadeStartsAt(NaN, 3), Infinity); assert.equal(crossfadeStartsAt(200, 0), Infinity);
 });

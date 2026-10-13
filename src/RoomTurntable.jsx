@@ -28,7 +28,8 @@ export default function RoomTurntable({ item, spinning, trackIndex = 0, style, i
       <div className="turntable-console">
     <div className="turntable-heading">{readOnly ? <span><Disc3 size={15}/>木屋唱机</span> : <button type="button" className="turntable-drag-handle" aria-label="移动唱机" title="拖动移动唱机 · 方向键微调 · 双击或 Home 复位" {...placement.handle}><Disc3 size={15}/>木屋唱机 ⠿</button>}{!readOnly && <button type="button" className="turntable-closeup" aria-label="唱机特写" title="唱机特写 · T" onClick={() => window.dispatchEvent(new Event('cabin-open-corner'))}><Eye size={14}/></button>}<small>{{ visual: '仅展示', ma: '家庭播放器', appleMusic: 'Apple Music', local: '本地音乐', system: '系统播放', qq: 'QQ 音乐', netease: '网易云音乐' }[provider] || '自动匹配'}</small></div>
     {!readOnly && tools}
-    {!readOnly && playback && <audio ref={playback.audio} {...playback.events} preload="metadata"/>}
+    {/* Two decks take turns: one plays, the other buffers the next song. */}
+    {!readOnly && playback && playback.deckRefs.map((ref, index) => <audio key={index} ref={ref} {...playback.events} preload="auto"/>)}
     <button type="button" className="turntable-record-art" aria-label="打开黑胶与专辑特写" disabled={readOnly} onClick={() => window.dispatchEvent(new Event('cabin-open-corner'))}>
       <span className="turntable-sleeve">{item?.cover ? <img src={item.cover} alt="" referrerPolicy="no-referrer"/> : <Disc3 size={32}/>}</span>
       <VinylDisc item={item || undefined} value={style} className={spinning ? 'is-spinning' : ''}/><span className="turntable-needle" aria-hidden="true"/>

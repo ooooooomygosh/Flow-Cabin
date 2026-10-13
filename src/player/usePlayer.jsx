@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { QUEUE_KEY, normalizeQueue, queueAddition, dequeue, pruneQueue, cycleRepeat, nextStep, previousStep } from './player-queue.mjs';
+import { QUEUE_KEY, normalizeQueue, queueAddition, dequeue, pruneQueue, cycleRepeat, nextStep, nextPlayableStep, previousStep } from './player-queue.mjs';
 import { createPlaybackBroadcaster, rmsEnergy, smoothEnergy, estimatedEnergy, ENERGY_INTERVAL_MS } from './playback-signal.mjs';
 import { analyserFor } from './audio-graph.mjs';
 import { trackNames } from '../room-model.mjs';
@@ -21,7 +21,8 @@ export function usePlayerQueue({ items, record, trackIndex, setTrackIndex, loadA
   const trackCount = trackNames(record).length, audible = provider !== 'visual' && provider !== 'system';
   // What plays after this track is decided once (shuffle included), so the deck
   // can match that exact track early and the transition is instant.
-  const upcoming = useMemo(() => nextStep({ trackIndex, trackCount, queue }), [record?.id, trackIndex, trackCount, queue.ids.join('|'), queue.repeat, queue.shuffle]);
+  // Tracks whose early match failed are stepped over (see useRoomPlayback).
+  const upcoming = useMemo(() => nextPlayableStep({ trackIndex, trackCount, queue, blocked: (index) => Boolean(playback?.isBlocked?.(record, index)) }), [record?.id, trackIndex, trackCount, queue.ids.join('|'), queue.repeat, queue.shuffle, playback?.blockedVersion]);
   const go = (step) => {
     if (step.type === 'track') setTrackIndex(step.index);
     else if (step.type === 'restart') { if (audible) playback?.restart(); }

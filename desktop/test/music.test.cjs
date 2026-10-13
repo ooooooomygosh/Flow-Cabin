@@ -200,3 +200,14 @@ test('cancelling a legacy QQ resolve prevents a late metadata lookup from reques
   await request('/config'); // Process the closed loopback connection before releasing the held lookup.
   release('0025nWDH4PCVfs'); await new Promise(resolve => setImmediate(resolve)); assert.equal(calls, 0);
 });
+test('search: identical requests share one upstream call and a refusal is remembered briefly', async (t) => {
+  let count = 0, release;
+  const gate = new Promise((resolve) => { release = resolve; });
+  const { request } = await fixture(t, { searchQQSongs: async () => { count++; await gate; throw new Error('QQ 音乐搜索暂时不可用（2001），稍后会自动重试。'); } });
+  const both = Promise.all([request('/search?provider=qq&query=same'), request('/search?provider=qq&query=same')]);
+  release();
+  const answers = await both;
+  assert.equal(count, 1); assert.deepEqual(answers.map((response) => response.status), [502, 502]);
+  const again = await (await request('/search?provider=qq&query=same')).json();
+  assert.equal(count, 1); assert.match(again.error, /2001/);
+});

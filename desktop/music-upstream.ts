@@ -94,3 +94,93 @@ export async function getQQMediaMid(cookie: string, mid: string): Promise<string
   const mediaMid = asStr(asObj(track.file).media_mid);
   return /^[a-z\d]{14}$/i.test(mediaMid) ? mediaMid : '';
 }
+
+// ---------- Flow Cabin: QQ song search that survives code 2001 ----------
+// QQ answers DoSearchForQQMusicDesktop with business code 2001 in bursts
+// (anonymous clients, rapid repeats). Simple Music retries the same request
+// five times in 1.2 s, which keeps the burst going. Here each request shape QQ
+// clients use is tried once, in turn; the shape that answered last is tried
+// first next time. Results are mapped to the plain shape `candidate()` reads.
+import { requestText, parseJSONText, QQ_HEADERS, QQ_MUSICU_URL } from './vendor/simple-music/server/lib/qq-client';
+
+type QQSearchShape = { name: string, run: (query: string, limit: number) => Promise<unknown[]> };
+type QQSearchOptions = { fetchText?: (url: string, init: { method?: string, headers?: Record<string, string> }, body?: string) => Promise<string>, wait?: (ms: number) => Promise<void> };
+const QQ_SEARCH_MODULE = 'music.search.SearchCgiService';
+let preferredQQShape = 0;
+
+export function mapQQSearchSong(raw: unknown) {
+  const song = asObj(raw), album = asObj(song.album), file = asObj(song.file), pay = asObj(song.pay);
+  const singers = asArr(song.singer).map((value) => ({ name: asStr(asObj(value).name) })).filter((artist) => artist.name);
+  const mediaMid = asStr(file.media_mid || song.strMediaMid || song.media_mid);
+  return {
+    mid: asStr(song.mid || song.songmid),
+    name: asStr(song.name || song.title || song.songname),
+    artists: singers,
+    artist: singers.map((artist) => artist.name).join(' / '),
+    album: asStr(album.name || album.title || song.albumname),
+    mediaMid: /^[a-z\d]{14}$/i.test(mediaMid) ? mediaMid : '',
+    duration: asNum(song.interval) * 1000,
+    fee: asNum(pay.pay_play || pay.payplay) ? 1 : 0
+  };
+}
+
+class QQSearchError extends Error { code: number; constructor(code: number) { super(`QQ_SEARCH_FAILED (${code})`); this.code = code; } }
+
+export function qqSearchShapes(options: QQSearchOptions = {}): QQSearchShape[] {
+  const fetchText = options.fetchText || requestText;
+  const post = async (payload: unknown) => {
+    const body = JSON.stringify(payload);
+    return asObj(parseJSONText(await fetchText(QQ_MUSICU_URL, { method: 'POST', headers: { ...QQ_HEADERS, 'Content-Type': 'application/json;charset=UTF-8' } }, body)));
+  };
+  const block = (json: Record<string, unknown>, key: string) => {
+    const part = asObj(json[key]), code = Number(json.code || 0) || Number(part.code || 0);
+    if (code !== 0 || !json[key]) throw new QQSearchError(code || -1);
+    return asArr(asObj(asObj(asObj(part.data).body).song).list);
+  };
+  const get = async (url: string, params: Record<string, string | number>) => {
+    const target = new URL(url);
+    for (const [name, value] of Object.entries(params)) target.searchParams.set(name, String(value));
+    return asObj(parseJSONText(await fetchText(target.toString(), { headers: { ...QQ_HEADERS } })));
+  };
+  return [
+    // What y.qq.com's desktop page sends: envelope key = module, no comm.
+    { name: 'desktop', run: async (query, limit) => block(await post({ [QQ_SEARCH_MODULE]: { module: QQ_SEARCH_MODULE, method: 'DoSearchForQQMusicDesktop', param: { search_type: 0, query, page_num: 1, num_per_page: limit } } }), QQ_SEARCH_MODULE) },
+    // The PC client's form (Listen1 and others): comm + req, grouped results.
+    { name: 'client', run: async (query, limit) => block(await post({ comm: { ct: '19', cv: '1859', uin: '0' }, req: { module: QQ_SEARCH_MODULE, method: 'DoSearchForQQMusicDesktop', param: { grp: 1, num_per_page: limit, page_num: 1, query, search_type: 0 } } }), 'req') },
+    // The older c.y.qq.com search page; same song objects with new_json=1.
+    { name: 'legacy', run: async (query, limit) => {
+      const json = await get('https://c.y.qq.com/soso/fcgi-bin/client_search_cp', { ct: 24, qqmusic_ver: 1298, new_json: 1, remoteplace: 'txt.yqq.song', t: 0, aggr: 1, cr: 1, catZhida: 1, lossless: 0, flag_qc: 0, p: 1, n: limit, w: query, format: 'json', inCharset: 'utf8', outCharset: 'utf-8', notice: 0, platform: 'yqq.json', needNewCode: 0 });
+      const code = Number(json.code || 0);
+      if (code !== 0) throw new QQSearchError(code);
+      return asArr(asObj(asObj(json.data).song).list);
+    } },
+    // The search box's suggestions: song ids and names only; the media id is looked up when played.
+    { name: 'smartbox', run: async (query, limit) => {
+      const json = await get('https://c.y.qq.com/splcloud/fcgi-bin/smartbox_new.fcg', { key: query, format: 'json', inCharset: 'utf-8', outCharset: 'utf-8', platform: 'yqq.json', is_xml: 0 });
+      const code = Number(json.code || 0);
+      if (code !== 0) throw new QQSearchError(code);
+      return asArr(asObj(asObj(json.data).song).itemlist).slice(0, limit).map((item) => { const value = asObj(item); return { mid: value.mid, name: value.name, singer: asStr(value.singer).split(/\s*[/、]\s*/).filter(Boolean).map((name) => ({ name })) }; });
+    } }
+  ];
+}
+
+export async function searchQQSongs(query: string, limit = 8, options: QQSearchOptions = {}) {
+  const keyword = String(query || '').trim();
+  if (!keyword) return [];
+  const count = Math.max(1, Math.min(20, Math.floor(limit) || 8));
+  const shapes = qqSearchShapes(options), wait = options.wait || ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
+  const order = shapes.map((_, index) => (preferredQQShape + index) % shapes.length);
+  let lastError: unknown = null;
+  for (const [step, index] of order.entries()) {
+    if (step) await wait(250);
+    try {
+      const seen = new Set<string>();
+      const songs = (await shapes[index].run(keyword, count)).map(mapQQSearchSong).filter((song) => /^[a-z\d]{14}$/i.test(song.mid) && song.name && !seen.has(song.mid) && seen.add(song.mid));
+      preferredQQShape = index;
+      return songs;
+    } catch (error) { lastError = error; }
+  }
+  const code = lastError instanceof QQSearchError ? lastError.code : 0;
+  throw new Error(code > 0 ? `QQ 音乐搜索暂时不可用（${code}），稍后会自动重试。` : 'QQ 音乐搜索暂时连不上，请检查网络后重试。');
+}
+export function resetQQSearchPreference() { preferredQQShape = 0; }
