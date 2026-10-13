@@ -43,8 +43,8 @@ function harness({ version = '1.14.2', arch = 'arm64', zip = Buffer.from('zip-by
   const execFileSyncProcess = (file, args) => String(plistOf(args[5])[args[1]] || '');
   let fsModule = writable ? fs : { ...fs, accessSync: () => { throw new Error('EACCES'); } };
   if (shortWrites || corruptWrites) fsModule = { ...fsModule, promises: { ...fs.promises, open: async (...args) => { const handle = await fs.promises.open(...args); return { close: () => handle.close(), write: chunk => handle.write(corruptWrites ? Buffer.alloc(chunk.length) : chunk.subarray(0, 100)) }; } } };
-  const mac = createMacUpdater({ app, fetch, platform: 'darwin', arch, bundlePath: bundle, directory, pid: 4242, execFileProcess, execFileSyncProcess, fsModule, downloadTimeoutMs: streamMode === 'stall' ? 50 : 120000, spawnProcess: (file, args, options) => { spawned.push({ file, args, options }); return { unref() {} }; } });
-  return { mac, app, bundle, directory, requests, spawned, files, nativeCalls, get cancelled() { return cancelled; } };
+  const reopen = () => createMacUpdater({ app, fetch, platform: 'darwin', arch, bundlePath: bundle, directory, pid: 4242, execFileProcess, execFileSyncProcess, fsModule, downloadTimeoutMs: streamMode === 'stall' ? 50 : 120000, spawnProcess: (file, args, options) => { spawned.push({ file, args, options }); return { unref() {} }; } });
+  return { mac: reopen(), reopen, app, bundle, directory, requests, spawned, files, nativeCalls, get cancelled() { return cancelled; } };
 }
 
 test('latest-mac.yml: both architectures, quoted values, nothing else picked up', () => {
@@ -143,19 +143,38 @@ test('backup survives until the new process confirms successful startup', async 
   const receiptPath = path.join(h.directory, 'install-receipt.json'), receipt = JSON.parse(fs.readFileSync(receiptPath));
   fs.mkdirSync(receipt.backup); fs.writeFileSync(path.join(receipt.backup,'old'), 'recoverable');
   fs.writeFileSync(path.join(h.directory,'install-status'), 'installed');
-  assert.equal(h.mac.confirmStartup(), false); assert.equal(fs.existsSync(receipt.backup), true);
+  assert.equal(h.mac.confirmStartup({ cabinReady: true }), false); assert.equal(fs.existsSync(receipt.backup), true);
   h.app.getVersion = () => '1.14.2';
   fs.writeFileSync(path.join(h.bundle,'Contents','Info.plist'), JSON.stringify({ CFBundleShortVersionString: '1.14.2' }));
-  assert.equal(h.mac.confirmStartup(), true); assert.equal(fs.existsSync(receipt.backup), false); assert.equal(fs.existsSync(receiptPath), false);
+  assert.equal(h.mac.confirmStartup(), false); assert.equal(fs.existsSync(receipt.backup),true, 'a shell without a rendered cabin cannot acknowledge startup');
+  assert.equal(h.mac.confirmStartup({ cabinReady: true }), true); assert.equal(fs.existsSync(receipt.backup), false); assert.equal(fs.existsSync(receiptPath), false);
 });
 test('rollback is reported and unrelated backup paths are never deleted', async () => {
   const h = harness(); await h.mac.checkForUpdates(); await h.mac.downloadUpdate(); h.mac.quitAndInstall();
   const receiptPath = path.join(h.directory,'install-receipt.json'), receipt = JSON.parse(fs.readFileSync(receiptPath));
   const unrelated = path.join(h.directory,'personal'); fs.mkdirSync(unrelated); fs.writeFileSync(path.join(unrelated,'keep'),'keep');
   fs.writeFileSync(receiptPath, JSON.stringify({ ...receipt, backup: unrelated })); fs.writeFileSync(path.join(h.directory,'install-status'),'installed');
-  h.app.getVersion = () => '1.14.2'; assert.equal(h.mac.confirmStartup(), false); assert.equal(fs.existsSync(unrelated),true);
+  h.app.getVersion = () => '1.14.2'; assert.equal(h.mac.confirmStartup({ cabinReady: true }), false); assert.equal(fs.existsSync(unrelated),true);
   fs.writeFileSync(receiptPath,JSON.stringify(receipt)); fs.writeFileSync(path.join(h.directory,'install-status'),'rolled-back');
-  assert.equal(h.mac.confirmStartup(), false); assert.match(h.mac.startupWarning,/已恢复原版本/); assert.equal(fs.existsSync(receiptPath),false);
+  assert.equal(h.mac.confirmStartup({ cabinReady: true }), false); assert.match(h.mac.startupWarning,/已恢复原版本/); assert.equal(fs.existsSync(receiptPath),false);
+});
+test('safe pre-swap cancellation permits download and install after reopening; uncertain swaps retain recovery files', async () => {
+  for (const status of ['disk-version-changed', 'version-unavailable', 'backup-exists', 'backup-failed', 'spawn-failed', 'wait-timeout', 'rollback-failed', 'pending']) {
+    const h = harness({ version: '1.14.4' }); await h.mac.checkForUpdates(); await h.mac.downloadUpdate(); h.mac.quitAndInstall();
+    const receiptPath = path.join(h.directory,'install-receipt.json'), receipt = JSON.parse(fs.readFileSync(receiptPath));
+    fs.mkdirSync(receipt.backup); fs.writeFileSync(path.join(receipt.backup,'keep'),'recovery');
+    fs.writeFileSync(path.join(h.directory,'install-status'),status);
+    const reopened = h.reopen(); reopened.confirmStartup({ cabinReady: true });
+    assert.equal(fs.readFileSync(path.join(receipt.backup,'keep'),'utf8'),'recovery');
+    await reopened.checkForUpdates();
+    if (['rollback-failed','pending'].includes(status)) {
+      assert.equal(fs.existsSync(receiptPath),true); await assert.rejects(reopened.downloadUpdate(),/尚未确认/);
+    } else {
+      assert.equal(fs.existsSync(receiptPath),false); assert.equal(fs.existsSync(path.join(h.directory,'staged-1.14.4')),false);
+      await reopened.downloadUpdate(); assert.equal(reopened.quitAndInstall(),true);
+      assert.equal(h.spawned.length,2, `${status}: retry can start a fresh installer`);
+    }
+  }
 });
 
 test('the copy on disk can be newer than the running process', () => {
@@ -228,4 +247,14 @@ test('install script restores on open failure and refuses disk changes during sh
     assert.equal(result.status, 1); assert.equal(fs.readFileSync(path.join(s.app,'version'),'utf8'), 'old');
     assert.equal(fs.readFileSync(s.status,'utf8'), mode === 'open-failure' ? 'rolled-back' : 'disk-version-changed');
   }
+});
+test('failed removal never nests the backup inside the failed new bundle', { skip: process.platform === 'win32' }, () => {
+  const s = runScript(), bin = path.join(s.root,'bin'); fs.mkdirSync(bin);
+  fs.writeFileSync(s.opener,'#!/bin/sh\nexit 1\n',{ mode:0o700 });
+  fs.writeFileSync(path.join(bin,'rm'),'#!/bin/sh\nif [ "$2" = "$FAIL_REMOVE_PATH" ]; then exit 1; fi\nexec /bin/rm "$@"\n',{ mode:0o700 });
+  const result = spawnSync('/bin/sh',[s.script,'999999',s.app,s.staged,s.backup,'1',s.opener,s.status,'old',s.plist],{ encoding:'utf8',timeout:20000,env:{...process.env,PATH:bin+path.delimiter+process.env.PATH,FAIL_REMOVE_PATH:s.app} });
+  assert.equal(result.status,1); assert.equal(fs.readFileSync(s.status,'utf8'),'rollback-failed');
+  assert.equal(fs.readFileSync(path.join(s.backup,'version'),'utf8'),'old');
+  assert.equal(fs.readFileSync(path.join(s.app,'version'),'utf8'),'new');
+  assert.equal(fs.existsSync(path.join(s.app,path.basename(s.backup))),false);
 });
