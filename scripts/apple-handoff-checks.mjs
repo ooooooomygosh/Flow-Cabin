@@ -12,8 +12,11 @@ export async function verifyAppleHandoff({ browser, origin, output, check }) {
     let current = { ...selected, title: '另一首歌曲', state: initial }, polls = 0, failPoll = false;
     await context.addInitScript(() => {
       Object.defineProperty(navigator, 'platform', { value: 'MacIntel' });
+      Object.defineProperty(navigator, 'userAgentData', { value: { platform: 'macOS' } });
       localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 1, status: 'done', step: 'done' }));
       window.albumDesktopAppearance = { client: true, reduceMotion: true };
+      const init = () => { document.documentElement.dataset.desktopClient = 'true'; document.documentElement.dataset.desktopReduceMotion = 'true'; };
+      if (document.documentElement) init(); else new MutationObserver((_, observer) => { if (document.documentElement) { init(); observer.disconnect(); } }).observe(document, { childList: true });
       window.open = () => { throw new Error('Unexpected native navigation'); };
     });
     await context.route('**/*', route => {
@@ -36,7 +39,10 @@ export async function verifyAppleHandoff({ browser, origin, output, check }) {
     const progress = page.getByRole('slider', { name: '音乐播放进度', exact: true });
     const pollAgain = async () => { const previous = polls; for (let i = 0; i < 40 && polls <= previous; i++) await page.waitForTimeout(100); assert.ok(polls > previous); await page.waitForTimeout(100); };
     try {
-      await page.goto(origin); await page.locator('.room-record').first().waitFor(); await chooseSource(page, 'appleMusic');
+      await page.goto(origin); await page.locator('.room-record').first().waitFor();
+      assert.equal(await page.evaluate(() => /mac/i.test(navigator.userAgentData?.platform || navigator.platform)), true, 'settings and player both receive the Mac fixture platform');
+      assert.equal(await page.evaluate(() => document.documentElement.dataset.desktopClient), 'true');
+      await chooseSource(page, 'appleMusic');
       await page.locator('.room-record').first().dblclick(); await waiting(); await pollAgain();
       assert.equal(resolves.length, 1); assert.equal(resolves[0].id, '1234567890'); assert.equal(resolves[0].album, initial === 'legacy' ? '' : selected.album);
       assert.equal(await page.getByRole('button', { name: '播放音乐', exact: true }).isDisabled(), true);
