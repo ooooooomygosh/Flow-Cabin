@@ -213,5 +213,34 @@ try {
     for(const [index,name] of ['音源','房间与桌宠','专注工具','桌面','数据与备份','关于'].entries()) { await page.getByRole('tablist',{name:'设置分区',exact:true}).getByRole('tab',{name,exact:true}).click();await screenshot(page,`settings-section-${index}`);if(name==='桌面')assert.equal(await page.locator('.hub-row-actions .segmented button').evaluateAll(buttons=>buttons.every(button=>{const range=document.createRange();range.selectNodeContents(button);return range.getClientRects().length===1;})),true,'performance option labels stay on one line'); }
     await page.getByRole('tablist',{name:'设置分区',exact:true}).getByRole('tab',{name:'专注工具',exact:true}).click();await page.getByRole('button',{name:'打开学习',exact:true}).click();assert.equal(await page.getByRole('dialog',{name:'设置',exact:true}).count(),0);assert.equal(await page.locator('.study-panel').count(),1);await openFocus(page,'随手记');assert.equal(await page.getByLabel('随手记内容').inputValue(),'设置面板往返保留');await screenshot(page,'settings-shortcut-restored');
   });
+  await run('companion-compact-header-keeps-brand-and-controls',async page=>{
+    await page.evaluate(()=>document.fonts.ready);
+    for(const width of [1440,960,640]) {
+      await page.setViewportSize({width,height:600});
+      const bounds=await page.locator('.app-titlebar').evaluate(header=>{const r=header.getBoundingClientRect(), brand=header.querySelector('.app-brand strong'), count=header.querySelector('.app-brand small'), range=document.createRange();range.selectNodeContents(brand);return {lines:range.getClientRects().length,brandBottom:brand.getBoundingClientRect().bottom,countBottom:count.getBoundingClientRect().bottom,headerBottom:r.bottom,buttons:[...header.querySelectorAll('button')].map(button=>{const b=button.getBoundingClientRect();return {name:button.getAttribute('aria-label'),left:b.left,right:b.right,top:b.top,bottom:b.bottom,reachable:document.elementFromPoint(b.left+b.width/2,b.top+b.height/2)?.closest('button')===button};})};});
+      await page.screenshot({path:path.join(output,`compact-header-${width}x600.png`),animations:'disabled'});assert.equal(bounds.lines,1,JSON.stringify(bounds));assert.ok(bounds.countBottom<=bounds.headerBottom);assert.ok(bounds.buttons.every(b=>b.left>=0&&b.right<=width&&b.top>=0&&b.bottom<=bounds.headerBottom&&b.reachable),JSON.stringify(bounds.buttons));
+    }
+    await page.getByRole('button',{name:'添加专辑',exact:true}).click();await page.getByRole('dialog',{name:'添加专辑',exact:true}).waitFor();await page.keyboard.press('Escape');assert.equal(await page.getByRole('button',{name:'添加专辑',exact:true}).evaluate(e=>e===document.activeElement),true);
+    await page.getByRole('button',{name:'设置',exact:true}).click();await page.getByRole('dialog',{name:'设置',exact:true}).waitFor();await page.keyboard.press('Escape');assert.equal(await page.getByRole('button',{name:'设置',exact:true}).evaluate(e=>e===document.activeElement),true);
+  });
+  await run('companion-generated-lofi-tempo-reaches-pet',async page=>{
+    const { cleanCompanion } = createRequire(path.join(root,'desktop/package.json'))('./wallpaper-model.cjs');
+    await openFocus(page,'声音');await page.getByRole('checkbox',{name:'Lofi 电台 · 实时生成',exact:true}).check(); // enabling lo-fi starts sound itself
+    await page.waitForFunction(()=>window.albumCompanionSnapshot?.().sound?.lofi===true,null,{timeout:30000});
+    const source=await page.evaluate(()=>window.albumCompanionSnapshot());const tempo=Number((await page.locator('.sound-section').innerText()).match(/(\d+) BPM/)[1]);
+    await screenshot(page,'lofi-source-playing');assert.equal(source.lofiBpm,tempo,'generated lo-fi snapshot carries its actual section tempo');assert.equal(source.musicPlaying,false);assert.equal(source.bpm,0);assert.equal(source.energy,0);
+    const pet=await page.context().newPage();pet.on('pageerror',e=>report.pageErrors.push(e.message));await pet.emulateMedia({reducedMotion:'no-preference'});await pet.addInitScript(()=>{window.albumPet={getSnapshot:async()=>null,onSnapshot:fn=>{window.__pushTempo=fn;return()=>{};},setHit(){},moveBy(){},dragEnd(){},menu(){},open(){}};window.__tempoEvents=[];window.addEventListener('cabin:playback',e=>window.__tempoEvents.push(e.detail));});
+    await pet.setViewportSize({width:420,height:420});await pet.goto(origin+'/pet.html',{waitUntil:'domcontentloaded',timeout:30000});await pet.locator('.pet-cat .pixel-cat').waitFor();
+    const push=async value=>{await pet.evaluate(companion=>window.__pushTempo({companion,size:192}),cleanCompanion({...value,reduceMotion:false}));};
+    const beat=()=>pet.evaluate(async()=>({...((await import('/src/player/beat-clock.mjs')).currentBeat())}));
+    const duration=async bpm=>{await pet.waitForFunction(bpm=>document.querySelector('.pet-cat .pixel-cat')?.getAnimations().some(a=>Math.abs(a.effect.getTiming().duration-60000/bpm)<1),bpm,{timeout:7000});};
+    try {
+      await push(source);await duration(tempo);assert.equal((await beat()).bpm,tempo);assert.equal((await beat()).detected,false);assert.equal(await pet.evaluate(()=>window.__tempoEvents.at(-1).playing),false);await pet.screenshot({path:path.join(output,'lofi-pet-tempo.png'),animations:'allow'});
+      await push({...source,lofiBpm:80});await duration(80);await push({...source,lofiBpm:85});await duration(85);
+      await page.evaluate(()=>window.dispatchEvent(new CustomEvent('cabin:playback',{detail:{playing:true,energy:.4,bpm:120,beatAt:Date.now()}})));const music=await page.evaluate(()=>window.albumCompanionSnapshot());assert.equal(music.lofiBpm,0);await push(music);await duration(120);assert.equal((await beat()).detected,true);
+      await page.evaluate(()=>window.dispatchEvent(new CustomEvent('cabin:playback',{detail:{playing:false,energy:0}})));await push(await page.evaluate(()=>window.albumCompanionSnapshot()));await duration(tempo);
+      await page.getByRole('button',{name:'声音已开启',exact:true}).click();await page.waitForFunction(()=>window.albumCompanionSnapshot?.().sound?.lofi===false);const stopped=await page.evaluate(()=>window.albumCompanionSnapshot());assert.equal(stopped.lofiBpm,0);await push(stopped);assert.equal((await beat()).bpm,96);assert.equal((await beat()).detected,false);await screenshot(page,'lofi-source-stopped');await pet.screenshot({path:path.join(output,'lofi-pet-stopped.png'),animations:'disabled'});
+    } finally { await pet.close(); }
+  });
   assert.deepEqual(report.pageErrors,[]);assert.deepEqual(report.unexpectedRequests,[]);if(report.checks.some(x=>!x.passed))process.exitCode=1;
 }finally{await fs.writeFile(path.join(output,'report.json'),JSON.stringify(report,null,2));await browser?.close();server?.kill();}

@@ -1,3 +1,5 @@
+import { setBeat } from '../player/beat-clock.mjs';
+
 // Subscribe before requesting the initial value. A late invoke reply must not
 // overwrite a newer broadcast, and a renderer reload must not cause an
 // unhandled rejection or update an unmounted component.
@@ -12,11 +14,17 @@ export function playbackFromCompanion(companion) {
   return { playing, energy: playing && Number.isFinite(energy) ? Math.max(0, Math.min(1, energy)) : 0, estimated: playing && companion?.energyEstimated === true, bpm, beatAt, source: 'companion' };
 }
 export function createPlaybackRelay(target = globalThis.window, EventClass = globalThis.CustomEvent) {
-  let last = '';
+  let last = '', lastLofi = 0;
   return (value) => {
     if (!value || !('companion' in value) || !target?.dispatchEvent || !EventClass) return;
-    const detail = playbackFromCompanion(value.companion), key = `${detail.playing}:${detail.energy}:${detail.estimated}:${detail.bpm}:${detail.beatAt}`;
+    const detail = playbackFromCompanion(value.companion), tempo = Number(value.companion?.lofiBpm);
+    const lofiBpm = !detail.playing && value.companion?.playing === true && Number.isFinite(tempo) && tempo >= 40 && tempo <= 220 ? tempo : 0;
+    const key = `${detail.playing}:${detail.energy}:${detail.estimated}:${detail.bpm}:${detail.beatAt}:${lofiBpm}`;
     if (key === last) return;
+    // Keep real-audio event semantics unchanged; lo-fi sets only the free-phase visual clock.
+    if (lofiBpm) setBeat({ bpm: lofiBpm });
+    else if (lastLofi && !detail.playing) setBeat({ bpm: 0 });
+    lastLofi = lofiBpm;
     last = key; target.dispatchEvent(new EventClass(PLAYBACK_EVENT, { detail: { ...detail, reason: 'companion' } }));
   };
 }

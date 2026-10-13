@@ -30,7 +30,9 @@ export default function CompanionBridge() {
         // Real audio only (see docs/events.md); `playing` above also covers lo-fi / spinning.
         musicPlaying: music.current.playing, energy: Number(music.current.energy.toFixed(2)), energyEstimated: music.current.estimated,
         // The detected beat (tempo + one beat's wall-clock time): the pet window keeps its own beat clock.
-        bpm: music.current.bpm, beatAt: music.current.beatAt
+        bpm: music.current.bpm, beatAt: music.current.beatAt,
+        // Lo-fi has a section tempo, but no shared beat-phase anchor.
+        lofiBpm: !music.current.playing && s?.lofiState === 'playing' ? Number(s.section?.bpm) || 0 : 0
       };
     };
     window.albumCompanionSnapshot = getter;

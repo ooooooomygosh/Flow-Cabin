@@ -177,3 +177,32 @@ test('pet companion carries music energy: cleaned, adaptive polling, relayed as 
   assert.equal(applied.length, 5, 'pet code still gets every snapshot');
   assert.deepEqual(events.map((e) => [e.type, e.detail.playing, e.detail.energy]), [['cabin:playback', true, .4], ['cabin:playback', false, 0]]);
 });
+
+test('lo-fi section tempo survives the display-only snapshot and respects source precedence', async () => {
+  const { readCompanion } = require('../companion-sync.cjs'), vm = require('node:vm');
+  const raw = { playing: true, musicPlaying: false, lofiBpm: 78.26, energy: .9, bpm: 120, beatAt: 1000, token: 'private' };
+  const value = await readCompanion({ isDestroyed: () => false, executeJavaScript: async script => vm.runInNewContext(script, { window: { albumCompanionSnapshot: () => raw }, document: { documentElement: { dataset: {} } } }) });
+  const clean = cleanCompanion(value.companion);
+  assert.equal(clean.lofiBpm, 78.3); assert.equal(clean.musicPlaying, false); assert.equal(clean.energy, 0); assert.equal(clean.bpm, 0); assert.equal(clean.beatAt, 0); assert.equal('token' in clean, false);
+  assert.equal(cleanCompanion({ ...raw, musicPlaying: true }).lofiBpm, 0);
+  assert.equal(cleanCompanion({ ...raw, playing: false }).lofiBpm, 0);
+  for (const lofiBpm of [undefined, null, 0, -80, 39, 221, Infinity, NaN, 'bad']) assert.equal(cleanCompanion({ ...raw, lofiBpm }).lofiBpm, 0);
+});
+
+test('lo-fi relay updates tempo without pretending music plays, then resets on stop', async t => {
+  const { createPlaybackRelay, playbackFromCompanion } = await import('../../src/pet/pet-snapshot.mjs');
+  const { setBeat, currentBeat } = await import('../../src/player/beat-clock.mjs');
+  setBeat({ bpm: 0 }); t.after(() => setBeat({ bpm: 0 }));
+  class FakeEvent { constructor(type, init) { this.type = type; this.detail = init.detail; } }
+  const events = [], relay = createPlaybackRelay({ dispatchEvent: event => events.push(event) }, FakeEvent);
+  const source = { playing: true, musicPlaying: false, lofiBpm: 80 };
+  relay({ companion: source }); assert.equal(currentBeat().bpm, 80); assert.equal(currentBeat().detected, false);
+  assert.deepEqual(playbackFromCompanion(source), { playing: false, energy: 0, estimated: false, bpm: 0, beatAt: 0, source: 'companion' });
+  relay({ companion: source }); assert.equal(events.length, 1);
+  relay({ companion: { ...source, lofiBpm: 85 } }); assert.equal(events.length, 2); assert.equal(currentBeat().bpm, 85);
+  setBeat({ bpm: 120, beatAt: 1000 }); relay({ companion: { ...source, musicPlaying: true, bpm: 120, beatAt: 1000 } }); assert.equal(currentBeat().bpm, 120, 'lo-fi does not overwrite real music');
+  relay({ companion: source }); assert.equal(currentBeat().bpm, 80); assert.equal(currentBeat().detected, false);
+  relay({ companion: { ...source, playing: false, lofiBpm: 0 } }); assert.equal(currentBeat().bpm, 96); assert.equal(events.at(-1).detail.playing, false);
+  relay({ companion: source }); relay({ companion: null }); assert.equal(currentBeat().bpm, 96);
+  relay({ companion: { ...source, lofiBpm: Infinity } }); assert.equal(currentBeat().bpm, 96);
+});

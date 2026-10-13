@@ -173,3 +173,13 @@ a{color:var(--amber-2)}
 @media(max-height:700px){.cabin-scene .room-empty{padding:16px;gap:8px}.room-welcome-actions{gap:8px}.room-empty .room-welcome-tip{display:none}}
 @media(max-width:760px){.cabin-scene .room-empty{left:27%;right:8%;top:36%}}
 @media(prefers-reduced-transparency:reduce){.cabin-room:not(.cabin-pixel) .room-empty{background:#1d2529;backdrop-filter:none}}
+
+/* Compact header keeps labels legible and every window action reachable. */
+@media(max-width:700px){
+  .app-titlebar{gap:8px;padding-left:10px}
+  .app-brand{gap:6px;flex-shrink:0}.app-brand-cat{flex-shrink:0}
+  .app-titlebar .app-brand strong{font-size:18px;line-height:22px;white-space:nowrap}
+  .app-actions{gap:4px}.app-actions .pixel-button{padding:7px 9px}
+  .app-actions .pixel-button.is-primary span{display:none}
+  .desktop-controls button{width:30px}
+}
