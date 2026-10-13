@@ -15,6 +15,13 @@ function fixture(t, options = {}) {
   const request = (url, value) => service.proxy(new Request('https://album-circle.vercel.app/desktop-music' + url, value === undefined ? {} : { method: 'POST', body: JSON.stringify(value) }), url, fetch);
   return { directory, service, request };
 }
+test('Apple control route preserves the expected recording for the native guard', async (t) => {
+  const calls = [], expectedTrack = { id: 'ABCDEF0123456789', title: 'Selected', artist: 'Artist', album: 'Album' };
+  const { request } = fixture(t, { appleMusic: { available: true, control: async (...args) => { calls.push(args); return { ok: true }; } } });
+  const response = await request('/apple/control', { action: 'pause', expectedTrack });
+  assert.equal(response.status, 200); assert.deepEqual(await response.json(), { ok: true });
+  assert.deepEqual(calls, [['pause', expectedTrack]]);
+});
 test('changing Music Assistant origin cannot reuse the previous server credential', async (t) => {
   const requests = [];
   const { request } = fixture(t, { fetch: async (url, init) => { requests.push([url, init.headers.Authorization]); return Response.json([]); } });

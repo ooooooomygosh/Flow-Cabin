@@ -280,6 +280,7 @@ async function wireRemoteView() {
     if (mainWindow && !mainWindow.isDestroyed() && !contents.isDestroyed() && (!mainWindow.isVisible() || mainWindow.isMinimized())) await contents.executeJavaScript("window.dispatchEvent(new Event('blur'));").catch(() => {});
     sendState();
     writeLog('page-ready');
+    confirmUpdatedCabinStartup();
   });
   contents.on('did-stop-loading', () => { if (!currentError) loading = false; sendState(); });
   contents.on('did-navigate-in-page', () => {
@@ -382,6 +383,20 @@ function notifySinkStatus(state) {
 // 检查更新 (desktop/updater.cjs). State reaches the page as
 // window.cabinUpdateState + CustomEvent 'cabin:update-state'.
 let updater = null, macUpdater = null;
+async function confirmUpdatedCabinStartup() {
+  const contents = siteView?.webContents;
+  if (!macUpdater || !startupComplete || loading || currentError || documentHttpFailed || !contents || contents.isDestroyed() || !isSiteUrl(contents.getURL())) return;
+  // A loaded Electron shell can still contain a failed/blank React page.
+  const cabinReady = await contents.executeJavaScript(`new Promise(resolve => {
+    const timer = setTimeout(() => { observer.disconnect(); resolve(false); }, 10000);
+    const check = () => { if (!document.querySelector('.cabin-room')) return; observer.disconnect(); clearTimeout(timer); setTimeout(() => resolve(Boolean(document.querySelector('.cabin-room'))), 500); };
+    const observer = new MutationObserver(check); observer.observe(document.documentElement, { childList: true, subtree: true }); check();
+  })`).catch(() => false);
+  if (cabinReady === true && contents === siteView?.webContents && !contents.isDestroyed() && !loading && !currentError && !documentHttpFailed) {
+    macUpdater.confirmStartup({ cabinReady: true });
+    if (macUpdater.startupWarning) { writeLog('update-recovery', macUpdater.startupWarning); if (macUpdater.listenerCount('error')) macUpdater.emit('error', new Error(macUpdater.startupWarning)); }
+  }
+}
 function updateSettings() {
   const file = path.join(app.getPath('userData'), 'update.json');
   return { get: () => { try { return JSON.parse(fs.readFileSync(file, 'utf8')).autoDownload !== false; } catch { return true; } }, set: (value) => { try { fs.writeFileSync(file, JSON.stringify({ autoDownload: Boolean(value) })); } catch {} } };
@@ -394,11 +409,10 @@ function startUpdater() {
   // macOS: ad-hoc builds update themselves (desktop/mac-updater.cjs). net.fetch
   // follows the system proxy settings.
   if (process.platform === 'darwin' && app.isPackaged) macUpdater = createMacUpdater({ app, fetch: (url, options) => net.fetch(url, options), bundlePath: path.resolve(process.execPath, '..', '..', '..'), directory: path.join(app.getPath('userData'), 'updates') });
-  if (startupComplete) macUpdater?.confirmStartup();
+  confirmUpdatedCabinStartup();
   const macUpdatable = macUpdater ? macUpdater.canSelfUpdate({ isPackaged: app.isPackaged }) : null;
   const native = updateMode({ isPackaged: app.isPackaged, macUpdatable }).mode === 'install';
   updater = createUpdater({ currentVersion: app.getVersion(), isPackaged: app.isPackaged, macUpdatable, autoUpdater: native ? macUpdater || require('electron-updater').autoUpdater : null, openExternal: (url) => shell.openExternal(url), installedVersion: () => macUpdater?.installedVersion() || '', relaunch: relaunchInstalledCopy, settings: updateSettings(), onState: (state) => pushUpdateState(state) });
-  if (macUpdater?.startupWarning) { writeLog('update-recovery', macUpdater.startupWarning); if (native) macUpdater.emit('error', new Error(macUpdater.startupWarning)); }
   if (!process.env.ALBUM_DESKTOP_TEST_PROFILE) updater.start();
 }
 // The .app on disk was replaced (a DMG dragged over it) while this older

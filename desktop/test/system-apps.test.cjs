@@ -57,3 +57,32 @@ test('Apple Music: a song outside the library comes from the catalogue and opens
   asked.length = 0; await createAppleMusic({ platform: 'darwin', country: '../x', fetch }).catalog('x');
   assert.equal(new URL(asked[0]).searchParams.get('country'), 'US', 'an unusable region falls back to the US storefront');
 });
+test('Apple Music executes guarded control against the current native recording', async () => {
+  const vm = require('node:vm'), commands = [];
+  const selected = { id: 'ABCDEF0123456789', title: 'Selected', artist: 'Artist', album: 'Album' };
+  let current = { ...selected, title: 'Other' }, state = 'paused';
+  const Music = { running: () => true, playerState: () => state,
+    currentTrack: () => ({ persistentID: () => current.id, name: () => current.title, artist: () => current.artist, album: () => current.album }),
+    play: () => commands.push('play'), pause: () => commands.push('pause') };
+  const music = createAppleMusic({ platform: 'darwin', execFileProcess: (file, args, options, done) => {
+    assert.equal(file, '/usr/bin/osascript');
+    try { done(null, vm.runInNewContext(args[3] + '; run(argv)', { Application: name => { assert.equal(name, 'Music'); return Music; }, argv: args.slice(4) })); }
+    catch (error) { done(error); }
+  } });
+  for (state of ['paused', 'playing']) {
+    for (const action of ['play', 'pause']) await assert.rejects(music.control(action, selected), /切换到其他歌曲/);
+  }
+  assert.deepEqual(commands, []);
+  current = { ...selected }; await music.control('play', selected); await music.control('pause', selected);
+  assert.deepEqual(commands, ['play', 'pause']);
+  // The same metadata with a different native id is a different recording.
+  current = { ...selected, id: '0123456789ABCDEF' };
+  await assert.rejects(music.control('play', selected), /切换到其他歌曲/);
+  assert.deepEqual(commands, ['play', 'pause']);
+  await assert.rejects(music.control('play', {}), /目标歌曲无效/);
+});
+test('Apple Music catalogue handoff never opens another platform', async () => {
+  let opened = 0;
+  const music = createAppleMusic({ platform: 'linux', openURL: async () => opened++ });
+  await assert.rejects(music.play('1234567890'), /macOS/); assert.equal(opened, 0);
+});

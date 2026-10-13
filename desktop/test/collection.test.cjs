@@ -4,6 +4,18 @@ const { createCollectionStore, normalizeItem } = require('../collection-store.cj
 const { createSiteRouter } = require('../site-router.cjs');
 const temp = (t) => { const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'cabin-collection-')); t.after(() => fs.rmSync(directory, { recursive: true, force: true })); return directory; };
 
+test('single recording metadata survives save/reload without rewriting old collections on read', t => {
+  const directory = temp(t), store = createCollectionStore({ directory });
+  const { item } = store.add({ type: 'song', title: 'Song', artist: 'Artist', albumTitle: 'Original album', trackTimeMillis: 200000, tracks: ['Song'], externalIds: { itunesTrackId: '1234567890' } });
+  const reloaded = createCollectionStore({ directory }).list()[0];
+  assert.equal(reloaded.albumTitle, 'Original album'); assert.equal(reloaded.trackTimeMillis, 200000); assert.deepEqual(reloaded.externalIds, item.externalIds);
+  const old = { ...item }; delete old.albumTitle; delete old.trackTimeMillis;
+  const file = path.join(directory, 'collection.json'), contents = JSON.stringify({ version: 2, items: [old] }); fs.writeFileSync(file, contents);
+  const restored = createCollectionStore({ directory }).list()[0];
+  assert.equal(restored.albumTitle, ''); assert.equal(restored.trackTimeMillis, 0);
+  assert.equal(fs.readFileSync(file, 'utf8'), contents, 'no migration or data rewrite');
+});
+
 test('albums saved by earlier releases are migrated once and keep their ids', (t) => {
   const directory = temp(t), legacy = path.join(directory, 'local', 'collection.json');
   fs.mkdirSync(path.dirname(legacy), { recursive: true });

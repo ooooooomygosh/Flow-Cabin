@@ -26,6 +26,12 @@ const SCRIPT = `function run(argv) {
   if (action === 'probe') return JSON.stringify({ ok: true, version: String(Music.version()) });
   if (action === 'search') { const lib = Music.libraryPlaylists[0]; const found = lib.search({ for: String(input.query || ''), only: 'songs' }) || []; return JSON.stringify({ tracks: found.slice(0, 12).map(trackInfo) }); }
   if (action === 'play') { const found = Music.libraryPlaylists[0].tracks.whose({ persistentID: input.id }); if (!found.length) throw new Error('track-missing'); found[0].play(); return JSON.stringify({ ok: true }); }
+  if (action === 'control' && input.expectedTrack) {
+    const t = Music.currentTrack(), expected = input.expectedTrack;
+    const clean = value => String(value || '').replace(/[\\x00-\\x1f\\x7f]/g, ' ').trim().slice(0, 300);
+    if ((expected.id && String(t.persistentID()) !== expected.id) || clean(t.name()) !== expected.title
+      || clean(t.artist()) !== expected.artist || clean(t.album()) !== expected.album) throw new Error('track-changed');
+  }
   if (action === 'control') { const a = input.action; if (a === 'toggle') Music.playpause(); else if (a === 'play') Music.play(); else if (a === 'pause') Music.pause(); else if (a === 'next') Music.nextTrack(); else if (a === 'previous') Music.previousTrack(); else if (a === 'stop') Music.stop(); return JSON.stringify({ ok: true }); }
   if (action === 'state') { const s = String(Music.playerState()); if (s === 'stopped') return JSON.stringify({ running: true, state: 'stopped' }); const t = Music.currentTrack(); return JSON.stringify({ running: true, state: s, title: t.name(), artist: t.artist(), album: t.album(), id: t.persistentID(), position: Number(Music.playerPosition()) || 0, duration: Number(t.duration()) || 0 }); }
   throw new Error('unknown-action');
@@ -42,6 +48,7 @@ function createAppleMusic({ platform = process.platform, execFileProcess = execF
       if (error) {
         const message = String(error.message || '');
         if (/not authori[sz]ed|-1743/i.test(message)) reject(Object.assign(new Error(PERMISSION_HINT), { code: 'permission' }));
+        else if (/track-changed/.test(message)) reject(new Error('“音乐”App 已切换到其他歌曲，请先播放小屋所选歌曲。'));
         else if (/track-missing/.test(message)) reject(new Error('Apple Music 资料库里找不到这首歌。'));
         else reject(new Error('“音乐”App 未响应，请确认它可以正常打开。'));
         return;
@@ -71,12 +78,22 @@ function createAppleMusic({ platform = process.platform, execFileProcess = execF
         .map((item) => ({ id: String(item.trackId), provider: 'appleMusic', title: text(item.trackName), artist: text(item.artistName), album: text(item.collectionName), duration: Math.max(0, Number(item.trackTimeMillis) || 0) }));
     },
     async play(id) {
+      if (!available) throw new Error('系统 Apple Music 仅支持 macOS。');
       const value = String(id || '');
       if (CATALOG_ID.test(value)) { await open(`music://music.apple.com/${storefront.toLowerCase()}/song/${value}`); return { remote: true, provider: 'appleMusic', player: 'Apple Music', catalog: true, notice: NOT_IN_LIBRARY }; }
       if (!PERSISTENT_ID.test(value)) throw new Error('Apple Music 曲目 ID 无效。');
       await run('play', { id: value }); return { remote: true, provider: 'appleMusic', player: 'Apple Music' };
     },
-    async control(action) { if (!ACTIONS.has(action)) throw new Error('不支持此播放操作。'); const result = await run('control', { action }, 5000); if (result.running === false) throw new Error('“音乐”App 没有在运行。'); return { ok: true }; },
+    async control(action, expectedTrack) {
+      if (!ACTIONS.has(action)) throw new Error('不支持此播放操作。');
+      let expected;
+      if (expectedTrack !== undefined) {
+        expected = { id: text(expectedTrack?.id, 16), title: text(expectedTrack?.title), artist: text(expectedTrack?.artist), album: text(expectedTrack?.album) };
+        if (!expected.title || !expected.artist || (expected.id && !PERSISTENT_ID.test(expected.id))) throw new Error('Apple Music 目标歌曲无效。');
+      }
+      const result = await run('control', { action, ...(expected ? { expectedTrack: expected } : {}) }, 5000);
+      if (result.running === false) throw new Error('“音乐”App 没有在运行。'); return { ok: true };
+    },
     async state() {
       const raw = await run('state', {}, 5000);
       if (raw.running === false || raw.state === 'stopped') return { state: raw.running === false ? 'stopped' : 'stopped', title: '', artist: '', elapsed: 0, duration: 0 };

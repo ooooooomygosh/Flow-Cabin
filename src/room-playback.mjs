@@ -3,7 +3,7 @@ import { rankForAutoplay, matchKey, AUTO_MATCH_ATTEMPTS } from './player/auto-ma
 import { toSimplified, toTraditional } from './player/hanzi.mjs';
 // A playlist's tracks each have their own artist and album; an album's share the record's.
 export const trackArtist = (item, index) => item?.trackDetails?.[index]?.artist || (item?.type === 'playlist' ? '' : item?.artist || '');
-export const trackAlbum = (item, index) => item?.trackDetails?.[index]?.album || (item?.type === 'playlist' ? '' : item?.title || '');
+export const trackAlbum = (item, index) => item?.trackDetails?.[index]?.album || (item?.type === 'song' ? item.albumTitle || '' : item?.type === 'playlist' ? '' : item?.title || '');
 export function exactTrack(item, index, provider) {
   if (provider === 'netease') {
     const detail = item?.trackDetails?.[index];
@@ -58,7 +58,7 @@ export function normalizeLocalLibrary(value) {
 // What the track should sound like, for ranking platform search results.
 export function wantedTrack(record, index) {
   const raw = record?.tracks?.[index], title = typeof raw === 'string' ? raw : raw?.title || raw?.name || record?.title;
-  return { title, artist: trackArtist(record, index), album: trackAlbum(record, index), duration: Number(record?.trackDetails?.[index]?.lengthMillis) || 0 };
+  return { title, artist: trackArtist(record, index), album: trackAlbum(record, index), duration: Number(record?.trackDetails?.[index]?.lengthMillis) || (record?.type === 'song' && index === 0 ? Number(record.trackTimeMillis) || 0 : 0) };
 }
 export function rankCandidates(candidates, record, index) {
   return rankForAutoplay(candidates, wantedTrack(record, index));
@@ -69,13 +69,15 @@ export function rankCandidates(candidates, record, index) {
 // AUTO_MATCH_ATTEMPTS per platform. Nothing is reported as playing unless
 // `play` resolved; when nothing works the caller gets the candidates + error.
 export async function findPlayableSource({ record, index, provider, request, play, isCurrent = () => true, memory = null }) {
-  const tried = new Set(), candidates = [];
+  const tried = new Set(), candidates = [], attempts = new Map();
+  const canAttempt = source => (attempts.get(source) || 0) < AUTO_MATCH_ATTEMPTS;
   let lastError = '', hadMatches = false, aborted = false;
   const active = () => !aborted && isCurrent();
   const key = memory ? matchKey(record, index) : '';
   const attempt = async (candidate) => {
     const id = `${candidate.provider}:${candidate.id}`;
-    if (!active() || tried.has(id)) return false;
+    if (!active() || tried.has(id) || !canAttempt(candidate.provider)) return false;
+    attempts.set(candidate.provider, (attempts.get(candidate.provider) || 0) + 1);
     tried.add(id); hadMatches = true;
     try {
       const result = await request('/resolve', candidate);
@@ -114,12 +116,14 @@ export async function findPlayableSource({ record, index, provider, request, pla
     // yields a playable match; later searches only run when earlier ones failed.
     const query = `${trackArtist(record, index)} ${name}`.trim(), seen = new Set();
     for (const variant of [...new Set([toSimplified(query), query, toTraditional(query)])]) {
+      if (!canAttempt(source)) break;
       try {
         const result = await request(`/search?provider=${source}&query=${encodeURIComponent(variant)}`);
         if (!active()) return null;
         const found = (Array.isArray(result.candidates) ? result.candidates : []).filter((candidate) => !seen.has(`${candidate.provider}:${candidate.id}`) && seen.add(`${candidate.provider}:${candidate.id}`));
         candidates.push(...found);
         for (const candidate of rankCandidates(found, record, index).slice(0, AUTO_MATCH_ATTEMPTS)) {
+          if (!canAttempt(source)) break;
           if (await attempt(candidate)) return { candidate, candidates: [] };
           if (!active()) return null;
         }
@@ -132,9 +136,11 @@ export async function findPlayableSource({ record, index, provider, request, pla
     // 系统 Apple Music plays library songs. A song the library lacks is taken
     // from Apple's catalogue (the record's own iTunes id, else a search) and
     // opened in Music.app, where the listener presses play.
-    if (source === 'appleMusic') {
+    if (source === 'appleMusic' && canAttempt(source)) {
       const detail = record?.trackDetails?.[index] || {};
-      const own = /^\d{1,12}$/.test(detail.providerId || '') && /itunes|apple/i.test(detail.source || '') ? { id: detail.providerId, provider: 'appleMusic', title: name, artist: trackArtist(record, index), album: trackAlbum(record, index) } : null;
+      const importedSongId = record?.type === 'song' && index === 0 ? record.externalIds?.itunesTrackId : '';
+      const exactId = /^\d{1,12}$/.test(detail.providerId || '') && /itunes|apple/i.test(detail.source || '') ? detail.providerId : importedSongId;
+      const own = /^\d{1,12}$/.test(exactId || '') ? { id: String(exactId), provider: 'appleMusic', ...wantedTrack(record, index) } : null;
       try {
         const found = own ? [own] : rankCandidates((await request(`/search?provider=appleMusic&scope=catalog&query=${encodeURIComponent(query)}`)).candidates || [], record, index);
         if (!active()) return null;

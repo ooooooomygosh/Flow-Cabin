@@ -12,7 +12,7 @@ const norm = (value) => toSimplified(String(value || '').normalize('NFKC')).toLo
 const VERSION = /live|remix|acoustic|instrumental|karaoke|demo|现场|伴奏|翻唱|混音|重混|不插电|纯音乐/g;
 const versions = (value) => (toSimplified(String(value || '')).toLowerCase().match(VERSION) || []).sort().join('|');
 // "(Remastered 2011)", "- 2015 Remaster", "（电影《X》插曲）": same recording, decorated title.
-const bareTitle = (value) => norm(String(value || '')
+const bareTitle = (value) => norm(toSimplified(String(value || ''))
   .replace(/[（(【\[][^）)】\]]*(remaster|version|edit|mono|stereo|deluxe|bonus|插曲|主题曲|片尾曲|片头曲|版)[^）)】\]]*[）)】\]]/gi, '')
   .replace(/\s+-\s+.*(remaster|version|edit|mono|stereo).*$/i, ''));
 const script = (value) => /[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]/.test(value) ? 'cjk' : /[a-z]/i.test(value) ? 'latin' : '';

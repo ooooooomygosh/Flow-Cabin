@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { scoreCandidate, rankForAutoplay, createMatchMemory, matchKey, AUTO_MATCH_THRESHOLD } from './auto-match.mjs';
+import { scoreCandidate, rankForAutoplay, createMatchMemory, matchKey, AUTO_MATCH_THRESHOLD, AUTO_MATCH_ATTEMPTS } from './auto-match.mjs';
 import { findPlayableSource } from '../room-playback.mjs';
 import { localAppTarget, listSources, getSourceStatus, requestPermission, testPlayback, connectSource } from './sources.mjs';
 
@@ -166,4 +166,54 @@ test('Apple Music: library first in each script, then the record\'s own catalogu
   const searched = await findPlayableSource({ record: manual, index: 0, provider: 'appleMusic', play: async () => {},
     request: async (path) => { if (path === '/resolve') return { remote: true }; const url = new URL(path, 'http://x'); scopes.push(url.searchParams.get('scope')); return { candidates: url.searchParams.get('scope') === 'catalog' ? [{ id: '1440911001', provider: 'appleMusic', title: '讨厌红楼梦', artist: '陶喆', album: '黑色柳丁', duration: 262000 }] : [] }; } });
   assert.equal(searched.candidate.id, '1440911001'); assert.deepEqual(scopes, [null, null, 'catalog']);
+});
+test('Traditional theme and opening-credit suffixes normalize before decoration removal', () => {
+  for (const suffix of ['主題曲', '片頭曲']) {
+    assert.ok(scoreCandidate({ title: '无题', artist: '歌手', album: '专辑', duration: 200000 },
+      { title: `無題（電影《某某》${suffix}）`, artist: '歌手', album: '專輯', duration: 200000 }) >= AUTO_MATCH_THRESHOLD);
+  }
+});
+test('native imported single preserves its exact iTunes track ID', async () => {
+  const { normalizeItem } = await import('../../desktop/collection-store.cjs');
+  const song = normalizeItem({ id: 'single', type: 'song', title: '所选歌曲', artist: '原歌手', albumTitle: '专辑', trackTimeMillis: 200000, tracks: ['所选歌曲'], trackDetails: [], externalIds: { itunesTrackId: '1234567890' } });
+  const calls = [], resolved = [];
+  const request = async (path, body) => {
+    calls.push(path);
+    if (path === '/resolve') { resolved.push(body.id); if (body.id === '1234567890') { assert.equal(body.album, '专辑'); assert.equal(body.duration, 200000); } return { remote: true, catalog: true }; }
+    return { candidates: path.includes('scope=catalog') ? [{ id: '9876543210', title: '所选歌曲', artist: '原歌手', provider: 'appleMusic' }] : [] };
+  };
+  await findPlayableSource({ record: song, index: 0, provider: 'appleMusic', request, play: async () => {} });
+  assert.deepEqual(resolved, ['1234567890']); assert.equal(calls.some(p => p.includes('scope=catalog')), false);
+  calls.length = 0; resolved.length = 0;
+  await findPlayableSource({ record: { ...song, type: 'album' }, index: 0, provider: 'appleMusic', request, play: async () => {} });
+  assert.equal(calls.some(p => p.includes('scope=catalog')), true, 'an album cannot use a single-level song ID');
+});
+test('script variants share one resolve budget per provider', async () => {
+  const resolutions = [], searches = [], record = { id: 'variants', title: '示例', artist: '演示歌手', tracks: ['裏面的歌'] };
+  await findPlayableSource({ record, index: 0, provider: 'qq', play: async () => {}, request: async (path, body) => {
+    if (path === '/resolve') { resolutions.push(body.provider); throw new Error('fixture unavailable'); }
+    const provider = new URL(path, 'http://fixture').searchParams.get('provider'); searches.push(provider);
+    return { candidates: [0,1].map(i => ({ id: `${searches.length}-${i}`, provider, title: '里面的歌', artist: '演示歌手', album: '示例' })) };
+  } });
+  assert.deepEqual(resolutions, [...Array(AUTO_MATCH_ATTEMPTS).fill('qq'), ...Array(AUTO_MATCH_ATTEMPTS).fill('netease')]);
+  assert.deepEqual(searches, ['qq', 'qq', 'netease', 'netease']);
+});
+test('catalog handoff never binds paused or playing unrelated recordings', async () => {
+  const { bindAppleHandoff } = await import('./apple-handoff.mjs');
+  const target = { title: '所選歌曲', artist: '歌手', album: '專輯', duration: 200000 };
+  const own = { id: 'ABCDEF0123456789', title: '所选歌曲', artist: '歌手', album: '专辑', duration: 200, elapsed: 8 };
+  for (const state of ['paused', 'playing']) {
+    assert.equal(bindAppleHandoff(target, { ...own, state, title: '另一首歌' }), null);
+    assert.equal(bindAppleHandoff(target, { ...own, state, title: '所选歌曲 (Live)' }), null);
+    assert.equal(bindAppleHandoff(target, { ...own, state, album: '另一版' }), null);
+    assert.equal(bindAppleHandoff(target, { ...own, state, artist: '' }), null);
+    assert.equal(bindAppleHandoff(target, { ...own, state, duration: 240 }), null);
+    for (const incomplete of [{ album: '' }, { duration: 0 }, { duration: Infinity }]) assert.equal(bindAppleHandoff({ ...target, ...incomplete }, { ...own, state }), null);
+    assert.equal(bindAppleHandoff(target, { ...own, state, album: 'Live Tour', duration: 200 }), null);
+    assert.equal(bindAppleHandoff(target, { ...own, state, album: '专辑', duration: 280 }), null);
+    assert.deepEqual(bindAppleHandoff(target, { ...own, state }), { id: own.id, title: own.title, artist: own.artist, album: own.album });
+    assert.equal(bindAppleHandoff(target, { ...own, state, id: '0123456789ABCDEF' }, own), null);
+    assert.equal(bindAppleHandoff(target, { ...own, state, id: '' }), null);
+  }
+  assert.equal(bindAppleHandoff(target, { ...own, state: 'stopped' }), null);
 });

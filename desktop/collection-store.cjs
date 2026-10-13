@@ -29,6 +29,8 @@ function normalizeItem(body = {}, previous = {}) {
     id: previous.id || text(body.id, 80) || 'album-' + crypto.randomBytes(8).toString('hex'),
     type,
     title, artist,
+    albumTitle: text(value.albumTitle, 160),
+    trackTimeMillis: Number.isFinite(Number(value.trackTimeMillis)) ? Math.max(0, Number(value.trackTimeMillis)) : 0,
     year: /^\d{4}$/.test(text(value.year, 16)) ? text(value.year, 4) : '',
     label: text(value.label, 120),
     cover: cover(value.cover),

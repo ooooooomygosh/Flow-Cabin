@@ -1,4 +1,5 @@
 import { verifyFullscreenStudy } from './fullscreen-study-checks.mjs';
+import { verifyAppleHandoff } from './apple-handoff-checks.mjs';
 import { hasViteLocalOrigin } from './vite-readiness.mjs';
 import { openRoomSettings, openMusicSettings, chooseSource } from './settings-actions.mjs';
 /** Offline renderer integration suite. Run: node scripts/browser-smoke.mjs
@@ -90,6 +91,7 @@ try {
   const welcomeRoute = route => new URL(route.request().url()).pathname === '/api/items' ? route.fulfill({ json: { items: [] } }) : routeHandler(route);
   await verifyOnboarding({ browser, origin, routeHandler: welcomeRoute, evidence: output, output, check });
   await verifyQQRegression({ browser, origin, check });
+  await verifyAppleHandoff({ browser, origin, output, check });
   await verifyFullscreenStudy({ browser, origin, output, check });
   await verifyPlaylistPagination({ browser, origin, check });
   context.on('page', watched => { watched.on('pageerror', error => report.pageErrors.push(error.message)); watched.on('console', message => { if (message.type() === 'error') report.consoleErrors.push(message.text()); }); watched.on('requestfailed', request => { if (request.failure()?.errorText !== 'net::ERR_ABORTED') report.failedRequests.push({ url: request.url(), error: request.failure()?.errorText }); }); });
