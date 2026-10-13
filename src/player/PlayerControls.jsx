@@ -20,7 +20,7 @@ export default function PlayerControls({ item, items = [], provider, spinning, t
   return <div className="player-controls">
     <div className="turntable-controls">
       <button type="button" aria-label="上一首展示曲目" title="上一首 · Shift+←" disabled={!player?.canPrevious} onClick={() => player?.previous()}><ChevronLeft size={18}/></button>
-      <button type="button" className={`turntable-toggle ${busy ? 'is-busy' : ''}`} aria-label={visual ? spinning ? '暂停唱片旋转' : '继续唱片旋转' : playing ? '暂停音乐播放' : '播放音乐'} title="播放 / 暂停 · 空格" onClick={visual ? toggle : playback?.toggle}>{busy ? <Loading size={19} className="player-spin"/> : playing ? <Pause size={19}/> : <Play size={19}/>}</button>
+      <button type="button" className={`turntable-toggle ${busy ? 'is-busy' : ''}`} aria-label={visual ? spinning ? '暂停唱片旋转' : '继续唱片旋转' : playing ? '暂停音乐播放' : '播放音乐'} title="播放 / 暂停 · 空格" disabled={!visual && playback?.handoff} onClick={visual ? toggle : playback?.toggle}>{busy ? <Loading size={19} className="player-spin"/> : playing ? <Pause size={19}/> : <Play size={19}/>}</button>
       <button type="button" aria-label="下一首展示曲目" title="下一首 · Shift+→" disabled={!player?.canNext} onClick={() => player?.next()}><ChevronRight size={18}/></button>
       <button type="button" aria-label="取下唱片" title="取下唱片" onClick={eject}><X size={17}/></button>
       {player && <span className="player-modes">
