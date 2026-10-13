@@ -8,6 +8,7 @@ import { ensureAnalyser } from './player/audio-graph.mjs';
 import { isSessionAlbum, sessionTrackUrl } from './player/session-files.mjs';
 import { createResolutionCache, createFader, resolutionKey, shouldAutoSkip, playbackErrorMessage, PREFETCH_PROVIDERS, AUTO_SKIP_DELAY_MS } from './player/playback-cache.mjs';
 import { crossfadeSeconds, crossfadeStartsAt, onCrossfadeChange } from './player/crossfade.mjs';
+import { seekWhenReady } from './player/media-position.mjs';
 
 const VOLUME_KEY = 'album-circle-player-volume-v1';
 const readVolume = () => { try { const value = JSON.parse(localStorage.getItem(VOLUME_KEY)); return { volume: Number.isFinite(value?.volume) ? Math.max(0, Math.min(1, value.volume)) : .65, muted: Boolean(value?.muted) }; } catch { return { volume: .65, muted: false }; } };
@@ -35,7 +36,7 @@ export default function useRoomPlayback(record, trackIndex, provider, onNext, op
   const decks = useRef([null, null]), live = useRef(0), standby = useRef(null), handover = useRef(0), releasing = useRef(Promise.resolve()), releaseTokens = useRef([null, null]);
   const audio = useMemo(() => ({ get current() { return decks.current[live.current]; } }), []);
   const markDecks = () => decks.current.forEach((element, index) => { if (element) element.dataset.deck = index === live.current ? 'active' : 'standby'; });
-  const deckRefs = useMemo(() => [0, 1].map((index) => (element) => { decks.current[index] = element; markDecks(); }), []);
+  const deckRefs = useMemo(() => [0, 1].map((index) => (element) => { const previous = decks.current[index]; if (previous && previous !== element) resetAudio(previous); decks.current[index] = element; markDecks(); }), []);
   const sequence = useRef(0), remote = useRef(false), next = useRef(onNext), resolveRef = useRef(null), controlling = useRef(false);
   const appleHandoff = useRef(null);
   const commandRemote = (source, action, handoff = appleHandoff.current) => {
@@ -68,13 +69,13 @@ export default function useRoomPlayback(record, trackIndex, provider, onNext, op
     setBlockedVersion((count) => count + 1);
   };
   const [accountEpoch, setAccountEpoch] = useState(0);
-  const skips = useRef(0), resumeAt = useRef(0), recovered = useRef(''), prefetched = useRef('');
+  const skips = useRef(0), resumeAt = useRef(0), recovered = useRef('');
   const update = (value) => setState((old) => ({ ...old, ...value }));
   // 45 rpm on a 33 record: faster and higher, like the real thing. Resets per record.
   const rate = useRef(1);
   const applyRate = (only) => { for (const element of only ? [only] : decks.current) { if (!element) continue; element.preservesPitch = false; element.mozPreservesPitch = false; element.webkitPreservesPitch = false; element.playbackRate = rate.current; } };
   useEffect(() => { rate.current = 1; applyRate(); }, [record?.id]);
-  const resetAudio = (element = audio.current) => { const index = deckIndex(element); if (index < 0) return; faders.current[index].stop(); releaseTokens.current[index] = null; element.pause(); if (element.getAttribute('src')) { element.removeAttribute('src'); element.load(); } };
+  const resetAudio = (element = audio.current) => { if (!element) return; const index = deckIndex(element); if (index < 0) return; faders.current[index].stop(); releaseTokens.current[index] = null; element.pause(); if (element.getAttribute('src')) { element.removeAttribute('src'); element.load(); } };
   // The deck that just stopped being live: fade it out (crossfade or a skip
   // mid-song), then empty it, unless it has become live again meanwhile.
   const release = (element, ms) => {
@@ -87,7 +88,12 @@ export default function useRoomPlayback(record, trackIndex, provider, onNext, op
   const dropStandby = () => { const ready = standby.current; standby.current = null; if (ready && ready.deck !== live.current && !releaseTokens.current[ready.deck]) resetAudio(decks.current[ready.deck]); };
   useEffect(() => {
     const current = ++sequence.current, controller = new AbortController();
+    // A second navigation interrupts any earlier crossfade immediately. Eject
+    // and visual/system sources must never leave the old deck playing.
+    silenceOutgoing();
     const key = resolutionKey(provider, record, trackIndex), blend = handover.current; handover.current = 0;
+    const startPosition = resumeAt.current; resumeAt.current = 0;
+    let cancelSeek = () => {};
     const outgoing = audio.current, ready = key && standby.current?.key === key && decks.current[standby.current.deck]?.getAttribute('src') ? standby.current : null;
     if (ready) {
       // The next track is already buffered on the idle deck: switch decks.
@@ -99,8 +105,8 @@ export default function useRoomPlayback(record, trackIndex, provider, onNext, op
     const active = () => sequence.current === current && !controller.signal.aborted;
     let resolution = 0;
     const request = (path, value) => musicRequest(path, value, controller.signal);
-    async function play(candidate, result) {
-      if (!active()) return;
+    async function play(candidate, result, owns = active) {
+      if (!owns()) return;
       if (result.remote) {
         remote.current = candidate.provider;
         appleHandoff.current = candidate.provider === 'appleMusic' && result.catalog ? { target: candidate, bound: null } : null;
@@ -112,29 +118,35 @@ export default function useRoomPlayback(record, trackIndex, provider, onNext, op
         update({ playing: false, status: 'loading', error: '', trial: result.trial, quality: result.quality, remote: false, resolvedProvider: candidate.provider, actualTrack: candidate.title, actualCover: candidate.cover || '' });
         // A playlist song without saved art: ask the platform for its album cover.
         if (record?.type === 'playlist' && !candidate.cover && !record.trackDetails?.[trackIndex]?.cover && ['qq', 'netease'].includes(candidate.provider))
-          musicRequest(`/track-cover?provider=${candidate.provider}&id=${encodeURIComponent(candidate.id)}`, undefined, controller.signal).then((found) => { if (active() && found?.cover) update({ actualCover: found.cover }); }, () => {});
+          musicRequest(`/track-cover?provider=${candidate.provider}&id=${encodeURIComponent(candidate.id)}`, undefined, controller.signal).then((found) => { if (owns() && found?.cover) update({ actualCover: found.cover }); }, () => {});
         const deckFader = faders.current[deckIndex(element)];
         deckFader.set(0); // every start fades in: no click, no blast at full volume
         if (element.getAttribute('src') !== result.audioPath) { element.src = result.audioPath; element.load(); }
         applyRate(element);
-        if (resumeAt.current > 0) { const at = resumeAt.current; resumeAt.current = 0; element.addEventListener('loadedmetadata', () => { if (Number.isFinite(element.duration)) element.currentTime = Math.min(at, Math.max(0, element.duration - 1)); }, { once: true }); }
+        cancelSeek();
+        if (startPosition > 0) cancelSeek = seekWhenReady(element, startPosition, { signal: controller.signal, isCurrent: owns });
+        // Standby metadata events were deliberately ignored. Transfer the
+        // already-known duration with ownership instead of waiting for an
+        // event which will not fire again on a buffered source.
+        update({ position: element.currentTime || 0, duration: Number.isFinite(element.duration) ? element.duration : 0 });
         await ensureAnalyser(element); // energy for cabin:playback; no-op for cross-origin audio
+        if (!owns()) return;
         let timer;
         try { await Promise.race([element.play(), new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('音频连接超时。')), 10000); })]); }
-        catch (error) { if (active()) resetAudio(element); throw error; }
+        catch (error) { if (owns()) resetAudio(element); throw error; }
         finally { clearTimeout(timer); }
         // A buffered next song starts almost at once; a fresh one fades in.
-        if (active()) deckFader.to(1, blend || (ready && candidate === ready.candidate ? 60 : FADE_IN_MS));
+        if (owns()) deckFader.to(1, blend || (ready && candidate === ready.candidate ? 60 : FADE_IN_MS));
       }
     }
     async function resolve(candidate) {
       if (!active()) return;
       const request = ++resolution;
       const latest = () => active() && request === resolution;
-      resetAudio(element); update({ status: 'loading', candidates: [], error: '' });
+      cancelSeek(); resetAudio(element); update({ status: 'loading', candidates: [], error: '' });
       try {
         const result = candidate.sessionUrl ? { audioPath: candidate.sessionUrl, trial: false, quality: '本次导入的文件' } : await musicRequest('/resolve', candidate, controller.signal); if (!latest()) return;
-        await play(candidate, result);
+        await play(candidate, result, latest);
         if (latest() && !result.remote && !candidate.sessionUrl) matches.put(matchKey(record, trackIndex), candidate);
       } catch (error) { if (latest()) update({ status: 'error', playing: false, error: playbackErrorMessage(error) || '音频加载失败。' }); }
     }
@@ -167,7 +179,7 @@ export default function useRoomPlayback(record, trackIndex, provider, onNext, op
     })();
     // The deck is emptied (or faded out) by the next run, which knows whether
     // the following track is already buffered.
-    return () => { controller.abort(); sequence.current++; };
+    return () => { cancelSeek(); controller.abort(); sequence.current++; };
   }, [record?.id, trackIndex, provider, accountEpoch]);
   useEffect(() => () => { standby.current = null; decks.current.forEach((element) => resetAudio(element)); }, []);
 
@@ -175,9 +187,22 @@ export default function useRoomPlayback(record, trackIndex, provider, onNext, op
   // and buffer it on the idle deck. If it cannot be played, the queue steps
   // over it and the track after it is tried instead.
   const settled = ['playing', 'buffering', 'paused'].includes(state.status) && !state.remote;
+  const [upcoming, setUpcoming] = useState(null), upcomingKey = useRef('');
+  // The queue hook updates its ref later in the same render. Read after commit,
+  // so enqueue/reorder/repeat/shuffle are observed without a one-render delay.
+  // Compare the exact recording identity rather than callback identity: normal
+  // position updates must not repeatedly cancel a pending prefetch.
   useEffect(() => {
+    const item = opts.current.peekNext?.(), key = item?.item ? resolutionKey(provider, item.item, item.index) : '';
+    if (key === upcomingKey.current) return;
+    upcomingKey.current = key;
+    setUpcoming(key ? { ...item, key } : null);
+  });
+  useEffect(() => {
+    // Also drop an obsolete, fully loaded standby when the queue becomes empty
+    // or repeat-one means there is no next recording to buffer.
+    if (standby.current && standby.current.key !== upcoming?.key) dropStandby();
     if (!settled || !PREFETCH_PROVIDERS.has(provider)) return;
-    const upcoming = opts.current.peekNext?.();
     if (!upcoming?.item || sessionTrackUrl(upcoming.item, upcoming.index) || isSessionAlbum(upcoming.item)) return;
     const key = resolutionKey(provider, upcoming.item, upcoming.index);
     if (!key || standby.current?.key === key || isBlocked(upcoming.item, upcoming.index) || prefetchFailures.current >= PREFETCH_FAILURE_LIMIT) return;
@@ -210,7 +235,7 @@ export default function useRoomPlayback(record, trackIndex, provider, onNext, op
       if (current() && standby.current?.key !== key) { prefetchFailures.current++; setBlocked(key, true); }
     }, PREFETCH_DELAY_MS);
     return () => { clearTimeout(timer); controller.abort(); };
-  }, [settled, record?.id, trackIndex, provider, blockedVersion]);
+  }, [settled, record?.id, trackIndex, provider, blockedVersion, upcoming?.key]);
 
   // Unplayable track inside an album or playlist: say so, then move on.
   useEffect(() => {
@@ -254,15 +279,18 @@ export default function useRoomPlayback(record, trackIndex, provider, onNext, op
     if (controlling.current || provider === 'system' || provider === 'visual') return;
     controlling.current = true;
     const current = sequence.current;
+    let owns = () => sequence.current === current;
     try {
       if (remote.current) { await commandRemote(remote.current, state.playing ? 'pause' : 'play'); return; }
       const element = audio.current;
       if (element?.getAttribute('src')) {
-        if (element.paused) { await ensureAnalyser(element); fader.current.set(0); await element.play(); fader.current.to(1, FADE_IN_MS); }
-        else { silenceOutgoing(); await fader.current.to(0, FADE_OUT_MS); if (sequence.current === current) element.pause(); }
+        const source = element.getAttribute('src'), ramp = fader.current;
+        owns = () => sequence.current === current && audio.current === element && element.getAttribute('src') === source;
+        if (element.paused) { await ensureAnalyser(element); if (!owns()) return; ramp.set(0); await element.play(); if (owns()) ramp.to(1, FADE_IN_MS); }
+        else { silenceOutgoing(); await ramp.to(0, FADE_OUT_MS); if (owns()) element.pause(); }
       }
       else { const sessionUrl = sessionTrackUrl(record, trackIndex); if (sessionUrl) await resolveRef.current?.({ sessionUrl, provider: 'local', title: trackNames(record)[trackIndex] }); else setAccountEpoch((value) => value + 1); }
-    } catch (error) { if (sequence.current === current) {
+    } catch (error) { if (owns()) {
       if (appleHandoff.current) { appleHandoff.current.bound = null; update({ status: 'handoff', handoff: true, playing: false, position: 0, duration: 0, actualTrack: '', error: '', notice: error.message }); }
       else update({ status: 'error', error: playbackErrorMessage(error) || '音频加载失败。' });
     } }
@@ -301,8 +329,10 @@ export default function useRoomPlayback(record, trackIndex, provider, onNext, op
   // Same track again ("repeat one", or "previous" after 3 s).
   const restart = async () => {
     if (remote.current || !audio.current?.getAttribute('src')) { setAccountEpoch((value) => value + 1); return; }
-    audio.current.currentTime = 0;
-    try { if (audio.current.paused) { fader.current.set(0); await audio.current.play(); fader.current.to(1, FADE_IN_MS); } } catch (error) { update({ status: 'error', error: playbackErrorMessage(error) || '音频加载失败。' }); }
+    const element = audio.current, ramp = fader.current, current = sequence.current, source = element.getAttribute('src');
+    const owns = () => sequence.current === current && audio.current === element && element.getAttribute('src') === source;
+    element.currentTime = 0;
+    try { if (element.paused) { ramp.set(0); await element.play(); if (owns()) ramp.to(1, FADE_IN_MS); } } catch (error) { if (owns()) update({ status: 'error', error: playbackErrorMessage(error) || '音频加载失败。' }); }
   };
   return { ...state, statusText: state.handoff ? APPLE_HANDOFF_STATUS : statusText, skipping, rate: rate.current, setRate: (value) => { rate.current = Math.max(.5, Math.min(2, Number(value) || 1)); applyRate(); update({}); },
     // Seek into a track that is about to start (dragging the needle across songs).

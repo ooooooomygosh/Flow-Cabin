@@ -28,6 +28,6 @@
 .room-personalization .personalization-footer .record-primary:hover{background:#e1c18f}
 .room-personalization .personalization-footer .record-primary:focus-visible{outline:3px solid #f7e6c6;outline-offset:3px}
 
-/* Show the five places together so the companion names stay in view. */
-@media(min-width:800px){.scene-options{grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}.choice-copy{padding:9px 10px 10px}.choice-copy small{min-height:33px}}
-@media(min-width:800px) and (max-height:700px){.personalization-intro{margin-bottom:12px}.personalization-heading{margin-top:14px}.scene-choice>img{aspect-ratio:16/10}.pet-choice .pixel-cat{width:58px;height:58px}.personalization-footer{margin-top:14px;padding-top:12px}}
+/* Keep all six places together so the companion names stay in view. */
+@media(min-width:800px){.scene-options{grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}.choice-copy{padding:9px 8px 10px}.choice-copy small{min-height:33px}}
+@media(min-width:800px) and (max-height:700px){.personalization-intro{margin-bottom:10px}.personalization-heading{margin-top:14px}.scene-choice>img{aspect-ratio:16/10}.pet-choice .pixel-cat{width:58px;height:58px}.personalization-footer{margin-top:8px;padding-top:8px}}

@@ -38,11 +38,15 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Run browser smoke tests
         run: npm run test:browser
+      - name: Run silent playback regressions
+        run: npm run test:playback
       - name: Save browser test evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: browser-smoke
-          path: desktop/test-results/browser/
+          path: |
+            desktop/test-results/browser/
+            desktop/test-results/playback/
           if-no-files-found: warn
           retention-days: 14
