@@ -1,0 +1,47 @@
+name: QQ 音乐 live matching
+
+# Real-network check of QQ 音乐 search and the deck's matcher (scripts/qq-live-check.mjs).
+# Runs when the music code changes, and on demand.
+on:
+  pull_request:
+    paths: ['desktop/music-upstream.ts', 'desktop/music-service.cjs', 'desktop/music-policy.cjs', 'src/room-playback.mjs', 'src/player/auto-match.mjs', 'src/player/hanzi.mjs', 'scripts/qq-live-check.mjs', '.github/workflows/qq-live.yml']
+  push:
+    branches: ['claude/**']
+    paths: ['desktop/music-upstream.ts', 'desktop/music-service.cjs', 'desktop/music-policy.cjs', 'src/room-playback.mjs', 'src/player/auto-match.mjs', 'src/player/hanzi.mjs', 'scripts/qq-live-check.mjs', '.github/workflows/qq-live.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qq-live-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  live:
+    name: Match known songs on QQ 音乐
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            desktop/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npm --prefix desktop ci --no-audit --no-fund
+      - run: npm --prefix desktop run build:music
+      - name: Search and match on the real service
+        run: node scripts/qq-live-check.mjs
+        env:
+          QQ_LIVE_REPORT: qq-live-report.json
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qq-live-report
+          path: qq-live-report.json
+          if-no-files-found: warn
+          retention-days: 14
