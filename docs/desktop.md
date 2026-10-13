@@ -87,6 +87,8 @@ macOS 关掉窗口后应用仍在后台运行。如果此时用 DMG 覆盖了应
 - 磁盘上的版本更新、且窗口没有显示：直接重启到新版本。
 - 窗口正在使用：显示「已安装 vX，重启后生效」，提供「重启到新版本」。
 
+macOS 安装保护：下载有总超时，短写会补齐，并按实际落盘内容校验 SHA512。暂存包须包含合法的主可执行文件并通过 `codesign --verify --deep --strict`；这只检查完整性，不证明 ad-hoc 签名发布者身份，也不会删除隔离属性。安装前重新读取磁盘版本，旧缓存不得覆盖同版或新版；退出等待期间磁盘版本变化也会取消替换。替换后保留独立旧包备份，只有新版本完成小屋窗口初始化才清理；打开失败则恢复原包并在下次启动报告。系统接受打开请求不等于启动成功，未确认启动时备份继续保留。
+
 接口：页面用 `album-desktop://action/update-check|update-download|update-install|update-relaunch|update-open|update-state`，以及 `update-auto?enabled=true|false`。状态写在 `window.cabinUpdateState` 里，变化时触发 `CustomEvent('cabin:update-state')`。「自动下载」开关保存在 `userData/update.json`。
 
 发布流程：`build.publish` 指向 GitHub，electron-builder 在 `--publish never` 时也会生成 `latest.yml`、`latest-mac.yml` 和 `*.blockmap`。两个 Mac 任务各自生成一份 `latest-mac.yml`，publish 任务用 `scripts/merge-mac-update-info.mjs` 合并成一份；缺少更新信息时整个发布会停止，不会只发一半。
