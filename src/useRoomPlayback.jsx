@@ -88,7 +88,7 @@ export default function useRoomPlayback(record, trackIndex, provider, onNext, op
       release(outgoing, blend || FADE_OUT_MS);
     } else { dropStandby(); resetAudio(outgoing); }
     const element = audio.current; prefetchFailures.current = 0;
-    update({ status: 'idle', playing: false, candidates: [], position: 0, duration: 0, error: '', trial: false, actualTrack: '', remote: false, quality: '', notice: '', handoff: false });
+    update({ status: 'idle', playing: false, candidates: [], position: 0, duration: 0, error: '', trial: false, actualTrack: '', actualCover: '', remote: false, quality: '', notice: '', handoff: false });
     const active = () => sequence.current === current && !controller.signal.aborted;
     let resolution = 0;
     const request = (path, value) => musicRequest(path, value, controller.signal);
@@ -102,7 +102,10 @@ export default function useRoomPlayback(record, trackIndex, provider, onNext, op
       }
       else {
         remote.current = false;
-        update({ playing: false, status: 'loading', error: '', trial: result.trial, quality: result.quality, remote: false, resolvedProvider: candidate.provider, actualTrack: candidate.title });
+        update({ playing: false, status: 'loading', error: '', trial: result.trial, quality: result.quality, remote: false, resolvedProvider: candidate.provider, actualTrack: candidate.title, actualCover: candidate.cover || '' });
+        // A playlist song without saved art: ask the platform for its album cover.
+        if (record?.type === 'playlist' && !candidate.cover && !record.trackDetails?.[trackIndex]?.cover && ['qq', 'netease'].includes(candidate.provider))
+          musicRequest(`/track-cover?provider=${candidate.provider}&id=${encodeURIComponent(candidate.id)}`, undefined, controller.signal).then((found) => { if (active() && found?.cover) update({ actualCover: found.cover }); }, () => {});
         const deckFader = faders.current[deckIndex(element)];
         deckFader.set(0); // every start fades in: no click, no blast at full volume
         if (element.getAttribute('src') !== result.audioPath) { element.src = result.audioPath; element.load(); }

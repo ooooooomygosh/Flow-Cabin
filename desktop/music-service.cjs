@@ -64,6 +64,17 @@ function createMusicService({ directory, safeStorage, login, logout, upstream = 
     remember(key, { time: Date.now(), items }); return items;
   }
   function remember(key, entry) { cache.delete(key); cache.set(key, entry); if (cache.size > 64) cache.delete(cache.keys().next().value); }
+  // A song's album art, by its exact platform id; answers (and misses) are kept for the session.
+  const covers = new Map();
+  async function trackCover(provider, id) {
+    if (!['qq', 'netease'].includes(provider) || !/^[a-z\d]{1,20}$/i.test(id) || !upstream.trackCover) return '';
+    const key = provider + ':' + id;
+    if (!covers.has(key)) {
+      covers.set(key, upstream.trackCover(provider, id, decode(preferences[provider])).then((value) => candidate({ id, name: '-', cover: value }, provider).cover).catch(() => { covers.delete(key); return ''; }));
+      if (covers.size > 500) covers.delete(covers.keys().next().value);
+    }
+    return covers.get(key);
+  }
   async function resolve(body, requestActive = () => true) {
     const currentRevision = revision;
     const ensureCurrent = () => { if (currentRevision !== revision || !requestActive()) throw new Error('播放请求或音源设置已更改，请重新播放。'); };
@@ -162,6 +173,7 @@ function createMusicService({ directory, safeStorage, login, logout, upstream = 
       if (req.method === 'GET' && url.pathname === '/apple/state') { if (!appleMusic?.available) throw new Error('系统 Apple Music 仅支持 macOS。'); return json(res, await appleMusic.state()); }
       if (req.method === 'POST' && url.pathname === '/apple/control') { if (!appleMusic?.available) throw new Error('系统 Apple Music 仅支持 macOS。'); const input = await body(req); return json(res, await appleMusic.control(String(input.action || ''), input.expectedTrack)); }
       if (req.method === 'POST' && url.pathname === '/open-local') { if (!localApps) throw new Error('本机音乐 App 打开功能不可用。'); return json(res, await localApps.open(await body(req))); }
+      if (req.method === 'GET' && url.pathname === '/track-cover') return json(res, { cover: await trackCover(String(url.searchParams.get('provider') || ''), String(url.searchParams.get('id') || '')) });
       if (req.method === 'GET' && url.pathname === '/search') return json(res, { candidates: await search(url.searchParams.get('provider'), String(url.searchParams.get('query') || '').slice(0, 300), String(url.searchParams.get('scope') || '')) });
       if (req.method === 'GET' && url.pathname === '/playlists') return json(res, await guarded(() => playlists.list(String(url.searchParams.get('provider') || ''))));
       if (req.method === 'GET' && url.pathname === '/playlist') {

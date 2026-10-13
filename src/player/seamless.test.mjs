@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createResolutionCache, createFader, resolutionKey, shouldAutoSkip, playbackErrorMessage, AUTO_SKIP_LIMIT } from './playback-cache.mjs';
 import { nextStep, nextPlayableStep } from './player-queue.mjs';
 import { crossfadeSeconds, setCrossfadeSeconds, crossfadeStartsAt } from './crossfade.mjs';
-import { findPlayableSource, rankCandidates, exactTrack, trackArtist } from '../room-playback.mjs';
+import { findPlayableSource, rankCandidates, exactTrack, trackArtist, trackCover } from '../room-playback.mjs';
 
 test('seamless: prefetched resolutions are used once and expire', () => {
   let time = 0; const cache = createResolutionCache({ now: () => time, ttl: 1000, limit: 2 });
@@ -110,4 +110,12 @@ test('crossfade: setting is stored, and short songs never overlap', () => {
   assert.equal(setCrossfadeSeconds(6, storage), 6); assert.equal(crossfadeSeconds(storage), 6);
   assert.equal(setCrossfadeSeconds(99, storage), 0, 'unknown values fall back to no overlap');
   assert.equal(crossfadeStartsAt(200, 6), 194); assert.equal(crossfadeStartsAt(15, 6), Infinity); assert.equal(crossfadeStartsAt(NaN, 3), Infinity); assert.equal(crossfadeStartsAt(200, 0), Infinity);
+});
+
+test('cover: a playlist song shows its own art, then the matched recording\'s, then the playlist\'s', () => {
+  const playlist = { type: 'playlist', cover: 'https://p/list.jpg', tracks: ['a', 'b'], trackDetails: [{ title: 'a', cover: 'https://p/a.jpg' }, { title: 'b' }] };
+  assert.equal(trackCover(playlist, 0, 'https://p/matched.jpg'), 'https://p/a.jpg');
+  assert.equal(trackCover(playlist, 1, 'https://p/matched.jpg'), 'https://p/matched.jpg');
+  assert.equal(trackCover(playlist, 1, ''), 'https://p/list.jpg');
+  assert.equal(trackCover({ type: 'album', cover: 'https://p/album.jpg', tracks: ['a'] }, 0, 'https://p/matched.jpg'), 'https://p/album.jpg', 'an album keeps its sleeve');
 });

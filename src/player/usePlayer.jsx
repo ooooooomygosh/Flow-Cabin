@@ -112,7 +112,7 @@ export function usePlayerShortcuts({ playback, player, provider, toggleVisual, r
       session.metadata = audible && record ? new MediaMetadata({ title: playback?.actualTrack || title || record.title, artist: record.artist, album: record.title, artwork: record.cover && /^(https:|data:image\/)/.test(record.cover) ? [{ src: record.cover, sizes: '512x512' }] : [] }) : null;
       session.playbackState = audible && record ? playback?.playing ? 'playing' : 'paused' : 'none';
     } catch {}
-  }, [audible, record?.id, title, playback?.actualTrack, playback?.playing]);
+  }, [audible, record?.id, record?.cover, title, playback?.actualTrack, playback?.playing]);
 }
 
 // Broadcasts `cabin:playback` on window (see docs/events.md).

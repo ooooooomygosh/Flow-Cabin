@@ -84,3 +84,7 @@ test('large playlists persist track identities through update and restart with a
   assert.deepEqual(saved.tracks, tracks); assert.equal(saved.trackDetails[619].providerId, '620'); assert.equal(saved.notes, 'keep');
   assert.equal(normalizeItem({ ...saved, tracks: Array(5001).fill('song') }).tracks.length, 5000);
 });
+test('playlist songs keep their own cover; unsafe covers are dropped', () => {
+  const item = normalizeItem({ type: 'playlist', title: '歌单', artist: '我', tracks: ['a', 'b'], trackDetails: [{ title: 'a', cover: 'https://y.gtimg.cn/a.jpg' }, { title: 'b', cover: 'javascript:alert(1)' }] });
+  assert.equal(item.trackDetails[0].cover, 'https://y.gtimg.cn/a.jpg'); assert.equal('cover' in item.trackDetails[1], false);
+});

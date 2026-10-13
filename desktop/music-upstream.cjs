@@ -49,7 +49,8 @@ __export(music_upstream_exports, {
   qqCookieUin: () => qqCookieUin,
   qqSearchShapes: () => qqSearchShapes,
   resetQQSearchPreference: () => resetQQSearchPreference,
-  searchQQSongs: () => searchQQSongs
+  searchQQSongs: () => searchQQSongs,
+  trackCover: () => trackCover
 });
 module.exports = __toCommonJS(music_upstream_exports);
 
@@ -1308,6 +1309,7 @@ function mapQQSearchSong(raw) {
     artist: singers.map((artist) => artist.name).join(" / "),
     album: asStr(album.name || album.title || song.albumname),
     mediaMid: /^[a-z\d]{14}$/i.test(mediaMid) ? mediaMid : "",
+    cover: /^[a-z\d]{14}$/i.test(asStr(album.mid || album.pmid)) ? `https://y.gtimg.cn/music/photo_new/T002R300x300M000${asStr(album.mid || album.pmid)}.jpg` : "",
     duration: asNum(song.interval) * 1e3,
     fee: asNum(pay.pay_play || pay.payplay) ? 1 : 0
   };
@@ -1383,6 +1385,19 @@ async function searchQQSongs(query, limit = 8, options = {}) {
 function resetQQSearchPreference() {
   preferredQQShape = 0;
 }
+async function trackCover(provider, id, cookie = "") {
+  if (provider === "qq" && /^[a-z\d]{14}$/i.test(id)) {
+    const json = asObj(await qqMusicRequest(cookie, { comm: { ct: 24, cv: 0 }, songinfo: { module: "music.pf_song_detail_svr", method: "get_song_detail_yqq", param: { song_mid: id } } }));
+    const track = asObj(asObj(asObj(json.songinfo).data).track_info), album = asObj(track.album), mid = asStr(album.mid || album.pmid);
+    return asStr(track.mid) === id && /^[a-z\d]{14}$/i.test(mid) ? `https://y.gtimg.cn/music/photo_new/T002R300x300M000${mid}.jpg` : "";
+  }
+  if (provider === "netease" && /^\d{1,20}$/.test(id)) {
+    const response = await call("song_detail", { ids: id, cookie, timestamp: Date.now() });
+    const song = asObj(asArr(asObj(response.body).songs)[0]);
+    return asStr(song.id) === id ? httpsCover(asObj(song.al).picUrl) : "";
+  }
+  return "";
+}
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   audioProxyHeadersFor,
@@ -1405,5 +1420,6 @@ function resetQQSearchPreference() {
   qqCookieUin,
   qqSearchShapes,
   resetQQSearchPreference,
-  searchQQSongs
+  searchQQSongs,
+  trackCover
 });

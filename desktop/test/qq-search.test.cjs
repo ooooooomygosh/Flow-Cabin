@@ -1,7 +1,7 @@
 'use strict';
 const { test } = require('node:test'), assert = require('node:assert/strict');
 const upstream = require('../music-upstream.cjs');
-const song = (mid, name) => ({ mid, name, singer: [{ name: '陶喆' }], album: { name: '黑色柳丁' }, file: { media_mid: mid }, interval: 285, pay: { pay_play: 0 } });
+const song = (mid, name) => ({ mid, name, singer: [{ name: '陶喆' }], album: { name: '黑色柳丁', mid: '000Z2Mx41VVUeG' }, file: { media_mid: mid }, interval: 285, pay: { pay_play: 0 } });
 const desktopBody = (code, list = []) => JSON.stringify({ code: 0, 'music.search.SearchCgiService': { code, data: { body: { song: { list } } } } });
 
 test('QQ search: a 2001 refusal moves on to the next request form instead of hammering the same one', async () => {
@@ -17,7 +17,7 @@ test('QQ search: a 2001 refusal moves on to the next request form instead of ham
   const songs = await upstream.searchQQSongs('陶喆 月亮代表谁的心', 8, { fetchText, wait: async () => {} });
   assert.deepEqual(calls, ['desktop', 'client', 'legacy']);
   assert.equal(songs.length, 1);
-  assert.deepEqual({ ...songs[0], artists: undefined }, { mid: '0039MnYb0qxYhV', name: '月亮代表谁的心', artists: undefined, artist: '陶喆', album: '黑色柳丁', mediaMid: '0039MnYb0qxYhV', duration: 285000, fee: 0 });
+  assert.deepEqual({ ...songs[0], artists: undefined }, { mid: '0039MnYb0qxYhV', name: '月亮代表谁的心', artists: undefined, artist: '陶喆', album: '黑色柳丁', mediaMid: '0039MnYb0qxYhV', cover: 'https://y.gtimg.cn/music/photo_new/T002R300x300M000000Z2Mx41VVUeG.jpg', duration: 285000, fee: 0 });
   // The form that answered is tried first next time.
   calls.length = 0;
   await upstream.searchQQSongs('陶喆 爱很简单', 8, { fetchText, wait: async () => {} });

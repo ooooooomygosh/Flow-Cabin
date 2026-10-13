@@ -45,7 +45,8 @@ export function playlistItem(detail, provider, { cover = '' } = {}) {
     trackDetails: tracks.map((track, index) => ({
       title: clean(track.title), trackNumber: index + 1, lengthMillis: Math.max(0, Number(track.duration) || 0),
       source: ['qq', 'netease', 'apple', 'local'].includes(track.source) ? track.source : 'apple',
-      providerId: clean(track.providerId, 64), mediaMid: clean(track.mediaMid, 64), artist: clean(track.artist), album: clean(track.album)
+      providerId: clean(track.providerId, 64), mediaMid: clean(track.mediaMid, 64), artist: clean(track.artist), album: clean(track.album),
+      ...(/^https:\/\//.test(track.cover || '') ? { cover: String(track.cover).slice(0, 700) } : {})
     })),
     externalIds: { playlist: playlistKey(provider, playlist.id || `${Date.now()}`) }
   };

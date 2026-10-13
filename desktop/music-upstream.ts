@@ -119,6 +119,7 @@ export function mapQQSearchSong(raw: unknown) {
     artist: singers.map((artist) => artist.name).join(' / '),
     album: asStr(album.name || album.title || song.albumname),
     mediaMid: /^[a-z\d]{14}$/i.test(mediaMid) ? mediaMid : '',
+    cover: /^[a-z\d]{14}$/i.test(asStr(album.mid || album.pmid)) ? `https://y.gtimg.cn/music/photo_new/T002R300x300M000${asStr(album.mid || album.pmid)}.jpg` : '',
     duration: asNum(song.interval) * 1000,
     fee: asNum(pay.pay_play || pay.payplay) ? 1 : 0
   };
@@ -184,3 +185,20 @@ export async function searchQQSongs(query: string, limit = 8, options: QQSearchO
   throw new Error(code > 0 ? `QQ 音乐搜索暂时不可用（${code}），稍后会自动重试。` : 'QQ 音乐搜索暂时连不上，请检查网络后重试。');
 }
 export function resetQQSearchPreference() { preferredQQShape = 0; }
+
+// ---------- Flow Cabin: a song's own album art ----------
+// Playlists saved before covers were kept per song, and songs played by their
+// exact platform id, carry no artwork; the deck asks for it here.
+export async function trackCover(provider: string, id: string, cookie = '') {
+  if (provider === 'qq' && /^[a-z\d]{14}$/i.test(id)) {
+    const json = asObj(await qqMusicRequest(cookie, { comm: { ct: 24, cv: 0 }, songinfo: { module: 'music.pf_song_detail_svr', method: 'get_song_detail_yqq', param: { song_mid: id } } }));
+    const track = asObj(asObj(asObj(json.songinfo).data).track_info), album = asObj(track.album), mid = asStr(album.mid || album.pmid);
+    return asStr(track.mid) === id && /^[a-z\d]{14}$/i.test(mid) ? `https://y.gtimg.cn/music/photo_new/T002R300x300M000${mid}.jpg` : '';
+  }
+  if (provider === 'netease' && /^\d{1,20}$/.test(id)) {
+    const response = await ncmCall('song_detail', { ids: id, cookie, timestamp: Date.now() });
+    const song = asObj(asArr(asObj(response.body).songs)[0]);
+    return asStr(song.id) === id ? httpsCover(asObj(song.al).picUrl) : '';
+  }
+  return '';
+}

@@ -211,3 +211,12 @@ test('search: identical requests share one upstream call and a refusal is rememb
   const again = await (await request('/search?provider=qq&query=same')).json();
   assert.equal(count, 1); assert.match(again.error, /2001/);
 });
+test('track cover: looked up once per song, https only, never for unknown providers', async (t) => {
+  let calls = 0;
+  const { request } = await fixture(t, { trackCover: async (provider, id) => { calls++; return provider === 'qq' ? `http://y.gtimg.cn/music/photo_new/T002R300x300M000${id}.jpg` : 'javascript:alert(1)'; } });
+  const first = await (await request('/track-cover?provider=qq&id=001n4C3p1yv0FU')).json();
+  await request('/track-cover?provider=qq&id=001n4C3p1yv0FU');
+  assert.equal(first.cover, 'https://y.gtimg.cn/music/photo_new/T002R300x300M000001n4C3p1yv0FU.jpg'); assert.equal(calls, 1);
+  assert.equal((await (await request('/track-cover?provider=netease&id=123')).json()).cover, '');
+  assert.equal((await (await request('/track-cover?provider=ma&id=123')).json()).cover, ''); assert.equal(calls, 2);
+});

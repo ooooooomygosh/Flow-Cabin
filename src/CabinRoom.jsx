@@ -2,7 +2,7 @@ import OnboardingWizard from './onboarding/OnboardingWizard';
 import SettingsHub from './onboarding/SettingsHub';
 import * as onboardingModel from './onboarding/onboarding-model.mjs';
 import { createPlayerAdapter, createDesktopAdapter } from './onboarding/onboarding-adapter.mjs';
-import { musicRequest } from './room-playback.mjs';
+import { musicRequest, trackCover } from './room-playback.mjs';
 import { enterDesktopMode, exitDesktopMode, getDesktopModeStatus, onDesktopModeChange, installDesktopApi, reportTrayPet } from './desktop/desktop-sink-client.mjs';
 import { getRoomScene } from './scene-catalog.mjs';
 import { normalizePetId } from './pet/pet-catalog.mjs';
@@ -80,7 +80,9 @@ export default function CabinRoom({ items, loading, openRecord, openAdd, firstVi
   const queueRef = useRef(null);
   const playback = useRoomPlayback(record, trackIndex, provider, (manual = false) => queueRef.current?.current.next(manual), { peekNext: () => queueRef.current?.current.peekNext(), canNext: () => Boolean(queueRef.current?.current.canNext) });
   const system = useSystemNowPlaying(provider === 'system');
-  const deckItem = provider === 'system' ? system.item : record;
+  // A playlist shows the current song's own cover on the deck, widgets and media keys.
+  const shownCover = provider === 'system' ? '' : trackCover(record, trackIndex, playback.actualCover);
+  const deckItem = useMemo(() => provider === 'system' ? system.item : record && shownCover && shownCover !== record.cover ? { ...record, cover: shownCover } : record, [provider, system.item, record, shownCover]);
   const effectiveSpin = provider === 'visual' ? spinning : provider === 'system' ? Boolean(system.active && system.playing) : playback.playing;
   const [wallpaper, setWallpaper] = useState(() => window.albumRoomWallpaperState || {});
   const [wallpaperError, setWallpaperError] = useState('');
@@ -104,7 +106,7 @@ export default function CabinRoom({ items, loading, openRecord, openAdd, firstVi
     if (record?.id === item.id && trackIndex === index && provider !== 'visual' && !playback.playing) playback.toggle(); setRecord(item); setSelectedId(item.id); setTrackIndex(index); setSpinning(true); };
   const [player, playerRef] = usePlayerQueue({ items, record, trackIndex, setTrackIndex, loadAlbum: (item, index) => loadRef.current(item, index), playback, provider });
   queueRef.current = playerRef;
-  usePlayerShortcuts({ playback, player, provider, record, trackIndex, spinning, toggleVisual: () => setSpinning((value) => !value) });
+  usePlayerShortcuts({ playback, player, provider, record: provider === 'system' ? record : deckItem, trackIndex, spinning, toggleVisual: () => setSpinning((value) => !value) });
   usePlaybackBroadcast({ playing: provider === 'system' ? Boolean(system.active && system.playing) : provider === 'visual' ? false : playback.playing, provider, spinning: effectiveSpin, record: deckItem, trackIndex: provider === 'system' ? 0 : trackIndex, trackTitle: provider === 'system' ? system.title : playback.actualTrack, audio: playback.audio });
   useEffect(() => { const open = () => openMusicDeep(), openCorner = () => setCorner(true); window.addEventListener('cabin-open-music-settings', open); window.addEventListener('cabin-open-corner', openCorner); return () => { window.removeEventListener('cabin-open-music-settings', open); window.removeEventListener('cabin-open-corner', openCorner); }; }, []);
   const changeRow = (next) => { const value = shelfWindow(visible, next, shelfColumns); setRow(value.startRow); setSelectedId(value.items[0]?.id || ''); };
