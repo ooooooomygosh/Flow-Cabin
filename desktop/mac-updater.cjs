@@ -19,25 +19,35 @@
 const fs = require('node:fs'), path = require('node:path'), crypto = require('node:crypto');
 const { EventEmitter } = require('node:events');
 const { execFile, execFileSync, spawn } = require('node:child_process');
-const { latestTag, latestNotes, httpError, parseVersion, RELEASES_URL } = require('./updater.cjs');
+const { latestTag, latestNotes, httpError, parseVersion, compareVersions, RELEASES_URL } = require('./updater.cjs');
 
 // Waits for the old process, swaps the bundle, restores it on failure.
 // Every value arrives as a positional argument; nothing is interpolated.
 const INSTALL_SCRIPT = `#!/bin/sh
-pid="$1"; app="$2"; staged="$3"; backup="$4"; relaunch="$5"; opener="$6"
+pid="$1"; app="$2"; staged="$3"; backup="$4"; relaunch="$5"; opener="$6"; status="$7"; expected="$8"; plist="$9"
+result() { [ -z "$status" ] || printf '%s' "$1" > "$status"; }
 i=0
 while kill -0 "$pid" 2>/dev/null; do
   i=$((i + 1)); [ "$i" -gt 600 ] && exit 1
   sleep 0.1
 done
-rm -rf "$backup"
-mv "$app" "$backup" || exit 1
+current=$("$plist" -extract CFBundleShortVersionString raw -o - "$app/Contents/Info.plist") || { result version-unavailable; exit 1; }
+[ "$current" = "$expected" ] || { result disk-version-changed; exit 1; }
+[ ! -e "$backup" ] || { result backup-exists; exit 1; }
+mv "$app" "$backup" || { result backup-failed; exit 1; }
+restore() {
+  rm -rf "$app"
+  if mv "$backup" "$app"; then result rolled-back; else result rollback-failed; fi
+}
 if mv "$staged" "$app" 2>/dev/null || ditto "$staged" "$app" 2>/dev/null; then
-  rm -rf "$backup" "$staged"
+  rm -rf "$staged"
 else
-  rm -rf "$app"; mv "$backup" "$app"
+  restore; exit 1
 fi
-if [ "$relaunch" = 1 ]; then "$opener" "$app"; fi
+result installed
+if [ "$relaunch" = 1 ] && ! "$opener" "$app"; then restore; exit 1; fi
+# LaunchServices accepting open is not startup confirmation. The new process
+# removes its exact backup only after the cabin window has initialized.
 exit 0
 `;
 
@@ -56,11 +66,12 @@ function parseMacUpdateInfo(text) {
 }
 const zipName = (version, arch) => `FlowCabin-${version}-mac-${arch === 'arm64' ? 'arm64' : 'x64'}.zip`;
 
-function createMacUpdater({ app, fetch = globalThis.fetch, platform = process.platform, arch = process.arch, bundlePath, directory, pid = process.pid, execFileProcess = execFile, execFileSyncProcess = execFileSync, spawnProcess = spawn, fsModule = fs } = {}) {
+function createMacUpdater({ app, fetch = globalThis.fetch, platform = process.platform, arch = process.arch, bundlePath, directory, pid = process.pid, execFileProcess = execFile, execFileSyncProcess = execFileSync, spawnProcess = spawn, fsModule = fs, downloadTimeoutMs = 120000 } = {}) {
   const updater = new EventEmitter();
   updater.autoDownload = false;
   updater.autoInstallOnAppQuit = true;
   let pending = null, staged = null, installing = false;
+  const receiptPath = path.join(directory, 'install-receipt.json'), statusPath = path.join(directory, 'install-status');
 
   const run = (file, args) => new Promise((resolve, reject) => execFileProcess(file, args, { timeout: 120000, maxBuffer: 1024 * 1024, encoding: 'utf8' }, (error, stdout) => error ? reject(error) : resolve(String(stdout || '').trim())));
   const plist = (bundle, key) => run('/usr/bin/plutil', ['-extract', key, 'raw', '-o', '-', path.join(bundle, 'Contents', 'Info.plist')]);
@@ -97,34 +108,50 @@ function createMacUpdater({ app, fetch = globalThis.fetch, platform = process.pl
     return { updateInfo: { version, releaseNotes: notes } };
   };
 
-  function clean(keep = []) {
+  function clean(keep = ['install-receipt.json', 'install-status']) {
     try { for (const name of fsModule.readdirSync(directory)) if (!keep.includes(name)) fsModule.rmSync(path.join(directory, name), { recursive: true, force: true }); } catch {}
   }
 
   updater.downloadUpdate = async () => {
     if (!pending) throw new Error('请先检查更新。');
+    if (fsModule.existsSync(receiptPath)) throw new Error('上一次更新尚未确认完成，已保留旧版本，请先重新打开小屋。');
     const { tag, version, file } = pending;
     if (staged?.version === version) { updater.emit('update-downloaded', { version }); return [staged.app]; }
     fsModule.mkdirSync(directory, { recursive: true });
     const stage = `staged-${version}`, zip = path.join(directory, file.url), part = zip + '.part';
-    clean();
-    const response = await fetch(`${RELEASES_URL}/download/${encodeURIComponent(tag)}/${encodeURIComponent(file.url)}`, { headers: { 'User-Agent': 'FlowCabin-Updater' } });
-    if (!response.ok || !response.body) throw httpError(response.status || 0);
-    const total = Number(file.size) || Number(response.headers?.get?.('content-length')) || 0;
-    const hash = crypto.createHash('sha512'), handle = await fsModule.promises.open(part, 'w');
-    let received = 0, shown = -1;
+    staged = null; clean();
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(new Error('更新包下载超时，请重试。')), downloadTimeoutMs);
+    let handle, reader, received = 0, total = 0, shown = -1;
+    const aborted = new Promise((_, reject) => controller.signal.addEventListener('abort', () => reject(controller.signal.reason), { once: true }));
     try {
-      const reader = response.body.getReader();
+      const response = await Promise.race([fetch(`${RELEASES_URL}/download/${encodeURIComponent(tag)}/${encodeURIComponent(file.url)}`, { headers: { 'User-Agent': 'FlowCabin-Updater' }, signal: controller.signal }), aborted]);
+      if (!response.ok || !response.body) throw httpError(response.status || 0);
+      total = Number(file.size) || Number(response.headers?.get?.('content-length')) || 0;
+      handle = await fsModule.promises.open(part, 'w');
+      reader = response.body.getReader();
       for (;;) {
-        const { done, value } = await reader.read();
+        const { done, value } = await Promise.race([reader.read(), aborted]);
         if (done) break;
         const chunk = Buffer.from(value);
-        hash.update(chunk); await handle.write(chunk); received += chunk.length;
+        for (let offset = 0; offset < chunk.length;) {
+          controller.signal.throwIfAborted();
+          const { bytesWritten } = await handle.write(chunk.subarray(offset));
+          if (!Number.isInteger(bytesWritten) || bytesWritten <= 0) throw new Error('更新包写入失败。');
+          offset += bytesWritten;
+        }
+        received += chunk.length;
         const percent = total ? Math.min(99, Math.floor(received / total * 100)) : 0;
         if (percent !== shown) { shown = percent; updater.emit('download-progress', { percent, transferred: received, total }); }
       }
-    } finally { await handle.close(); }
-    if (hash.digest('base64') !== file.sha512 || (file.size && received !== file.size)) { fsModule.rmSync(part, { force: true }); throw new Error('下载的更新包校验失败，已删除，请稍后重试。'); }
+      await handle.close(); handle = null;
+      const hash = crypto.createHash('sha512');
+      for await (const chunk of fsModule.createReadStream(part)) { controller.signal.throwIfAborted(); hash.update(chunk); }
+      if (hash.digest('base64') !== file.sha512 || fsModule.statSync(part).size !== received || (file.size && received !== file.size)) throw new Error('下载的更新包校验失败，已删除，请稍后重试。');
+    } catch (error) {
+      reader?.cancel().catch(() => {}); await handle?.close().catch(() => {}); handle = null;
+      fsModule.rmSync(part, { force: true }); throw error;
+    } finally { clearTimeout(timer); }
     fsModule.renameSync(part, zip);
     const target = path.join(directory, stage);
     fsModule.mkdirSync(target, { recursive: true });
@@ -133,9 +160,16 @@ function createMacUpdater({ app, fetch = globalThis.fetch, platform = process.pl
       const apps = fsModule.readdirSync(target).filter((name) => name.endsWith('.app'));
       if (apps.length !== 1) throw new Error('更新包内容不完整。');
       const copy = path.join(target, apps[0]);
-      const [newVersion, newId, ownId] = await Promise.all([plist(copy, 'CFBundleShortVersionString'), plist(copy, 'CFBundleIdentifier'), plist(bundlePath, 'CFBundleIdentifier')]);
+      const [newVersion, newId, ownId, executable] = await Promise.all([plist(copy, 'CFBundleShortVersionString'), plist(copy, 'CFBundleIdentifier'), plist(bundlePath, 'CFBundleIdentifier'), plist(copy, 'CFBundleExecutable')]);
       if (newVersion !== version || !newId || newId !== ownId) throw new Error('更新包与这个应用不匹配。');
-      await run('/usr/bin/xattr', ['-dr', 'com.apple.quarantine', copy]).catch(() => {});
+      if (!executable || executable === '.' || executable === '..' || /[\\/\x00-\x1f]/.test(executable)) throw new Error('更新包没有有效的主程序。');
+      const binary = path.join(copy, 'Contents', 'MacOS', executable);
+      if (!fsModule.lstatSync(binary).isFile()) throw new Error('更新包没有有效的主程序。');
+      if (!fsModule.realpathSync(binary).startsWith(fsModule.realpathSync(copy) + path.sep)) throw new Error('更新包主程序不在应用目录内。');
+      fsModule.accessSync(binary, fsModule.constants.X_OK);
+      await run('/usr/bin/codesign', ['--verify', '--deep', '--strict', copy]);
+      // Preserve quarantine and other platform trust decisions. Integrity of
+      // an ad-hoc signature does not authenticate a publisher.
       staged = { version, app: copy };
     } catch (error) { clean(); throw error; }
     fsModule.rmSync(zip, { force: true });
@@ -146,16 +180,45 @@ function createMacUpdater({ app, fetch = globalThis.fetch, platform = process.pl
 
   function startInstaller(relaunch) {
     if (!staged || installing) return false;
+    // A manually installed copy always wins over an older cached download.
+    const installed = updater.installedVersion();
+    if (!installed || compareVersions(staged.version, installed) <= 0) {
+      fsModule.rmSync(path.dirname(staged.app), { recursive: true, force: true }); staged = null;
+      return false;
+    }
+    if (!updater.canSelfUpdate().ok || fsModule.existsSync(receiptPath)) return false;
     installing = true;
     const script = path.join(directory, 'install.sh');
     fsModule.writeFileSync(script, INSTALL_SCRIPT, { mode: 0o700 });
-    const backup = path.join(path.dirname(bundlePath), `.${path.basename(bundlePath)}.previous`);
-    const child = spawnProcess('/bin/sh', [script, String(pid), bundlePath, staged.app, backup, relaunch ? '1' : '0', '/usr/bin/open'], { detached: true, stdio: 'ignore' });
+    const backup = path.join(path.dirname(bundlePath), `.${path.basename(bundlePath)}.previous-${crypto.randomBytes(12).toString('hex')}`);
+    fsModule.writeFileSync(receiptPath, JSON.stringify({ bundle: bundlePath, backup, version: staged.version }), { mode: 0o600 });
+    fsModule.writeFileSync(statusPath, 'pending', { mode: 0o600 });
+    const child = spawnProcess('/bin/sh', [script, String(pid), bundlePath, staged.app, backup, relaunch ? '1' : '0', '/usr/bin/open', statusPath, installed, '/usr/bin/plutil'], { detached: true, stdio: 'ignore' });
+    child.once?.('error', () => { fsModule.writeFileSync(statusPath, 'spawn-failed'); });
     child.unref?.();
     return true;
   }
   // 「重启安装」: install now and open the new version.
-  updater.quitAndInstall = () => { if (startInstaller(true)) app.quit(); };
+  updater.quitAndInstall = () => { const started = startInstaller(true); if (started) app.quit(); return started; };
+  updater.confirmStartup = () => {
+    // Called after createWindow succeeds, never by the outgoing process.
+    try {
+      const receipt = JSON.parse(fsModule.readFileSync(receiptPath, 'utf8'));
+      const status = fsModule.readFileSync(statusPath, 'utf8');
+      const prefix = `.${path.basename(bundlePath)}.previous-`;
+      if (receipt.bundle !== bundlePath || path.dirname(receipt.backup) !== path.dirname(bundlePath)
+        || !path.basename(receipt.backup).startsWith(prefix) || !/^[a-f0-9]{24}$/.test(path.basename(receipt.backup).slice(prefix.length))) return false;
+      if (status === 'installed' && receipt.version === app.getVersion() && receipt.version === updater.installedVersion()) {
+        fsModule.rmSync(receipt.backup, { recursive: true, force: true });
+        fsModule.rmSync(receiptPath, { force: true }); fsModule.rmSync(statusPath, { force: true }); return true;
+      }
+      if (status === 'rolled-back') {
+        updater.startupWarning = '上次更新安装或打开失败，已恢复原版本。';
+        fsModule.rmSync(receiptPath, { force: true }); fsModule.rmSync(statusPath, { force: true });
+      } else updater.startupWarning = '上次更新尚未确认完成，已保留原版本备份，请检查更新状态后再试。';
+      return false;
+    } catch { return false; }
+  };
   // Otherwise the update goes in quietly the next time the app quits.
   app?.on?.('will-quit', () => { if (updater.autoInstallOnAppQuit) startInstaller(false); });
   return updater;

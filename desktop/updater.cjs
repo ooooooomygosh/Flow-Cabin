@@ -132,7 +132,7 @@ function createUpdater({ currentVersion, platform = process.platform, arch = pro
   }
   async function check({ manual = false } = {}) {
     if (pending) return pending;
-    if (['downloading', 'downloaded', 'restart'].includes(state.status) || checkInstalled()) return state; // keep the download / the installed copy; nothing to re-check
+    if (checkInstalled() || ['downloading', 'downloaded', 'restart'].includes(state.status)) return state; // a newer installed copy takes priority over cached downloads
     set({ status: 'checking', error: '', manual });
     pending = (useNative ? checkNative() : checkRelease()).catch((error) => set({ status: 'error', error: friendly(error) })).finally(() => { pending = null; });
     return pending;
@@ -145,7 +145,7 @@ function createUpdater({ currentVersion, platform = process.platform, arch = pro
     return state;
   }
   // Only on an explicit click. The app restarts into the installer.
-  function install() { if (!useNative || state.status !== 'downloaded') return false; autoUpdater.quitAndInstall(false, true); return true; }
+  function install() { if (!useNative || state.status !== 'downloaded' || checkInstalled()) return false; return autoUpdater.quitAndInstall(false, true) !== false; }
   // 「重启到新版本」: the installed copy is newer than this process.
   function restart() { return state.status === 'restart' ? relaunch() !== false : false; }
   async function openRelease() { await openExternal(state.releaseUrl || RELEASES_URL); return true; }

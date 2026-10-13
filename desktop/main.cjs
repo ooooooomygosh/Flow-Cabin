@@ -394,9 +394,11 @@ function startUpdater() {
   // macOS: ad-hoc builds update themselves (desktop/mac-updater.cjs). net.fetch
   // follows the system proxy settings.
   if (process.platform === 'darwin' && app.isPackaged) macUpdater = createMacUpdater({ app, fetch: (url, options) => net.fetch(url, options), bundlePath: path.resolve(process.execPath, '..', '..', '..'), directory: path.join(app.getPath('userData'), 'updates') });
+  if (startupComplete) macUpdater?.confirmStartup();
   const macUpdatable = macUpdater ? macUpdater.canSelfUpdate({ isPackaged: app.isPackaged }) : null;
   const native = updateMode({ isPackaged: app.isPackaged, macUpdatable }).mode === 'install';
   updater = createUpdater({ currentVersion: app.getVersion(), isPackaged: app.isPackaged, macUpdatable, autoUpdater: native ? macUpdater || require('electron-updater').autoUpdater : null, openExternal: (url) => shell.openExternal(url), installedVersion: () => macUpdater?.installedVersion() || '', relaunch: relaunchInstalledCopy, settings: updateSettings(), onState: (state) => pushUpdateState(state) });
+  if (macUpdater?.startupWarning) { writeLog('update-recovery', macUpdater.startupWarning); if (native) macUpdater.emit('error', new Error(macUpdater.startupWarning)); }
   if (!process.env.ALBUM_DESKTOP_TEST_PROFILE) updater.start();
 }
 // The .app on disk was replaced (a DMG dragged over it) while this older
