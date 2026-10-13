@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { rmsEnergy, smoothEnergy, createPlaybackBroadcaster, PLAYBACK_EVENT, estimatedEnergy } from './playback-signal.mjs';
 import { normalizeQueue, enqueue, playNext, dequeue, pruneQueue, cycleRepeat, nextStep, previousStep, queueAddition, QUEUE_LIMIT } from './player-queue.mjs';
 import { proceduralGrid, quantize, readPalette, nearestIndex, gridToRgba, hexToRgb, GRID, PALETTE_TOKENS } from './pixel-cover.mjs';
+import { createBeatTracker, bassLevel } from './beat-tracker.mjs';
+import { setBeat, currentBeat, sinceBeat } from './beat-clock.mjs';
 import { readId3, readFlac, readTags, parseFileName, groupAlbums } from './audio-tags.mjs';
 
 test('energy: silence is 0, loud signal approaches but stays within 1', () => {
@@ -132,4 +134,38 @@ test('queue additions reject overflow without dropping existing records and dedu
   const promoted = queueAddition(full, 'r49', true).queue; assert.equal(promoted.ids[0], 'r49'); assert.equal(promoted.ids.length, 50);
   let q = normalizeQueue(); for (let i = 0; i < 10; i++) q = queueAddition(q, 'same').queue;
   assert.deepEqual(q.ids, ['same']); assert.equal(full.ids[0], 'r0');
+});
+
+const kickTrack = (bpm, { offset = 37, ms = 12000, offbeat = .25 } = {}) => {
+  const tracker = createBeatTracker(), length = 60000 / bpm; let seed = 7; const random = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let time = 0; time < ms; time += 16.7) tracker.push(time, .2 + Math.exp(-((time + offset) % length) / 70) * .6 + Math.exp(-((time + offset + length / 2) % length) / 50) * offbeat + random() * .08);
+  return tracker.state();
+};
+test('beat tracker: finds the tempo and lands on the kick, not the off-beat', () => {
+  for (const bpm of [80, 100, 124, 150]) {
+    const state = kickTrack(bpm), length = 60000 / bpm;
+    assert.ok(state.confident, `${bpm}: confident`);
+    assert.ok(Math.abs(state.bpm - bpm) / bpm < .03, `${bpm}: found ${state.bpm}`);
+    const error = (((state.beatAt + 37) % length) + length * 1.5) % length - length / 2;
+    assert.ok(Math.abs(error) < 40, `${bpm}: beat off by ${Math.round(error)} ms`);
+  }
+});
+test('beat tracker: noise and silence give no beat', () => {
+  const noisy = createBeatTracker(); let seed = 3; const random = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let time = 0; time < 12000; time += 16.7) noisy.push(time, .3 + random() * .05);
+  assert.equal(noisy.state().confident, false); assert.equal(noisy.state().bpm, 0);
+  const flat = createBeatTracker(); for (let time = 0; time < 12000; time += 16.7) flat.push(time, .4);
+  assert.equal(flat.state().confident, false);
+  assert.equal(bassLevel(new Uint8Array(1024).fill(255), 48000, 2048), 1); assert.equal(bassLevel(new Uint8Array(0)), 0);
+});
+test('beat clock and playback signal: a beat is sent when the tempo or phase changes, not every beat', () => {
+  setBeat({ bpm: 120, beatAt: 1000 }); assert.equal(sinceBeat(1600), 100); assert.equal(currentBeat().detected, true);
+  setBeat({ bpm: 0 }); assert.equal(currentBeat().bpm, 96, 'no beat: calm default tempo');
+  let time = 0; const sent = [];
+  const cast = createPlaybackBroadcaster({ target: { dispatchEvent: (event) => sent.push(event.detail) }, now: () => time, EventClass: class { constructor(type, init) { this.detail = init.detail; } } });
+  cast.update({ playing: true, energy: .5, bpm: 120, beatAt: 1000 });
+  time = 10; assert.equal(cast.update({ playing: true, energy: .5, bpm: 120, beatAt: 1500 }), null, 'the next beat of the same tempo is not news');
+  time = 20; assert.equal(cast.update({ playing: true, energy: .5, bpm: 120, beatAt: 1560 })?.reason, 'beat', 'a 60 ms phase shift is');
+  time = 30; assert.equal(cast.update({ playing: true, energy: .5, bpm: 126, beatAt: 1560 })?.reason, 'beat');
+  assert.equal(sent.at(-1).bpm, 126); assert.equal(cast.update({ playing: false, bpm: 126, beatAt: 1560 }).bpm, 0);
 });

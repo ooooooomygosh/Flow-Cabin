@@ -22,7 +22,9 @@ window.addEventListener('cabin:playback', (event) => {
 | `spinning` | `boolean` | The record is turning on the deck, including 仅动画展示 mode. Use this for platter and tonearm motion, and `playing` for anything that implies sound. |
 | `provider` | `string` | `visual`, `auto`, `local`, `qq`, `netease`, `ma` or `system`. |
 | `track` | `object \| null` | `{ id, index, title, artist, album }`. `id` is the collection item id. `null` when the deck is empty. |
-| `reason` | `string` | `state` (play/pause/source/spin changed), `track` (track or record changed), or `energy` (periodic tick). |
+| `bpm` | `number` | Tempo found by `src/player/beat-tracker.mjs` (kick-drum band of the analyser, autocorrelation), or `0` while no beat is certain or the signal is `estimated`. |
+| `beatAt` | `number` | Wall-clock time (`Date.now()` ms) of one beat when `bpm` is set, else `0`. Any beat works as the phase anchor: beats fall at `beatAt + k × 60000 / bpm`. |
+| `reason` | `string` | `state` (play/pause/source/spin changed), `track` (track or record changed), `beat` (a new tempo, or a phase shift of more than 30 ms), or `energy` (periodic tick). |
 
 ### Timing
 
@@ -41,11 +43,11 @@ window.addEventListener('cabin:playback', (event) => {
 
 The pet runs in its own Electron window (`pet.html`), so it never sees the main page's `window` events. The music state travels with the companion snapshot instead:
 
-1. `src/CompanionBridge.jsx` listens to `cabin:playback` and adds `musicPlaying`, `energy` (rounded to 0.05) and `energyEstimated` to `albumCompanionSnapshot()`.
+1. `src/CompanionBridge.jsx` listens to `cabin:playback` and adds `musicPlaying`, `energy` (rounded to 0.05), `energyEstimated`, `bpm` and `beatAt` to `albumCompanionSnapshot()`.
 2. `desktop/companion-sync.cjs` reads the snapshot. `desktop/wallpaper-model.cjs` `cleanCompanion` whitelists and clamps it (`energy` 0..1, 2 decimals, forced to 0 when nothing is playing). `desktop/pet.cjs` polls about every **125 ms (~8 Hz) while `musicPlaying` is true** and every 750 ms otherwise, and only sends `pet:update` when the cleaned value changed.
 3. `src/pet/pet-snapshot.mjs` re-dispatches `cabin:playback` on the pet window with `{ playing, energy, estimated, source: 'companion', reason: 'companion' }`, and only when the values change.
 
-Pet code listens the same way in both windows (`onCabinPlayback` in `src/scene/playback-listener.mjs`). In the pet window the signal is coarser: about 8 Hz, with 0.05 energy steps and roughly 125 ms of extra latency. That is enough for sway or bob, but not for beat-accurate motion. The existing `playing` field in the snapshot still means "grooving" (real audio, spinning, or lo-fi). Use `musicPlaying` / the event's `playing` for real audio only.
+Pet code listens the same way in both windows (`onCabinPlayback` in `src/scene/playback-listener.mjs`). In the pet window the signal is coarser: about 8 Hz, with 0.05 energy steps and roughly 125 ms of extra latency. That is too coarse for beats, so the beat itself travels as `bpm` + `beatAt` on the wall clock and each window keeps its own beat clock (`src/player/beat-clock.mjs`): the pet's hop (`src/pet/PetLife.jsx`, a Web Animation put back on the beat when it drifts) and its groove frames (`grooveFrame` in `src/pet/pet-model.mjs`, two per beat, head dip on the beat) follow it. Without a detected beat they use 96 BPM, or the lo-fi section's tempo. The existing `playing` field in the snapshot still means "grooving" (real audio, spinning, or lo-fi). Use `musicPlaying` / the event's `playing` for real audio only.
 
 ## `cabin:player-command` (incoming)
 

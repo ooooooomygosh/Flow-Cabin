@@ -19,6 +19,11 @@ export function frameAt(pose, timeMs) {
   const count = POSES[pose] || 1, fps = FPS[pose] || 2;
   return Math.floor(timeMs / 1000 * fps) % count;
 }
+// Groove frames move on every half beat; the head dips (frames 1 and 3) on the beat.
+export function grooveFrame(now, { bpm, beatAt = 0 } = {}) {
+  const half = 30000 / (bpm > 0 ? bpm : 96), since = now - beatAt, halves = Math.floor(since / half);
+  return { index: ((halves + 1) % 4 + 4) % 4, wait: half - ((since % half) + half) % half };
+}
 export function celebrateUntil(now) { return now + CELEBRATE_MS; }
 
 const POKE_LINES = ['喵～', '今天也辛苦啦', '摸摸头 (=^･ω･^=)', '要不要放张唱片？', '喝口水再继续吧', '咕噜咕噜…', '我在陪你哦'];

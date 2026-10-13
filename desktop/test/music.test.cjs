@@ -200,3 +200,23 @@ test('cancelling a legacy QQ resolve prevents a late metadata lookup from reques
   await request('/config'); // Process the closed loopback connection before releasing the held lookup.
   release('0025nWDH4PCVfs'); await new Promise(resolve => setImmediate(resolve)); assert.equal(calls, 0);
 });
+test('search: identical requests share one upstream call and a refusal is remembered briefly', async (t) => {
+  let count = 0, release;
+  const gate = new Promise((resolve) => { release = resolve; });
+  const { request } = await fixture(t, { searchQQSongs: async () => { count++; await gate; throw new Error('QQ 音乐搜索暂时不可用（2001），稍后会自动重试。'); } });
+  const both = Promise.all([request('/search?provider=qq&query=same'), request('/search?provider=qq&query=same')]);
+  release();
+  const answers = await both;
+  assert.equal(count, 1); assert.deepEqual(answers.map((response) => response.status), [502, 502]);
+  const again = await (await request('/search?provider=qq&query=same')).json();
+  assert.equal(count, 1); assert.match(again.error, /2001/);
+});
+test('track cover: looked up once per song, https only, never for unknown providers', async (t) => {
+  let calls = 0;
+  const { request } = await fixture(t, { trackCover: async (provider, id) => { calls++; return provider === 'qq' ? `http://y.gtimg.cn/music/photo_new/T002R300x300M000${id}.jpg` : 'javascript:alert(1)'; } });
+  const first = await (await request('/track-cover?provider=qq&id=001n4C3p1yv0FU')).json();
+  await request('/track-cover?provider=qq&id=001n4C3p1yv0FU');
+  assert.equal(first.cover, 'https://y.gtimg.cn/music/photo_new/T002R300x300M000001n4C3p1yv0FU.jpg'); assert.equal(calls, 1);
+  assert.equal((await (await request('/track-cover?provider=netease&id=123')).json()).cover, '');
+  assert.equal((await (await request('/track-cover?provider=ma&id=123')).json()).cover, ''); assert.equal(calls, 2);
+});

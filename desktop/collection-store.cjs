@@ -42,6 +42,7 @@ function normalizeItem(body = {}, previous = {}) {
     trackDetails: Array.isArray(value.trackDetails) ? value.trackDetails.slice(0, trackLimit).map((track) => ({
       title: text(track?.title, 160), trackNumber: Number(track?.trackNumber) || 0, lengthMillis: Math.max(0, Number(track?.lengthMillis) || 0),
       source: text(track?.source, 40), providerId: text(track?.providerId, 64), mediaMid: text(track?.mediaMid, 64),
+      ...(cover(track?.cover) ? { cover: cover(track.cover) } : {}),
       ...(text(track?.artist, 160) ? { artist: text(track.artist, 160) } : {}), ...(text(track?.album, 160) ? { album: text(track.album, 160) } : {})
     })).filter((track) => track.title) : [],
     externalIds,

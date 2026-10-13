@@ -1,4 +1,5 @@
-import { FPS, frameAt } from './pet-model.mjs';
+import { FPS, frameAt, grooveFrame } from './pet-model.mjs';
+import { currentBeat } from '../player/beat-clock.mjs';
 
 // Wake at sprite boundaries, rather than on every display refresh. This keeps
 // a 1–6 fps pixel animation cheap even when the picker shows all five pets.
@@ -6,12 +7,20 @@ import { FPS, frameAt } from './pet-model.mjs';
 export function startPetAnimation({
   pose = 'idle', reduceMotion = false, enabled = true, onFrame,
   now = () => performance.now(), setTimer = setTimeout, clearTimer = clearTimeout,
+  // Grooving follows the song's beat (two sprite frames per beat), on the wall clock.
+  beat = currentBeat, wallClock = () => Date.now(),
 }) {
   if (!enabled) return () => {};
   const safePose = Object.hasOwn(FPS, pose) ? pose : 'idle', fps = FPS[safePose];
   let timer, stopped = false, last = -1;
   const draw = () => {
     if (stopped) return;
+    if (safePose === 'groove' && !reduceMotion) {
+      const { index, wait } = grooveFrame(wallClock(), beat());
+      if (index !== last) { last = index; onFrame(index); }
+      timer = setTimer(draw, Math.max(16, Math.ceil(wait)));
+      return;
+    }
     const time = now(), index = reduceMotion ? 0 : frameAt(safePose, time);
     if (index !== last) { last = index; onFrame(index); }
     if (!reduceMotion && !stopped) {

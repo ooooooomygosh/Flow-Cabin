@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { QUEUE_KEY, normalizeQueue, queueAddition, dequeue, pruneQueue, cycleRepeat, nextStep, previousStep } from './player-queue.mjs';
+import { QUEUE_KEY, normalizeQueue, queueAddition, dequeue, pruneQueue, cycleRepeat, nextStep, nextPlayableStep, previousStep } from './player-queue.mjs';
 import { createPlaybackBroadcaster, rmsEnergy, smoothEnergy, estimatedEnergy, ENERGY_INTERVAL_MS } from './playback-signal.mjs';
 import { analyserFor } from './audio-graph.mjs';
+import { createBeatTracker } from './beat-tracker.mjs';
 import { trackNames } from '../room-model.mjs';
 
 const readQueue = () => { try { return normalizeQueue(JSON.parse(localStorage.getItem(QUEUE_KEY))); } catch { return normalizeQueue(null); } };
@@ -21,7 +22,8 @@ export function usePlayerQueue({ items, record, trackIndex, setTrackIndex, loadA
   const trackCount = trackNames(record).length, audible = provider !== 'visual' && provider !== 'system';
   // What plays after this track is decided once (shuffle included), so the deck
   // can match that exact track early and the transition is instant.
-  const upcoming = useMemo(() => nextStep({ trackIndex, trackCount, queue }), [record?.id, trackIndex, trackCount, queue.ids.join('|'), queue.repeat, queue.shuffle]);
+  // Tracks whose early match failed are stepped over (see useRoomPlayback).
+  const upcoming = useMemo(() => nextPlayableStep({ trackIndex, trackCount, queue, blocked: (index) => Boolean(playback?.isBlocked?.(record, index)) }), [record?.id, trackIndex, trackCount, queue.ids.join('|'), queue.repeat, queue.shuffle, provider, playback?.blockedVersion]);
   const go = (step) => {
     if (step.type === 'track') setTrackIndex(step.index);
     else if (step.type === 'restart') { if (audible) playback?.restart(); }
@@ -111,13 +113,14 @@ export function usePlayerShortcuts({ playback, player, provider, toggleVisual, r
       session.metadata = audible && record ? new MediaMetadata({ title: playback?.actualTrack || title || record.title, artist: record.artist, album: record.title, artwork: record.cover && /^(https:|data:image\/)/.test(record.cover) ? [{ src: record.cover, sizes: '512x512' }] : [] }) : null;
       session.playbackState = audible && record ? playback?.playing ? 'playing' : 'paused' : 'none';
     } catch {}
-  }, [audible, record?.id, title, playback?.actualTrack, playback?.playing]);
+  }, [audible, record?.id, record?.cover, title, playback?.actualTrack, playback?.playing]);
 }
 
 // Broadcasts `cabin:playback` on window (see docs/events.md).
 export function usePlaybackBroadcast({ playing, provider, spinning, record, trackIndex, trackTitle, audio }) {
-  const cast = useRef(null), energy = useRef(0);
+  const cast = useRef(null), energy = useRef(0), tracker = useRef(null);
   cast.current ||= createPlaybackBroadcaster({ target: window });
+  tracker.current ||= createBeatTracker();
   const track = record ? { id: record.id, index: trackIndex, title: trackTitle || trackNames(record)[trackIndex] || record.title, artist: record.artist, album: record.title } : null;
   const state = { playing, provider, spinning, track };
   const latest = useRef(state); latest.current = state;
@@ -126,13 +129,18 @@ export function usePlaybackBroadcast({ playing, provider, spinning, record, trac
     let value = 0, estimated = false;
     if (now.playing) { if (graph && audio.current && !audio.current.paused) value = rmsEnergy(graph.read()); else { value = estimatedEnergy(performance.now()); estimated = true; } }
     energy.current = smoothEnergy(energy.current, value);
-    cast.current.update({ ...now, energy: energy.current, estimated });
+    // The beat, on the wall clock so other windows (the desktop pet) can share it.
+    const beat = estimated ? null : tracker.current.state();
+    const beatAt = beat?.confident ? Date.now() - (performance.now() - beat.beatAt) : 0;
+    cast.current.update({ ...now, energy: energy.current, estimated, bpm: beatAt ? beat.bpm : 0, beatAt });
   };
-  useEffect(() => { energy.current = 0; sample(); }, [playing, provider, spinning, track?.id, track?.index, track?.title]);
+  useEffect(() => { energy.current = 0; tracker.current.reset(); sample(); }, [playing, provider, spinning, track?.id, track?.index, track?.title]);
   useEffect(() => {
     if (!playing) return;
     const timer = setInterval(sample, ENERGY_INTERVAL_MS);
-    return () => clearInterval(timer);
+    // The bass band is read ~60 times a second for beat tracking (cheap: 2048-point FFT).
+    const listen = setInterval(() => { const graph = analyserFor(audio?.current); if (graph?.bass && audio.current && !audio.current.paused) tracker.current.push(performance.now(), graph.bass()); }, 16);
+    return () => { clearInterval(timer); clearInterval(listen); };
   }, [playing]);
   useEffect(() => () => cast.current?.update({ playing: false, provider: '', track: null }), []);
 }

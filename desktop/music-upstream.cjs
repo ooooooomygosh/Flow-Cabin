@@ -40,12 +40,17 @@ __export(music_upstream_exports, {
   handleQQUserPlaylists: () => handleQQUserPlaylists,
   handleSearch: () => handleSearch,
   handleSongUrl: () => handleSongUrl,
+  mapQQSearchSong: () => mapQQSearchSong,
   neteasePlaylistTracks: () => neteasePlaylistTracks,
   neteaseUserPlaylists: () => neteaseUserPlaylists,
   normalizeLoginInfo: () => normalizeLoginInfo,
   parseCookieString: () => parseCookieString,
   qqCookieMusicKey: () => qqCookieMusicKey,
-  qqCookieUin: () => qqCookieUin
+  qqCookieUin: () => qqCookieUin,
+  qqSearchShapes: () => qqSearchShapes,
+  resetQQSearchPreference: () => resetQQSearchPreference,
+  searchQQSongs: () => searchQQSongs,
+  trackCover: () => trackCover
 });
 module.exports = __toCommonJS(music_upstream_exports);
 
@@ -1291,6 +1296,122 @@ async function getQQMediaMid(cookie, mid) {
   const mediaMid = asStr(asObj(track.file).media_mid);
   return /^[a-z\d]{14}$/i.test(mediaMid) ? mediaMid : "";
 }
+var QQ_SEARCH_MODULE = "music.search.SearchCgiService";
+var preferredQQShape = 0;
+var nextQQSearchAt = 0;
+var QQ_SEARCH_GAP_MS = 300;
+var QQ_SEARCH_COOLDOWN_MS = 1200;
+function mapQQSearchSong(raw) {
+  const song = asObj(raw), album = asObj(song.album), file = asObj(song.file), pay = asObj(song.pay);
+  const singers = asArr(song.singer).map((value) => ({ name: asStr(asObj(value).name) })).filter((artist) => artist.name);
+  const mediaMid = asStr(file.media_mid || song.strMediaMid || song.media_mid);
+  return {
+    mid: asStr(song.mid || song.songmid),
+    name: asStr(song.name || song.title || song.songname),
+    artists: singers,
+    artist: singers.map((artist) => artist.name).join(" / "),
+    album: asStr(album.name || album.title || song.albumname),
+    mediaMid: /^[a-z\d]{14}$/i.test(mediaMid) ? mediaMid : "",
+    cover: /^[a-z\d]{14}$/i.test(asStr(album.mid || album.pmid)) ? `https://y.gtimg.cn/music/photo_new/T002R300x300M000${asStr(album.mid || album.pmid)}.jpg` : "",
+    duration: asNum(song.interval) * 1e3,
+    fee: asNum(pay.pay_play || pay.payplay) ? 1 : 0
+  };
+}
+var QQSearchError = class extends Error {
+  code;
+  constructor(code) {
+    super(`QQ_SEARCH_FAILED (${code})`);
+    this.code = code;
+  }
+};
+function qqSearchShapes(options = {}) {
+  const fetchText = options.fetchText || requestText;
+  const post = async (payload) => {
+    const body = JSON.stringify(payload);
+    return asObj(parseJSONText(await fetchText(QQ_MUSICU_URL, { method: "POST", headers: { ...QQ_HEADERS, "Content-Type": "application/json;charset=UTF-8" } }, body)));
+  };
+  const block = (json, key) => {
+    const part = asObj(json[key]), code = Number(json.code || 0) || Number(part.code || 0);
+    if (code !== 0 || !json[key]) throw new QQSearchError(code || -1);
+    return asArr(asObj(asObj(asObj(part.data).body).song).list);
+  };
+  const get = async (url, params) => {
+    const target = new URL(url);
+    for (const [name, value] of Object.entries(params)) target.searchParams.set(name, String(value));
+    return asObj(parseJSONText(await fetchText(target.toString(), { headers: { ...QQ_HEADERS } })));
+  };
+  return [
+    // What y.qq.com's desktop page sends: envelope key = module, no comm.
+    { name: "desktop", run: async (query, limit) => block(await post({ [QQ_SEARCH_MODULE]: { module: QQ_SEARCH_MODULE, method: "DoSearchForQQMusicDesktop", param: { search_type: 0, query, page_num: 1, num_per_page: limit } } }), QQ_SEARCH_MODULE) },
+    // The PC client's form (Listen1 and others): comm + req, grouped results.
+    { name: "client", run: async (query, limit) => block(await post({ comm: { ct: "19", cv: "1859", uin: "0" }, req: { module: QQ_SEARCH_MODULE, method: "DoSearchForQQMusicDesktop", param: { grp: 1, num_per_page: limit, page_num: 1, query, search_type: 0 } } }), "req") },
+    // The search box's suggestions: song ids, names and singers. Each is filled
+    // in from the song's detail (album, length, media id), which QQ keeps
+    // answering while it refuses searches, so the ranking can still check them.
+    { name: "smartbox", run: async (query, limit) => {
+      const json = await get("https://c.y.qq.com/splcloud/fcgi-bin/smartbox_new.fcg", { key: query, format: "json", inCharset: "utf-8", outCharset: "utf-8", platform: "yqq.json", is_xml: 0 });
+      const code = Number(json.code || 0);
+      if (code !== 0) throw new QQSearchError(code);
+      const items = asArr(asObj(asObj(json.data).song).itemlist).slice(0, Math.min(limit, 5)).map(asObj);
+      const songs = [];
+      for (const item of items) {
+        const basic = { mid: item.mid, name: item.name, singer: asStr(item.singer).split(/\s*[/、]\s*/).filter(Boolean).map((name) => ({ name })) };
+        try {
+          const detail = await post({ comm: { ct: 24, cv: 0 }, songinfo: { module: "music.pf_song_detail_svr", method: "get_song_detail_yqq", param: { song_mid: asStr(item.mid) } } });
+          const track = asObj(asObj(asObj(detail.songinfo).data).track_info);
+          songs.push(asStr(track.mid) === asStr(item.mid) ? track : basic);
+        } catch {
+          songs.push(basic);
+        }
+      }
+      return songs;
+    } }
+  ];
+}
+async function searchQQSongs(query, limit = 8, options = {}) {
+  const keyword = String(query || "").trim();
+  if (!keyword) return [];
+  const count = Math.max(1, Math.min(20, Math.floor(limit) || 8));
+  const shapes = qqSearchShapes(options), wait = options.wait || ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
+  const full = [preferredQQShape, 1 - preferredQQShape];
+  const order = [...full, ...full, shapes.length - 1];
+  let lastError = null;
+  const now = options.now || Date.now;
+  for (const [step, index] of order.entries()) {
+    if (step) await wait(step === full.length ? 700 : 250);
+    const slot = Math.max(now(), nextQQSearchAt);
+    nextQQSearchAt = slot + QQ_SEARCH_GAP_MS;
+    if (slot > now()) await wait(slot - now());
+    try {
+      const seen = /* @__PURE__ */ new Set();
+      const songs = (await shapes[index].run(keyword, count)).map(mapQQSearchSong).filter((song) => /^[a-z\d]{14}$/i.test(song.mid) && song.name && !seen.has(song.mid) && seen.add(song.mid));
+      if (index < full.length) preferredQQShape = index;
+      return songs;
+    } catch (error) {
+      lastError = error;
+      if (error instanceof QQSearchError && error.code === 2001) nextQQSearchAt = Math.max(nextQQSearchAt, now() + QQ_SEARCH_COOLDOWN_MS);
+    }
+  }
+  const code = lastError instanceof QQSearchError ? lastError.code : 0;
+  throw new Error(code > 0 ? `QQ \u97F3\u4E50\u641C\u7D22\u6682\u65F6\u4E0D\u53EF\u7528\uFF08${code}\uFF09\uFF0C\u7A0D\u540E\u4F1A\u81EA\u52A8\u91CD\u8BD5\u3002` : "QQ \u97F3\u4E50\u641C\u7D22\u6682\u65F6\u8FDE\u4E0D\u4E0A\uFF0C\u8BF7\u68C0\u67E5\u7F51\u7EDC\u540E\u91CD\u8BD5\u3002");
+}
+function resetQQSearchPreference() {
+  preferredQQShape = 0;
+  nextQQSearchAt = 0;
+}
+async function trackCover(provider, id, cookie = "") {
+  if (provider === "qq" && /^[a-z\d]{14}$/i.test(id)) {
+    const json = asObj(await qqMusicRequest(cookie, { comm: { ct: 24, cv: 0 }, songinfo: { module: "music.pf_song_detail_svr", method: "get_song_detail_yqq", param: { song_mid: id } } }));
+    const track = asObj(asObj(asObj(json.songinfo).data).track_info), album = asObj(track.album), mid = asStr(album.mid || album.pmid);
+    return asStr(track.mid) === id && /^[a-z\d]{14}$/i.test(mid) ? `https://y.gtimg.cn/music/photo_new/T002R300x300M000${mid}.jpg` : "";
+  }
+  if (provider === "netease" && /^\d{1,20}$/.test(id)) {
+    const response = await call("song_detail", { ids: id, cookie, timestamp: Date.now() });
+    const song = asObj(asArr(asObj(response.body).songs)[0]);
+    return asStr(song.id) === id ? httpsCover(asObj(song.al).picUrl) : "";
+  }
+  return "";
+}
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   audioProxyHeadersFor,
@@ -1304,10 +1425,15 @@ async function getQQMediaMid(cookie, mid) {
   handleQQUserPlaylists,
   handleSearch,
   handleSongUrl,
+  mapQQSearchSong,
   neteasePlaylistTracks,
   neteaseUserPlaylists,
   normalizeLoginInfo,
   parseCookieString,
   qqCookieMusicKey,
-  qqCookieUin
+  qqCookieUin,
+  qqSearchShapes,
+  resetQQSearchPreference,
+  searchQQSongs,
+  trackCover
 });

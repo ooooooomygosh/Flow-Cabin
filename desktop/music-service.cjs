@@ -5,9 +5,10 @@ const { createPlaylistLibrary } = require('./playlists.cjs');
 // Requested tier; the platform answers with the best tier the account may
 // play (VIP → FLAC, guest → 128k) and the deck shows that actual tier.
 const QUALITIES = ['standard', 'exhigh', 'lossless'];
+const SEARCH_CACHE_MS = 60000, SEARCH_FAILURE_MS = 20000;
 const QUALITY_OPTIONS = [{ id: 'standard', label: '标准 · 128k' }, { id: 'exhigh', label: '高品质 · 320k' }, { id: 'lossless', label: '无损 · FLAC' }];
 function createMusicService({ directory, safeStorage, login, logout, upstream = require('./music-upstream.cjs'), fetch = globalThis.fetch, nowPlaying = null, localMusic = null, appleMusic = null, localApps = null }) {
-  const token = crypto.randomBytes(32).toString('hex'), streams = new Map(), cache = new Map(), activeStreams = new Set(), accountVersions = { qq: 0, netease: 0 };
+  const token = crypto.randomBytes(32).toString('hex'), streams = new Map(), cache = new Map(), pending = new Map(), activeStreams = new Set(), accountVersions = { qq: 0, netease: 0 };
   let revision = 0;
   const prefsPath = path.join(directory, 'music.json'); let preferences = { maURL: '', maToken: '', playerId: '', qq: '', netease: '', quality: 'exhigh' }, server, port, opening;
   try { preferences = { ...preferences, ...JSON.parse(fs.readFileSync(prefsPath, 'utf8')) }; } catch {}
@@ -33,17 +34,46 @@ function createMusicService({ directory, safeStorage, login, logout, upstream = 
   async function search(provider, query, scope = '') {
     if (provider === 'appleMusic' && scope === 'catalog') { if (!appleMusic?.available) throw new Error('系统 Apple Music 仅支持 macOS。'); return (await appleMusic.catalog(query)).map((value) => candidate(value, 'appleMusic')).filter((v) => v.id && v.title); }
     const currentRevision = revision;
-    const key = provider + ':' + query, old = cache.get(key); if (old && Date.now() - old.time < 60000) return old.items;
+    const key = provider + ':' + query, old = cache.get(key);
+    if (old && Date.now() - old.time < (old.error ? SEARCH_FAILURE_MS : SEARCH_CACHE_MS)) { if (old.error) throw new Error(old.error); return old.items; }
+    // One upstream request per query at a time: a prefetch and the deck asking
+    // for the same track share it instead of doubling the load on the platform.
+    if (pending.has(key)) return pending.get(key);
+    const task = searchUpstream(provider, query, currentRevision).finally(() => pending.delete(key));
+    pending.set(key, task);
+    return task;
+  }
+  async function searchUpstream(provider, query, currentRevision) {
+    const key = provider + ':' + query;
     let values;
-    if (provider === 'qq') values = await upstream.handleQQSearch(decode(preferences.qq), query, 8);
-    else if (provider === 'netease') values = await upstream.handleSearch(query, 8, decode(preferences.netease));
-    else if (provider === 'ma') values = (await ma('music/search', { search_query: query, media_types: ['track'], limit: 8 })).tracks || [];
-    else if (provider === 'appleMusic') { if (!appleMusic?.available) throw new Error('系统 Apple Music 仅支持 macOS。'); return (await appleMusic.search(query)).map((value) => candidate(value, 'appleMusic')); }
-    else if (provider === 'local') { if (!localMusic) throw new Error('本地音乐不可用。'); return localMusic.search(query).map((value) => candidate(value, 'local')); }
-    else throw new Error('不支持此音乐来源。');
+    try {
+      if (provider === 'qq') values = upstream.searchQQSongs ? await upstream.searchQQSongs(query, 20) : await upstream.handleQQSearch(decode(preferences.qq), query, 8);
+      else if (provider === 'netease') values = await upstream.handleSearch(query, 15, decode(preferences.netease));
+      else if (provider === 'ma') values = (await ma('music/search', { search_query: query, media_types: ['track'], limit: 8 })).tracks || [];
+      else if (provider === 'appleMusic') { if (!appleMusic?.available) throw new Error('系统 Apple Music 仅支持 macOS。'); return (await appleMusic.search(query)).map((value) => candidate(value, 'appleMusic')); }
+      else if (provider === 'local') { if (!localMusic) throw new Error('本地音乐不可用。'); return localMusic.search(query).map((value) => candidate(value, 'local')); }
+      else throw new Error('不支持此音乐来源。');
+    } catch (error) {
+      // A platform refusing searches (QQ 2001, timeouts) is remembered briefly,
+      // so skipping through an album does not keep hitting it every second.
+      if (currentRevision === revision && (provider === 'qq' || provider === 'netease')) remember(key, { time: Date.now(), error: error.message });
+      throw error;
+    }
     if (currentRevision !== revision) throw new Error('音源设置已更改，请重新搜索。');
     const items = values.map((value) => candidate(value, provider)).filter((v) => v.id && v.title);
-    cache.set(key, { time: Date.now(), items }); if (cache.size > 64) cache.delete(cache.keys().next().value); return items;
+    remember(key, { time: Date.now(), items }); return items;
+  }
+  function remember(key, entry) { cache.delete(key); cache.set(key, entry); if (cache.size > 64) cache.delete(cache.keys().next().value); }
+  // A song's album art, by its exact platform id; answers (and misses) are kept for the session.
+  const covers = new Map();
+  async function trackCover(provider, id) {
+    if (!['qq', 'netease'].includes(provider) || !/^[a-z\d]{1,20}$/i.test(id) || !upstream.trackCover) return '';
+    const key = provider + ':' + id;
+    if (!covers.has(key)) {
+      covers.set(key, upstream.trackCover(provider, id, decode(preferences[provider])).then((value) => candidate({ id, name: '-', cover: value }, provider).cover).catch(() => { covers.delete(key); return ''; }));
+      if (covers.size > 500) covers.delete(covers.keys().next().value);
+    }
+    return covers.get(key);
   }
   async function resolve(body, requestActive = () => true) {
     const currentRevision = revision;
@@ -143,6 +173,7 @@ function createMusicService({ directory, safeStorage, login, logout, upstream = 
       if (req.method === 'GET' && url.pathname === '/apple/state') { if (!appleMusic?.available) throw new Error('系统 Apple Music 仅支持 macOS。'); return json(res, await appleMusic.state()); }
       if (req.method === 'POST' && url.pathname === '/apple/control') { if (!appleMusic?.available) throw new Error('系统 Apple Music 仅支持 macOS。'); const input = await body(req); return json(res, await appleMusic.control(String(input.action || ''), input.expectedTrack)); }
       if (req.method === 'POST' && url.pathname === '/open-local') { if (!localApps) throw new Error('本机音乐 App 打开功能不可用。'); return json(res, await localApps.open(await body(req))); }
+      if (req.method === 'GET' && url.pathname === '/track-cover') return json(res, { cover: await trackCover(String(url.searchParams.get('provider') || ''), String(url.searchParams.get('id') || '')) });
       if (req.method === 'GET' && url.pathname === '/search') return json(res, { candidates: await search(url.searchParams.get('provider'), String(url.searchParams.get('query') || '').slice(0, 300), String(url.searchParams.get('scope') || '')) });
       if (req.method === 'GET' && url.pathname === '/playlists') return json(res, await guarded(() => playlists.list(String(url.searchParams.get('provider') || ''))));
       if (req.method === 'GET' && url.pathname === '/playlist') {

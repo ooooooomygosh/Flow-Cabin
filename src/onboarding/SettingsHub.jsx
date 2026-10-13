@@ -8,6 +8,7 @@ import { sourceOptions, providerFor } from './onboarding-model.mjs';
 import { version } from '../../package.json';
 import UpdatePanel from '../desktop/UpdatePanel';
 import './onboarding.css';
+import { CROSSFADE_OPTIONS, crossfadeSeconds, setCrossfadeSeconds, onCrossfadeChange } from '../player/crossfade.mjs';
 
 export const HUB_SECTIONS = Object.freeze([
   { id: 'music', label: '音源' }, { id: 'room', label: '房间与桌宠' }, { id: 'focus', label: '专注工具' },
@@ -67,8 +68,18 @@ function MusicSection({ env, player, provider, useSource, openMusicSettings }) {
     <Row title="音质" hint={quality?.options?.length ? '播放不了时会自动降一档。' : '标准 / 高品质 / 无损 · 等播放器更新后开放'}>
       {quality?.options?.length ? <select aria-label="音质" value={quality.current || ''} onChange={async (event) => { const id = event.target.value; if (await player.setQuality(id)) setQuality({ ...quality, current: id }); }}>{quality.options.map((option) => <option key={option.id ?? option} value={option.id ?? option}>{option.label ?? option}</option>)}</select> : <select aria-label="音质" disabled><option>自动</option></select>}
     </Row>
+    <CrossfadeRow/>
     <Row title="账户、文件夹与 Music Assistant" hint="登录 QQ 音乐 / 网易云、管理本地文件夹、连接家里的播放器。"><button type="button" className="pixel-button" onClick={openMusicSettings}><Music2 size={15}/>音源与账户</button></Row>
   </div>;
+}
+
+// 歌曲过渡: the next song is always buffered early; a crossfade also overlaps them.
+function CrossfadeRow() {
+  const [seconds, setSeconds] = useState(crossfadeSeconds);
+  useEffect(() => onCrossfadeChange(setSeconds), []);
+  return <Row title="歌曲过渡" hint={seconds ? `上一首结束前 ${seconds} 秒，下一首淡入，上一首淡出。` : '下一首会提前缓冲好，上一首结束时立刻接上。'}>
+    <select aria-label="歌曲过渡" value={seconds} onChange={(event) => setSeconds(setCrossfadeSeconds(event.target.value))}>{CROSSFADE_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
+  </Row>;
 }
 
 function FocusSection({ focus, openDock, player }) {
