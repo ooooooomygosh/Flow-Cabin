@@ -1,5 +1,6 @@
 import { playbackErrorMessage } from './player/playback-cache.mjs';
 import { rankForAutoplay, matchKey, AUTO_MATCH_ATTEMPTS } from './player/auto-match.mjs';
+import { toSimplified, toTraditional } from './player/hanzi.mjs';
 // A playlist's tracks each have their own artist and album; an album's share the record's.
 export const trackArtist = (item, index) => item?.trackDetails?.[index]?.artist || (item?.type === 'playlist' ? '' : item?.artist || '');
 export const trackAlbum = (item, index) => item?.trackDetails?.[index]?.album || (item?.type === 'playlist' ? '' : item?.title || '');
@@ -108,19 +109,42 @@ export async function findPlayableSource({ record, index, provider, request, pla
     const exact = exactTrack(record, index, source);
     if (exact && await attempt(exact)) return { candidate: exact, candidates: [] };
     if (!active()) return null;
-    try {
-      const result = await request(`/search?provider=${source}&query=${encodeURIComponent(`${trackArtist(record, index)} ${name}`)}`);
-      if (!active()) return null;
-      const found = Array.isArray(result.candidates) ? result.candidates : [];
-      candidates.push(...found);
-      for (const candidate of rankCandidates(found, record, index).slice(0, AUTO_MATCH_ATTEMPTS)) {
-        if (await attempt(candidate)) return { candidate, candidates: [] };
+    // Catalogs and libraries index one script: QQ / 网易云 mostly Simplified,
+    // a Taiwan Apple Music library Traditional. Try each written form until one
+    // yields a playable match; later searches only run when earlier ones failed.
+    const query = `${trackArtist(record, index)} ${name}`.trim(), seen = new Set();
+    for (const variant of [...new Set([toSimplified(query), query, toTraditional(query)])]) {
+      try {
+        const result = await request(`/search?provider=${source}&query=${encodeURIComponent(variant)}`);
         if (!active()) return null;
+        const found = (Array.isArray(result.candidates) ? result.candidates : []).filter((candidate) => !seen.has(`${candidate.provider}:${candidate.id}`) && seen.add(`${candidate.provider}:${candidate.id}`));
+        candidates.push(...found);
+        for (const candidate of rankCandidates(found, record, index).slice(0, AUTO_MATCH_ATTEMPTS)) {
+          if (await attempt(candidate)) return { candidate, candidates: [] };
+          if (!active()) return null;
+        }
+      } catch (error) {
+        if (!active() || error.name === 'AbortError') return null;
+        if (error.name === 'NotAllowedError') throw error;
+        lastError = error.message;
       }
-    } catch (error) {
-      if (!active() || error.name === 'AbortError') return null;
-      if (error.name === 'NotAllowedError') throw error;
-      lastError = error.message;
+    }
+    // 系统 Apple Music plays library songs. A song the library lacks is taken
+    // from Apple's catalogue (the record's own iTunes id, else a search) and
+    // opened in Music.app, where the listener presses play.
+    if (source === 'appleMusic') {
+      const detail = record?.trackDetails?.[index] || {};
+      const own = /^\d{1,12}$/.test(detail.providerId || '') && /itunes|apple/i.test(detail.source || '') ? { id: detail.providerId, provider: 'appleMusic', title: name, artist: trackArtist(record, index), album: trackAlbum(record, index) } : null;
+      try {
+        const found = own ? [own] : rankCandidates((await request(`/search?provider=appleMusic&scope=catalog&query=${encodeURIComponent(query)}`)).candidates || [], record, index);
+        if (!active()) return null;
+        if (!own) candidates.push(...found);
+        if (found[0] && await attempt(found[0])) return { candidate: found[0], candidates: [] };
+        if (!active()) return null;
+      } catch (error) {
+        if (!active() || error.name === 'AbortError') return null;
+        lastError = error.message;
+      }
     }
   }
   return { candidates, error: hadMatches ? `匹配的音源暂时不可播放。${lastError}` : lastError || (provider === 'local' ? '本地音乐里没有找到这首歌，请先在音源设置中添加文件夹。' : '未找到可播放的同版本音源，可切换音源或手动选择。') };
