@@ -30,7 +30,8 @@ function createMusicService({ directory, safeStorage, login, logout, upstream = 
     if (!response.ok) throw new Error(response.status === 401 || response.status === 403 ? 'Music Assistant 令牌无效或权限不足。' : 'Music Assistant 请求失败，请检查服务器与播放器。');
     const result = await response.json(); if (result?.error_code || result?.error) throw new Error('Music Assistant 无法执行此操作。'); return result?.result ?? result;
   }
-  async function search(provider, query) {
+  async function search(provider, query, scope = '') {
+    if (provider === 'appleMusic' && scope === 'catalog') { if (!appleMusic?.available) throw new Error('系统 Apple Music 仅支持 macOS。'); return (await appleMusic.catalog(query)).map((value) => candidate(value, 'appleMusic')).filter((v) => v.id && v.title); }
     const currentRevision = revision;
     const key = provider + ':' + query, old = cache.get(key); if (old && Date.now() - old.time < 60000) return old.items;
     let values;
@@ -142,7 +143,7 @@ function createMusicService({ directory, safeStorage, login, logout, upstream = 
       if (req.method === 'GET' && url.pathname === '/apple/state') { if (!appleMusic?.available) throw new Error('系统 Apple Music 仅支持 macOS。'); return json(res, await appleMusic.state()); }
       if (req.method === 'POST' && url.pathname === '/apple/control') { if (!appleMusic?.available) throw new Error('系统 Apple Music 仅支持 macOS。'); return json(res, await appleMusic.control(String((await body(req)).action || ''))); }
       if (req.method === 'POST' && url.pathname === '/open-local') { if (!localApps) throw new Error('本机音乐 App 打开功能不可用。'); return json(res, await localApps.open(await body(req))); }
-      if (req.method === 'GET' && url.pathname === '/search') return json(res, { candidates: await search(url.searchParams.get('provider'), String(url.searchParams.get('query') || '').slice(0, 300)) });
+      if (req.method === 'GET' && url.pathname === '/search') return json(res, { candidates: await search(url.searchParams.get('provider'), String(url.searchParams.get('query') || '').slice(0, 300), String(url.searchParams.get('scope') || '')) });
       if (req.method === 'GET' && url.pathname === '/playlists') return json(res, await guarded(() => playlists.list(String(url.searchParams.get('provider') || ''))));
       if (req.method === 'GET' && url.pathname === '/playlist') {
         const offset = Number(url.searchParams.get('offset') || 0);

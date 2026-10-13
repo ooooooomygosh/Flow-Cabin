@@ -48,7 +48,7 @@ export default function useRoomPlayback(record, trackIndex, provider, onNext, op
     const key = resolutionKey(provider, record, trackIndex);
     async function play(candidate, result) {
       if (!active()) return;
-      if (result.remote) { remote.current = candidate.provider; if (element.getAttribute('src')) resetAudio(element); update({ status: 'loading', remote: true, resolvedProvider: candidate.provider }); }
+      if (result.remote) { remote.current = candidate.provider; if (element.getAttribute('src')) resetAudio(element); update({ status: 'loading', remote: true, resolvedProvider: candidate.provider, notice: result.notice || '' }); }
       else {
         remote.current = false;
         update({ playing: false, status: 'loading', error: '', trial: result.trial, quality: result.quality, remote: false, resolvedProvider: candidate.provider, actualTrack: candidate.title });

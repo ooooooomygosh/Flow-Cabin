@@ -38,3 +38,22 @@ test('search candidates keep the album name (QQ returns it as a string)', () => 
   assert.equal(candidate({ mid: 'x', name: '晴天', album: '叶惠美' }, 'qq').album, '叶惠美');
   assert.equal(candidate({ id: 1, name: 'a', album: { name: 'B' } }, 'netease').album, 'B');
 });
+test('Apple Music: a song outside the library comes from the catalogue and opens in Music.app', async () => {
+  const opened = [], asked = [];
+  const fetch = async (url) => { asked.push(String(url)); return new Response(JSON.stringify({ results: [
+    { kind: 'song', trackId: 1440911001, trackName: '討厭紅樓夢', artistName: '陶喆', collectionName: '黑色柳丁', trackTimeMillis: 262000 },
+    { kind: 'music-video', trackId: 1, trackName: 'mv' }, { kind: 'song', trackId: 'x;rm', trackName: 'bad' }] }), { status: 200 }); };
+  const music = createAppleMusic({ platform: 'darwin', country: 'tw', fetch, openURL: async (url) => opened.push(url), execFileProcess: fakeExec(() => assert.fail('the catalogue never runs osascript')) });
+  const found = await music.catalog('陶喆 討厭紅樓夢');
+  assert.deepEqual(found, [{ id: '1440911001', provider: 'appleMusic', title: '討厭紅樓夢', artist: '陶喆', album: '黑色柳丁', duration: 262000 }]);
+  assert.equal(new URL(asked[0]).searchParams.get('country'), 'TW'); assert.equal(new URL(asked[0]).searchParams.get('entity'), 'song');
+  assert.equal(candidate(found[0], 'appleMusic').id, '1440911001');
+  const played = await music.play('1440911001');
+  assert.equal(played.remote, true); assert.equal(played.catalog, true); assert.match(played.notice, /不在你的「音乐」资料库/);
+  assert.deepEqual(opened, ['music://music.apple.com/tw/song/1440911001']);
+  await assert.rejects(music.play('1440911001; open /'), /ID 无效/);
+  const offline = createAppleMusic({ platform: 'darwin', fetch: async () => { throw new Error('offline'); } });
+  await assert.rejects(offline.catalog('x'), /无法连接 Apple Music 曲库/);
+  asked.length = 0; await createAppleMusic({ platform: 'darwin', country: '../x', fetch }).catalog('x');
+  assert.equal(new URL(asked[0]).searchParams.get('country'), 'US', 'an unusable region falls back to the US storefront');
+});

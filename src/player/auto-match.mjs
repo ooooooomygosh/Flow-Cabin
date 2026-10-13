@@ -6,9 +6,11 @@
 // MusicBrainz / Discogs often carry "Jay Chou" while QQ lists "周杰伦", or a
 // "(Remastered)" suffix, so every candidate scored 0, playback ended in an
 // error and the listener had to pick the very same candidate by hand.
-const norm = (value) => String(value || '').normalize('NFKC').toLowerCase().replace(/[\s\p{P}\p{S}]/gu, '');
+// Traditional and Simplified compare equal: 「討厭紅樓夢」 is 「讨厌红楼梦」.
+import { toSimplified } from './hanzi.mjs';
+const norm = (value) => toSimplified(String(value || '').normalize('NFKC')).toLowerCase().replace(/[\s\p{P}\p{S}]/gu, '');
 const VERSION = /live|remix|acoustic|instrumental|karaoke|demo|现场|伴奏|翻唱|混音|重混|不插电|纯音乐/g;
-const versions = (value) => (String(value || '').toLowerCase().match(VERSION) || []).sort().join('|');
+const versions = (value) => (toSimplified(String(value || '')).toLowerCase().match(VERSION) || []).sort().join('|');
 // "(Remastered 2011)", "- 2015 Remaster", "（电影《X》插曲）": same recording, decorated title.
 const bareTitle = (value) => norm(String(value || '')
   .replace(/[（(【\[][^）)】\]]*(remaster|version|edit|mono|stereo|deluxe|bonus|插曲|主题曲|片尾曲|片头曲|版)[^）)】\]]*[）)】\]]/gi, '')

@@ -125,3 +125,45 @@ test('fallback: superseded resolutions neither play nor update match memory', as
     play: async () => assert.fail('superseded resolution must not play') });
   assert.equal(result, null); assert.equal(memory.size, 0);
 });
+test('Traditional and Simplified titles are the same recording', async () => {
+  const { toSimplified, toTraditional, scriptVariants } = await import('./hanzi.mjs');
+  assert.equal(toSimplified('討厭紅樓夢 黑色柳丁 為什麼'), '讨厌红楼梦 黑色柳丁 为什么');
+  assert.equal(toTraditional('讨厌红楼梦 为什么'), '討厭紅樓夢 為什麼');
+  assert.deepEqual(scriptVariants('Jay Chou'), ['Jay Chou']);
+  const wanted = { title: '討厭紅樓夢', artist: '陶喆', album: '黑色柳丁', duration: 262000 };
+  const qq = { id: 'q', provider: 'qq', title: '讨厌红楼梦', artist: '陶喆', album: '黑色柳丁', duration: 262000 };
+  assert.ok(scoreCandidate(qq, wanted) >= AUTO_MATCH_THRESHOLD, 'the screenshot case: 討厭紅樓夢 → 讨厌红楼梦');
+  assert.equal(scoreCandidate({ ...qq, title: '讨厌红楼梦 (现场)' }, { ...wanted, title: '討厭紅樓夢 (現場)' }) >= AUTO_MATCH_THRESHOLD, true, 'a live take matches a live take across scripts');
+  assert.equal(scoreCandidate({ ...qq, title: '讨厌红楼梦 (现场)' }, wanted), 0, 'and is still never substituted for the studio one');
+});
+test('search tries Simplified first, then the written form, and stops once one plays', async () => {
+  const album = { id: 'tw', type: 'album', title: '黑色柳丁', artist: '陶喆', tracks: ['討厭紅樓夢'], trackDetails: [{ title: '討厭紅樓夢', lengthMillis: 262000, source: 'apple' }] };
+  const queries = [];
+  const found = await findPlayableSource({ record: album, index: 0, provider: 'qq', play: async () => {},
+    request: async (path, body) => {
+      if (path === '/resolve') return { audioPath: '/a' };
+      const query = new URL(path, 'http://x').searchParams.get('query'); queries.push(query);
+      return { candidates: query.includes('讨厌') ? [{ id: 'hit', provider: 'qq', title: '讨厌红楼梦', artist: '陶喆', album: '黑色柳丁', duration: 262000 }] : [] };
+    } });
+  assert.equal(found.candidate.id, 'hit'); assert.deepEqual(queries, ['陶喆 讨厌红楼梦']);
+  const misses = [];
+  const none = await findPlayableSource({ record: { ...album, trackDetails: [{ title: '討厭紅樓夢' }] }, index: 0, provider: 'ma', play: async () => {},
+    request: async (path) => { misses.push(new URL(path, 'http://x').searchParams.get('query')); return { candidates: [] }; } });
+  assert.deepEqual(misses, ['陶喆 讨厌红楼梦', '陶喆 討厭紅樓夢'], 'each written form once (Traditional = as written here)');
+  assert.match(none.error, /未找到/);
+});
+test('Apple Music: library first in each script, then the record\'s own catalogue song', async () => {
+  const album = { id: 'tw', type: 'album', title: '黑色柳丁', artist: '陶喆', tracks: ['討厭紅樓夢'], trackDetails: [{ title: '討厭紅樓夢', lengthMillis: 262000, source: 'iTunes Search', providerId: '1440911001' }] };
+  const calls = [];
+  const result = await findPlayableSource({ record: album, index: 0, provider: 'appleMusic', play: async () => {},
+    request: async (path, body) => { calls.push(path === '/resolve' ? `resolve:${body.id}` : new URL(path, 'http://x').searchParams.get('query')); return path === '/resolve' ? { remote: true, notice: 'opened' } : { candidates: [] }; } });
+  assert.equal(result.candidate.id, '1440911001');
+  assert.deepEqual(calls, ['陶喆 讨厌红楼梦', '陶喆 討厭紅樓夢', 'resolve:1440911001'], 'both library forms, then the catalogue song');
+  const library = await findPlayableSource({ record: album, index: 0, provider: 'appleMusic', play: async () => {},
+    request: async (path, body) => path === '/resolve' ? { remote: true, id: body.id } : { candidates: [{ id: 'ABCDEF0123456789', provider: 'appleMusic', title: '討厭紅樓夢', artist: '陶喆', album: '黑色柳丁', duration: 262000 }] } });
+  assert.equal(library.candidate.id, 'ABCDEF0123456789', 'a library copy is preferred: it plays without a click');
+  const manual = { ...album, trackDetails: [{ title: '討厭紅樓夢', lengthMillis: 262000 }] }, scopes = [];
+  const searched = await findPlayableSource({ record: manual, index: 0, provider: 'appleMusic', play: async () => {},
+    request: async (path) => { if (path === '/resolve') return { remote: true }; const url = new URL(path, 'http://x'); scopes.push(url.searchParams.get('scope')); return { candidates: url.searchParams.get('scope') === 'catalog' ? [{ id: '1440911001', provider: 'appleMusic', title: '讨厌红楼梦', artist: '陶喆', album: '黑色柳丁', duration: 262000 }] : [] }; } });
+  assert.equal(searched.candidate.id, '1440911001'); assert.deepEqual(scopes, [null, null, 'catalog']);
+});
