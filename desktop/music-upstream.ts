@@ -189,15 +189,17 @@ export async function searchQQSongs(query: string, limit = 8, options: QQSearchO
   const now = options.now || Date.now;
   for (const [step, index] of order.entries()) {
     if (step) await wait(step === full.length ? 700 : 250);
-    const delay = nextQQSearchAt - now();
-    if (delay > 0) await wait(delay);
-    nextQQSearchAt = now() + QQ_SEARCH_GAP_MS;
+    // The slot is reserved before waiting, so overlapping searches queue up
+    // one gap apart instead of all leaving when the same moment comes.
+    const slot = Math.max(now(), nextQQSearchAt);
+    nextQQSearchAt = slot + QQ_SEARCH_GAP_MS;
+    if (slot > now()) await wait(slot - now());
     try {
       const seen = new Set<string>();
       const songs = (await shapes[index].run(keyword, count)).map(mapQQSearchSong).filter((song) => /^[a-z\d]{14}$/i.test(song.mid) && song.name && !seen.has(song.mid) && seen.add(song.mid));
       if (index < full.length) preferredQQShape = index;
       return songs;
-    } catch (error) { lastError = error; if (error instanceof QQSearchError && error.code === 2001) nextQQSearchAt = now() + QQ_SEARCH_COOLDOWN_MS; }
+    } catch (error) { lastError = error; if (error instanceof QQSearchError && error.code === 2001) nextQQSearchAt = Math.max(nextQQSearchAt, now() + QQ_SEARCH_COOLDOWN_MS); }
   }
   const code = lastError instanceof QQSearchError ? lastError.code : 0;
   throw new Error(code > 0 ? `QQ 音乐搜索暂时不可用（${code}），稍后会自动重试。` : 'QQ 音乐搜索暂时连不上，请检查网络后重试。');

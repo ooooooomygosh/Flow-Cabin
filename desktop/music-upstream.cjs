@@ -1379,9 +1379,9 @@ async function searchQQSongs(query, limit = 8, options = {}) {
   const now = options.now || Date.now;
   for (const [step, index] of order.entries()) {
     if (step) await wait(step === full.length ? 700 : 250);
-    const delay = nextQQSearchAt - now();
-    if (delay > 0) await wait(delay);
-    nextQQSearchAt = now() + QQ_SEARCH_GAP_MS;
+    const slot = Math.max(now(), nextQQSearchAt);
+    nextQQSearchAt = slot + QQ_SEARCH_GAP_MS;
+    if (slot > now()) await wait(slot - now());
     try {
       const seen = /* @__PURE__ */ new Set();
       const songs = (await shapes[index].run(keyword, count)).map(mapQQSearchSong).filter((song) => /^[a-z\d]{14}$/i.test(song.mid) && song.name && !seen.has(song.mid) && seen.add(song.mid));
@@ -1389,7 +1389,7 @@ async function searchQQSongs(query, limit = 8, options = {}) {
       return songs;
     } catch (error) {
       lastError = error;
-      if (error instanceof QQSearchError && error.code === 2001) nextQQSearchAt = now() + QQ_SEARCH_COOLDOWN_MS;
+      if (error instanceof QQSearchError && error.code === 2001) nextQQSearchAt = Math.max(nextQQSearchAt, now() + QQ_SEARCH_COOLDOWN_MS);
     }
   }
   const code = lastError instanceof QQSearchError ? lastError.code : 0;

@@ -59,7 +59,14 @@ export default function useRoomPlayback(record, trackIndex, provider, onNext, op
   // Tracks whose early match failed: the queue steps over them for a while.
   const blocked = useRef(new Map()), [blockedVersion, setBlockedVersion] = useState(0), prefetchFailures = useRef(0);
   const isBlocked = (item, index) => { const key = resolutionKey(provider, item, index), at = key && blocked.current.get(key); return Boolean(at && Date.now() - at < BLOCK_MS); };
-  const setBlocked = (key, value) => { if (!key || Boolean(blocked.current.has(key)) === value) return; if (value) blocked.current.set(key, Date.now()); else blocked.current.delete(key); setBlockedVersion((count) => count + 1); };
+  // An expired entry counts as absent, so a track that fails again is blocked afresh.
+  const setBlocked = (key, value) => {
+    if (!key) return;
+    const at = blocked.current.get(key), fresh = Boolean(at && Date.now() - at < BLOCK_MS);
+    if (value === fresh) return;
+    if (value) blocked.current.set(key, Date.now()); else blocked.current.delete(key);
+    setBlockedVersion((count) => count + 1);
+  };
   const [accountEpoch, setAccountEpoch] = useState(0);
   const skips = useRef(0), resumeAt = useRef(0), recovered = useRef(''), prefetched = useRef('');
   const update = (value) => setState((old) => ({ ...old, ...value }));

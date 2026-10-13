@@ -23,7 +23,7 @@ export function usePlayerQueue({ items, record, trackIndex, setTrackIndex, loadA
   // What plays after this track is decided once (shuffle included), so the deck
   // can match that exact track early and the transition is instant.
   // Tracks whose early match failed are stepped over (see useRoomPlayback).
-  const upcoming = useMemo(() => nextPlayableStep({ trackIndex, trackCount, queue, blocked: (index) => Boolean(playback?.isBlocked?.(record, index)) }), [record?.id, trackIndex, trackCount, queue.ids.join('|'), queue.repeat, queue.shuffle, playback?.blockedVersion]);
+  const upcoming = useMemo(() => nextPlayableStep({ trackIndex, trackCount, queue, blocked: (index) => Boolean(playback?.isBlocked?.(record, index)) }), [record?.id, trackIndex, trackCount, queue.ids.join('|'), queue.repeat, queue.shuffle, provider, playback?.blockedVersion]);
   const go = (step) => {
     if (step.type === 'track') setTrackIndex(step.index);
     else if (step.type === 'restart') { if (audible) playback?.restart(); }

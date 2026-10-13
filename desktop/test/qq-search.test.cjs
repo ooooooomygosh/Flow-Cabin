@@ -61,3 +61,13 @@ test('QQ search: back-to-back searches are paced, and a refusal makes the next o
   assert.deepEqual(waits, [250, 950], 'after a 2001 the next request waits 1.2 s in all');
   upstream.resetQQSearchPreference();
 });
+
+test('QQ search: overlapping searches take separate slots, one gap apart', async () => {
+  upstream.resetQQSearchPreference();
+  let time = 1000; const sent = [];
+  const options = { now: () => time, wait: (ms) => new Promise((resolve) => setTimeout(() => { time = Math.max(time, sentAt + ms); resolve(); }, 0)), fetchText: async (url, _init, body) => { sent.push(time); return answer(form(url, body), 0, [song('002ZcDrY3quHI3', 'x')]); } };
+  const sentAt = time;
+  await Promise.all([upstream.searchQQSongs('a', 20, options), upstream.searchQQSongs('b', 20, options), upstream.searchQQSongs('c', 20, options)]);
+  assert.deepEqual(sent, [1000, 1300, 1600], 'three searches started together leave 0.3 s apart');
+  upstream.resetQQSearchPreference();
+});
