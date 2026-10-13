@@ -2,7 +2,8 @@
 const { test } = require('node:test'), assert = require('node:assert/strict');
 const upstream = require('../music-upstream.cjs');
 const song = (mid, name) => ({ mid, name, singer: [{ name: '陶喆' }], album: { name: '黑色柳丁', mid: '001mvhPh0qevad' }, file: { media_mid: mid }, interval: 204, pay: { pay_play: 0 } });
-const form = (url, body) => body ? (Object.keys(JSON.parse(body)).includes('req') ? 'client' : 'desktop') : 'smartbox';
+const form = (url, body) => body ? (Object.keys(JSON.parse(body)).includes('req') ? 'client' : Object.keys(JSON.parse(body)).includes('songinfo') ? 'detail' : 'desktop') : 'smartbox';
+const detail = (mid) => JSON.stringify({ code: 0, songinfo: { code: 0, data: { track_info: song(mid, '月亮代表谁的心') } } });
 const answer = (which, code, list = []) => which === 'client' ? JSON.stringify({ code: 0, req: { code, data: { body: { song: { list } } } } }) : JSON.stringify({ code: 0, 'music.search.SearchCgiService': { code, data: { body: { song: { list } } } } });
 let clock = 0; const later = () => (clock += 10000);
 const smartbox = JSON.stringify({ code: 0, data: { song: { itemlist: [{ mid: '002ABCdef12345', name: '月亮代表谁的心', singer: '陶喆' }] } } });
@@ -24,10 +25,15 @@ test('QQ search: a 2001 refusal moves to the other full form, and that form is t
 test('QQ search: both full forms get a second try after a pause; suggestions come last and are never preferred', async () => {
   upstream.resetQQSearchPreference();
   const calls = [], waits = [];
-  const refusing = async (url, _init, body) => { const which = form(url, body); calls.push(which); return which === 'smartbox' ? smartbox : answer(which, 2001); };
+  const refusing = async (url, _init, body) => { const which = form(url, body); calls.push(which); return which === 'smartbox' ? smartbox : which === 'detail' ? detail(JSON.parse(body).songinfo.param.song_mid) : answer(which, 2001); };
   const songs = await upstream.searchQQSongs('月亮代表谁的心', 20, { fetchText: refusing, wait: async (ms) => { waits.push(ms); }, now: later });
-  assert.deepEqual(calls, ['desktop', 'client', 'desktop', 'client', 'smartbox']); assert.deepEqual(waits, [250, 700, 250, 250]);
-  assert.equal(songs[0].mid, '002ABCdef12345'); assert.equal(songs[0].artist, '陶喆'); assert.equal(songs[0].mediaMid, '');
+  assert.deepEqual(calls, ['desktop', 'client', 'desktop', 'client', 'smartbox', 'detail']); assert.deepEqual(waits, [250, 700, 250, 250]);
+  assert.equal(songs[0].mid, '002ABCdef12345'); assert.equal(songs[0].artist, '陶喆');
+  assert.deepEqual([songs[0].album, songs[0].duration, songs[0].mediaMid], ['黑色柳丁', 204000, '002ABCdef12345'], 'a suggestion is filled in from the song detail');
+  // Detail unavailable: the suggestion is still used, with what it carries.
+  upstream.resetQQSearchPreference();
+  const bare = await upstream.searchQQSongs('月亮代表谁的心', 20, { fetchText: async (url, _init, body) => form(url, body) === 'smartbox' ? smartbox : form(url, body) === 'detail' ? JSON.stringify({ code: 500 }) : answer(form(url, body), 2001), wait: async () => {}, now: later });
+  assert.deepEqual([bare[0].mid, bare[0].album, bare[0].mediaMid], ['002ABCdef12345', '', '']);
   calls.length = 0;
   await upstream.searchQQSongs('x', 20, { fetchText: async (url, init, body) => { calls.push(form(url, body)); return answer(form(url, body), 0, [song('002ZcDrY3quHI3', 'x')]); }, wait: async () => {}, now: later });
   assert.deepEqual(calls, ['desktop'], 'after a suggestions answer the full forms still lead');

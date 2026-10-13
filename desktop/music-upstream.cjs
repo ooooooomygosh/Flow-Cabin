@@ -1345,15 +1345,26 @@ function qqSearchShapes(options = {}) {
     { name: "desktop", run: async (query, limit) => block(await post({ [QQ_SEARCH_MODULE]: { module: QQ_SEARCH_MODULE, method: "DoSearchForQQMusicDesktop", param: { search_type: 0, query, page_num: 1, num_per_page: limit } } }), QQ_SEARCH_MODULE) },
     // The PC client's form (Listen1 and others): comm + req, grouped results.
     { name: "client", run: async (query, limit) => block(await post({ comm: { ct: "19", cv: "1859", uin: "0" }, req: { module: QQ_SEARCH_MODULE, method: "DoSearchForQQMusicDesktop", param: { grp: 1, num_per_page: limit, page_num: 1, query, search_type: 0 } } }), "req") },
-    // The search box's suggestions: song ids and names only; the media id is looked up when played.
+    // The search box's suggestions: song ids, names and singers. Each is filled
+    // in from the song's detail (album, length, media id), which QQ keeps
+    // answering while it refuses searches, so the ranking can still check them.
     { name: "smartbox", run: async (query, limit) => {
       const json = await get("https://c.y.qq.com/splcloud/fcgi-bin/smartbox_new.fcg", { key: query, format: "json", inCharset: "utf-8", outCharset: "utf-8", platform: "yqq.json", is_xml: 0 });
       const code = Number(json.code || 0);
       if (code !== 0) throw new QQSearchError(code);
-      return asArr(asObj(asObj(json.data).song).itemlist).slice(0, limit).map((item) => {
-        const value = asObj(item);
-        return { mid: value.mid, name: value.name, singer: asStr(value.singer).split(/\s*[/、]\s*/).filter(Boolean).map((name) => ({ name })) };
-      });
+      const items = asArr(asObj(asObj(json.data).song).itemlist).slice(0, Math.min(limit, 5)).map(asObj);
+      const songs = [];
+      for (const item of items) {
+        const basic = { mid: item.mid, name: item.name, singer: asStr(item.singer).split(/\s*[/、]\s*/).filter(Boolean).map((name) => ({ name })) };
+        try {
+          const detail = await post({ comm: { ct: 24, cv: 0 }, songinfo: { module: "music.pf_song_detail_svr", method: "get_song_detail_yqq", param: { song_mid: asStr(item.mid) } } });
+          const track = asObj(asObj(asObj(detail.songinfo).data).track_info);
+          songs.push(asStr(track.mid) === asStr(item.mid) ? track : basic);
+        } catch {
+          songs.push(basic);
+        }
+      }
+      return songs;
     } }
   ];
 }
