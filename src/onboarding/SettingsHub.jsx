@@ -19,9 +19,25 @@ const PROVIDER_LABEL = { visual: '仅动画展示', auto: '自动匹配', qq: 'Q
 // One place for every setting. Old shortcuts (布置小屋, 音源设置, 收藏与备份,
 // tray / menu commands) open this hub on their section.
 export default function SettingsHub({ section = 'music', setSection, close, env, player, desktop, provider, useSource, openMusicSettings, look, petId, onRoomChange, reduceMotion, error, focus, openDock, pet, openBackup, openWall, restartOnboarding }) {
+  const [compact, setCompact] = useState(() => window.matchMedia('(max-width: 700px)').matches);
+  useEffect(() => {
+    const query = window.matchMedia('(max-width: 700px)'), change = () => setCompact(query.matches);
+    change(); query.addEventListener('change', change);
+    return () => query.removeEventListener('change', change);
+  }, []);
+  const navigateTabs = event => {
+    if (event.altKey || event.ctrlKey || event.metaKey) return;
+    const index = HUB_SECTIONS.findIndex(item => item.id === section), count = HUB_SECTIONS.length;
+    const next = ['ArrowDown', 'ArrowRight'].includes(event.key) ? (index + 1) % count
+      : ['ArrowUp', 'ArrowLeft'].includes(event.key) ? (index + count - 1) % count
+      : event.key === 'Home' ? 0 : event.key === 'End' ? count - 1 : -1;
+    if (next < 0) return;
+    event.preventDefault(); setSection(HUB_SECTIONS[next].id);
+    document.getElementById(`hub-tab-${HUB_SECTIONS[next].id}`)?.focus();
+  };
   return <Dialog title="设置" label="设置" close={close} className="settings-hub room-personalization" wide>
     <div className="settings-hub-layout">
-      <nav className="settings-hub-nav" role="tablist" aria-label="设置分区">{HUB_SECTIONS.map((item) => <button type="button" role="tab" key={item.id} id={`hub-tab-${item.id}`} aria-selected={section === item.id} aria-controls="hub-panel" onClick={() => setSection(item.id)}>{item.label}</button>)}</nav>
+      <nav className="settings-hub-nav" role="tablist" aria-label="设置分区" aria-orientation={compact ? 'horizontal' : 'vertical'}>{HUB_SECTIONS.map((item) => <button type="button" role="tab" key={item.id} id={`hub-tab-${item.id}`} aria-selected={section === item.id} aria-controls="hub-panel" tabIndex={section === item.id ? 0 : -1} onKeyDown={navigateTabs} onClick={() => setSection(item.id)}>{item.label}</button>)}</nav>
       <section id="hub-panel" role="tabpanel" aria-labelledby={`hub-tab-${section}`} className="settings-hub-panel">
         {section === 'music' && <MusicSection env={env} player={player} provider={provider} useSource={useSource} openMusicSettings={openMusicSettings}/>}
         {section === 'room' && <><p className="personalization-intro">选一个今天想待着的地方，再找一位安静的伙伴。换装不会打断音乐和专注。</p><RoomPickers look={look} petId={petId} onChange={onRoomChange} reduceMotion={reduceMotion}/>{error && <p role="alert" className="record-error">{error}</p>}</>}

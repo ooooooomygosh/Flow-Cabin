@@ -121,3 +121,17 @@ test('a full 5000-card collection cannot create a new word-book state or rewrite
   assert.equal(state.cards.length, 5000);
   for (let i=0;i<10;i++) assert.equal(nextBookCard(state, WORD_BOOKS[0].id, T0), state);
 });
+
+test('study creation limits return the original state so forms can preserve rejected drafts', () => {
+  const state = normalizeStudy({
+    decks: Array.from({ length: 40 }, (_, i) => ({ id: `deck-${i}`, name: `Deck ${i}`, createdAt: T0 + i })),
+    countdowns: Array.from({ length: 12 }, (_, i) => ({ id: `exam-${i}`, title: `Exam ${i}`, date: '2027-01-15' }))
+  });
+  const snapshot = structuredClone(state);
+  assert.equal(addDeck(state, '41st deck', T0), state);
+  assert.equal(addCountdown(state, '13th goal', '2027-01-16'), state);
+  assert.deepEqual(state, snapshot);
+  const empty = normalizeStudy();
+  assert.equal(addDeck(empty, '   ', T0), empty);
+  assert.equal(addCountdown(empty, 'Exam', 'not-a-date'), empty);
+});

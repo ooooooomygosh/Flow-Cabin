@@ -1,5 +1,5 @@
 /* 学习 · flashcards and countdowns inside the focus dock. */
-.study-panel, .study-review, .study-editor { display: grid; gap: 10px; outline: none; }
+.study-panel, .study-review, .study-editor { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; gap: 10px; outline: none; }
 .study-summary { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--px-ink-dim); }
 .study-summary b { color: var(--px-accent-hi); font-weight: 600; }
 .study-decks { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }

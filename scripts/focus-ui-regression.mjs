@@ -25,7 +25,7 @@ try {
   for (let i=0;;i++) { if (server.exitCode!==null || i>150) throw new Error(log); if (hasViteLocalOrigin(log,origin) && await fetch(origin).then(r=>r.ok,()=>false)) break; await new Promise(r=>setTimeout(r,100)); }
   browser = await chromium.launch({executablePath:process.env.BROWSER_EXECUTABLE || (process.env.CI?chromium.executablePath():'/usr/bin/chromium'),headless:true,args:['--no-sandbox','--mute-audio']});
   const run = async (name,test,{firstVisit=false,collection}={}) => {
-    if (process.env.FOCUS_FILTER && !name.includes(process.env.FOCUS_FILTER)) return;
+    if (process.env.FOCUS_FILTER && !process.env.FOCUS_FILTER.split(',').some(filter=>name.includes(filter))) return;
     const context = await browser.newContext({viewport:{width:1440,height:900},locale:'zh-CN',reducedMotion:'reduce'});
     await context.addInitScript(({key,firstVisit}) => {
       if (location.origin==='null') return;
@@ -150,5 +150,68 @@ try {
     assert.match(await page.locator('.room-empty').innerText(),/正在整理/);await screenshot(page,'collection-retrying');await pending.fulfill({json:{items}});
     await page.locator('.room-record').first().waitFor();assert.equal(await page.locator('.app-error').count(),0);await screenshot(page,'collection-retry-success');
   },{firstVisit:true,collection:route=>++calls===1?route.fulfill({status:503,json:{error:'模拟收藏读取失败'}}):(pending=route,undefined)});
+  const STUDY_KEY = 'album-circle-study-v1:local-owner';
+  const studyState = page => page.evaluate(key => JSON.parse(localStorage.getItem(key) || '{}'), STUDY_KEY);
+  const failStudyStorage = (page, fail) => page.evaluate(fail => {
+    window.__failStudyStorage = fail;
+    if (window.__studyStorageOriginal) return;
+    window.__studyStorageOriginal = Storage.prototype.setItem;
+    Storage.prototype.setItem = function(key,value) { if(window.__failStudyStorage && key==='album-circle-study-v1:local-owner') throw new DOMException('Synthetic quota failure','QuotaExceededError'); return window.__studyStorageOriginal.call(this,key,value); };
+  },fail);
+  const seedStudy = async (page, state) => { await page.evaluate(({key,state}) => localStorage.setItem(key,JSON.stringify(state)),{key:STUDY_KEY,state});await page.reload();await openFocus(page,'学习'); };
+  const assertStudyError = async page => { const alert=page.locator('.focus-dock [role=alert]');await alert.waitFor();assert.match(await alert.innerText(),/无法保存|上限/); };
+  await run('productivity-study-layout-stays-within-dock',async page=>{
+    await openFocus(page,'学习');
+    for(const [width,height] of [[1440,900],[960,600],[640,600]]) {
+      await page.setViewportSize({width,height});await page.getByLabel('新卡组名称').scrollIntoViewIfNeeded();
+      const layout=await page.locator('.focus-dock-body').evaluate(body=>{const r=body.getBoundingClientRect();return {width:body.clientWidth,scrollWidth:body.scrollWidth,scrollLeft:body.scrollLeft,overflow:[...body.querySelectorAll('*')].map(e=>({tag:e.tagName,cls:e.className,left:e.getBoundingClientRect().left,right:e.getBoundingClientRect().right})).filter(e=>e.left<r.left||e.right>r.right).slice(0,10)};});
+      await page.screenshot({path:path.join(output,`study-layout-${width}x${height}.png`),animations:'disabled'});assert.ok(layout.scrollWidth<=layout.width+1,JSON.stringify(layout));assert.equal(layout.scrollLeft,0);
+    }
+  });
+  await run('productivity-deck-draft-survives-save-failure',async page=>{
+    await openFocus(page,'学习');await failStudyStorage(page,true);await page.getByLabel('新卡组名称').fill('高数复习草稿');await page.locator('.study-new-deck button').click();
+    assert.equal((await studyState(page)).decks?.length||0,0);await assertStudyError(page);assert.equal(await page.getByLabel('新卡组名称').inputValue(),'高数复习草稿');await screenshot(page,'study-deck-unsaved');
+    await failStudyStorage(page,false);await page.locator('.study-new-deck button').click();assert.equal(await page.getByLabel('新卡组名称').inputValue(),'');await page.reload();await openFocus(page,'学习');assert.equal((await studyState(page)).decks.length,1);assert.equal((await studyState(page)).decks[0].name,'高数复习草稿');
+  });
+  await run('productivity-countdown-draft-survives-save-failure',async page=>{
+    await openFocus(page,'学习');await failStudyStorage(page,true);await page.getByLabel('倒计时名称').fill('期末考试');await page.getByLabel('倒计时日期').fill('2027-01-15');await page.getByRole('button',{name:'添加倒计时',exact:true}).click();
+    assert.equal((await studyState(page)).countdowns?.length||0,0);await assertStudyError(page);assert.equal(await page.getByLabel('倒计时名称').inputValue(),'期末考试');assert.equal(await page.getByLabel('倒计时日期').inputValue(),'2027-01-15');await screenshot(page,'study-countdown-unsaved');
+    await failStudyStorage(page,false);await page.getByRole('button',{name:'添加倒计时',exact:true}).click();await page.reload();await openFocus(page,'学习');assert.equal((await studyState(page)).countdowns.length,1);assert.equal((await studyState(page)).countdowns[0].date,'2027-01-15');
+  });
+  await run('productivity-limits-keep-drafts-and-explain',async page=>{
+    await seedStudy(page,{decks:Array.from({length:40},(_,i)=>({id:`d${i}`,name:`已有卡组${i}`,createdAt:i+1})),countdowns:Array.from({length:12},(_,i)=>({id:`c${i}`,title:`已有计划${i}`,date:'2027-01-15'}))});
+    await page.getByLabel('新卡组名称').fill('第41组草稿');await page.locator('.study-new-deck button').click();assert.equal(await page.getByLabel('新卡组名称').inputValue(),'第41组草稿');await assertStudyError(page);assert.equal((await studyState(page)).decks.length,40);await screenshot(page,'study-deck-limit');
+    await page.getByLabel('倒计时名称').fill('第13个计划');await page.getByLabel('倒计时日期').fill('2027-01-16');await page.getByRole('button',{name:'添加倒计时',exact:true}).click();assert.equal(await page.getByLabel('倒计时名称').inputValue(),'第13个计划');assert.equal((await studyState(page)).countdowns.length,12);await assertStudyError(page);await screenshot(page,'study-countdown-limit');
+  });
+  await run('productivity-cards-save-edit-and-cancel',async page=>{
+    await seedStudy(page,{decks:[{id:'qa-deck',name:'测试卡组',createdAt:1}]});await page.locator('.study-deck-edit').click();await failStudyStorage(page,true);await page.getByLabel('新卡片',{exact:true}).fill('alpha - 第一\nbeta - 第二');await page.getByRole('button',{name:'添加 2 张',exact:true}).click();
+    assert.equal(await page.getByLabel('新卡片',{exact:true}).inputValue(),'alpha - 第一\nbeta - 第二');await assertStudyError(page);assert.doesNotMatch(await page.locator('.study-add').innerText(),/没有新卡片|添加了/,'storage failure must not claim duplicate input or success');await screenshot(page,'study-card-unsaved');
+    await failStudyStorage(page,false);await page.getByRole('button',{name:'添加 2 张',exact:true}).click();assert.equal((await studyState(page)).cards.length,2);await page.getByRole('button',{name:'编辑卡片 alpha',exact:true}).click();await page.getByLabel('编辑卡片背面').fill('编辑后的背面');await failStudyStorage(page,true);await page.getByRole('button',{name:'保存卡片',exact:true}).click();assert.equal(await page.getByLabel('编辑卡片背面').inputValue(),'编辑后的背面');assert.equal((await studyState(page)).cards.find(x=>x.front==='alpha').back,'第一');
+    await failStudyStorage(page,false);await page.getByRole('button',{name:'保存卡片',exact:true}).click();assert.equal((await studyState(page)).cards.find(x=>x.front==='alpha').back,'编辑后的背面');await page.getByRole('button',{name:'删除卡组',exact:true}).click();await page.getByRole('button',{name:'取消',exact:true}).click();assert.equal((await studyState(page)).decks.length,1);await screenshot(page,'study-card-edit-recovered');
+  });
+  await run('productivity-word-import-failure-does-not-claim-success',async page=>{
+    await seedStudy(page,{decks:[{id:'qa-import',name:'导入测试',createdAt:1}]});await page.locator('.study-deck-edit').click();await page.locator('.study-import summary').click();
+    const file={name:'synthetic-words.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify([{front:'window',back:'窗户'},{front:'garden',back:'花园'}]))};
+    await page.getByLabel('选择词书文件').setInputFiles(file);await page.getByRole('button',{name:'确认追加 2 张',exact:true}).waitFor();await failStudyStorage(page,true);await page.getByRole('button',{name:'确认追加 2 张',exact:true}).click();
+    await assertStudyError(page);assert.doesNotMatch(await page.locator('.study-import').innerText(),/已追加/);assert.equal((await studyState(page)).cards?.length||0,0);assert.equal(await page.locator('.study-import-preview li').count(),2);await screenshot(page,'study-word-import-unsaved');
+    await failStudyStorage(page,false);await page.getByRole('button',{name:'确认追加 2 张',exact:true}).click();assert.equal((await studyState(page)).cards.length,2);assert.match(await page.locator('.study-import').innerText(),/已追加 2/);
+    await page.getByLabel('选择词书文件').setInputFiles(file);await page.getByRole('button',{name:'确认追加 0 张',exact:true}).waitFor();assert.equal(await page.getByRole('button',{name:'确认追加 0 张',exact:true}).isDisabled(),true);assert.equal((await studyState(page)).cards.length,2);await screenshot(page,'study-word-import-duplicates');
+  });
+  await run('productivity-review-failure-keeps-card-and-keyboard',async page=>{
+    await seedStudy(page,{decks:[{id:'qa-review',name:'复习测试',createdAt:1}],cards:[{id:'qa-card',deckId:'qa-review',front:'orbit',back:'轨道',createdAt:1,memory:null}]});await page.locator('.study-deck-open').click();await page.locator('.study-review').focus();await page.keyboard.press('Space');assert.equal(await page.getByRole('button',{name:'卡片背面',exact:true}).count(),1);await failStudyStorage(page,true);await page.keyboard.press('3');await assertStudyError(page);assert.equal((await studyState(page)).cards[0].memory,null);assert.equal(await page.getByRole('button',{name:'卡片背面',exact:true}).count(),1);await screenshot(page,'study-review-unsaved');
+    await failStudyStorage(page,false);await page.locator('.study-review').focus();await page.keyboard.press('3');assert.equal((await studyState(page)).cards[0].memory.reps,1);await page.keyboard.press('Escape');assert.equal(await page.locator('.study-panel').count(),1);assert.equal(await page.locator('.focus-dock').count(),1);await screenshot(page,'study-review-returned');
+  });
+  await run('productivity-settings-keyboard-navigation',async page=>{
+    await page.getByRole('button',{name:'设置',exact:true}).click();const nav=page.getByRole('tablist',{name:'设置分区',exact:true});await nav.getByRole('tab',{name:'音源',exact:true}).focus();await page.keyboard.press('ArrowDown');
+    assert.equal(await nav.getByRole('tab',{name:'房间与桌宠',exact:true}).getAttribute('aria-selected'),'true');assert.equal(await page.evaluate(()=>document.activeElement?.id),'hub-tab-room');assert.equal(await nav.locator('[tabindex="0"]').count(),1);await screenshot(page,'settings-keyboard-room');
+    await page.keyboard.press('End');assert.equal(await page.evaluate(()=>document.activeElement?.id),'hub-tab-about');await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>document.activeElement?.id),'hub-tab-music');await page.keyboard.press('ArrowLeft');assert.equal(await page.evaluate(()=>document.activeElement?.id),'hub-tab-about');await page.keyboard.press('Home');assert.equal(await page.evaluate(()=>document.activeElement?.id),'hub-tab-music');
+    await page.setViewportSize({width:640,height:600});await page.waitForFunction(()=>document.querySelector('[aria-label="设置分区"]')?.getAttribute('aria-orientation')==='horizontal');await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>document.activeElement?.id),'hub-tab-room');await page.screenshot({path:path.join(output,'settings-keyboard-640x600.png'),animations:'disabled'});await page.keyboard.press('Home');
+    await page.keyboard.press('Tab');assert.equal(await page.locator('#hub-panel').evaluate(e=>e.contains(document.activeElement)),true);await page.keyboard.press('Escape');assert.equal(await page.getByRole('dialog',{name:'设置',exact:true}).count(),0);assert.equal(await page.getByRole('button',{name:'设置',exact:true}).evaluate(e=>e===document.activeElement),true);
+  });
+  await run('productivity-settings-sections-and-shortcut-return',async page=>{
+    await openFocus(page,'随手记');await page.getByLabel('随手记内容').fill('设置面板往返保留');await page.getByRole('button',{name:'设置',exact:true}).click();
+    for(const [index,name] of ['音源','房间与桌宠','专注工具','桌面','数据与备份','关于'].entries()) { await page.getByRole('tablist',{name:'设置分区',exact:true}).getByRole('tab',{name,exact:true}).click();await screenshot(page,`settings-section-${index}`);if(name==='桌面')assert.equal(await page.locator('.hub-row-actions .segmented button').evaluateAll(buttons=>buttons.every(button=>{const range=document.createRange();range.selectNodeContents(button);return range.getClientRects().length===1;})),true,'performance option labels stay on one line'); }
+    await page.getByRole('tablist',{name:'设置分区',exact:true}).getByRole('tab',{name:'专注工具',exact:true}).click();await page.getByRole('button',{name:'打开学习',exact:true}).click();assert.equal(await page.getByRole('dialog',{name:'设置',exact:true}).count(),0);assert.equal(await page.locator('.study-panel').count(),1);await openFocus(page,'随手记');assert.equal(await page.getByLabel('随手记内容').inputValue(),'设置面板往返保留');await screenshot(page,'settings-shortcut-restored');
+  });
   assert.deepEqual(report.pageErrors,[]);assert.deepEqual(report.unexpectedRequests,[]);if(report.checks.some(x=>!x.passed))process.exitCode=1;
 }finally{await fs.writeFile(path.join(output,'report.json'),JSON.stringify(report,null,2));await browser?.close();server?.kill();}

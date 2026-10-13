@@ -16,7 +16,12 @@ export function StudyProvider({ userId, children }) {
     try { localStorage.setItem(key, raw); setError(''); } catch { setError('无法保存学习记录，请检查存储空间。'); return false; }
     current.current = value; setState(value); return true;
   };
-  const apply = (change) => { const result = change(current.current); const saved = commit(result?.state ?? result); return saved ? result : { ...result, added: 0 }; };
+  // Callers only clear drafts after the change was actually persisted.
+  const apply = (change, unchangedError = '') => {
+    const previous = current.current, result = change(previous), next = result?.state ?? result;
+    if (next === previous) { if (unchangedError) setError(unchangedError); return false; }
+    return commit(next) ? result : false;
+  };
   useEffect(() => {
     const sync = (event) => { if (event.key === key) { const next = read(); current.current = next; setState(next); } };
     window.addEventListener('storage', sync); return () => window.removeEventListener('storage', sync);
@@ -25,15 +30,18 @@ export function StudyProvider({ userId, children }) {
     state, error,
     openBook: (id) => { const next = openWordBook(current.current, id); return next === current.current ? next.decks.some(deck => deck.id === id) : commit(next); },
     nextBookCard: (id) => { const next = nextBookCard(current.current, id); return next !== current.current && commit(next); },
-    addDeck: (name) => apply((s) => model.addDeck(s, name)),
+    addDeck: (name) => Boolean(apply((s) => model.addDeck(s, name), current.current.decks.length >= model.LIMITS.decks ? `卡组已达 ${model.LIMITS.decks} 组上限，请先整理不用的卡组。` : '请填写卡组名称。')),
     renameDeck: (id, name) => apply((s) => model.renameDeck(s, id, name)),
     removeDeck: (id) => commit(model.removeDeck(current.current, id)),
-    addCards: (deckId, input) => apply((s) => model.addCards(s, deckId, Array.isArray(input) ? input : model.parseCards(input))).added || 0, // 0 when the save failed: the text stays
+    addCards: (deckId, input) => {
+      const result = apply((s) => model.addCards(s, deckId, Array.isArray(input) ? input : model.parseCards(input)));
+      return result === false ? null : result.added || 0; // null = save failed, 0 = no new cards
+    },
     updateCard: (id, change) => commit(model.updateCard(current.current, id, change)),
     removeCard: (id) => commit(model.removeCard(current.current, id)),
     review: (id, rating) => commit(model.review(current.current, id, rating, Date.now())),
     setNewPerDay: (count) => apply((s) => ({ ...s, newPerDay: count })),
-    addCountdown: (title, date) => apply((s) => model.addCountdown(s, title, date)),
+    addCountdown: (title, date) => Boolean(apply((s) => model.addCountdown(s, title, date), current.current.countdowns.length >= model.LIMITS.countdowns ? `倒计时已达 ${model.LIMITS.countdowns} 个上限，请先整理已结束的倒计时。` : '请填写倒计时名称和有效日期。')),
     removeCountdown: (id) => apply((s) => model.removeCountdown(s, id)),
     replace: (next) => commit(next)
   };

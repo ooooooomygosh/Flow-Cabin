@@ -64,7 +64,8 @@ html[data-desktop-reduce-motion=true] :is(.onboarding-sources,.onboarding-scenes
 .settings-hub-nav button:hover{color:var(--ob-ink)}
 .settings-hub-nav button[aria-selected=true]{color:var(--ob-ink);background:var(--ob-well);border-color:var(--ob-accent)}
 .settings-hub-panel{min-width:0}
-.hub-rows{display:grid}.hub-row-actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
+.hub-rows{display:grid}.hub-row-actions{display:flex;flex-shrink:0;max-width:100%;flex-wrap:wrap;gap:8px;justify-content:flex-end}
+.hub-row-actions .segmented button{white-space:nowrap}
 .hub-current{font-size:13px;color:var(--ob-dim);margin:0 0 12px}.hub-current strong{color:var(--ob-ink)}
 .hub-toggle{display:inline-flex;align-items:center;gap:8px;font-size:12px}.hub-toggle input{width:18px;height:18px;accent-color:var(--ob-accent)}
 .hub-row select{padding:6px 8px;background:var(--px-bg,#24170d);color:var(--ob-ink);border:2px solid var(--ob-edge)}
