@@ -150,7 +150,8 @@ export default function useRoomPlayback(record, trackIndex, provider, onNext, op
         if (!disposed && sequence.current === current) {
           const handoff = appleHandoff.current;
           if (provider === 'appleMusic' && handoff) {
-            handoff.bound = bindAppleHandoff(handoff.target, result);
+            handoff.bound = bindAppleHandoff(handoff.target, result, handoff.identity);
+            if (handoff.bound) handoff.identity ||= handoff.bound;
             if (!handoff.bound) { update({ playing: false, status: 'handoff', handoff: true, position: 0, duration: 0, actualTrack: '', error: '' }); return; }
           }
           update({ handoff: false, playing: result.state === 'playing', status: result.state === 'playing' ? 'playing' : result.state === 'paused' ? 'paused' : 'waiting', position: result.elapsed, duration: result.duration, actualTrack: result.title });

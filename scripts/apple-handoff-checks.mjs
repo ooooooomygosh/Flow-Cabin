@@ -5,12 +5,13 @@ import { normalizeItem } from '../desktop/collection-store.cjs';
 
 // Runs the real renderer and polls its HTTP boundary. Music.app is never opened.
 export async function verifyAppleHandoff({ browser, origin, output, check }) {
-  for (const initial of ['paused', 'playing']) {
+  for (const initial of ['paused', 'playing', 'legacy']) {
     const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'zh-CN', reducedMotion: 'reduce' });
     const errors = [], controls = [], resolves = [];
     const selected = { id: 'ABCDEF0123456789', title: '所选歌曲', artist: '演示歌手', album: '原始专辑', duration: 200, elapsed: 12 };
     let current = { ...selected, title: '另一首歌曲', state: initial }, polls = 0, failPoll = false;
     await context.addInitScript(() => {
+      Object.defineProperty(navigator, 'platform', { value: 'MacIntel' });
       localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 1, status: 'done', step: 'done' }));
       window.albumDesktopAppearance = { client: true, reduceMotion: true };
       window.open = () => { throw new Error('Unexpected native navigation'); };
@@ -18,7 +19,7 @@ export async function verifyAppleHandoff({ browser, origin, output, check }) {
     await context.route('**/*', route => {
       const u = new URL(route.request().url()), json = value => route.fulfill({ json: value });
       if (u.origin !== origin) { errors.push('external request blocked'); return route.abort(); }
-      if (u.pathname === '/api/items') return json({ items: [normalizeItem({ id: 'apple-single', type: 'song', title: selected.title, artist: selected.artist, albumTitle: selected.album, tracks: [selected.title], trackDetails: [], externalIds: { itunesTrackId: '1234567890' }, source: 'iTunes Search', cover: '' })] });
+      if (u.pathname === '/api/items') return json({ items: [normalizeItem({ id: 'apple-single', type: 'song', title: selected.title, artist: selected.artist, ...(initial === 'legacy' ? {} : { albumTitle: selected.album, trackTimeMillis: selected.duration * 1000 }), tracks: [selected.title], trackDetails: [], externalIds: { itunesTrackId: '1234567890' }, source: 'iTunes Search', cover: '' })] });
       if (u.pathname === '/desktop-music/config') return json({ appleMusicAvailable: true, qqLoggedIn: false, neteaseLoggedIn: false });
       if (u.pathname === '/desktop-music/apple/permission') return json({ available: true, granted: true });
       if (u.pathname === '/desktop-music/now-playing') return json({ available: false });
@@ -37,18 +38,30 @@ export async function verifyAppleHandoff({ browser, origin, output, check }) {
     try {
       await page.goto(origin); await page.locator('.room-record').first().waitFor(); await chooseSource(page, 'appleMusic');
       await page.locator('.room-record').first().dblclick(); await waiting(); await pollAgain();
-      assert.equal(resolves.length, 1); assert.equal(resolves[0].id, '1234567890'); assert.equal(resolves[0].album, '', 'native stored singles have no album metadata; do not mistake the song title for its album');
+      assert.equal(resolves.length, 1); assert.equal(resolves[0].id, '1234567890'); assert.equal(resolves[0].album, initial === 'legacy' ? '' : selected.album);
       assert.equal(await page.getByRole('button', { name: '播放音乐', exact: true }).isDisabled(), true);
       assert.equal(await progress.inputValue(), '0'); assert.equal(await progress.isDisabled(), true);
       await page.evaluate(() => document.activeElement?.blur()); await page.keyboard.press('Space');
       assert.deepEqual(controls, []); assert.equal(resolves.length, 1);
       if (output) await page.screenshot({ path: path.join(output, `apple-handoff-unrelated-${initial}.png`), animations: 'disabled' });
       check(`apple-catalog-does-not-adopt-or-control-${initial}-unrelated-track`);
+      for (const wrong of [{ album: 'Live in Concert', duration: 350 }, { album: selected.album, duration: 350 }]) {
+        current = { ...selected, state: 'playing', ...wrong }; await pollAgain(); await waiting();
+        assert.equal(await progress.inputValue(), '0'); assert.deepEqual(controls, []);
+      }
       current = { ...selected, state: 'playing' }; await pollAgain();
+      if (initial === 'legacy') {
+        await waiting(); assert.equal(await progress.inputValue(), '0');
+        await page.getByRole('button', { name: '取下唱片', exact: true }).click(); await page.waitForTimeout(100);
+        assert.deepEqual(controls, []); assert.deepEqual(errors, []); check('apple-legacy-single-without-recording-metadata-never-takes-control');
+        continue;
+      }
       const pause = page.getByRole('button', { name: '暂停音乐播放', exact: true }); await pause.waitFor();
       assert.equal(await pause.isEnabled(), true); assert.equal(await progress.inputValue(), '12');
       await pause.click(); assert.deepEqual(controls, [{ action: 'pause', expectedTrack: { id: selected.id, title: selected.title, artist: selected.artist, album: selected.album } }]);
       if (output) await page.screenshot({ path: path.join(output, `apple-handoff-bound-${initial}.png`), animations: 'disabled' });
+      current = { ...selected, id: '0123456789ABCDEF', state: 'playing' }; await pollAgain(); await waiting(); await pollAgain(); await waiting();
+      assert.equal(await progress.inputValue(), '0'); assert.equal(controls.length, 1, 'polls cannot rebind to a different native id with identical metadata');
       current = { ...selected, title: '另一首歌曲', state: 'playing' }; await pollAgain(); await waiting();
       assert.equal(await progress.inputValue(), '0');
       failPoll = true; await pollAgain(); await waiting();

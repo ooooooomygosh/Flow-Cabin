@@ -175,11 +175,11 @@ test('Traditional theme and opening-credit suffixes normalize before decoration 
 });
 test('native imported single preserves its exact iTunes track ID', async () => {
   const { normalizeItem } = await import('../../desktop/collection-store.cjs');
-  const song = normalizeItem({ id: 'single', type: 'song', title: '所选歌曲', artist: '原歌手', albumTitle: '专辑', tracks: ['所选歌曲'], trackDetails: [], externalIds: { itunesTrackId: '1234567890' } });
+  const song = normalizeItem({ id: 'single', type: 'song', title: '所选歌曲', artist: '原歌手', albumTitle: '专辑', trackTimeMillis: 200000, tracks: ['所选歌曲'], trackDetails: [], externalIds: { itunesTrackId: '1234567890' } });
   const calls = [], resolved = [];
   const request = async (path, body) => {
     calls.push(path);
-    if (path === '/resolve') { resolved.push(body.id); if (body.id === '1234567890') assert.equal(body.album, ''); return { remote: true, catalog: true }; }
+    if (path === '/resolve') { resolved.push(body.id); if (body.id === '1234567890') { assert.equal(body.album, '专辑'); assert.equal(body.duration, 200000); } return { remote: true, catalog: true }; }
     return { candidates: path.includes('scope=catalog') ? [{ id: '9876543210', title: '所选歌曲', artist: '原歌手', provider: 'appleMusic' }] : [] };
   };
   await findPlayableSource({ record: song, index: 0, provider: 'appleMusic', request, play: async () => {} });
@@ -208,7 +208,12 @@ test('catalog handoff never binds paused or playing unrelated recordings', async
     assert.equal(bindAppleHandoff(target, { ...own, state, album: '另一版' }), null);
     assert.equal(bindAppleHandoff(target, { ...own, state, artist: '' }), null);
     assert.equal(bindAppleHandoff(target, { ...own, state, duration: 240 }), null);
+    for (const incomplete of [{ album: '' }, { duration: 0 }, { duration: Infinity }]) assert.equal(bindAppleHandoff({ ...target, ...incomplete }, { ...own, state }), null);
+    assert.equal(bindAppleHandoff(target, { ...own, state, album: 'Live Tour', duration: 200 }), null);
+    assert.equal(bindAppleHandoff(target, { ...own, state, album: '专辑', duration: 280 }), null);
     assert.deepEqual(bindAppleHandoff(target, { ...own, state }), { id: own.id, title: own.title, artist: own.artist, album: own.album });
+    assert.equal(bindAppleHandoff(target, { ...own, state, id: '0123456789ABCDEF' }, own), null);
+    assert.equal(bindAppleHandoff(target, { ...own, state, id: '' }), null);
   }
   assert.equal(bindAppleHandoff(target, { ...own, state: 'stopped' }), null);
 });

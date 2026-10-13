@@ -58,7 +58,7 @@ export function normalizeLocalLibrary(value) {
 // What the track should sound like, for ranking platform search results.
 export function wantedTrack(record, index) {
   const raw = record?.tracks?.[index], title = typeof raw === 'string' ? raw : raw?.title || raw?.name || record?.title;
-  return { title, artist: trackArtist(record, index), album: trackAlbum(record, index), duration: Number(record?.trackDetails?.[index]?.lengthMillis) || 0 };
+  return { title, artist: trackArtist(record, index), album: trackAlbum(record, index), duration: Number(record?.trackDetails?.[index]?.lengthMillis) || (record?.type === 'song' && index === 0 ? Number(record.trackTimeMillis) || 0 : 0) };
 }
 export function rankCandidates(candidates, record, index) {
   return rankForAutoplay(candidates, wantedTrack(record, index));
