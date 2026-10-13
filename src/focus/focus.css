@@ -5,17 +5,19 @@
 .cabin-room > .focus-badge.phase-shortBreak,.cabin-room > .focus-badge.phase-longBreak{background:#7fae8a;color:#14200f}
 .cabin-room > .focus-badge:focus-visible{outline:2px solid #ffe0a8;outline-offset:3px}
 .cabin-room.cabin-room .cabin-toolbar{right:180px}
-.room-zen .cabin-room > .focus-badge{top:12px}
+.room-zen:not(.room-zen-tools) .cabin-room > .focus-badge{top:12px}
 .room-zen .cabin-room .cabin-toolbar{right:200px}
 .cabin-toolbar .focus-badge.is-running{background:#d79a51!important;color:#21140b!important;border-color:#ffd99c!important}
 .cabin-toolbar .focus-badge.phase-shortBreak,.cabin-toolbar .focus-badge.phase-longBreak{background:#7fae8a!important;color:#14200f!important}
 .focus-dock{position:absolute;z-index:20;top:calc(var(--room-header-bottom,82px) + 58px);right:16px;width:min(360px,calc(100% - 32px));max-height:calc(100% - var(--room-header-bottom,82px) - 90px);display:flex;flex-direction:column;color:#ffe9cb;background:#27180ef2;border:2px solid #d4a46b;box-shadow:6px 6px 0 #120b06b3;image-rendering:pixelated;font-size:13px}
-.room-zen .focus-dock{top:70px;max-height:calc(100% - 100px)}
+.room-zen:not(.room-zen-tools) .focus-dock{top:70px;max-height:calc(100% - 100px)}
 .focus-dock-header{display:flex;align-items:stretch;border-bottom:2px solid #6b4528;background:#3a2414}
 .focus-dock-header nav{display:flex;flex:1;min-width:0}
 .focus-dock-header nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 4px 7px;color:#d8b688;background:none;border:0;border-right:1px solid #5a3a22;font-size:11px}
 .focus-dock-header nav button[aria-selected=true]{color:#24170d;background:#e0ad69}
 .focus-dock-close{padding:0 12px;color:#e7c79b;background:none;border:0}
+.focus-save-error{flex-shrink:0;padding:10px 14px;border-bottom:2px solid #8a5a32;color:#ffc2a6;line-height:1.5;background:#472519}
+.focus-save-error .pixel-button{margin-left:4px;padding:4px 8px;min-height:28px;font-size:12px}
 .focus-dock-body{overflow:auto;padding:14px 16px 16px}
 .focus-dock button{cursor:pointer;font:inherit}
 .focus-dock input,.focus-dock select{font:inherit;color:#ffe9cb;background:#3e281a;border:1px solid #9c7048;padding:6px 8px;border-radius:0}

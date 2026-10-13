@@ -56,7 +56,7 @@ function useShelfFilters(items) {
   return { filters, setFilters, visible };
 }
 
-export default function CabinRoom({ items, loading, openRecord, openAdd, firstVisit = false, hubRequest = null, openBackup, openWall, notify }) {
+export default function CabinRoom({ items, loading, loadError = '', openRecord, openAdd, firstVisit = false, hubRequest = null, openBackup, openWall, notify }) {
   const library = useRecordLibrary(), look = library?.data.rooms[library.roomId]?.look || 'pixel';
   const appearance = useDesktopAppearance();
   const petId = normalizePetId(library?.data.rooms[library.roomId]?.petId);
@@ -69,10 +69,10 @@ export default function CabinRoom({ items, loading, openRecord, openAdd, firstVi
   const welcomeChecked = useRef(false);
   const saveOnboarding = (next) => { setOnboarding(next); try { onboardingModel.writeOnboarding(localStorage, next); } catch { notify?.('这次未能记住引导进度，下次仍可从「设置 › 关于」重新引导。'); } };
   useEffect(() => {
-    if (loading || welcomeChecked.current) return;
+    if (loading || loadError || welcomeChecked.current) return;
     welcomeChecked.current = true;
     if (onboardingModel.shouldAutoOpen(onboarding, { isNew: firstVisit && !items.length })) { setWizard(true); if (onboarding.status === 'new') saveOnboarding(onboardingModel.start(onboarding)); }
-  }, [loading, firstVisit, items.length]);
+  }, [loading, loadError, firstVisit, items.length]);
   useEffect(() => { if (hubRequest?.section) setHub(hubRequest.section); }, [hubRequest]);
   const restartOnboarding = () => { setHub(''); saveOnboarding(onboardingModel.reopen(onboarding)); setWizard(true); };
   // 音源设置 / turntable error buttons open the hub's 音源 detail page directly.
@@ -234,8 +234,8 @@ export default function CabinRoom({ items, loading, openRecord, openAdd, firstVi
         <button type="button" aria-label="筛选与唱片盒" title="筛选与唱片盒" aria-controls="cabin-shelf-filters" aria-expanded={filtersOpen} className={filtered ? 'is-active' : ''} onClick={() => setFiltersOpen(!filtersOpen)}><Settings size={17}/><span>筛选与唱片盒{filtered ? ` · ${visible.length}` : ''}</span></button>
       </nav>}/>
       {!visible.length && <div className="room-empty">
-        <p>{loading ? '正在整理唱片…' : items.length ? '没有符合筛选的唱片。' : '木屋的唱片架，等你放上第一张。'}</p>
-        {!loading && (items.length ? <button type="button" onClick={() => setFilters({ ...filters, type: 'all', box: 'all', genre: 'all', decade: 'all', provider: 'all' })}>清除筛选</button> : <>
+        <p>{loading ? '正在整理唱片…' : loadError ? '唱片暂时没有读出来，请重试。' : items.length ? '没有符合筛选的唱片。' : '木屋的唱片架，等你放上第一张。'}</p>
+        {!loading && !loadError && (items.length ? <button type="button" onClick={() => setFilters({ ...filters, type: 'all', box: 'all', genre: 'all', decade: 'all', provider: 'all' })}>清除筛选</button> : <>
           <small>也可以先专注一会儿，收藏慢慢来。</small>
           <div className="room-welcome-actions"><button type="button" onClick={() => openAdd()}><Plus size={16}/>添加第一张专辑</button>{focus && <button type="button" className="room-welcome-focus" onClick={() => saveDock({ open: true, tab: 'timer' })}>先专注一会儿</button>}</div>
           <small className="room-welcome-tip">在右上角「设置 → 房间与桌宠」里换场景和伙伴。</small>

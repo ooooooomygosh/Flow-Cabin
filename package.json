@@ -18,9 +18,10 @@
     "test:playback": "node scripts/playback-regression.mjs",
     "test:layout": "node scripts/cabin-layout-electron.mjs",
     "check": "npm test && npm run build",
-    "qa": "npm run check && npm --prefix desktop run build:music && npm run test:browser && npm run test:playback",
+    "qa": "npm run check && npm --prefix desktop run build:music && npm run test:browser && npm run test:playback && npm run test:focus-ui",
     "screenshots:product": "node scripts/product-showcase.mjs",
-    "screenshots:readme": "node scripts/readme-assets.mjs"
+    "screenshots:readme": "node scripts/readme-assets.mjs",
+    "test:focus-ui": "node scripts/focus-ui-regression.mjs"
   },
   "dependencies": {
     "@heroicons/react": "2.2.0",

@@ -48,3 +48,52 @@ test('completed focus round earns a reward and starts a break', () => {
   assert.equal(next.rewards.fish, 1);
   assert.equal(next.timer.phase, 'shortBreak');
 });
+
+test('long sleep credits one phase and repeated wake events cannot credit it twice', () => {
+  for (const autoBreak of [false, true]) for (const autoFocus of [false, true]) {
+    const state = model.startPhase(model.normalizeFocus({ settings: { focusMin: 1, shortMin: 1, autoBreak, autoFocus } }), 'focus', NOW);
+    const result = model.tick(state, NOW + 20 * MIN);
+    assert.equal(result.state.timer.phase, 'idle');
+    assert.equal(result.state.sessions.length, 1);
+    assert.equal(result.state.rewards.fish, 1);
+    assert.equal(result.state.rewards.xp, 1);
+    assert.equal(result.state.sessions[0].end, NOW + MIN);
+    assert.equal(model.tick(result.state, NOW + 20 * MIN).event, null);
+  }
+});
+
+test('pause, reload normalization, and resume preserve remaining work', () => {
+  let state = model.startPhase(model.normalizeFocus({ settings: { focusMin: 2 } }), 'focus', NOW);
+  state = model.pause(state, NOW + 30000);
+  state = model.normalizeFocus(JSON.parse(JSON.stringify(state)));
+  assert.equal(model.remainingMs(state.timer, NOW + 10 * MIN), 90000);
+  state = model.resume(state, NOW + 10 * MIN);
+  assert.equal(state.timer.endsAt, NOW + 10 * MIN + 90000);
+  const result = model.tick(state, state.timer.endsAt);
+  assert.equal(result.state.sessions.length, 1);
+  assert.equal(result.state.sessions[0].end - result.state.sessions[0].start, 2 * MIN);
+  assert.equal(result.state.rewards.xp, 2);
+});
+
+test('four completed rounds start a long break; a manual skip earns no reward', () => {
+  let state = model.normalizeFocus({ settings: { focusMin: 1, shortMin: 1, longMin: 2, longEvery: 4 } });
+  for (let round = 1; round <= 4; round++) {
+    state = model.startPhase(state, 'focus', NOW + (round - 1) * 10 * MIN);
+    state = model.tick(state, state.timer.endsAt).state;
+    assert.equal(state.timer.phase, round === 4 ? 'longBreak' : 'shortBreak');
+    assert.equal(state.rewards.fish, round);
+  }
+  const working = model.startPhase(state, 'focus', NOW + 50 * MIN);
+  const skipped = model.skip(working, NOW + 50 * MIN + 10000);
+  assert.equal(skipped.event.completed, false);
+  assert.equal(skipped.state.rewards.fish, 4);
+  assert.equal(skipped.state.timer.round, 4);
+});
+
+test('completed sessions split across local midnight without losing minutes', () => {
+  const start = new Date(2026, 9, 13, 23, 59).getTime();
+  const end = new Date(2026, 9, 14, 0, 1).getTime();
+  const days = model.minutesByDay([{ start, end, completed: true }]);
+  assert.equal(days.get('2026-10-13'), 1);
+  assert.equal(days.get('2026-10-14'), 1);
+});
