@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Dialog from './Dialog';
-import { QueueList, Play, Shuffle, Plus, Check, Heart, Search, Loading, Link, DocumentArrow, ArrowLeft, Music2, ListBullet } from './icons';
+import { QueueList, Play, ShufflePixel, Plus, Check, Heart, Search, Loading, Link, DocumentArrow, ArrowLeft, Music2, ListBullet } from './icons';
 import { addItem, updateItem } from './collection-api.mjs';
 import { musicRequest } from './room-playback.mjs';
 import { desktopCommand, useDesktopAppearance } from './desktop-client';
@@ -70,7 +70,7 @@ function PlaylistDetail({ detail, provider, back, act, busy, saved, loadMore, lo
         {playlist.description && <p className="playlist-description" title={playlist.description}>{playlist.description}</p>}
         <div className="playlist-actions">
           <button type="button" className="pixel-button is-primary" disabled={busy || loadingMore || !tracks.length} onClick={() => act('play', 0)}><Play size={16}/>放上唱机</button>
-          <button type="button" className="pixel-button" disabled={busy || loadingMore || tracks.length < 2} onClick={() => act('shuffle')}><Shuffle size={16}/>随机播放</button>
+          <button type="button" className="pixel-button" disabled={busy || loadingMore || tracks.length < 2} onClick={() => act('shuffle')}><ShufflePixel/>随机播放</button>
           <button type="button" className="pixel-button" disabled={busy || loadingMore || !tracks.length} onClick={() => act('queue')}><ListBullet size={16}/>加入待播</button>
           <button type="button" className="pixel-button is-quiet" disabled={busy || loadingMore || !tracks.length} onClick={() => act('save')}>{saved ? <><Check size={16}/>已在唱片架 · 同步</> : <><Plus size={16}/>放上唱片架</>}</button>
         </div>

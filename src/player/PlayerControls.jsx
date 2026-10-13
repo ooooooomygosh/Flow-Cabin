@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, Pause, Play, X, SpeakerWave, SpeakerOff, ListBullet, Loading, Music2 } from '../icons';
+import { ChevronLeft, ChevronRight, Pause, Play, X, SpeakerWave, SpeakerOff, ListBullet, Loading, Music2, RepeatPixel, RepeatOnePixel, ShufflePixel } from '../icons';
 import { trackNames } from '../room-model.mjs';
 import './player.css';
 
 const clock = (seconds) => { const value = Math.max(0, Math.floor(Number(seconds) || 0)); return `${Math.floor(value / 60)}:${String(value % 60).padStart(2, '0')}`; };
 const REPEAT_LABEL = { off: '顺序播放', all: '整张循环', one: '单曲循环' };
-const REPEAT_GLYPH = { off: '→', all: '⟳', one: '⟳1' };
 export const QUICK_SOURCES = [['auto', '自动匹配'], ['local', '本地音乐'], ['qq', 'QQ 音乐'], ['netease', '网易云']];
 
 // The deck's transport: one obvious play button, previous / next, a small
@@ -25,8 +24,8 @@ export default function PlayerControls({ item, items = [], provider, spinning, t
       <button type="button" aria-label="下一首展示曲目" title="下一首 · Shift+→" disabled={!player?.canNext} onClick={() => player?.next()}><ChevronRight size={18}/></button>
       <button type="button" aria-label="取下唱片" title="取下唱片" onClick={eject}><X size={17}/></button>
       {player && <span className="player-modes">
-        <button type="button" className="player-mode" aria-label={`播放模式：${REPEAT_LABEL[player.queue.repeat]}`} title={`${REPEAT_LABEL[player.queue.repeat]} · R`} aria-pressed={player.queue.repeat !== 'off'} onClick={player.cycleRepeat}>{REPEAT_GLYPH[player.queue.repeat]}</button>
-        <button type="button" className="player-mode" aria-label="随机播放本张" title="本张随机 · S" aria-pressed={player.queue.shuffle} onClick={player.toggleShuffle}>⤮</button>
+        <button type="button" className="player-mode" aria-label={`播放模式：${REPEAT_LABEL[player.queue.repeat]}`} title={`${REPEAT_LABEL[player.queue.repeat]} · R`} aria-pressed={player.queue.repeat !== 'off'} data-mode={player.queue.repeat} onClick={player.cycleRepeat}>{player.queue.repeat === 'one' ? <RepeatOnePixel/> : <RepeatPixel/>}</button>
+        <button type="button" className="player-mode" aria-label="随机播放本张" title="本张随机 · S" aria-pressed={player.queue.shuffle} onClick={player.toggleShuffle}><ShufflePixel/></button>
         <button type="button" className="player-mode" aria-label={`待播唱片 ${queued.length} 张`} title="待播唱片" aria-expanded={queueOpen} onClick={() => setQueueOpen(!queueOpen)}><ListBullet size={14}/>{queued.length > 0 && <b>{queued.length}</b>}</button>
       </span>}
       {!!names.length && <select aria-label="唱机展示曲目" value={trackIndex} onChange={(event) => track?.(Number(event.target.value))}>{names.map((name, index) => <option value={index} key={index}>{String(index + 1).padStart(2, '0')} · {name}</option>)}</select>}
