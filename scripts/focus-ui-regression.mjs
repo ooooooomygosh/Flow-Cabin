@@ -69,9 +69,17 @@ try {
     await page.reload();await openFocus(page,'随手记');assert.equal(await page.getByLabel('随手记内容').inputValue(),draft+' 已恢复');
   });
   await run('unsaved-notes-survive-another-window-update',async page=>{
+    await openFocus(page);await page.getByRole('button',{name:'开始专注',exact:true}).click();const deadline=(await focusState(page)).timer.endsAt;
     await openFocus(page,'随手记');await failStorage(page,true);await page.getByLabel('随手记内容').fill('当前窗口未保存草稿');
-    await page.evaluate(key=>{ const raw=JSON.stringify({notes:'另一窗口保存的笔记',settings:{notify:false,chime:false}});window.__focusStorageOriginal.call(localStorage,key,raw);window.dispatchEvent(new StorageEvent('storage',{key,newValue:raw,storageArea:localStorage})); },KEY);
-    assert.equal(await page.getByLabel('随手记内容').inputValue(),'当前窗口未保存草稿');assert.match(await page.locator('.focus-dock [role=alert]').innerText(),/另一窗口/);assert.equal((await focusState(page)).notes,'另一窗口保存的笔记');await screenshot(page,'notes-storage-conflict');
+    await page.evaluate(key=>{ const raw=JSON.stringify({notes:'另一窗口保存的笔记',tasks:[{id:'other-task',text:'另一窗口的任务',createdAt:1}],settings:{notify:false,chime:false,dailyGoal:100}});window.__focusStorageOriginal.call(localStorage,key,raw);window.dispatchEvent(new StorageEvent('storage',{key,newValue:raw,storageArea:localStorage})); },KEY);
+    assert.equal(await page.getByLabel('随手记内容').inputValue(),'当前窗口未保存草稿');assert.match(await page.locator('.focus-dock [role=alert]').innerText(),/另一窗口/);assert.equal((await focusState(page)).notes,'另一窗口保存的笔记');
+    await page.getByRole('button',{name:'重试保存',exact:true}).click();assert.match(await page.locator('.focus-dock [role=alert]').innerText(),/另一窗口.*本窗口.*仍失败/,'failed explicit retry retains the conflict explanation');
+    await failStorage(page,false);await page.evaluate(end=>{Date.now=()=>end+1;window.dispatchEvent(new Event('focus'));},deadline);await page.waitForFunction(()=>window.albumCompanionSnapshot?.().focus.fish===1);
+    await page.getByLabel('随手记内容').fill('当前窗口继续写的草稿');assert.equal((await focusState(page)).notes,'另一窗口保存的笔记','automatic timer and note writes must remain paused during conflict');await screenshot(page,'notes-storage-conflict');
+    await openFocus(page,'统计');await page.getByLabel('每日专注目标分钟').fill('120');assert.equal((await focusState(page)).settings.dailyGoal,100,'settings cannot bypass unresolved conflict');
+    await openFocus(page,'待办');await page.getByLabel('新的待办').fill('冲突期间的任务草稿');await page.getByRole('button',{name:'添加待办',exact:true}).click();assert.equal(await page.getByLabel('新的待办').inputValue(),'冲突期间的任务草稿');assert.equal((await focusState(page)).tasks[0].id,'other-task','tasks cannot bypass unresolved conflict');
+    await page.getByRole('button',{name:'重试保存',exact:true}).click();const resolved=await focusState(page);assert.equal(resolved.notes,'当前窗口继续写的草稿');assert.equal(resolved.rewards.fish,1);assert.equal(resolved.sessions.length,1);
+    await page.getByRole('button',{name:'添加待办',exact:true}).click();assert.equal((await focusState(page)).tasks.length,1);assert.equal((await focusState(page)).tasks[0].text,'冲突期间的任务草稿');
   });
   await run('timer-storage-failure-settles-once-and-recovers',async page=>{
     await openFocus(page);await page.getByRole('button',{name:'开始专注',exact:true}).click();const before=await focusState(page);await failStorage(page,true);

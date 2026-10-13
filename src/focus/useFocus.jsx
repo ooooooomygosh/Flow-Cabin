@@ -22,15 +22,24 @@ export function FocusProvider({ userId, children }) {
   const [state, setState] = useState(() => model.readFocus(localStorage, userId));
   const [now, setNow] = useState(() => Date.now());
   const [error, setError] = useState('');
-  const current = useRef(state), dirty = useRef(false);
+  const current = useRef(state), dirty = useRef(false), conflicted = useRef(false);
+  const conflictMessage = '另一窗口更新了专注记录；当前草稿已保留，重试将以本窗口内容保存。';
   // Notes and running timers may keep a recoverable working copy. Explicit
   // edits/imports are transactional: failed writes must not look committed.
-  const commit = (next, { volatile = false } = {}) => {
+  const commit = (next, { volatile = false, overwriteConflict = false } = {}) => {
     const value = model.normalizeFocus(next), raw = JSON.stringify(value);
     if (raw.length > model.MAX_FOCUS_BYTES) { setError('专注记录空间已满，请清理已完成的待办。'); return { applied: false, persisted: false }; }
+    if (conflicted.current && !overwriteConflict) {
+      setError(conflictMessage);
+      if (!volatile) return { applied: false, persisted: false };
+      // Keep typing and timer settlement available without overwriting the
+      // other window. Only an explicit retry resolves this conflict.
+      dirty.current = true; current.current = value; setState(value);
+      return { applied: true, persisted: false };
+    }
     let persisted = true;
-    try { localStorage.setItem(key, raw); setError(''); } catch {
-      persisted = false; setError('无法保存专注记录，请检查存储空间。');
+    try { localStorage.setItem(key, raw); conflicted.current = false; setError(''); } catch {
+      persisted = false; setError(conflicted.current ? `${conflictMessage} 本次保存仍失败，请检查存储空间。` : '无法保存专注记录，请检查存储空间。');
       if (!volatile) return { applied: false, persisted: false };
     }
     dirty.current = !persisted; current.current = value; setState(value);
@@ -77,7 +86,7 @@ export function FocusProvider({ userId, children }) {
     return () => { clearInterval(timer); window.removeEventListener('focus', advance); document.removeEventListener('visibilitychange', advance); };
   }, [state.timer.phase, state.timer.paused, state.timer.endsAt]);
   useEffect(() => {
-    const sync = (event) => { if (event.key !== key) return; if (dirty.current) { setError('另一窗口更新了专注记录；当前草稿已保留，重试将以本窗口内容保存。'); return; } const next = model.readFocus(localStorage, userId); current.current = next; setState(next); setNow(Date.now()); };
+    const sync = (event) => { if (event.key !== key) return; if (dirty.current) { conflicted.current = true; setError(conflictMessage); return; } const next = model.readFocus(localStorage, userId); current.current = next; setState(next); setNow(Date.now()); };
     window.addEventListener('storage', sync);
     return () => window.removeEventListener('storage', sync);
   }, [key]);
@@ -109,7 +118,7 @@ export function FocusProvider({ userId, children }) {
     saveNotes: (notes) => apply((s) => ({ ...s, notes: model.normalizeNotes(notes) }), { volatile: true }),
     selectTask: (id, toggle = false) => apply((s) => model.selectTask(s, id, toggle)),
     equip: (kind, value) => apply((s) => model.equip(s, kind, value)),
-    retrySave: () => commit(current.current, { volatile: true }).persisted,
+    retrySave: () => commit(current.current, { volatile: true, overwriteConflict: true }).persisted,
     replace: (value) => commit({ ...model.normalizeFocus(value), timer: current.current.timer }).persisted
   };
   const value = { state, now, error, hasUnsavedChanges: dirty.current, remaining: model.remainingMs(state.timer, now), snapshot: () => model.focusSnapshot(current.current, Date.now()), ...actions };
