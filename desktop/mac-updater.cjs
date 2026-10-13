@@ -28,7 +28,7 @@ pid="$1"; app="$2"; staged="$3"; backup="$4"; relaunch="$5"; opener="$6"; status
 result() { [ -z "$status" ] || printf '%s' "$1" > "$status"; }
 i=0
 while kill -0 "$pid" 2>/dev/null; do
-  i=$((i + 1)); [ "$i" -gt 600 ] && exit 1
+  i=$((i + 1)); [ "$i" -gt 600 ] && { result wait-timeout; exit 1; }
   sleep 0.1
 done
 current=$("$plist" -extract CFBundleShortVersionString raw -o - "$app/Contents/Info.plist") || { result version-unavailable; exit 1; }
@@ -36,7 +36,7 @@ current=$("$plist" -extract CFBundleShortVersionString raw -o - "$app/Contents/I
 [ ! -e "$backup" ] || { result backup-exists; exit 1; }
 mv "$app" "$backup" || { result backup-failed; exit 1; }
 restore() {
-  rm -rf "$app"
+  if ! rm -rf "$app" || [ -e "$app" ] || [ -L "$app" ]; then result rollback-failed; return 1; fi
   if mv "$backup" "$app"; then result rolled-back; else result rollback-failed; fi
 }
 if mv "$staged" "$app" 2>/dev/null || ditto "$staged" "$app" 2>/dev/null; then
@@ -200,7 +200,8 @@ function createMacUpdater({ app, fetch = globalThis.fetch, platform = process.pl
   }
   // 「重启安装」: install now and open the new version.
   updater.quitAndInstall = () => { const started = startInstaller(true); if (started) app.quit(); return started; };
-  updater.confirmStartup = () => {
+  updater.confirmStartup = ({ cabinReady = false } = {}) => {
+    if (!cabinReady) return false;
     // Called after createWindow succeeds, never by the outgoing process.
     try {
       const receipt = JSON.parse(fsModule.readFileSync(receiptPath, 'utf8'));
@@ -212,8 +213,12 @@ function createMacUpdater({ app, fetch = globalThis.fetch, platform = process.pl
         fsModule.rmSync(receipt.backup, { recursive: true, force: true });
         fsModule.rmSync(receiptPath, { force: true }); fsModule.rmSync(statusPath, { force: true }); return true;
       }
-      if (status === 'rolled-back') {
-        updater.startupWarning = '上次更新安装或打开失败，已恢复原版本。';
+      const beforeSwap = ['disk-version-changed', 'version-unavailable', 'backup-exists', 'backup-failed', 'spawn-failed', 'wait-timeout'].includes(status);
+      if (status === 'rolled-back' || beforeSwap) {
+        updater.startupWarning = status === 'rolled-back' ? '上次更新安装或打开失败，已恢复原版本。' : '上次更新已安全取消，原应用未被替换，可以重新检查并下载。';
+        // Only our version-named staging is discarded. A backup mentioned by
+        // a cancelled attempt is preserved, including backup-exists failures.
+        if (/^\d+\.\d+\.\d+$/.test(receipt.version)) fsModule.rmSync(path.join(directory, `staged-${receipt.version}`), { recursive: true, force: true });
         fsModule.rmSync(receiptPath, { force: true }); fsModule.rmSync(statusPath, { force: true });
       } else updater.startupWarning = '上次更新尚未确认完成，已保留原版本备份，请检查更新状态后再试。';
       return false;
