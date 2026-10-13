@@ -105,9 +105,12 @@ export async function getQQMediaMid(cookie: string, mid: string): Promise<string
 import { requestText, parseJSONText, QQ_HEADERS, QQ_MUSICU_URL } from './vendor/simple-music/server/lib/qq-client';
 
 type QQSearchShape = { name: string, run: (query: string, limit: number) => Promise<unknown[]> };
-type QQSearchOptions = { fetchText?: (url: string, init: { method?: string, headers?: Record<string, string> }, body?: string) => Promise<string>, wait?: (ms: number) => Promise<void> };
+type QQSearchOptions = { fetchText?: (url: string, init: { method?: string, headers?: Record<string, string> }, body?: string) => Promise<string>, wait?: (ms: number) => Promise<void>, now?: () => number };
 const QQ_SEARCH_MODULE = 'music.search.SearchCgiService';
-let preferredQQShape = 0;
+let preferredQQShape = 0, nextQQSearchAt = 0;
+// QQ refuses searches (2001) in bursts after quick runs of requests, so
+// searches are paced: 0.3 s apart, 1.2 s after a refusal.
+const QQ_SEARCH_GAP_MS = 300, QQ_SEARCH_COOLDOWN_MS = 1200;
 
 export function mapQQSearchSong(raw: unknown) {
   const song = asObj(raw), album = asObj(song.album), file = asObj(song.file), pay = asObj(song.pay);
@@ -171,19 +174,23 @@ export async function searchQQSongs(query: string, limit = 8, options: QQSearchO
   const full = [preferredQQShape, 1 - preferredQQShape];
   const order = [...full, ...full, shapes.length - 1];
   let lastError: unknown = null;
+  const now = options.now || Date.now;
   for (const [step, index] of order.entries()) {
     if (step) await wait(step === full.length ? 700 : 250);
+    const delay = nextQQSearchAt - now();
+    if (delay > 0) await wait(delay);
+    nextQQSearchAt = now() + QQ_SEARCH_GAP_MS;
     try {
       const seen = new Set<string>();
       const songs = (await shapes[index].run(keyword, count)).map(mapQQSearchSong).filter((song) => /^[a-z\d]{14}$/i.test(song.mid) && song.name && !seen.has(song.mid) && seen.add(song.mid));
       if (index < full.length) preferredQQShape = index;
       return songs;
-    } catch (error) { lastError = error; }
+    } catch (error) { lastError = error; if (error instanceof QQSearchError && error.code === 2001) nextQQSearchAt = now() + QQ_SEARCH_COOLDOWN_MS; }
   }
   const code = lastError instanceof QQSearchError ? lastError.code : 0;
   throw new Error(code > 0 ? `QQ 音乐搜索暂时不可用（${code}），稍后会自动重试。` : 'QQ 音乐搜索暂时连不上，请检查网络后重试。');
 }
-export function resetQQSearchPreference() { preferredQQShape = 0; }
+export function resetQQSearchPreference() { preferredQQShape = 0; nextQQSearchAt = 0; }
 
 // ---------- Flow Cabin: a song's own album art ----------
 // Playlists saved before covers were kept per song, and songs played by their

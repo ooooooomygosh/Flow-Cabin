@@ -1298,6 +1298,9 @@ async function getQQMediaMid(cookie, mid) {
 }
 var QQ_SEARCH_MODULE = "music.search.SearchCgiService";
 var preferredQQShape = 0;
+var nextQQSearchAt = 0;
+var QQ_SEARCH_GAP_MS = 300;
+var QQ_SEARCH_COOLDOWN_MS = 1200;
 function mapQQSearchSong(raw) {
   const song = asObj(raw), album = asObj(song.album), file = asObj(song.file), pay = asObj(song.pay);
   const singers = asArr(song.singer).map((value) => ({ name: asStr(asObj(value).name) })).filter((artist) => artist.name);
@@ -1362,8 +1365,12 @@ async function searchQQSongs(query, limit = 8, options = {}) {
   const full = [preferredQQShape, 1 - preferredQQShape];
   const order = [...full, ...full, shapes.length - 1];
   let lastError = null;
+  const now = options.now || Date.now;
   for (const [step, index] of order.entries()) {
     if (step) await wait(step === full.length ? 700 : 250);
+    const delay = nextQQSearchAt - now();
+    if (delay > 0) await wait(delay);
+    nextQQSearchAt = now() + QQ_SEARCH_GAP_MS;
     try {
       const seen = /* @__PURE__ */ new Set();
       const songs = (await shapes[index].run(keyword, count)).map(mapQQSearchSong).filter((song) => /^[a-z\d]{14}$/i.test(song.mid) && song.name && !seen.has(song.mid) && seen.add(song.mid));
@@ -1371,6 +1378,7 @@ async function searchQQSongs(query, limit = 8, options = {}) {
       return songs;
     } catch (error) {
       lastError = error;
+      if (error instanceof QQSearchError && error.code === 2001) nextQQSearchAt = now() + QQ_SEARCH_COOLDOWN_MS;
     }
   }
   const code = lastError instanceof QQSearchError ? lastError.code : 0;
@@ -1378,6 +1386,7 @@ async function searchQQSongs(query, limit = 8, options = {}) {
 }
 function resetQQSearchPreference() {
   preferredQQShape = 0;
+  nextQQSearchAt = 0;
 }
 async function trackCover(provider, id, cookie = "") {
   if (provider === "qq" && /^[a-z\d]{14}$/i.test(id)) {
