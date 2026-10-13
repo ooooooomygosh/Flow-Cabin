@@ -68,7 +68,7 @@ test('playlists: each track keeps its own artist, album and platform id', async 
   assert.deepEqual(queries, ['resolve:netease:186016'], 'a NetEase playlist track tries 网易云 first, by id');
   queries.length = 0;
   await findPlayableSource({ record: playlist, index: 2, provider: 'auto', request: async (path) => { queries.push(decodeURIComponent(path)); return { candidates: [] }; }, play: async () => {} });
-  assert.deepEqual(queries, ['/search?provider=qq&query=Nujabes Aruarian Dance', '/search?provider=netease&query=Nujabes Aruarian Dance']);
+  assert.deepEqual(queries, ['/search?provider=qq&query=Nujabes Aruarian Dance', '/search?provider=qq&query=Aruarian Dance', '/search?provider=netease&query=Nujabes Aruarian Dance', '/search?provider=netease&query=Aruarian Dance'], 'artist + title, then the title alone, on each platform');
 });
 
 
@@ -88,9 +88,9 @@ test('matching: a platform refusing searches is named, not hidden behind another
   const request = async (path) => { paths.push(decodeURIComponent(path)); if (path.includes('provider=qq')) throw new Error('QQ 音乐搜索暂时不可用（2001），稍后会自动重试。'); return { candidates: [] }; };
   const result = await findPlayableSource({ record, index: 0, provider: 'auto', request, play: async () => {} });
   assert.equal(result.error, 'QQ 音乐搜索暂时不可用（2001），稍后会自动重试。 网易云没有找到这首歌。');
-  // After QQ refuses once, its other spellings are not searched again; 网易云 tries both.
+  // After QQ refuses once, its other spellings are not searched again; 网易云 tries both, then the title alone.
   assert.deepEqual(paths.filter((path) => path.includes('provider=qq')), ['/search?provider=qq&query=陶喆 月亮代表谁的心']);
-  assert.equal(paths.filter((path) => path.includes('provider=netease')).length, 2);
+  assert.deepEqual(paths.filter((path) => path.includes('provider=netease')), ['/search?provider=netease&query=陶喆 月亮代表谁的心', '/search?provider=netease&query=陶喆 月亮代表誰的心', '/search?provider=netease&query=月亮代表谁的心']);
 });
 
 test('queue: tracks whose early match failed are stepped over, in order and in shuffle', () => {
@@ -118,4 +118,17 @@ test('cover: a playlist song shows its own art, then the matched recording\'s, t
   assert.equal(trackCover(playlist, 1, 'https://p/matched.jpg'), 'https://p/matched.jpg');
   assert.equal(trackCover(playlist, 1, ''), 'https://p/list.jpg');
   assert.equal(trackCover({ type: 'album', cover: 'https://p/album.jpg', tracks: ['a'] }, 0, 'https://p/matched.jpg'), 'https://p/album.jpg', 'an album keeps its sleeve');
+});
+
+test('matching: the title alone finds a song whose artist the platform writes differently', async () => {
+  const record = { id: 'r', type: 'album', title: '叶惠美', artist: 'Jay Chou', tracks: ['晴天'], trackDetails: [{ title: '晴天', lengthMillis: 269000 }] };
+  const queries = [];
+  const request = async (path, body) => {
+    if (path === '/resolve') return { audioPath: '/x', id: body.id };
+    const query = new URL(path, 'http://x').searchParams.get('query'); queries.push(query);
+    return { candidates: query === '晴天' ? [{ id: 'cover', provider: 'qq', title: '晴天', artist: '某翻唱', album: '翻唱集', duration: 250000 }, { id: 'jay', provider: 'qq', title: '晴天', artist: '周杰伦', album: '叶惠美', duration: 269000 }] : [] };
+  };
+  const result = await findPlayableSource({ record, index: 0, provider: 'qq', request, play: async () => {} });
+  assert.deepEqual(queries, ['Jay Chou 晴天', '晴天']);
+  assert.equal(result.candidate.id, 'jay', 'same title, album and length: the original, not a cover');
 });

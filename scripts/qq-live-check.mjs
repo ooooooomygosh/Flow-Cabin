@@ -52,6 +52,15 @@ for (const shape of upstream.qqSearchShapes()) {
   console.log(`form ${shape.name}: ${answers.map((a) => a.error ? `✗ ${a.error}` : `${a.found ? '✓' : '·'} ${a.count}`).join(' | ')}`);
 }
 
+// The raw shape of one answer, so mapping changes can be checked against it.
+try {
+  const [desktop] = upstream.qqSearchShapes();
+  const raw = (await desktop.run('陶喆 月亮代表谁的心', 3))[0] || {};
+  const pick = (value) => value && typeof value === 'object' ? Object.fromEntries(Object.entries(value).filter(([, v]) => typeof v !== 'object' || v === null).slice(0, 14)) : value;
+  console.log('raw song:', JSON.stringify({ keys: Object.keys(raw), album: pick(raw.album), file: pick(raw.file), singer: (raw.singer || []).map(pick), interval: raw.interval, pay: pick(raw.pay), name: raw.name, title: raw.title }));
+  console.log('mapped:', JSON.stringify(upstream.mapQQSearchSong(raw)));
+} catch (error) { console.log('raw song: unavailable', error.message); }
+
 // 2. The deck's matcher on the real service.
 const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'qq-live-'));
 const service = createMusicService({ directory, safeStorage: { isEncryptionAvailable: () => false, encryptString: (v) => Buffer.from(v), decryptString: (b) => b.toString() }, login: async () => ({ ok: false }), logout: async () => {} });

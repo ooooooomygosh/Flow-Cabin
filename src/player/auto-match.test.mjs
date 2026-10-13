@@ -149,7 +149,7 @@ test('search tries Simplified first, then the written form, and stops once one p
   const misses = [];
   const none = await findPlayableSource({ record: { ...album, trackDetails: [{ title: '討厭紅樓夢' }] }, index: 0, provider: 'ma', play: async () => {},
     request: async (path) => { misses.push(new URL(path, 'http://x').searchParams.get('query')); return { candidates: [] }; } });
-  assert.deepEqual(misses, ['陶喆 讨厌红楼梦', '陶喆 討厭紅樓夢'], 'each written form once (Traditional = as written here)');
+  assert.deepEqual(misses, ['陶喆 讨厌红楼梦', '陶喆 討厭紅樓夢', '讨厌红楼梦'], 'each written form once (Traditional = as written here), then the title alone');
   assert.match(none.error, /未找到/);
 });
 test('Apple Music: library first in each script, then the record\'s own catalogue song', async () => {
@@ -158,14 +158,14 @@ test('Apple Music: library first in each script, then the record\'s own catalogu
   const result = await findPlayableSource({ record: album, index: 0, provider: 'appleMusic', play: async () => {},
     request: async (path, body) => { calls.push(path === '/resolve' ? `resolve:${body.id}` : new URL(path, 'http://x').searchParams.get('query')); return path === '/resolve' ? { remote: true, notice: 'opened' } : { candidates: [] }; } });
   assert.equal(result.candidate.id, '1440911001');
-  assert.deepEqual(calls, ['陶喆 讨厌红楼梦', '陶喆 討厭紅樓夢', 'resolve:1440911001'], 'both library forms, then the catalogue song');
+  assert.deepEqual(calls, ['陶喆 讨厌红楼梦', '陶喆 討厭紅樓夢', '讨厌红楼梦', 'resolve:1440911001'], 'both library forms and the title alone, then the catalogue song');
   const library = await findPlayableSource({ record: album, index: 0, provider: 'appleMusic', play: async () => {},
     request: async (path, body) => path === '/resolve' ? { remote: true, id: body.id } : { candidates: [{ id: 'ABCDEF0123456789', provider: 'appleMusic', title: '討厭紅樓夢', artist: '陶喆', album: '黑色柳丁', duration: 262000 }] } });
   assert.equal(library.candidate.id, 'ABCDEF0123456789', 'a library copy is preferred: it plays without a click');
   const manual = { ...album, trackDetails: [{ title: '討厭紅樓夢', lengthMillis: 262000 }] }, scopes = [];
   const searched = await findPlayableSource({ record: manual, index: 0, provider: 'appleMusic', play: async () => {},
     request: async (path) => { if (path === '/resolve') return { remote: true }; const url = new URL(path, 'http://x'); scopes.push(url.searchParams.get('scope')); return { candidates: url.searchParams.get('scope') === 'catalog' ? [{ id: '1440911001', provider: 'appleMusic', title: '讨厌红楼梦', artist: '陶喆', album: '黑色柳丁', duration: 262000 }] : [] }; } });
-  assert.equal(searched.candidate.id, '1440911001'); assert.deepEqual(scopes, [null, null, 'catalog']);
+  assert.equal(searched.candidate.id, '1440911001'); assert.deepEqual(scopes, [null, null, null, 'catalog']);
 });
 test('Traditional theme and opening-credit suffixes normalize before decoration removal', () => {
   for (const suffix of ['主題曲', '片頭曲']) {

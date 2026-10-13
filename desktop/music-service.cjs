@@ -47,8 +47,8 @@ function createMusicService({ directory, safeStorage, login, logout, upstream = 
     const key = provider + ':' + query;
     let values;
     try {
-      if (provider === 'qq') values = upstream.searchQQSongs ? await upstream.searchQQSongs(query, 8) : await upstream.handleQQSearch(decode(preferences.qq), query, 8);
-      else if (provider === 'netease') values = await upstream.handleSearch(query, 8, decode(preferences.netease));
+      if (provider === 'qq') values = upstream.searchQQSongs ? await upstream.searchQQSongs(query, 20) : await upstream.handleQQSearch(decode(preferences.qq), query, 8);
+      else if (provider === 'netease') values = await upstream.handleSearch(query, 15, decode(preferences.netease));
       else if (provider === 'ma') values = (await ma('music/search', { search_query: query, media_types: ['track'], limit: 8 })).tracks || [];
       else if (provider === 'appleMusic') { if (!appleMusic?.available) throw new Error('系统 Apple Music 仅支持 macOS。'); return (await appleMusic.search(query)).map((value) => candidate(value, 'appleMusic')); }
       else if (provider === 'local') { if (!localMusic) throw new Error('本地音乐不可用。'); return localMusic.search(query).map((value) => candidate(value, 'local')); }

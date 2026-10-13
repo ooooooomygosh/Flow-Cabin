@@ -119,8 +119,12 @@ export async function findPlayableSource({ record, index, provider, request, pla
     // a Taiwan Apple Music library Traditional. Try each written form until one
     // yields a playable match; later searches only run when earlier ones failed.
     const query = `${trackArtist(record, index)} ${name}`.trim(), seen = new Set();
-    let searched = false;
-    for (const variant of [...new Set([toSimplified(query), query, toTraditional(query)])]) {
+    let searched = false, ranked = 0;
+    // Artist + title in each script; then the title alone, for a record whose
+    // artist the platform writes differently (the ranking still checks it).
+    const queries = [...new Set([toSimplified(query), query, toTraditional(query)])];
+    for (const variant of queries.concat(trackArtist(record, index) ? [`${toSimplified(name)}`] : [])) {
+      if (!queries.includes(variant) && (ranked || !searched)) break;
       if (!canAttempt(source)) break;
       try {
         const result = await request(`/search?provider=${source}&query=${encodeURIComponent(variant)}`);
@@ -128,7 +132,9 @@ export async function findPlayableSource({ record, index, provider, request, pla
         searched = true;
         const found = (Array.isArray(result.candidates) ? result.candidates : []).filter((candidate) => !seen.has(`${candidate.provider}:${candidate.id}`) && seen.add(`${candidate.provider}:${candidate.id}`));
         candidates.push(...found);
-        for (const candidate of rankCandidates(found, record, index).slice(0, AUTO_MATCH_ATTEMPTS)) {
+        const best = rankCandidates(found, record, index).slice(0, AUTO_MATCH_ATTEMPTS);
+        ranked += best.length;
+        for (const candidate of best) {
           if (!canAttempt(source)) break;
           if (await attempt(candidate)) return { candidate, candidates: [] };
           if (!active()) return null;
