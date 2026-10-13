@@ -43,11 +43,17 @@ window.addEventListener('cabin:playback', (event) => {
 
 The pet runs in its own Electron window (`pet.html`), so it never sees the main page's `window` events. The music state travels with the companion snapshot instead:
 
-1. `src/CompanionBridge.jsx` listens to `cabin:playback` and adds `musicPlaying`, `energy` (rounded to 0.05), `energyEstimated`, `bpm` and `beatAt` to `albumCompanionSnapshot()`.
+1. `src/CompanionBridge.jsx` listens to `cabin:playback` and adds `musicPlaying`, `energy` (rounded to 0.05), `energyEstimated`, `bpm`, `beatAt` and a separate `lofiBpm` to `albumCompanionSnapshot()`.
 2. `desktop/companion-sync.cjs` reads the snapshot. `desktop/wallpaper-model.cjs` `cleanCompanion` whitelists and clamps it (`energy` 0..1, 2 decimals, forced to 0 when nothing is playing). `desktop/pet.cjs` polls about every **125 ms (~8 Hz) while `musicPlaying` is true** and every 750 ms otherwise, and only sends `pet:update` when the cleaned value changed.
 3. `src/pet/pet-snapshot.mjs` re-dispatches `cabin:playback` on the pet window with `{ playing, energy, estimated, source: 'companion', reason: 'companion' }`, and only when the values change.
 
 Pet code listens the same way in both windows (`onCabinPlayback` in `src/scene/playback-listener.mjs`). In the pet window the signal is coarser: about 8 Hz, with 0.05 energy steps and roughly 125 ms of extra latency. That is too coarse for beats, so the beat itself travels as `bpm` + `beatAt` on the wall clock and each window keeps its own beat clock (`src/player/beat-clock.mjs`): the pet's hop (`src/pet/PetLife.jsx`, a Web Animation put back on the beat when it drifts) and its groove frames (`grooveFrame` in `src/pet/pet-model.mjs`, two per beat, head dip on the beat) follow it. Without a detected beat they use 96 BPM, or the lo-fi section's tempo. The existing `playing` field in the snapshot still means "grooving" (real audio, spinning, or lo-fi). Use `musicPlaying` / the event's `playing` for real audio only.
+
+### Generated lo-fi tempo
+
+`lofiBpm` is nonzero only while the generated lo-fi engine is playing and real deck/system music is not. The shell whitelists it to 40–220 BPM. The pet relay applies it to the visual beat clock independently; it does **not** turn `musicPlaying` or the playback event's `playing` on, and lo-fi-only playback still has `energy: 0`, `bpm: 0`, `beatAt: 0` in that event. Tempo changes participate in snapshot deduplication. Stopping lo-fi resets its visual fallback to 96 BPM; real music takes precedence.
+
+This synchronizes the generated section's target tempo, not sample-accurate phase. The engine supplies no beat-origin timestamp and ramps between section tempos over two seconds; the slow lo-fi snapshot poll can add up to approximately 750 ms of visual delay.
 
 ## `cabin:player-command` (incoming)
 
