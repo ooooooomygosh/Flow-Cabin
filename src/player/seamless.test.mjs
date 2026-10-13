@@ -81,6 +81,11 @@ test('seamless: the upcoming shuffle pick is decided once', () => {
   assert.deepEqual(step, { type: 'track', index: 3 }); assert.equal(calls, 1);
 });
 
+test('queue: repeat-all restarts a one-track record instead of setting the unchanged index', () => {
+  assert.deepEqual(nextStep({ trackIndex: 0, trackCount: 1, queue: { ids: [], repeat: 'all', shuffle: false } }), { type: 'restart' });
+  assert.deepEqual(nextStep({ trackIndex: 0, trackCount: 1, queue: { ids: ['next-album'], repeat: 'all', shuffle: false } }), { type: 'album', id: 'next-album' }, 'queued albums still take precedence');
+});
+
 test('playlists: each track keeps its own artist, album and platform id', async () => {
   const playlist = { id: 'p', type: 'playlist', title: '深夜', artist: '我', tracks: ['晴天', 'From The Start', 'Aruarian Dance'], trackDetails: [
     { title: '晴天', source: 'netease', providerId: '186016', artist: '周杰伦', album: '叶惠美' },

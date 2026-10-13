@@ -34,7 +34,7 @@ export function nextStep({ trackIndex = 0, trackCount = 0, queue, manual = false
   }
   if (trackIndex < trackCount - 1) return { type: 'track', index: trackIndex + 1 };
   if (ids.length) return { type: 'album', id: ids[0] };
-  if (repeat === 'all' && trackCount > 0) return { type: 'track', index: 0 };
+  if (repeat === 'all' && trackCount > 0) return trackCount === 1 ? { type: 'restart' } : { type: 'track', index: 0 };
   return { type: 'stop' };
 }
 

@@ -10,14 +10,15 @@ Baseline: v1.14.4 / `73fcb8f23ed73d5473d73e4f7146c10040408734`.
 - Enqueue, reorder, removal, repeat, and shuffle changes did not invalidate the buffered next recording. Prefetch now observes the committed queue's exact recording identity.
 - Repeated mounting exposed a null-ref cleanup crash and failure to explicitly stop detached audio elements. Ref disposal now stops an element before discarding it.
 - Asynchronous resume/restart and candidate selection now retain their deck, source, and request ownership across awaits.
+- A single-track album in repeat-all reached the end without restarting because its track index did not change. It now uses the explicit restart path, while queued albums retain precedence.
 - Keyboard focus could leave the modal listening corner through Shift+Tab. Tab navigation now wraps inside it and Escape still restores the opener.
 - The compact queue opened below the scroll viewport, hidden behind volume controls. Opening now reveals and focuses the queue; an explicit close button returns to the wheel. Queue rows shrink safely without losing their remove controls.
 - Six room scenes used a five-column layout, leaving one orphan card and unnecessary vertical space. Desktop layouts now use one six-card row.
 
 ## Verification
 
-- `npm run check`: 273 desktop tests, 125 frontend tests, and production build passed.
-- Actual cloud Chromium with generated silent 60-second PCM WAVs: the first nine playback regressions passed in two consecutive runs. Expanded natural-ended handoff and overlapping pause/mute checks are included in the fixture.
+- `npm run check`: 273 desktop tests, 126 frontend tests, and production build passed.
+- Actual cloud Chromium with generated silent 60-second PCM WAVs: the first nine playback regressions passed in two consecutive runs. A subsequent expanded 13-case real-media run also passed. The final standalone suite adds the one-track repeat-all case; final execution results belong to its exact-head CI/artifacts.
 - `npm run test:playback`: standalone Playwright regression suite, now run by CI. Covers real media readiness, buffered duration/seek, stale listener reuse, natural end, crossfade interruption, queue changes, and in-flight prefetch replacement.
 - Browser smoke now explicitly mutes audio, checks buffered UI progress, scene-card alignment, and keyboard focus trapping.
 - UI screenshots use synthetic collections and offline service fixtures. No account credentials or copyrighted music were used.
