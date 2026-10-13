@@ -35,7 +35,7 @@ const simple = (value) => String(value || '').toLowerCase().replace(/[\s\p{P}\p{
 const { toSimplified } = await import('../src/player/hanzi.mjs');
 const same = (a, b) => simple(toSimplified(a)) === simple(toSimplified(b));
 const report = { shapes: {}, songs: [] };
-let failures = 0;
+let failures = 0, thin = 0;
 
 // 1. Each request form on its own.
 for (const shape of upstream.qqSearchShapes()) {
@@ -84,11 +84,19 @@ try {
     const ok = Boolean(picked && picked.provider === 'qq' && same(picked.title, title) && String(picked.artist).includes(artist));
     if (!ok) failures++;
     report.songs.push({ title, artist, ok, picked: picked && { id: picked.id, title: picked.title, artist: picked.artist, album: picked.album }, address, error: result?.error || '' });
-    console.log(`${ok ? 'PASS' : 'FAIL'} ${artist} · ${title} → ${picked ? `${picked.title} / ${picked.artist} / ${picked.album} (${picked.id})` : result?.error || 'nothing'}${picked ? ` · guest play address: ${address}` : ''}`);
+    if (ok && !picked.album) thin++;
+    console.log(`${ok ? 'PASS' : 'FAIL'} ${artist} · ${title} → ${picked ? `${picked.title} / ${picked.artist} / ${picked.album || '(suggestion: no album)'} (${picked.id})` : result?.error || 'nothing'}${picked ? ` · guest play address: ${address}` : ''}`);
     await new Promise((resolve) => setTimeout(resolve, 600));
   }
 } finally { service.stop(); fs.rmSync(directory, { recursive: true, force: true }); }
 
+// A song's own cover by its id (used for playlists saved without art).
+try {
+  const cover = await upstream.trackCover('qq', '002ZcDrY3quHI3');
+  console.log(`${cover ? 'PASS' : 'FAIL'} cover by song id → ${cover || 'none'}`); if (!cover) failures++;
+} catch (error) { console.log(`FAIL cover by song id → ${error.message}`); failures++; }
+// Most answers must come from the full forms (album, length); suggestions are the last resort.
+if (thin > SONGS.length / 2) { console.log(`FAIL ${thin} of ${SONGS.length} matches came from suggestions without album data`); failures++; }
 if (process.env.QQ_LIVE_REPORT) fs.writeFileSync(process.env.QQ_LIVE_REPORT, JSON.stringify(report, null, 2));
 console.log(failures ? `${failures} of ${SONGS.length} songs not matched` : `all ${SONGS.length} songs matched`);
 process.exitCode = failures ? 1 : 0;

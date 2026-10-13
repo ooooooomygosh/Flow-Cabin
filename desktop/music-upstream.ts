@@ -96,11 +96,12 @@ export async function getQQMediaMid(cookie: string, mid: string): Promise<string
 }
 
 // ---------- Flow Cabin: QQ song search that survives code 2001 ----------
-// QQ answers DoSearchForQQMusicDesktop with business code 2001 in bursts
-// (anonymous clients, rapid repeats). Simple Music retries the same request
-// five times in 1.2 s, which keeps the burst going. Here each request shape QQ
-// clients use is tried once, in turn; the shape that answered last is tried
-// first next time. Results are mapped to the plain shape `candidate()` reads.
+// QQ answers DoSearchForQQMusicDesktop with business code 2001 now and then
+// (seen live: one query refused, the next answered). Simple Music retried the
+// same request five times in 1.2 s. Here the forms QQ's own clients use take
+// turns (checked live by scripts/qq-live-check.mjs: the desktop and PC-client
+// forms answer with full song data; c.y.qq.com's old search page now fails).
+// Results are mapped to the plain shape `candidate()` reads.
 import { requestText, parseJSONText, QQ_HEADERS, QQ_MUSICU_URL } from './vendor/simple-music/server/lib/qq-client';
 
 type QQSearchShape = { name: string, run: (query: string, limit: number) => Promise<unknown[]> };
@@ -148,13 +149,6 @@ export function qqSearchShapes(options: QQSearchOptions = {}): QQSearchShape[] {
     { name: 'desktop', run: async (query, limit) => block(await post({ [QQ_SEARCH_MODULE]: { module: QQ_SEARCH_MODULE, method: 'DoSearchForQQMusicDesktop', param: { search_type: 0, query, page_num: 1, num_per_page: limit } } }), QQ_SEARCH_MODULE) },
     // The PC client's form (Listen1 and others): comm + req, grouped results.
     { name: 'client', run: async (query, limit) => block(await post({ comm: { ct: '19', cv: '1859', uin: '0' }, req: { module: QQ_SEARCH_MODULE, method: 'DoSearchForQQMusicDesktop', param: { grp: 1, num_per_page: limit, page_num: 1, query, search_type: 0 } } }), 'req') },
-    // The older c.y.qq.com search page; same song objects with new_json=1.
-    { name: 'legacy', run: async (query, limit) => {
-      const json = await get('https://c.y.qq.com/soso/fcgi-bin/client_search_cp', { ct: 24, qqmusic_ver: 1298, new_json: 1, remoteplace: 'txt.yqq.song', t: 0, aggr: 1, cr: 1, catZhida: 1, lossless: 0, flag_qc: 0, p: 1, n: limit, w: query, format: 'json', inCharset: 'utf8', outCharset: 'utf-8', notice: 0, platform: 'yqq.json', needNewCode: 0 });
-      const code = Number(json.code || 0);
-      if (code !== 0) throw new QQSearchError(code);
-      return asArr(asObj(asObj(json.data).song).list);
-    } },
     // The search box's suggestions: song ids and names only; the media id is looked up when played.
     { name: 'smartbox', run: async (query, limit) => {
       const json = await get('https://c.y.qq.com/splcloud/fcgi-bin/smartbox_new.fcg', { key: query, format: 'json', inCharset: 'utf-8', outCharset: 'utf-8', platform: 'yqq.json', is_xml: 0 });
@@ -170,14 +164,19 @@ export async function searchQQSongs(query: string, limit = 8, options: QQSearchO
   if (!keyword) return [];
   const count = Math.max(1, Math.min(20, Math.floor(limit) || 8));
   const shapes = qqSearchShapes(options), wait = options.wait || ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
-  const order = shapes.map((_, index) => (preferredQQShape + index) % shapes.length);
+  // The two full forms (album, length, media id) take turns, starting with the
+  // one that answered last; QQ's 2001 comes and goes, so both get a second try
+  // after a pause. Search-box suggestions (title and singer only) come last
+  // and are never preferred.
+  const full = [preferredQQShape, 1 - preferredQQShape];
+  const order = [...full, ...full, shapes.length - 1];
   let lastError: unknown = null;
   for (const [step, index] of order.entries()) {
-    if (step) await wait(250);
+    if (step) await wait(step === full.length ? 700 : 250);
     try {
       const seen = new Set<string>();
       const songs = (await shapes[index].run(keyword, count)).map(mapQQSearchSong).filter((song) => /^[a-z\d]{14}$/i.test(song.mid) && song.name && !seen.has(song.mid) && seen.add(song.mid));
-      preferredQQShape = index;
+      if (index < full.length) preferredQQShape = index;
       return songs;
     } catch (error) { lastError = error; }
   }
