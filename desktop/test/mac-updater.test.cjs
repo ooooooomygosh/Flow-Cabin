@@ -50,7 +50,9 @@ test('latest-mac.yml: both architectures, quoted values, nothing else picked up'
 
 test('only an installed, writable copy updates itself; the reason says what to do', () => {
   assert.equal(harness().mac.canSelfUpdate().ok, true);
-  assert.match(harness({ bundlePath: path.join(tmp(), 'AppTranslocation', 'x', '心流小屋.app') }).mac.canSelfUpdate().reason, /应用程序/);
+  // macOS paths are always POSIX, also when this test runs on Windows CI.
+  const translocated = createMacUpdater({ platform: 'darwin', bundlePath: '/private/var/folders/x/T/AppTranslocation/ABC/d/心流小屋.app', directory: tmp() });
+  assert.match(translocated.canSelfUpdate().reason, /应用程序/);
   const dmg = createMacUpdater({ platform: 'darwin', bundlePath: '/Volumes/心流小屋/心流小屋.app', directory: tmp() });
   assert.match(dmg.canSelfUpdate().reason, /拖到「应用程序」/);
   assert.match(harness({ writable: false }).mac.canSelfUpdate().reason, /没有权限/);
