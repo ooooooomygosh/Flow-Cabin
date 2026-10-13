@@ -1,6 +1,11 @@
 'use strict';
 // 检查更新. GitHub Releases of ooooooomygosh/album-web are the only source.
 //
+// Every check goes through github.com itself, never api.github.com: the API
+// allows 60 anonymous requests an hour per IP, which a shared network (school,
+// office, proxy) uses up long before this app asks. electron-updater avoids
+// the API for the same reason.
+//
 // Platform honesty:
 //   Windows 安装版 (NSIS)  electron-updater downloads latest.yml + the setup
 //                          exe (blockmap delta) and installs on the next quit or
@@ -40,13 +45,25 @@ function updateMode({ platform = process.platform, isPackaged = false, env = pro
   return { mode: 'notify', reason: '此系统只检查新版本。' };
 }
 
-function pickAsset(assets = [], { platform = process.platform, arch = process.arch, portable = false } = {}) {
-  const names = assets.map((asset) => ({ name: String(asset?.name || ''), url: String(asset?.browser_download_url || '') })).filter((a) => a.url.startsWith('https://github.com/'));
-  if (platform === 'darwin') return names.find((a) => a.name.endsWith(`-mac-${arch === 'arm64' ? 'arm64' : 'x64'}.dmg`)) || null;
-  if (platform === 'win32') return names.find((a) => a.name.endsWith(portable ? '-portable.exe' : '-setup.exe')) || null;
-  return null;
+// The release workflow publishes these names (build.*.artifactName in package.json).
+function assetName(version, { platform = process.platform, arch = process.arch, portable = false } = {}) {
+  if (platform === 'darwin') return `FlowCabin-${version}-mac-${arch === 'arm64' ? 'arm64' : 'x64'}.dmg`;
+  if (platform === 'win32') return `FlowCabin-${version}-x64-${portable ? 'portable' : 'setup'}.exe`;
+  return '';
 }
 const cleanNotes = (value) => String(Array.isArray(value) ? value.map((n) => n?.note || '').join('\n') : value || '').replace(/<[^>]+>/g, '').replace(/[\x00-\x08\x0b-\x1f\x7f]/g, '').trim().slice(0, 4000);
+const decodeEntities = (text) => text.replace(/&(lt|gt|quot|apos|#39|#x27|#\d+|amp);/g, (entity, name) => ({ lt: '<', gt: '>', quot: '"', apos: "'", '#39': "'", '#x27': "'", amp: '&' })[name] ?? String.fromCodePoint(Number(name.slice(1)) || 32));
+// Release notes of `tag` from the releases Atom feed (escaped HTML in <content>).
+function notesFromFeed(xml, tag) {
+  for (const entry of String(xml || '').split(/<entry\b/).slice(1)) {
+    const href = /<link\b[^>]*\bhref="([^"]+)"/.exec(entry)?.[1] || '';
+    if (!href.endsWith(`/releases/tag/${tag}`)) continue;
+    const html = decodeEntities(/<content\b[^>]*>([\s\S]*?)<\/content>/.exec(entry)?.[1] || '');
+    return cleanNotes(decodeEntities(html.replace(/<br\s*\/?>|<\/(p|li|h[1-6]|pre)>/gi, '\n').replace(/<li\b[^>]*>/gi, '- ').replace(/<[^>]+>/g, ''))).replace(/\n{3,}/g, '\n\n');
+  }
+  return '';
+}
+const httpError = (status) => Object.assign(new Error(`HTTP ${status}`), { statusCode: status });
 
 // status: idle | checking | latest | available | downloading | downloaded | error
 function createUpdater({ currentVersion, platform = process.platform, arch = process.arch, isPackaged = false, env = process.env, autoUpdater = null, fetch = globalThis.fetch, openExternal = async () => {}, settings = { get: () => true, set: () => {} }, onState = () => {}, timers = { setTimeout, clearTimeout, setInterval, clearInterval } } = {}) {
@@ -65,9 +82,11 @@ function createUpdater({ currentVersion, platform = process.platform, arch = pro
   }
   function friendly(error) {
     const text = String(error?.message || error || '');
-    if (/ENOTFOUND|ECONN|ETIMEDOUT|network|fetch failed/i.test(text)) return '无法连接 GitHub，请检查网络后重试。';
-    if (/404|latest\.yml|latest-mac\.yml/i.test(text)) return '这个版本的更新信息还没发布，请稍后再试或打开发布页。';
-    if (/rate limit|403/i.test(text)) return 'GitHub 暂时限制了请求次数，请稍后再试。';
+    // Our own requests carry statusCode; electron-updater puts "HttpError: 429" in the message.
+    const status = Number(error?.statusCode) || Number(/HttpError: (\d{3})\b/.exec(text)?.[1]) || 0;
+    if (/ENOTFOUND|EAI_AGAIN|ECONN|ETIMEDOUT|TimeoutError|network|fetch failed/i.test(text)) return '无法连接 GitHub，请检查网络后重试。';
+    if (status === 403 || status === 429 || /rate limit/i.test(text)) return 'GitHub 暂时限制了请求次数，请稍后再试，或先打开发布页下载。';
+    if (status === 404 || /latest(-mac)?\.yml/i.test(text)) return '这个版本的更新信息还没发布，请稍后再试或打开发布页。';
     return '检查更新失败：' + text.slice(0, 160);
   }
   async function checkNative() {
@@ -79,14 +98,27 @@ function createUpdater({ currentVersion, platform = process.platform, arch = pro
     if (state.autoDownload) download().catch(() => {});
     return state;
   }
+  const web = (url, accept) => fetch(url, { headers: { Accept: accept, 'User-Agent': 'FlowCabin-Updater' }, signal: AbortSignal.timeout(15000) });
+  // github.com answers /releases/latest with {"tag_name": ...} for JSON clients
+  // and otherwise redirects to /releases/tag/<tag>.
+  async function latestTag() {
+    const response = await web(`${RELEASES_URL}/latest`, 'application/json');
+    if (!response.ok) throw httpError(response.status);
+    let tag = '';
+    try { tag = String((await response.json())?.tag_name || ''); } catch {}
+    return tag || decodeURIComponent(/\/releases\/tag\/([^/?#]+)$/.exec(String(response.url || ''))?.[1] || '');
+  }
+  // Notes are a courtesy: a failed feed never fails the check.
+  async function latestNotes(tag) {
+    try { const response = await web(`${RELEASES_URL}.atom`, 'application/atom+xml'); return response.ok ? notesFromFeed(await response.text(), tag) : ''; } catch { return ''; }
+  }
   async function checkRelease() {
-    const response = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/releases/latest`, { headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'FlowCabin-Updater' }, signal: AbortSignal.timeout(15000) });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const release = await response.json();
-    const latest = String(release.tag_name || '').replace(/^v/, '');
+    const tag = await latestTag();
+    const latest = tag.replace(/^v/, '');
     if (!parseVersion(latest) || compareVersions(latest, currentVersion) <= 0) return set({ status: 'latest', latestVersion: latest || currentVersion, checkedAt: Date.now() });
-    const asset = pickAsset(release.assets, { platform, arch, portable });
-    return set({ status: 'available', latestVersion: latest, notes: cleanNotes(release.body), releaseUrl: String(release.html_url || `${RELEASES_URL}/tag/v${latest}`), downloadUrl: asset?.url || '', checkedAt: Date.now() });
+    const name = assetName(latest, { platform, arch, portable });
+    const base = `${RELEASES_URL}/download/${encodeURIComponent(tag)}/`;
+    return set({ status: 'available', latestVersion: latest, notes: await latestNotes(tag), releaseUrl: `${RELEASES_URL}/tag/${encodeURIComponent(tag)}`, downloadUrl: name ? base + name : '', checkedAt: Date.now() });
   }
   async function check({ manual = false } = {}) {
     if (pending) return pending;
@@ -116,4 +148,4 @@ function createUpdater({ currentVersion, platform = process.platform, arch = pro
   return { check, download, install, openRelease, setAutoDownload, start, stop, get state() { return state; } };
 }
 
-module.exports = { createUpdater, compareVersions, parseVersion, updateMode, pickAsset, cleanNotes, MAC_SIGNED, STARTUP_DELAY_MS, INTERVAL_MS, RELEASES_URL };
+module.exports = { createUpdater, compareVersions, parseVersion, updateMode, assetName, cleanNotes, notesFromFeed, MAC_SIGNED, STARTUP_DELAY_MS, INTERVAL_MS, RELEASES_URL };
