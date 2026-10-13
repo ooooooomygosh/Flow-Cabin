@@ -34,7 +34,6 @@ function Review({ deck, close }) {
         : <button type="button" className="pixel-button is-primary study-flip" onClick={() => setFlipped(true)}>翻面 · 空格</button>}
     </> : <div className="study-done"><Check size={22}/><strong>{done ? `今天这组复习完了，共 ${done} 张` : '这组现在没有要复习的卡片'}</strong><small>{queue.upcoming ? `下一张在 ${new Date(queue.upcoming).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })} 到期` : '添加新卡片，或明天再来。'}</small><button type="button" className="pixel-button" onClick={close}>回到卡组</button></div>}
     {study.state.cards.length >= LIMITS.cards && <p role="status">学习卡已达 5,000 张上限；旧词仍可复习。整理不需要的卡片后再添加新词。</p>}
-    {study.error && <p className="record-error" role="alert">{study.error}</p>}
   </div>;
 }
 
@@ -44,7 +43,7 @@ function DeckEditor({ deck, close }) {
   const needle = query.normalize('NFKC').toLowerCase().trim();
   const visible = cards.filter(card => !needle || [card.front, card.back].some(side => side.normalize('NFKC').toLowerCase().includes(needle)));
   const saveCard = (event) => { event.preventDefault(); if (editing?.front.trim() && study.updateCard(editing.id, { front: editing.front, back: editing.back })) { setEditing(null); setMessage('卡片已保存，复习进度保持不变。'); } };
-  const add = (event) => { event.preventDefault(); const added = study.addCards(deck.id, input); setMessage(added ? `添加了 ${added} 张卡片。` : '没有新卡片（可能都已经在这组里了）。'); if (added) setInput(''); };
+  const add = (event) => { event.preventDefault(); const added = study.addCards(deck.id, input); setMessage(added === null ? '' : added ? `添加了 ${added} 张卡片。` : '没有新卡片（可能都已经在这组里了，或已达卡片上限）。'); if (added) setInput(''); };
   return <div className="study-editor">
     <header className="study-review-head"><button type="button" className="study-back" onClick={close}><ArrowLeft size={14}/>卡组</button><span>{deck.name} · {cards.length} 张</span></header>
     <WordImport deck={deck} cards={cards}/>
@@ -62,7 +61,6 @@ function DeckEditor({ deck, close }) {
     <ul className="study-card-list" aria-label="这组卡片">{visible.slice(-60).reverse().map((card) => <li key={card.id}><span title={card.front}>{card.front}</span><small title={card.back}>{card.back}</small><button type="button" aria-label={`编辑卡片 ${card.front}`} onClick={() => { setEditing({ id: card.id, front: card.front, back: card.back }); setMessage(''); }}>编辑</button><button type="button" aria-label={`删除卡片 ${card.front}`} onClick={() => { if (study.removeCard(card.id) && editing?.id === card.id) setEditing(null); }}><Trash2 size={13}/></button></li>)}</ul>
     {visible.length > 60 && <small className="study-more">显示最近 60 张匹配卡片，搜索可查找这组全部 {cards.length} 张。</small>}
     {query && !visible.length && <p role="status">没有找到匹配卡片，试试正面或背面的关键词。</p>}
-    {study.error && <p className="record-error" role="alert">{study.error}</p>}
     {confirming ? <p className="study-danger">删除「{deck.name}」和其中 {cards.length} 张卡片？<button type="button" className="pixel-button is-danger" onClick={() => { if (study.removeDeck(deck.id)) close(); }}>确认删除</button><button type="button" className="pixel-button is-quiet" onClick={() => setConfirming(false)}>取消</button></p>
       : <button type="button" className="pixel-button is-quiet study-delete-deck" onClick={() => setConfirming(true)}><Trash2 size={13}/>删除卡组</button>}
   </div>;
@@ -89,7 +87,7 @@ function WordImport({ deck, cards }) {
       {format === 'tsv' && <div className="study-import-columns">{[['正面列', frontColumn, setFrontColumn], ['背面列', backColumn, setBackColumn]].map(([label, value, update]) => <label key={label}>{label}<select aria-label={label} value={value} onChange={event => update(Number(event.target.value))}>{[0,1,2,3].map(index => <option key={index} value={index}>第 {index+1} 列</option>)}</select></label>)}<label><input type="checkbox" checked={header} onChange={event => setHeader(event.target.checked)}/>首行为标题</label></div>}
       <p role="status">有效 {preview.cards.length} · 重复 {preview.duplicates} · 错误 {preview.errors}{preview.message && ` · ${preview.message}`}</p>
       <ul className="study-import-preview">{preview.cards.slice(0,5).map(card => <li key={card.front}><b>{card.front}</b><span>{card.back}</span></li>)}</ul>
-      <button type="button" className="pixel-button" disabled={!preview.cards.length} onClick={() => { const added = study.addCards(deck.id, preview.cards); setMessage(`已追加 ${added} 张卡片；旧进度保持不变。`); if (added) setText(''); }}>确认追加 {preview.cards.length} 张</button></>}
+      <button type="button" className="pixel-button" disabled={!preview.cards.length} onClick={() => { const added = study.addCards(deck.id, preview.cards); setMessage(added === null ? '' : `已追加 ${added} 张卡片；旧进度保持不变。`); if (added) setText(''); }}>确认追加 {preview.cards.length} 张</button></>}
     {message && <p role="status">{message}</p>}
   </details>;
 }
@@ -100,7 +98,7 @@ function Countdowns() {
   return <section className="study-countdowns" aria-label="考试倒计时">
     <h4><Clock size={14}/>倒计时</h4>
     {list.length > 0 && <ul>{list.map((entry) => <li key={entry.id} className={entry.days < 0 ? 'is-past' : entry.days <= 7 ? 'is-soon' : ''}><span>{entry.title}</span><b>{entry.days < 0 ? '已结束' : entry.days === 0 ? '就是今天' : `${entry.days} 天`}</b><button type="button" aria-label={`删除倒计时 ${entry.title}`} onClick={() => study.removeCountdown(entry.id)}><Trash2 size={12}/></button></li>)}</ul>}
-    <form className="study-countdown-add" onSubmit={(event) => { event.preventDefault(); study.addCountdown(title, date); setTitle(''); setDate(''); }}>
+    <form className="study-countdown-add" onSubmit={(event) => { event.preventDefault(); if (study.addCountdown(title, date)) { setTitle(''); setDate(''); } }}>
       <input aria-label="倒计时名称" placeholder="考研、四级、期末…" value={title} maxLength={40} onChange={(event) => setTitle(event.target.value)}/>
       <input type="date" aria-label="倒计时日期" value={date} onChange={(event) => setDate(event.target.value)}/>
       <button type="submit" className="pixel-button" disabled={!title.trim() || !date} aria-label="添加倒计时"><Plus size={14}/></button>
@@ -133,9 +131,8 @@ export default function StudyPanel() {
         <button type="button" className="study-deck-edit" onClick={() => setView({ mode: 'edit', deckId: entry.id })}>编辑</button>
       </li>;
     })}</ul>}
-    <form className="study-new-deck" onSubmit={(event) => { event.preventDefault(); if (name.trim()) { study.addDeck(name); setName(''); } }}><input aria-label="新卡组名称" placeholder="新卡组：英语单词、高数公式…" value={name} maxLength={40} onChange={(event) => setName(event.target.value)}/><button type="submit" className="pixel-button" disabled={!name.trim()}><Plus size={14}/>新建</button></form>
+    <form className="study-new-deck" onSubmit={(event) => { event.preventDefault(); if (name.trim() && study.addDeck(name)) setName(''); }}><input aria-label="新卡组名称" placeholder="新卡组：英语单词、高数公式…" value={name} maxLength={40} onChange={(event) => setName(event.target.value)}/><button type="submit" className="pixel-button" disabled={!name.trim()}><Plus size={14}/>新建</button></form>
     <label className="study-limit">每天新卡<input type="number" min="0" max="200" value={study.state.newPerDay} onChange={(event) => study.setNewPerDay(Math.max(0, Math.min(200, Number(event.target.value) || 0)))}/>张</label>
     <Countdowns/>
-    {study.error && <p className="record-error" role="alert">{study.error}</p>}
   </div>;
 }

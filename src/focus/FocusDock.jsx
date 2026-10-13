@@ -10,6 +10,7 @@ import TaskList from './TaskList';
 import FocusStats from './FocusStats';
 import QuickNotes from './QuickNotes';
 import StudyPanel from '../study/StudyPanel';
+import { useStudy } from '../study/useStudy';
 import './focus.css';
 
 // Explicit built-in registry; never loads third-party code or remote widgets.
@@ -92,7 +93,7 @@ export function FocusBadge({ onClick, open = false }) {
 }
 
 export default function FocusDock({ open, close, tab, setTab }) {
-  const tabId = useId(), focus = useFocus();
+  const tabId = useId(), focus = useFocus(), study = useStudy();
   useEffect(() => {
     if (!open) return;
     const escape = event => { if (event.key === 'Escape' && !event.repeat && !event.defaultPrevented && !document.querySelector('dialog[open], .listening-corner')) { event.preventDefault(); close(); document.querySelector('.focus-badge')?.focus(); } };
@@ -114,6 +115,7 @@ export default function FocusDock({ open, close, tab, setTab }) {
       <button type="button" className="focus-dock-close" aria-label="收起专注工具" onClick={close}><X size={18}/></button>
     </header>
     {focus.error && <div className="focus-save-error" role="alert">{focus.error}{focus.hasUnsavedChanges ? <>{tab === 'notes' && ' 请先复制内容，避免丢失。'} <button type="button" className="pixel-button" onClick={focus.retrySave}>重试保存</button></> : ' 请在原控件重试刚才的操作。'}</div>}
+    {tab === 'study' && study?.error && <div className="focus-save-error" role="alert">{study.error} 本次操作未保存，请在原控件重试。</div>}
     <div className="focus-dock-body" role="tabpanel" id={`${tabId}-panel`} aria-labelledby={`${tabId}-${tab}`}>
       <Panel/>
     </div>
