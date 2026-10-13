@@ -23,7 +23,7 @@ export default function AlbumWall({ items, onClose }) {
     const previous = document.activeElement, overflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden'; close.current?.focus();
     const key = (event) => {
-      if (event.key === 'Escape') { event.stopPropagation(); onClose(); }
+      if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); if (!event.repeat) onClose(); }
       if (event.key === 'Tab') {
         const elements = [...overlay.current.querySelectorAll('button:not(:disabled),a,input,select')].filter((node) => node.getClientRects().length);
         const first = elements[0], last = elements.at(-1);
@@ -31,8 +31,8 @@ export default function AlbumWall({ items, onClose }) {
         else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
       }
     };
-    window.addEventListener('keydown', key);
-    return () => { searchRequest.current?.abort(); document.body.style.overflow = overflow; window.removeEventListener('keydown', key); previous?.focus(); };
+    window.addEventListener('keydown', key, true);
+    return () => { searchRequest.current?.abort(); document.body.style.overflow = overflow; window.removeEventListener('keydown', key, true); previous?.focus(); };
   }, [onClose]);
   useEffect(() => {
     try { const data = JSON.stringify({ version: 1, options, selected }); if (data.length > 512000) throw new Error(); localStorage.setItem(WALL_STORAGE_KEY, data); }

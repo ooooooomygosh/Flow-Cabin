@@ -94,6 +94,7 @@ function FocusWidget({ layout, move }) {
         {timer.phase !== 'idle' && <button type="button" aria-label="跳过本阶段" onClick={focus.skip}><Forward size={15}/></button>}
       </span>
     </div>
+    {focus.error && <p className="record-error" role="alert">{focus.error}</p>}
   </Widget>;
 }
 
@@ -102,7 +103,8 @@ function TodoWidget({ layout, move }) {
   if (!focus) return null;
   const open = focus.state.tasks.filter((task) => !task.done).slice(0, 6), doneToday = focus.state.tasks.filter((task) => task.done && task.doneAt && new Date(task.doneAt).toDateString() === new Date().toDateString()).length;
   return <Widget id="todo" title="待办" icon={<ListBullet size={13}/>} layout={layout} move={move}>
-    <form className="desktop-todo-add" onSubmit={(event) => { event.preventDefault(); if (text.trim()) { focus.addTask(text.trim()); setText(''); } }}><input aria-label="桌面待办" placeholder="接下来要做…" value={text} maxLength={120} onChange={(event) => setText(event.target.value)}/><button type="submit" aria-label="添加桌面待办"><Plus size={14}/></button></form>
+    <form className="desktop-todo-add" onSubmit={(event) => { event.preventDefault(); if (text.trim()) { if (focus.addTask(text.trim())) setText(''); } }}><input aria-label="桌面待办" placeholder="接下来要做…" value={text} maxLength={120} onChange={(event) => setText(event.target.value)}/><button type="submit" aria-label="添加桌面待办"><Plus size={14}/></button></form>
+    {focus.error && <p className="record-error" role="alert">{focus.error}</p>}
     {open.length ? <ul className="desktop-todo">{open.map((task) => <li key={task.id}><label><input type="checkbox" checked={false} onChange={() => focus.updateTask(task.id, { done: true })}/><span title={task.text}>{task.text}</span></label></li>)}</ul> : <p className="desktop-widget-empty">{doneToday ? `做完 ${doneToday} 件事了，歇一会儿。` : '写下一件想完成的小事。'}</p>}
   </Widget>;
 }

@@ -62,7 +62,6 @@ export function FocusTimer() {
       <div className="focus-settings-grid">{number('focusMin', '专注（分）', 180)}{number('shortMin', '短休（分）', 60)}{number('longMin', '长休（分）', 90)}{number('longEvery', '几轮长休', 8)}</div>
       {check('hideSeconds', '隐藏秒数（仅显示剩余分钟）')}{check('autoBreak', '专注结束自动开始休息')}{check('autoFocus', '休息结束自动开始专注')}{check('notify', '系统通知')}{check('chime', '提示音')}{check('autoSound', '开始专注时打开声音')}
     </div>}
-    {focus.error && <p className="record-error" role="alert">{focus.error}</p>}
   </div>;
 }
 
@@ -93,7 +92,7 @@ export function FocusBadge({ onClick, open = false }) {
 }
 
 export default function FocusDock({ open, close, tab, setTab }) {
-  const tabId = useId();
+  const tabId = useId(), focus = useFocus();
   useEffect(() => {
     if (!open) return;
     const escape = event => { if (event.key === 'Escape' && !event.repeat && !event.defaultPrevented && !document.querySelector('dialog[open], .listening-corner')) { event.preventDefault(); close(); document.querySelector('.focus-badge')?.focus(); } };
@@ -114,6 +113,7 @@ export default function FocusDock({ open, close, tab, setTab }) {
       <nav role="tablist" aria-label="专注工具">{TABS.map(([id, label, Icon]) => <button type="button" role="tab" key={id} id={`${tabId}-${id}`} aria-controls={`${tabId}-panel`} tabIndex={tab === id ? 0 : -1} onKeyDown={navigateTabs} aria-selected={tab === id} onClick={() => setTab(id)}><Icon size={16}/><span>{label}</span></button>)}</nav>
       <button type="button" className="focus-dock-close" aria-label="收起专注工具" onClick={close}><X size={18}/></button>
     </header>
+    {focus.error && <div className="focus-save-error" role="alert">{focus.error}{focus.hasUnsavedChanges ? <>{tab === 'notes' && ' 请先复制内容，避免丢失。'} <button type="button" className="pixel-button" onClick={focus.retrySave}>重试保存</button></> : ' 请在原控件重试刚才的操作。'}</div>}
     <div className="focus-dock-body" role="tabpanel" id={`${tabId}-panel`} aria-labelledby={`${tabId}-${tab}`}>
       <Panel/>
     </div>

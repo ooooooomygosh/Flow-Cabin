@@ -33,6 +33,7 @@ export default function App() {
   const [playlists, setPlaylists] = useState(false), [adding, setAdding] = useState(null), [recordId, setRecordId] = useState(''), [backup, setBackup] = useState(false), [wall, setWall] = useState(false);
   const [toast, notify] = useToast();
   const reload = useCallback(async () => {
+    setLoading(true);
     try { setItems(await listItems()); setError(''); } catch (cause) { setError(cause.message); } finally { setLoading(false); }
   }, []);
   useEffect(() => { reload(); }, [reload]);
@@ -63,8 +64,8 @@ export default function App() {
         <DesktopControls/>
       </header>
       <main className="app-cabin">
-        {error && <p className="app-error" role="alert">{error}<button type="button" onClick={reload}>重试</button></p>}
-        <CabinRoom items={items} loading={loading || Boolean(error)} firstVisit={firstVisit} hubRequest={hubRequest} openBackup={() => setBackup(true)} openWall={() => setWall(true)} notify={notify} openRecord={setRecordId} openAdd={(query = '') => setAdding({ query })}/>
+        {error && <p className="app-error" role="alert">{error}<button type="button" disabled={loading} onClick={reload}>{loading ? '正在重试…' : '重试'}</button></p>}
+        <CabinRoom items={items} loading={loading} loadError={error} firstVisit={firstVisit} hubRequest={hubRequest} openBackup={() => setBackup(true)} openWall={() => setWall(true)} notify={notify} openRecord={setRecordId} openAdd={(query = '') => setAdding({ query })}/>
       </main>
       {toast && <p className="app-toast" role="status" key={toast.at}>{toast.text}</p>}
     </div>

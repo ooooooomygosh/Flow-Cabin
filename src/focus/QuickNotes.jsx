@@ -10,6 +10,6 @@ export default function QuickNotes() {
     <p>先把突然想到的事记下来，继续专注。内容仅保存在本机。</p>
     <label>随手记<textarea aria-label="随手记内容" maxLength={MAX_NOTE_LENGTH} value={notes} placeholder="灵感、会议要点、稍后再做的事…" onChange={(event) => focus.saveNotes(event.target.value)}/></label>
     <div className="focus-task-footer"><span>{notes.length} / {MAX_NOTE_LENGTH}</span><button type="button" disabled={!notes} onClick={() => { if (window.confirm('清空随手记？此操作无法撤销。')) focus.saveNotes(''); }}>清空</button></div>
-    {focus.error ? <p className="record-error" role="alert">{focus.error} 请先复制内容，避免丢失。</p> : <small role="status">已自动保存到本机</small>}
+    {!focus.error && <small role="status">已自动保存到本机</small>}
   </section>;
 }

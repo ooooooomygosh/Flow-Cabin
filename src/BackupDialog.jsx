@@ -38,7 +38,7 @@ export default function BackupDialog({ items, close, reload }) {
       const librarySaved = library.update((old) => ({ ...old, styles: { ...old.styles, ...source.styles }, genres: { ...old.genres, ...source.genres }, rooms: sourceRoom ? { ...old.rooms, [roomId]: { ...(old.rooms[roomId] || {}), ...sourceRoom } } : old.rooms }));
       const warnings = [];
       if (!librarySaved) warnings.push('唱片已导入，但小屋设置保存失败，请检查存储空间');
-      if (data.focus && focus && window.confirm('备份里包含专注记录、待办与随手记。要替换这台电脑上的这些内容吗？')) focus.replace(restoreFocus(data.focus, focus.state));
+      if (data.focus && focus && window.confirm('备份里包含专注记录、待办与随手记。要替换这台电脑上的这些内容吗？')) { if (!focus.replace(restoreFocus(data.focus, focus.state))) warnings.push('专注记录、待办与随手记未能保存，原有内容保持不变'); }
       const savedStudy = data.study ? normalizeStudy(data.study) : null;
       if (savedStudy && study && (savedStudy.decks.length || savedStudy.countdowns.length) && window.confirm(`备份里有 ${savedStudy.decks.length} 个卡组、${savedStudy.cards.length} 张闪卡和 ${savedStudy.countdowns.length} 个倒计时。要替换这台电脑上的学习记录吗？`)) { if (!study.replace(savedStudy)) warnings.push('学习记录未能保存'); }
       if (data.sound && soundscape?.replaceMix) {

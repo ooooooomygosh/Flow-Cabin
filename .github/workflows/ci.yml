@@ -40,6 +40,8 @@ jobs:
         run: npm run test:browser
       - name: Run silent playback regressions
         run: npm run test:playback
+      - name: Run focus and mode regressions
+        run: npm run test:focus-ui
       - name: Save browser test evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -48,5 +50,6 @@ jobs:
           path: |
             desktop/test-results/browser/
             desktop/test-results/playback/
+            desktop/test-results/focus-ui/
           if-no-files-found: warn
           retention-days: 14

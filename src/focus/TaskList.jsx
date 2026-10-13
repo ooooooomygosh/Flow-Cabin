@@ -6,8 +6,8 @@ import { taskProgress } from './focus-model.mjs';
 export default function TaskList() {
   const focus = useFocus(), [draft, setDraft] = useState(''), [dragging, setDragging] = useState(''), [editing, setEditing] = useState('');
   const { tasks, timer } = focus.state, progress = taskProgress(tasks, focus.now), open = progress.open;
-  const finishEdit = (task, value) => { setEditing(''); if (value.trim() && value.trim() !== task.text) focus.renameTask(task.id, value); };
-  const submit = (event) => { event.preventDefault(); if (!draft.trim() || tasks.length >= 200) return; focus.addTask(draft); setDraft(''); };
+  const finishEdit = (task, value) => { if (value.trim() && value.trim() !== task.text && !focus.renameTask(task.id, value)) return; setEditing(''); };
+  const submit = (event) => { event.preventDefault(); if (!draft.trim() || tasks.length >= 200) return; if (focus.addTask(draft)) setDraft(''); };
   return <div className="focus-tasks">
     <form className="focus-task-form" onSubmit={submit}>
       <input aria-label="新的待办" placeholder="接下来要做什么？" maxLength={120} value={draft} onChange={(event) => setDraft(event.target.value)}/>
