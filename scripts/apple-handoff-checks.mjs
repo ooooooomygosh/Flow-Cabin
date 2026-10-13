@@ -17,7 +17,15 @@ export async function verifyAppleHandoff({ browser, origin, output, check }) {
       window.albumDesktopAppearance = { client: true, reduceMotion: true };
       const init = () => { document.documentElement.dataset.desktopClient = 'true'; document.documentElement.dataset.desktopReduceMotion = 'true'; };
       if (document.documentElement) init(); else new MutationObserver((_, observer) => { if (document.documentElement) { init(); observer.disconnect(); } }).observe(document, { childList: true });
-      window.open = () => { throw new Error('Unexpected native navigation'); };
+      window.__desktopCommands = [];
+      window.__unexpectedNavigation = [];
+      window.open = value => {
+        const url = new URL(String(value));
+        if (url.protocol !== 'album-desktop:' || url.hostname !== 'action' || url.pathname !== '/tray-pet') {
+          window.__unexpectedNavigation.push(String(value)); throw new Error('Unexpected native navigation');
+        }
+        window.__desktopCommands.push(String(value)); return null;
+      };
     });
     await context.route('**/*', route => {
       const u = new URL(route.request().url()), json = value => route.fulfill({ json: value });
@@ -42,6 +50,7 @@ export async function verifyAppleHandoff({ browser, origin, output, check }) {
       await page.goto(origin); await page.locator('.room-record').first().waitFor();
       assert.equal(await page.evaluate(() => /mac/i.test(navigator.userAgentData?.platform || navigator.platform)), true, 'settings and player both receive the Mac fixture platform');
       assert.equal(await page.evaluate(() => document.documentElement.dataset.desktopClient), 'true');
+      assert.deepEqual(errors, []);
       await chooseSource(page, 'appleMusic');
       await page.locator('.room-record').first().dblclick(); await waiting(); await pollAgain();
       assert.equal(resolves.length, 1); assert.equal(resolves[0].id, '1234567890'); assert.equal(resolves[0].album, initial === 'legacy' ? '' : selected.album);
@@ -59,7 +68,7 @@ export async function verifyAppleHandoff({ browser, origin, output, check }) {
       if (initial === 'legacy') {
         await waiting(); assert.equal(await progress.inputValue(), '0');
         await page.getByRole('button', { name: '取下唱片', exact: true }).click(); await page.waitForTimeout(100);
-        assert.deepEqual(controls, []); assert.deepEqual(errors, []); check('apple-legacy-single-without-recording-metadata-never-takes-control');
+        assert.deepEqual(controls, []); assert.deepEqual(errors, []); assert.deepEqual(await page.evaluate(() => window.__unexpectedNavigation), []); check('apple-legacy-single-without-recording-metadata-never-takes-control');
         continue;
       }
       const pause = page.getByRole('button', { name: '暂停音乐播放', exact: true }); await pause.waitFor();
@@ -75,7 +84,11 @@ export async function verifyAppleHandoff({ browser, origin, output, check }) {
       await page.getByRole('button', { name: '取下唱片', exact: true }).click(); await page.waitForTimeout(100);
       assert.equal(controls.length, 1, 'ejecting pending handoff never pauses the unrelated song');
       assert.deepEqual(errors, []);
+      assert.deepEqual(await page.evaluate(() => window.__unexpectedNavigation), []);
       check(`apple-catalog-binds-selected-track-revokes-on-change-and-ejects-safely-${initial}`);
+    } catch (error) {
+      console.error('Apple handoff fixture failure', { initial, errors, body: (await page.locator('body').innerText().catch(() => '')).slice(0, 2000) });
+      throw error;
     } finally { await context.close(); }
   }
 }
