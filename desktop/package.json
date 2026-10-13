@@ -1,6 +1,6 @@
 {
   "name": "album-circle-desktop",
-  "version": "1.14.1",
+  "version": "1.14.2",
   "description": "心流小屋 · Flow Cabin — a pixel lo-fi cabin for your favourite albums, focus timer and desktop cat",
   "productName": "心流小屋",
   "author": "Flow Cabin",
@@ -73,6 +73,7 @@
       "apple-music.cjs",
       "local-app.cjs",
       "updater.cjs",
+      "mac-updater.cjs",
       "local-music.cjs",
       "collection-store.cjs",
       "catalog-search.mjs",
