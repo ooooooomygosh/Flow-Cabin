@@ -13,7 +13,8 @@ test('platform modes are honest', () => {
   assert.equal(updateMode({ platform: 'win32', isPackaged: true, env: {} }).mode, 'install');
   assert.match(updateMode({ platform: 'win32', isPackaged: true, env: { PORTABLE_EXECUTABLE_DIR: 'D:\\x' } }).reason, /便携版/);
   const mac = updateMode({ platform: 'darwin', isPackaged: true, env: {} });
-  assert.equal(mac.mode, 'notify'); assert.match(mac.reason, /签名/);
+  assert.equal(mac.mode, 'notify', 'macOS installs only when mac-updater says this copy can replace itself'); assert.match(mac.reason, /DMG/);
+  assert.equal(updateMode({ platform: 'darwin', isPackaged: true, env: {}, macUpdatable: { ok: true, reason: '' } }).mode, 'install');
   assert.equal(updateMode({ platform: 'win32', isPackaged: false }).mode, 'notify');
 });
 test('download names match what the release workflow builds', () => {

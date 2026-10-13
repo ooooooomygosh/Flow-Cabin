@@ -14,3 +14,9 @@ test('update view: every status names what happens next', () => {
   assert.equal(done.label, 'v1.12.0 已下载，重启安装'); assert.deepEqual(done.actions, ['install']);
   assert.deepEqual(updateView({ status: 'error', error: '无法连接' }).actions, ['check', 'open-release']);
 });
+test('update view: a newer copy installed while the old one still runs', async () => {
+  const { ACTION_LABELS, ACTION_COMMANDS } = await import('./update-model.mjs');
+  const view = updateView({ status: 'restart', mode: 'install', latestVersion: '1.14.1' });
+  assert.equal(view.label, '已安装 v1.14.1，重启后生效'); assert.deepEqual(view.actions, ['relaunch']);
+  assert.equal(ACTION_LABELS.relaunch, '重启到新版本'); assert.equal(ACTION_COMMANDS.relaunch, 'update-relaunch');
+});

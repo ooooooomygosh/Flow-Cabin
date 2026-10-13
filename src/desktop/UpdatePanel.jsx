@@ -22,7 +22,7 @@ export default function UpdatePanel({ version, desktop }) {
       {desktop && native && <label className="update-auto"><input type="checkbox" checked={state?.autoDownload !== false} onChange={(event) => desktopCommand('update-auto', { enabled: event.target.checked })}/>有新版本时自动下载（不会自动重启）</label>}
     </span>
     <span className="hub-row-actions">
-      {view.actions.map((action) => <button type="button" key={action} className={`pixel-button${action === 'install' || action === 'download' || action === 'open-download' ? ' is-primary' : ''}`} onClick={() => desktopCommand(ACTION_COMMANDS[action])}>{ACTION_LABELS[action]}</button>)}
+      {view.actions.map((action) => <button type="button" key={action} className={`pixel-button${['install', 'relaunch', 'download', 'open-download'].includes(action) ? ' is-primary' : ''}`} onClick={() => desktopCommand(ACTION_COMMANDS[action])}>{ACTION_LABELS[action]}</button>)}
       {view.busy && <button type="button" className="pixel-button" disabled>检查中…</button>}
       <a className="pixel-button" href="https://github.com/ooooooomygosh/album-web" target="_blank" rel="noreferrer">项目主页</a>
     </span>

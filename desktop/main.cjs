@@ -22,7 +22,8 @@ const { createPet } = require('./pet.cjs');
 const { createNowPlaying } = require('./now-playing.cjs');
 const { createAppleMusic } = require('./apple-music.cjs');
 const { createLocalApps } = require('./local-app.cjs');
-const { createUpdater } = require('./updater.cjs');
+const { createUpdater, compareVersions } = require('./updater.cjs');
+const { createMacUpdater } = require('./mac-updater.cjs');
 const { createLocalMusic } = require('./local-music.cjs');
 const { sendCompanionCommand } = require('./companion-sync.cjs');
 
@@ -344,7 +345,7 @@ function handleSiteCommand(value) {
   if (url.protocol !== 'album-desktop:' || url.hostname !== 'action' || url.username || url.password || !isSiteUrl(siteView?.webContents.getURL())) return false;
   switch (url.pathname) {
     case '/settings': toggleSettings(true); break;
-    case '/update-check': case '/update-download': case '/update-install': case '/update-open': case '/update-auto': case '/update-state': handleUpdateCommand(url.pathname, url.searchParams); break;
+    case '/update-check': case '/update-download': case '/update-install': case '/update-relaunch': case '/update-open': case '/update-auto': case '/update-state': handleUpdateCommand(url.pathname, url.searchParams); break;
     case '/fullscreen': toggleFullscreen(); break;
     case '/fullscreen-exit': setFullscreen(false); break;
     // 沉入桌面. The old desktop-mode / wallpaper commands are kept as aliases.
@@ -380,7 +381,7 @@ function notifySinkStatus(state) {
 }
 // 检查更新 (desktop/updater.cjs). State reaches the page as
 // window.cabinUpdateState + CustomEvent 'cabin:update-state'.
-let updater = null;
+let updater = null, macUpdater = null;
 function updateSettings() {
   const file = path.join(app.getPath('userData'), 'update.json');
   return { get: () => { try { return JSON.parse(fs.readFileSync(file, 'utf8')).autoDownload !== false; } catch { return true; } }, set: (value) => { try { fs.writeFileSync(file, JSON.stringify({ autoDownload: Boolean(value) })); } catch {} } };
@@ -390,9 +391,26 @@ function pushUpdateState(state = updater?.state) {
 }
 function startUpdater() {
   const { updateMode } = require('./updater.cjs');
-  const native = updateMode({ isPackaged: app.isPackaged }).mode === 'install';
-  updater = createUpdater({ currentVersion: app.getVersion(), isPackaged: app.isPackaged, autoUpdater: native ? require('electron-updater').autoUpdater : null, openExternal: (url) => shell.openExternal(url), settings: updateSettings(), onState: (state) => pushUpdateState(state) });
+  // macOS: ad-hoc builds update themselves (desktop/mac-updater.cjs). net.fetch
+  // follows the system proxy settings.
+  if (process.platform === 'darwin' && app.isPackaged) macUpdater = createMacUpdater({ app, fetch: (url, options) => net.fetch(url, options), bundlePath: path.resolve(process.execPath, '..', '..', '..'), directory: path.join(app.getPath('userData'), 'updates') });
+  const macUpdatable = macUpdater ? macUpdater.canSelfUpdate({ isPackaged: app.isPackaged }) : null;
+  const native = updateMode({ isPackaged: app.isPackaged, macUpdatable }).mode === 'install';
+  updater = createUpdater({ currentVersion: app.getVersion(), isPackaged: app.isPackaged, macUpdatable, autoUpdater: native ? macUpdater || require('electron-updater').autoUpdater : null, openExternal: (url) => shell.openExternal(url), installedVersion: () => macUpdater?.installedVersion() || '', relaunch: relaunchInstalledCopy, settings: updateSettings(), onState: (state) => pushUpdateState(state) });
   if (!process.env.ALBUM_DESKTOP_TEST_PROFILE) updater.start();
+}
+// The .app on disk was replaced (a DMG dragged over it) while this older
+// process kept running in the background: start the installed copy instead.
+function relaunchInstalledCopy() {
+  if (macUpdater) macUpdater.autoInstallOnAppQuit = false; // the newer copy wins; never swap a staged older one over it
+  app.relaunch(); app.quit(); return true;
+}
+// Reopening the app (Dock, Launchpad, Finder) while it only ran in the
+// background starts the newer installed copy; with the window open the
+// About row offers 「重启到新版本」 instead.
+function newerCopyInstalled() {
+  const installed = macUpdater?.installedVersion() || '';
+  return Boolean(installed) && compareVersions(installed, app.getVersion()) > 0;
 }
 function checkUpdatesFromMenu() { restoreMainWindow(); sendCompanionCommand(siteView?.webContents, 'open-about'); updater?.check({ manual: true }); }
 function handleUpdateCommand(pathname, params) {
@@ -400,6 +418,7 @@ function handleUpdateCommand(pathname, params) {
   if (pathname === '/update-check') updater.check({ manual: true });
   else if (pathname === '/update-download') updater.download();
   else if (pathname === '/update-install') updater.install();
+  else if (pathname === '/update-relaunch') updater.restart();
   else if (pathname === '/update-open') updater.openRelease();
   else if (pathname === '/update-auto' && ['true', 'false'].includes(params.get('enabled'))) updater.setAutoDownload(params.get('enabled') === 'true');
   else if (pathname === '/update-state') pushUpdateState();
@@ -592,6 +611,12 @@ else {
     app.quit();
   });
   app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
-  app.on('activate', () => { if (mainWindow) restoreMainWindow(); else createWindow().catch((error) => writeLog('startup-error', error.message)); });
+  app.on('activate', () => {
+    if (newerCopyInstalled()) {
+      if (!mainWindow || mainWindow.isDestroyed() || !mainWindow.isVisible()) { writeLog('relaunch-installed', macUpdater.installedVersion()); relaunchInstalledCopy(); return; }
+      updater?.checkInstalled();
+    }
+    if (mainWindow) restoreMainWindow(); else createWindow().catch((error) => writeLog('startup-error', error.message));
+  });
   app.on('before-quit', () => { quitting = true; if (awakeBlocker !== null) { powerSaveBlocker.stop(awakeBlocker); awakeBlocker = null; } globalShortcut.unregisterAll(); desktopSink?.stop(); miniPlayer?.hide(); wallpaper?.stop(); pet?.stop(); music?.stop(); companionTray?.destroy(); companionTray = null; if (startupComplete) writeLog('closed'); });
 }

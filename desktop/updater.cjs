@@ -12,13 +12,14 @@
 //                          when the user clicks 「重启安装」. Never forced.
 //   Windows 便携版         cannot replace itself: we only notify and open the
 //                          release page.
-//   macOS                  Squirrel.Mac refuses to install an update that is not
-//                          signed with an Apple Developer ID. Our builds use an
-//                          ad-hoc identity ("-"), so we notify and offer the DMG
-//                          for this Mac's architecture. Flip MAC_SIGNED when the
-//                          release workflow signs + notarises.
+//   macOS                  Squirrel.Mac refuses builds without an Apple
+//                          Developer ID, and ours are ad-hoc signed ("-"). So
+//                          desktop/mac-updater.cjs downloads the verified zip and
+//                          swaps the .app itself, on 「重启安装」 or on quit. When
+//                          it cannot (run from the DMG, translocated, read-only)
+//                          we notify and offer the DMG. Once releases are signed
+//                          and notarised, electron-updater can take over again.
 //   Development / Linux    check only (notify).
-const MAC_SIGNED = false;
 const OWNER = 'ooooooomygosh', REPO = 'album-web';
 const RELEASES_URL = `https://github.com/${OWNER}/${REPO}/releases`;
 const STARTUP_DELAY_MS = 20 * 1000, INTERVAL_MS = 6 * 60 * 60 * 1000;
@@ -38,10 +39,11 @@ function compareVersions(a, b) {
 }
 
 // How this copy can update itself.
-function updateMode({ platform = process.platform, isPackaged = false, env = process.env } = {}) {
+// `macUpdatable` is mac-updater's canSelfUpdate(): { ok, reason }.
+function updateMode({ platform = process.platform, isPackaged = false, env = process.env, macUpdatable = null } = {}) {
   if (!isPackaged) return { mode: 'notify', reason: '开发版只检查新版本，不会自动安装。' };
   if (platform === 'win32') return env.PORTABLE_EXECUTABLE_DIR ? { mode: 'notify', reason: '便携版无法自动替换自己，请下载新版本后替换。' } : { mode: 'install', reason: '' };
-  if (platform === 'darwin') return MAC_SIGNED ? { mode: 'install', reason: '' } : { mode: 'notify', reason: '这个 macOS 版本没有 Apple 开发者签名，系统不允许自动安装更新。请下载新的 DMG 手动替换。' };
+  if (platform === 'darwin') return macUpdatable?.ok ? { mode: 'install', reason: '' } : { mode: 'notify', reason: macUpdatable?.reason || '这个副本无法自动更新，请下载新的 DMG 手动替换。' };
   return { mode: 'notify', reason: '此系统只检查新版本。' };
 }
 
@@ -64,10 +66,26 @@ function notesFromFeed(xml, tag) {
   return '';
 }
 const httpError = (status) => Object.assign(new Error(`HTTP ${status}`), { statusCode: status });
+const web = (fetch, url, accept) => fetch(url, { headers: { Accept: accept, 'User-Agent': 'FlowCabin-Updater' }, signal: AbortSignal.timeout(15000) });
+// github.com answers /releases/latest with {"tag_name": ...} for JSON clients
+// and otherwise redirects to /releases/tag/<tag>.
+async function latestTag(fetch) {
+  const response = await web(fetch, `${RELEASES_URL}/latest`, 'application/json');
+  if (!response.ok) throw httpError(response.status);
+  let tag = '';
+  try { tag = String((await response.json())?.tag_name || ''); } catch {}
+  return tag || decodeURIComponent(/\/releases\/tag\/([^/?#]+)$/.exec(String(response.url || ''))?.[1] || '');
+}
+// Notes are a courtesy: a failed feed never fails the check.
+async function latestNotes(fetch, tag) {
+  try { const response = await web(fetch, `${RELEASES_URL}.atom`, 'application/atom+xml'); return response.ok ? notesFromFeed(await response.text(), tag) : ''; } catch { return ''; }
+}
 
-// status: idle | checking | latest | available | downloading | downloaded | error
-function createUpdater({ currentVersion, platform = process.platform, arch = process.arch, isPackaged = false, env = process.env, autoUpdater = null, fetch = globalThis.fetch, openExternal = async () => {}, settings = { get: () => true, set: () => {} }, onState = () => {}, timers = { setTimeout, clearTimeout, setInterval, clearInterval } } = {}) {
-  const { mode, reason } = updateMode({ platform, isPackaged, env });
+// status: idle | checking | latest | available | downloading | downloaded | restart | error
+// `restart`: a newer copy is already installed on disk while this older
+// process keeps running (macOS keeps apps alive after their window closes).
+function createUpdater({ currentVersion, platform = process.platform, arch = process.arch, isPackaged = false, env = process.env, macUpdatable = null, autoUpdater = null, fetch = globalThis.fetch, openExternal = async () => {}, installedVersion = () => '', relaunch = () => false, settings = { get: () => true, set: () => {} }, onState = () => {}, timers = { setTimeout, clearTimeout, setInterval, clearInterval } } = {}) {
+  const { mode, reason } = updateMode({ platform, isPackaged, env, macUpdatable });
   const portable = platform === 'win32' && Boolean(env.PORTABLE_EXECUTABLE_DIR);
   let state = { status: 'idle', currentVersion, mode, reason, autoDownload: settings.get() !== false, latestVersion: '', notes: '', percent: 0, error: '', releaseUrl: RELEASES_URL, downloadUrl: '', checkedAt: 0, platform };
   let pending = null, startTimer = null, intervalTimer = null;
@@ -98,31 +116,23 @@ function createUpdater({ currentVersion, platform = process.platform, arch = pro
     if (state.autoDownload) download().catch(() => {});
     return state;
   }
-  const web = (url, accept) => fetch(url, { headers: { Accept: accept, 'User-Agent': 'FlowCabin-Updater' }, signal: AbortSignal.timeout(15000) });
-  // github.com answers /releases/latest with {"tag_name": ...} for JSON clients
-  // and otherwise redirects to /releases/tag/<tag>.
-  async function latestTag() {
-    const response = await web(`${RELEASES_URL}/latest`, 'application/json');
-    if (!response.ok) throw httpError(response.status);
-    let tag = '';
-    try { tag = String((await response.json())?.tag_name || ''); } catch {}
-    return tag || decodeURIComponent(/\/releases\/tag\/([^/?#]+)$/.exec(String(response.url || ''))?.[1] || '');
-  }
-  // Notes are a courtesy: a failed feed never fails the check.
-  async function latestNotes(tag) {
-    try { const response = await web(`${RELEASES_URL}.atom`, 'application/atom+xml'); return response.ok ? notesFromFeed(await response.text(), tag) : ''; } catch { return ''; }
-  }
   async function checkRelease() {
-    const tag = await latestTag();
+    const tag = await latestTag(fetch);
     const latest = tag.replace(/^v/, '');
     if (!parseVersion(latest) || compareVersions(latest, currentVersion) <= 0) return set({ status: 'latest', latestVersion: latest || currentVersion, checkedAt: Date.now() });
     const name = assetName(latest, { platform, arch, portable });
     const base = `${RELEASES_URL}/download/${encodeURIComponent(tag)}/`;
-    return set({ status: 'available', latestVersion: latest, notes: await latestNotes(tag), releaseUrl: `${RELEASES_URL}/tag/${encodeURIComponent(tag)}`, downloadUrl: name ? base + name : '', checkedAt: Date.now() });
+    return set({ status: 'available', latestVersion: latest, notes: await latestNotes(fetch, tag), releaseUrl: `${RELEASES_URL}/tag/${encodeURIComponent(tag)}`, downloadUrl: name ? base + name : '', checkedAt: Date.now() });
+  }
+  // True when a newer copy is installed than the one running.
+  function checkInstalled(version = installedVersion()) {
+    if (!parseVersion(version) || compareVersions(version, currentVersion) <= 0) return false;
+    set({ status: 'restart', latestVersion: String(version).replace(/^v/, ''), error: '' });
+    return true;
   }
   async function check({ manual = false } = {}) {
     if (pending) return pending;
-    if (['downloading', 'downloaded'].includes(state.status)) return state; // keep the download; nothing to re-check
+    if (['downloading', 'downloaded', 'restart'].includes(state.status) || checkInstalled()) return state; // keep the download / the installed copy; nothing to re-check
     set({ status: 'checking', error: '', manual });
     pending = (useNative ? checkNative() : checkRelease()).catch((error) => set({ status: 'error', error: friendly(error) })).finally(() => { pending = null; });
     return pending;
@@ -136,6 +146,8 @@ function createUpdater({ currentVersion, platform = process.platform, arch = pro
   }
   // Only on an explicit click. The app restarts into the installer.
   function install() { if (!useNative || state.status !== 'downloaded') return false; autoUpdater.quitAndInstall(false, true); return true; }
+  // 「重启到新版本」: the installed copy is newer than this process.
+  function restart() { return state.status === 'restart' ? relaunch() !== false : false; }
   async function openRelease() { await openExternal(state.releaseUrl || RELEASES_URL); return true; }
   function setAutoDownload(value) { settings.set(Boolean(value)); set({ autoDownload: Boolean(value) }); if (value && state.status === 'available' && useNative) download().catch(() => {}); return state; }
   function start() {
@@ -145,7 +157,7 @@ function createUpdater({ currentVersion, platform = process.platform, arch = pro
     startTimer?.unref?.(); intervalTimer?.unref?.();
   }
   function stop() { if (startTimer) timers.clearTimeout(startTimer); if (intervalTimer) timers.clearInterval(intervalTimer); startTimer = intervalTimer = null; }
-  return { check, download, install, openRelease, setAutoDownload, start, stop, get state() { return state; } };
+  return { check, checkInstalled, download, install, restart, openRelease, setAutoDownload, start, stop, get state() { return state; } };
 }
 
-module.exports = { createUpdater, compareVersions, parseVersion, updateMode, assetName, cleanNotes, notesFromFeed, MAC_SIGNED, STARTUP_DELAY_MS, INTERVAL_MS, RELEASES_URL };
+module.exports = { createUpdater, compareVersions, parseVersion, updateMode, assetName, cleanNotes, notesFromFeed, latestTag, latestNotes, httpError, STARTUP_DELAY_MS, INTERVAL_MS, RELEASES_URL };

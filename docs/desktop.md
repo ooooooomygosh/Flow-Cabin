@@ -70,19 +70,23 @@ Mini deck hover controls: 上一首 / 播放·暂停 / 下一首 / 声音 / 专�
 
 ## 检查更新
 
-代码：`desktop/updater.cjs`（主进程）、`src/desktop/UpdatePanel.jsx` + `update-model.mjs`（设置 › 关于）。更新只来自 GitHub Releases（ooooooomygosh/album-web）。
+代码：`desktop/updater.cjs` 与 `desktop/mac-updater.cjs`（主进程）、`src/desktop/UpdatePanel.jsx` + `update-model.mjs`（设置 › 关于）。更新只来自 GitHub Releases（ooooooomygosh/album-web）。
 
 - 什么时候检查：启动 20 秒后检查一次，之后每 6 小时检查一次；也可以在 设置 › 关于、托盘菜单或应用菜单里点「检查更新…」手动检查。
-- 状态：尚未检查 / 检查中… / 已是最新 / 发现新版本 vX（附更新说明）/ 下载中 N% / 已下载，重启安装 / 检查更新失败。
+- 状态：尚未检查 / 检查中… / 已是最新 / 发现新版本 vX（附更新说明）/ 下载中 N% / 已下载，重启安装 / 已安装 vX，重启后生效 / 检查更新失败。
 - 永远不会强制重启。下载好之后，点「重启安装」才会安装；不点的话，下次退出小屋时安装（`autoInstallOnAppQuit`）。
 
 | 平台 | 行为 |
 | --- | --- |
 | Windows 安装版（NSIS） | 用 electron-updater 读取 `latest.yml`，按 blockmap 增量下载。「有新版本时自动下载」默认开启，可以关掉。 |
 | Windows 便携版 | 不能替换自己。只提示有新版本，「下载安装包」会打开新的 portable.exe。 |
-| macOS | 安装包是 ad-hoc 签名（`identity: "-"`），Squirrel.Mac 会拒绝安装没有 Developer ID 签名的更新。所以只提示有新版本，「下载安装包」会打开对应架构的 DMG。完成签名和公证后，把 `MAC_SIGNED` 改成 `true`，就会改用自动安装。 |
+| macOS | 安装包是 ad-hoc 签名（`identity: "-"`），Squirrel.Mac 不接受，所以由 `mac-updater.cjs` 自己更新。它读取 `latest-mac.yml`，下载本机架构的 zip，sha512 校验通过后用 `ditto` 解开，再核对版本号和 bundle id。之后由一个小脚本等旧进程退出，替换 `.app`，失败时还原。点「重启安装」会重新打开新版本；不点的话，退出时静默替换。从 DMG、App Translocation 运行，或者没有写权限时，退回到只提示、打开 DMG。ad-hoc 签名每次构建都会变，更新后 macOS 可能会再次询问「自动化」权限。完成签名和公证后，可以改回 electron-updater。 |
 | 开发版 / 网页版 | 开发版只检查、不安装；网页版本来就是最新的。 |
 
-接口：页面用 `album-desktop://action/update-check|update-download|update-install|update-open|update-state`，以及 `update-auto?enabled=true|false`。状态写在 `window.cabinUpdateState` 里，变化时触发 `CustomEvent('cabin:update-state')`。「自动下载」开关保存在 `userData/update.json`。
+macOS 关掉窗口后应用仍在后台运行。如果此时用 DMG 覆盖了应用，再打开时 macOS 会唤起仍在运行的旧进程。所以每次 `activate` 和检查更新前，都会读取磁盘上 `.app` 的 `CFBundleShortVersionString`：
+- 磁盘上的版本更新、且窗口没有显示：直接重启到新版本。
+- 窗口正在使用：显示「已安装 vX，重启后生效」，提供「重启到新版本」。
+
+接口：页面用 `album-desktop://action/update-check|update-download|update-install|update-relaunch|update-open|update-state`，以及 `update-auto?enabled=true|false`。状态写在 `window.cabinUpdateState` 里，变化时触发 `CustomEvent('cabin:update-state')`。「自动下载」开关保存在 `userData/update.json`。
 
 发布流程：`build.publish` 指向 GitHub，electron-builder 在 `--publish never` 时也会生成 `latest.yml`、`latest-mac.yml` 和 `*.blockmap`。两个 Mac 任务各自生成一份 `latest-mac.yml`，publish 任务用 `scripts/merge-mac-update-info.mjs` 合并成一份；缺少更新信息时整个发布会停止，不会只发一半。
