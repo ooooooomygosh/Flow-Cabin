@@ -5,6 +5,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { verifyFullscreenStudy } from './fullscreen-study-checks.mjs';
 import { verifyQQRegression } from './qq-regression-checks.mjs';
+import { verifyAppleHandoff } from './apple-handoff-checks.mjs';
 const require = createRequire(new URL('../desktop/package.json', import.meta.url));
 const { chromium } = require('playwright');
 const root = path.resolve('dist');
@@ -23,4 +24,5 @@ try {
   browser = await chromium.launch({ headless: true, executablePath: process.env.BROWSER_EXECUTABLE });
   await verifyFullscreenStudy({ browser, origin: `http://127.0.0.1:${server.address().port}`, output: process.env.BROWSER_OUTPUT, check: name => console.log('PASS '+name) });
   await verifyQQRegression({ browser, origin: `http://127.0.0.1:${server.address().port}`, check: name => console.log('PASS '+name) });
+  await verifyAppleHandoff({ browser, origin: `http://127.0.0.1:${server.address().port}`, output: process.env.BROWSER_OUTPUT, check: name => console.log('PASS '+name) });
 } finally { await browser?.close(); await new Promise(resolve => server.close(resolve)); }
