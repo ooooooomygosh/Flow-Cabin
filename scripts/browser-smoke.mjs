@@ -48,7 +48,7 @@ try {
     if (i === 99) throw new Error('Vite startup timed out: ' + serverLog);
     await new Promise(r => setTimeout(r, 100));
   }
-  browser = await chromium.launch({ executablePath: process.env.BROWSER_EXECUTABLE || (process.env.CI ? chromium.executablePath() : await fs.access('/usr/bin/chromium').then(() => true, () => false) ? '/usr/bin/chromium' : chromium.executablePath()), headless: true, args: ['--no-sandbox', '--autoplay-policy=no-user-gesture-required'] });
+  browser = await chromium.launch({ executablePath: process.env.BROWSER_EXECUTABLE || (process.env.CI ? chromium.executablePath() : await fs.access('/usr/bin/chromium').then(() => true, () => false) ? '/usr/bin/chromium' : chromium.executablePath()), headless: true, args: ['--no-sandbox', '--mute-audio', '--autoplay-policy=no-user-gesture-required'] });
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1, locale: 'zh-CN', reducedMotion: 'reduce' });
   await context.addInitScript(() => { window.__desktopCommands = []; window.__cabinPlayback = []; window.addEventListener('cabin:playback', e => window.__cabinPlayback.push({ ...e.detail, at: performance.now() })); window.open = url => { window.__desktopCommands.push(String(url)); return null; }; window.albumDesktopAppearance = { client: true, reduceMotion: true }; const init = () => { document.documentElement.dataset.desktopClient = 'true'; document.documentElement.dataset.desktopReduceMotion = 'true'; }; if (document.documentElement) init(); else new MutationObserver((_, o) => { if (document.documentElement) { init(); o.disconnect(); } }).observe(document, { childList: true }); });
   const routeHandler = async route => {
@@ -105,6 +105,7 @@ try {
   const { PETS } = await import('../src/pet/pet-catalog.mjs');
   assert.equal(ROOM_SCENES.length, 6); assert.equal(PETS.length, 5);
   await openRoomSettings(page);
+  assert.equal(await page.locator('.scene-options > button').evaluateAll(buttons => new Set(buttons.map(button => Math.round(button.getBoundingClientRect().top))).size), 1, 'all six room scenes share one balanced desktop row');
   for (const scene of ROOM_SCENES) {
     await page.getByRole('button', { name: `选择场景 ${scene.label}`, exact: true }).click();
     assert.equal(await page.locator('.cabin-scene').getAttribute('data-room-look'), scene.id);
@@ -126,6 +127,8 @@ try {
   const buffered = () => page.waitForFunction(() => { const a = document.querySelector('audio[data-deck="standby"]'); return a && a.src.endsWith('fedcba9876543210') && a.readyState >= 3; });
   await buffered(); await page.evaluate(() => { window.__standbyDeck = document.querySelector('audio[data-deck="standby"]'); });
   await page.getByRole('button', { name: '下一首展示曲目' }).click(); await page.waitForFunction(() => { const a = document.querySelector('audio[data-deck="active"]'); return a === window.__standbyDeck && a.src.endsWith('fedcba9876543210') && !a.paused; }); check('local-next-track-resolves-exact-id'); check('next-track-preloaded-on-idle-deck-and-switched');
+  assert.equal(await page.getByLabel('音乐播放进度', { exact: true }).isEnabled(), true);
+  assert.equal(Number(await page.getByLabel('音乐播放进度', { exact: true }).getAttribute('max')), 15, 'buffered duration transfers to the visible progress control');
   // 歌曲过渡 3 s: near the end the buffered next song starts and both decks overlap, then the old one is emptied.
   await page.evaluate(() => window.dispatchEvent(new CustomEvent('cabin:player-command', { detail: { action: 'previous' } }))); await page.waitForFunction(() => document.querySelector('audio[data-deck="active"]').src.endsWith('abcdef0123456789') && !document.querySelector('audio[data-deck="active"]').paused);
   await buffered(); await page.evaluate(() => { localStorage.setItem('flow-cabin-crossfade-v1', '3'); window.dispatchEvent(new CustomEvent('flow-cabin-crossfade', { detail: 3 })); window.__overlap = false; const a = document.querySelector('audio[data-deck="active"]'); a.currentTime = a.duration - 4; });
@@ -150,7 +153,17 @@ try {
   await page.keyboard.press('Shift+ArrowLeft'); await page.waitForFunction(() => document.querySelector('.turntable-track').textContent.startsWith('01'));
   check('keyboard-space-mute-and-previous');
   await page.locator('.room-record').nth(1).click(); await page.getByRole('button', { name: '加入待播' }).click(); await page.getByRole('button', { name: '已在待播' }).waitFor();
-  await page.getByRole('button', { name: '待播唱片 1 张' }).click(); await page.locator('.player-queue li', { hasText: '测试唱片 2' }).waitFor(); await screenshot('player-queue'); await page.getByRole('button', { name: '待播唱片 1 张' }).click();
+  await page.getByRole('button', { name: '待播唱片 1 张' }).click(); await page.locator('.player-queue li', { hasText: '测试唱片 2' }).waitFor(); await screenshot('player-queue'); await page.getByRole('button', { name: '关闭待播', exact: true }).click();
+  await page.setViewportSize({ width: 960, height: 600 });
+  await page.getByRole('button', { name: '待播唱片 1 张' }).click();
+  const queueBounds = await page.locator('.player-queue').boundingBox(), volumeBounds = await page.locator('.pocket-volume').boundingBox();
+  const removeBounds = await page.getByRole('button', { name: '从待播移除 测试唱片 2', exact: true }).boundingBox();
+  assert(removeBounds.x >= queueBounds.x && removeBounds.x + removeBounds.width <= queueBounds.x + queueBounds.width + 1, 'compact remove button stays inside the queue');
+  assert(removeBounds.y + removeBounds.height <= volumeBounds.y + 1, 'opened queue is revealed above sticky volume');
+  await screenshot('player-queue-960x600');
+  await page.getByRole('button', { name: '关闭待播', exact: true }).click();
+  assert.equal(await page.getByRole('button', { name: '待播唱片 1 张' }).evaluate(element => element === document.activeElement), true, 'closing queue restores the wheel button');
+  await page.setViewportSize({ width: 1440, height: 900 }); check('compact-queue-reveals-content-and-restores-trigger');
   check('queue-adds-selected-album');
   await page.locator('.room-record').nth(2).click(); await page.getByRole('button', { name: '加入待播', exact: true }).click();
   await page.getByRole('button', { name: '待播唱片 2 张', exact: true }).click();
@@ -256,6 +269,12 @@ try {
   check('playlists-account-link-and-file-import-play-on-deck');
   // 唱机特写: the close-up opens with T, draws the deck, and Esc returns.
   await page.keyboard.press('t'); await page.locator('.listening-corner .pixel-turntable').waitFor(); await page.waitForTimeout(300); await screenshot('listening-corner');
+  await page.getByRole('radio', { name: '台灯', exact: true }).focus();
+  await page.keyboard.press('Shift+Tab');
+  assert.equal(await page.evaluate(() => document.querySelector('.listening-corner').contains(document.activeElement)), true, 'Shift+Tab cannot escape the modal corner');
+  await page.keyboard.press('Tab');
+  assert.equal(await page.getByRole('radio', { name: '台灯', exact: true }).evaluate(element => element === document.activeElement), true, 'Tab wraps from the last corner control back to its first');
+  check('listening-corner-keyboard-focus-stays-inside');
   assert(await page.locator('.pixel-turntable').evaluate(c => { const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let lit = 0; for (let i = 3; i < d.length; i += 4) if (d[i]) lit++; return lit > c.width * c.height * .5; }), 'deck is painted');
   assert.equal(await page.locator('.corner-tracks li').count(), 1);
   const cornerLoaded = await page.locator('.room-turntable').getAttribute('data-loaded-id');

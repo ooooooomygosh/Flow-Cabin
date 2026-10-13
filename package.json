@@ -15,9 +15,10 @@
     "icons": "node scripts/generate-icons.mjs",
     "test": "npm run desktop:test && node --test scripts/release-source.test.mjs scripts/vite-readiness.test.mjs src/perf-profile.test.mjs src/audio/lifecycle.test.mjs src/focus/focus-model.test.mjs src/onboarding/onboarding.test.mjs src/player/player.test.mjs src/player/seamless.test.mjs src/player/auto-match.test.mjs src/playlist-files.test.mjs src/desktop/widget-layout.test.mjs src/desktop/desktop-sink-client.test.mjs src/desktop/update-model.test.mjs src/study/study-model.test.mjs src/room-model.test.mjs",
     "test:browser": "node scripts/browser-smoke.mjs",
+    "test:playback": "node scripts/playback-regression.mjs",
     "test:layout": "node scripts/cabin-layout-electron.mjs",
     "check": "npm test && npm run build",
-    "qa": "npm run check && npm --prefix desktop run build:music && npm run test:browser",
+    "qa": "npm run check && npm --prefix desktop run build:music && npm run test:browser && npm run test:playback",
     "screenshots:product": "node scripts/product-showcase.mjs",
     "screenshots:readme": "node scripts/readme-assets.mjs"
   },

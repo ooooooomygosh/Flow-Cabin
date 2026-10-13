@@ -38,7 +38,18 @@ export default function ListeningCorner({ item, items = [], vinyl, provider, spi
   useEffect(() => { setSpeed(33); }, [item?.id]);
   useEffect(() => {
     const previous = document.activeElement; root.current?.focus({ preventScroll: true });
-    const key = (event) => { if (event.key === 'Escape' && !document.querySelector('dialog[open]')) { event.preventDefault(); close(); } };
+    const key = (event) => {
+      if (document.querySelector('dialog[open]')) return;
+      if (event.key === 'Escape') { event.preventDefault(); close(); return; }
+      if (event.key !== 'Tab') return;
+      const controls = [...root.current.querySelectorAll('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex]:not([tabindex="-1"])')].filter(element => element.getClientRects().length);
+      const first = controls[0], last = controls.at(-1), current = document.activeElement;
+      // This full-screen section is a modal dialog. Keep keyboard navigation
+      // inside it, including when focus starts on the section itself.
+      if (!first) { event.preventDefault(); root.current.focus(); }
+      else if (event.shiftKey && (current === first || current === root.current || !root.current.contains(current))) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && (current === last || !root.current.contains(current))) { event.preventDefault(); first.focus(); }
+    };
     const energyListener = (event) => setEnergy(event.detail?.playing ? Number(event.detail.energy) || 0 : 0);
     document.addEventListener('keydown', key); window.addEventListener('cabin:playback', energyListener);
     document.documentElement.classList.add('room-corner-open');

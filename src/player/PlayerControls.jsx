@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { X, SpeakerWave, SpeakerOff, Loading, Music2, RepeatPixel, RepeatOnePixel, ShufflePixel, PlayPixel, PausePixel, PreviousPixel, NextPixel, EjectPixel } from '../icons';
 import { trackNames } from '../room-model.mjs';
 import './player.css';
@@ -23,6 +23,9 @@ export function PocketProgress({ playback }) {
 }
 export default function PlayerControls({ item, items = [], provider, spinning, trackIndex, track, toggle, eject, playback, player, setProvider }) {
   const [queueOpen, setQueueOpen] = useState(false), [queueNotice, setQueueNotice] = useState(''), names = trackNames(item);
+  const queuePanel = useRef(null), queueButton = useRef(null);
+  useEffect(() => { if (queueOpen) { queuePanel.current?.focus({ preventScroll: true }); queuePanel.current?.scrollIntoView({ block: 'nearest' }); } }, [queueOpen]);
+  const closeQueue = () => { setQueueOpen(false); queueButton.current?.focus({ preventScroll: true }); queueButton.current?.scrollIntoView({ block: 'nearest' }); };
   const visual = provider === 'visual', audible = !visual && playback;
   const busy = audible && ['loading', 'searching', 'buffering'].includes(playback.status);
   const playing = visual ? spinning : Boolean(playback?.playing);
@@ -31,7 +34,7 @@ export default function PlayerControls({ item, items = [], provider, spinning, t
   return <div className="player-controls pocket-controls">
     <div className="turntable-controls pocket-deck">
       <div className="pocket-wheel">
-        {player ? <button type="button" className="pocket-wheel-key is-top player-mode" aria-label={`待播唱片 ${queued.length} 张`} title="待播唱片" aria-expanded={queueOpen} onClick={() => setQueueOpen(!queueOpen)}>待播{queued.length > 0 && <b>{queued.length}</b>}</button> : <span className="pocket-wheel-key is-top" aria-hidden="true">MENU</span>}
+        {player ? <button ref={queueButton} type="button" className="pocket-wheel-key is-top player-mode" aria-label={`待播唱片 ${queued.length} 张`} title="待播唱片" aria-expanded={queueOpen} onClick={() => queueOpen ? closeQueue() : setQueueOpen(true)}>待播{queued.length > 0 && <b>{queued.length}</b>}</button> : <span className="pocket-wheel-key is-top" aria-hidden="true">MENU</span>}
         <button type="button" className="pocket-wheel-key is-left" aria-label="上一首展示曲目" title="上一首 · Shift+←" disabled={!player?.canPrevious} onClick={() => player?.previous()}><PreviousPixel/></button>
         <button type="button" className="pocket-wheel-key is-right" aria-label="下一首展示曲目" title="下一首 · Shift+→" disabled={!player?.canNext} onClick={() => player?.next()}><NextPixel/></button>
         <button type="button" className="pocket-wheel-key is-bottom" aria-label="取下唱片" title="取下唱片" onClick={eject}><EjectPixel size={20}/></button>
@@ -43,7 +46,8 @@ export default function PlayerControls({ item, items = [], provider, spinning, t
       </span>}
     </div>
     {!!names.length && <label className="pocket-track"><span>曲目</span><select aria-label="唱机展示曲目" value={trackIndex} onChange={(event) => track?.(Number(event.target.value))}>{names.map((name, index) => <option value={index} key={index}>{String(index + 1).padStart(2, '0')} · {name}</option>)}</select></label>}
-    {queueOpen && player && <div className="player-queue" aria-label="待播唱片">
+    {queueOpen && player && <div ref={queuePanel} className="player-queue" role="region" aria-label="待播唱片" tabIndex={-1}>
+      <div className="player-queue-header"><strong>待播</strong><button type="button" aria-label="关闭待播" onClick={closeQueue}><X size={12}/></button></div>
       {player.queue.repeat !== 'one' && !player.queue.shuffle && names.length > trackIndex + 1 && <><small className="player-queue-title">接下来 · 本张</small><ol className="player-queue-tracks">{names.slice(trackIndex + 1, trackIndex + 6).map((name, offset) => <li key={offset}><button type="button" className="player-queue-jump" aria-label={`跳到第 ${trackIndex + offset + 2} 首 ${name}`} onClick={() => track?.(trackIndex + offset + 1)}><b>{String(trackIndex + offset + 2).padStart(2, '0')}</b><span title={name}>{name}</span></button></li>)}</ol>{names.length > trackIndex + 6 && <small className="player-queue-more">还有 {names.length - trackIndex - 6} 首</small>}</>}
       {player.queue.repeat === 'one' && <p className="player-queue-state">单曲循环中 · 切换为顺序播放后继续待播</p>}
       {player.queue.repeat !== 'one' && player.queue.shuffle && <small className="player-queue-title">本张随机播放中 · 关闭随机后进入待播</small>}

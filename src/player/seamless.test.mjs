@@ -4,6 +4,38 @@ import { createResolutionCache, createFader, resolutionKey, shouldAutoSkip, play
 import { nextStep, nextPlayableStep } from './player-queue.mjs';
 import { crossfadeSeconds, setCrossfadeSeconds, crossfadeStartsAt } from './crossfade.mjs';
 import { findPlayableSource, rankCandidates, exactTrack, trackArtist, trackCover } from '../room-playback.mjs';
+import { seekWhenReady } from './media-position.mjs';
+
+const media = (readyState = 0) => Object.assign(new EventTarget(), { readyState, duration: 60, currentTime: 0, source: '/first', getAttribute() { return this.source; } });
+test('buffered seek uses metadata immediately and never repeats on deck reuse', () => {
+  const element = media(3);
+  seekWhenReady(element, 23);
+  assert.equal(element.currentTime, 23);
+  element.source = '/next'; element.currentTime = 0;
+  element.dispatchEvent(new Event('loadedmetadata'));
+  assert.equal(element.currentTime, 0);
+});
+test('deferred seek is canceled on abort, source replacement, and owner replacement', () => {
+  for (const change of ['abort', 'source', 'owner', 'cancel']) {
+    const element = media(), controller = new AbortController(); let current = true;
+    const cancel = seekWhenReady(element, 23, { signal: controller.signal, isCurrent: () => current });
+    if (change === 'abort') controller.abort();
+    if (change === 'source') element.source = '/next';
+    if (change === 'owner') current = false;
+    if (change === 'cancel') cancel();
+    element.dispatchEvent(new Event('loadedmetadata'));
+    assert.equal(element.currentTime, 0, change);
+  }
+});
+test('deferred seek runs once and clamps short or unknown media safely', () => {
+  const element = media();
+  seekWhenReady(element, 99); element.dispatchEvent(new Event('loadedmetadata'));
+  assert.equal(element.currentTime, 59);
+  element.currentTime = 0; element.dispatchEvent(new Event('loadedmetadata'));
+  assert.equal(element.currentTime, 0);
+  element.duration = Infinity; element.readyState = 1; seekWhenReady(element, 23);
+  assert.equal(element.currentTime, 0);
+});
 
 test('seamless: prefetched resolutions are used once and expire', () => {
   let time = 0; const cache = createResolutionCache({ now: () => time, ttl: 1000, limit: 2 });
@@ -47,6 +79,11 @@ test('seamless: the upcoming shuffle pick is decided once', () => {
   let calls = 0; const random = () => { calls++; return 0.5; };
   const step = nextStep({ trackIndex: 0, trackCount: 5, queue: { ids: [], repeat: 'off', shuffle: true }, random });
   assert.deepEqual(step, { type: 'track', index: 3 }); assert.equal(calls, 1);
+});
+
+test('queue: repeat-all restarts a one-track record instead of setting the unchanged index', () => {
+  assert.deepEqual(nextStep({ trackIndex: 0, trackCount: 1, queue: { ids: [], repeat: 'all', shuffle: false } }), { type: 'restart' });
+  assert.deepEqual(nextStep({ trackIndex: 0, trackCount: 1, queue: { ids: ['next-album'], repeat: 'all', shuffle: false } }), { type: 'album', id: 'next-album' }, 'queued albums still take precedence');
 });
 
 test('playlists: each track keeps its own artist, album and platform id', async () => {
