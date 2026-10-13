@@ -1,6 +1,6 @@
 'use strict';
 const test = require('node:test'), assert = require('node:assert/strict'), { EventEmitter } = require('node:events');
-const { createUpdater, compareVersions, updateMode, pickAsset, cleanNotes } = require('../updater.cjs');
+const { createUpdater, compareVersions, updateMode, assetName, cleanNotes, notesFromFeed } = require('../updater.cjs');
 const pkg = require('../package.json');
 
 test('version compare', () => {
@@ -16,12 +16,14 @@ test('platform modes are honest', () => {
   assert.equal(mac.mode, 'notify'); assert.match(mac.reason, /签名/);
   assert.equal(updateMode({ platform: 'win32', isPackaged: false }).mode, 'notify');
 });
-test('asset choice per platform and arch', () => {
-  const assets = ['FlowCabin-1.12.0-mac-arm64.dmg', 'FlowCabin-1.12.0-mac-x64.dmg', 'FlowCabin-1.12.0-x64-setup.exe', 'FlowCabin-1.12.0-x64-portable.exe'].map((name) => ({ name, browser_download_url: `https://github.com/o/r/releases/download/v1.12.0/${name}` }));
-  assert.match(pickAsset(assets, { platform: 'darwin', arch: 'arm64' }).name, /arm64\.dmg$/);
-  assert.match(pickAsset(assets, { platform: 'darwin', arch: 'x64' }).name, /mac-x64\.dmg$/);
-  assert.match(pickAsset(assets, { platform: 'win32', portable: true }).name, /portable/);
-  assert.equal(pickAsset([{ name: 'x-mac-arm64.dmg', browser_download_url: 'https://evil.test/x' }], { platform: 'darwin', arch: 'arm64' }), null);
+test('download names match what the release workflow builds', () => {
+  const fill = (template, arch, ext) => template.replace('${version}', '1.12.0').replace('${arch}', arch).replace('${ext}', ext);
+  assert.equal(assetName('1.12.0', { platform: 'darwin', arch: 'arm64' }), fill(pkg.build.mac.artifactName, 'arm64', 'dmg'));
+  assert.equal(assetName('1.12.0', { platform: 'darwin', arch: 'x64' }), fill(pkg.build.mac.artifactName, 'x64', 'dmg'));
+  assert.equal(assetName('1.12.0', { platform: 'win32' }), fill(pkg.build.win.artifactName, 'x64', 'exe'));
+  assert.equal(assetName('1.12.0', { platform: 'win32', portable: true }), fill(pkg.build.portable.artifactName, 'x64', 'exe'));
+  assert.deepEqual(pkg.build.win.target.map((t) => t.arch), [['x64'], ['x64']], 'Windows builds are x64 only');
+  assert.equal(assetName('1.12.0', { platform: 'linux' }), '');
 });
 test('build config publishes to GitHub so update info is generated', () => {
   assert.deepEqual(pkg.build.publish, [{ provider: 'github', owner: 'ooooooomygosh', repo: 'album-web', releaseType: 'release' }]);
@@ -60,12 +62,53 @@ test('latest and network errors', async () => {
   const down = createUpdater({ currentVersion: '1.11.0', platform: 'win32', isPackaged: true, env: {}, autoUpdater: fakeAutoUpdater('1.12.0', { fail: true }) });
   const s = await down.check(); assert.equal(s.status, 'error'); assert.match(s.error, /无法连接 GitHub/);
 });
+const RELEASES = 'https://github.com/ooooooomygosh/album-web/releases';
+const feed = `<?xml version="1.0" encoding="UTF-8"?><feed xmlns="http://www.w3.org/2005/Atom"><title>Release notes from album-web</title>
+  <entry><id>tag:github.com,2008:Repository/1/v1.12.0</id><link rel="alternate" type="text/html" href="${RELEASES}/tag/v1.12.0"/><title>v1.12.0</title>
+    <content type="html">&lt;h2&gt;新版本&lt;/h2&gt;&lt;ul&gt;&lt;li&gt;唱片 &amp;amp; 小猫&lt;/li&gt;&lt;li&gt;修复&lt;/li&gt;&lt;/ul&gt;</content></entry>
+  <entry><id>tag:github.com,2008:Repository/1/v1.11.0</id><link rel="alternate" type="text/html" href="${RELEASES}/tag/v1.11.0"/><content type="html">&lt;p&gt;旧&lt;/p&gt;</content></entry></feed>`;
+// github.com only: /releases/latest (JSON) and the releases feed. Never api.github.com.
+function fakeGitHub({ latest = { status: 200, body: { tag_name: 'v1.12.0' } }, atom = { status: 200, body: feed } } = {}) {
+  const urls = [];
+  const fetch = async (url, options) => {
+    urls.push(String(url));
+    if (url === `${RELEASES}/latest`) { assert.equal(options.headers.Accept, 'application/json'); return typeof latest === 'function' ? latest() : new Response(JSON.stringify(latest.body), { status: latest.status }); }
+    if (url === `${RELEASES}.atom`) return new Response(atom.body, { status: atom.status });
+    throw new Error('unexpected ' + url);
+  };
+  return { fetch, urls };
+}
 test('unsigned macOS and portable: notify + open the right download, never install', async () => {
-  const opened = [];
-  const fetch = async () => new Response(JSON.stringify({ tag_name: 'v1.12.0', html_url: 'https://github.com/ooooooomygosh/album-web/releases/tag/v1.12.0', body: '## 新版本', assets: [{ name: 'FlowCabin-1.12.0-mac-arm64.dmg', browser_download_url: 'https://github.com/ooooooomygosh/album-web/releases/download/v1.12.0/FlowCabin-1.12.0-mac-arm64.dmg' }] }), { status: 200 });
-  const up = createUpdater({ currentVersion: '1.11.0', platform: 'darwin', arch: 'arm64', isPackaged: true, env: {}, autoUpdater: fakeAutoUpdater('9.9.9'), fetch, openExternal: async (url) => opened.push(url) });
-  const s = await up.check(); assert.equal(s.status, 'available'); assert.equal(s.mode, 'notify'); assert.match(s.downloadUrl, /arm64\.dmg$/);
+  const opened = [], gh = fakeGitHub();
+  const up = createUpdater({ currentVersion: '1.11.0', platform: 'darwin', arch: 'arm64', isPackaged: true, env: {}, autoUpdater: fakeAutoUpdater('9.9.9'), fetch: gh.fetch, openExternal: async (url) => opened.push(url) });
+  const s = await up.check(); assert.equal(s.status, 'available'); assert.equal(s.mode, 'notify');
+  assert.equal(s.downloadUrl, `${RELEASES}/download/v1.12.0/FlowCabin-1.12.0-mac-arm64.dmg`);
+  assert.equal(s.releaseUrl, `${RELEASES}/tag/v1.12.0`); assert.equal(s.notes, '新版本\n- 唱片 & 小猫\n- 修复');
   await up.download(); assert.deepEqual(opened, [s.downloadUrl]); assert.equal(up.install(), false);
+  const portable = createUpdater({ currentVersion: '1.11.0', platform: 'win32', isPackaged: true, env: { PORTABLE_EXECUTABLE_DIR: 'D:\\x' }, fetch: fakeGitHub().fetch });
+  assert.equal((await portable.check()).downloadUrl, `${RELEASES}/download/v1.12.0/FlowCabin-1.12.0-x64-portable.exe`);
+  assert.ok(gh.urls.every((url) => url.startsWith('https://github.com/')), 'never the rate-limited API');
+});
+test('the check survives a missing feed, falls back to the redirect, and reports limits plainly', async () => {
+  const noFeed = createUpdater({ currentVersion: '1.11.0', platform: 'darwin', arch: 'x64', isPackaged: true, env: {}, fetch: fakeGitHub({ atom: { status: 429, body: '' } }).fetch });
+  const s = await noFeed.check(); assert.equal(s.status, 'available'); assert.equal(s.notes, ''); assert.match(s.downloadUrl, /mac-x64\.dmg$/);
+  const redirected = { ok: true, status: 200, url: `${RELEASES}/tag/v1.13.0`, json: async () => { throw new SyntaxError('HTML'); } };
+  const viaUrl = createUpdater({ currentVersion: '1.11.0', platform: 'darwin', arch: 'arm64', isPackaged: true, env: {}, fetch: fakeGitHub({ latest: () => redirected }).fetch });
+  assert.equal((await viaUrl.check()).latestVersion, '1.13.0');
+  const same = createUpdater({ currentVersion: '1.12.0', platform: 'darwin', isPackaged: true, env: {}, fetch: fakeGitHub().fetch });
+  assert.equal((await same.check()).status, 'latest');
+  for (const status of [403, 429]) {
+    const limited = createUpdater({ currentVersion: '1.11.0', platform: 'darwin', isPackaged: true, env: {}, fetch: fakeGitHub({ latest: { status, body: {} } }).fetch });
+    assert.match((await limited.check()).error, /限制了请求次数/);
+  }
+  const missing = createUpdater({ currentVersion: '1.11.0', platform: 'darwin', isPackaged: true, env: {}, fetch: fakeGitHub({ latest: { status: 404, body: {} } }).fetch });
+  assert.match((await missing.check()).error, /还没发布/);
+});
+test('electron-updater errors are classified by status, not by stray digits', async () => {
+  const failing = (message) => { const u = fakeAutoUpdater('1.12.0'); u.checkForUpdates = async () => { throw new Error(message); }; return createUpdater({ currentVersion: '1.11.0', platform: 'win32', isPackaged: true, env: {}, autoUpdater: u }); };
+  assert.match((await failing('Unable to find latest version on GitHub (https://github.com/o/r/releases/latest), please ensure a production release exists: HttpError: 429 Too Many Requests').check()).error, /限制了请求次数/);
+  assert.match((await failing('Cannot parse releases feed: content-length: 14030').check()).error, /^检查更新失败/);
+  assert.equal(notesFromFeed(feed, 'v1.11.0'), '旧'); assert.equal(notesFromFeed(feed, 'v9.0.0'), ''); assert.equal(notesFromFeed('<html>', 'v1.12.0'), '');
 });
 test('startup check is delayed, then every 6 hours; notes are plain text', () => {
   const calls = [];
