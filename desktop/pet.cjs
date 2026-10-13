@@ -67,7 +67,7 @@ function createPet({ directory, getSite, getFocus, status, registerProtocol, res
   // A thrown pet stays on the display it was thrown on (stacked monitors must not swap floors mid-air).
   let flightArea = null;
   const area = () => flightArea || screen.getDisplayMatching(window.getBounds()).workArea;
-  const allowWalk = () => !latest?.reduceMotion && (!latest?.focus || latest.focus.phase === 'idle') && !latest?.musicPlaying;
+  const allowWalk = () => !latest?.reduceMotion && (!latest?.focus || latest.focus.phase === 'idle') && !latest?.musicPlaying && !latest?.playing;
   function publish(next) { if (next.mode !== motion.mode || next.facing !== motion.facing) { motion = { mode: next.mode, facing: next.facing }; window?.webContents.send('pet:update', payload()); } }
   function resetMotion(bounds) {
     clearTimeout(loop); loop = null; lastStep = 0; flightArea = null;

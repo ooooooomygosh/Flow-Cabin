@@ -27,6 +27,14 @@ export function smoothEnergy(previous, next, attack = 0.6, release = 0.18) {
 // cross-origin audio). Gentle and clearly marked as estimated.
 export function estimatedEnergy(time) { return clamp01(0.32 + Math.sin(time / 420) * 0.08 + Math.sin(time / 173) * 0.04); }
 
+// Any beat time serves as the phase anchor, so the next beat of the same
+// tempo is not news: only a tempo change or a 30 ms+ phase shift is.
+function beatMoved(previous, next) {
+  if (Math.abs((previous.bpm || 0) - (next.bpm || 0)) >= .5) return true;
+  if (!next.bpm || !previous.beatAt) return Boolean(next.bpm);
+  const length = 60000 / next.bpm, error = ((next.beatAt - previous.beatAt) % length + length) % length;
+  return Math.min(error, length - error) > 30;
+}
 const sameTrack = (a, b) => (a?.id || '') === (b?.id || '') && (a?.index ?? -1) === (b?.index ?? -1) && (a?.title || '') === (b?.title || '');
 
 // Throttles energy ticks to ~15 fps; play/pause and track changes go out at
@@ -39,12 +47,15 @@ export function createPlaybackBroadcaster({ target, now = () => Date.now(), inte
     return detail;
   };
   return {
-    update({ playing = false, energy = 0, provider = '', estimated = false, track = null, spinning = false } = {}) {
-      const detail = { playing: Boolean(playing), energy: playing ? Math.round(clamp01(energy) * 1000) / 1000 : 0, provider: String(provider || ''), estimated: Boolean(estimated), spinning: Boolean(spinning), track: track ? { id: String(track.id || ''), index: Number(track.index) || 0, title: String(track.title || ''), artist: String(track.artist || ''), album: String(track.album || '') } : null };
+    update({ playing = false, energy = 0, provider = '', estimated = false, track = null, spinning = false, bpm = 0, beatAt = 0 } = {}) {
+      const tempo = playing && bpm >= 40 && bpm <= 220 ? Math.round(bpm * 10) / 10 : 0;
+      const detail = { playing: Boolean(playing), energy: playing ? Math.round(clamp01(energy) * 1000) / 1000 : 0, provider: String(provider || ''), estimated: Boolean(estimated), spinning: Boolean(spinning), bpm: tempo, beatAt: tempo && Number.isFinite(beatAt) ? Math.round(beatAt) : 0, track: track ? { id: String(track.id || ''), index: Number(track.index) || 0, title: String(track.title || ''), artist: String(track.artist || ''), album: String(track.album || '') } : null };
       if (!last) return send({ ...detail, reason: 'state' });
       if (!sameTrack(last.track, detail.track)) return send({ ...detail, reason: 'track' });
       if (last.playing !== detail.playing || last.provider !== detail.provider || last.spinning !== detail.spinning) return send({ ...detail, reason: 'state' });
       if (!detail.playing) return null;
+      // A new tempo, or a beat that has drifted from the last one sent, goes out at once.
+      if (beatMoved(last, detail)) return send({ ...detail, reason: 'beat' });
       if (now() - lastAt < interval) return null;
       if (Math.abs(last.energy - detail.energy) < 0.004) return null;
       return send({ ...detail, reason: 'energy' });

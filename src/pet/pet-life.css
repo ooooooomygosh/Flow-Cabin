@@ -11,11 +11,8 @@
 .pet-life[data-pose='sleep'] > .pixel-cat { animation: pet-breathe 3.6s steps(2, end) infinite; }
 @keyframes pet-breathe { 50% { scale: 1.015 1.035; } }
 
-/* music: bounce height and speed follow --pet-energy (0..1) */
-.pet-life[data-pose='groove'] > .pixel-cat { animation: pet-bop calc(620ms - var(--pet-energy) * 220ms) steps(2, end) infinite; }
-.pet-life[data-pose='groove']::before { animation: pet-shadow calc(620ms - var(--pet-energy) * 220ms) steps(2, end) infinite; }
-@keyframes pet-bop { 50% { translate: 0 calc(-2% - var(--pet-energy) * 5%); scale: .98 1.03; } }
-@keyframes pet-shadow { 50% { scale: .8 1; opacity: .2; } }
+/* music: one hop per beat, driven from PetLife.jsx (Web Animations, synced
+   to the detected beat); --pet-energy (0..1) sets the hop height. */
 
 /* hover: ears up, tiny lift */
 .room-cat:hover .pet-life > .pixel-cat, .pet-cat:hover .pet-life > .pixel-cat { translate: 0 -3%; }

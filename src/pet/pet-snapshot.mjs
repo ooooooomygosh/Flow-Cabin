@@ -8,13 +8,14 @@
 export const PLAYBACK_EVENT = 'cabin:playback';
 export function playbackFromCompanion(companion) {
   const playing = companion?.musicPlaying === true, energy = Number(companion?.energy);
-  return { playing, energy: playing && Number.isFinite(energy) ? Math.max(0, Math.min(1, energy)) : 0, estimated: playing && companion?.energyEstimated === true, source: 'companion' };
+  const bpm = playing ? Number(companion?.bpm) || 0 : 0, beatAt = bpm ? Number(companion?.beatAt) || 0 : 0;
+  return { playing, energy: playing && Number.isFinite(energy) ? Math.max(0, Math.min(1, energy)) : 0, estimated: playing && companion?.energyEstimated === true, bpm, beatAt, source: 'companion' };
 }
 export function createPlaybackRelay(target = globalThis.window, EventClass = globalThis.CustomEvent) {
   let last = '';
   return (value) => {
     if (!value || !('companion' in value) || !target?.dispatchEvent || !EventClass) return;
-    const detail = playbackFromCompanion(value.companion), key = `${detail.playing}:${detail.energy}:${detail.estimated}`;
+    const detail = playbackFromCompanion(value.companion), key = `${detail.playing}:${detail.energy}:${detail.estimated}:${detail.bpm}:${detail.beatAt}`;
     if (key === last) return;
     last = key; target.dispatchEvent(new EventClass(PLAYBACK_EVENT, { detail: { ...detail, reason: 'companion' } }));
   };

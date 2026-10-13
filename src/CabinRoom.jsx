@@ -7,6 +7,13 @@ import { enterDesktopMode, exitDesktopMode, getDesktopModeStatus, onDesktopModeC
 import { getRoomScene } from './scene-catalog.mjs';
 import { normalizePetId } from './pet/pet-catalog.mjs';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { setBeat } from './player/beat-clock.mjs';
+// True as soon as `value` is; stays true for `ms` after it turns false.
+function useSustained(value, ms) {
+  const [held, setHeld] = useState(value);
+  useEffect(() => { if (value) { setHeld(true); return; } const timer = setTimeout(() => setHeld(false), ms); return () => clearTimeout(timer); }, [value, ms]);
+  return value || held;
+}
 import { Up, Down, ArrowUpRight, Grid3X3, Settings, External, Music2, Eye, EyeSlash, Heart, Plus, ListBullet, Check, Computer } from './icons';
 import DiscogsLink from './DiscogsLink';
 import { RecordBoxControls, RecordTools, useRecordLibrary, useRecordStyle } from './RecordLibrary';
@@ -174,7 +181,11 @@ export default function CabinRoom({ items, loading, openRecord, openAdd, firstVi
   const recordStyle = useRecordStyle(deckItem);
   const catFocus = focus ? focusSnapshot(focus.state, focus.now) : {}, weather = catFocus.weather || 'snow';
   const nowTrack = provider === 'visual' ? '' : provider === 'system' ? (system.active ? system.title : '') : playback.actualTrack || (record && playback.playing ? record.tracks?.[trackIndex] || record.title : '');
-  const grooving = effectiveSpin || sound?.lofiState === 'playing';
+  // The cat keeps dancing through a moment of buffering or a track change.
+  const grooving = useSustained(effectiveSpin || sound?.lofiState === 'playing', 1800);
+  // Lo-fi alone: dance at its tempo (a detected song beat takes over when the deck plays).
+  const lofiBpm = sound?.lofiState === 'playing' && !playback.playing ? sound.section?.bpm : 0;
+  useEffect(() => { if (lofiBpm) setBeat({ bpm: lofiBpm }); }, [lofiBpm]);
   snapshot.current = { look, petId, petOut: Boolean(pet.active), roomName: getRoomScene(look).label, weather, accessory: catFocus.accessory || '', grooving, track: typeof nowTrack === 'string' ? nowTrack : '', startRow: view.startRow, items: view.items.map(snapshotItem), selectedId: selected?.id || '', record: snapshotItem(deckItem), recordStyle, spinning: effectiveSpin, trackIndex: provider === 'system' ? 0 : trackIndex, reduceMotion: appearance.reduceMotion, statusText: provider === 'visual' ? (record ? spinning ? '展示中 · 无音频' : '旋转已暂停 · 无音频' : '等待放盘 · 无音频') : provider === 'system' ? system.statusText : playback.statusText, actualTrack: provider === 'system' ? system.title || '' : playback.actualTrack || '', provider };
   useEffect(() => {
     const getter = () => snapshot.current; window.albumRoomSnapshot = getter;

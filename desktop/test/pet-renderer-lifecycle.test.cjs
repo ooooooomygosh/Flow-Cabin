@@ -16,7 +16,7 @@ function fakeClock(initial = 0) {
 test('animation wakes only at pose cadence and stops cleanly', async () => {
   const { startPetAnimation } = await import('../../src/pet/pet-animation.mjs');
   const { FPS, frameAt } = await import('../../src/pet/pet-model.mjs');
-  for (const [pose, fps] of Object.entries(FPS)) {
+  for (const [pose, fps] of Object.entries(FPS).filter(([pose]) => pose !== 'groove')) {
     const clock = fakeClock(), frames = [];
     const stop = startPetAnimation({ pose, onFrame: index => frames.push([clock.now(), index]), ...clock });
     assert.deepEqual(frames, [[0, 0]]);
@@ -37,11 +37,12 @@ test('reduced motion draws once without any timer', async () => {
 test('late timers skip missed frames without drift or a catch-up burst', async () => {
   const { startPetAnimation } = await import('../../src/pet/pet-animation.mjs');
   const clock = fakeClock(100), frames = [];
-  const stop = startPetAnimation({ pose: 'groove', onFrame: n => frames.push(n), ...clock });
+  const stop = startPetAnimation({ pose: 'walk', onFrame: n => frames.push(n), ...clock });
+  const { frameAt } = await import('../../src/pet/pet-model.mjs');
   clock.delayNextUntil(2830);
-  assert.deepEqual(frames, [0, 3]);
+  assert.deepEqual(frames, [frameAt('walk', 100), frameAt('walk', 2830)]);
   assert.equal([...clock.jobs.values()][0].at, 3000);
-  clock.advance(3000); assert.deepEqual(frames, [0, 3, 0]); stop();
+  clock.advance(3000); assert.deepEqual(frames, [frameAt('walk', 100), frameAt('walk', 2830), frameAt('walk', 3000)]); stop();
 });
 test('initial snapshot failure is handled and later broadcasts recover', async () => {
   const { subscribePetSnapshot } = await import('../../src/pet/pet-snapshot.mjs');
@@ -72,10 +73,11 @@ test('unmount ignores pending snapshot completion; missing or throwing APIs are 
 test('disabled lifecycle creates no animation work and can resume at the current frame', async () => {
   const { startPetAnimation } = await import('../../src/pet/pet-animation.mjs');
   const clock = fakeClock(1250), frames = [];
-  const disabled = startPetAnimation({ pose: 'groove', enabled: false, onFrame: n => frames.push(n), ...clock });
+  const beat = () => ({ bpm: 120, beatAt: 0 });
+  const disabled = startPetAnimation({ pose: 'groove', enabled: false, onFrame: n => frames.push(n), ...clock, wallClock: clock.now, beat });
   clock.advance(2000); assert.deepEqual(frames, []); assert.equal(clock.jobs.size, 0); disabled();
-  const enabled = startPetAnimation({ pose: 'groove', enabled: true, onFrame: n => frames.push(n), ...clock });
-  assert.deepEqual(frames, [0]); assert.equal(clock.jobs.size, 1); enabled(); assert.equal(clock.jobs.size, 0);
+  const enabled = startPetAnimation({ pose: 'groove', enabled: true, onFrame: n => frames.push(n), ...clock, wallClock: clock.now, beat });
+  assert.deepEqual(frames, [1], 'at 2000 ms, 120 BPM: on a beat, head dipped'); assert.equal(clock.jobs.size, 1); enabled(); assert.equal(clock.jobs.size, 0);
 });
 
 test('motion reconciles initial focus, visibility, desktop exemptions, OS preference and cleanup', async () => {
@@ -107,4 +109,18 @@ test('live snapshots keep species and cat cosmetics independent without stale ro
   broadcast({ companion: { petId: 'bunny', focus: { petId: 'bunny', catSkin: 'black' } } });
   resolve({ companion: { petId: 'cat', focus: { catSkin: 'orange' } } }); await flush();
   assert.equal(values.length, 1); assert.equal(values[0].companion.petId, 'bunny'); assert.equal(values[0].companion.focus.catSkin, 'black'); stop();
+});
+
+test('grooving follows the beat: two frames per beat, the head dips on each beat, tempo changes apply at once', async () => {
+  const { startPetAnimation } = await import('../../src/pet/pet-animation.mjs');
+  const { grooveFrame } = await import('../../src/pet/pet-model.mjs');
+  const clock = fakeClock(1000), frames = []; let beat = { bpm: 120, beatAt: 1000 };
+  const stop = startPetAnimation({ pose: 'groove', onFrame: index => frames.push([clock.now(), index]), ...clock, wallClock: clock.now, beat: () => beat });
+  clock.advance(2000);
+  assert.deepEqual(frames.map(([time]) => time), [1000, 1250, 1500, 1750, 2000], 'a frame every half beat (250 ms at 120 BPM)');
+  assert.deepEqual(frames.map(([, index]) => index), [1, 2, 3, 0, 1], 'frames 1 and 3 (head dip) land on the beats');
+  beat = { bpm: 60, beatAt: 2000 }; clock.advance(3000);
+  assert.deepEqual(frames.slice(5).map(([time]) => time), [2500, 3000], 'after the change, frames move every 500 ms on the new beat');
+  assert.deepEqual(grooveFrame(4000, { bpm: 60, beatAt: 2000 }), { index: 1, wait: 500 });
+  stop(); assert.equal(clock.jobs.size, 0);
 });
