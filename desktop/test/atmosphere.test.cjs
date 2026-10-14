@@ -68,3 +68,21 @@ test('fire origin stays inside each firebox and blocked furniture/front faces re
     for (const time of [0, .3, 2, 8, 120]) { const light = surfaceLighting(time, look); assert.equal(light.wood, 0); assert.equal(light.glass, 0); assert.ok(light.floor > light.rug); assert.ok(light.hearth > 0); }
   }
 });
+
+test('shared 8 fps atmosphere keeps time, pauses safely and disposes its subscription', async () => {
+  const { createAtmosphereLoop } = await model;
+  const { createFrameClock } = await import('../../src/frame-clock.mjs');
+  let pending = null, id = 0; const frames = [];
+  const clock = createFrameClock({ request: (cb) => { pending = cb; return ++id; }, cancel: () => { pending = null; } });
+  const step = (t) => { const cb = pending; pending = null; cb?.(t); };
+  const loop = createAtmosphereLoop({ clock, fps: 8, draw: (t) => frames.push(t) });
+  loop.setMode('running');
+  for (let i = 0; i <= 600; i++) step(i * 1000 / 60);
+  assert.ok(Math.abs(frames.at(-1) - frames[0] - 10) < .05, frames.at(-1));
+  loop.setMode('hidden'); assert.equal(clock.size, 0); assert.equal(pending, null);
+  const last = frames.at(-1); loop.setMode('running'); step(60000);
+  assert.ok(Math.abs(frames.at(-1) - last - .125) < 1e-9);
+  loop.setMode('reduced'); assert.equal(frames.at(-1), 0); assert.equal(clock.size, 0);
+  loop.setMode('running'); const stale = pending; const count = frames.length;
+  loop.dispose(); stale(120000); assert.equal(frames.length, count); assert.equal(clock.size, 0); assert.equal(pending, null);
+});

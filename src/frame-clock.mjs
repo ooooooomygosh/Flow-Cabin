@@ -21,7 +21,12 @@ export function createFrameClock({ request, cancel, now, maxFps = MAX_FPS }) {
         const interval = 1000 / rate(sub);
         let dt;
         if (sub.last === null) dt = 1 / rate(sub);
-        else if (t >= sub.due - interval * .25) dt = Math.min(.1, Math.max(0, (t - sub.last) / 1000));
+        else if (t >= sub.due - interval * .25) {
+          // Bound suspend/stall jumps, not ordinary low-fps frames. Allow one
+          // subscriber interval plus scheduling jitter (8 fps needs >125 ms).
+          const maxStep = Math.max(.1, interval * 1.5 / 1000);
+          dt = Math.min(maxStep, Math.max(0, (t - sub.last) / 1000));
+        }
         else continue;
         sub.due = sub.last === null ? t + interval : Math.max(sub.due + interval, t + interval * .5);
         sub.last = t;

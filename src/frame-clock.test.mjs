@@ -61,3 +61,31 @@ test('real focus loss never pauses; forwarded (untrusted) blur does until focus'
 test('document.hidden always pauses, including desktop surfaces', () => {
   assert.equal(backgroundState({ hidden: true, desktop: true }), true); assert.equal(backgroundState({}), false);
 });
+
+test('8 fps preserves elapsed time on a 60 Hz display', () => {
+  const r = rig(); const frames = [];
+  r.clock.subscribe((t, dt) => frames.push({ t, dt }), { fps: 8 });
+  for (let i = 0; i <= 600; i++) r.frame(i * 1000 / 60);
+  assert.ok(frames.length >= 80 && frames.length <= 82);
+  // The first draw starts with one nominal frame; subsequent deltas must telescope.
+  const elapsed = frames.slice(1).reduce((sum, frame) => sum + frame.dt, 0);
+  assert.ok(Math.abs(elapsed - (frames.at(-1).t - frames[0].t) / 1000) < 1e-9, elapsed);
+});
+
+test('8 fps bounds long stalls and resets after explicit background pause', () => {
+  const r = rig(); const dts = []; r.clock.subscribe((t, dt) => dts.push(dt), { fps: 8 });
+  r.frame(0); r.frame(125); r.frame(60000);
+  assert.ok(dts.at(-1) >= .125 && dts.at(-1) <= .1875);
+  r.frame(60125); assert.equal(dts.at(-1), .125);
+  r.clock.setPaused(true); assert.equal(r.pending, null);
+  const count = dts.length; r.frame(120000); assert.equal(dts.length, count);
+  r.clock.setPaused(false); r.frame(180000); assert.equal(dts.at(-1), .125);
+});
+
+test('unsubscribe before its turn skips the subscriber and leaves no scheduled work', () => {
+  const r = rig(); let second = 0, stopFirst, stopSecond;
+  stopFirst = r.clock.subscribe(() => { stopSecond(); stopFirst(); }, { fps: 8 });
+  stopSecond = r.clock.subscribe(() => second++, { fps: 8 });
+  r.frame(0); assert.equal(second, 0); assert.equal(r.clock.size, 0); assert.equal(r.pending, null);
+  stopFirst(); stopSecond(); r.frame(60000); assert.equal(second, 0);
+});
