@@ -1,7 +1,7 @@
 /* Desktop widgets (桌面模式) and the immersive clock. Small pixel cards with a
    frosted wood panel; the room stays visible and clickable around them. */
 .desktop-widgets { position: absolute; inset: 0; z-index: 45; pointer-events: none; }
-.desktop-widget { position: absolute; width: clamp(220px, 19vw, 300px); pointer-events: auto; color: var(--px-ink); background: color-mix(in srgb, #1c120b 78%, transparent); backdrop-filter: blur(6px) saturate(1.1);
+.desktop-widget { position: absolute; width: clamp(220px, 19vw, 300px); pointer-events: auto; color: var(--px-ink); background: rgba(28, 18, 11, .86);
   border: 2px solid var(--px-shadow); box-shadow: inset 2px 2px 0 #ffffff14, inset -2px -2px 0 #00000059, 4px 4px 0 #0d080599; animation: widget-in var(--px-dur-med) var(--px-ease) both; }
 .desktop-widget-handle { display: flex; align-items: center; gap: 6px; width: 100%; padding: 5px 9px; font: 400 11px/1.3 var(--px-font-cn); color: var(--px-ink-faint); text-align: left; background: #0d080533; border: 0; border-bottom: 2px solid #0d080566; cursor: grab; touch-action: none; }
 .desktop-widget-handle:active { cursor: grabbing; }
@@ -12,7 +12,7 @@
 .desktop-widget.is-clock { width: auto; min-width: 230px; background: transparent; backdrop-filter: none; border-color: transparent; box-shadow: none; }
 .desktop-widget.is-clock .desktop-widget-handle { opacity: 0; background: transparent; border: 0; transition: opacity 120ms steps(2, end); }
 .desktop-widget.is-clock:hover .desktop-widget-handle, .desktop-widget.is-clock .desktop-widget-handle:focus-visible { opacity: 1; }
-.desktop-clock { margin: 0 10px; font-family: var(--px-font-en); font-size: clamp(56px, 7.5vw, 112px); line-height: 1; color: #fff3df; text-shadow: 4px 4px 0 #0d0805, 0 0 28px #ffbe6a55; letter-spacing: .02em; }
+.desktop-clock { margin: 0 10px; font-family: var(--px-font-en); font-size: clamp(56px, 7.5vw, 112px); line-height: 1; color: #fff3df; text-shadow: 4px 4px 0 #0d0805, 0 0 28px #ffbe6a55; letter-spacing: .02em; font-variant-numeric: tabular-nums; }
 .desktop-clock b { font-weight: 400; animation: clock-colon 2s steps(1, end) infinite; }
 .desktop-date { margin: 6px 12px 0; font-family: var(--px-font-cn); font-size: clamp(14px, 1.3vw, 18px); color: #ffe9cb; text-shadow: 2px 2px 0 #0d0805; }
 .desktop-date span { color: var(--px-accent-hi); }
@@ -24,7 +24,7 @@
 .desktop-music-cover { position: relative; width: 64px; height: 64px; padding: 0; background: var(--px-surface-2); border: 2px solid var(--px-shadow); cursor: pointer; overflow: visible; }
 .desktop-music-cover img, .desktop-music-cover > span { position: relative; z-index: 1; display: block; width: 100%; height: 100%; object-fit: cover; }
 .desktop-music-cover i { position: absolute; z-index: 0; top: 6px; right: -16px; width: 52px; height: 52px; border-radius: 50%; background: repeating-radial-gradient(circle, #1c1612 0 1.5px, #2a221c 1.5px 3px); box-shadow: 0 0 0 2px #0d0805; }
-.desktop-music-cover i.is-spinning { animation: widget-spin 1.8s linear infinite; }
+.desktop-music-cover i.is-spinning { animation: widget-spin 1.8s steps(8) infinite; will-change: transform; }
 .desktop-music-cover i::after { content: ''; position: absolute; inset: 36%; border-radius: 50%; background: var(--px-accent); }
 .desktop-music-copy { display: flex; flex-direction: column; gap: 3px; min-width: 0; padding-left: 12px; }
 .desktop-music-copy strong, .desktop-music-copy small { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
@@ -66,19 +66,22 @@
 .desktop-widgets.is-zen .desktop-widget.is-clock { left: 2.5% !important; top: auto !important; bottom: 5%; }
 
 /* Fullscreen / immersive: a mouse-reachable way out, and the cursor rests. */
-.immersive-exit { position: fixed; top: 10px; left: 50%; z-index: 90; transform: translate(-50%, -140%); display: flex; gap: 6px; padding: 4px; background: #1c120be6; border: 2px solid var(--px-shadow); box-shadow: 3px 3px 0 #0d080599; transition: transform 200ms steps(4, end); }
-.immersive-exit.is-visible { transform: translate(-50%, 0); }
-.immersive-exit button { padding: 4px 10px; font: inherit; font-size: 12px; color: var(--px-ink); background: var(--px-surface-2); border: 2px solid var(--px-shadow); cursor: pointer; }
+.immersive-exit { position: fixed; top: 8px; left: 50%; z-index: 90; translate: -50% 0; display: flex; gap: 0; padding: 0; max-width: calc(100vw - 24px); background: var(--px-surface-hud); border: 2px solid var(--px-border); box-shadow: 2px 2px 0 var(--px-shadow); opacity: .78; -webkit-app-region: no-drag; transition: opacity 160ms steps(3, end); }
+.immersive-exit *, .immersive-exit:hover, .immersive-exit:focus-within { -webkit-app-region: no-drag; }
+.immersive-exit:hover, .immersive-exit:focus-within { opacity: 1; }
+.immersive-exit button { height: 28px; padding: 0 10px; font: inherit; font-size: 12px; white-space: nowrap; color: var(--px-ink-dim); background: var(--px-surface-2); border: 0; border-left: 2px solid var(--px-border); cursor: pointer; transition: background-color 120ms steps(2, end), color 120ms steps(2, end); }
+.immersive-exit button:first-child { border-left: 0; }
+.immersive-exit button:hover { color: var(--px-ink); background: var(--px-surface-3); }
+.immersive-exit button[aria-pressed=true] { color: var(--px-ink-on-accent); background: var(--px-accent); box-shadow: inset 2px 2px 0 var(--px-accent-hi), inset -2px -2px 0 var(--px-accent-lo); }
+/* Titlebar visible (fullscreen, or zen with tools): sit centred inside the 56px band; narrow windows slide it clear of the right-hand actions. */
+.immersive-exit:not(.is-zen), :root.room-zen-tools .immersive-exit { top: calc((var(--titlebar, 56px) - 32px) / 2); }
+@media (max-width: 1100px) { .immersive-exit:not(.is-zen), :root.room-zen-tools .immersive-exit { left: 200px; translate: none; } .immersive-exit.is-zen { left: 12px; translate: none; } }
 :root.cursor-resting, :root.cursor-resting * { cursor: none !important; }
 
 @keyframes widget-in { from { opacity: 0; transform: translateY(6px); } }
 @keyframes widget-spin { to { transform: rotate(360deg); } }
 @keyframes clock-colon { 50% { opacity: .35; } }
 :root[data-desktop-reduce-motion=true] .desktop-widgets *, :root[data-desktop-reduce-motion=true] .immersive-exit { animation: none !important; transition: none !important; }
-@media (prefers-reduced-motion: reduce) { .desktop-widgets *, .immersive-exit { animation: none !important; transition: none !important; } }
+@media (prefers-reduced-motion: reduce) { .desktop-widgets *, .immersive-exit, .immersive-exit * { animation: none !important; transition: none !important; } }
 @media (max-width: 760px) { .desktop-widget { width: min(300px, calc(100vw - 32px)); } }
 
-/* Keep recovery discoverable without covering the top window controls. */
-.immersive-exit { top:68px; bottom:auto; max-width:calc(100vw - 24px); flex-wrap:wrap; justify-content:center; }
-
-.room-zen:not(.room-zen-tools) .immersive-exit { top:14px; }

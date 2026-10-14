@@ -7,6 +7,10 @@ import useTurntablePosition from './useTurntablePosition';
 import { trackNames } from './room-model.mjs';
 import { trackArtist } from './room-playback.mjs';
 import PlayerControls, { PocketProgress } from './player/PlayerControls';
+import { displayTitle } from './display-title.mjs';
+// Wrap the quality token (无损 / FLAC / Hi-Res / 320k MP3…) of a status line in a small badge; the text stays whole.
+const QUALITY = /(\d{2,4}\s?k(?:bps)?(?:\s?(?:MP3|AAC|OGG))?|Hi-?Res|FLAC|无损)/i;
+const statusNode = (text) => { const match = typeof text === 'string' && QUALITY.exec(text); return match ? <>{text.slice(0, match.index)}<span className="turntable-quality">{match[0]}</span>{text.slice(match.index + match[0].length)}</> : text; };
 // 系统 Apple Music drives the macOS “音乐” App; other systems never see the option.
 const isMacClient = () => typeof navigator !== 'undefined' && /Mac/i.test(navigator.platform || navigator.userAgent || '');
 
@@ -41,7 +45,7 @@ export default function RoomTurntable({ item, spinning, trackIndex = 0, style, i
       <span className="turntable-sleeve">{item?.cover ? <img src={item.cover} alt="" referrerPolicy="no-referrer"/> : <Disc3 size={32}/>}</span>
       <VinylDisc item={item || undefined} value={style} className={spinning ? 'is-spinning' : ''}/><span className="turntable-needle" aria-hidden="true"/>
     </button>
-    <div className="turntable-copy"><strong title={item?.title}>{item?.title || '让收藏转起来'}</strong><span className="turntable-artist">{item?.type === 'playlist' ? `${trackArtist(item, trackIndex) || '歌单'} · 歌单` : item?.artist || '专辑库原始封面与曲目'}</span><p className="turntable-track" title={trackName}>{item && names.length ? `${String(trackIndex + 1).padStart(2, '0')} · ` : ''}{trackName}</p><small className="turntable-status" role="status">{statusText || (provider === 'system' ? system?.statusText : provider === 'visual' ? (item ? spinning ? '展示中 · 无音频' : '旋转已暂停 · 无音频' : '等待放盘 · 无音频') : playback?.statusText)}</small></div>
+    <div className="turntable-copy"><strong title={item?.title}>{displayTitle(item?.title) || '让收藏转起来'}</strong><span className="turntable-artist">{item?.type === 'playlist' ? <>{trackArtist(item, trackIndex) || '歌单'} · <em>歌单</em></> : item?.artist || '专辑库原始封面与曲目'}</span><p className="turntable-track" title={trackName}>{item && names.length ? `${String(trackIndex + 1).padStart(2, '0')} · ` : ''}{displayTitle(trackName)}</p><small className="turntable-status" role="status">{statusNode(statusText || (provider === 'system' ? system?.statusText : provider === 'visual' ? (item ? spinning ? '展示中 · 无音频' : '旋转已暂停 · 无音频' : '等待放盘 · 无音频') : playback?.statusText))}</small></div>
     </div>
     {!readOnly && item && playback && !['visual', 'system', 'ma'].includes(provider) && <PocketProgress playback={playback}/>}
     </div>

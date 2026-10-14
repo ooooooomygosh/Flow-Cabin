@@ -32,15 +32,25 @@
   --px-border-hi: #b07a46;   /* frame highlight bevel */
   --px-shadow: #0d0805;      /* hard drop shadow */
   --px-focus: #ffd99c;       /* keyboard focus ring */
+  --px-surface-hud: rgba(42, 26, 16, .92); /* floating HUD chips */
+  --px-surface-inset: #160d07;  /* form controls / wells */
+  --px-surface-card: #24160d;
+  --px-ink-muted: #6e553b;      /* decorative only, not for text */
+  --px-ink-on-accent: #1c120b;
+  --px-border-subtle: rgba(138, 90, 50, .42);
+  --px-shadow-inset: inset 2px 2px 0 #090503, inset -1px -1px 0 rgba(255, 217, 156, .10);
+  --px-heat-0: #180e08; --px-heat-1: #5c3b1e; --px-heat-2: #8f5d2e; --px-heat-3: #c48745; --px-heat-4: #ffd99c;
 
   /* ── type ─────────────────────────────────────────────────────── */
   --px-font-cn: 'Fusion Pixel 12', 'Fusion Pixel', 'Zpix', 'HarmonyOS Sans SC Bundled', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   --px-font-en: 'Silkscreen', 'Fusion Pixel 12', 'Press Start 2P', monospace;
   --px-font-body: 'HarmonyOS Sans SC Bundled', 'PingFang SC', 'Microsoft YaHei', sans-serif; /* long-form/small text where pixel CJK hurts legibility */
   --px-text-xs: 12px;        /* pixel fonts are drawn on a 12px grid: use multiples */
-  --px-text-sm: 12px;
-  --px-text-md: 14px;
-  --px-text-lg: 24px;
+  --px-text-2xs: 10px;
+  --px-text-sm: 13px;
+  --px-text-md: 15px;
+  --px-text-lg: 20px;
+  --px-text-xl: 32px;
 
   /* ── geometry ─────────────────────────────────────────────────── */
   --px-unit: 4px;            /* one art pixel at 1x */
@@ -79,6 +89,8 @@
   --px-z-hud: 40;
   --px-z-overlay: 80;
   --px-z-toast: 100;
+  /* z table (inside .cabin-room): pet-with-bubble lifts above the console, under the dock/HUD */
+  --z-scene: 0; --z-props: 10; --z-room-console: 10; --z-room-pet: 22; --z-hud: 20; --z-titlebar: 30; --z-chrome: 90; --z-overlay: 80; --z-toast: 100;
 }
 
 /* Images that are pixel art must never be smoothed. */

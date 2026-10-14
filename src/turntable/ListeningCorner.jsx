@@ -4,6 +4,7 @@ import PixelTurntable from './PixelTurntable';
 import { sideProgress, seekTarget } from './turntable-physics.mjs';
 import { flyRecord } from './record-flight.mjs';
 import { deckSoundsEnabled, setDeckSounds } from './deck-sfx.mjs';
+import { displayTitle } from '../display-title.mjs';
 import { trackNames } from '../room-model.mjs';
 import { trackArtist } from '../room-playback.mjs';
 import { formatDuration } from '../playlist-model.mjs';
@@ -33,7 +34,7 @@ export default function ListeningCorner({ item, items = [], vinyl, provider, spi
   const position = audible ? playback.position || 0 : visualSeconds;
   const { progress, gaps } = useMemo(() => sideProgress(lengths.length ? lengths : [0], trackIndex, position), [lengths.join(), trackIndex, Math.floor(position)]);
   const [speed, setSpeed] = useState(33), [light, setLight] = useState(() => { try { return localStorage.getItem('album-circle-corner-light-v1') || 'lamp'; } catch { return 'lamp'; } });
-  const [sounds, setSounds] = useState(deckSoundsEnabled), [energy, setEnergy] = useState(0), [query, setQuery] = useState(''), [notice, setNotice] = useState('');
+  const [sounds, setSounds] = useState(deckSoundsEnabled), [energyStep, setEnergyStep] = useState(0), [query, setQuery] = useState(''), [notice, setNotice] = useState('');
   const root = useRef(null), deckRef = useRef(null), list = useRef(null);
   useEffect(() => { setSpeed(33); }, [item?.id]);
   useEffect(() => {
@@ -50,7 +51,7 @@ export default function ListeningCorner({ item, items = [], vinyl, provider, spi
       else if (event.shiftKey && (current === first || current === root.current || !root.current.contains(current))) { event.preventDefault(); last.focus(); }
       else if (!event.shiftKey && (current === last || !root.current.contains(current))) { event.preventDefault(); first.focus(); }
     };
-    const energyListener = (event) => setEnergy(event.detail?.playing ? Number(event.detail.energy) || 0 : 0);
+    const energyListener = (event) => { const value = event.detail?.playing ? Math.min(1, Math.max(0, Number(event.detail.energy) || 0)) : 0; root.current?.style.setProperty('--corner-energy', value.toFixed(3)); setEnergyStep(Math.round(value * 4) / 4); };
     document.addEventListener('keydown', key); window.addEventListener('cabin:playback', energyListener);
     document.documentElement.classList.add('room-corner-open');
     return () => { document.removeEventListener('keydown', key); window.removeEventListener('cabin:playback', energyListener); document.documentElement.classList.remove('room-corner-open'); previous?.focus?.({ preventScroll: true }); };
@@ -74,7 +75,7 @@ export default function ListeningCorner({ item, items = [], vinyl, provider, spi
   const matches = items.filter(entry => !needle || `${entry.title} ${entry.artist}`.normalize('NFKC').toLowerCase().includes(needle));
   const crate = matches.slice(0, 120);
   const queueRecord = (entry, event) => { if (!player?.enqueue(entry.id)) { setNotice(''); return; } flyRecord({ from: event.currentTarget.closest('li')?.querySelector('img, .corner-crate-blank'), to: root.current?.querySelector('.corner-crate-status'), cover: entry.cover, mode: 'queue' }); setNotice(`《${entry.title}》已加入待播`); };
-  return createPortal(<section ref={root} tabIndex={-1} className={`listening-corner is-${light}`} role="dialog" aria-modal="true" aria-label="唱机特写" data-playing={String(playing)} style={{ '--corner-energy': energy }}>
+  return createPortal(<section ref={root} tabIndex={-1} className={`listening-corner is-${light}`} role="dialog" aria-modal="true" aria-label="唱机特写" data-playing={String(playing)}>
     <div className="corner-backdrop" aria-hidden="true"><span className="corner-lamp"/><span className="corner-window"/><span className="corner-dust"/></div>
     <header className="corner-bar">
       <span className="corner-title"><Disc3 size={16}/>唱机特写<small>拖动唱臂换位置 · 点唱片暂停 · 33 / 45 转</small></span>
@@ -86,7 +87,7 @@ export default function ListeningCorner({ item, items = [], vinyl, provider, spi
     </header>
     <div className="corner-stage">
       <div ref={deckRef} className="corner-deck">
-        <PixelTurntable item={item} vinyl={vinyl} playing={playing && !busy} progress={item ? progress : 0} gaps={gaps} energy={energy} speed={speed} reduceMotion={reduceMotion}
+        <PixelTurntable item={item} vinyl={vinyl} playing={playing && !busy} progress={item ? progress : 0} gaps={gaps} energy={energyStep} speed={speed} reduceMotion={reduceMotion}
           label={item ? `唱机特写：${item.title}${playing ? '，正在播放' : '，已暂停'}` : '唱机特写：还没有放唱片'} onToggle={item ? toggle : undefined} onSeek={item ? seek : undefined} onSpeed={changeSpeed}/>
         {!item && <p className="corner-empty">从下面的唱片箱挑一张，或回到小屋双击封面。</p>}
       </div>
@@ -95,8 +96,8 @@ export default function ListeningCorner({ item, items = [], vinyl, provider, spi
           <div className="corner-sleeve">{item.cover ? <img src={item.cover} alt={`${item.title} 封套`} referrerPolicy="no-referrer"/> : <span className="corner-crate-blank"/>}<span className="corner-sleeve-shadow"/></div>
           <div className="corner-copy">
             <small>{item.type === 'playlist' ? '歌单' : item.year || '唱片'}{speed === 45 ? ' · 45 转加速' : ''}</small>
-            <h2 title={item.title}>{item.title}</h2>
-            <p title={names[trackIndex]}>{String(trackIndex + 1).padStart(2, '0')} · {audible && playback.actualTrack || names[trackIndex] || '原始资料暂无曲目'}</p>
+            <h2 title={item.title}>{displayTitle(item.title)}</h2>
+            <p title={names[trackIndex]}>{String(trackIndex + 1).padStart(2, '0')} · {displayTitle(audible && playback.actualTrack || names[trackIndex] || '原始资料暂无曲目')}</p>
             <p className="corner-artist">{item.type === 'playlist' ? trackArtist(item, trackIndex) : item.artist}</p>
           </div>
           <div className="corner-transport">
@@ -106,7 +107,7 @@ export default function ListeningCorner({ item, items = [], vinyl, provider, spi
             <span className="corner-time">{audible && playback.duration ? `${clock(position)} / ${clock(playback.duration)}` : provider === 'visual' ? '仅动画 · 无音频' : ''}</span>
           </div>
           {audible && playback.statusText && !playback.playing && <p className="corner-status" role="status">{playback.statusText}</p>}
-          <ol ref={list} className="corner-tracks" aria-label="本面曲目">{names.map((name, index) => <li key={index}><button type="button" aria-current={index === trackIndex ? 'true' : undefined} onClick={() => setTrackIndex(index)}><b>{String(index + 1).padStart(2, '0')}</b><span>{name}</span><small>{lengths[index] ? formatDuration(lengths[index]) : ''}</small></button></li>)}</ol>
+          <ol ref={list} className="corner-tracks" aria-label="本面曲目">{names.map((name, index) => <li key={index}><button type="button" aria-current={index === trackIndex ? 'true' : undefined} onClick={() => setTrackIndex(index)}><b>{String(index + 1).padStart(2, '0')}</b><span>{displayTitle(name)}</span><small>{lengths[index] ? formatDuration(lengths[index]) : ''}</small></button></li>)}</ol>
         </> : <p className="corner-empty-side">唱机上还没有唱片。</p>}
       </aside>
     </div>

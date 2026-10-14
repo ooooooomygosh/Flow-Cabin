@@ -3,10 +3,10 @@
  * `cat` the cat's rect, `obstacles` rects it must not cover (record cells,
  * toolbar, console, footer, paging, focus panel). Returns the first candidate
  * with no overlap that stays on screen, else the least-bad one. */
-export const BUBBLE_OBSTACLES = '.room-record-slot, .room-empty, .scene-deck, .app-titlebar, .cabin-toolbar > *, .room-turntable, .room-now-playing, .room-shelf-navigation, .focus-dock';
+export const BUBBLE_OBSTACLES = '.room-record-slot, .room-empty, .scene-deck, .app-titlebar, .cabin-toolbar > *, .room-turntable, .room-now-playing, .room-shelf-navigation, .focus-dock, .immersive-exit, .focus-badge';
 const area = (a, b) => Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left)) * Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
 const shift = (r, dx, dy) => ({ left: r.left + dx, right: r.right + dx, top: r.top + dy, bottom: r.bottom + dy });
-export function chooseBubbleOffset(base, cat, obstacles, view, gap = 6) {
+export function chooseBubbleOffset(base, cat, obstacles, view, gap = 6, consoleRect = null) {
   const w = base.right - base.left, h = base.bottom - base.top, catMid = (cat.top + cat.bottom) / 2;
   const toSide = (cat.right - cat.left) / 2 + w / 2 + gap, down = catMid - h / 2 - base.top;
   const candidates = [
@@ -14,13 +14,15 @@ export function chooseBubbleOffset(base, cat, obstacles, view, gap = 6) {
     ['right', toSide, down], ['left', -toSide, down],
     ['top', 0, -h - gap], ['top', -(w / 2 - 14), -h - gap], ['top', w / 2 - 14, -h - gap]
   ];
+  // Console present and the cat sits left of its right edge: the bubble would be painted into/over it, so lean right (tie-break only: `cost` stays pure overlap).
+  const lean = Boolean(consoleRect && (cat.left + cat.right) / 2 < consoleRect.right);
   let best = null;
   for (const [side, dx, dy] of candidates) {
     const r = shift(base, dx, dy);
     const off = Math.max(0, view.left - r.left) + Math.max(0, r.right - view.right) + Math.max(0, view.top - r.top) + Math.max(0, r.bottom - view.bottom);
-    const cost = obstacles.reduce((sum, o) => sum + area(r, o), 0) + off * h * 4;
-    if (!best || cost < best.cost) best = { side, dx: Math.round(dx), dy: Math.round(dy), cost };
-    if (cost === 0) break;
+    const cost = obstacles.reduce((sum, o) => sum + area(r, o), 0) + off * h * 4, bias = lean && dx < 0 ? 1 : 0;
+    if (!best || cost < best.cost || (cost === best.cost && bias < best.bias)) best = { side, dx: Math.round(dx), dy: Math.round(dy), cost, bias };
+    if (cost === 0 && bias === 0) break;
   }
   return best;
 }
@@ -43,7 +45,7 @@ export function chooseCatSpot({ cat, floorTop = cat.top, bubble, obstacles, cons
     let cost = obstacles.reduce((sum, o) => sum + area(body, o), 0) * 2 + offscreen(body) * h * 4, bubblePick = null;
     if (bubble) {
       const dx = spot.left - cat.left, dy = spot.top - cat.top;
-      bubblePick = chooseBubbleOffset(shift(bubble, dx, dy), { left: spot.left, right: spot.left + w, top: spot.top, bottom: spot.top + h }, obstacles, view);
+      bubblePick = chooseBubbleOffset(shift(bubble, dx, dy), { left: spot.left, right: spot.left + w, top: spot.top, bottom: spot.top + h }, obstacles, view, 6, consoleRect);
       cost += bubblePick.cost;
     }
     return { ...spot, cost, bubble: bubblePick, distance: Math.abs(spot.left - home) + (spot.perch ? w : 0) };

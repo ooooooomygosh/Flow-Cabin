@@ -38,6 +38,7 @@ function PlaylistGrid({ playlists, open, busyId }) {
       <button type="button" className="playlist-card" aria-label={`打开歌单 ${entry.name}`} aria-busy={busyId === entry.id} onClick={() => open(entry)}>
         <Sleeve src={entry.cover} title={entry.name} size={kind === 'liked' ? 'lg' : 'md'}/>
         <span className="playlist-card-copy"><strong title={entry.name}>{entry.name}</strong><small>{entry.trackCount ? `${entry.trackCount} 首` : '歌单'}{entry.creator ? ` · ${entry.creator}` : ''}</small></span>
+        {kind === 'liked' && <span className="playlist-card-cta" aria-hidden="true"><b>打开歌单 →</b></span>}
         {busyId === entry.id && <Loading size={18} className="player-spin playlist-card-busy"/>}
       </button>
     </li>)}</ul>

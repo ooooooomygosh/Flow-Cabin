@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { X, SpeakerWave, SpeakerOff, Loading, Music2, RepeatPixel, RepeatOnePixel, ShufflePixel, PlayPixel, PausePixel, PreviousPixel, NextPixel, EjectPixel } from '../icons';
 import { trackNames } from '../room-model.mjs';
+import { displayTitle } from '../display-title.mjs';
 import './player.css';
 import './pocket-player.css';
 
@@ -45,10 +46,10 @@ export default function PlayerControls({ item, items = [], provider, spinning, t
         <button type="button" className="player-mode pocket-key" aria-label="随机播放本张" title="本张随机 · S" aria-pressed={player.queue.shuffle} onClick={player.toggleShuffle}><i className="pocket-led" aria-hidden="true"/><ShufflePixel/><small>随机</small></button>
       </span>}
     </div>
-    {!!names.length && <label className="pocket-track"><span>曲目</span><select aria-label="唱机展示曲目" value={trackIndex} onChange={(event) => track?.(Number(event.target.value))}>{names.map((name, index) => <option value={index} key={index}>{String(index + 1).padStart(2, '0')} · {name}</option>)}</select></label>}
+    {!!names.length && <label className="pocket-track"><span>曲目</span><select aria-label="唱机展示曲目" value={trackIndex} onChange={(event) => track?.(Number(event.target.value))}>{names.map((name, index) => <option value={index} key={index}>{String(index + 1).padStart(2, '0')} · {displayTitle(name)}</option>)}</select></label>}
     {queueOpen && player && <div ref={queuePanel} className="player-queue" role="region" aria-label="待播唱片" tabIndex={-1}>
       <div className="player-queue-header"><strong>待播</strong><button type="button" aria-label="关闭待播" onClick={closeQueue}><X size={12}/></button></div>
-      {player.queue.repeat !== 'one' && !player.queue.shuffle && names.length > trackIndex + 1 && <><small className="player-queue-title">接下来 · 本张</small><ol className="player-queue-tracks">{names.slice(trackIndex + 1, trackIndex + 6).map((name, offset) => <li key={offset}><button type="button" className="player-queue-jump" aria-label={`跳到第 ${trackIndex + offset + 2} 首 ${name}`} onClick={() => track?.(trackIndex + offset + 1)}><b>{String(trackIndex + offset + 2).padStart(2, '0')}</b><span title={name}>{name}</span></button></li>)}</ol>{names.length > trackIndex + 6 && <small className="player-queue-more">还有 {names.length - trackIndex - 6} 首</small>}</>}
+      {player.queue.repeat !== 'one' && !player.queue.shuffle && names.length > trackIndex + 1 && <><small className="player-queue-title">接下来 · 本张</small><ol className="player-queue-tracks">{names.slice(trackIndex + 1, trackIndex + 6).map((name, offset) => <li key={offset}><button type="button" className="player-queue-jump" aria-label={`跳到第 ${trackIndex + offset + 2} 首 ${name}`} onClick={() => track?.(trackIndex + offset + 1)}><b>{String(trackIndex + offset + 2).padStart(2, '0')}</b><span title={name}>{displayTitle(name)}</span></button></li>)}</ol>{names.length > trackIndex + 6 && <small className="player-queue-more">还有 {names.length - trackIndex - 6} 首</small>}</>}
       {player.queue.repeat === 'one' && <p className="player-queue-state">单曲循环中 · 切换为顺序播放后继续待播</p>}
       {player.queue.repeat !== 'one' && player.queue.shuffle && <small className="player-queue-title">本张随机播放中 · 关闭随机后进入待播</small>}
       <small className="player-queue-title">待播唱片{queued.length ? ` · ${queued.length}` : ''}</small>
