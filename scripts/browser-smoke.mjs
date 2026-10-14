@@ -434,10 +434,14 @@ try {
     });
     assert(focusLoss.events.some(event => event.trusted), 'iframe focus must produce a real blur');
     assert.equal(focusLoss.motion, 'running', 'ordinary blur must not pause the atmosphere');
-    await page.evaluate(() => window.dispatchEvent(new Event('blur')));
-    await page.waitForFunction(() => document.querySelector('.cabin-atmosphere')?.dataset.motion === 'hidden');
-    await page.evaluate(() => window.dispatchEvent(new Event('focus')));
-    await page.waitForFunction(() => document.querySelector('.cabin-atmosphere')?.dataset.motion === 'running');
+    const forwardedModes = await page.evaluate(() => {
+      // Observe each synchronous bridge notification before a pending native
+      // iframe-focus event can legitimately resume the visible main window.
+      const motion = () => document.querySelector('.cabin-atmosphere').dataset.motion;
+      window.dispatchEvent(new Event('blur')); const hidden = motion();
+      window.dispatchEvent(new Event('focus')); return [hidden, motion()];
+    });
+    assert.deepEqual(forwardedModes, ['hidden', 'running']);
     check('atmosphere-keeps-running-on-trusted-blur-and-pauses-on-forwarded-minimize');
     await openRoomSettings(page); await page.getByRole('button', { name: `选择场景 ${ROOM_SCENES.find(scene => scene.id === originalScene).label}`, exact: true }).click(); await closeDialog();
     await page.evaluate(catHelpers); await page.waitForTimeout(800);
