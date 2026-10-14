@@ -41,4 +41,13 @@ function listSystemFonts() {
   });
   return fontsPromise;
 }
-module.exports = { DEFAULT_SETTINGS, WEIGHTS, normalizeSettings, appearanceScript, listSystemFonts };
+// Settings overlays hide the content WebContents. Restore real keyboard focus
+// when closing; focusing a hidden shell button would strand keyboard users.
+function setSettingsVisibility(siteView, { open, loading, error }) {
+  const visible = !open && !loading && !error;
+  siteView?.setVisible(visible);
+  const contents = siteView?.webContents;
+  if (visible && contents && !contents.isDestroyed()) contents.focus();
+  return visible;
+}
+module.exports = { DEFAULT_SETTINGS, WEIGHTS, normalizeSettings, appearanceScript, listSystemFonts, setSettingsVisibility };

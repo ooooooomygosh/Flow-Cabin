@@ -42,6 +42,8 @@ jobs:
         run: npm run test:playback
       - name: Run focus and mode regressions
         run: npm run test:focus-ui
+      - name: Run shelf and window-control regressions
+        run: npm run test:shelf-ui
       - name: Save browser test evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -51,5 +53,6 @@ jobs:
             desktop/test-results/browser/
             desktop/test-results/playback/
             desktop/test-results/focus-ui/
+            desktop/test-results/shelf-ui/
           if-no-files-found: warn
           retention-days: 14

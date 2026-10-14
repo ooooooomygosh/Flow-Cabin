@@ -129,7 +129,7 @@ export default function DesktopWidgets({ mode = 'desktop', exit, ...music }) {
 }
 
 // A persistent, small recovery control: fullscreen never removes interaction.
-export function ImmersiveChrome({ zen, fullscreen, desktopClient, toggleZen, openStudy }) {
+export function ImmersiveChrome({ zen, fullscreen, exitFullscreen, toggleZen, openStudy }) {
   const [tools, setTools] = useState(false);
   useEffect(() => {
     document.documentElement.classList.toggle('room-zen-tools', zen && tools);
@@ -141,6 +141,6 @@ export function ImmersiveChrome({ zen, fullscreen, desktopClient, toggleZen, ope
     <button type="button" aria-pressed={zen} onClick={toggleZen}>{zen ? '正常模式' : '沉浸模式'}</button>
     {zen && <button type="button" aria-expanded={tools} onClick={() => setTools((value) => !value)}>{tools ? '收起工具' : '显示工具'}</button>}
     {zen && tools && <button type="button" onClick={openStudy}>学习</button>}
-    {fullscreen && desktopClient && <button type="button" onClick={() => window.open('album-desktop://action/fullscreen-exit', '_blank')}>退出全屏</button>}
+    {fullscreen && zen && !tools && <button type="button" onClick={exitFullscreen}>退出全屏</button>}
   </div>;
 }

@@ -1,5 +1,5 @@
 /* Ambient room life (owner: beauty). */
-.ambient-life { position: absolute; inset: 0; pointer-events: none; z-index: 2; overflow: hidden; }
+.ambient-life { position: absolute; inset: 0; pointer-events: none; z-index: 1; overflow: hidden; }
 .ambient-mote { position: absolute; width: calc(4 / 1448 * 100%); aspect-ratio: 1; background: #ffe6b0; opacity: 0; animation: ambient-drift 14s steps(28, end) infinite; }
 .ambient-mote.size-2 { width: calc(6 / 1448 * 100%); }
 @keyframes ambient-drift {

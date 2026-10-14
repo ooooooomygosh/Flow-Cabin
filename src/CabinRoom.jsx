@@ -18,9 +18,10 @@ import { Up, Down, ArrowUpRight, Grid3X3, Settings, External, Music2, Eye, EyeSl
 import DiscogsLink from './DiscogsLink';
 import { RecordBoxControls, RecordTools, useRecordLibrary, useRecordStyle } from './RecordLibrary';
 import { matchesLibraryFilters } from './record-library.mjs';
-import { desktopCommand, useDesktopAppearance } from './desktop-client';
+import { desktopCommand, useDesktopAppearance, useDesktopFullscreen } from './desktop-client';
 import RoomScene from './RoomScene';
 import RoomTurntable from './RoomTurntable';
+import { readCabinFullscreen, requestCabinFullscreen } from './desktop/fullscreen-client.mjs';
 import { shelfWindow } from './room-model.mjs';
 import MusicSettings from './MusicSettings';
 import useRoomPlayback from './useRoomPlayback';
@@ -103,7 +104,9 @@ export default function CabinRoom({ items, loading, loadError = '', openRecord, 
   const focus = useFocus(), sound = useSoundscape();
   const [dock, setDock] = useState(() => readJSON('album-circle-focus-dock-v1', { open: false, tab: 'timer' }));
   const saveDock = (change) => setDock((old) => { const next = { ...old, ...change }; writeJSON('album-circle-focus-dock-v1', next); return next; });
-  const [desktopMode, setDesktopMode] = useState(() => document.documentElement.dataset.desktopMode === 'true'), [fullscreen, setFullscreen] = useState(() => document.documentElement.dataset.desktopFullscreen === 'true');
+  const [desktopMode, setDesktopMode] = useState(() => document.documentElement.dataset.desktopMode === 'true');
+  const fullscreen = useDesktopFullscreen();
+  const exitFullscreen = () => requestCabinFullscreen({ exit: true }).catch(() => notify?.('无法退出全屏，请重试或使用系统退出全屏快捷键。'));
   const [corner, setCorner] = useState(false), [zen, setZen] = useState(false), [pet, setPet] = useState(() => window.albumPetState || {});
   const shelfColumns = getRoomScene(look).geometry.columns.length;
   const signature = visible.map((item) => item.id).join('|'), view = shelfWindow(visible, row, shelfColumns);
@@ -130,12 +133,12 @@ export default function CabinRoom({ items, loading, loadError = '', openRecord, 
     return () => { window.removeEventListener('cabin-play', play); window.removeEventListener('cabin-enqueue', enqueue); };
   }, [items]);
   useEffect(() => {
-    // 桌面模式 and fullscreen are decided by the desktop shell; the page follows.
-    const mode = (event) => setDesktopMode(Boolean(event.detail?.active)), screen = (event) => setFullscreen(Boolean(event.detail));
-    const observer = new MutationObserver(() => { setDesktopMode(document.documentElement.dataset.desktopMode === 'true'); setFullscreen(document.documentElement.dataset.desktopFullscreen === 'true'); });
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-desktop-mode', 'data-desktop-fullscreen'] });
-    window.addEventListener('album-desktop-mode', mode); window.addEventListener('album-desktop-fullscreen', screen);
-    return () => { observer.disconnect(); window.removeEventListener('album-desktop-mode', mode); window.removeEventListener('album-desktop-fullscreen', screen); };
+    // Desktop attachment is decided by the shell; fullscreen uses the shared hook.
+    const mode = (event) => setDesktopMode(Boolean(event.detail?.active));
+    const observer = new MutationObserver(() => { setDesktopMode(document.documentElement.dataset.desktopMode === 'true'); });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-desktop-mode'] });
+    window.addEventListener('album-desktop-mode', mode);
+    return () => { observer.disconnect(); window.removeEventListener('album-desktop-mode', mode); };
   }, []);
   useEffect(() => { document.documentElement.classList.toggle('room-desktop', desktopMode); window.dispatchEvent(new Event('resize')); return () => document.documentElement.classList.remove('room-desktop'); }, [desktopMode]);
   // In a browser preview there is no shell: 桌面模式 only changes the layout.
@@ -153,7 +156,7 @@ export default function CabinRoom({ items, loading, loadError = '', openRecord, 
       else if ((event.key === 't' || event.key === 'T') && !event.shiftKey) { event.preventDefault(); setCorner((value) => !value); }
       else if (event.key === 'Escape' && !corner && !dock.open) {
         if (zen) setZen(false);
-        else if (fullscreen && appearance.client) desktopCommand('fullscreen-exit');
+        else if (readCabinFullscreen()) exitFullscreen();
       }
     };
     document.addEventListener('keydown', key); return () => document.removeEventListener('keydown', key);
@@ -246,7 +249,7 @@ export default function CabinRoom({ items, loading, loadError = '', openRecord, 
     {selected && <div className="room-now-playing"><div className="room-selection-copy"><small>唱片架 · 双击封面放盘</small><h2 title={selected.title}>{selected.title}</h2><p title={selected.type === 'playlist' ? `歌单 · ${selected.artist} · ${selected.tracks?.length || 0} 首` : `${selected.artist} · ${selected.year || '年份待补充'} · ${selected.tracks?.length || 0} 首曲目`}>{selected.type === 'playlist' ? `歌单 · ${selected.artist} · ${selected.tracks?.length || 0} 首` : `${selected.artist} · ${selected.year || '年份待补充'} · ${selected.tracks?.length || 0} 首曲目`}</p></div><div className="room-selection-actions">{record && record.id !== selected.id && <button type="button" className="room-queue-add" aria-label={player.queue.ids.includes(selected.id) ? '已在待播' : '加入待播'} aria-pressed={player.queue.ids.includes(selected.id)} title="当前唱片放完后接着放" onClick={(event) => { if (player.queue.ids.includes(selected.id)) { player.remove(selected.id); return; } if (!player.enqueue(selected.id)) return; const queueButton = document.querySelector('.room-turntable .player-mode[aria-label^="待播唱片"]'); flyRecord({ from: document.querySelector('.room-record.is-selected') || event.currentTarget, to: queueButton, target: queueButton, cover: selected.cover, mode: 'queue' }); }}>{player.queue.ids.includes(selected.id) ? <><Check size={16}/><span>已在待播</span></> : <><ListBullet size={16}/><span>加入待播</span></>}</button>}<RecordTools item={selected}/><DiscogsLink item={selected}/><button type="button" className="room-open-album" aria-label="唱片卡片" title="唱片卡片" onClick={() => openRecord(selected.id)}><span>唱片卡片</span><ArrowUpRight size={18}/></button></div></div>}
     {focus && <><FocusBadge open={dock.open} onClick={() => saveDock({ open: !dock.open })}/><FocusDock open={dock.open} tab={dock.tab} setTab={(tab) => saveDock({ tab })} close={() => saveDock({ open: false })}/></>}
     {desktopMode ? <DesktopWidgets mode="desktop" exit={toggleDesktopMode} item={deckItem} provider={provider} playback={playback} player={player} spinning={effectiveSpin} toggleVisual={() => setSpinning((value) => !value)} trackIndex={provider === 'system' ? 0 : trackIndex}/> : zen && <DesktopWidgets mode="zen"/>}
-    {!desktopMode && <ImmersiveChrome zen={zen} fullscreen={fullscreen} desktopClient={appearance.client} toggleZen={() => setZen((value) => !value)} openStudy={() => saveDock({ open: true, tab: 'study' })}/>}
+    {!desktopMode && <ImmersiveChrome zen={zen} fullscreen={fullscreen} exitFullscreen={exitFullscreen} toggleZen={() => setZen((value) => !value)} openStudy={() => saveDock({ open: true, tab: 'study' })}/>}
     {corner && <ListeningCorner item={deckItem} items={visible} vinyl={recordStyle} provider={provider} spinning={effectiveSpin} trackIndex={provider === 'system' ? 0 : trackIndex} setTrackIndex={setTrackIndex} playback={playback} player={player} toggleVisual={() => setSpinning((value) => !value)} load={load} close={() => setCorner(false)} reduceMotion={appearance.reduceMotion}/>}
     {hub && <SettingsHub section={hub} setSection={setHub} close={() => setHub('')} env={env} player={playerAdapter} desktop={desktopAdapter} provider={provider} useSource={chooseProvider} openMusicSettings={() => { setHub(''); setMusicSettings(true); }} look={look} petId={petId} onRoomChange={personalizeRoom} reduceMotion={appearance.reduceMotion} error={library?.error} focus={focus} openDock={(tab) => { setHub(''); saveDock({ open: true, tab }); }} pet={pet} openBackup={() => { setHub(''); openBackup?.(); }} openWall={() => { setHub(''); openWall?.(); }} restartOnboarding={restartOnboarding}/>}
     {wizard && <OnboardingWizard state={onboarding} update={saveOnboarding} env={env} player={playerAdapter} look={look} petId={petId} onRoomChange={personalizeRoom} useSource={chooseProvider} openMusicSettings={() => { setHub(''); setMusicSettings(true); }} openAdd={() => { closeWizard('later'); openAdd(); }} close={closeWizard} reduceMotion={appearance.reduceMotion} error={library?.error}/>}

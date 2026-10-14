@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Plus, Grid3X3, Settings, QueueList } from './icons';
+import { Plus, Grid3X3, QueueList } from './icons';
 import { isNewCabin } from './onboarding/onboarding-model.mjs';
 import CabinRoom from './CabinRoom';
 import AddAlbum from './AddAlbum';
@@ -59,9 +59,8 @@ export default function App() {
           <button type="button" className="pixel-button is-primary" aria-label="添加专辑" title="添加专辑" onClick={() => setAdding({ query: '' })}><Plus size={17}/><span>添加专辑</span></button>
           <button type="button" className="pixel-button" aria-label="我的歌单" title="导入网易云 / QQ 音乐 / Apple Music 歌单" onClick={() => setPlaylists(true)}><QueueList size={17}/><span>我的歌单</span></button>
           <button type="button" className="pixel-button" aria-label="专辑墙" onClick={() => setWall(true)} title="挑选专辑，生成专辑墙图片"><Grid3X3 size={17}/><span>专辑墙</span></button>
-          <button type="button" className="pixel-button is-quiet" aria-label="设置" title="设置：音源、房间与桌宠、专注、桌面、备份、重新引导" onClick={() => setHubRequest({ section: 'music', at: Date.now() })}><Settings size={17}/><span>设置</span></button>
         </div>
-        <DesktopControls/>
+        <DesktopControls onSettings={() => setHubRequest({ section: 'music', at: Date.now() })} onError={notify}/>
       </header>
       <main className="app-cabin">
         {error && <p className="app-error" role="alert">{error}<button type="button" disabled={loading} onClick={reload}>{loading ? '正在重试…' : '重试'}</button></p>}

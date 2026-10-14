@@ -133,7 +133,7 @@ function DesktopSection({ env, desktop, pet }) {
     <Row title="伙伴出门（桌宠）" hint={env.desktop ? '伙伴会在桌面上散步，和小屋里选的是同一位。' : '需要心流小屋桌面版。'}>
       <button type="button" className="pixel-button" disabled={!env.desktop} onClick={() => desktopCommand(pet?.active ? 'pet-stop' : 'pet-start')}>{pet?.active ? '让伙伴回家' : '伙伴出门'}</button>
     </Row>
-    {env.desktop && <Row title="交互全屏" hint="独立的全屏空间，照常听歌、操作唱片和学习。可在全屏里切换正常 / 沉浸模式。F11 切换；Esc 先关闭弹窗或沉浸，再退出全屏。"><button type="button" className="pixel-button" onClick={() => desktopCommand('fullscreen')}>{fullscreen ? '退出全屏' : '进入全屏'}</button></Row>}
+    <Row title="交互全屏" hint={env.desktop ? '右上角全屏图标或 F11 切换。Esc 先关闭弹窗或沉浸，再退出全屏。' : '用右上角全屏图标切换，退出后仍回到当前小屋。'}><span role="status">{fullscreen ? '全屏中' : '窗口中'}</span></Row>
     {env.desktop && <Row title="显示与字体" hint="界面缩放、字体、减少动态效果。"><button type="button" className="pixel-button" onClick={() => desktopCommand('settings')}>软件设置</button></Row>}
   </div>;
 }
