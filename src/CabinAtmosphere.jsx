@@ -2,6 +2,7 @@ import React, { useEffect, useId, useRef } from 'react';
 import { ATMOSPHERE, atmosphereFrame, createAtmosphereLoop } from './cabin-atmosphere.mjs';
 import './cabin-atmosphere.css';
 import { createFirePainter } from './cabin-fire.mjs';
+import { frameClock } from './frame-clock.mjs';
 import { performanceLevel, onPerformanceChange } from './perf-profile.mjs';
 
 const placement = ({ x, y, width, height }) => ({ left: `${x / 1448 * 100}%`, top: `${y / 1086 * 100}%`, width: `${width / 1448 * 100}%`, height: `${height / 1086 * 100}%` });
@@ -48,10 +49,10 @@ export default function CabinAtmosphere({ look, weather }) {
     if (!renderFire) { element.dataset.motion = 'unavailable'; return; }
     const surfaces = [...light.current.querySelectorAll('[data-surface]')];
     const clean = new Image(); let ready = false, disposed = false, windowBackdrop = null, fireBackdrop = null, lastLight = 0;
-    const shown = new Map();
+    const shown = new Map(), buffer = { snow: null, surfaces: {} };
     const draw = (seconds) => {
       if (!ready || disposed) return;
-      const frame = atmosphereFrame(seconds, look, weather);
+      const frame = atmosphereFrame(seconds, look, weather, buffer);
       paintSnow(snowContext, geometry, frame.snow, pixel, windowBackdrop); paintFire(fireContext, geometry, seconds, fireBackdrop, renderFire);
       // Firelight on the floor and hearth changes slowly; restyling these large
       // SVG shapes repaints half the room, so only visible changes are applied.
@@ -64,7 +65,7 @@ export default function CabinAtmosphere({ look, weather }) {
     };
     draw(0);
     const rate = () => pixel ? (performanceLevel() === 'low' ? 8 : 12) : (performanceLevel() === 'low' ? 12 : 24);
-    const loop = createAtmosphereLoop({ draw, request: requestAnimationFrame, cancel: cancelAnimationFrame, now: () => performance.now(), fps: rate() });
+    const loop = createAtmosphereLoop({ draw, request: requestAnimationFrame, cancel: cancelAnimationFrame, now: () => performance.now(), fps: rate(), clock: frameClock() });
     const offPerformance = onPerformanceChange(() => loop.setFps(rate()));
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
     let focused = document.hasFocus();

@@ -139,7 +139,7 @@ export function usePlaybackBroadcast({ playing, provider, spinning, record, trac
     if (!playing) return;
     const timer = setInterval(sample, ENERGY_INTERVAL_MS);
     // The bass band is read ~60 times a second for beat tracking (cheap: 2048-point FFT).
-    const listen = setInterval(() => { const graph = analyserFor(audio?.current); if (graph?.bass && audio.current && !audio.current.paused) tracker.current.push(performance.now(), graph.bass()); }, 16);
+    const listen = setInterval(() => { const graph = analyserFor(audio?.current); if (graph?.bass && audio.current && !audio.current.paused) tracker.current.push(performance.now(), graph.bass()); }, Math.round(1000 / 60));
     return () => { clearInterval(timer); clearInterval(listen); };
   }, [playing]);
   useEffect(() => () => cast.current?.update({ playing: false, provider: '', track: null }), []);

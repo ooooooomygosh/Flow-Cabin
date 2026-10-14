@@ -35,3 +35,10 @@ test('a background interruption cannot persist a false slow-hardware result', ()
   doc.hidden = true; doc.dispatchEvent(new Event('visibilitychange')); doc.hidden = false;
   tick(300000); assert.equal(doc.documentElement.dataset.perfMode, undefined); assert.equal(cancelled, 1); stop();
 });
+
+import { frameBudget } from './perf-profile.mjs';
+test('frame budget never exceeds 60 fps and halves the deck on low', () => {
+  assert.deepEqual(frameBudget('high'), { max: 60, deck: 60 });
+  assert.deepEqual(frameBudget('low'), { max: 60, deck: 30 });
+  assert.equal(frameBudget('anything').max, 60);
+});

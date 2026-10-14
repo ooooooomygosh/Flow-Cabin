@@ -40,6 +40,9 @@ export function syncPerformance(win = globalThis.window) {
   win.addEventListener('storage', changed);
   return () => win.removeEventListener('storage', changed);
 }
+// Frame-rate budget per level. Every loop is capped at 60 fps (frame-clock.mjs);
+// `deck` is the turntable canvas rate. The probe below samples raw rAF, not the clock.
+export function frameBudget(level) { return level === 'low' ? { max: 60, deck: 30 } : { max: 60, deck: 60 }; }
 // Frames per second over a sample of rAF timestamps (ignores the first frame).
 export function measuredFps(stamps) {
   if (stamps.length < 3) return 0;

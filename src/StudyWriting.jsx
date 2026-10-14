@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useDesktopAppearance } from './desktop-client';
+import { onBackgroundChange } from './frame-clock.mjs';
 
 // Authored finger poses, not transforms of a rectangle from the background.
 // Write for a while, lift, thumb-around, catch, then put the tip back on paper.
@@ -21,21 +22,27 @@ export default function StudyWriting() {
   }, []);
   useEffect(() => {
     if (!ready || reduceMotion) return;
-    let raf, start, previous = -1;
+    // The pose only changes every 120–420 ms, so sleep until the next boundary
+    // instead of running a frame loop; paused while hidden / unfocused.
+    let timer = 0, start = performance.now(), previous = -1, visible = true;
     const total = WRITING_TIMELINE.reduce((sum, [, duration]) => sum + duration, 0);
-    const paint = (now) => {
-      start ??= now;
-      let elapsed = (now - start) % total, frame = 0;
-      for (const [pose, duration] of WRITING_TIMELINE) { frame = pose; if (elapsed < duration) break; elapsed -= duration; }
+    const paint = () => {
+      timer = 0; if (!visible) return;
+      let elapsed = (performance.now() - start) % total, frame = 0, wait = 0;
+      for (const [pose, duration] of WRITING_TIMELINE) { frame = pose; wait = duration - elapsed; if (elapsed < duration) break; elapsed -= duration; }
       if (frame !== previous && hand.current) {
         previous = frame; hand.current.style.backgroundPosition = `${frame % 4 / 3 * 100}% ${Math.floor(frame / 4) / 3 * 100}%`;
         hand.current.dataset.pose = String(frame);
       }
-      raf = requestAnimationFrame(paint);
+      timer = setTimeout(paint, Math.max(16, Math.ceil(wait)));
     };
-    const visibility = () => { cancelAnimationFrame(raf); if (!document.hidden) { start = undefined; raf = requestAnimationFrame(paint); } };
-    visibility(); document.addEventListener('visibilitychange', visibility);
-    return () => { cancelAnimationFrame(raf); document.removeEventListener('visibilitychange', visibility); };
+    const off = onBackgroundChange((background) => {
+      const next = !background;
+      if (next === visible && (timer || !next)) return;
+      visible = next; clearTimeout(timer); timer = 0;
+      if (visible) { start = performance.now(); previous = -1; paint(); }
+    });
+    return () => { visible = false; clearTimeout(timer); off(); };
   }, [ready, reduceMotion]);
   // Original supplied artwork remains visible if either generated asset is missing.
   return ready ? <div className="study-writing" aria-hidden="true" data-animation={reduceMotion ? 'still' : 'writing-and-spin'}>
