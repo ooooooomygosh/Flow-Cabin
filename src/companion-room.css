@@ -19,7 +19,7 @@
 .cabin-scene[data-time-of-day=day] .cabin-daylight{opacity:.4;background:linear-gradient(115deg,#fffbe8,#ffe9c0 60%,transparent)}
 .cabin-scene[data-time-of-day=dusk] .cabin-daylight{opacity:.5;background:linear-gradient(115deg,#ff9b5a,#b34a6d 70%,transparent)}
 .cabin-scene[data-time-of-day=night] .cabin-daylight{opacity:.45;mix-blend-mode:multiply;background:radial-gradient(ellipse at 88% 70%,transparent 18%,#3a3f6e 85%)}
-[data-desktop-reduce-motion=true] .cabin-weather{animation:none!important}
+[data-desktop-reduce-motion=true] .cabin-weather,[data-desktop-reduce-motion=true] .cabin-weather::before,[data-desktop-reduce-motion=true] .cabin-weather::after{animation:none!important}
 
 /* The cat sits on the visible floor, clear of the deck, footer and focus dock. */
 .room-cat{position:absolute;left:25%;bottom:118px;width:clamp(96px,8.5vw,168px);aspect-ratio:1;z-index:9;pointer-events:auto;cursor:pointer;background:none;border:0;padding:0;filter:drop-shadow(0 3px 0 #1a0f0866)}

@@ -1,3 +1,4 @@
+import { verifyWeatherMotion } from './weather-motion-checks.mjs';
 import { verifyFullscreenStudy } from './fullscreen-study-checks.mjs';
 import { verifyAppleHandoff } from './apple-handoff-checks.mjs';
 import { hasViteLocalOrigin } from './vite-readiness.mjs';
@@ -89,6 +90,7 @@ try {
   };
   await context.route('**/*', routeHandler);
   const welcomeRoute = route => new URL(route.request().url()).pathname === '/api/items' ? route.fulfill({ json: { items: [] } }) : routeHandler(route);
+  await verifyWeatherMotion(browser, origin, check);
   await verifyOnboarding({ browser, origin, routeHandler: welcomeRoute, evidence: output, output, check });
   await verifyQQRegression({ browser, origin, check });
   await verifyAppleHandoff({ browser, origin, output, check });
