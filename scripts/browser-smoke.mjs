@@ -417,7 +417,12 @@ try {
   await page.mouse.move(1200, 120); await page.waitForTimeout(400); assert.equal(await deckStyle(), '0 hidden none'); await page.waitForTimeout(700); assert.deepEqual(await layoutIssues('immersive again'), []); await page.keyboard.press('Escape'); await page.waitForTimeout(700); assert.deepEqual(await layoutIssues('after immersive'), []);
   assert((await page.evaluate(() => window.__catMoves)).every(m => m === 'fade'), 'reduced motion moves the cat with a fade swap only');
   check('cat-always-on-a-surface-and-hops-off-hidden-console'); check('immersive-console-hidden-and-revealed-near-pointer');
-  { const motionPage = await context.newPage(); await motionPage.emulateMedia({ reducedMotion: 'no-preference' }); await motionPage.setViewportSize({ width: 1280, height: 800 }); await motionPage.goto(origin); await motionPage.locator('.room-record').first().waitFor(); await motionPage.evaluate(() => { document.documentElement.dataset.desktopReduceMotion = 'false'; });
+  { const motionPage = await context.newPage(); await motionPage.emulateMedia({ reducedMotion: 'no-preference' }); await motionPage.setViewportSize({ width: 1280, height: 800 }); await motionPage.goto(origin); await motionPage.locator('.room-record').first().waitFor(); await motionPage.evaluate(() => {
+      document.documentElement.dataset.desktopReduceMotion = 'false';
+      // Earlier wallpaper/pet checks install context-wide bridge mocks. This
+      // page tests a normal main window, which must not inherit their exemption.
+      delete window.albumWallpaper; delete window.albumPet;
+    });
     const mainRef = page; page = motionPage; await page.bringToFront();
     const originalScene = await page.locator('.cabin-scene').getAttribute('data-room-look');
     await openRoomSettings(page); await page.getByRole('button', { name: `选择场景 ${ROOM_SCENES.find(scene => scene.id === 'warm').label}`, exact: true }).click(); await closeDialog();
