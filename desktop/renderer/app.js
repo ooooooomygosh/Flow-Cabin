@@ -67,7 +67,7 @@ window.albumDesktop.onState((state) => {
   $('message').textContent = state.error || '壁炉生起火，唱机上好弦，马上就好。';
   $('settings-panel').hidden = !state.settingsOpen; showDisplay(state.display);
   if (state.settingsOpen && !panelOpen) { showSettings(state.settings); $('settings-notice').textContent = '修改后立即生效'; loadSettings(); $('settings-close').focus(); }
-  if (!state.settingsOpen && panelOpen) $('settings').focus();
+  if (!state.settingsOpen && panelOpen && (state.loading || state.error)) $('settings').focus();
   panelOpen = state.settingsOpen;
 });
 window.addEventListener('keydown', (event) => {

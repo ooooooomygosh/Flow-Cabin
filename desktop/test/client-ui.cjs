@@ -41,9 +41,20 @@ const check = (value) => report.checks.push(value);
   await site.getByRole('button', { name: /唱片卡片/ }).click(); const card = site.getByRole('dialog', { name: '唱片卡片：本地验证专辑' });
   await card.getByPlaceholder(/第一次听的场景/).fill('安装后的第一张'); await card.locator('.record-card-saved', { hasText: '已保存' }).waitFor();
   await card.getByRole('button', { name: '关闭唱片卡片' }).click(); check('record-card-notes');
-  await site.getByRole('button', { name: '软件设置', exact: true }).first().click();
+  await site.getByRole('button', { name: '设置', exact: true }).click();
+  await site.getByRole('tab', { name: '桌面', exact: true }).click();
+  await site.getByRole('button', { name: '软件设置', exact: true }).click();
   const shell = application.windows().find((page) => page.url().startsWith('album-desktop://shell'));
   await shell.locator('#zoom').fill('110'); await shell.locator('#zoom').dispatchEvent('change'); await shell.getByRole('button', { name: '完成', exact: true }).click();
+  await application.evaluate(async ({ webContents }) => {
+    const started = Date.now();
+    while (!webContents.getFocusedWebContents()?.getURL().startsWith('https://album-circle.vercel.app')) {
+      if (Date.now() - started > 15000) throw new Error('Keyboard focus did not return to content');
+      await new Promise(resolve => setTimeout(resolve, 25));
+    }
+  });
+  await site.getByRole('dialog', { name: '设置', exact: true }).waitFor();
+  await site.keyboard.press('Escape');
   check('settings-open-and-save');
   // Exercise the packaged native window and real renderer, without music accounts.
   const nativeKey = keyCode => application.evaluate(({ webContents }, keyCode) => {

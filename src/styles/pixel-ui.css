@@ -120,15 +120,24 @@ input[type=checkbox], input[type=radio] { accent-color: var(--px-accent); }
 .app-toast { animation: px-toast-in var(--px-dur-med) var(--px-ease) both !important; }
 @keyframes px-toast-in { 0% { opacity: 0; translate: -50% 12px; } 100% { opacity: 1; translate: -50% 0; } }
 
-/* ── shelf records: lift, settle and a lamp-lit selection frame ────────── */
-.room-record { transition: translate var(--px-dur-fast) steps(2, end), filter var(--px-dur-fast) steps(2, end) !important; }
-.room-record:hover { translate: 0 -4px !important; filter: brightness(1.1) saturate(1.05); outline: 2px solid var(--px-accent) !important; outline-offset: 0 !important; box-shadow: 0 4px 0 #0d0805b3 !important; }
-.room-record:active { translate: 0 0 !important; transition-duration: 0s !important; }
-.room-record.is-selected { outline: 2px solid var(--px-accent-hi) !important; outline-offset: 0 !important; box-shadow: 0 0 0 4px var(--px-shadow), 0 0 0 6px #ffd99c55 !important; }
-.room-record.is-selected::after { content: ''; position: absolute; left: 50%; top: -12px; width: 10px; height: 6px; translate: -50% 0; z-index: 4;
-  background: linear-gradient(var(--px-accent-hi) 0 0) 0 0 / 10px 2px no-repeat, linear-gradient(var(--px-accent-hi) 0 0) 2px 2px / 6px 2px no-repeat, linear-gradient(var(--px-accent-hi) 0 0) 4px 4px / 2px 2px no-repeat;
-  animation: px-bob 960ms steps(2, end) infinite; filter: drop-shadow(1px 1px 0 var(--px-shadow)); }
-@keyframes px-bob { 0%, 100% { translate: -50% 0; } 50% { translate: -50% 2px; } }
+/* Sleeves sit inside an opaque recess, behind a narrow wooden front lip.
+   The whole cell stays clickable; decoration never intercepts input. */
+.cabin-rack .room-record-slot { isolation: isolate; --shelf-lip: #734821; --shelf-lip-light: #a27340; }
+.cabin-rack .room-record-slot::after { content: ''; position: absolute; z-index: 5; inset: auto 0 0; height: 3.2%; min-height: 2px; pointer-events: none; background: var(--shelf-lip); box-shadow: inset 0 1px 0 var(--shelf-lip-light), 0 -1px 0 #120b0688; }
+.cabin-rack .room-record, .cabin-rack .room-record:is(:hover, :active, :focus-visible, .is-selected) { translate: none !important; filter: none !important; outline: none !important; box-shadow: none !important; }
+.cabin-rack .room-record::after { content: none !important; }
+.room-record-sleeve { position: absolute; z-index: 2; left: 5%; bottom: 2%; width: 90%; aspect-ratio: 1; pointer-events: none; background: #d8c8a9; border: 1px solid #18120cb3; box-shadow: 2px 2px 0 #130d08a6, 0 3px 2px #0d080580; }
+.room-record-sleeve::after { content: ''; position: absolute; z-index: 3; inset: 0; pointer-events: none; box-shadow: inset 1px 1px 0 #fff5d533, inset -1px -1px 0 #130b0555; }
+.cabin-rack .room-record:hover .room-record-sleeve { filter: brightness(1.06); }
+.cabin-rack .room-record.is-selected .room-record-sleeve { outline: 2px solid var(--px-accent-hi); outline-offset: 1px; }
+.cabin-rack .room-record:focus-visible .room-record-sleeve { outline: 2px dashed #fff7df; outline-offset: 2px; }
+.cabin-rack .room-record:active .room-record-sleeve { filter: brightness(.96); }
+@media (prefers-reduced-motion: no-preference) {
+  html:not([data-desktop-reduce-motion='true']) .room-record-sleeve { transition: filter var(--px-dur-fast) steps(2, end); }
+}
+.cabin-scene[data-room-look='forest'] .room-record-slot { --shelf-lip: #666747; --shelf-lip-light: #939270; }
+.cabin-scene[data-room-look='seaside'] .room-record-slot { --shelf-lip: #9a7b53; --shelf-lip-light: #c1a77a; }
+.cabin-scene[data-room-look='starlight'] .room-record-slot { --shelf-lip: #575063; --shelf-lip-light: #8c7f96; }
 
 /* Empty shelf slots read as soft carved recesses, not UI tiles. */
 .cabin-empty-slot { opacity: .55; transition: opacity var(--px-dur-med) var(--px-ease); }
@@ -176,8 +185,8 @@ html[data-desktop-reduce-motion='true'] .room-record:hover, html[data-desktop-re
 .cabin-scene[data-room-look=night-study] :is(.study-clean-plate, .study-writing-hand) { image-rendering: pixelated; }
 .cabin-scene[data-room-look=night-study] .study-clean-plate { clip-path: polygon(19.337% 45.672%, 26.796% 45.672%, 26.796% 54.512%, 19.337% 54.512%); }
 .cabin-scene[data-room-look=night-study] .study-writing-hand { left: 17.956%; top: 44.199%; width: 9.392%; height: 12.523%; filter: none; }
-.cabin-scene[data-room-look=night-study] .room-record { box-shadow: 4px 4px 0 #100902b0, inset 0 0 0 2px #e4ba8133; }
-.cabin-scene[data-room-look=night-study] .room-record:after { background: #130a06; box-shadow: inset 0 8px 0 -4px #140a0899, inset -6px 0 0 -3px #140a0866; }
+
+
 .cabin-scene[data-room-look=night-study] .study-writing-hand { background-image: url('/room-scenes/night-study-hands-pixel.png'); }
 /* The desk scene has no free surface outside the toolbar/console/footer safe areas
    (cabinet top sits under the toolbar), so the console alone is the turntable here. */

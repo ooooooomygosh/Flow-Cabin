@@ -6,7 +6,7 @@ const path = require('node:path');
 const { SITE_ORIGIN, SHELL_URL, isSiteUrl, isShellUrl, isExternalUrl, safeSavedWindow, localDownloadType } = require('./policy.cjs');
 const { createQQMusic } = require('./qq-music.cjs');
 const { createSiteRouter } = require('./site-router.cjs');
-const { DEFAULT_SETTINGS, normalizeSettings, appearanceScript, listSystemFonts } = require('./settings.cjs');
+const { DEFAULT_SETTINGS, normalizeSettings, appearanceScript, listSystemFonts, setSettingsVisibility } = require('./settings.cjs');
 const { registerShellProtocol } = require('./shell-protocol.cjs');
 const { createWallpaper } = require('./wallpaper.cjs');
 const { createFullscreen } = require('./fullscreen.cjs');
@@ -126,7 +126,7 @@ async function applyAppearance() {
 }
 function toggleSettings(open = !settingsOpen) {
   settingsOpen = open;
-  siteView?.setVisible(!open && !currentError && !loading);
+  setSettingsVisibility(siteView, { open, loading, error: currentError });
   sendState();
 }
 async function saveAppearance(value) {

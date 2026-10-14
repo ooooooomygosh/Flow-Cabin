@@ -13,6 +13,7 @@ export const MessageCircle = icon('ChatBubbleLeftEllipsisIcon'), Music2 = icon('
 export const Search = icon('MagnifyingGlassIcon'), Send = icon('PaperAirplaneIcon'), Share2 = icon('ShareIcon'), Sparkles = icon('SparklesIcon');
 export const Star = icon('StarIcon'), Trash2 = icon('TrashIcon'), UserRound = icon('UserIcon'), Users = icon('UserGroupIcon'), Wand2 = icon('AdjustmentsHorizontalIcon');
 export const Pause = icon('PauseIcon'), Play = icon('PlayIcon'), Shuffle = icon('ArrowsRightLeftIcon'), X = icon('XMarkIcon');
+export const Expand = icon('ArrowsPointingOutIcon'), Contract = icon('ArrowsPointingInIcon');
 export const Settings = icon('Cog6ToothIcon'), Minus = icon('MinusIcon'), Maximize = icon('StopIcon'), External = icon('ArrowTopRightOnSquareIcon');
 export const Download = icon('ArrowDownTrayIcon'), Check = icon('CheckIcon'), Up = icon('ChevronUpIcon'), Down = icon('ChevronDownIcon');
 export const Info = icon('InformationCircleIcon'), ErrorIcon = icon('ExclamationCircleIcon'), Loading = icon('ArrowPathIcon');
