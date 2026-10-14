@@ -16,6 +16,9 @@ function createWallpaper({ app, getMain, getSite, status, appearanceScript, getA
       try { const value = JSON.parse(out); if (!value.behindIcons || !value.visible) throw new Error('unverified desktop layer'); resolve(value); } catch { reject(new Error('无法确认 Windows 桌面层的位置，已取消应用动态背景。')); }
     });
   });
+  // webContents.setFrameRate only affects offscreen windows, so the cap is also pushed into the
+  // renderer (frame-clock.mjs reads data-frame-cap). Not a preload key: the bridge stays minimal.
+  const pushFrameCap = () => { if (window && !window.isDestroyed()) Promise.resolve(window.webContents.executeJavaScript(`document.documentElement.dataset.frameCap = ${JSON.stringify(String(frameRate))}`)).catch(() => {}); };
   const announce = (error = '') => status({ active, busy, error });
   function stop(error = '') {
     lastError = error;
@@ -56,6 +59,7 @@ function createWallpaper({ app, getMain, getSite, status, appearanceScript, getA
         webPreferences: { preload: path.join(__dirname, 'wallpaper-preload.cjs'), partition: 'album-circle-wallpaper', sandbox: true, contextIsolation: true, nodeIntegration: false, webSecurity: true, backgroundThrottling: false, spellcheck: false } });
       window = created; handle = process.platform === 'win32' ? hwnd(created) : null; created.webContents.setFrameRate(frameRate);
       created.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+      created.webContents.on('did-finish-load', pushFrameCap);
       created.webContents.on('will-navigate', (event) => event.preventDefault());
       created.webContents.on('will-frame-navigate', (event) => event.preventDefault());
       created.webContents.session.setPermissionRequestHandler((_wc, _permission, callback) => callback(false));
@@ -66,6 +70,7 @@ function createWallpaper({ app, getMain, getSite, status, appearanceScript, getA
       if (token !== generation) return;
       await created.webContents.executeJavaScript(appearanceScript(getAppearance()));
       if (token !== generation) return;
+      pushFrameCap();
       // A loaded document may still be an empty React root. Wait for the actual
       // scene before attaching an opaque window to the user's desktop.
       const ready = await created.webContents.executeJavaScript(`new Promise((resolve) => {
@@ -106,6 +111,6 @@ function createWallpaper({ app, getMain, getSite, status, appearanceScript, getA
     if (event.sender !== window?.webContents || event.senderFrame !== window.webContents.mainFrame || event.senderFrame.url !== URL) throw new Error('Unknown wallpaper sender');
     return snapshot;
   });
-  return { start, stop, get active() { return active; }, get busy() { return busy; }, async reposition() { if (active) { const token = generation; try { if (process.platform === 'darwin') { window.setBounds(screen.getDisplayMatching(getMain().getBounds()).bounds); return; } await native('attach'); } catch (error) { if (token === generation) stop(error.message); } } }, async applyAppearance() { if (window && !window.isDestroyed()) await window.webContents.executeJavaScript(appearanceScript(getAppearance())).catch(() => {}); }, get window() { return window; }, get error() { return lastError; }, setFrameRate(value) { frameRate = value; if (window && !window.isDestroyed()) window.webContents.setFrameRate(value); }, get handle() { return handle; } };
+  return { start, stop, get active() { return active; }, get busy() { return busy; }, async reposition() { if (active) { const token = generation; try { if (process.platform === 'darwin') { window.setBounds(screen.getDisplayMatching(getMain().getBounds()).bounds); return; } await native('attach'); } catch (error) { if (token === generation) stop(error.message); } } }, async applyAppearance() { if (window && !window.isDestroyed()) await window.webContents.executeJavaScript(appearanceScript(getAppearance())).catch(() => {}); }, get window() { return window; }, get error() { return lastError; }, setFrameRate(value) { frameRate = value; if (window && !window.isDestroyed()) { window.webContents.setFrameRate(value); pushFrameCap(); } }, get handle() { return handle; } };
 }
 module.exports = { createWallpaper };

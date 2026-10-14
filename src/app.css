@@ -49,7 +49,7 @@ a{color:var(--amber-2)}
 .room-zen .cabin-room .cabin-toolbar{top:12px;left:auto}
 .shelf-filters{position:absolute;z-index:25;top:calc(var(--titlebar) + 58px);left:14px;width:min(700px,calc(100% - 28px));max-height:calc(100% - var(--titlebar) - 200px);overflow:auto;padding:14px 16px 4px;color:var(--text);background:#27180ef5;border:2px solid var(--brass);box-shadow:6px 6px 0 #0d0805cc}
 .shelf-filter-row{display:flex;gap:14px;flex-wrap:wrap}.shelf-filter-row label{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
-.shelf-filters select{padding:6px 8px;font-size:13px;color:var(--text);background:var(--wood-2);border:1px solid var(--line);border-radius:0}
+.shelf-filters select{padding:6px 8px;font-size:13px;color:var(--text);background-color:var(--wood-2);border:1px solid var(--line);border-radius:0}
 .shelf-filters .record-library-controls{padding:12px 0!important;color:var(--muted)!important}
 .cabin-room .room-now-playing{border-radius:0;border:2px solid #d4a46b99;background:#24160fe6;box-shadow:5px 5px 0 #0d0805aa;backdrop-filter:none}
 .room-selection-actions button,.room-selection-actions a,.cabin-room .room-selection-actions button,.cabin-room .room-selection-actions a{border-radius:0!important;border:2px solid #8a5a32!important;box-shadow:3px 3px 0 #0d0805aa}

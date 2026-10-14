@@ -89,7 +89,8 @@ export function SoundMixer() {
 export function FocusBadge({ onClick, open = false }) {
   const focus = useFocus(), { timer } = focus.state;
   if (timer.phase === 'idle') return <button type="button" className="focus-badge" aria-expanded={open} title="打开专注工具，开始一轮或写下待办" onClick={onClick}><Clock size={17}/>专注 · {focus.state.settings.focusMin} 分钟</button>;
-  return <button type="button" className={`focus-badge is-running phase-${timer.phase}`} aria-expanded={open} title="打开专注工具" onClick={onClick} aria-label={`${PHASE_LABELS[timer.phase]}，剩余 ${formatClock(focus.remaining, focus.state.settings.hideSeconds)}`}><Clock size={17}/>{formatClock(focus.remaining, focus.state.settings.hideSeconds)}{timer.paused ? ' ⏸' : ''}</button>;
+  const clock = formatClock(focus.remaining, focus.state.settings.hideSeconds);
+  return <button type="button" className={`focus-badge is-running phase-${timer.phase}${timer.paused ? ' is-paused' : ''}${open ? ' is-open' : ''}`} aria-expanded={open} title="打开专注工具" onClick={onClick} aria-label={`${PHASE_LABELS[timer.phase]}，剩余 ${clock}`}><Clock size={17}/><span className="focus-badge-time">{clock}{timer.paused ? ' ⏸' : ''}</span>{open && <span>收起</span>}</button>;
 }
 
 export default function FocusDock({ open, close, tab, setTab }) {

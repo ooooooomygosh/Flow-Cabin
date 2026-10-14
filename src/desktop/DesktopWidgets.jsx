@@ -137,7 +137,7 @@ export function ImmersiveChrome({ zen, fullscreen, exitFullscreen, toggleZen, op
     return () => document.documentElement.classList.remove('room-zen-tools');
   }, [zen, tools]);
   if (!zen && !fullscreen) return null;
-  return <div className="immersive-exit is-visible" role="toolbar" aria-label="全屏与沉浸工具">
+  return <div className={`immersive-exit is-visible${zen ? ' is-zen' : ''}`} role="toolbar" aria-label="全屏与沉浸工具">
     <button type="button" aria-pressed={zen} onClick={toggleZen}>{zen ? '正常模式' : '沉浸模式'}</button>
     {zen && <button type="button" aria-expanded={tools} onClick={() => setTools((value) => !value)}>{tools ? '收起工具' : '显示工具'}</button>}
     {zen && tools && <button type="button" onClick={openStudy}>学习</button>}

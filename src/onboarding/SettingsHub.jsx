@@ -59,7 +59,7 @@ export default function SettingsHub({ section = 'music', setSection, close, env,
   </Dialog>;
 }
 
-const Row = ({ title, hint, children }) => <div className="hub-row"><span><strong>{title}</strong>{hint && <small>{hint}</small>}</span>{children && <span className="hub-row-actions">{children}</span>}</div>;
+const Row = ({ title, hint, led, children }) => <div className="hub-row"><span><strong>{led !== undefined && <i className={`hub-led ${led ? 'is-on' : ''}`} aria-hidden="true"/>}{title}</strong>{hint && <small>{hint}</small>}</span>{children && <span className="hub-row-actions">{children}</span>}</div>;
 
 function MusicSection({ env, player, provider, useSource, openMusicSettings }) {
   const [sources, setSources] = useState(() => sourceOptions(env)), [status, setStatus] = useState({}), [quality, setQuality] = useState(null);
@@ -76,7 +76,7 @@ function MusicSection({ env, player, provider, useSource, openMusicSettings }) {
   }, []);
   return <div className="hub-rows">
     <p className="hub-current">唱机现在用：<strong>{PROVIDER_LABEL[provider] || provider || '自动匹配'}</strong></p>
-    {sources.map((source) => { const p = source.provider || providerFor(source.id); return <Row key={source.id} title={source.label} hint={source.available ? status[source.id]?.detail || source.hint : source.reason}>
+    {sources.map((source) => { const p = source.provider || providerFor(source.id); return <Row key={source.id} title={source.label} led={Boolean(source.available && ((p && p === provider) || status[source.id]?.connected))} hint={source.available ? status[source.id]?.detail || source.hint : source.reason}>
       {source.available && (p && p === provider ? <span className="onboarding-ok"><Check size={14}/>唱机在用</span> : <button type="button" className="pixel-button" aria-label={`唱机改用 ${source.label}`} onClick={() => useSource(p)}>在唱机上用</button>)}
     </Row>; })}
     <label className="turntable-source">音源<select aria-label="唱机音源" value={provider} onChange={(event) => useSource(event.target.value)}><option value="visual">仅动画展示</option><option value="auto" disabled={!env.desktop}>自动匹配可播放音源</option><option value="qq" disabled={!env.desktop}>QQ 音乐 · {env.desktop ? 'Simple Music' : '桌面客户端'}</option><option value="netease" disabled={!env.desktop}>网易云 · {env.desktop ? 'Simple Music' : '桌面客户端'}</option><option value="ma" disabled={!env.desktop}>Music Assistant · {env.desktop ? '服务器播放器' : '桌面客户端'}</option><option value="local" disabled={!env.desktop}>本地音乐 · {env.desktop ? '文件夹' : '桌面客户端'}</option>{env.mac && <option value="appleMusic" disabled={!env.desktop}>系统 Apple Music · {env.desktop ? '“音乐”App' : '桌面客户端'}</option>}<option value="system" disabled={!env.desktop}>系统正在播放 · {env.desktop ? '跟随播放器' : '桌面客户端'}</option></select></label>

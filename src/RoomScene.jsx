@@ -68,7 +68,7 @@ export default function RoomScene({ look = 'warm', items = [], selectedId, selec
           </div>;
         })}
       </div></div>
-      {['warm', 'pixel'].includes(scene.id) ? <CabinAtmosphere look={scene.id} weather={normalizeWeather(weather)}/> : scene.id !== 'night-study' && <div className="cabin-snow" aria-hidden="true"/>}
+      {['warm', 'pixel'].includes(scene.id) ? <CabinAtmosphere look={scene.id} weather={normalizeWeather(weather)}/> : scene.id !== 'night-study' && normalizeWeather(weather) === 'snow' && <div className="cabin-snow" aria-hidden="true"/>}
       <div className="cabin-weather" aria-hidden="true"/>
       <div className="cabin-daylight" aria-hidden="true"/>
       <AmbientLife/>

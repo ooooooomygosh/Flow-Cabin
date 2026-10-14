@@ -1,9 +1,18 @@
 /* Window weather and daylight over the cabin artwork, plus the room cat. */
 .cabin-weather{position:absolute;left:13.15%;top:15.9%;width:14.7%;height:25%;pointer-events:none;opacity:0;transition:opacity 1.2s;clip-path:polygon(0 0,46% 0,46% 45%,0 45%,0 0,0 55%,46% 55%,46% 100%,0 100%,0 55%,54% 55%,100% 55%,100% 100%,54% 100%,54% 55%,54% 45%,100% 45%,100% 0,54% 0,54% 45%)}
-.cabin-scene[data-weather=rain] .cabin-weather{opacity:.85;background-image:linear-gradient(#22324c88,#22324c88),repeating-linear-gradient(105deg,transparent 0 9px,#cfe3ff55 9px 10px,transparent 10px 23px),repeating-linear-gradient(100deg,transparent 0 15px,#dcecff3d 15px 16px,transparent 16px 31px);background-size:100% 100%,90px 70px,120px 95px;animation:cabin-rain .55s linear infinite}
-@keyframes cabin-rain{to{background-position:0 0,-18px 70px,-16px 95px}}
-.cabin-scene[data-weather=starry] .cabin-weather{opacity:1;background-image:radial-gradient(circle,#fff6 1px,transparent 1.6px),radial-gradient(circle,#ffe7a8aa 1.2px,transparent 2px),linear-gradient(#0b1230aa,#1a235066);background-size:23px 29px,61px 47px,100% 100%;background-position:3px 4px,11px 19px,0 0;animation:cabin-twinkle 3.2s ease-in-out infinite alternate}
-@keyframes cabin-twinkle{from{filter:brightness(.7)}to{filter:brightness(1.35)}}
+.cabin-scene[data-weather=rain] .cabin-weather{opacity:.85}
+/* Rain streaks scroll on the compositor: oversized pseudo layers translate instead of animating background-position. */
+.cabin-scene[data-weather=rain] .cabin-weather{background-image:linear-gradient(#22324c88,#22324c88);background-size:100% 100%}
+.cabin-scene[data-weather=rain] .cabin-weather::before,.cabin-scene[data-weather=rain] .cabin-weather::after{content:'';position:absolute;left:0;will-change:transform}
+.cabin-scene[data-weather=rain] .cabin-weather::before{top:-70px;right:-18px;bottom:0;background:repeating-linear-gradient(105deg,transparent 0 9px,#cfe3ff55 9px 10px,transparent 10px 23px) 0 0/90px 70px;animation:cabin-rain-a .55s linear infinite}
+.cabin-scene[data-weather=rain] .cabin-weather::after{top:-95px;right:-16px;bottom:0;background:repeating-linear-gradient(100deg,transparent 0 15px,#dcecff3d 15px 16px,transparent 16px 31px) 0 0/120px 95px;animation:cabin-rain-b .55s linear infinite}
+@keyframes cabin-rain-a{to{transform:translate3d(-18px,70px,0)}}
+@keyframes cabin-rain-b{to{transform:translate3d(-16px,95px,0)}}
+@media(prefers-reduced-motion:reduce){.cabin-weather::before,.cabin-weather::after{animation:none!important}}
+.cabin-scene[data-weather=starry] .cabin-weather{opacity:1;background-image:linear-gradient(#0b1230aa,#1a235066)}
+/* Stars twinkle by fading their own layer (compositor opacity) instead of a brightness filter on the whole element. */
+.cabin-scene[data-weather=starry] .cabin-weather::before{content:'';position:absolute;inset:0;background:radial-gradient(circle,#fff6 1px,transparent 1.6px) 3px 4px/23px 29px,radial-gradient(circle,#ffe7a8aa 1.2px,transparent 2px) 11px 19px/61px 47px;animation:cabin-twinkle 3.2s ease-in-out infinite alternate}
+@keyframes cabin-twinkle{from{opacity:.55}to{opacity:1}}
 .cabin-scene[data-weather=clear] .cabin-weather{opacity:.5;background:linear-gradient(170deg,#c6dcff22,transparent 60%)}
 .cabin-daylight{position:absolute;inset:0;pointer-events:none;mix-blend-mode:soft-light;transition:background 2s,opacity 2s;opacity:0}
 .cabin-scene[data-time-of-day=morning] .cabin-daylight{opacity:.55;background:linear-gradient(115deg,#d9ecff 0%,#fff3d6 45%,transparent 75%)}
@@ -14,6 +23,8 @@
 
 /* The cat sits on the visible floor, clear of the deck, footer and focus dock. */
 .room-cat{position:absolute;left:25%;bottom:118px;width:clamp(96px,8.5vw,168px);aspect-ratio:1;z-index:9;pointer-events:auto;cursor:pointer;background:none;border:0;padding:0;filter:drop-shadow(0 3px 0 #1a0f0866)}
+/* bubble showing: lift the cat above the console (.room-turntable z10) — both live in .room-scene's isolated stacking context, so this stays under the focus dock/dialogs */
+.room-scene .room-cat:has(> .room-cat-bubble){z-index:var(--z-room-pet,22);pointer-events:none}
 .room-cat .pixel-cat{display:block;width:100%;height:100%;image-rendering:pixelated}
 .room-cat:focus-visible{outline:2px solid #ffe2a8;outline-offset:3px}
 .room-cat-bubble{position:absolute;left:50%;bottom:100%;translate:-50% -4px;white-space:nowrap;padding:5px 9px;font-size:clamp(10px,.8vw,14px);line-height:1.2;color:#3b2a20;background:#fff7e6;border:2px solid #3b2a20;box-shadow:3px 3px 0 #3b2a2066;pointer-events:none;animation:bubble-pop .18s ease-out}
@@ -48,13 +59,14 @@
 .cabin-scene[data-room-look=starlight] :is(.cabin-weather,.cabin-snow){left:5.94%;top:20.44%;width:19.75%;height:26.34%;clip-path:circle(48%)}
 
 .cabin-scene:not([data-weather=snow]) .cabin-snow{opacity:0}
+.cabin-scene:not([data-weather=snow]) .cabin-snow::before,.cabin-scene:not([data-weather=snow]) .cabin-snow::after{animation:none}
 
 /* The console shares the collection's original vinyl material and album art. */
 .turntable-record-art { position:relative; display:block; width:100%; height:104px; margin:8px 0 10px; padding:0; background:#1c160f; border:1px solid #795737; overflow:hidden; cursor:pointer; }
 .turntable-sleeve { position:absolute; left:calc(50% - 74px); top:12px; width:78px; height:78px; display:grid; place-items:center; background:#a3794e; border:2px solid #2a1b13; box-shadow:3px 3px 0 #0007; z-index:2; }
 .turntable-sleeve img { width:100%;height:100%;object-fit:cover; }
 .turntable-record-art .custom-vinyl { position:absolute; width:86px; height:86px; left:calc(50% - 12px); top:8px; border-radius:50%; }
-.turntable-record-art .custom-vinyl.is-spinning { animation:room-spin 5s linear infinite; }
+.turntable-record-art .custom-vinyl.is-spinning { animation:room-spin 5s linear infinite; will-change:transform; }
 .turntable-needle { position:absolute; right:9px; top:14px; width:5px; height:49px; border:1px solid #38251b; background:#d5bd91; transform:rotate(24deg); transform-origin:top; box-shadow:2px 2px #0008; }
 .turntable-needle:after { content:''; position:absolute; width:10px; height:6px; bottom:-2px; left:-3px; background:#ddd0ac; border:1px solid #38251b; }
 .player-visual-note { margin:8px 0 0; font-size:10px; line-height:1.6; opacity:.7; }

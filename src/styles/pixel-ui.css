@@ -88,14 +88,28 @@ html { -webkit-font-smoothing: none; font-smooth: never; text-rendering: optimiz
 .segmented button[aria-checked=true] { box-shadow: inset 2px 2px 0 var(--px-accent-hi), inset -2px -2px 0 var(--px-accent-lo); }
 
 /* ── inputs, selects, sliders ─────────────────────────────────────────── */
-.cabin-room select, .cabin-dialog select, .cabin-dialog input:not([type=range]):not([type=checkbox]):not([type=radio]), .cabin-dialog textarea {
-  border-radius: 0 !important; box-shadow: inset 2px 2px 0 #0000006b, inset -2px -2px 0 #ffffff12;
+/* Canonical form controls: dark inset well, amber edge on hover/focus. One chevron SVG, size/position pinned with !important so
+   later `background:` shorthands can't stretch it. Not: .pixel-button, range, checkbox, .segmented.
+   Separate lists per element kind keep specificity at 0,1,1 (select/textarea) and 0,2,1 (typed inputs). */
+:is(.cabin-room, .cabin-dialog, .focus-dock) :is(select, textarea), :is(.cabin-room, .cabin-dialog, .focus-dock) input:is([type=text], [type=search], [type=number], [type=date], [type=url]), :is(.cabin-room, .cabin-dialog, .focus-dock) input:not([type]) {
+  appearance: none; -webkit-appearance: none; box-sizing: border-box; min-height: 32px; font: inherit; border-radius: 0 !important;
+  background-color: var(--px-surface-inset) !important; color: var(--px-ink) !important; border: 2px solid var(--px-border); box-shadow: var(--px-shadow-inset);
+  transition: border-color var(--px-dur-fast) steps(2, end);
 }
-.cabin-room select, .cabin-dialog select {
-  appearance: none; -webkit-appearance: none; padding-right: 22px !important;
-  background-image: linear-gradient(45deg, transparent 50%, var(--px-ink-dim) 50%), linear-gradient(-45deg, transparent 50%, var(--px-ink-dim) 50%) !important;
-  background-size: 4px 4px, 4px 4px; background-position: calc(100% - 13px) 55%, calc(100% - 9px) 55%; background-repeat: no-repeat;
+:is(.cabin-room, .cabin-dialog, .focus-dock) :is(select, textarea):hover, :is(.cabin-room, .cabin-dialog, .focus-dock) input:is([type=text], [type=search], [type=number], [type=date], [type=url]):hover, :is(.cabin-room, .cabin-dialog, .focus-dock) input:not([type]):hover { border-color: var(--px-border-hi); }
+:is(.cabin-room, .cabin-dialog, .focus-dock) :is(select, textarea):focus-visible, :is(.cabin-room, .cabin-dialog, .focus-dock) input:is([type=text], [type=search], [type=number], [type=date], [type=url]):focus-visible, :is(.cabin-room, .cabin-dialog, .focus-dock) input:not([type]):focus-visible { border-color: var(--px-accent-hi); }
+:is(.cabin-room, .cabin-dialog, .focus-dock) :is(select, textarea):disabled, :is(.cabin-room, .cabin-dialog, .focus-dock) input:is([type=text], [type=search], [type=number], [type=date], [type=url]):disabled, :is(.cabin-room, .cabin-dialog, .focus-dock) input:not([type]):disabled { opacity: .5; cursor: default; }
+:is(.cabin-room, .cabin-dialog, .focus-dock) textarea::placeholder, :is(.cabin-room, .cabin-dialog, .focus-dock) input:is([type=text], [type=search], [type=number], [type=date], [type=url])::placeholder, :is(.cabin-room, .cabin-dialog, .focus-dock) input:not([type])::placeholder { color: var(--px-ink-faint); opacity: 1; }
+:is(.cabin-room, .cabin-dialog, .focus-dock) select {
+  cursor: pointer; padding-right: 28px !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' shape-rendering='crispEdges'%3E%3Cpath fill='%23e0ad69' d='M0 0h10v2H8v2H6v2H4V4H2V2H0z'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important; background-position: right 10px center !important; background-size: 10px 6px !important;
 }
+:is(.cabin-room, .cabin-dialog, .focus-dock) option { background: #2e1d12; color: #ffe9cb; }
+:is(.cabin-room, .cabin-dialog, .focus-dock) input[type=date] { color-scheme: dark; }
+:is(.cabin-room, .cabin-dialog, .focus-dock) input[type=date]::-webkit-calendar-picker-indicator { filter: invert(72%) sepia(40%) saturate(600%) hue-rotate(345deg); opacity: .9; cursor: pointer; }
+/* compact contexts keep their own height (pocket player owns .pocket-track) */
+.cabin-room .pocket-track select, .cabin-room .turntable-source select { min-height: 0; }
 input[type=range] { -webkit-appearance: none; appearance: none; height: 16px; background: transparent; cursor: pointer; }
 input[type=range]::-webkit-slider-runnable-track { height: 6px; background: var(--px-shadow); border: 2px solid var(--px-border); box-shadow: inset 0 2px 0 #00000080; }
 input[type=range]::-moz-range-track { height: 6px; background: var(--px-shadow); border: 2px solid var(--px-border); }

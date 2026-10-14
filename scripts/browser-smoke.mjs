@@ -417,8 +417,39 @@ try {
   await page.mouse.move(1200, 120); await page.waitForTimeout(400); assert.equal(await deckStyle(), '0 hidden none'); await page.waitForTimeout(700); assert.deepEqual(await layoutIssues('immersive again'), []); await page.keyboard.press('Escape'); await page.waitForTimeout(700); assert.deepEqual(await layoutIssues('after immersive'), []);
   assert((await page.evaluate(() => window.__catMoves)).every(m => m === 'fade'), 'reduced motion moves the cat with a fade swap only');
   check('cat-always-on-a-surface-and-hops-off-hidden-console'); check('immersive-console-hidden-and-revealed-near-pointer');
-  { const motionPage = await context.newPage(); await motionPage.emulateMedia({ reducedMotion: 'no-preference' }); await motionPage.setViewportSize({ width: 1280, height: 800 }); await motionPage.goto(origin); await motionPage.locator('.room-record').first().waitFor(); await motionPage.evaluate(() => { document.documentElement.dataset.desktopReduceMotion = 'false'; });
-    const mainRef = page; page = motionPage; await page.bringToFront(); await page.evaluate(catHelpers); await page.waitForTimeout(800);
+  { const motionPage = await context.newPage(); await motionPage.emulateMedia({ reducedMotion: 'no-preference' }); await motionPage.setViewportSize({ width: 1280, height: 800 }); await motionPage.goto(origin); await motionPage.locator('.room-record').first().waitFor(); await motionPage.evaluate(() => {
+      document.documentElement.dataset.desktopReduceMotion = 'false';
+      // Earlier wallpaper/pet checks install context-wide bridge mocks. This
+      // page tests a normal main window, which must not inherit their exemption.
+      delete window.albumWallpaper; delete window.albumPet;
+    });
+    const mainRef = page; page = motionPage; await page.bringToFront();
+    const originalScene = await page.locator('.cabin-scene').getAttribute('data-room-look');
+    await openRoomSettings(page); await page.getByRole('button', { name: `选择场景 ${ROOM_SCENES.find(scene => scene.id === 'warm').label}`, exact: true }).click(); await closeDialog();
+    await page.waitForFunction(() => document.querySelector('.cabin-atmosphere')?.dataset.motion === 'running');
+    const focusLoss = await page.evaluate(async () => {
+      const events = []; const capture = (event) => events.push({ type: event.type, trusted: event.isTrusted });
+      window.addEventListener('blur', capture);
+      const iframe = document.createElement('iframe'); iframe.srcdoc = '<input autofocus>';
+      const loaded = new Promise(resolve => iframe.onload = resolve); document.body.append(iframe); await loaded;
+      iframe.contentWindow.focus(); await new Promise(resolve => setTimeout(resolve, 150));
+      const motion = document.querySelector('.cabin-atmosphere').dataset.motion;
+      iframe.remove(); window.focus(); window.removeEventListener('blur', capture);
+      return { events, motion };
+    });
+    assert(focusLoss.events.some(event => event.trusted), 'iframe focus must produce a real blur');
+    assert.equal(focusLoss.motion, 'running', 'ordinary blur must not pause the atmosphere');
+    const forwardedModes = await page.evaluate(() => {
+      // Observe each synchronous bridge notification before a pending native
+      // iframe-focus event can legitimately resume the visible main window.
+      const motion = () => document.querySelector('.cabin-atmosphere').dataset.motion;
+      window.dispatchEvent(new Event('blur')); const hidden = motion();
+      window.dispatchEvent(new Event('focus')); return [hidden, motion()];
+    });
+    assert.deepEqual(forwardedModes, ['hidden', 'running']);
+    check('atmosphere-keeps-running-on-trusted-blur-and-pauses-on-forwarded-minimize');
+    await openRoomSettings(page); await page.getByRole('button', { name: `选择场景 ${ROOM_SCENES.find(scene => scene.id === originalScene).label}`, exact: true }).click(); await closeDialog();
+    await page.evaluate(catHelpers); await page.waitForTimeout(800);
     // Sample the rendered cat every animation frame while a transition happens.
     await page.evaluate(() => { window.__sampleCat = (ms) => new Promise((resolve) => { const out = [], start = performance.now(); const tick = (now) => {
       const cat = document.querySelector('.room-cat'), r = cat.getBoundingClientRect(), scale = getComputedStyle(cat).scale, parts = scale === 'none' ? [1, 1] : scale.split(' ').map(Number);

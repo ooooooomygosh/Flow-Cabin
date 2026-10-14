@@ -142,10 +142,23 @@ export function paintSheen(create) {
   return canvas;
 }
 
+// Integer Bresenham: endpoints snap to whole pixels and every covered pixel is painted exactly once
+// (a thick line stamps a thick x thick square per step; the Set drops overlaps, which matters for translucent fills).
 function line(ctx, x0, y0, x1, y1, fill, thick = 1) {
   ctx.fillStyle = fill;
-  const steps = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0)) * 2;
-  for (let i = 0; i <= steps; i++) { const t = i / steps; ctx.fillRect(Math.round(x0 + (x1 - x0) * t - thick / 2), Math.round(y0 + (y1 - y0) * t - thick / 2), thick, thick); }
+  x0 = Math.round(x0); y0 = Math.round(y0); x1 = Math.round(x1); y1 = Math.round(y1);
+  const dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0), sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1, off = Math.floor(thick / 2), seen = new Set();
+  let err = dx + dy;
+  for (;;) {
+    for (let j = 0; j < thick; j++) for (let i = 0; i < thick; i++) {
+      const px = x0 - off + i, py = y0 - off + j, key = px * 100003 + py;
+      if (!seen.has(key)) { seen.add(key); ctx.fillRect(px, py, 1, 1); }
+    }
+    if (x0 === x1 && y0 === y1) break;
+    const e2 = 2 * err;
+    if (e2 >= dy) { err += dy; x0 += sx; }
+    if (e2 <= dx) { err += dx; y0 += sy; }
+  }
 }
 // Tonearm: counterweight behind the pivot, straight tube, headshell with finger lift.
 export function drawArm(ctx, angle, liftAmount = 0) {

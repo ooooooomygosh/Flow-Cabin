@@ -2,6 +2,7 @@ import React, { useEffect, useId, useRef } from 'react';
 import { ATMOSPHERE, atmosphereFrame, createAtmosphereLoop } from './cabin-atmosphere.mjs';
 import './cabin-atmosphere.css';
 import { createFirePainter } from './cabin-fire.mjs';
+import { frameClock, onBackgroundChange } from './frame-clock.mjs';
 import { performanceLevel, onPerformanceChange } from './perf-profile.mjs';
 
 const placement = ({ x, y, width, height }) => ({ left: `${x / 1448 * 100}%`, top: `${y / 1086 * 100}%`, width: `${width / 1448 * 100}%`, height: `${height / 1086 * 100}%` });
@@ -48,10 +49,10 @@ export default function CabinAtmosphere({ look, weather }) {
     if (!renderFire) { element.dataset.motion = 'unavailable'; return; }
     const surfaces = [...light.current.querySelectorAll('[data-surface]')];
     const clean = new Image(); let ready = false, disposed = false, windowBackdrop = null, fireBackdrop = null, lastLight = 0;
-    const shown = new Map();
+    const shown = new Map(), buffer = { snow: null, surfaces: {} };
     const draw = (seconds) => {
       if (!ready || disposed) return;
-      const frame = atmosphereFrame(seconds, look, weather);
+      const frame = atmosphereFrame(seconds, look, weather, buffer);
       paintSnow(snowContext, geometry, frame.snow, pixel, windowBackdrop); paintFire(fireContext, geometry, seconds, fireBackdrop, renderFire);
       // Firelight on the floor and hearth changes slowly; restyling these large
       // SVG shapes repaints half the room, so only visible changes are applied.
@@ -64,29 +65,25 @@ export default function CabinAtmosphere({ look, weather }) {
     };
     draw(0);
     const rate = () => pixel ? (performanceLevel() === 'low' ? 8 : 12) : (performanceLevel() === 'low' ? 12 : 24);
-    const loop = createAtmosphereLoop({ draw, request: requestAnimationFrame, cancel: cancelAnimationFrame, now: () => performance.now(), fps: rate() });
+    const loop = createAtmosphereLoop({ draw, request: requestAnimationFrame, cancel: cancelAnimationFrame, now: () => performance.now(), fps: rate(), clock: frameClock() });
     const offPerformance = onPerformanceChange(() => loop.setFps(rate()));
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
-    let focused = document.hasFocus();
-    const update = (event) => {
-      if (event?.type === 'blur') focused = false;
-      if (event?.type === 'focus') focused = true;
+    let background = frameClock().paused;
+    const update = () => {
       const reduced = media.matches || document.documentElement.dataset.desktopReduceMotion === 'true';
       if (!ready) return;
-      // Main view keeps audio/timers unthrottled in Electron, so Page Visibility
-      // can remain visible after minimize. Focus/blur is the renderer-only
-      // fallback; an unfocusable wallpaper must keep animating independently.
-      const background = document.hidden || (!window.albumWallpaper && !focused);
       const mode = background ? 'hidden' : reduced ? 'reduced' : 'running';
       element.dataset.motion = mode; loop.setMode(mode);
     };
     const observer = new MutationObserver(update); observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-desktop-reduce-motion'] });
-    media.addEventListener('change', update); document.addEventListener('visibilitychange', update); window.addEventListener('focus', update); window.addEventListener('blur', update);
+    media.addEventListener('change', update);
+    // Share the clock's hidden/minimized policy; ordinary blur keeps the room alive.
+    const offBackground = onBackgroundChange((value) => { background = value; update(); });
     element.dataset.motion = 'loading';
     clean.onload = () => { if (disposed) return; windowBackdrop = crop(clean, geometry.window, snowContext); fireBackdrop = crop(clean, geometry.fire, fireContext); ready = true; draw(0); update(); };
     clean.onerror = () => { if (!disposed) element.dataset.motion = 'unavailable'; };
     clean.src = `/room-scenes/${look}-cabin-clean.png`;
-    return () => { disposed = true; clean.onload = clean.onerror = null; loop.dispose(); offPerformance(); observer.disconnect(); media.removeEventListener('change', update); document.removeEventListener('visibilitychange', update); window.removeEventListener('focus', update); window.removeEventListener('blur', update); };
+    return () => { disposed = true; clean.onload = clean.onerror = null; loop.dispose(); offPerformance(); observer.disconnect(); media.removeEventListener('change', update); offBackground(); };
   }, [look, weather, geometry]);
   return <div ref={root} className={`cabin-atmosphere atmosphere-${look}`} aria-hidden="true">
     {/* Edited illumination is sampled only on bare floor; all other original

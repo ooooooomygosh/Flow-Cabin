@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { GEOMETRY, createDeckPhysics, progressAngle, progressFromPoint, stylusPoint, REST_ANGLE } from './turntable-physics.mjs';
 import { paintDeck, paintRecord, paintSheen, drawFrame } from './turntable-render.mjs';
 import { playDeckSound } from './deck-sfx.mjs';
+import { frameClock } from '../frame-clock.mjs';
+import { frameBudget, performanceLevel, onPerformanceChange } from '../perf-profile.mjs';
 
 // Close-up pixel turntable. `playing` drives the motor; `progress` (0…1 of the
 // side) places the needle; `gaps` are the quiet rings between songs. Dragging
@@ -30,11 +32,11 @@ export default function PixelTurntable({ item, vinyl, playing = false, progress 
   useEffect(() => {
     const element = canvas.current; if (!element || !deck) return;
     const context = element.getContext('2d');
-    let previousLift = physics.current.state.lift, visible = true;
-    const render = (time) => {
-      frame.current = 0;
+    let previousLift = physics.current.state.lift, visible = true, off = null;
+    const sleep = () => { off?.(); off = null; frame.current = 0; };
+    // Shared 60 fps clock: capped on high-refresh screens, paused while hidden / in the background.
+    const render = (time, dt) => {
       const now = live.current, state = physics.current.state;
-      const dt = last.current ? (time - last.current) / 1000 : 1 / 60; last.current = time;
       const target = now.record ? (drag.current ? drag.current.angle : progressAngle(now.progress)) : null;
       if (now.reduceMotion) { state.arm = target ?? REST_ANGLE; state.lift = now.playing ? 0 : 1; state.omega = 0; }
       else physics.current.step(dt, { motor: now.playing, armTarget: target, lowered: now.playing && !drag.current, dragging: Boolean(drag.current) });
@@ -44,15 +46,14 @@ export default function PixelTurntable({ item, vinyl, playing = false, progress 
       drawFrame(context, { deck, record: now.record, sheen, physics: state, speed: now.speed, motor: now.playing, glow: now.energy });
       // Keep animating while anything moves; otherwise sleep until props change.
       const settled = !now.playing && state.omega === 0 && Math.abs((target ?? REST_ANGLE) - state.arm) < .002 && (state.lift > .99 || state.lift < .01) && !drag.current;
-      if (visible && !document.hidden && (!settled || !now.reduceMotion && now.playing)) frame.current = requestAnimationFrame(render);
-      else last.current = 0;
+      if (!(visible && (!settled || !now.reduceMotion && now.playing))) sleep();
     };
-    const wake = () => { if (!frame.current) frame.current = requestAnimationFrame(render); };
+    const wake = () => { if (!off) { off = frameClock().subscribe(render, { fps: frameBudget(performanceLevel()).deck }); frame.current = 1; } };
+    const offPerformance = onPerformanceChange(() => { if (off) { sleep(); wake(); } });
     const observer = typeof IntersectionObserver !== 'undefined' ? new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; if (visible) wake(); }) : null;
     observer?.observe(element);
-    document.addEventListener('visibilitychange', wake);
     element.__wake = wake; wake();
-    return () => { cancelAnimationFrame(frame.current); frame.current = 0; observer?.disconnect(); document.removeEventListener('visibilitychange', wake); };
+    return () => { sleep(); observer?.disconnect(); offPerformance(); };
   }, [deck, sheen]);
   useEffect(() => { canvas.current?.__wake?.(); }, [playing, progress, record, speed, reduceMotion, energy > .05]);
 

@@ -28,7 +28,7 @@
 .onboarding-sources svg{position:absolute;right:6px;top:6px;color:var(--ob-accent)}
 :is(.onboarding-sources,.onboarding-scenes,.onboarding-pets) button:is([aria-checked=true],[aria-pressed=true]){border-color:var(--ob-accent);box-shadow:inset 0 0 0 2px var(--ob-accent)}
 :is(.onboarding-sources,.onboarding-scenes,.onboarding-pets) button:focus-visible{outline:3px solid var(--ob-ink);outline-offset:2px}
-.onboarding-connect,.hub-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;background:var(--ob-well);border:2px solid var(--ob-edge);margin-bottom:10px}
+.onboarding-connect,.hub-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:4px 12px;min-height:46px;box-sizing:border-box;background:var(--ob-well);border:2px solid var(--ob-edge);margin-bottom:8px}
 .onboarding-connect>span,.hub-row>span:first-child{display:grid;gap:3px;min-width:0}
 .onboarding-connect small,.hub-row small{font-size:11px;line-height:1.5;color:var(--ob-dim)}
 .onboarding-quality{display:flex;align-items:center;gap:10px;font-size:12px;margin-bottom:10px}.onboarding-quality small{color:var(--ob-dim)}
@@ -68,8 +68,12 @@ html[data-desktop-reduce-motion=true] :is(.onboarding-sources,.onboarding-scenes
 .hub-row-actions .segmented button{white-space:nowrap}
 .hub-current{font-size:13px;color:var(--ob-dim);margin:0 0 12px}.hub-current strong{color:var(--ob-ink)}
 .hub-toggle{display:inline-flex;align-items:center;gap:8px;font-size:12px}.hub-toggle input{width:18px;height:18px;accent-color:var(--ob-accent)}
-.hub-row select{padding:6px 8px;background:var(--px-bg,#24170d);color:var(--ob-ink);border:2px solid var(--ob-edge)}
+.hub-row select,.settings-hub .turntable-source select{box-sizing:border-box;flex:none;width:200px;max-width:100%;min-height:32px;height:32px;font-size:13px}
+.settings-hub .turntable-source{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:46px;box-sizing:border-box;margin:0 0 8px;padding:6px 12px;font-size:13px;color:var(--ob-ink);background:var(--ob-well);border:2px solid var(--ob-edge)}
+.hub-led{display:inline-block;flex:none;width:6px;height:6px;margin-right:8px;vertical-align:middle;background:var(--px-ink-muted,#6e553b);box-shadow:0 0 0 1px var(--px-shadow,#0d0805)}.hub-led.is-on{background:var(--px-good,#9ccf8c)}
 @media(max-width:700px){.settings-hub-layout{grid-template-columns:1fr}.settings-hub-nav{grid-auto-flow:column;grid-auto-columns:max-content;overflow-x:auto;position:static}.hub-row{flex-wrap:wrap}}
 /* moved from the retired cabin-welcome.css */
 @media(prefers-reduced-motion:no-preference){html:not([data-desktop-reduce-motion=true]) .focus-dock,html:not([data-desktop-reduce-motion=true]) .shelf-filters{animation:welcome-step-in .18s ease-out}}
 @keyframes welcome-step-in{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+
+.hub-row>span:first-child{gap:1px}.hub-row small{line-height:1.35}
