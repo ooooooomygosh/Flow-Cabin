@@ -5,6 +5,8 @@ import { useRecordLibrary } from '../RecordLibrary';
 // The 专注画面 preference, one live value per window.
 let store = null;
 const displayStore = () => (store ||= createDisplayStore());
+// Read on demand (the desktop shell's companion snapshot): no re-render.
+export const currentFocusDisplay = () => displayStore().get();
 export function useFocusDisplay() {
   const s = displayStore(), value = useSyncExternalStore(s.subscribe, s.get, s.get);
   return [value, s.set];

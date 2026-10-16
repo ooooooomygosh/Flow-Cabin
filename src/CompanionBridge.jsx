@@ -3,6 +3,7 @@ import { useFocusState as useFocus } from './focus/useFocus'; // read on demand:
 import { useSoundscape } from './audio/useSoundscape';
 import { focusSnapshot } from './focus/focus-model.mjs';
 import { PLAYBACK_EVENT } from './player/playback-signal.mjs';
+import { currentFocusDisplay } from './focus/useFocusDisplay';
 
 // Energy is quantised so the desktop shell's change detection only relays
 // visible differences to the pet window.
@@ -24,6 +25,8 @@ export default function CompanionBridge() {
         room,
         petId: room?.petId || 'cat',
         focus: f ? focusSnapshot(f.state, Date.now()) : null,
+        // The 专注画面 choice, so the wallpaper shows the same face (its own partition cannot read it).
+        focusDisplay: currentFocusDisplay(),
         sound: s ? { enabled: s.enabled, lofi: s.lofiState === 'playing' } : null,
         playing: Boolean(room?.grooving || (s?.lofiState === 'playing')),
         track: room?.track || '',
