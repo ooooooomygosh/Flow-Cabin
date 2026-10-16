@@ -228,18 +228,18 @@ export default function ListeningCorner({ item, items = [], vinyl, provider, spi
     </aside>
     {items.length > 0 && <nav className="corner-crate" aria-label="唱片箱" style={{ left: crateX, width: crateW, height: layout.crateH }}>
       {player?.queueError && <p role="alert">{player.queueError}</p>}
-      {active && <div className="corner-crate-peek" style={{ left: peekLeft }}>
-        <Sleeve item={active}/>
-        <span><b title={active.title}>{displayTitle(active.title)}</b><small>{active.artist}</small></span>
-        {player && active.id !== item?.id && <button type="button" className="corner-crate-queue" aria-label={`加入待播 ${active.title}`} disabled={queued(active)} onClick={() => queueRecord(active)}><Plus size={12}/>{queued(active) ? '已入队' : '待播'}</button>}
-        {active.id === item?.id && <em>在唱机上</em>}
-      </div>}
       <ul ref={crateList} className="corner-crate-spines" aria-describedby={hint} onScroll={placePeek}>{crate.map((entry, index) => <li key={entry.id} data-id={entry.id}>
         <button type="button" className={`corner-spine${entry.id === item?.id ? ' is-current' : ''}${index === activeIndex ? ' is-active' : ''}`} tabIndex={index === activeIndex ? 0 : -1} aria-label={`放上《${entry.title}》`} title={`${entry.title} · ${entry.artist}`}
           onClick={() => pick(entry)} onFocus={() => setActiveId(entry.id)} onPointerEnter={() => setActiveId(entry.id)} onKeyDown={(event) => spineKeys(event, index)}>
           <Sleeve item={entry} className="corner-spine-art" lazy/>
         </button>
       </li>)}</ul>
+      {active && <div className="corner-crate-peek" style={{ left: peekLeft }}>
+        <Sleeve item={active}/>
+        <span><b title={active.title}>{displayTitle(active.title)}</b><small>{active.artist}</small></span>
+        {player && active.id !== item?.id && <button type="button" className="corner-crate-queue" aria-label={`加入待播 ${active.title}`} disabled={queued(active)} onClick={() => queueRecord(active)}><Plus size={12}/>{queued(active) ? '已入队' : '待播'}</button>}
+        {active.id === item?.id && <em>在唱机上</em>}
+      </div>}
       <div className="corner-crate-front">
         <div className="corner-crate-tools"><label>唱片箱<input type="search" aria-label="查找唱片箱" placeholder="唱片或歌手" value={query} onChange={event => setQuery(event.target.value)}/></label><span className="corner-crate-status" role="status">{notice || `待播 ${player?.queue.ids.length || 0} 张 · ${matches.length} 张匹配`}</span></div>
         <span id={hint} className="corner-crate-hint">← → 翻找 · 回车放上唱机 · + 加入待播</span>

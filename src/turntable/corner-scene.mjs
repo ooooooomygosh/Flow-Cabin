@@ -54,7 +54,7 @@ export function cornerLayout({ width, height, dpr = 1 }) {
 export const SCENE_PALETTES = Object.freeze({
   lamp: { wall: ['#1e100a', '#2f1a0d', '#3c2213', '#4a2a16', '#5a331b'], desk: ['#2f1a0d', '#4a2a16', '#5d351c', '#6b3f22', '#8a5530'], floor: '#120a06', shadow: '#0d0805',
     pool: '#ffcf86', poolAt: 'lamp', lampOn: true, brass: ['#5e3f22', '#a8743c', '#d4a46b', '#ffd99c'], shade: ['#1d3a2c', '#2c5a42', '#3f7a58'], glass: '#ffe9b8', frame: ['#2a170c', '#4a2a16', '#6b3f22', '#8a5530'] },
-  dusk: { wall: ['#24100e', '#3a1c17', '#4a261c', '#5a3022', '#6c3b28'], desk: ['#311a12', '#4d2a1c', '#603523', '#6e3f2a', '#8c5536'], floor: '#160a08', shadow: '#110706',
+  dusk: { wall: ['#26121a', '#3a1d26', '#47242c', '#552c33', '#66363b'], desk: ['#33191a', '#4f2a26', '#62352d', '#714033', '#8c5540'], floor: '#160a0c', shadow: '#110607',
     pool: '#ff9a6a', poolAt: 'window', lampOn: false, brass: ['#5e3a24', '#a86c42', '#d69a6c', '#ffcf9e'], shade: ['#1f2f2a', '#2c4a3c', '#3a5e4a'], glass: '#6a4a3a', frame: ['#2c140d', '#4a2619', '#6c3b28', '#8c5536'] },
   night: { wall: ['#0e0d16', '#161420', '#1f1c2c', '#28243a', '#322c46'], desk: ['#1d110a', '#2c1a10', '#3f2717', '#4f311d', '#5f3b22'], floor: '#07060b', shadow: '#05040a',
     pool: '#e7c48a', poolAt: 'lamp', lampOn: true, small: true, brass: ['#4a3420', '#87613a', '#b98d5c', '#e7c48a'], shade: ['#16241f', '#22382e', '#2e4a3c'], glass: '#ffe0a8', frame: ['#120f18', '#1f1a28', '#2c2538', '#3a3248'] }
@@ -124,7 +124,7 @@ export function paintScene(ctx, layout, { light = 'lamp', weather = 'snow', time
   // Dusk light: the window throws a slanted patch of warm light onto the wall.
   if (P.poolAt === 'window') for (let y = win.y + win.h + 4; y < deskBack - 8; y++) for (let x = 0; x < W; x++) {
     const shift = (y - win.y - win.h) * .55, inside = x > win.x - shift - 6 && x < win.x + win.w - shift - 10;
-    if (inside && (x + y) % 2 === 0) { const i = (y * W + x) * 4; set(x, y, toward([data[i], data[i + 1], data[i + 2]], pool, .3)); }
+    if (inside) { const i = (y * W + x) * 4, edge = x < win.x - shift || x > win.x + win.w - shift - 16; if (!edge || (x + y) % 2 === 0) set(x, y, toward([data[i], data[i + 1], data[i + 2]], pool, edge ? .22 : .3)); }
   }
   // Desk top: planks running left–right, closer together towards the back.
   for (let y = deskBack; y < deskFront; y++) {

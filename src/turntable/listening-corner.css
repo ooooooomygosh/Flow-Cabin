@@ -120,8 +120,7 @@ button[aria-current=true] > .corner-groove { background: var(--px-accent-lo); }
 .corner-crate-front::after { right: -2px; clip-path: polygon(0 0, 100% 26px, 100% 100%, 0 100%); }
 .corner-crate-tools { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex: 1; min-width: 0; font-size: 12px; color: var(--px-ink-dim); }
 .corner-crate-tools label { display: flex; align-items: center; gap: 8px; min-width: 0; font: 400 12px/16px var(--px-font-cn); color: var(--px-ink); -webkit-font-smoothing: none; }
-.corner-crate-tools input { width: 168px; min-width: 0; height: var(--px-hit); padding: 2px 8px; font: inherit; font-size: 12px; color: var(--corner-ink); background: var(--corner-paper); border: 2px solid var(--px-brass); box-shadow: inset 2px 2px 0 var(--corner-paper-3); }
-.corner-crate-tools input::placeholder { color: var(--corner-ink-2); }
+.corner-crate-tools input { width: 168px; min-width: 0; height: var(--px-hit); padding: 2px 8px; font: inherit; font-size: 12px; }
 .corner-crate-status { overflow: hidden; color: var(--px-accent); white-space: nowrap; text-overflow: ellipsis; }
 .corner-crate-hint { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .corner-crate > [role=alert], .corner-crate-empty, .corner-crate-more { position: absolute; z-index: 1; left: 40px; top: 18px; margin: 0; padding: 4px 8px; font-size: 12px; color: var(--corner-ink); background: var(--corner-paper); border: 2px solid var(--px-shadow); }
