@@ -20,10 +20,11 @@ import { listItems, removeItem } from './collection-api.mjs';
 // earlier releases attached to this computer's collection.
 const OWNER = 'local-owner', ROOM = 'local-room';
 
+// notify(text) confirms quietly for 3.2 s; notify(text, { tone: 'error' }) is an alert that stays 6 s.
 function useToast() {
   const [toast, setToast] = useState(null);
-  useEffect(() => { if (!toast) return; const timer = setTimeout(() => setToast(null), 3200); return () => clearTimeout(timer); }, [toast]);
-  return [toast, (text) => setToast({ text, at: Date.now() })];
+  useEffect(() => { if (!toast) return; const timer = setTimeout(() => setToast(null), toast.tone === 'error' ? 6000 : 3200); return () => clearTimeout(timer); }, [toast]);
+  return [toast, useCallback((text, { tone = '' } = {}) => setToast({ text, tone, at: Date.now() }), [])];
 }
 
 export default function App() {
@@ -48,7 +49,7 @@ export default function App() {
   const replaceItem = (item) => setItems((list) => list.map((entry) => entry.id === item.id ? item : entry));
   const remove = async (item) => {
     try { await removeItem(item.id); setRecordId(''); setItems((list) => list.filter((entry) => entry.id !== item.id)); notify(`《${item.title}》已从唱片架移除。`); }
-    catch (cause) { notify(cause.message); }
+    catch (cause) { notify(cause.message, { tone: 'error' }); }
   };
   return <RecordLibraryProvider userId={OWNER} roomId={ROOM}><FocusProvider userId={OWNER}><StudyProvider userId={OWNER}><SoundscapeProvider>
     <CompanionBridge/>
@@ -56,17 +57,17 @@ export default function App() {
       <header className="app-titlebar">
         <div className="app-brand"><PixelCat pose="idle" accessory="headphones" className="app-brand-cat" label="心流小屋"/><span><strong>心流小屋</strong><small>{loading ? '整理唱片中…' : `${items.length} 张唱片`}</small></span></div>
         <div className="app-actions">
-          <button type="button" className="pixel-button is-primary" aria-label="添加专辑" title="添加专辑" onClick={() => setAdding({ query: '' })}><Plus size={17}/><span>添加专辑</span></button>
+          <button type="button" className="pixel-button is-primary" aria-label="添加专辑" title="搜索专辑，放上唱片架" onClick={() => setAdding({ query: '' })}><Plus size={17}/><span>添加专辑</span></button>
           <button type="button" className="pixel-button" aria-label="我的歌单" title="导入网易云 / QQ 音乐 / Apple Music 歌单" onClick={() => setPlaylists(true)}><QueueList size={17}/><span>我的歌单</span></button>
           <button type="button" className="pixel-button" aria-label="专辑墙" onClick={() => setWall(true)} title="挑选专辑，生成专辑墙图片"><Grid3X3 size={17}/><span>专辑墙</span></button>
         </div>
-        <DesktopControls onSettings={() => setHubRequest({ section: 'music', at: Date.now() })} onError={notify}/>
+        <DesktopControls onSettings={() => setHubRequest({ section: 'music', at: Date.now() })} onError={(text) => notify(text, { tone: 'error' })}/>
       </header>
       <main className="app-cabin">
         {error && <p className="app-error" role="alert">{error}<button type="button" disabled={loading} onClick={reload}>{loading ? '正在重试…' : '重试'}</button></p>}
         <CabinRoom items={items} loading={loading} loadError={error} firstVisit={firstVisit} hubRequest={hubRequest} openBackup={() => setBackup(true)} openWall={() => setWall(true)} notify={notify} openRecord={setRecordId} openAdd={(query = '') => setAdding({ query })}/>
       </main>
-      {toast && <p className="app-toast" role="status" key={toast.at}>{toast.text}</p>}
+      {toast && <p className={`app-toast ${toast.tone === 'error' ? 'is-error' : ''}`} role={toast.tone === 'error' ? 'alert' : 'status'} key={toast.at}>{toast.text}</p>}
     </div>
     {playlists && <PlaylistLibrary items={items} close={() => setPlaylists(false)} onAdded={(item) => setItems((list) => [item, ...list.filter((entry) => entry.id !== item.id)])}/>}
     {adding && <AddAlbum items={items} initialQuery={adding.query} close={() => setAdding(null)} onAdded={(item) => setItems((list) => [item, ...list.filter((entry) => entry.id !== item.id)])}/>}

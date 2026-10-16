@@ -12,22 +12,21 @@ import { useSoundscape } from './audio/useSoundscape';
 import { MAX_BACKUP_BYTES, backupFileName, backupReplacements, buildBackup, mergeBackupLibrary, parseBackup, restoreFocus } from './backup-model.mjs';
 
 const savedSound = () => { try { return JSON.parse(localStorage.getItem(SOUND_KEY)); } catch { return null; } };
-const withWarnings = (text, warnings) => text + (warnings.length ? ' 注意：' + warnings.join('；') : '');
 
 // Everything lives on this computer; a backup file moves it to another one.
 // Albums merge in right away; anything that would overwrite this computer's own records is asked once, inline.
 export default function BackupDialog({ items, close, reload }) {
   const library = useRecordLibrary(), focus = useFocus(), study = useStudy(), soundscape = useSoundscape();
-  const [busy, setBusy] = useState(false), [notice, setNotice] = useState(''), [pending, setPending] = useState(null), picker = useRef(null);
+  const [busy, setBusy] = useState(false), [notice, setNotice] = useState(''), [problems, setProblems] = useState([]), [pending, setPending] = useState(null), picker = useRef(null);
   const stats = focus ? focusStats(focus.state.sessions, Date.now()) : null;
   const exportBackup = () => {
     const backup = buildBackup({ items, library: library.data, focus: focus?.state, study: study?.state, sound: savedSound() });
     downloadBlob(new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' }), backupFileName());
-    setNotice('备份文件已生成。');
+    setProblems([]); setNotice('备份文件已生成。');
   };
   const importBackup = async (event) => {
     const file = event.target.files?.[0]; event.target.value = ''; if (!file) return;
-    setBusy(true); setNotice(''); setPending(null);
+    setBusy(true); setNotice(''); setProblems([]); setPending(null);
     try {
       if (file.size > MAX_BACKUP_BYTES) throw new Error('备份文件最大 8 MB。');
       const parsed = parseBackup(await file.text()), result = await importItems(parsed.items), warnings = [];
@@ -35,9 +34,9 @@ export default function BackupDialog({ items, close, reload }) {
       await reload();
       const summary = `导入完成：新增 ${result.added} 张唱片，唱片架现在共有 ${result.total} 张。`;
       const replacements = backupReplacements(parsed, { focus: Boolean(focus), study: Boolean(study), sound: Boolean(soundscape?.replaceMix) });
-      setNotice(withWarnings(summary, warnings));
+      setNotice(summary); setProblems(warnings);
       if (replacements.length) setPending({ parsed, replacements, summary, warnings });
-    } catch (error) { setNotice(error.message || '导入失败，请重试。'); }
+    } catch (error) { setProblems([error.message || '导入失败，请重试。']); }
     finally { setBusy(false); }
   };
   const replace = () => {
@@ -50,9 +49,9 @@ export default function BackupDialog({ items, close, reload }) {
       if (warnings.length === before) done.push(entry.label.replace(/（.*）$/, ''));
     }
     // Only what was actually written is reported as replaced.
-    setPending(null); setNotice(withWarnings(done.length ? `${summary} 已用备份替换${done.join('、')}。` : summary, warnings));
+    setPending(null); setNotice(done.length ? `${summary} 已用备份替换${done.join('、')}。` : summary); setProblems(warnings);
   };
-  const keep = () => { setNotice(withWarnings(`${pending.summary} 这台电脑上的其他记录保持不变。`, pending.warnings)); setPending(null); };
+  const keep = () => { setNotice(`${pending.summary} 这台电脑上的其他记录保持不变。`); setProblems(pending.warnings); setPending(null); };
   return <Dialog title="收藏与备份" icon={<Library size={20}/>} close={close} className="backup-dialog">
     <dl className="backup-stats">
       <div><dt>唱片</dt><dd>{items.length}</dd></div>
@@ -67,6 +66,7 @@ export default function BackupDialog({ items, close, reload }) {
       <input ref={picker} type="file" accept=".json,application/json" aria-label="导入备份文件" disabled={busy} onChange={importBackup} hidden/>
     </div>
     {notice && <p className="add-status" role="status">{notice}</p>}
+    {problems.length > 0 && <ul className="status is-error" role="alert">{problems.map((text) => <li key={text}>{text}</li>)}</ul>}
     {pending && <div className="backup-replace" role="group" aria-label="替换本机记录">
       <p className="add-intro">备份里还有{pending.replacements.map((entry) => entry.label).join('、')}。要用备份替换这台电脑上的这些内容吗？</p>
       <div className="backup-actions">

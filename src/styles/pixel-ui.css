@@ -130,6 +130,8 @@ input[type=checkbox], input[type=radio] { accent-color: var(--px-accent); }
 }
 .room-cat-bubble::after { content: ''; position: absolute; left: 50%; top: 100%; width: 8px; height: 6px; translate: -50% 2px; rotate: 0deg; border: 0;
   background: linear-gradient(var(--px-paper-ink) 0 0) 2px 0 / 4px 2px no-repeat, linear-gradient(var(--px-paper-ink) 0 0) 2px 2px / 4px 2px no-repeat, linear-gradient(var(--px-paper) 0 0) 2px -2px / 4px 2px no-repeat; }
+/* An error toast keeps the paper tag but inks it in the warn colour, with a warn rule on the left. */
+.app-toast.is-error { color: var(--px-warn); box-shadow: inset 4px 0 0 var(--px-warn), var(--px-shadow-1); }
 .app-toast { animation: px-toast-in var(--px-dur-med) var(--px-ease) both; }
 @keyframes px-toast-in { 0% { opacity: 0; translate: -50% 12px; } 100% { opacity: 1; translate: -50% 0; } }
 /* Cat bubble placement (CatBubble.jsx): offset vars, tail follows the side. */
