@@ -64,8 +64,10 @@ export function paintDeck(create, { led = false } = {}) {
 }
 // Speed button states are tiny and change with interaction; drawn per frame.
 const GLYPHS = { 3: ['111', '001', '111', '001', '111'], 4: ['101', '101', '111', '001', '001'], 5: ['111', '100', '111', '001', '111'], F: ['111', '100', '110', '100', '100'], L: ['100', '100', '100', '100', '111'], O: ['111', '101', '101', '101', '111'], W: ['101', '101', '101', '111', '101'] };
-function text(ctx, value, x, y, fill) { ctx.fillStyle = fill; [...String(value)].forEach((char, index) => (GLYPHS[char] || []).forEach((row, gy) => [...row].forEach((bit, gx) => { if (bit === '1') ctx.fillRect(x + index * 4 + gx, y + gy, 1, 1); }))); }
-// Speed button states are tiny and change with interaction; drawn per frame.
+const GLYPH_PIXELS = Object.fromEntries(Object.entries(GLYPHS).map(([char, rows]) => [char, rows.flatMap((row, gy) => [...row].flatMap((bit, gx) => bit === '1' ? [[gx, gy]] : []))]));
+function text(ctx, value, x, y, fill) { ctx.fillStyle = fill; const chars = String(value); for (let index = 0; index < chars.length; index++) for (const [gx, gy] of GLYPH_PIXELS[chars[index]] || []) ctx.fillRect(x + index * 4 + gx, y + gy, 1, 1); }
+// Speed button states are tiny and change with interaction; drawFrame keeps
+// the deck with each of the four (speed, motor) states as a cached layer.
 export function drawControls(ctx, { speed = 33, motor = false }) {
   for (const [value, x] of [[33, 24], [45, 46]]) {
     const on = speed === value;
@@ -143,16 +145,23 @@ export function paintSheen(create) {
 }
 
 // Integer Bresenham: endpoints snap to whole pixels and every covered pixel is painted exactly once
-// (a thick line stamps a thick x thick square per step; the Set drops overlaps, which matters for translucent fills).
+// (a thick line stamps a thick x thick square per step; a reusable stamp mask drops overlaps, which matters
+// for translucent fills, without allocating per call). Pixels off the canvas are clipped anyway and skipped.
+const STAMP = new Uint32Array(GEOMETRY.width * GEOMETRY.height);
+let stampGeneration = 0;
 function line(ctx, x0, y0, x1, y1, fill, thick = 1) {
   ctx.fillStyle = fill;
+  if (++stampGeneration === 0xffffffff) { STAMP.fill(0); stampGeneration = 1; }
+  const generation = stampGeneration, { width, height } = GEOMETRY;
   x0 = Math.round(x0); y0 = Math.round(y0); x1 = Math.round(x1); y1 = Math.round(y1);
-  const dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0), sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1, off = Math.floor(thick / 2), seen = new Set();
+  const dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0), sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1, off = Math.floor(thick / 2);
   let err = dx + dy;
   for (;;) {
     for (let j = 0; j < thick; j++) for (let i = 0; i < thick; i++) {
-      const px = x0 - off + i, py = y0 - off + j, key = px * 100003 + py;
-      if (!seen.has(key)) { seen.add(key); ctx.fillRect(px, py, 1, 1); }
+      const px = x0 - off + i, py = y0 - off + j;
+      if (px < 0 || py < 0 || px >= width || py >= height) continue;
+      const key = py * width + px;
+      if (STAMP[key] !== generation) { STAMP[key] = generation; ctx.fillRect(px, py, 1, 1); }
     }
     if (x0 === x1 && y0 === y1) break;
     const e2 = 2 * err;
@@ -178,17 +187,58 @@ export function drawArm(ctx, angle, liftAmount = 0) {
   disc(ctx, px0, py0, 3, PALETTE.alloyLight); ctx.fillStyle = PALETTE.alloyDark; ctx.fillRect(px0, py0, 1, 1);
 }
 
+// A blank canvas like `source` (DOM canvas or OffscreenCanvas), or null where neither exists.
+function layerLike(source) {
+  const { width, height } = GEOMETRY;
+  try {
+    if (source?.ownerDocument) return Object.assign(source.ownerDocument.createElement('canvas'), { width, height });
+    if (typeof OffscreenCanvas === 'function') return new OffscreenCanvas(width, height);
+  } catch {}
+  return null;
+}
+// The deck plus one of its four control states, painted once per state.
+const controlLayers = new WeakMap();
+function deckWithControls(deck, speed, motor) {
+  let layers = controlLayers.get(deck);
+  if (!layers) { layers = new Map(); controlLayers.set(deck, layers); }
+  const key = `${speed}:${motor ? 1 : 0}`;
+  if (!layers.has(key)) {
+    const layer = layerLike(deck), ctx = layer?.getContext('2d');
+    if (ctx) { ctx.imageSmoothingEnabled = false; ctx.drawImage(deck, 0, 0); drawControls(ctx, { speed, motor }); }
+    layers.set(key, ctx ? layer : null);
+  }
+  return layers.get(key);
+}
+// The arm only moves while cueing or travelling; a still (or slowly tracking)
+// arm is redrawn from a one-entry layer keyed on its quantised pose. 1/2000 rad
+// is well under a pixel at the arm's length.
+const armLayers = new WeakMap();
+const ARM_STEP = 2000;
+function armLayer(owner, angle, liftAmount) {
+  const qa = Math.round(angle * ARM_STEP) / ARM_STEP, ql = Math.round(liftAmount * 100) / 100, key = `${qa}:${ql}`;
+  let cached = armLayers.get(owner);
+  if (cached?.key === key) return cached.layer;
+  const layer = cached?.layer || layerLike(owner), ctx = layer?.getContext('2d');
+  if (!ctx) return null;
+  ctx.clearRect(0, 0, GEOMETRY.width, GEOMETRY.height); ctx.imageSmoothingEnabled = false;
+  drawArm(ctx, qa, ql);
+  armLayers.set(owner, { key, layer });
+  return layer;
+}
+
 export function drawFrame(ctx, { deck, record, sheen, physics, speed = 33, motor = false, glow = 0 }) {
   const { width, height, center: [cx, cy] } = GEOMETRY;
   ctx.imageSmoothingEnabled = false;
   ctx.clearRect(0, 0, width, height);
-  ctx.drawImage(deck, 0, 0);
-  drawControls(ctx, { speed, motor });
+  const base = deckWithControls(deck, speed, motor);
+  if (base) ctx.drawImage(base, 0, 0);
+  else { ctx.drawImage(deck, 0, 0); drawControls(ctx, { speed, motor }); }
   if (record) {
     const size = record.width;
     ctx.save(); ctx.translate(cx, cy); ctx.rotate(physics.angle); ctx.drawImage(record, -size / 2, -size / 2); ctx.restore();
     ctx.globalAlpha = .9; ctx.drawImage(sheen, cx - size / 2, cy - size / 2); ctx.globalAlpha = 1;
     if (glow > 0) { ctx.globalAlpha = Math.min(.35, glow * .35); ctx.drawImage(sheen, cx - size / 2, cy - size / 2); ctx.globalAlpha = 1; }
   }
-  drawArm(ctx, physics.arm, physics.lift);
+  const arm = armLayer(deck, physics.arm, physics.lift || 0);
+  if (arm) ctx.drawImage(arm, 0, 0); else drawArm(ctx, physics.arm, physics.lift);
 }

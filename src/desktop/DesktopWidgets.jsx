@@ -8,6 +8,7 @@ import { trackArtist } from '../room-playback.mjs';
 import { usePlaybackDuration, usePlaybackPosition } from '../deck/usePlaybackClock';
 import { ChevronLeft, ChevronRight, Pause, Play, Forward, Plus, Eye, Clock, ListBullet, Music2 } from '../icons';
 import { clampWidget, defaultWidgetLayout, readWidgetLayout, writeWidgetLayout } from './widget-layout.mjs';
+import { createDragGesture, nudgeDelta } from '../drag-gesture.mjs';
 import './desktop-widgets.css';
 
 // Desktop widgets: what a desktop needs at a glance, drawn as small cabin
@@ -24,26 +25,41 @@ function useMinute() {
 }
 
 function Widget({ id, title, icon, layout, move, children, className = '' }) {
-  const ref = useRef(null), drag = useRef(null);
-  const position = layout[id];
+  const ref = useRef(null), from = useRef(null), position = layout[id];
+  const live = useRef({ id, move }); live.current = { id, move };
+  // Where a drag of dx, dy px puts the card, as clamped fractions of the room.
+  const place = (dx, dy) => {
+    const value = from.current; if (!value) return null;
+    return clampWidget({ x: (value.left + dx - value.parent.left) / value.parent.width, y: (value.top + dy - value.parent.top) / value.parent.height }, value.width / value.parent.width, value.height / value.parent.height);
+  };
+  const [gesture] = useState(() => createDragGesture({
+    // The card follows the pointer by transform only: no React render or save mid-drag.
+    onMove: (_, dx, dy) => { const next = place(dx, dy), value = from.current; if (next && ref.current) ref.current.style.translate = `${(next.x - value.start.x) * value.parent.width}px ${(next.y - value.start.y) * value.parent.height}px`; },
+    onCommit: (_, dx, dy) => { const next = place(dx, dy); if (ref.current) ref.current.style.translate = ''; from.current = null; if (next) live.current.move(live.current.id, next, true); },
+    onCancel: () => { if (ref.current) ref.current.style.translate = ''; from.current = null; }
+  }));
+  useEffect(() => () => gesture.cancel(), [gesture]);
   const down = (event) => {
     if (event.button !== 0) return;
     const parent = ref.current.offsetParent.getBoundingClientRect(), box = ref.current.getBoundingClientRect();
-    drag.current = { dx: event.clientX - box.left, dy: event.clientY - box.top, parent, width: box.width, height: box.height };
-    event.currentTarget.setPointerCapture(event.pointerId); event.preventDefault();
+    from.current = { parent, left: box.left, top: box.top, width: box.width, height: box.height, start: { x: (box.left - parent.left) / parent.width, y: (box.top - parent.top) / parent.height } };
+    gesture.down(event.pointerId, event.clientX, event.clientY, id);
+    event.currentTarget.setPointerCapture?.(event.pointerId); event.preventDefault();
   };
-  const moveTo = (event) => {
-    const value = drag.current; if (!value) return;
-    move(id, clampWidget({ x: (event.clientX - value.dx - value.parent.left) / value.parent.width, y: (event.clientY - value.dy - value.parent.top) / value.parent.height }, value.width / value.parent.width, value.height / value.parent.height), false);
-  };
-  const up = () => { if (drag.current) { drag.current = null; move(id, layout[id], true); } };
-  const nudge = (event) => {
-    const step = event.shiftKey ? .05 : .01, delta = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }[event.key];
-    if (!delta) return; event.preventDefault();
-    move(id, clampWidget({ x: position.x + delta[0], y: position.y + delta[1] }, .2, .15), true);
+  const moveTo = (event) => { gesture.move(event.pointerId, event.clientX, event.clientY); };
+  const up = (event) => { if (!gesture.up(event.pointerId)) from.current = null; };
+  const cancel = (event) => { gesture.cancel(event?.pointerId); };
+  const key = (event) => {
+    if (event.key === 'Escape' && gesture.pending) { event.preventDefault(); event.stopPropagation(); gesture.cancel(); return; }
+    if (event.key === 'Home') { event.preventDefault(); move(id, defaultWidgetLayout()[id], true); return; }
+    const delta = nudgeDelta(event.key, event.shiftKey); if (!delta) return;
+    event.preventDefault();
+    const parent = ref.current?.offsetParent?.getBoundingClientRect(), box = ref.current?.getBoundingClientRect();
+    if (!parent?.width || !parent?.height) return;
+    move(id, clampWidget({ x: position.x + delta[0] / parent.width, y: position.y + delta[1] / parent.height }, box.width / parent.width, box.height / parent.height), true);
   };
   return <section ref={ref} className={`desktop-widget is-${id} ${className}`} aria-label={title} style={{ left: `${position.x * 100}%`, top: `${position.y * 100}%` }}>
-    <button type="button" className="desktop-widget-handle" aria-label={`移动小组件：${title}（方向键微调）`} title="拖动移动" onPointerDown={down} onPointerMove={moveTo} onPointerUp={up} onKeyDown={nudge}>{icon}<span>{title}</span><i aria-hidden="true">⠿</i></button>
+    <button type="button" className="desktop-widget-handle" aria-label={`移动小组件：${title}（方向键微调）`} aria-keyshortcuts="ArrowLeft ArrowRight ArrowUp ArrowDown Shift Home Escape" title="拖动移动 · 方向键微调（Shift 加大）· Home 复位 · Esc 取消拖动" onPointerDown={down} onPointerMove={moveTo} onPointerUp={up} onPointerCancel={cancel} onLostPointerCapture={cancel} onKeyDown={key}>{icon}<span>{title}</span><i aria-hidden="true">⠿</i></button>
     {children}
   </section>;
 }
