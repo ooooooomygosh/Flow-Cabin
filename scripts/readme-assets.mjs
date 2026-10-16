@@ -3,7 +3,7 @@
  * tasks only; no accounts, no network beyond the local Vite server.
  * Usage: npm run screenshots:readme  (BROWSER_EXECUTABLE may point to Chromium)
  */
-import { createRequire } from 'node:module';
+import { launchChromium } from './launch-browser.mjs';
 import { spawn } from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -11,7 +11,6 @@ import { fileURLToPath } from 'node:url';
 import { showcaseAlbums } from './showcase-albums.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const { chromium } = createRequire(path.join(root, 'desktop/package.json'))('playwright');
 const output = path.resolve(process.env.README_ASSETS || path.join(root, 'docs/assets/screenshots'));
 const port = Number(process.env.README_PORT || 4185), origin = `http://127.0.0.1:${port}`;
 await fs.mkdir(output, { recursive: true });
@@ -27,7 +26,7 @@ let server, browser;
 try {
   server = spawn(process.execPath, [path.join(root, 'node_modules/vite/bin/vite.js'), '--host', '127.0.0.1', '--port', String(port), '--strictPort'], { cwd: root, stdio: 'ignore' });
   for (let i = 0; ; i++) { try { if ((await fetch(origin)).ok) break; } catch {} if (i > 100) throw new Error('Vite did not start'); await new Promise((r) => setTimeout(r, 100)); }
-  browser = await chromium.launch({ executablePath: process.env.BROWSER_EXECUTABLE || chromium.executablePath(), headless: true });
+  browser = await launchChromium();
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2, locale: 'zh-CN', reducedMotion: 'reduce' });
   await context.addInitScript((fixture) => {
     window.albumDesktopAppearance = { client: true, reduceMotion: true };

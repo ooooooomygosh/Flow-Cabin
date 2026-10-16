@@ -1,15 +1,14 @@
 /** Offline shelf/chrome regressions. Synthetic covers, muted Chromium, native window bridge mocked. */
 import assert from 'node:assert/strict';
+import { launchChromium } from './launch-browser.mjs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createRequire } from 'node:module';
 import { spawn } from 'node:child_process';
 import { hasViteLocalOrigin } from './vite-readiness.mjs';
 import { showcaseAlbums } from './showcase-albums.mjs';
 import { ROOM_SCENES } from '../src/scene-catalog.mjs';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const { chromium } = createRequire(path.join(root, 'desktop/package.json'))('playwright');
 const output = process.env.SHELF_OUTPUT || path.join(root, 'desktop/test-results/shelf-ui');
 const port = Number(process.env.SHELF_PORT || 4191), origin = `http://127.0.0.1:${port}`;
 const cover = (name, hue) => `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800"><defs><linearGradient id="sky" x2="0" y2="1"><stop stop-color="hsl(${hue} 40% 66%)"/><stop offset="1" stop-color="hsl(${hue} 30% 22%)"/></linearGradient><pattern id="grain" width="8" height="8" patternUnits="userSpaceOnUse"><path d="M0 0h4v1H0z" fill="#fff" opacity=".15"/></pattern></defs><rect width="800" height="800" fill="url(#sky)"/><circle cx="560" cy="290" r="105" fill="#f7dfb1"/><path d="M0 600 190 290 440 620 625 440 800 590v210H0Z" fill="#213936"/><path d="m140 370 50-80 74 98-75-33Z" fill="#f8efda"/><path d="M0 655q200-110 400 0t400 0v145H0Z" fill="#497b75"/><path d="M0 690h800M0 700h800M0 710h800M0 720h800" stroke="#cfdfc2" stroke-width="2"/><rect width="800" height="800" fill="url(#grain)"/><text x="52" y="105" font-family="serif" font-size="60" fill="#fff5dc">${name}</text><text x="55" y="152" font-family="sans-serif" font-size="22" letter-spacing="6" fill="#fff5dc">SYNTHETIC QA · VOL. 01</text><text x="50" y="758" font-family="sans-serif" font-size="18" letter-spacing="3" fill="#fff5dc">QUIET HOURS / SIDE A</text></svg>`)}`;
@@ -22,7 +21,7 @@ try {
   server=spawn(process.execPath,[path.join(root,'node_modules/vite/bin/vite.js'),'--host','127.0.0.1','--port',String(port),'--strictPort'],{cwd:root,env:{...process.env,FLOW_CABIN_VITE_CACHE_DIR:path.join(output,'vite-cache')},stdio:['ignore','pipe','pipe']});
   let log='';server.stdout.on('data',b=>log+=b);server.stderr.on('data',b=>log+=b);
   for(let i=0;;i++){if(server.exitCode!==null||i>300)throw new Error(`Vite startup: ${log}`);if(hasViteLocalOrigin(log,origin)&&await fetch(origin).then(r=>r.ok,()=>false))break;await new Promise(r=>setTimeout(r,100));}
-  browser=await chromium.launch({executablePath:process.env.BROWSER_EXECUTABLE||(process.env.CI?chromium.executablePath():'/usr/bin/chromium'),headless:true,args:['--no-sandbox','--mute-audio']});
+  browser = await launchChromium();
   const run=async(name,test,{native=true,dpr=1,collectionItems=items}={})=>{
     if(process.env.SHELF_FILTER&&!process.env.SHELF_FILTER.split(',').some(s=>name.includes(s)))return;
     const context=await browser.newContext({viewport:{width:1440,height:900},deviceScaleFactor:dpr,locale:'zh-CN',reducedMotion:'reduce'});

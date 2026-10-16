@@ -1,13 +1,11 @@
 /** Isolated production-bundle check; no native windows, profile, or external services. */
 import { createServer } from 'node:http';
+import { launchChromium } from './launch-browser.mjs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { createRequire } from 'node:module';
 import { verifyFullscreenStudy } from './fullscreen-study-checks.mjs';
 import { verifyQQRegression } from './qq-regression-checks.mjs';
 import { verifyAppleHandoff } from './apple-handoff-checks.mjs';
-const require = createRequire(new URL('../desktop/package.json', import.meta.url));
-const { chromium } = require('playwright');
 const root = path.resolve('dist');
 const types = { '.html': 'text/html', '.js': 'application/javascript', '.css': 'text/css', '.woff2': 'font/woff2', '.png': 'image/png', '.svg': 'image/svg+xml' };
 const server = createServer(async (req, res) => {
@@ -21,7 +19,7 @@ const server = createServer(async (req, res) => {
 let browser;
 try {
   await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
-  browser = await chromium.launch({ headless: true, executablePath: process.env.BROWSER_EXECUTABLE });
+  browser = await launchChromium();
   await verifyFullscreenStudy({ browser, origin: `http://127.0.0.1:${server.address().port}`, output: process.env.BROWSER_OUTPUT, check: name => console.log('PASS '+name) });
   await verifyQQRegression({ browser, origin: `http://127.0.0.1:${server.address().port}`, check: name => console.log('PASS '+name) });
   await verifyAppleHandoff({ browser, origin: `http://127.0.0.1:${server.address().port}`, output: process.env.BROWSER_OUTPUT, check: name => console.log('PASS '+name) });

@@ -4,17 +4,15 @@
  * BROWSER_EXECUTABLE may point to an already installed Chromium.
  */
 import assert from 'node:assert/strict';
+import { launchChromium } from './launch-browser.mjs';
 import { showcaseAlbums } from './showcase-albums.mjs';
 import { verifyOnboarding } from './onboarding-checks.mjs';
-import { createRequire } from 'node:module';
 import { spawn, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const require = createRequire(path.join(root, 'desktop/package.json'));
-const { chromium } = require('playwright');
 const output = path.resolve(process.env.SHOWCASE_OUTPUT || path.join(root, 'docs/images/showcase'));
 const evidence = path.join(root, 'desktop/test-results/product-presentation');
 const port = Number(process.env.SHOWCASE_PORT || 4183), origin = `http://127.0.0.1:${port}`;
@@ -35,7 +33,7 @@ try {
   server = spawn(process.execPath, [path.join(root, 'node_modules/vite/bin/vite.js'), '--host', '127.0.0.1', '--port', String(port), '--strictPort'], { cwd: root, stdio: ['ignore', 'pipe', 'pipe'] });
   let log = ''; server.stdout.on('data', b => log += b); server.stderr.on('data', b => log += b);
   for (let i = 0; i < 100; i++) { try { if ((await fetch(origin)).ok) break; } catch {} if (server.exitCode !== null || i === 99) throw new Error(log || 'Server timeout'); await new Promise(r => setTimeout(r, 100)); }
-  browser = await chromium.launch({ executablePath: process.env.BROWSER_EXECUTABLE || chromium.executablePath(), headless: true });
+  browser = await launchChromium();
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1, locale: 'zh-CN', reducedMotion: 'reduce' });
   await context.addInitScript(() => {
     window.albumDesktopAppearance = { client: true, reduceMotion: true };
