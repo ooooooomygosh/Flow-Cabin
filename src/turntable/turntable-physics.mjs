@@ -140,7 +140,7 @@ export function createDeckPhysics({ speed = 33 } = {}) {
           // While lowered, the groove carries the arm in small steps.
           state.arm += clamp(target - state.arm, -.25 * step, .25 * step);
           const wantLift = lowered ? 0 : 1;
-          state.lift = wantLift > state.lift ? Math.min(1, state.lift + step / MOTION.lift) : Math.max(0, state.lift - step / MOTION.lower);
+          state.lift = wantLift ? Math.min(1, state.lift + step / MOTION.lift) : Math.max(0, state.lift - step / MOTION.lower);
         }
       }
       // Touch-down: the headshell dips a pixel for a frame.
