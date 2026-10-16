@@ -135,3 +135,11 @@ test('study creation limits return the original state so forms can preserve reje
   assert.equal(addDeck(empty, '   ', T0), empty);
   assert.equal(addCountdown(empty, 'Exam', 'not-a-date'), empty);
 });
+
+test('typed and imported cards share one duplicate rule (full-width, case, spaces)', () => {
+  let state = addDeck(normalizeStudy({}), '英语');
+  const deck = state.decks[0].id;
+  state = addCards(state, deck, parseCards('window - 窗户'), T0).state;
+  assert.equal(addCards(state, deck, parseCards('ｗｉｎｄｏｗ - 全角\nWINDOW - 大写'), T0).added, 0);
+  assert.equal(previewWordImport('ｗｉｎｄｏｗ\t全角', {}, state.cards).duplicates, 1);
+});

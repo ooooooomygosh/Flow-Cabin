@@ -9,6 +9,7 @@ import { ShowroomArtwork } from './RoomArtwork';
 import { genresFor } from './record-library.mjs';
 import { trackNames } from './room-model.mjs';
 import { updateItem } from './collection-api.mjs';
+import { formatDuration } from './lib/time-format.mjs';
 
 // Turns the album's cover into a cabin-palette pixel cover (or generates one
 // from the title). Preview first; the original is kept so it can come back.
@@ -31,7 +32,7 @@ function PixelCoverTool({ item, onChanged }) {
   </>;
 }
 
-const duration = (ms) => ms > 0 ? `${Math.floor(ms / 60000)}:${String(Math.round(ms / 1000) % 60).padStart(2, '0')}` : '';
+const duration = (ms) => ms > 0 ? formatDuration(ms) : '';
 // One album: cover and vinyl, track list that plays on the deck, personal notes.
 export default function RecordCard({ item, close, onChanged, onRemove }) {
   const library = useRecordLibrary(), names = trackNames(item), genres = library ? genresFor(item, library.data) : [];
@@ -65,7 +66,7 @@ export default function RecordCard({ item, close, onChanged, onRemove }) {
         </dl>
         {names.length > 0 ? <ol className="record-card-tracks" aria-label="曲目">{names.map((name, index) => <li key={index}><button type="button" onClick={() => play(index)} title="从这一首开始播放"><span>{String(index + 1).padStart(2, '0')}</span><strong>{name}</strong><small>{duration(item.trackDetails?.[index]?.lengthMillis)}</small></button></li>)}</ol> : <p className="record-card-empty">还没有曲目资料。</p>}
         <label className="record-card-notes">我的笔记<textarea value={notes} maxLength={4000} rows={4} placeholder="第一次听的场景、最喜欢的一首、想记住的一句歌词…" onChange={(event) => { removing.current = false; setNotes(event.target.value); setSaved('dirty'); clearTimeout(timer.current); timer.current = setTimeout(saveNotes, 900); }} onBlur={saveNotes}/></label>
-        <small className="record-card-saved" role="status">{{ saving: '正在保存…', error: '保存失败，请稍后再试。', dirty: '', saved: notes ? <><Check size={13}/>已保存在这台电脑</> : '' }[saved]}</small>
+        <small className="record-card-saved" role="status">{{ saving: '正在保存…', error: <>保存失败。<button type="button" className="pixel-button is-quiet" onClick={saveNotes}>重试</button></>, dirty: '', saved: notes ? <><Check size={13}/>已保存在这台电脑</> : '' }[saved]}</small>
         <footer className="record-card-footer">
           {links.map(([label, url]) => <a key={label} href={url} target="_blank" rel="noreferrer"><External size={15}/>{label}</a>)}
           <span className="record-card-spacer"/>

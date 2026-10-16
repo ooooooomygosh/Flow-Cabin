@@ -11,11 +11,7 @@ export const PLAYLIST_SOURCES = {
 export const PLAYLIST_TRACK_LIMIT = 5000;
 const clean = (value, max = 160) => String(value ?? '').replace(/[\x00-\x1f\x7f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max);
 
-export function formatDuration(millis) {
-  const total = Math.max(0, Math.round((Number(millis) || 0) / 1000));
-  const hours = Math.floor(total / 3600), minutes = Math.floor(total / 60) % 60, seconds = total % 60;
-  return hours ? `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}` : `${minutes}:${String(seconds).padStart(2, '0')}`;
-}
+export { formatDuration } from './lib/time-format.mjs';
 export function totalDuration(tracks) {
   const millis = (tracks || []).reduce((sum, track) => sum + (Number(track?.duration) || 0), 0);
   if (!millis) return '';

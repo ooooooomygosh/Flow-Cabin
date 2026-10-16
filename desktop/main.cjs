@@ -3,7 +3,7 @@
 const { app, BrowserWindow, WebContentsView, Menu, Tray, dialog, ipcMain, clipboard, shell, protocol, screen, net, safeStorage, nativeImage, powerSaveBlocker, globalShortcut, powerMonitor } = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
-const { SITE_ORIGIN, SHELL_URL, isSiteUrl, isShellUrl, isExternalUrl, safeSavedWindow, localDownloadType } = require('./policy.cjs');
+const { SITE_ORIGIN, SHELL_URL, isSiteUrl, isShellUrl, isExternalUrl, safeSavedWindow, localDownloadType, saveDialog } = require('./policy.cjs');
 const { createQQMusic } = require('./qq-music.cjs');
 const { createSiteRouter } = require('./site-router.cjs');
 const { DEFAULT_SETTINGS, normalizeSettings, appearanceScript, listSystemFonts, setSettingsVisibility } = require('./settings.cjs');
@@ -325,7 +325,8 @@ async function wireRemoteView() {
   session.on('will-download', (event, item, source) => {
     const type = source === contents && isSiteUrl(contents.getURL()) && localDownloadType({ url:item.getURL(), filename:item.getFilename(), bytes:item.getTotalBytes(), mimeType:item.getMimeType() });
     if (!type) { event.preventDefault(); return; }
-    item.setSaveDialogOptions({ title:type === 'tsv' ? '保存词书模板' : '保存专辑墙', defaultPath:path.join(app.getPath('downloads'), path.basename(item.getFilename())), filters:[{ name:type === 'tsv' ? '词书模板' : type === 'png' ? 'PNG 图片' : '专辑墙工程', extensions:[type] }] });
+    const dialog = saveDialog(type);
+    item.setSaveDialogOptions({ title:dialog.title, defaultPath:path.join(app.getPath('downloads'), path.basename(item.getFilename())), filters:[{ name:dialog.filter, extensions:[dialog.extension] }] });
   });
   // Request URLs, tokens and room identifiers are intentionally not written to logs.
   session.webRequest.onHeadersReceived({ urls: [`${SITE_ORIGIN}/*`] }, (details, callback) => {

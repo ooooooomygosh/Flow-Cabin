@@ -30,10 +30,19 @@ function isExternalUrl(value) {
 // Keep downloads local and small; only the named study template gains TSV.
 function localDownloadType({ url, filename, bytes, mimeType }) {
   if (!String(url).startsWith(`blob:${SITE_ORIGIN}/`) || !Number.isFinite(bytes) || bytes < 0) return null;
+  if (/^FlowCabin-backup-\d{8}\.json$/.test(filename) && bytes <= 64 * 1024 * 1024) return 'backup';
   if (/\.(png|json)$/i.test(filename) && bytes <= 64 * 1024 * 1024) return /\.png$/i.test(filename) ? 'png' : 'json';
   if (filename === '小屋词书模板.tsv' && mimeType === 'text/tab-separated-values' && bytes <= 4096) return 'tsv';
   return null;
 }
+// The native save dialog's wording per allowed download.
+const SAVE_DIALOGS = Object.freeze({
+  backup: { title: '保存备份', filter: '心流小屋备份', extension: 'json' },
+  json: { title: '保存专辑墙工程', filter: '专辑墙工程', extension: 'json' },
+  png: { title: '保存专辑墙图片', filter: 'PNG 图片', extension: 'png' },
+  tsv: { title: '保存词书模板', filter: '词书模板', extension: 'tsv' }
+});
+const saveDialog = (type) => SAVE_DIALOGS[type] || null;
 
 function safeSavedWindow(value, workArea) {
   const width = Math.min(workArea.width, Math.max(Math.min(900, workArea.width), Math.round(Number(value?.width) || workArea.width * 0.9)));
@@ -46,4 +55,4 @@ function safeSavedWindow(value, workArea) {
   return { width, height, ...(visible ? { x: Math.max(workArea.x, Math.min(x, workArea.x + workArea.width - width)), y: Math.max(workArea.y, Math.min(y, workArea.y + workArea.height - height)) } : {}) };
 }
 
-module.exports = { SITE_ORIGIN, SHELL_ORIGIN, SHELL_URL, isSiteUrl, isShellUrl, isExternalUrl, safeSavedWindow, localDownloadType };
+module.exports = { SITE_ORIGIN, SHELL_ORIGIN, SHELL_URL, isSiteUrl, isShellUrl, isExternalUrl, safeSavedWindow, localDownloadType, saveDialog };

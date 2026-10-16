@@ -2,12 +2,11 @@ import React, { useEffect, useRef, useState } from 'react';
 import { X, SpeakerWave, SpeakerOff, Loading, Music2, RepeatPixel, RepeatOnePixel, ShufflePixel, PlayPixel, PausePixel, PreviousPixel, NextPixel, EjectPixel } from '../icons';
 import { trackNames } from '../room-model.mjs';
 import { displayTitle } from '../display-title.mjs';
+import { formatSeconds } from '../lib/time-format.mjs';
 import './player.css';
 import './pocket-player.css';
 
-const clock = (seconds) => { const value = Math.max(0, Math.floor(Number(seconds) || 0)); return `${Math.floor(value / 60)}:${String(value % 60).padStart(2, '0')}`; };
 const REPEAT_LABEL = { off: '顺序播放', all: '整张循环', one: '单曲循环' };
-export const QUICK_SOURCES = [['auto', '自动匹配'], ['local', '本地音乐'], ['qq', 'QQ 音乐'], ['netease', '网易云']];
 
 // The deck's transport, built like a pocket music player: a click wheel
 // (待播 on top, previous / next at the sides, eject at the bottom, play in the
@@ -19,7 +18,7 @@ export function PocketProgress({ playback }) {
   const duration = playback?.duration || 0, position = Math.min(playback?.position || 0, duration || 1);
   return <div className="pocket-progress">
     <input type="range" aria-label="音乐播放进度" min="0" max={duration || 1} step=".1" value={position} disabled={!duration} onChange={(event) => playback.seek(Number(event.target.value))} style={{ '--player-progress': `${duration ? Math.min(100, position / duration * 100) : 0}%` }}/>
-    <small><span>{clock(position)}</span><span>-{clock(Math.max(0, duration - position))}</span></small>
+    <small><span>{formatSeconds(position)}</span><span>-{formatSeconds(Math.max(0, duration - position))}</span></small>
   </div>;
 }
 export default function PlayerControls({ item, items = [], provider, spinning, trackIndex, track, toggle, eject, playback, player, setProvider }) {

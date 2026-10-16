@@ -347,7 +347,7 @@ try {
   page = await context.newPage(); await page.setViewportSize({ width: 300, height: 64 }); await page.goto(origin + '/mini.html');
   await page.locator('.mini-bar').waitFor(); await page.getByText('雪夜 · 预览').waitFor();
   assert.equal(await page.locator('.mini-actions').evaluate(e => getComputedStyle(e).opacity), '0', 'controls hidden until hover');
-  await page.hover('.mini-bar'); await page.getByRole('button', { name: '上一首' }).click(); await page.getByRole('button', { name: '暂停' }).click(); await page.getByRole('button', { name: '下一首' }).click(); await page.getByRole('button', { name: '浮出桌面' }).click();
+  await page.hover('.mini-bar'); await page.getByRole('button', { name: '上一首' }).click(); await page.getByRole('button', { name: '暂停', exact: true }).click(); await page.getByRole('button', { name: '下一首' }).click(); await page.getByRole('button', { name: '浮出桌面' }).click();
   await page.locator('.mini-bar').dblclick({ position: { x: 4, y: 4 } });
   assert.deepEqual(await page.evaluate(() => window.__miniCalls), ['player:previous', 'player:toggle', 'player:next', 'exit', 'exit']); await screenshot('mini-player');
   check('mini-player-hover-controls-and-double-click-exit'); await page.close();

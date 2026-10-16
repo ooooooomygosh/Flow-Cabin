@@ -1,6 +1,6 @@
 // Original short teaching notes written for Flow Cabin; no scraped dictionary,
 // examination list, pronunciation audio, or third-party quotations are bundled.
-import { addCards, dayKey, LIMITS } from './study-model.mjs';
+import { addCards, cardKey, dayKey, LIMITS } from './study-model.mjs';
 const book = (id, name, description, rows) => Object.freeze({ id: `book-${id}`, name, description, source: '小屋原创入门词书 · 不是考试完整词库', words: rows.map(([front, back]) => ({ front, back })) });
 export const WORD_BOOKS = Object.freeze([
   book('daily', '日常小事', '从家、食物和天气开始。', [['morning', 'n. 早晨；一天开始的时段'], ['window', 'n. 窗户；房间采光通风的开口'], ['bread', 'n. 面包'], ['water', 'n. 水'], ['quiet', 'adj. 安静的；声音很少的'], ['garden', 'n. 花园；栽种花草的地方']]),
@@ -19,14 +19,14 @@ export function nextBookCard(state, id, now = Date.now()) {
   if (!book || !state.decks.some(deck => deck.id === id) || (state.log[dayKey(now)]?.learned || 0) >= state.newPerDay) return state;
   const cards = state.cards.filter(card => card.deckId === id);
   if (cards.some(card => !card.memory)) return state;
-  const existing = new Set(cards.map(card => card.front.toLowerCase()));
-  const word = book.words.find(word => !existing.has(word.front.toLowerCase()));
+  const existing = new Set(cards.map(card => cardKey(card.front)));
+  const word = book.words.find(word => !existing.has(cardKey(word.front)));
   if (!word) return state;
   const result = addCards(state, id, [word], now);
   return result.added ? result.state : state;
 }
 export function previewWordImport(text, { format = 'tsv', frontColumn = 0, backColumn = 1, header = false } = {}, existing = []) {
-  const seen = new Set(existing.map(card => card.front.normalize('NFKC').trim().toLowerCase()));
+  const seen = new Set(existing.map(card => cardKey(card.front)));
   let rows;
   try {
     if (format === 'json') { rows = JSON.parse(text); if (!Array.isArray(rows)) throw new Error(); }
@@ -35,7 +35,7 @@ export function previewWordImport(text, { format = 'tsv', frontColumn = 0, backC
   let duplicates = 0, errors = 0; const cards = [];
   for (const row of rows) {
     if (!row || typeof row.front !== 'string' || typeof row.back !== 'string' || !row.front.trim() || !row.back.trim() || row.front.length > LIMITS.side || row.back.length > LIMITS.side) { errors++; continue; }
-    const key = row.front.normalize('NFKC').trim().toLowerCase();
+    const key = cardKey(row.front);
     if (seen.has(key)) { duplicates++; continue; }
     seen.add(key); cards.push({ front: row.front.trim(), back: row.back.trim() });
   }

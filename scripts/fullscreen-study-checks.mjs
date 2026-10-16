@@ -65,7 +65,7 @@ export async function verifyFullscreenStudy({ browser, origin, output, check }) 
     assert.equal(await page.evaluate(() => window.__commands.some(x => x.endsWith('/fullscreen-exit'))), false);
     await page.keyboard.press('Escape'); assert.match(await page.evaluate(() => window.__commands.at(-1)), /fullscreen-exit$/);
     await state(false); check('escape-closes-dialog-then-immersive-then-requests-native-exit');
-    await openStudy(); await page.getByLabel('词书每日新词').selectOption('5');
+    await openStudy(); await page.getByLabel('词书每日新词').fill('5'); assert.equal((await studyState()).newPerDay, 5); assert.equal(await page.getByText('每天新卡').count(), 0, 'one daily-new control');
     await page.getByText('预览 6 个词', { exact: true }).click(); await shot('study-book-library');
     await page.getByRole('button', { name: '开始学习 / 复习', exact: true }).click();
     await page.getByRole('button', { name: '翻到背面（空格）', exact: true }).waitFor();

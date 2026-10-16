@@ -71,13 +71,15 @@ export function parseCards(input) {
     return { front: text(parts[0], LIMITS.side), back: text(parts.slice(1).join(' / '), LIMITS.side) };
   }).filter((card) => card.front);
 }
+// One duplicate rule for typed, pasted and imported cards: ｗｉｎｄｏｗ, Window and window are the same card.
+export const cardKey = (front) => String(front || '').normalize('NFKC').trim().toLowerCase();
 export function addCards(state, deckId, cards, now = Date.now()) {
   if (!state.decks.some((deck) => deck.id === deckId)) return { state, added: 0 };
-  const existing = new Set(state.cards.filter((card) => card.deckId === deckId).map((card) => card.front.toLowerCase()));
+  const existing = new Set(state.cards.filter((card) => card.deckId === deckId).map((card) => cardKey(card.front)));
   const fresh = [];
   for (const card of cards) {
     if (state.cards.length + fresh.length >= LIMITS.cards) break;
-    const key = card.front.toLowerCase(); if (existing.has(key)) continue; existing.add(key);
+    const key = cardKey(card.front); if (existing.has(key)) continue; existing.add(key);
     fresh.push({ id: uid('card'), deckId, front: card.front, back: card.back, createdAt: now + fresh.length, memory: null });
   }
   return { state: { ...state, cards: [...state.cards, ...fresh] }, added: fresh.length };
