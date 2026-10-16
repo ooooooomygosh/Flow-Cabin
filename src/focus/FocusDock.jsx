@@ -110,7 +110,7 @@ export default function FocusDock({ open, close, tab, setTab }) {
   const tabId = useId(), focus = useFocusState(), study = useStudy();
   useEffect(() => {
     if (!open) return;
-    const escape = event => { if (event.key === 'Escape' && !event.repeat && !event.defaultPrevented && !document.querySelector('dialog[open], .listening-corner')) { event.preventDefault(); close(); document.querySelector('.focus-badge')?.focus(); } };
+    const escape = event => { if (event.key === 'Escape' && !event.repeat && !event.defaultPrevented && !document.querySelector('dialog[open]')) { event.preventDefault(); close(); document.querySelector('.focus-badge')?.focus(); } };
     document.addEventListener('keydown', escape);
     return () => document.removeEventListener('keydown', escape);
   }, [open, close]);
