@@ -94,7 +94,7 @@ try {
   },{native:false});
   await run('chrome-browser-fullscreen-denial-and-retry',async page=>{
     await page.evaluate(()=>{window.__requestFullscreen=document.documentElement.requestFullscreen;document.documentElement.requestFullscreen=()=>Promise.reject(new DOMException('Synthetic denial','NotAllowedError'));});
-    await page.getByRole('button',{name:'进入全屏模式',exact:true}).click();await page.getByRole('status').filter({hasText:'无法切换全屏'}).waitFor();assert.equal(await page.evaluate(()=>Boolean(document.fullscreenElement)),false);await shot(page,'browser-fullscreen-denied');
+    await page.getByRole('button',{name:'进入全屏模式',exact:true}).click();await page.getByRole('alert').filter({hasText:'无法切换全屏'}).waitFor();assert.equal(await page.evaluate(()=>Boolean(document.fullscreenElement)),false);await shot(page,'browser-fullscreen-denied');
     await page.evaluate(()=>{document.documentElement.requestFullscreen=window.__requestFullscreen;});await page.getByRole('button',{name:'进入全屏模式',exact:true}).click();await page.waitForFunction(()=>Boolean(document.fullscreenElement));await page.getByRole('button',{name:'退出全屏模式',exact:true}).click();await page.waitForFunction(()=>!document.fullscreenElement);
   },{native:false});
 } finally {
