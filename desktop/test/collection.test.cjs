@@ -61,7 +61,10 @@ test('backup restore keeps ids and shelf order, and importing twice adds nothing
   assert.equal(byTitle['Manual B'].id, 'album-newest'); assert.equal(byTitle['Manual A'].addedAt, '2023-01-01T00:00:00.000Z');
   assert.notEqual(byTitle.Clash.id, taken.id); assert.deepEqual(first.ids, { [taken.id]: byTitle.Clash.id }, 'a clashing id is reported so styles can follow it');
   assert.match(byTitle['Odd id'].id, /^album-[a-f\d]{16}$/);
-  assert.deepEqual(list.map((item) => item.title), ['QQ', 'Already here', 'Manual B', 'Manual A', 'Clash', 'Odd id'], 'newest addedAt first');
+  // 'QQ' (invalid date → now) and 'Already here' (added now) may share a millisecond, so only their pair is fixed.
+  const titles = list.map((item) => item.title);
+  assert.deepEqual(titles.slice(0, 2).sort(), ['Already here', 'QQ']); assert.deepEqual(titles.slice(2), ['Manual B', 'Manual A', 'Clash', 'Odd id'], 'newest addedAt first');
+  assert.ok(Date.parse(byTitle.QQ.addedAt) >= Date.parse(byTitle['Already here'].addedAt), 'an undated backup item counts as added now');
   const again = store.importItems([...backup, { id: 'album-copy', title: 'manual b', artist: 'ARTIST' }]);
   assert.equal(again.added, 0); assert.equal(again.total, 6); assert.equal(again.ids['album-copy'], 'album-newest');
 });
