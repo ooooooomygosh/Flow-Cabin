@@ -1,5 +1,5 @@
 import React, { useId, useRef } from 'react';
-import { rovingIndex } from './roving.mjs';
+import { rovingIndex } from './roving-keys.mjs';
 
 // items: [{ id, label, icon?, title?, disabled? }]. Only the selected entry is in
 // the Tab order; arrows/Home/End move the selection and the focus together.

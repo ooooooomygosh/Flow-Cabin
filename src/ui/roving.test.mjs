@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { rovingIndex } from './roving.mjs';
+import { rovingIndex } from './roving-keys.mjs';
 
 test('arrows wrap both ways, Home/End jump', () => {
   assert.equal(rovingIndex('ArrowRight', 2, 3), 0);
