@@ -42,7 +42,28 @@ test('adding, de-duplicating, editing notes and removing albums persist to disk'
   assert.equal(reloaded.length, 1); assert.equal(reloaded[0].notes, '夏天的夜里'); assert.equal(reloaded[0].id, first.item.id); assert.notEqual(reloaded[0].addedAt, 'x');
   store.remove(first.item.id); assert.equal(createCollectionStore({ directory }).list().length, 0);
   assert.throws(() => store.remove('missing')); assert.throws(() => store.add({ title: '', artist: 'x' }));
-  assert.deepEqual(store.importItems([{ title: 'A', artist: 'B' }, { title: '', artist: '' }, { title: 'C', artist: 'D', externalIds: { localAlbum: '0123456789abcdef' } }]), { added: 2, total: 2 });
+  assert.deepEqual(store.importItems([{ title: 'A', artist: 'B' }, { title: '', artist: '' }, { title: 'C', artist: 'D', externalIds: { localAlbum: '0123456789abcdef' } }]), { added: 2, total: 2, ids: {} });
+});
+
+test('backup restore keeps ids and shelf order, and importing twice adds nothing', t => {
+  const directory = temp(t), store = createCollectionStore({ directory });
+  const taken = store.add({ title: 'Already here', artist: 'Someone' }).item;
+  const backup = [
+    { id: 'album-newest', title: 'Manual B', artist: 'Artist', addedAt: '2024-03-01T00:00:00.000Z' },
+    { id: 'album-older', title: 'Manual A', artist: 'Artist', addedAt: '2023-01-01T00:00:00.000Z' },
+    { id: taken.id, title: 'Clash', artist: 'Other', addedAt: '2022-01-01T00:00:00.000Z' },
+    { id: 'album-qq', title: 'QQ', artist: 'Q', externalIds: { qqAlbumMid: '001abc' }, addedAt: 'not a date' },
+    { id: '../bad id', title: 'Odd id', artist: 'Z', addedAt: '2021-01-01T00:00:00.000Z' }
+  ];
+  const first = store.importItems(backup);
+  assert.equal(first.added, 5); assert.equal(first.total, 6);
+  const list = createCollectionStore({ directory }).list(), byTitle = Object.fromEntries(list.map((item) => [item.title, item]));
+  assert.equal(byTitle['Manual B'].id, 'album-newest'); assert.equal(byTitle['Manual A'].addedAt, '2023-01-01T00:00:00.000Z');
+  assert.notEqual(byTitle.Clash.id, taken.id); assert.deepEqual(first.ids, { [taken.id]: byTitle.Clash.id }, 'a clashing id is reported so styles can follow it');
+  assert.match(byTitle['Odd id'].id, /^album-[a-f\d]{16}$/);
+  assert.deepEqual(list.map((item) => item.title), ['QQ', 'Already here', 'Manual B', 'Manual A', 'Clash', 'Odd id'], 'newest addedAt first');
+  const again = store.importItems([...backup, { id: 'album-copy', title: 'manual b', artist: 'ARTIST' }]);
+  assert.equal(again.added, 0); assert.equal(again.total, 6); assert.equal(again.ids['album-copy'], 'album-newest');
 });
 
 test('item fields are bounded and unsafe artwork is dropped', () => {
