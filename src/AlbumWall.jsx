@@ -2,21 +2,22 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Grid3X3, Search, X, Plus, Check, Download, Up, Down, Trash2, External, Loading } from './icons';
 import { useDesktopAppearance } from './desktop-client';
-import { albumKey, normalizeWall, orderAlbums, readWall, WALL_STORAGE_KEY } from './album-wall-model.mjs';
-import { downloadBlob, loadWallCover, paintWall } from './album-wall-canvas.mjs';
+import { wallKey, normalizeWall, orderAlbums, readWall, WALL_STORAGE_KEY } from './album-wall-model.mjs';
+import { downloadBlob, loadWallCover, paintWall, releaseWallCovers } from './album-wall-canvas.mjs';
 import { buildSearchInput } from './music-search.mjs';
 
-function lightweight(item) { return { type: 'album', id: item.id || albumKey(item), title: item.title, artist: item.artist || '未知艺人', cover: item.cover || '', year: item.year || '', externalIds: item.externalIds || {} }; }
+function lightweight(item) { return { type: 'album', id: item.id || wallKey(item), title: item.title, artist: item.artist || '未知艺人', cover: item.cover || '', year: item.year || '', externalIds: item.externalIds || {} }; }
 export default function AlbumWall({ items, onClose }) {
   const saved = useRef(readWall(localStorage)), appearance = useDesktopAppearance();
+  useEffect(() => releaseWallCovers, []); // closing the wall frees its full-size cover bitmaps
   const [options, setOptions] = useState(saved.current.options), [selected, setSelected] = useState(saved.current.selected);
   const [source, setSource] = useState('library'), [query, setQuery] = useState(''), [provider, setProvider] = useState('qq'), [results, setResults] = useState([]), [searching, setSearching] = useState(false);
   const [notice, setNotice] = useState(''), [busy, setBusy] = useState(false), [painting, setPainting] = useState(false), [metrics, setMetrics] = useState(null);
   const canvas = useRef(null), overlay = useRef(null), close = useRef(null), searchRequest = useRef(null), paintRevision = useRef(0);
   const ordered = useMemo(() => orderAlbums(selected, options.sort), [selected, options.sort]);
-  const selectedKeys = useMemo(() => new Map(ordered.map((item, index) => [albumKey(item), index + 1])), [ordered]);
+  const selectedKeys = useMemo(() => new Map(ordered.map((item, index) => [wallKey(item), index + 1])), [ordered]);
   const library = useMemo(() => {
-    const seen = new Set(); return items.filter((item) => { if (item.type !== 'album' || seen.has(albumKey(item))) return false; seen.add(albumKey(item)); return `${item.title} ${item.artist}`.toLocaleLowerCase().includes(query.toLocaleLowerCase()); });
+    const seen = new Set(); return items.filter((item) => { if (item.type !== 'album' || seen.has(wallKey(item))) return false; seen.add(wallKey(item)); return `${item.title} ${item.artist}`.toLocaleLowerCase().includes(query.toLocaleLowerCase()); });
   }, [items, query]);
   const visible = source === 'library' ? library : results;
   useEffect(() => {
@@ -42,7 +43,7 @@ export default function AlbumWall({ items, onClose }) {
     const revision = ++paintRevision.current; setPainting(true);
     const timer = setTimeout(async () => {
       try {
-        const images = await Promise.all(ordered.map((item) => loadWallCover(item.cover, appearance.client)));
+        const images = await Promise.all(ordered.map((item) => loadWallCover(item.cover)));
         const offscreen = document.createElement('canvas'); const result = await paintWall(offscreen, ordered, options, images, 1);
         if (revision !== paintRevision.current || !canvas.current) return;
         canvas.current.width = offscreen.width; canvas.current.height = offscreen.height; canvas.current.getContext('2d').drawImage(offscreen, 0, 0);
@@ -50,11 +51,11 @@ export default function AlbumWall({ items, onClose }) {
       } catch (error) { if (revision === paintRevision.current) { setNotice(error.message); setPainting(false); } }
     }, 80);
     return () => { clearTimeout(timer); paintRevision.current++; };
-  }, [ordered, options, appearance.client]);
+  }, [ordered, options]);
   const update = (patch) => setOptions((current) => normalizeWall({ ...current, ...patch }));
   const toggle = (item) => {
-    const key = albumKey(item);
-    setSelected((current) => current.some((album) => albumKey(album) === key) ? current.filter((album) => albumKey(album) !== key) : current.length >= 100 ? (setNotice('最多选择 100 张专辑。'), current) : [...current, lightweight(item)]);
+    const key = wallKey(item);
+    setSelected((current) => current.some((album) => wallKey(album) === key) ? current.filter((album) => wallKey(album) !== key) : current.length >= 100 ? (setNotice('最多选择 100 张专辑。'), current) : [...current, lightweight(item)]);
   };
   const move = (index, direction) => { setSelected((current) => { const next = [...orderAlbums(current, options.sort)], target = index + direction; if (target >= 0 && target < next.length) [next[index], next[target]] = [next[target], next[index]]; return next; }); update({ sort: 'selection' }); };
   const search = async (event) => {
@@ -74,7 +75,7 @@ export default function AlbumWall({ items, onClose }) {
   const download = async () => {
     if (!ordered.length) return; setBusy(true); setNotice('正在生成高清图片…');
     try {
-      const images = await Promise.all(ordered.map((item) => loadWallCover(item.cover, appearance.client)));
+      const images = await Promise.all(ordered.map((item) => loadWallCover(item.cover)));
       const image = document.createElement('canvas'); const result = await paintWall(image, ordered, options, images, options.scale);
       const blob = await new Promise((resolve) => image.toBlob(resolve, 'image/png')); if (!blob) throw new Error('无法生成图片，请降低下载倍率重试。');
       downloadBlob(blob, `Album-Wall-${(options.title || 'Collection').replace(/[<>:"/\\|?*\x00-\x1f]/g, '').slice(0, 60)}.png`);
@@ -92,13 +93,13 @@ export default function AlbumWall({ items, onClose }) {
     <div className="wall-workspace">
       <aside className="wall-library" aria-label="专辑选择"><div className="wall-source-tabs"><button className={source === 'library' ? 'active' : ''} onClick={() => { searchRequest.current?.abort(); setSource('library'); setSearching(false); setQuery(''); }}>专辑库</button><button className={source === 'online' ? 'active' : ''} onClick={() => { setSource('online'); setQuery(''); }}>搜索添加</button></div>
         <form className="wall-search" onSubmit={search}><label><Search size={17}/><input aria-label="专辑墙搜索" placeholder={source === 'library' ? '筛选歌手或专辑' : '歌手、专辑或 QQ 链接'} value={query} onChange={(event) => setQuery(event.target.value)}/></label>{source === 'online' && <div><select aria-label="专辑墙搜索来源" value={provider} onChange={(event) => setProvider(event.target.value)}><option value="qq">QQ 音乐</option><option value="itunes">iTunes</option></select><button type="submit" disabled={!query.trim() || searching}>{searching ? '搜索中…' : '搜索'}</button></div>}</form>
-        <div className="wall-library-tools"><small>点击右上角添加，数字代表排列顺序。</small><button onClick={() => setSelected((current) => { const keys = new Set(current.map(albumKey)); return [...current, ...visible.filter((item) => !keys.has(albumKey(item))).map(lightweight)].slice(0, 100); })} disabled={!visible.length}>批量添加当前列表</button></div>
-        <div className="wall-library-grid">{visible.map((item) => { const order = selectedKeys.get(albumKey(item)); return <button key={albumKey(item)} className={`wall-library-album ${order ? 'selected' : ''}`} aria-label={`${order ? '取消选择' : '添加'} ${item.artist} 的 ${item.title}`} aria-pressed={Boolean(order)} onClick={() => toggle(item)}><span className="wall-cover">{item.cover ? <img src={item.cover} alt={`${item.title} 封面`} loading="lazy"/> : <Grid3X3 size={32}/>}</span><span className="wall-add-order">{order || <Plus size={16}/>}</span><strong>{item.title}</strong><small>{item.artist}</small></button>; })}</div>
+        <div className="wall-library-tools"><small>点击右上角添加，数字代表排列顺序。</small><button onClick={() => setSelected((current) => { const keys = new Set(current.map(wallKey)); return [...current, ...visible.filter((item) => !keys.has(wallKey(item))).map(lightweight)].slice(0, 100); })} disabled={!visible.length}>批量添加当前列表</button></div>
+        <div className="wall-library-grid">{visible.map((item) => { const order = selectedKeys.get(wallKey(item)); return <button key={wallKey(item)} className={`wall-library-album ${order ? 'selected' : ''}`} aria-label={`${order ? '取消选择' : '添加'} ${item.artist} 的 ${item.title}`} aria-pressed={Boolean(order)} onClick={() => toggle(item)}><span className="wall-cover">{item.cover ? <img src={item.cover} alt={`${item.title} 封面`} loading="lazy"/> : <Grid3X3 size={32}/>}</span><span className="wall-add-order">{order || <Plus size={16}/>}</span><strong>{item.title}</strong><small>{item.artist}</small></button>; })}</div>
         {!visible.length && <p className="wall-empty">{searching ? '正在寻找封面…' : source === 'library' ? '这里没有匹配的专辑，可用“搜索添加”寻找。' : '搜索一张专辑，把封面加入海报。'}</p>}
       </aside>
       <main className="wall-preview"><div className="wall-preview-bar"><span>海报预览</span><small>{painting ? '正在更新…' : metrics ? `${metrics.width} × ${metrics.height}${metrics.missing ? ` · ${metrics.missing} 张封面未加载` : ''}` : ''}</small></div><div className="wall-canvas-wrap"><canvas ref={canvas} aria-label="专辑墙图片预览"/>{!selected.length && <div className="wall-preview-empty"><Grid3X3 size={42}/><strong>从左侧选择第一张专辑</strong><span>添加顺序就是你的榜单顺序。</span></div>}</div><p className="wall-notice" role="status">{notice || '草稿自动保存在本机。下载图片和预览使用相同排版。'}</p>
         <div className="wall-selected-heading"><strong>已选择 · {selected.length}</strong><button disabled={!selected.length} onClick={() => setSelected([])}><Trash2 size={15}/>清空</button></div>
-        <ol className="wall-selected-list">{ordered.map((item, index) => <li key={albumKey(item)}><span>{String(index + 1).padStart(2, '0')}</span><div><strong>{item.title}</strong><small>{item.artist}</small></div><button disabled={index === 0} aria-label={`将 ${item.title} 向前移动`} onClick={() => move(index, -1)}><Up size={17}/></button><button disabled={index === selected.length - 1} aria-label={`将 ${item.title} 向后移动`} onClick={() => move(index, 1)}><Down size={17}/></button><button aria-label={`移除 ${item.title}`} onClick={() => toggle(item)}><X size={17}/></button></li>)}</ol>
+        <ol className="wall-selected-list">{ordered.map((item, index) => <li key={wallKey(item)}><span>{String(index + 1).padStart(2, '0')}</span><div><strong>{item.title}</strong><small>{item.artist}</small></div><button disabled={index === 0} aria-label={`将 ${item.title} 向前移动`} onClick={() => move(index, -1)}><Up size={17}/></button><button disabled={index === selected.length - 1} aria-label={`将 ${item.title} 向后移动`} onClick={() => move(index, 1)}><Down size={17}/></button><button aria-label={`移除 ${item.title}`} onClick={() => toggle(item)}><X size={17}/></button></li>)}</ol>
       </main>
       <aside className="wall-options" aria-label="海报设置"><h2>排版设置</h2>
         <label>排列方法<select aria-label="排列方法" value={options.layout} onChange={(event) => update({ layout: event.target.value })}><option value="grid">等大网格</option><option value="ranked">榜单 · 前排大封面</option></select></label>
