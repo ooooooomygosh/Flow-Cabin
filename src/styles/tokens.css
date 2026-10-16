@@ -111,6 +111,8 @@ html[data-desktop-reduce-motion='true'] *::after { animation: none !important; t
   --px-ease-smooth: cubic-bezier(.2, .8, .2, 1); /* only for opacity/large panels */
   /* z table (inside .cabin-room): pet-with-bubble lifts above the console, under the dock/HUD */
   --z-scene: 0; --z-props: 10; --z-room-console: 10; --z-room-pet: 22; --z-hud: 20; --z-titlebar: 30; --z-chrome: 90; --z-overlay: 80; --z-toast: 100;
+  /* modal widths (Dialog size=sm|md|lg|xl); modals live in the top layer, above every --z-* */
+  --dialog-sm: 440px; --dialog-md: 580px; --dialog-lg: 920px; --dialog-xl: 1040px;
 }
 * { box-sizing: border-box; }
 /* Form controls take the surrounding type; a feature may still size its own control. */

@@ -25,7 +25,7 @@ const ROOM = 'local-room';
   await manager.getByLabel('新唱片盒名称').fill('最爱'); await manager.getByRole('button', { name: '新建唱片盒', exact: true }).click();
   await manager.getByRole('checkbox', { name: `唱片盒包含 ${items[0].title}`, exact: true }).check();
   await manager.screenshot({ path: path.join(output, 'record-boxes.png') });
-  await manager.getByRole('button', { name: '完成整理', exact: true }).click();
+  await manager.getByRole('button', { name: '完成', exact: true }).click();
   const boxes = (await saved()).rooms[ROOM].boxes;
   assert.equal(boxes.length, 2); assert.equal(boxes[0].name, '周末唱片');
   await site.getByLabel('筛选唱片盒').selectOption(boxes[0].id); assert.equal(await site.locator('.room-record').count(), 2);
@@ -58,7 +58,7 @@ const ROOM = 'local-room';
   await filters.click(); await site.getByRole('button', { name: '管理唱片盒', exact: true }).click();
   await manager.getByRole('button', { name: '最爱', exact: false }).click();
   await manager.getByRole('button', { name: '删除这个唱片盒' }).click(); await manager.getByRole('button', { name: '确认删除唱片盒' }).click();
-  await manager.getByRole('button', { name: '完成整理' }).click();
+  await manager.getByRole('button', { name: '完成', exact: true }).click();
   assert.equal(await site.locator('.room-record').count(), 12); assert.equal((await saved()).rooms[ROOM].boxes.length, 1);
   check('delete-box-keeps-the-shelf');
 
