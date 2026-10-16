@@ -21,10 +21,10 @@ html, body, #root { margin: 0; height: 100%; background: transparent; overflow: 
 .mini-track { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--px-ink); }
 .mini-row { display: grid; min-width: 0; }
 .mini-row > * { grid-area: 1 / 1; }
-.mini-status { display: flex; align-items: center; gap: 6px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--px-ink-dim); transition: opacity var(--px-dur-fast) steps(2, end); }
+.mini-status { pointer-events: none; display: flex; align-items: center; gap: 6px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--px-ink-dim); transition: opacity var(--px-dur-fast) steps(2, end); }
 .mini-led { flex: none; width: 4px; height: 4px; background: var(--px-ink-muted); }
 .mini-bar.is-playing .mini-led { background: var(--px-good); }
-.mini-actions { display: flex; align-items: center; gap: 2px; opacity: 0; transition: opacity var(--px-dur-fast) steps(2, end); }
+.mini-actions { position: relative; z-index: 1; display: flex; align-items: center; gap: 2px; opacity: 0; transition: opacity var(--px-dur-fast) steps(2, end); }
 .mini-bar:hover .mini-actions, .mini-bar:focus-within .mini-actions { opacity: 1; }
 .mini-bar:hover .mini-status, .mini-bar:focus-within .mini-status { opacity: 0; }
 .mini-actions button { display: grid; place-items: center; min-width: var(--px-hit); min-height: var(--px-hit); padding: 2px 4px; color: var(--px-ink); background: var(--px-surface-2); border: 2px solid var(--px-shadow); box-shadow: inset 2px 2px 0 #ffffff14; font: inherit; cursor: pointer; }

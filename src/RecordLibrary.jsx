@@ -7,6 +7,7 @@ import { radialSplatterLayers } from './vinyl-splatter.mjs';
 import PixelRecord from './ui/PixelRecord';
 import RecordSleeve from './ui/RecordSleeve';
 import { sleeveTone } from './player/pixel-cover.mjs';
+import { liftLabel } from './scene/deck-sprite.mjs';
 
 const LibraryContext = createContext(null);
 export function RecordLibraryProvider({ userId, roomId, children, initialData, readOnly = false }) {
@@ -59,7 +60,7 @@ export function VinylDisc({ item, value, className = '' }) {
 // library, label in the cover's colour (or the generated sleeve's ink when coverless).
 export function PixelVinyl({ item, value, className = '' }) {
   const style = useRecordStyle(item, value), cover = useCoverColour(item?.cover);
-  const label = item && !item.cover ? sleeveTone(item) : cover;
+  const label = item && !item.cover ? sleeveTone(item) : liftLabel(cover, 100);
   return <PixelRecord className={className} base={style.base} opacity={style.opacity} splatter={style.splatter} splashes={style.splashes} label={label} seed={albumKey(item)}/>;
 }
 
