@@ -138,9 +138,9 @@ def main(scene, folder, out):
     lit = np.where(glass | sky, .5, steps)
     warm, cool = np.array(room['warm'], np.float32), np.array(room['cool'], np.float32)
     a = room['ambient']
-    gain = a + (1.16 - a) * lit
+    gain = a + (1.22 - a) * lit
     img = img * gain[..., None]
-    img = img + (warm - img) * (np.clip(lit - .5, 0, 1) * .22)[..., None]
+    img = img + (warm - img) * (np.clip(lit - .4, 0, 1) * .34)[..., None]
     img = img + (cool - img) * (np.clip(.45 - lit, 0, 1) * .26)[..., None]
 
     # Rim: objects (not wall/floor/rug/sky/glass) get a lit 1 px edge toward the lamp, dark away.
