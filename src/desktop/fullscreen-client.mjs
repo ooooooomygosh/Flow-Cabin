@@ -1,3 +1,5 @@
+import { desktopCommand } from './desktop-command.mjs';
+
 const pending = new WeakMap();
 
 // Native shell events and the browser Fullscreen API are the only confirmed state.
@@ -11,7 +13,7 @@ export async function requestCabinFullscreen({ exit = false, env = window } = {}
   const doc = env.document;
   if (doc.documentElement.dataset.desktopClient === 'true') {
     // Keep toggle intent in the native controller while macOS animates a transition.
-    env.open(`album-desktop://action/${exit ? 'fullscreen-exit' : 'fullscreen'}`, '_blank');
+    desktopCommand(exit ? 'fullscreen-exit' : 'fullscreen', {}, (href) => env.open(href, '_blank'));
     return;
   }
   const running = pending.get(doc);

@@ -4,14 +4,13 @@ import { X, Music2, FolderOpen, Trash2, Loading } from './icons';
 import { desktopCommand, useDesktopAppearance } from './desktop-client';
 import './player/player.css';
 
-const SOURCE_NAMES = { visual: '仅动画展示', auto: '自动匹配可播放音源', qq: 'QQ 音乐', netease: '网易云音乐', ma: 'Music Assistant', local: '本地音乐', system: '系统正在播放', appleMusic: '系统 Apple Music' };
 // "Use on the deck": one click from a connected source to hearing it.
 function UseSource({ value, provider, useSource }) {
   if (!useSource) return null;
-  return provider === value ? <span className="music-source-current" aria-label={`唱机正在使用 ${SOURCE_NAMES[value]}`}>唱机在用</span> : <button type="button" className="music-source-use" onClick={() => useSource(value)}>在唱机上用</button>;
+  return provider === value ? <span className="music-source-current" aria-label={`唱机正在使用 ${providerLabel(value)}`}>唱机在用</span> : <button type="button" className="music-source-use" onClick={() => useSource(value)}>在唱机上用</button>;
 }
 import { musicRequest, normalizeLocalLibrary } from './room-playback.mjs';
-import { requestPermission } from './player/sources.mjs';
+import { requestPermission, providerLabel } from './player/sources.mjs';
 
 // Requested tier. Platforms answer with the best tier the account may play;
 // the deck status shows the tier that is actually playing.
@@ -117,7 +116,7 @@ export default function MusicSettings({ close, provider = '', useSource }) {
   const account = (provider, logout = false) => { if (pending.current) return; if (!desktop) { setError('平台登录需要在心流小屋桌面版中进行：登录窗口由桌面版打开，凭据只加密保存在本机。'); return; } pending.current = true; setBusy(true); setError(''); setNotice(''); desktopCommand(logout ? 'music-logout' : 'music-login', { provider }); };
   return createPortal(<dialog ref={dialog} className="record-dialog music-settings" aria-label="音源与账户" onCancel={(event) => { event.preventDefault(); close(); }}>
     <header><h2><Music2 size={22}/>音源与账户</h2><button type="button" aria-label="关闭音源设置" onClick={close}><X/></button></header>
-    <p className="record-dialog-intro">先选一种音乐来源，点「在唱机上用」，再双击专辑放盘。平台登录在官方页面完成，登录信息加密保存在本机，不会上传。{provider && <> 唱机现在用的是 <strong>{SOURCE_NAMES[provider] || provider}</strong>。</>}</p>
+    <p className="record-dialog-intro">先选一种音乐来源，点「在唱机上用」，再双击专辑放盘。平台登录在官方页面完成，登录信息加密保存在本机，不会上传。{provider && <> 唱机现在用的是 <strong>{providerLabel(provider)}</strong>。</>}</p>
     {[['qq', 'QQ 音乐', config.qqLoggedIn], ['netease', '网易云音乐', config.neteaseLoggedIn]].map(([provider, name, loggedIn]) => <div className="music-account" key={provider}><span><strong>{name}</strong><small>{loggedIn ? '已保存登录信息 · 尚未验证本次播放权限' : '未登录，可尝试平台允许的游客音频'}</small></span><button type="button" disabled={busy || !desktop} title={desktop ? '' : '需要在心流小屋桌面版中登录'} onClick={() => account(provider)}>{loggedIn ? '重新登录' : '登录'}</button>{loggedIn && <button type="button" disabled={busy} onClick={() => account(provider, true)}>退出平台</button>}<UseSource value={provider} provider={currentProvider} useSource={useSource}/></div>)}
     <QualitySetting config={config} onChange={setConfig}/>
     <LocalMusicSettings/>{useSource && <p className="music-source-row"><UseSource value="local" provider={currentProvider} useSource={useSource}/><small>本地音乐 · 扫描的文件夹和这次选的音乐文件</small></p>}

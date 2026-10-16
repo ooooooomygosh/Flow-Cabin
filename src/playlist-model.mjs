@@ -47,7 +47,6 @@ export function playlistItem(detail, provider, { cover = '' } = {}) {
     externalIds: { playlist: playlistKey(provider, playlist.id || `${Date.now()}`) }
   };
 }
-export const isPlaylist = (item) => item?.type === 'playlist';
 // Search inside a long playlist: title, artist and album, ignoring case/width.
 const fold = (value) => String(value || '').normalize('NFKC').toLowerCase();
 export function filterTracks(tracks, query) {

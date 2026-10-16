@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as m from './onboarding-model.mjs';
-import { createPlayerAdapter, createDesktopAdapter, loadPlayerSources, DESKTOP_MODE_EVENT } from './onboarding-adapter.mjs';
+import { createPlayerAdapter, createDesktopAdapter, DESKTOP_MODE_EVENT } from './onboarding-adapter.mjs';
 
 const memory = (seed = {}) => { const data = { ...seed }; return { getItem: (k) => (k in data ? data[k] : null), setItem: (k, v) => { data[k] = String(v); }, data, get length() { return Object.keys(data).length; }, ...Object.fromEntries(Object.entries(data)) }; };
 
@@ -54,23 +54,40 @@ test('sources and permissions follow web / desktop / mac', () => {
   assert.equal(m.sourceOptions({ desktop: true, mac: true }).find((s) => s.id === 'appleMusic').available, true);
   assert.deepEqual(m.permissionItems({ notifications: true }).map((p) => p.id), ['notifications']);
   assert.deepEqual(m.permissionItems({ notifications: true, desktop: true, mac: true }, 'appleMusic').map((p) => p.id), ['notifications', 'appleMusic', 'autostart']);
-  assert.equal(m.providerFor('appleMusic'), 'system');
+  assert.equal(m.providerFor('appleMusic'), 'appleMusic', 'Apple Music switches the deck to its own provider');
+  assert.equal(m.sourceOptions({ desktop: true, mac: true }).find((s) => s.id === 'netease').label, '网易云音乐', 'names come from the provider table');
 });
 
-test('player adapter falls back on main without sources.mjs', async () => {
-  const commands = [];
-  const fallback = createPlayerAdapter({ env: { desktop: true }, win: {}, load: async () => null, command: (...a) => commands.push(a), request: async (path) => path === '/config' ? { qqLoggedIn: true } : { albumCount: 1, trackCount: 3 } });
-  assert.deepEqual(await fallback.connectSource('qq'), { ok: true, pending: 'album-music-account' });
-  assert.deepEqual(commands, [['music-login', { provider: 'qq' }]]);
-  assert.equal((await fallback.getSourceStatus('qq')).connected, true);
-  assert.equal((await fallback.getSourceStatus('local')).detail, '1 张专辑 · 3 首');
-  assert.equal(await fallback.requestPermission('appleMusic'), 'unsupported');
-  assert.equal(await fallback.qualities(), null);
-  const web = createPlayerAdapter({ env: { desktop: false }, win: {}, load: async () => null });
+test('player adapter never pretends: missing or failing calls report honestly', async () => {
+  const empty = createPlayerAdapter({ api: {}, env: { desktop: true } });
+  assert.deepEqual(await empty.connectSource('qq'), { ok: false, error: '未知音源' });
+  assert.deepEqual(await empty.getSourceStatus('qq'), { connected: false, detail: '暂时读不到状态' });
+  assert.equal(await empty.requestPermission('appleMusic'), 'unsupported');
+  assert.equal((await empty.testPlayback()).ok, false);
+  assert.equal(await empty.qualities(), null, 'no request function, no quality list');
+  assert.equal((await empty.listSources()).length, m.sourceOptions({ desktop: true }).length, 'falls back to the local table');
+  const web = createPlayerAdapter({ api: {}, env: { desktop: false } });
   assert.equal((await web.connectSource('local')).fallback, 'add-album');
   assert.equal((await web.connectSource('netease')).ok, false);
-  assert.equal((await web.testPlayback()).ok, false);
-  assert.equal(await loadPlayerSources({}), null);
+  assert.equal(await web.requestPermission('autostart'), 'unsupported');
+});
+
+test('autostart asks the shell and maps its answer', async () => {
+  const asked = [];
+  const adapter = (answer) => createPlayerAdapter({ api: {}, env: { desktop: true }, autostart: async (enabled) => { asked.push(enabled); return answer; } });
+  assert.equal(await adapter({ supported: true, enabled: true }).requestPermission('autostart'), 'granted');
+  assert.equal(await adapter({ supported: true, enabled: false }).requestPermission('autostart'), 'denied');
+  assert.equal(await adapter({ supported: false, enabled: false }).requestPermission('autostart'), 'unsupported');
+  assert.deepEqual(asked, [true, true, true]);
+});
+
+test('autostart client sends the command and resolves with the shell event', async () => {
+  const { setAutostart, getAutostart, AUTOSTART_EVENT } = await import('../desktop/autostart-client.mjs');
+  const win = new EventTarget(), sent = [];
+  const pending = setAutostart(false, { win, command: (name, params) => { sent.push([name, params]); win.cabinAutostart = { supported: true, enabled: false }; win.dispatchEvent(Object.assign(new Event(AUTOSTART_EVENT), { detail: win.cabinAutostart })); } });
+  assert.deepEqual(await pending, { supported: true, enabled: false }); assert.deepEqual(sent, [['autostart', { enabled: false }]]);
+  assert.deepEqual(getAutostart(win), { supported: true, enabled: false }); assert.deepEqual(getAutostart({}), { supported: false, enabled: false });
+  assert.deepEqual(await setAutostart(true, { win: new EventTarget(), command: () => {}, timeoutMs: 5 }), { supported: false, enabled: false }, 'no shell answer reads as unsupported');
 });
 
 test('player adapter matches PR #15 sources.mjs shapes', async () => {
@@ -100,8 +117,6 @@ test('player adapter matches PR #15 sources.mjs shapes', async () => {
   assert.equal(await denied.requestPermission('appleMusic'), 'unsupported');
   const failing = createPlayerAdapter({ api: { connectSource: () => { throw new Error('网络错误'); } }, env: { desktop: true } });
   assert.deepEqual(await failing.connectSource('qq'), { ok: false, error: '网络错误' });
-  const lazy = createPlayerAdapter({ win: {}, env: { desktop: true }, load: async () => api });
-  assert.equal((await lazy.listSources()).length, 2);
 });
 
 test('notification permission maps browser answers', async () => {
@@ -110,21 +125,19 @@ test('notification permission maps browser answers', async () => {
   assert.equal(await createPlayerAdapter({ win: {} }).requestPermission('notifications'), 'unsupported');
 });
 
-test('desktop adapter uses 沉入桌面 API, reports unsupported reason, and falls back', async () => {
-  const listeners = {}; const win = { addEventListener: (n, f) => { listeners[n] = f; }, removeEventListener: (n) => { delete listeners[n]; } };
-  const api = { getDesktopModeStatus: () => ({ active: false, supported: false, reason: '需要 macOS 13+' }), enterDesktopMode: () => {} };
-  const real = createDesktopAdapter({ api, win });
+test('desktop adapter wraps the 沉入桌面 module and reports an unsupported reason', async () => {
+  const calls = [], api = { getDesktopModeStatus: () => ({ active: false, supported: false, reason: '需要 macOS 13+' }), enterDesktopMode: () => calls.push('enter'), exitDesktopMode: () => { throw new Error('busy'); } };
+  const real = createDesktopAdapter({ api });
   assert.deepEqual(await real.status(), { active: false, busy: false, supported: false, via: '', reason: '需要 macOS 13+' });
-  let got; const off = real.subscribe((d) => { got = d; }); listeners[DESKTOP_MODE_EVENT]({ detail: { active: true } });
-  assert.deepEqual(got, { active: true }); off(); assert.equal(listeners[DESKTOP_MODE_EVENT], undefined);
-  let active = false; const local = createDesktopAdapter({ win: {}, env: { desktop: true }, fallback: { get active() { return active; }, enter: () => { active = true; }, exit: () => { active = false; } } });
-  await local.enter(); assert.equal((await local.status()).active, true); await local.exit(); assert.equal(active, false);
+  assert.equal(await real.enter(), true); assert.deepEqual(calls, ['enter']); assert.equal(await real.exit(), false);
+  assert.equal(typeof real.subscribe(() => {}), 'function', 'no change source still returns an unsubscribe');
+  assert.equal(DESKTOP_MODE_EVENT, 'cabin:desktop-mode');
 });
 
 test('desktop adapter passes busy/via and prefers onDesktopModeChange', async () => {
   let cb, offed = false;
   const api = { getDesktopModeStatus: () => ({ active: true, busy: true, supported: true, via: 'wallpaper', reason: '' }), onDesktopModeChange: (f) => { cb = f; return () => { offed = true; }; } };
-  const a = createDesktopAdapter({ api, win: {} });
+  const a = createDesktopAdapter({ api });
   assert.deepEqual(await a.status(), { active: true, busy: true, supported: true, via: 'wallpaper', reason: '' });
   let got; const off = a.subscribe((d) => { got = d; }); cb({ active: false }); assert.deepEqual(got, { active: false }); off(); assert.equal(offed, true);
 });

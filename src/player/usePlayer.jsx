@@ -35,7 +35,6 @@ export function usePlayerQueue({ items, record, trackIndex, setTrackIndex, loadA
     canNext: Boolean(record) && nextStep({ trackIndex, trackCount, queue, manual: true, random: () => 0 }).type !== 'stop',
     canPrevious: Boolean(record) && (trackIndex > 0 || (audible && (playback?.position || 0) > 0)),
     next: (manual = true) => record && go(manual && upcoming.type === 'restart' ? nextStep({ trackIndex, trackCount, queue, manual }) : upcoming),
-    canAdvance: Boolean(record) && upcoming.type !== 'stop',
     peekNext: () => upcoming.type === 'track' ? { item: record, index: upcoming.index } : upcoming.type === 'album' ? { item: items.find((entry) => entry.id === upcoming.id), index: 0 } : null,
     previous: () => record && go(previousStep({ trackIndex, position: audible ? playback?.position || 0 : 0 })),
     enqueue: (id) => add(id),

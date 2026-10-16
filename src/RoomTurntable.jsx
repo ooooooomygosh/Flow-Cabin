@@ -6,6 +6,7 @@ import { ROOM_DRAG_TYPE } from './RoomScene';
 import useTurntablePosition from './useTurntablePosition';
 import { trackNames } from './room-model.mjs';
 import { trackArtist } from './track-meta.mjs';
+import { providerLabel } from './player/providers.mjs';
 import PlayerControls, { PocketProgress } from './player/PlayerControls';
 import { displayTitle } from './display-title.mjs';
 // Wrap the quality token (无损 / FLAC / Hi-Res / 320k MP3…) of a status line in a small badge; the text stays whole.
@@ -33,7 +34,7 @@ export default function RoomTurntable({ item, spinning, trackIndex = 0, style, i
     <div className="turntable-side-cabinet">
       <span className="cabinet-side-face" aria-hidden="true"/><span className="cabinet-leg cabinet-leg-left" aria-hidden="true"/><span className="cabinet-leg cabinet-leg-right" aria-hidden="true"/>
       <div className="turntable-console">
-    <div className="turntable-heading">{readOnly ? <span><Disc3 size={15}/>木屋唱机</span> : <button type="button" className="turntable-drag-handle" aria-label="移动唱机" title="拖动移动唱机 · 方向键微调 · 双击或 Home 复位" {...placement.handle}><Disc3 size={15}/>木屋唱机 ⠿</button>}{!readOnly && <button type="button" className="turntable-closeup" aria-label="唱机特写" title="唱机特写 · T" onClick={() => window.dispatchEvent(new Event('cabin-open-corner'))}><Eye size={14}/></button>}<small>{{ visual: '仅展示', ma: '家庭播放器', appleMusic: 'Apple Music', local: '本地音乐', system: '系统播放', qq: 'QQ 音乐', netease: '网易云音乐' }[provider] || '自动匹配'}</small></div>
+    <div className="turntable-heading">{readOnly ? <span><Disc3 size={15}/>木屋唱机</span> : <button type="button" className="turntable-drag-handle" aria-label="移动唱机" title="拖动移动唱机 · 方向键微调 · 双击或 Home 复位" {...placement.handle}><Disc3 size={15}/>木屋唱机 ⠿</button>}{!readOnly && <button type="button" className="turntable-closeup" aria-label="唱机特写" title="唱机特写 · T" onClick={() => window.dispatchEvent(new Event('cabin-open-corner'))}><Eye size={14}/></button>}<small>{providerLabel(provider, 'short')}</small></div>
     {!readOnly && tools}
     {/* Two decks take turns: one plays, the other buffers the next song. */}
     {!readOnly && playback && playback.deckRefs.map((ref, index) => <audio key={index} ref={ref} {...playback.events} preload="auto"/>)}

@@ -5,6 +5,7 @@ import { RoomPickers } from '../RoomPersonalization';
 import { desktopCommand, useDesktopFullscreen } from '../desktop-client';
 import { Check, Music2 } from '../icons';
 import { sourceOptions, providerFor } from './onboarding-model.mjs';
+import { providerLabel } from '../player/providers.mjs';
 import { version } from '../../package.json';
 import UpdatePanel from '../desktop/UpdatePanel';
 import './onboarding.css';
@@ -14,7 +15,6 @@ export const HUB_SECTIONS = Object.freeze([
   { id: 'music', label: '音源' }, { id: 'room', label: '房间与桌宠' }, { id: 'focus', label: '专注工具' },
   { id: 'desktop', label: '桌面' }, { id: 'data', label: '数据与备份' }, { id: 'about', label: '关于' }
 ]);
-const PROVIDER_LABEL = { visual: '仅动画展示', auto: '自动匹配', qq: 'QQ 音乐', netease: '网易云音乐', ma: 'Music Assistant', local: '本地音乐', system: '系统正在播放' };
 
 // One place for every setting. Old shortcuts (布置小屋, 音源设置, 收藏与备份,
 // tray / menu commands) open this hub on their section.
@@ -75,11 +75,11 @@ function MusicSection({ env, player, provider, useSource, openMusicSettings }) {
     return () => { alive = false; window.removeEventListener('album-music-account', load); window.removeEventListener('album-local-music', load); };
   }, []);
   return <div className="hub-rows">
-    <p className="hub-current">唱机现在用：<strong>{PROVIDER_LABEL[provider] || provider || '自动匹配'}</strong></p>
+    <p className="hub-current">唱机现在用：<strong>{providerLabel(provider)}</strong></p>
     {sources.map((source) => { const p = source.provider || providerFor(source.id); return <Row key={source.id} title={source.label} led={Boolean(source.available && ((p && p === provider) || status[source.id]?.connected))} hint={source.available ? status[source.id]?.detail || source.hint : source.reason}>
       {source.available && (p && p === provider ? <span className="onboarding-ok"><Check size={14}/>唱机在用</span> : <button type="button" className="pixel-button" aria-label={`唱机改用 ${source.label}`} onClick={() => useSource(p)}>在唱机上用</button>)}
     </Row>; })}
-    <label className="turntable-source">音源<select aria-label="唱机音源" value={provider} onChange={(event) => useSource(event.target.value)}><option value="visual">仅动画展示</option><option value="auto" disabled={!env.desktop}>自动匹配可播放音源</option><option value="qq" disabled={!env.desktop}>QQ 音乐 · {env.desktop ? 'Simple Music' : '桌面客户端'}</option><option value="netease" disabled={!env.desktop}>网易云 · {env.desktop ? 'Simple Music' : '桌面客户端'}</option><option value="ma" disabled={!env.desktop}>Music Assistant · {env.desktop ? '服务器播放器' : '桌面客户端'}</option><option value="local" disabled={!env.desktop}>本地音乐 · {env.desktop ? '文件夹' : '桌面客户端'}</option>{env.mac && <option value="appleMusic" disabled={!env.desktop}>系统 Apple Music · {env.desktop ? '“音乐”App' : '桌面客户端'}</option>}<option value="system" disabled={!env.desktop}>系统正在播放 · {env.desktop ? '跟随播放器' : '桌面客户端'}</option></select></label>
+    <label className="turntable-source">音源<select aria-label="唱机音源" value={provider} onChange={(event) => useSource(event.target.value)}><option value="visual">仅动画展示</option><option value="auto" disabled={!env.desktop}>自动匹配可播放音源</option><option value="qq" disabled={!env.desktop}>QQ 音乐 · {env.desktop ? '桌面版' : '桌面客户端'}</option><option value="netease" disabled={!env.desktop}>网易云 · {env.desktop ? '桌面版' : '桌面客户端'}</option><option value="ma" disabled={!env.desktop}>Music Assistant · {env.desktop ? '服务器播放器' : '桌面客户端'}</option><option value="local" disabled={!env.desktop}>本地音乐 · {env.desktop ? '文件夹' : '桌面客户端'}</option>{env.mac && <option value="appleMusic" disabled={!env.desktop}>系统 Apple Music · {env.desktop ? '“音乐”App' : '桌面客户端'}</option>}<option value="system" disabled={!env.desktop}>系统正在播放 · {env.desktop ? '跟随播放器' : '桌面客户端'}</option></select></label>
     {/* Reserved: player teammate's 音质 setting (标准 / 高品质 / 无损, auto-downgrade). */}
     <Row title="音质" hint={quality?.options?.length ? '播放不了时会自动降一档。' : '标准 / 高品质 / 无损 · 等播放器更新后开放'}>
       {quality?.options?.length ? <select aria-label="音质" value={quality.current || ''} onChange={async (event) => { const id = event.target.value; if (await player.setQuality(id)) setQuality({ ...quality, current: id }); }}>{quality.options.map((option) => <option key={option.id ?? option} value={option.id ?? option}>{option.label ?? option}</option>)}</select> : <select aria-label="音质" disabled><option>自动</option></select>}

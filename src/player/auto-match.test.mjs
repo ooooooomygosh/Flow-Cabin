@@ -78,6 +78,29 @@ test('onboarding API: list, status, permission, connect and test playback', asyn
   assert.equal(bad.ok, false, 'never reports success unless audio played');
 });
 
+test('本地音乐 试听 plays the first song of the local library, or a chime when it is empty', async () => {
+  const audio = { play: async () => {}, pause() {}, removeAttribute() {}, load() {} };
+  const library = { albums: [{ id: 'empty', title: '空', artist: 'x', tracks: [] }, { id: 'a1', title: '旧唱片', artist: '我', tracks: [{ id: '0123456789abcdef', title: '第一首', duration: 120 }] }] };
+  let tried;
+  const find = async ({ record, play }) => { tried = record; await play({ provider: 'local', title: record.tracks[0] }, { audioPath: '/local/a' }); return {}; };
+  const ok = await testPlayback({ provider: 'local', seconds: 0, createAudio: () => audio, find, request: async (path) => path === '/local/albums' ? library : {} });
+  assert.equal(ok.ok, true); assert.equal(ok.title, '第一首'); assert.equal(tried.trackDetails[0].providerId, '0123456789abcdef');
+  let chimed = 0;
+  const empty = await testPlayback({ provider: 'local', seconds: 0, createAudio: () => audio, find, chime: () => { chimed++; return { ok: true, kind: 'chime' }; }, request: async () => ({ albums: [] }) });
+  assert.equal(chimed, 1); assert.equal(empty.ok, true); assert.equal(empty.kind, 'chime');
+  const offline = await testPlayback({ provider: 'local', seconds: 0, find, request: async () => { throw new Error('读不到'); } });
+  assert.deepEqual([offline.ok, offline.error], [false, '读不到']);
+});
+
+test('one provider table names every deck source', async () => {
+  const { PROVIDERS, DECK_PROVIDERS, providerLabel, isDeckProvider, SOURCES } = await import('./sources.mjs');
+  assert.deepEqual(DECK_PROVIDERS, ['visual', 'auto', 'qq', 'netease', 'local', 'appleMusic', 'ma', 'system']);
+  assert.ok(PROVIDERS.every((provider) => provider.label && provider.short));
+  assert.equal(providerLabel('appleMusic'), 'Apple Music（音乐 App）'); assert.equal(providerLabel('ma', 'short'), '家庭播放器'); assert.equal(providerLabel('spotify'), '自动匹配');
+  assert.equal(isDeckProvider('visual'), true); assert.equal(isDeckProvider('spotify'), false);
+  assert.deepEqual(SOURCES.map((source) => source.id), ['qq', 'netease', 'local', 'appleMusic', 'ma', 'system']);
+});
+
 
 test('match memory: same-title metadata edits invalidate the remembered recording', () => {
   const playlist = { id: 'mix', type: 'playlist', title: 'Mix', artist: 'Curator', tracks: ['Hello'], trackDetails: [{ artist: 'Artist A', album: 'First', source: 'netease', providerId: '11', lengthMillis: 180000 }] };
