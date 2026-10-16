@@ -1,13 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useFocus, useFocusState } from '../focus/useFocus';
+import { useFocusState } from '../focus/useFocus';
 import { useStudy } from '../study/useStudy';
 import { nextCountdown } from '../study/study-model.mjs';
-import { formatClock, PHASE_LABELS, phaseProgress } from '../focus/focus-model.mjs';
+import { PHASE_LABELS } from '../focus/focus-model.mjs';
 import { trackNames } from '../room-model.mjs';
 import { trackArtist } from '../track-meta.mjs';
 import { usePlaybackDuration, usePlaybackPosition } from '../deck/usePlaybackClock';
 import { ChevronLeft, ChevronRight, Pause, Play, Forward, Plus, Eye, Clock, ListBullet, Music2 } from '../icons';
-import { clampWidget, defaultWidgetLayout, readWidgetLayout, writeWidgetLayout } from './widget-layout.mjs';
+import { clampWidget, clearWidgetLayout, defaultWidgetLayout, readSavedWidgetLayout, writeWidgetLayout } from './widget-layout.mjs';
 import { createDragGesture, nudgeDelta } from '../drag-gesture.mjs';
 import FocusFace, { faceFocus } from '../focus/FocusFace';
 import { useFocusDisplay, useSceneLook } from '../focus/useFocusDisplay';
@@ -54,7 +54,7 @@ function Widget({ id, title, icon, layout, move, children, className = '' }) {
   const cancel = (event) => { gesture.cancel(event?.pointerId); };
   const key = (event) => {
     if (event.key === 'Escape' && gesture.pending) { event.preventDefault(); event.stopPropagation(); gesture.cancel(); return; }
-    if (event.key === 'Home') { event.preventDefault(); move(id, defaultWidgetLayout()[id], true); return; }
+    if (event.key === 'Home') { event.preventDefault(); move(id, null, true); return; } // Home: back to this scene's place
     const delta = nudgeDelta(event.key, event.shiftKey); if (!delta) return;
     event.preventDefault();
     const parent = ref.current?.offsetParent?.getBoundingClientRect(), box = ref.current?.getBoundingClientRect();
@@ -72,7 +72,7 @@ export function ClockWidget({ layout, move, compact = false }) {
   const now = useMinute(), focus = useFocusState(), look = useSceneLook(), [display] = useFocusDisplay();
   const study = useStudy(), exam = study ? nextCountdown(study.state, now.getTime()) : null;
   return <Widget id="clock" title="时钟" icon={<Clock size={13}/>} layout={layout} move={move} className={compact ? 'is-compact' : ''}>
-    <FocusFace face={faceFor(display, look)} look={look} focus={faceFocus(focus?.state)} show={display.show} seconds={display.seconds} variant="widget"/>
+    <FocusFace face={faceFor(display, look)} look={look} focus={faceFocus(focus?.state)} show={compact ? display.show : 'clock'} seconds={display.seconds} variant="widget"/>
     <p className="desktop-date"><time dateTime={now.toISOString()}>{dateLine(now)}</time><span> · {greeting(now.getHours())}</span></p>
     {exam && <p className="desktop-countdown">距离{exam.title}{exam.days === 0 ? '就是今天' : <>还有 <b>{exam.days}</b> 天</>}</p>}
   </Widget>;
@@ -100,16 +100,16 @@ function NowPlayingWidget({ layout, move, item, provider, playback, player, spin
 }
 
 function FocusWidget({ layout, move }) {
-  const focus = useFocus();
+  // The round on the chosen 专注画面 face (its own wake schedule: no per-second
+  // re-render here); the clock widget beside it keeps the wall time.
+  const focus = useFocusState(), look = useSceneLook(), [display] = useFocusDisplay();
   if (!focus) return null;
-  const { state, now, remaining } = focus, timer = state.timer, running = timer.phase !== 'idle' && !timer.paused;
+  const { state } = focus, timer = state.timer, running = timer.phase !== 'idle' && !timer.paused;
   const task = state.tasks.find((entry) => entry.id === timer.taskId);
-  const progress = timer.phase === 'idle' ? 0 : phaseProgress(timer, state.settings, now);
   return <Widget id="focus" title="专注" icon={<Clock size={13}/>} layout={layout} move={move}>
+    <FocusFace face={faceFor(display, look)} look={look} focus={faceFocus(state)} show="timer" variant="widget"/>
     <div className="desktop-focus" data-phase={timer.phase}>
-      <span className="desktop-focus-ring" style={{ '--focus-progress': `${Math.round(progress * 100)}%` }} aria-hidden="true"/>
-      <div><small>{PHASE_LABELS[timer.phase]}{timer.paused ? ' · 已暂停' : ''}</small>
-        <strong>{timer.phase === 'idle' ? `${state.settings.focusMin}:00` : formatClock(remaining, state.settings.hideSeconds)}</strong>
+      <div><small>{PHASE_LABELS[timer.phase]}{timer.paused ? ' · 已暂停' : ''}{timer.phase === 'idle' ? ` · ${state.settings.focusMin} 分钟` : ''}</small>
         {task && <small className="desktop-focus-task" title={task.text}>{task.text}</small>}</div>
       <span className="desktop-focus-actions">
         <button type="button" className="is-primary" aria-label={running ? '暂停专注' : timer.phase === 'idle' ? '开始专注' : '继续专注'} onClick={focus.toggle}>{running ? <Pause size={15}/> : <Play size={15}/>}</button>
@@ -132,9 +132,10 @@ function TodoWidget({ layout, move }) {
 }
 
 export default function DesktopWidgets({ mode = 'desktop', exit, ...music }) {
-  const [layout, setLayout] = useState(readWidgetLayout);
-  const move = (id, position, save) => setLayout((old) => { const next = { ...old, [id]: position }; if (save) writeWidgetLayout(next); return next; });
-  const reset = () => { const next = defaultWidgetLayout(); setLayout(next); writeWidgetLayout(next); };
+  // null: nothing arranged yet, so the cards take the scene's own places.
+  const look = useSceneLook(), [saved, setSaved] = useState(readSavedWidgetLayout), layout = saved || defaultWidgetLayout(look);
+  const move = (id, position, save) => setSaved((old) => { const base = old || defaultWidgetLayout(look), next = { ...base, [id]: position || defaultWidgetLayout(look)[id] }; if (save) writeWidgetLayout(next); return next; });
+  const reset = () => { setSaved(null); clearWidgetLayout(); };
   if (mode === 'zen') return <div className="desktop-widgets is-zen"><ClockWidget layout={layout} move={move} compact/></div>;
   return <div className="desktop-widgets">
     <ClockWidget layout={layout} move={move}/>

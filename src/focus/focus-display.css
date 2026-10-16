@@ -2,11 +2,13 @@
    quick switch and the whole-window display. */
 @layer guards, reset, features, skin, overrides;
 @layer features {
-.focus-face { display: grid; justify-items: center; gap: 8px; width: 100%; }
-.focus-face-fit { display: grid; place-items: center; width: 100%; height: 168px; }
+.focus-face { display: grid; grid-template-columns: minmax(0, 100%); justify-items: center; gap: 8px; width: 100%; }
+.focus-face-fit { display: grid; place-items: center; width: 100%; min-width: 0; height: 168px; }
 .focus-face-canvas { display: block; image-rendering: pixelated; }
 .focus-face-caption { margin: 0; font: 400 12px/1.4 var(--px-font-cn); color: var(--px-ink-dim); font-variant-numeric: tabular-nums; }
 .focus-face.is-thumb .focus-face-fit { width: 128px; height: 84px; }
+/* The dock hugs its face: ×3 when the window is tall enough, ×2 otherwise. */
+.focus-face.is-dock .focus-face-fit { height: auto; max-height: clamp(168px, calc(100vh - 640px), 246px); }
 .focus-face.is-wallpaper .focus-face-fit { width: clamp(220px, 20vw, 380px); height: clamp(100px, 11vw, 176px); }
 .focus-face:is(.is-widget, .is-wallpaper, .is-full) .focus-face-canvas { filter: drop-shadow(4px 4px 0 var(--px-shadow)); }
 

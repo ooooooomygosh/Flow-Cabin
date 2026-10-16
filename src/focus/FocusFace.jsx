@@ -45,11 +45,12 @@ export default function FocusFace({ face: faceId, look = 'pixel', focus = null, 
   // Fit by whole pixels.
   useLayoutEffect(() => {
     const el = box.current; if (!el) return undefined;
-    const measure = () => setScale(fitScale({ width: el.clientWidth, height: el.clientHeight }, w, h, window.devicePixelRatio || 1, maxScale));
+    // A box with a max-height (the dock) hugs the face: fit to that cap, not to its own height.
+    const measure = () => { const cap = parseFloat(getComputedStyle(el).maxHeight); setScale(fitScale({ width: el.clientWidth, height: Number.isFinite(cap) ? cap : el.clientHeight }, w, h, window.devicePixelRatio || 1, maxScale)); };
     measure();
-    if (typeof ResizeObserver === 'undefined') return undefined;
-    const observer = new ResizeObserver(measure); observer.observe(el);
-    return () => observer.disconnect();
+    window.addEventListener('resize', measure); // a viewport-relative cap can change without the box resizing
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure); observer?.observe(el);
+    return () => { observer?.disconnect(); window.removeEventListener('resize', measure); };
   }, [w, h, maxScale]);
   useEffect(() => () => anim.current?.(), []);
   // Paint when what the face shows changes; flip the changed cards.
