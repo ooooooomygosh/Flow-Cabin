@@ -3,6 +3,7 @@ import SettingsHub from './onboarding/SettingsHub';
 import * as onboardingModel from './onboarding/onboarding-model.mjs';
 import { createPlayerAdapter, createDesktopAdapter } from './onboarding/onboarding-adapter.mjs';
 import { musicRequest, trackCover } from './room-playback.mjs';
+import { isDeckProvider } from './player/providers.mjs';
 import { enterDesktopMode, exitDesktopMode, getDesktopModeStatus, onDesktopModeChange, installDesktopApi, reportTrayPet } from './desktop/desktop-sink-client.mjs';
 import { getRoomScene } from './scene-catalog.mjs';
 import { normalizePetId } from './pet/pet-catalog.mjs';
@@ -40,7 +41,6 @@ import './companion-room.css';
 export { ShowroomArtwork } from './RoomArtwork';
 
 const snapshotItem = (item) => item ? ({ id: item.id, title: item.title, artist: item.artist, cover: item.cover, type: item.type, tracks: item.tracks, externalIds: item.externalIds, collectionId: item.collectionId }) : null;
-const PROVIDERS = ['auto', 'qq', 'netease', 'ma', 'local', 'appleMusic', 'system'];
 const SORTS = { recent: '最近放上', year: '发行年份', title: '专辑名', artist: '歌手' };
 const readJSON = (key, fallback) => { try { return { ...fallback, ...(JSON.parse(localStorage.getItem(key)) || {}) }; } catch { return fallback; } };
 const writeJSON = (key, value) => { try { localStorage.setItem(key, JSON.stringify(value)); } catch {} };
@@ -82,7 +82,7 @@ export default function CabinRoom({ items, loading, loadError = '', openRecord, 
   const { filters, setFilters, visible } = useShelfFilters(items);
   const [row, setRow] = useState(0), [selectedId, setSelectedId] = useState(visible[0]?.id || '');
   const [record, setRecord] = useState(null), [spinning, setSpinning] = useState(false), [trackIndex, setTrackIndex] = useState(0);
-  const [provider, setProvider] = useState(() => { try { const value = localStorage.getItem('album-circle-room-player-v1'); return PROVIDERS.includes(value) || value === 'visual' ? value : 'visual'; } catch { return 'visual'; } });
+  const [provider, setProvider] = useState(() => { try { const value = localStorage.getItem('album-circle-room-player-v1'); return isDeckProvider(value) ? value : 'visual'; } catch { return 'visual'; } });
   const chosenProvider = useRef((() => { try { return Boolean(localStorage.getItem('album-circle-room-player-v1')); } catch { return true; } })());
   const chooseProvider = (value) => { chosenProvider.current = true; setProvider(value); try { localStorage.setItem('album-circle-room-player-v1', value); } catch {} };
   const [musicSettings, setMusicSettings] = useState(false), [filtersOpen, setFiltersOpen] = useState(false);
@@ -128,7 +128,7 @@ export default function CabinRoom({ items, loading, loadError = '', openRecord, 
   useEffect(() => {
     // A playlist saved a moment ago may not be in `items` yet; the event carries it.
     const resolve = (detail) => items.find((entry) => entry.id === detail?.id) || (detail?.item?.id === detail?.id ? detail.item : null);
-    const play = (event) => { const item = resolve(event.detail); if (!item) return; if (event.detail.shuffle && !queueRef.current?.current?.queue.shuffle) queueRef.current?.current?.toggleShuffle(); loadRef.current(item, Math.max(0, Number(event.detail.track) || 0)); };
+    const play = (event) => { const item = resolve(event.detail); if (!item) return; if (event.detail.shuffle) queueRef.current?.current?.shuffleOnce(item.id); loadRef.current(item, Math.max(0, Number(event.detail.track) || 0)); };
     const enqueue = (event) => { const item = resolve(event.detail); if (event.detail) event.detail.accepted = Boolean(item && queueRef.current?.current?.enqueue(item.id)); };
     window.addEventListener('cabin-play', play); window.addEventListener('cabin-enqueue', enqueue);
     return () => { window.removeEventListener('cabin-play', play); window.removeEventListener('cabin-enqueue', enqueue); };

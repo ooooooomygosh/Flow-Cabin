@@ -4,7 +4,7 @@ import { useStudy } from '../study/useStudy';
 import { nextCountdown } from '../study/study-model.mjs';
 import { formatClock, PHASE_LABELS, phaseProgress } from '../focus/focus-model.mjs';
 import { trackNames } from '../room-model.mjs';
-import { trackArtist } from '../room-playback.mjs';
+import { trackArtist } from '../track-meta.mjs';
 import { ChevronLeft, ChevronRight, Pause, Play, Forward, Plus, Eye, Clock, ListBullet, Music2 } from '../icons';
 import { clampWidget, defaultWidgetLayout, readWidgetLayout, writeWidgetLayout } from './widget-layout.mjs';
 import './desktop-widgets.css';

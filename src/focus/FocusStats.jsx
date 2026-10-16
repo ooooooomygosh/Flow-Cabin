@@ -3,6 +3,7 @@ import { useFocus } from './useFocus';
 import { focusStats, levelInfo, UNLOCKS, unlockedIds, minutesByDay, dayKey } from './focus-model.mjs';
 import { heatmap } from '../study/study-model.mjs';
 import '../study/study.css';
+import { NumberField } from '../lib/NumberField.jsx';
 
 const hours = (minutes) => minutes >= 60 ? `${Math.floor(minutes / 60)} 小时 ${minutes % 60} 分` : `${minutes} 分钟`;
 export default function FocusStats() {
@@ -21,7 +22,7 @@ export default function FocusStats() {
       <span>每日目标 {stats.today} / {goal} 分钟{stats.today >= goal ? ' · 今天达成了 🎉' : ` · 还差 ${goal - stats.today} 分钟`}</span>
       <span className="focus-goal-bar" role="progressbar" aria-label="每日目标进度" aria-valuemin={0} aria-valuemax={goal} aria-valuenow={Math.min(goal, stats.today)}><i style={{ width: `${Math.min(100, stats.today / goal * 100)}%` }}/></span>
     </div>}
-    <label className="focus-goal">每日目标（分钟，0 关闭）<input type="number" min="0" max="720" step="15" aria-label="每日专注目标分钟" value={goal} onChange={(event) => focus.settings({ dailyGoal: Math.max(0, Math.min(720, Number(event.target.value) || 0)) })}/></label>
+    <label className="focus-goal">每日目标（分钟，0 关闭）<NumberField min={0} max={720} step="15" aria-label="每日专注目标分钟" value={goal} onCommit={(dailyGoal) => focus.settings({ dailyGoal })}/></label>
     <figure className="focus-week stats-chart-well" aria-label="最近 7 天专注分钟">
       <div className="focus-week-bars">{stats.week.map((day) => <div key={day.key} className="focus-week-day" title={`${day.key} · ${day.minutes} 分钟`}>
         <span className="focus-week-value">{day.minutes || ''}</span>

@@ -21,3 +21,8 @@ test('browser preview is unsupported with a reason', () => {
   document.documentElement.dataset.desktopClient = 'false';
   const s = api.getDesktopModeStatus(); assert.equal(s.supported, false); assert.ok(s.reason);
 });
+test('every desktop command goes through one URL builder', async () => {
+  const { desktopCommandUrl } = await import('./desktop-command.mjs');
+  assert.equal(desktopCommandUrl('music-login', { provider: 'qq' }), 'album-desktop://action/music-login?provider=qq');
+  document.documentElement.dataset.desktopClient = 'true'; api.reportTrayPet('fox'); assert.equal(opened.at(-1), 'album-desktop://action/tray-pet?id=fox');
+});

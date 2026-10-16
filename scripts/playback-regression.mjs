@@ -2,14 +2,13 @@
  * No accounts or external traffic. Chromium output is additionally muted.
  */
 import assert from 'node:assert/strict';
+import { launchChromium } from './launch-browser.mjs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createRequire } from 'node:module';
 import { spawn } from 'node:child_process';
 import { hasViteLocalOrigin } from './vite-readiness.mjs';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const { chromium } = createRequire(path.join(root, 'desktop/package.json'))('playwright');
 const output = process.env.PLAYBACK_OUTPUT || path.join(root, 'desktop/test-results/playback');
 const port = Number(process.env.PLAYBACK_PORT || 4185), origin = `http://127.0.0.1:${port}`;
 await fs.mkdir(output, { recursive: true });
@@ -30,7 +29,7 @@ try {
   server = spawn(process.execPath, [path.join(root, 'node_modules/vite/bin/vite.js'), '--host', '127.0.0.1', '--port', String(port), '--strictPort'], { cwd: root, env: { ...process.env, FLOW_CABIN_VITE_CACHE_DIR: path.join(output, 'vite-cache') }, stdio: ['ignore', 'pipe', 'pipe'] });
   let log = ''; server.stdout.on('data', b => log += b); server.stderr.on('data', b => log += b);
   for (let i = 0; ; i++) { if (server.exitCode !== null || i > 100) throw new Error(log); if (hasViteLocalOrigin(log, origin) && await fetch(origin).then(r => r.ok, () => false)) break; await new Promise(r => setTimeout(r, 100)); }
-  browser = await chromium.launch({ executablePath: process.env.BROWSER_EXECUTABLE || (process.env.CI ? chromium.executablePath() : '/usr/bin/chromium'), headless: true, args: ['--no-sandbox', '--mute-audio', '--autoplay-policy=no-user-gesture-required'] });
+  browser = await launchChromium();
   const run = async (name, test, setup = async () => {}) => {
     const context = await browser.newContext();
     await context.route('**/*', route => { const url = new URL(route.request().url()); if (url.origin !== origin) { report.unexpectedRequests.push(url.href); return route.abort(); } if (url.pathname === '/desktop-music/resolve') return route.fulfill({ json: { audioPath: `/fixture-audio/${route.request().postDataJSON().id}` } }); if (url.pathname.startsWith('/fixture-audio/')) return fulfillAudio(route); return route.continue(); });

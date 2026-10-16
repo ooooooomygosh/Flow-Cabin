@@ -1,6 +1,6 @@
 'use strict';
 const { _electron } = require('playwright'), fs = require('node:fs'), path = require('node:path'), assert = require('node:assert/strict');
-const { mountFixture, albums } = require('./ui-fixture.cjs');
+const { mountFixture, albums, openMusicSettings } = require('./ui-fixture.cjs');
 const desktop = path.resolve(__dirname, '..'), output = path.join(desktop, 'test-results');
 const env = { ...process.env, ALBUM_DESKTOP_TEST_PROFILE: path.join(output, `music-ui-profile-${Date.now()}`) }; delete env.ELECTRON_RUN_AS_NODE;
 const executablePath = process.env.ALBUM_QA_EXE || path.join(desktop, 'node_modules/electron/dist/electron.exe');
@@ -25,7 +25,7 @@ const check = (name) => { report.checks.push({ name, passed: true }); console.lo
   await site.waitForFunction(() => document.querySelector('audio').currentTime > .2 && !document.querySelector('audio').paused);
   assert.equal((await app.evaluate(() => globalThis.__qaMusicResolves)).at(-1), '12345'); check('netease-matches-the-recording-and-plays-automatically');
   await site.getByLabel('唱机音源', { exact: true }).selectOption('ma'); await site.waitForFunction(() => document.querySelector('.turntable-status').textContent.includes('配置 Music Assistant'));
-  await site.getByRole('button', { name: '音源设置', exact: true }).click(); const settings = site.getByRole('dialog', { name: '音源与账户' }); await settings.locator('.music-advanced summary').click(); await settings.getByLabel('Music Assistant 服务器地址').fill('http://127.0.0.1:8095'); await settings.getByLabel('Music Assistant 访问令牌').fill('QA_MA_TOKEN');
+  await openMusicSettings(site); const settings = site.getByRole('dialog', { name: '音源与账户' }); await settings.locator('.music-advanced summary').click(); await settings.getByLabel('Music Assistant 服务器地址').fill('http://127.0.0.1:8095'); await settings.getByLabel('Music Assistant 访问令牌').fill('QA_MA_TOKEN');
   await settings.getByRole('button', { name: '连接并读取播放器', exact: true }).click(); await settings.getByLabel('Music Assistant 播放器').selectOption('qa-speaker'); await settings.getByRole('button', { name: '保存播放器', exact: true }).click();
   await settings.screenshot({ path: path.join(output, 'music-settings.png') }); const config = await site.evaluate(async () => (await fetch('/desktop-music/config')).json()); assert.equal(config.maTokenSet, true); assert.equal(JSON.stringify(config).includes('QA_MA_TOKEN'), false); check('music-assistant-settings-read-players-and-hide-saved-token');
   await settings.getByRole('button', { name: '完成音源设置' }).click();

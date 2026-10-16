@@ -76,12 +76,21 @@ async function chooseRoomScene(site, sceneId) {
   const { getRoomScene } = await import('../../src/scene-catalog.mjs');
   const scene = getRoomScene(sceneId);
   if (scene.id !== sceneId) throw new Error(`Unknown scene in test: ${sceneId}`);
-  await site.getByRole('button', { name: '设置', exact: true }).click();
-  await site.getByRole('tab', { name: '房间与桌宠', exact: true }).click();
+  await openRoomSettings(site);
   const picker = site.getByRole('dialog', { name: '设置', exact: true }); // 布置小屋 opens 设置 › 房间与桌宠 (PR #16)
   await picker.getByRole('button', { name: `选择场景 ${scene.label}`, exact: true }).click();
   await picker.getByRole('button', { name: '回到小屋', exact: true }).click();
   await site.locator(`.cabin-scene[data-room-look="${sceneId}"]`).waitFor();
 }
 async function useWarmCabin(site) { await chooseRoomScene(site, 'warm'); }
-module.exports = { mountFixture, albums, chooseRoomScene, useWarmCabin };
+// The old 布置小屋 / 音源设置 buttons are gone; both live in the settings hub.
+async function openRoomSettings(site) {
+  await site.getByRole('button', { name: '设置', exact: true }).click();
+  await site.getByRole('tab', { name: '房间与桌宠', exact: true }).click();
+}
+async function openMusicSettings(site) {
+  await site.getByRole('button', { name: '设置', exact: true }).click();
+  await site.getByRole('tab', { name: '音源', exact: true }).click();
+  await site.getByRole('button', { name: '音源与账户', exact: true }).click();
+}
+module.exports = { mountFixture, albums, chooseRoomScene, useWarmCabin, openRoomSettings, openMusicSettings };

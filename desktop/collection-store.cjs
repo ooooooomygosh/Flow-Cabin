@@ -60,6 +60,10 @@ function identity(item) {
   return item.externalIds?.playlist ? 'playlist:' + item.externalIds.playlist : item.collectionId ? 'itunes:' + item.collectionId : item.externalIds?.qqAlbumMid ? 'qq:' + item.externalIds.qqAlbumMid : item.externalIds?.localAlbum ? 'local:' + item.externalIds.localAlbum : item.externalIds?.fileAlbum ? 'file:' + item.externalIds.fileAlbum : '';
 }
 
+const backupId = (value) => typeof value === 'string' && /^[\w.:-]{1,80}$/.test(value) ? value : '';
+// Manual albums have no catalog identity: the same type, artist and title is the same album.
+const manualKey = (item) => [item.type, item.artist.toLowerCase(), item.title.toLowerCase()].join('\n');
+
 function readLegacy(file) {
   try {
     const raw = JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -104,10 +108,25 @@ function createCollectionStore({ directory, legacyFile = path.join(directory, 'l
       items[index] = normalizeItem(allowed, items[index]); save(); return { item: items[index] };
     },
     remove(id) { const before = items.length; items = items.filter((item) => item.id !== id); if (items.length === before) throw new Error('这张专辑已经不在唱片架上了。'); save(); return { ok: true }; },
+    // Restoring a backup keeps each album's id and addedAt, so record styles and
+    // boxes (keyed by `item:<id>`) still find it and 「最近放上」 keeps its order.
+    // `ids` maps backup ids to the shelf ids they landed on when those differ.
     importItems(values) {
-      let added = 0;
-      for (const value of (Array.isArray(values) ? values : []).slice(0, MAX_ITEMS)) { try { if (!this.add(value).duplicate) added++; } catch {} }
-      return { added, total: items.length };
+      let added = 0; const ids = {}, used = new Set(items.map((item) => item.id)), now = Date.now();
+      for (const value of (Array.isArray(values) ? values : []).slice(0, MAX_ITEMS)) {
+        try {
+          const wanted = backupId(value?.id), at = typeof value?.addedAt === 'string' ? Date.parse(value.addedAt) : NaN;
+          const item = normalizeItem({ ...value, id: undefined, addedAt: undefined }, Number.isFinite(at) ? { addedAt: new Date(Math.min(at, now)).toISOString() } : {});
+          const key = identity(item), manual = !key && manualKey(item);
+          const existing = key ? items.find((entry) => identity(entry) === key) : items.find((entry) => entry.id === wanted && manualKey(entry) === manual) || items.find((entry) => !identity(entry) && manualKey(entry) === manual);
+          if (existing) { if (wanted && existing.id !== wanted) ids[wanted] = existing.id; continue; }
+          if (items.length >= MAX_ITEMS) break;
+          if (wanted && !used.has(wanted)) item.id = wanted; else if (wanted) ids[wanted] = item.id;
+          used.add(item.id); items.push(item); added++;
+        } catch { /* Skip records without a title. */ }
+      }
+      if (added) { items.sort((a, b) => b.addedAt.localeCompare(a.addedAt)); save(); }
+      return { added, total: items.length, ids };
     }
   };
 }

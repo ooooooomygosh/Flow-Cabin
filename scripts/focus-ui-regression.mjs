@@ -1,5 +1,6 @@
 /** Silent, offline state/data regression pass. Native fullscreen is a mock. */
 import assert from 'node:assert/strict';
+import { launchChromium } from './launch-browser.mjs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -7,7 +8,6 @@ import { createRequire } from 'node:module';
 import { spawn } from 'node:child_process';
 import { hasViteLocalOrigin } from './vite-readiness.mjs';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const { chromium } = createRequire(path.join(root, 'desktop/package.json'))('playwright');
 const output = process.env.FOCUS_OUTPUT || path.join(root, 'desktop/test-results/focus-ui');
 const port = Number(process.env.FOCUS_PORT || 4188), origin = `http://127.0.0.1:${port}`;
 const KEY = 'album-circle-focus-v1:local-owner';
@@ -23,7 +23,7 @@ try {
   server = spawn(process.execPath, [path.join(root,'node_modules/vite/bin/vite.js'),'--host','127.0.0.1','--port',String(port),'--strictPort'], {cwd:root,env:{...process.env,FLOW_CABIN_VITE_CACHE_DIR:path.join(output,'vite-cache')},stdio:['ignore','pipe','pipe']});
   let log=''; server.stdout.on('data',b=>log+=b); server.stderr.on('data',b=>log+=b);
   for (let i=0;;i++) { if (server.exitCode!==null || i>150) throw new Error(log); if (hasViteLocalOrigin(log,origin) && await fetch(origin).then(r=>r.ok,()=>false)) break; await new Promise(r=>setTimeout(r,100)); }
-  browser = await chromium.launch({executablePath:process.env.BROWSER_EXECUTABLE || (process.env.CI?chromium.executablePath():'/usr/bin/chromium'),headless:true,args:['--no-sandbox','--mute-audio']});
+  browser = await launchChromium();
   const run = async (name,test,{firstVisit=false,collection}={}) => {
     if (process.env.FOCUS_FILTER && !process.env.FOCUS_FILTER.split(',').some(filter=>name.includes(filter))) return;
     const context = await browser.newContext({viewport:{width:1440,height:900},locale:'zh-CN',reducedMotion:'reduce'});
@@ -76,7 +76,7 @@ try {
     await page.getByRole('button',{name:'重试保存',exact:true}).click();assert.match(await page.locator('.focus-dock [role=alert]').innerText(),/另一窗口.*本窗口.*仍失败/,'failed explicit retry retains the conflict explanation');
     await failStorage(page,false);await page.evaluate(end=>{Date.now=()=>end+1;window.dispatchEvent(new Event('focus'));},deadline);await page.waitForFunction(()=>window.albumCompanionSnapshot?.().focus.fish===1);
     await page.getByLabel('随手记内容').fill('当前窗口继续写的草稿');assert.equal((await focusState(page)).notes,'另一窗口保存的笔记','automatic timer and note writes must remain paused during conflict');await screenshot(page,'notes-storage-conflict');
-    await openFocus(page,'统计');await page.getByLabel('每日专注目标分钟').fill('120');assert.equal((await focusState(page)).settings.dailyGoal,100,'settings cannot bypass unresolved conflict');
+    await openFocus(page,'统计');await page.getByLabel('每日专注目标分钟').fill('120');await page.getByLabel('每日专注目标分钟').press('Enter');assert.equal((await focusState(page)).settings.dailyGoal,100,'settings cannot bypass unresolved conflict');
     await openFocus(page,'待办');await page.getByLabel('新的待办').fill('冲突期间的任务草稿');await page.getByRole('button',{name:'添加待办',exact:true}).click();assert.equal(await page.getByLabel('新的待办').inputValue(),'冲突期间的任务草稿');assert.equal((await focusState(page)).tasks[0].id,'other-task','tasks cannot bypass unresolved conflict');
     await page.getByRole('button',{name:'重试保存',exact:true}).click();const resolved=await focusState(page);assert.equal(resolved.notes,'当前窗口继续写的草稿');assert.equal(resolved.rewards.fish,1);assert.equal(resolved.sessions.length,1);
     await page.getByRole('button',{name:'添加待办',exact:true}).click();assert.equal((await focusState(page)).tasks.length,1);assert.equal((await focusState(page)).tasks[0].text,'冲突期间的任务草稿');
@@ -95,9 +95,9 @@ try {
   });
   await run('backup-focus-failure-is-transactional-and-visible',async page=>{
     await failStorage(page,true);await page.getByRole('button',{name:'设置',exact:true}).click();await page.getByRole('tab',{name:'数据与备份',exact:true}).click();await page.getByRole('button',{name:'收藏与备份',exact:true}).click();
-    page.on('dialog',dialog=>dialog.accept());
     await page.getByLabel('导入备份文件').setInputFiles({name:'synthetic-backup.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify({kind:'FlowCabinBackup',items:[],focus:{notes:'导入的新内容',tasks:[],settings:{notify:false,chime:false}}}))});
-    await page.getByRole('status').filter({hasText:'导入完成'}).waitFor();
+    await page.getByRole('status').filter({hasText:'导入完成'}).waitFor();assert.equal((await focusState(page)).notes,'原有随手记','nothing is replaced before the inline confirm');
+    await page.getByRole('group',{name:'替换本机记录'}).getByRole('button',{name:'替换这些内容',exact:true}).click();await page.getByRole('status').filter({hasText:'未能保存'}).waitFor();
     assert.match(await page.locator('.backup-dialog').innerText(),/专注.*未能保存|专注.*保存失败/,'backup must not report a successful focus restore');
     await screenshot(page,'backup-storage-error');await page.keyboard.press('Escape');await openFocus(page,'随手记');assert.equal(await page.getByLabel('随手记内容').inputValue(),'原有随手记');
     assert.equal((await focusState(page)).notes,'原有随手记');

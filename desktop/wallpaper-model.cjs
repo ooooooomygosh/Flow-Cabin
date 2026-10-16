@@ -10,6 +10,8 @@ function item(value) {
 const PETS = ['cat', 'chick', 'bunny', 'bear', 'fox'], LOOKS = ['warm', 'pixel', 'forest', 'seaside', 'starlight', 'night-study'];
 const petId = (value) => PETS.includes(value) ? value : 'cat';
 const PHASES = ['idle', 'focus', 'shortBreak', 'longBreak'], WEATHERS = ['snow', 'clear', 'rain', 'starry'], ACCESSORIES = ['', 'headphones', 'scarf', 'beanie'];
+// Mirrors of renderer catalogs (main never loads ../src); test/catalog-contract.test.cjs keeps them equal.
+const DECK_PROVIDERS = ['visual', 'auto', 'qq', 'netease', 'local', 'appleMusic', 'ma', 'system'];
 const bounded = (value, max) => Number.isFinite(value) ? Math.max(0, Math.min(max, Math.round(value))) : 0;
 // Focus state shown by the wallpaper and the desktop pet: no task history.
 function cleanFocus(value) {
@@ -34,7 +36,7 @@ function cleanSnapshot(value) {
     items: Array.isArray(value.items) ? value.items.slice(0, 12).map(item).filter(Boolean) : [], selectedId: string(value.selectedId), record,
     recordStyle: { base: colour(style.base, '#16191d'), opacity: Number.isFinite(style.opacity) ? Math.max(0, Math.min(100, style.opacity)) : 100, splatter: style.splatter === true, splashes: (Array.isArray(style.splashes) && style.splashes.length ? style.splashes : ['#dba746']).slice(0, 3).map((v) => colour(v, '#dba746')) },
     spinning: Boolean(record && value.spinning === true), trackIndex: Math.max(0, Math.min(tracks - 1, Number.isSafeInteger(value.trackIndex) ? value.trackIndex : 0)), reduceMotion: value.reduceMotion === true,
-    statusText: string(value.statusText, 200), actualTrack: string(value.actualTrack), provider: ['auto', 'qq', 'netease', 'ma', 'local', 'system'].includes(value.provider) ? value.provider : 'visual',
+    statusText: string(value.statusText, 200), actualTrack: string(value.actualTrack), provider: DECK_PROVIDERS.includes(value.provider) ? value.provider : 'visual',
     weather: WEATHERS.includes(value.weather) ? value.weather : 'snow', accessory: ACCESSORIES.includes(value.accessory) ? value.accessory : '', grooving: value.grooving === true, track: string(value.track, 200), focus: cleanFocus(value.focus) };
 }
-module.exports = { cleanSnapshot, cleanFocus, cleanCompanion };
+module.exports = { cleanSnapshot, cleanFocus, cleanCompanion, CATALOG_IDS: Object.freeze({ looks: LOOKS, pets: PETS, phases: PHASES, weathers: WEATHERS, accessories: ACCESSORIES, providers: DECK_PROVIDERS }) };

@@ -34,7 +34,7 @@
 | 数据与备份 | 收藏与备份、专辑墙、本地音乐文件夹 |
 | 关于 | 版本、项目主页、**重新引导**、快捷键 |
 
-旧入口保留但路由到设置：「布置小屋」→ 设置 › 房间与桌宠；「音源设置」与唱机出错按钮 → 设置 › 音源 的详情页「音源与账户」；「收藏与备份」从标题栏移入 设置 › 数据与备份；「入门指南」改为 设置 › 关于 › 重新引导。托盘新增「小屋设置…」，应用菜单新增「小屋设置… / 重新引导」，原 ⌘, 改名「显示与字体…」（页面命令 `open-settings`、`open-onboarding`，经 `album-companion-command`）。页面也可派发 `cabin-open-settings` `{section}` 打开指定分区。小屋工具条上的桌面模式/动态背景按钮由 #14 处理，本分支没有改动。
+唱机上的「布置小屋」「音源设置」按钮已移除（`scripts/cabin-layout-checks.mjs` 断言它们不存在）：场景与伙伴在 设置 › 房间与桌宠；唱机出错按钮（`cabin-open-music-settings`）→ 设置 › 音源 的详情页「音源与账户」；「收藏与备份」从标题栏移入 设置 › 数据与备份；「入门指南」改为 设置 › 关于 › 重新引导。托盘新增「小屋设置…」，应用菜单新增「小屋设置… / 重新引导」，原 ⌘, 改名「显示与字体…」（页面命令 `open-settings`、`open-onboarding`，经 `album-companion-command`）。页面也可派发 `cabin-open-settings` `{section}` 打开指定分区。小屋工具条上的桌面模式/动态背景按钮由 #14 处理，本分支没有改动。
 
 ## 3. 新手引导
 
@@ -45,32 +45,30 @@
 - 网页版：QQ / 网易云 / 系统播放器标为「需要心流小屋桌面版」并禁用；本地音乐改为「选择音乐文件」（打开 添加专辑）。Apple Music 只在 Mac 出现。
 - 像素样式用 `--px-*` token（均有回退值）；`prefers-reduced-motion` 与桌面「减少动态效果」都会关掉步骤动画。
 
-## 4. 需要队友实现的 API 契约
+## 4. 接口
 
-适配层在 `onboarding-adapter.mjs`，所有方法可选；缺失时走回退，**不会假装已登录或已授权**。
+适配层在 `onboarding-adapter.mjs`，直接调用 `src/player/sources.mjs` 与 `src/desktop/*`；任何一步失败都如实返回，**不会假装已登录或已授权**。
 
-### 播放器（PR #15 `src/player/sources.mjs`，docs/player.md「音源接口」）
+### 播放器（`src/player/sources.mjs`，docs/player.md「音源接口」）
 
-适配层按 #15 的真实签名编写；模块用 `import.meta.glob('../player/sources.mjs')` 懒加载，main 上没有这个文件时自动走回退。
+音源名称只有一张表：`src/player/providers.mjs` 的 `PROVIDERS`（`providerLabel(id)` 取全名，`providerLabel(id, 'short')` 取唱机铭牌上的短名），`sources.mjs` 再导出。
 
-| 方法（#15） | 返回 | 引导 / 设置怎么用 | main 上的回退 |
-| --- | --- | --- | --- |
-| `listSources({ mac })` | `[{ id, label, kind, login, platform?, supported }]` | 隐藏 `supported=false` 与 `ma`（MA 在「音源与账户」详情页）；Apple Music 映射到唱机 `appleMusic` 音源 | 内置列表（按桌面/网页、Mac 过滤），Apple Music 落到「系统正在播放」 |
-| `connectSource(id)` | `Promise<{ ok, cancelled, error }>`，登录/选文件夹结束才 resolve | 按钮显示「等待完成…」，结束后刷新状态；`cancelled` 显示「已取消」 | 发 `music-login` / `local-music-folder` 命令，等 `album-music-account` / `album-local-music` 事件刷新 |
-| `getSourceStatus(id)` | `{ id, supported, connected, detail, needsPermission?, app? }` | 显示 `detail` | 读 `/desktop-music/config`、`/local/summary` |
-| `requestPermission('appleMusic')` | `{ granted, needsPermission, available, error }` | `granted`→已允许；`available=false`→不支持；否则→未允许 | 返回「第一次用到时由系统询问」 |
-| `testPlayback({ provider })` | `{ ok, provider, quality, title }` 或 `{ ok:false, error }` | 「播放测试」低音量真实试放《晴天》约 3 秒；Apple Music / 系统播放用 `auto` | WebAudio 提示音，只能确认输出设备 |
-| 音质 | `GET /desktop-music/config` 的 `quality` / `qualities`，`POST /quality { quality }` | 设置 › 音源 的音质下拉；引导音源步骤在有 `qualities` 时显示 | 显示禁用的「自动」占位 |
-
-已用 #15 合并预演验证：`main + feat/onboarding + feat/seamless-playback` 构建通过，`npm run test:browser` 54 项全部通过（唯一冲突是 package.json 的测试列表，一行即可解决）。
+| 方法 | 返回 | 引导 / 设置怎么用 |
+| --- | --- | --- |
+| `listSources({ mac })` | `[{ id, label, kind, login, platform?, supported }]` | 隐藏 `supported=false` 与 `ma`（MA 在「音源与账户」详情页）；Apple Music 切到唱机 `appleMusic` 音源 |
+| `connectSource(id)` | `Promise<{ ok, cancelled, error }>`，登录/选文件夹结束才 resolve | 按钮显示「等待完成…」，结束后刷新状态；`cancelled` 显示「已取消」 |
+| `getSourceStatus(id)` | `{ id, supported, connected, detail, needsPermission?, app? }` | 显示 `detail`；读不到时显示「暂时读不到状态」 |
+| `requestPermission('appleMusic')` | `{ granted, needsPermission, available, error }` | `granted`→已允许；`available=false`→不支持；否则→未允许 |
+| `testPlayback({ provider })` | `{ ok, provider, quality, title }` 或 `{ ok:false, error }` | 「播放测试」低音量真实试放约 3 秒：平台音源试《晴天》；**本地音乐试本地曲库的第一首**，曲库为空时播放提示音确认扬声器；Apple Music / 系统播放用 `auto` |
+| 音质 | `GET /desktop-music/config` 的 `quality` / `qualities`，`POST /quality { quality }` | 设置 › 音源 的音质下拉；引导音源步骤在有 `qualities` 时显示 |
 
 通知权限由页面自己用 `Notification.requestPermission()` 处理。播放控制可派发 `cabin:player-command` `{ action: toggle|play|pause|next|previous }`，引导目前不需要。
 
-### 桌面（`window.cabinDesktop`，对应 #14 的 docs/desktop.md）
+### 桌面
 
-`enterDesktopMode()`、`exitDesktopMode()`、`getDesktopModeStatus() → { active, busy, supported, via, reason }`、`onDesktopModeChange(cb)`（无则监听 `cabin:desktop-mode`）。`busy` 时开关禁用；`supported=false` 时禁用并直接显示 `reason`（中文）。退出快捷键 Ctrl/⌘+Alt+D 写在设置 › 桌面 与引导完成页。缺失时回退到当前页面的桌面模式切换。
+- 沉入桌面：`src/desktop/desktop-sink-client.mjs`（`window.cabinDesktop` 同一组函数）：`enterDesktopMode()`、`exitDesktopMode()`、`getDesktopModeStatus() → { active, busy, supported, via, reason }`、`onDesktopModeChange(cb)`。`busy` 时开关禁用；`supported=false` 时禁用并直接显示 `reason`（中文）。退出快捷键 Ctrl/⌘+Alt+D 写在设置 › 桌面 与引导完成页。
+- 开机启动：`src/desktop/autostart-client.mjs`：`setAutostart(enabled) → Promise<{ supported, enabled }>`、`getAutostart()`、`onAutostartChange(cb)`。页面命令 `album-desktop://action/autostart?enabled=true|false`，主进程（`desktop/main/autostart.cjs`）调用 Electron `app.setLoginItemSettings({ openAtLogin })`，结果写到 `window.cabinAutostart` 并派发 `cabin:autostart`。只有打包后的 macOS / Windows 应用支持；其他情况返回 `supported: false`，引导里显示「不支持」。引导的「开机时打开小屋」用 `requestPermission('autostart')`。
 
 ## 5. 待办（TODO）
 
-- 播放器：#15 合并后可删掉 `onboarding-adapter.mjs` 的回退分支；开机启动还没有 API（`requestPermission('autostart')` 目前返回不支持）。
-- 桌面：#14 合并后，本分支只读 `window.cabinDesktop`，回退分支可删除；开机启动需要一个 `requestPermission('autostart')` 或独立 API。
+- 设置 › 桌面 还没有「开机时打开小屋」开关；接 `getAutostart()` / `setAutostart()` 即可。

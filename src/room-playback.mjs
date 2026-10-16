@@ -1,12 +1,8 @@
 import { playbackErrorMessage } from './player/playback-cache.mjs';
 import { rankForAutoplay, matchKey, AUTO_MATCH_ATTEMPTS } from './player/auto-match.mjs';
 import { toSimplified, toTraditional } from './player/hanzi.mjs';
-// A playlist's tracks each have their own artist and album; an album's share the record's.
-export const trackArtist = (item, index) => item?.trackDetails?.[index]?.artist || (item?.type === 'playlist' ? '' : item?.artist || '');
-// The cover to show for the track on the deck: a playlist song's own album
-// art (saved with the playlist, else from the recording that matched), else the record's.
-export const trackCover = (item, index, matched = '') => item?.trackDetails?.[index]?.cover || (item?.type === 'playlist' ? matched : '') || item?.cover || '';
-export const trackAlbum = (item, index) => item?.trackDetails?.[index]?.album || (item?.type === 'song' ? item.albumTitle || '' : item?.type === 'playlist' ? '' : item?.title || '');
+import { trackArtist, trackAlbum } from './track-meta.mjs';
+export { trackArtist, trackCover, trackAlbum } from './track-meta.mjs';
 export function exactTrack(item, index, provider) {
   if (provider === 'netease') {
     const detail = item?.trackDetails?.[index];

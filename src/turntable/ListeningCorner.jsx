@@ -6,7 +6,7 @@ import { flyRecord } from './record-flight.mjs';
 import { deckSoundsEnabled, setDeckSounds } from './deck-sfx.mjs';
 import { displayTitle } from '../display-title.mjs';
 import { trackNames } from '../room-model.mjs';
-import { trackArtist } from '../room-playback.mjs';
+import { trackArtist } from '../track-meta.mjs';
 import { formatDuration } from '../playlist-model.mjs';
 import { ChevronLeft, ChevronRight, Pause, Play, X, SpeakerWave, SpeakerOff, Disc3 } from '../icons';
 import './listening-corner.css';

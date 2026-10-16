@@ -65,8 +65,8 @@ Mini deck hover controls: 上一首 / 播放·暂停 / 下一首 / 声音 / 专�
 - Main process (`desktop/mini-player.cjs` → `relayPlayerCommand`): validates the sender is the mini window and that
   `action ∈ toggle | play | pause | next | previous`, then dispatches in the cabin page:
   `window.dispatchEvent(new CustomEvent('cabin:player-command', { detail: { action } }))`.
-- The player listens to that DOM event on the main window. Play/pause on the mini deck still uses the
-  older companion `play-toggle` command until the player handles `toggle`; switch it over then.
+- The player listens to that DOM event on the main window. The mini deck's play/pause sends `toggle` through
+  this same channel; the companion command set only carries `sound-toggle` / `focus-toggle`.
 
 ## 检查更新
 

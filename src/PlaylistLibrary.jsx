@@ -143,33 +143,34 @@ export default function PlaylistLibrary({ items, close, onAdded }) {
   const desktop = useDesktopAppearance().client;
   const [tab, setTab] = useState(() => { try { const stored = localStorage.getItem('album-circle-playlist-tab-v1'); return TABS.some(t => t.id === stored) ? stored : 'netease'; } catch { return 'netease'; } });
   const [config, setConfig] = useState(null), [lists, setLists] = useState({}), [detail, setDetail] = useState(null), [busy, setBusy] = useState(false), [busyId, setBusyId] = useState(''), [error, setError] = useState(''), [notice, setNotice] = useState(''), [signing, setSigning] = useState('');
-  const generation = useRef(0), moreRequest = useRef(null);
+  // List loads and detail loads have separate generations: refreshing the list must not orphan an open request.
+  const listGen = useRef(0), detailGen = useRef(0), moreRequest = useRef(null);
   const [loadingMore, setLoadingMore] = useState(false);
-  const cancelMore = () => { generation.current++; moreRequest.current?.abort(); moreRequest.current = null; setLoadingMore(false); };
+  const cancelMore = () => { detailGen.current++; moreRequest.current?.abort(); moreRequest.current = null; setLoadingMore(false); };
   const loadMore = async (offset = detail?.page?.nextOffset) => {
     if (moreRequest.current || offset == null) return;
-    const controller = new AbortController(), current = generation.current, base = detail; moreRequest.current = controller; setLoadingMore(true); setError(''); setNotice('');
+    const controller = new AbortController(), current = detailGen.current, base = detail; moreRequest.current = controller; setLoadingMore(true); setError(''); setNotice('');
     try {
       const next = await musicRequest(`/playlist?provider=${encodeURIComponent(base.provider)}&id=${encodeURIComponent(base.playlist.id)}&offset=${offset}&revision=${encodeURIComponent(base.revision)}`, undefined, controller.signal);
-      if (current === generation.current && !controller.signal.aborted) {
+      if (current === detailGen.current && !controller.signal.aborted) {
         const merged = mergePlaylistPage(base, { ...next, provider: base.provider }); setDetail(merged);
         if (merged.tracks.length === base.tracks.length) setNotice('本次仍未返回缺少的曲目；已读取内容保留，可稍后手动重试。');
       }
-    } catch (cause) { if (current === generation.current && !controller.signal.aborted) setError(cause.message); }
+    } catch (cause) { if (current === detailGen.current && !controller.signal.aborted) setError(cause.message); }
     finally { if (moreRequest.current === controller) { moreRequest.current = null; setLoadingMore(false); } }
   };
   const [accountEpoch, setAccountEpoch] = useState(0);
-  useEffect(() => () => { generation.current++; moreRequest.current?.abort(); }, []);
+  useEffect(() => () => { listGen.current++; detailGen.current++; moreRequest.current?.abort(); }, []);
   const choose = (next) => { if (next === tab) return; cancelMore(); setTab(next); setDetail(null); setError(''); setNotice(''); setBusyId(''); try { localStorage.setItem('album-circle-playlist-tab-v1', next); } catch {} };
   const listProvider = tab === 'apple' ? 'apple-local' : tab;
   const loggedIn = tab === 'netease' ? config?.neteaseLoggedIn : tab === 'qq' ? config?.qqLoggedIn : false;
   const refreshConfig = async () => { try { setConfig(await musicRequest('/config')); } catch (cause) { setConfig({}); setError(cause.message); } };
   const loadList = async (provider, force = false) => {
     if (!force && lists[provider]?.playlists) return;
-    const current = ++generation.current;
+    const current = ++listGen.current;
     setLists((old) => ({ ...old, [provider]: { ...old[provider], loading: true, error: '' } }));
-    try { const result = await musicRequest('/playlists?provider=' + provider); if (current === generation.current) setLists((old) => ({ ...old, [provider]: { ...result, loading: false } })); }
-    catch (cause) { if (current === generation.current) setLists((old) => ({ ...old, [provider]: { playlists: null, loading: false, error: cause.message } })); }
+    try { const result = await musicRequest('/playlists?provider=' + provider); if (current === listGen.current) setLists((old) => ({ ...old, [provider]: { ...result, loading: false } })); }
+    catch (cause) { if (current === listGen.current) setLists((old) => ({ ...old, [provider]: { playlists: null, loading: false, error: cause.message } })); }
   };
   useEffect(() => { refreshConfig(); }, []);
   useEffect(() => {
@@ -179,9 +180,9 @@ export default function PlaylistLibrary({ items, close, onAdded }) {
   useEffect(() => { if ((tab === 'netease' || tab === 'qq') && loggedIn) loadList(tab); }, [tab, loggedIn, accountEpoch]);
   const openDetail = (value, provider) => { cancelMore(); setDetail({ ...value, provider }); setBusyId(''); setNotice(''); setError(''); };
   const openPlaylist = async (entry) => {
-    if (busyId) return; const current = generation.current; setBusyId(entry.id); setError('');
-    try { const value = await musicRequest(`/playlist?provider=${listProvider}&id=${encodeURIComponent(entry.id)}`); if (current === generation.current) openDetail(value, listProvider); }
-    catch (cause) { if (current === generation.current) setError(cause.message); } finally { if (current === generation.current) setBusyId(''); }
+    if (busyId) return; const current = detailGen.current; setBusyId(entry.id); setError('');
+    try { const value = await musicRequest(`/playlist?provider=${listProvider}&id=${encodeURIComponent(entry.id)}`); if (current === detailGen.current) openDetail(value, listProvider); }
+    catch (cause) { if (current === detailGen.current) setError(cause.message); } finally { setBusyId((value) => value === entry.id ? '' : value); }
   };
   const savedItem = detail && items.find((item) => item.externalIds?.playlist === playlistKey(detail.provider, detail.playlist.id));
   // Saving is idempotent: an existing sleeve is refreshed with the latest track list.
@@ -196,14 +197,14 @@ export default function PlaylistLibrary({ items, close, onAdded }) {
     return { item, refreshed: result.duplicate };
   };
   const act = async (action, index = 0) => {
-    if (busy || loadingMore) return; const current = generation.current; setBusy(true); setError(''); setNotice('');
+    if (busy || loadingMore) return; const current = detailGen.current; setBusy(true); setError(''); setNotice('');
     try {
-      const { item, refreshed } = await save(); if (current !== generation.current) return;
+      const { item, refreshed } = await save(); if (current !== detailGen.current) return;
       if (action === 'save') { setNotice(refreshed ? `《${item.title}》已同步为最新的 ${item.tracks.length} 首。` : `《${item.title}》已放上唱片架，可以像专辑一样双击放盘。`); return; }
       if (action === 'queue') { const request = { id: item.id, item, accepted: false }; window.dispatchEvent(new CustomEvent('cabin-enqueue', { detail: request })); if (!request.accepted) throw new Error('未能加入待播，请检查队列容量和本地存储后重试。'); setNotice(`《${item.title}》已加入待播，当前唱片放完后接着放。`); return; }
       window.dispatchEvent(new CustomEvent('cabin-play', { detail: { id: item.id, item, track: action === 'shuffle' ? Math.floor(Math.random() * item.tracks.length) : index, shuffle: action === 'shuffle' } }));
       close();
-    } catch (cause) { if (current === generation.current) setError(cause.message); } finally { setBusy(false); }
+    } catch (cause) { if (current === detailGen.current) setError(cause.message); } finally { setBusy(false); }
   };
   const state = lists[listProvider];
   const signIn = (provider) => { setSigning(provider); setError(''); desktopCommand('music-login', { provider }); };

@@ -1,5 +1,5 @@
 import { wallGeometry, normalizeWall } from './album-wall-model.mjs';
-const cache = new Map();
+import { createCoverCache } from './lib/cover-cache.mjs';
 async function fetchCoverBlob(value) {
   // Local and inline artwork is read directly; catalog artwork uses the existing desktop proxy.
   const url = new URL(value, window.location.href);
@@ -9,18 +9,11 @@ async function fetchCoverBlob(value) {
   const blob = await response.blob();
   return blob.type.startsWith('image/') && blob.size <= 8 * 1024 * 1024 ? blob : null;
 }
-export async function loadWallCover(value) {
-  if (!value) return null;
-  if (!cache.has(value)) cache.set(value, (async () => {
-    try {
-      const blob = await fetchCoverBlob(value);
-      return blob ? await createImageBitmap(blob) : null;
-    } catch { return null; }
-  })());
-  // Full-resolution artwork belongs to wall export/preview only.
-  if (cache.size > 150) { const first = cache.keys().next().value; cache.delete(first); }
-  return cache.get(value);
-}
+// Full-resolution artwork belongs to wall export/preview only. Evicted bitmaps are closed and the
+// whole cache is released once the wall has been idle for a while (see lib/cover-cache.mjs).
+const covers = createCoverCache({ load: async (value) => { const blob = await fetchCoverBlob(value); return blob ? await createImageBitmap(blob) : null; } });
+export const loadWallCover = (value) => covers.get(value);
+export const releaseWallCovers = () => covers.release();
 // Shelf colour sampling never populates the full-resolution wall cache.
 // The temporary resized bitmap is always released, even if canvas readback fails.
 export async function readCoverPixels(value) {
@@ -76,4 +69,5 @@ export async function paintWall(canvas, albums, value, images, requestedScale = 
   }
   return { width: canvas.width, height: canvas.height, missing: images.filter((image) => !image).length };
 }
-export function downloadBlob(blob, filename) { const url = URL.createObjectURL(blob), anchor = document.createElement('a'); anchor.href = url; anchor.download = filename; anchor.click(); setTimeout(() => URL.revokeObjectURL(url), 60000); }
+// Kept for existing importers; the helper lives in lib/download.mjs.
+export { downloadBlob } from './lib/download.mjs';

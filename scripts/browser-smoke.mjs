@@ -1,4 +1,5 @@
 import { verifyWeatherMotion } from './weather-motion-checks.mjs';
+import { launchChromium } from './launch-browser.mjs';
 import { verifyFullscreenStudy } from './fullscreen-study-checks.mjs';
 import { verifyAppleHandoff } from './apple-handoff-checks.mjs';
 import { hasViteLocalOrigin } from './vite-readiness.mjs';
@@ -14,14 +15,11 @@ import { verifyOnboarding } from './onboarding-checks.mjs';
 import { verifyCabinLayout, verifyCabinToolActions, verifyFocusLayout } from './cabin-layout-checks.mjs';
 import { verifyPlaylistPagination } from './playlist-pagination-checks.mjs';
 import { neteasePlaylists, playlistDetail } from './playlist-fixture.mjs';
-import { createRequire } from 'node:module';
 import { spawn } from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const require = createRequire(path.join(root, 'desktop/package.json'));
-const { chromium } = require('playwright');
 const output = path.resolve(process.env.BROWSER_OUTPUT || path.join(root, 'desktop/test-results/browser'));
 await fs.mkdir(output, { recursive: true });
 const port = Number(process.env.BROWSER_PORT || 4179), origin = `http://127.0.0.1:${port}`;
@@ -49,7 +47,7 @@ try {
     if (i === 99) throw new Error('Vite startup timed out: ' + serverLog);
     await new Promise(r => setTimeout(r, 100));
   }
-  browser = await chromium.launch({ executablePath: process.env.BROWSER_EXECUTABLE || (process.env.CI ? chromium.executablePath() : await fs.access('/usr/bin/chromium').then(() => true, () => false) ? '/usr/bin/chromium' : chromium.executablePath()), headless: true, args: ['--no-sandbox', '--mute-audio', '--autoplay-policy=no-user-gesture-required'] });
+  browser = await launchChromium();
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1, locale: 'zh-CN', reducedMotion: 'reduce' });
   await context.addInitScript(() => { window.__desktopCommands = []; window.__cabinPlayback = []; window.addEventListener('cabin:playback', e => window.__cabinPlayback.push({ ...e.detail, at: performance.now() })); window.open = url => { window.__desktopCommands.push(String(url)); return null; }; window.albumDesktopAppearance = { client: true, reduceMotion: true }; const init = () => { document.documentElement.dataset.desktopClient = 'true'; document.documentElement.dataset.desktopReduceMotion = 'true'; }; if (document.documentElement) init(); else new MutationObserver((_, o) => { if (document.documentElement) { init(); o.disconnect(); } }).observe(document, { childList: true }); });
   const routeHandler = async route => {
@@ -178,6 +176,7 @@ try {
   await page.getByRole('button', { name: '从待播移除 测试唱片 3', exact: true }).click(); await page.getByRole('button', { name: '待播唱片 1 张', exact: true }).click(); await page.locator('.room-record').nth(1).click();
   check('queue-priority-and-repeat-state-match-playback');
   // Album import from picked files (session playback) + pixel covers.
+  localAlbumCalls = 0; // the onboarding 播放测试 also reads /local/albums (first local track)
   await page.getByRole('button', { name: '添加专辑', exact: true }).click(); await page.getByRole('tab', { name: '本地音乐' }).click();
   await page.getByRole('tab', { name: '手动填写' }).click(); await page.getByRole('tab', { name: '本地音乐' }).click(); // {} first, then a partial album
   await page.locator('.add-results[aria-label="本地专辑"] li', { hasText: '残缺资料' }).getByText('未知歌手 · 0 首').waitFor(); check('local-music-empty-or-partial-response-renders');
@@ -349,9 +348,9 @@ try {
   page = await context.newPage(); await page.setViewportSize({ width: 300, height: 64 }); await page.goto(origin + '/mini.html');
   await page.locator('.mini-bar').waitFor(); await page.getByText('雪夜 · 预览').waitFor();
   assert.equal(await page.locator('.mini-actions').evaluate(e => getComputedStyle(e).opacity), '0', 'controls hidden until hover');
-  await page.hover('.mini-bar'); await page.getByRole('button', { name: '上一首' }).click(); await page.getByRole('button', { name: '暂停' }).click(); await page.getByRole('button', { name: '下一首' }).click(); await page.getByRole('button', { name: '浮出桌面' }).click();
+  await page.hover('.mini-bar'); await page.getByRole('button', { name: '上一首' }).click(); await page.getByRole('button', { name: '暂停', exact: true }).click(); await page.getByRole('button', { name: '下一首' }).click(); await page.getByRole('button', { name: '浮出桌面' }).click();
   await page.locator('.mini-bar').dblclick({ position: { x: 4, y: 4 } });
-  assert.deepEqual(await page.evaluate(() => window.__miniCalls), ['player:previous', 'play-toggle', 'player:next', 'exit', 'exit']); await screenshot('mini-player');
+  assert.deepEqual(await page.evaluate(() => window.__miniCalls), ['player:previous', 'player:toggle', 'player:next', 'exit', 'exit']); await screenshot('mini-player');
   check('mini-player-hover-controls-and-double-click-exit'); await page.close();
   page = await context.newPage(); await page.setViewportSize({ width: 420, height: 420 }); await page.goto(origin + '/pet.html'); await page.locator('.pet-cat .pixel-cat').waitFor();
   for (const pet of PETS) {
