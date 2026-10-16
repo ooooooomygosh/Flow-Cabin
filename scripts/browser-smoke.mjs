@@ -477,6 +477,8 @@ try {
     await page.evaluate(() => { const s = document.querySelector('.room-scene'), cs = getComputedStyle(s); s.style.setProperty('--scene-floor', String((s.clientHeight - parseFloat(cs.getPropertyValue('--scene-y')) - 118) / parseFloat(cs.getPropertyValue('--scene-k')))); }); await page.waitForTimeout(800);
     assert.equal(await page.locator('.room-cat[data-perch="console"]').count(), 1, 'with the focus panel open and the floor blocked at 1280x800 the cat perches on the console');
     const expand = await hopDuring('console expands', () => page.locator('.room-record').nth(2).dblclick());
+    // Back to the scene's own floor: a cat on a clear perch stays there until the console goes.
+    await page.evaluate(() => document.querySelector('.room-scene').style.removeProperty('--scene-floor'));
     await page.getByRole('button', { name: '收起专注工具', exact: true }).click(); await page.waitForTimeout(1200); await page.mouse.move(1200, 120);
     assert.equal(await page.locator('.room-cat[data-perch="console"]').count(), 1, 'cat still perched before immersive');
     const immersive = await hopDuring('immersive hides the console', () => page.keyboard.press('z'));
