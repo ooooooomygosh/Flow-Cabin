@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { QUEUE_KEY, normalizeQueue, queueAddition, dequeue, pruneQueue, cycleRepeat, nextStep, nextPlayableStep, previousStep } from './player-queue.mjs';
+import { QUEUE_KEY, normalizeQueue, queueAddition, dequeue, pruneQueue, cycleRepeat, nextStep, nextPlayableStep, previousStep, playedBag } from './player-queue.mjs';
 import { createPlaybackBroadcaster, rmsEnergy, smoothEnergy, estimatedEnergy, ENERGY_INTERVAL_MS } from './playback-signal.mjs';
 import { analyserFor } from './audio-graph.mjs';
 import { createBeatTracker } from './beat-tracker.mjs';
@@ -20,10 +20,16 @@ export function usePlayerQueue({ items, record, trackIndex, setTrackIndex, loadA
   const itemsSignature = items.map((item) => item.id).join('|');
   useEffect(() => { if (items.length) setQueue((old) => pruneQueue(old, items.map((item) => item.id))); }, [itemsSignature]);
   const trackCount = trackNames(record).length, audible = provider !== 'visual' && provider !== 'system';
+  // 歌单「随机播放」 shuffles that one record without switching the saved shuffle key on;
+  // it ends when another record starts.
+  const [oneShot, setOneShot] = useState(null), lastRecord = useRef(record?.id);
+  useEffect(() => { if (oneShot && lastRecord.current === oneShot && record?.id !== oneShot) setOneShot(null); lastRecord.current = record?.id; }, [record?.id]);
+  const effective = oneShot && oneShot === record?.id && !queue.shuffle ? { ...queue, shuffle: true } : queue;
+  const bag = useRef(null); bag.current = playedBag(bag.current, record?.id, trackIndex, trackCount); const played = bag.current.played;
   // What plays after this track is decided once (shuffle included), so the deck
   // can match that exact track early and the transition is instant.
   // Tracks whose early match failed are stepped over (see useRoomPlayback).
-  const upcoming = useMemo(() => nextPlayableStep({ trackIndex, trackCount, queue, blocked: (index) => Boolean(playback?.isBlocked?.(record, index)) }), [record?.id, trackIndex, trackCount, queue.ids.join('|'), queue.repeat, queue.shuffle, provider, playback?.blockedVersion]);
+  const upcoming = useMemo(() => nextPlayableStep({ trackIndex, trackCount, queue: effective, played, blocked: (index) => Boolean(playback?.isBlocked?.(record, index)) }), [record?.id, trackIndex, trackCount, queue.ids.join('|'), queue.repeat, effective.shuffle, played.join('|'), provider, playback?.blockedVersion]);
   const go = (step) => {
     if (step.type === 'track') setTrackIndex(step.index);
     else if (step.type === 'restart') { if (audible) playback?.restart(); }
@@ -31,17 +37,18 @@ export function usePlayerQueue({ items, record, trackIndex, setTrackIndex, loadA
     return step.type !== 'stop';
   };
   const api = {
-    queue, queueError,
-    canNext: Boolean(record) && nextStep({ trackIndex, trackCount, queue, manual: true, random: () => 0 }).type !== 'stop',
+    queue: effective, queueError,
+    canNext: Boolean(record) && nextStep({ trackIndex, trackCount, queue: effective, played, manual: true, random: () => 0 }).type !== 'stop',
     canPrevious: Boolean(record) && (trackIndex > 0 || (audible && (playback?.position || 0) > 0)),
-    next: (manual = true) => record && go(manual && upcoming.type === 'restart' ? nextStep({ trackIndex, trackCount, queue, manual }) : upcoming),
+    next: (manual = true) => record && go(manual && upcoming.type === 'restart' ? nextStep({ trackIndex, trackCount, queue: effective, played, manual }) : upcoming),
     peekNext: () => upcoming.type === 'track' ? { item: record, index: upcoming.index } : upcoming.type === 'album' ? { item: items.find((entry) => entry.id === upcoming.id), index: 0 } : null,
     previous: () => record && go(previousStep({ trackIndex, position: audible ? playback?.position || 0 : 0 })),
     enqueue: (id) => add(id),
     playNext: (id) => add(id, true),
     remove: (id) => setQueue((old) => dequeue(old, id)),
     cycleRepeat: () => setQueue((old) => cycleRepeat(old)),
-    toggleShuffle: () => setQueue((old) => ({ ...old, shuffle: !old.shuffle }))
+    toggleShuffle: () => { const once = effective.shuffle && !currentQueue.current.shuffle; setOneShot(null); return once || setQueue((old) => ({ ...old, shuffle: !old.shuffle })); },
+    shuffleOnce: (id) => { bag.current = null; setOneShot(id); }
   };
   const ref = useRef(api); ref.current = api;
   return [api, ref];

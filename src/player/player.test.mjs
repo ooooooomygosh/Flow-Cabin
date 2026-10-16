@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { rmsEnergy, smoothEnergy, createPlaybackBroadcaster, PLAYBACK_EVENT, estimatedEnergy } from './playback-signal.mjs';
-import { normalizeQueue, enqueue, playNext, dequeue, pruneQueue, cycleRepeat, nextStep, previousStep, queueAddition, QUEUE_LIMIT } from './player-queue.mjs';
+import { normalizeQueue, enqueue, playNext, dequeue, pruneQueue, cycleRepeat, nextStep, nextPlayableStep, previousStep, queueAddition, playedBag, QUEUE_LIMIT } from './player-queue.mjs';
 import { proceduralGrid, quantize, readPalette, nearestIndex, gridToRgba, hexToRgb, GRID, PALETTE_TOKENS } from './pixel-cover.mjs';
 import { createBeatTracker, bassLevel } from './beat-tracker.mjs';
 import { setBeat, currentBeat, sinceBeat } from './beat-clock.mjs';
@@ -168,4 +168,19 @@ test('beat clock and playback signal: a beat is sent when the tempo or phase cha
   time = 20; assert.equal(cast.update({ playing: true, energy: .5, bpm: 120, beatAt: 1560 })?.reason, 'beat', 'a 60 ms phase shift is');
   time = 30; assert.equal(cast.update({ playing: true, energy: .5, bpm: 126, beatAt: 1560 })?.reason, 'beat');
   assert.equal(sent.at(-1).bpm, 126); assert.equal(cast.update({ playing: false, bpm: 126, beatAt: 1560 }).bpm, 0);
+});
+
+test('queue: shuffle is a bag per record, then falls through to 待播, repeat-all or stop', () => {
+  const queue = normalizeQueue({ shuffle: true }), heard = [];
+  let bag = playedBag(null, 'r', 2, 5), index = 2;
+  for (let i = 0; i < 4; i++) { const step = nextStep({ trackIndex: index, trackCount: 5, queue, played: bag.played, random: () => .5 }); assert.equal(step.type, 'track'); assert.ok(!bag.played.includes(step.index), 'never a track already heard'); index = step.index; heard.push(index); bag = playedBag(bag, 'r', index, 5); }
+  assert.deepEqual([2, ...heard].sort(), [0, 1, 2, 3, 4], 'each track once');
+  assert.deepEqual(nextStep({ trackIndex: index, trackCount: 5, queue, played: bag.played }), { type: 'stop' });
+  assert.deepEqual(nextStep({ trackIndex: index, trackCount: 5, queue: enqueue(queue, 'z'), played: bag.played }), { type: 'album', id: 'z' }, 'the 待播 queue plays once the bag is empty');
+  const again = nextStep({ trackIndex: index, trackCount: 5, queue: { ...queue, repeat: 'all' }, played: bag.played, random: () => 0 });
+  assert.equal(again.type, 'track'); assert.notEqual(again.index, index, 'a new round never repeats the last track');
+  assert.deepEqual(playedBag(bag, 'r', again.index, 5), { id: 'r', played: [again.index] }, 'a full bag starts over');
+  assert.deepEqual(playedBag(bag, 'other', 0, 5), { id: 'other', played: [0] }, 'a new record starts a new bag');
+  assert.deepEqual(nextPlayableStep({ trackIndex: 0, trackCount: 3, queue, played: [0, 1], blocked: (i) => i === 2 }), { type: 'track', index: 2 }, 'only a blocked track left: the plain step');
+  assert.deepEqual(nextPlayableStep({ trackIndex: 0, trackCount: 4, queue: enqueue(queue, 'z'), played: [0, 1], random: () => 0, blocked: (i) => i >= 2 }), { type: 'album', id: 'z' });
 });

@@ -128,7 +128,7 @@ export default function CabinRoom({ items, loading, loadError = '', openRecord, 
   useEffect(() => {
     // A playlist saved a moment ago may not be in `items` yet; the event carries it.
     const resolve = (detail) => items.find((entry) => entry.id === detail?.id) || (detail?.item?.id === detail?.id ? detail.item : null);
-    const play = (event) => { const item = resolve(event.detail); if (!item) return; if (event.detail.shuffle && !queueRef.current?.current?.queue.shuffle) queueRef.current?.current?.toggleShuffle(); loadRef.current(item, Math.max(0, Number(event.detail.track) || 0)); };
+    const play = (event) => { const item = resolve(event.detail); if (!item) return; if (event.detail.shuffle) queueRef.current?.current?.shuffleOnce(item.id); loadRef.current(item, Math.max(0, Number(event.detail.track) || 0)); };
     const enqueue = (event) => { const item = resolve(event.detail); if (event.detail) event.detail.accepted = Boolean(item && queueRef.current?.current?.enqueue(item.id)); };
     window.addEventListener('cabin-play', play); window.addEventListener('cabin-enqueue', enqueue);
     return () => { window.removeEventListener('cabin-play', play); window.removeEventListener('cabin-enqueue', enqueue); };
