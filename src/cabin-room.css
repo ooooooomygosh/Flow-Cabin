@@ -1,29 +1,76 @@
-.listening-room{color:#ffe9cb}.cabin-toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 28px;background:#24160f;flex-wrap:wrap}.cabin-toolbar>span{display:flex;gap:8px;align-items:center;color:#dfbc91;font-size:13px}.cabin-toolbar button{display:flex;gap:8px;align-items:center;padding:9px 15px;color:#ffdfaa;background:#624226;border:1px solid #b97c49;border-radius:9px}.cabin-toolbar button[aria-pressed=true]{background:#d79a51;color:#21140b}
-.cabin-stage-wrap{background:radial-gradient(ellipse at center,#74401e,#211208 90%)}
-.cabin-scene.room-scene{position:relative;width:100%;max-width:1800px;aspect-ratio:1448/1086;margin:auto;isolation:isolate;overflow:hidden;background:#4a2a13;min-height:0}
-.cabin-scene:before{display:none}.cabin-scene-art{display:block;position:absolute;inset:0;width:100%;height:100%;object-fit:fill;user-select:none;pointer-events:none}
-.cabin-rack.room-rack{position:absolute!important;left:0!important;top:0!important;width:100%!important;height:100%!important;bottom:auto!important;transform:none!important;padding:0!important;background:none!important;box-shadow:none!important;border:0!important;max-width:none!important;min-width:0!important;z-index:2}
+/* The shelf stage: scene art, rack, record slots, empty wells and the first-visit card. */
+@layer guards, reset, features, skin, overrides;
+@layer features {
+.listening-room{color:var(--px-ink)}.cabin-toolbar{display:flex;align-items:center;justify-content:space-between}.cabin-toolbar>span{display:flex;gap:8px;align-items:center;color:#dfbc91;font-size:13px}
+.cabin-scene.room-scene{isolation:isolate;background:#4a2a13;min-height:0}
+.cabin-scene-art{display:block;position:absolute;inset:0;width:100%;height:100%;object-fit:fill;user-select:none;pointer-events:none}
+.cabin-rack.room-rack{position:absolute;left:0;top:0;width:100%;height:100%;bottom:auto;transform:none;padding:0;background:none;box-shadow:none;border:0;max-width:none;min-width:0;z-index:2}
 
 .cabin-rack .room-rack-grid{position:relative;display:block;width:100%;height:100%}
 .cabin-rack .room-record-slot{position:absolute;background:linear-gradient(115deg,#22180e,#3e2815);min-width:0;min-height:0;box-shadow:inset 0 0 0 1px #130b05,inset 3px 4px 0 #130b0544}
-.cabin-rack .room-record{display:block;width:100%;height:100%;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;transform:none!important;box-shadow:none!important;position:relative}
-.cabin-rack .room-record.is-selected{outline:2px solid #ffd99c;outline-offset:1px;z-index:3}.cabin-rack .room-record:hover{outline:2px solid #f3b776;outline-offset:1px}.cabin-rack .room-record:focus-visible{outline:3px solid white;outline-offset:2px}
-.showroom-artwork{position:relative;display:block;width:100%;height:100%;aspect-ratio:1;overflow:hidden;background:#25221d}.showroom-artwork img{display:block;width:100%;height:100%;object-fit:cover;user-select:none}.showroom-art-placeholder{display:grid;place-content:center;text-align:center;gap:10px;height:100%;padding:12px;color:#d3c5ad}.showroom-art-placeholder strong{overflow:hidden;text-overflow:ellipsis;font-size:12px}
-.pixel-artwork canvas{display:none;position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated}.pixel-artwork canvas.is-painted{display:block}.cabin-empty-slot{position:absolute;inset:0;display:grid;place-content:center;justify-items:center;gap:7px;background:var(--px-surface-inset,#160d07);box-shadow:inset 0 6px 14px rgba(0,0,0,.75),inset 0 -3px 0 #4d311c;color:var(--px-ink-muted,#6e553b);font-size:clamp(10px,.75vw,13px);transition:color 120ms steps(2,end)}.cabin-empty-slot>*{opacity:.95;transition:opacity 120ms steps(2,end)}.cabin-empty-slot:hover{color:var(--px-ink-faint,#a88a68)}.cabin-empty-slot:hover>*{opacity:1}.cabin-empty-slot svg{width:clamp(16px,2vw,30px);height:auto}
-.cabin-scene .room-empty{position:absolute;inset:auto 24% 10%;text-align:center;padding:16px;background:#21150eea;border:1px solid #bf90594d;border-radius:10px;z-index:4}.room-empty p{color:#f4d1a2}.room-empty button{padding:10px 16px;border-radius:8px;background:#d2a169;color:#24170d}
-.room-now-playing{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:24px 28px;background:#28190f}.room-selection-copy{min-width:0;flex:1}.room-selection-copy>small{font-size:10px;letter-spacing:.14em;color:#c49662}.room-selection-copy h2{font-size:clamp(22px,2vw,34px);margin:6px 0;overflow-wrap:anywhere;color:#ffe9cb}.room-selection-copy p{font-size:13px;color:#d3b58f;margin:0}.room-selection-actions{display:flex;gap:10px;align-items:center;justify-content:flex-end;flex-wrap:wrap}.room-selection-actions button,.room-selection-actions a{padding:9px 13px;border:1px solid #ad80534d;border-radius:8px;background:#573722;color:#ffe0b6;display:inline-flex;gap:8px;align-items:center}.room-selection-actions .room-open-album{background:#d2a169;color:#24170d}.room-pagination{display:flex;align-items:center;gap:10px;color:#c4a17a;font-size:13px}.room-pagination button:disabled{opacity:.35;cursor:default}
-@media(max-width:800px){.cabin-toolbar{padding:12px 18px}.room-now-playing{padding:18px;align-items:flex-start;flex-direction:column}.room-selection-actions{justify-content:flex-start}.cabin-scene .room-empty{inset:auto 12% 7%;font-size:12px}.cabin-rack .room-record.is-selected{outline-width:1px}}
-
-.cabin-rack .showroom-artwork img{object-fit:cover}.cabin-rack .showroom-artwork{background:#1c1711}.room-selection-art{position:relative;isolation:isolate;width:115px;height:100px;flex-shrink:0}.room-selection-art>.showroom-artwork{position:absolute;inset:0 auto 0 0;width:100px;height:100px;z-index:2;border-radius:3px}.room-selection-art>.custom-vinyl{position:absolute;right:0;top:10px;width:85px;height:85px;z-index:0}
+.cabin-rack .room-record{display:block;width:100%;height:100%;padding:0;border:0;background:transparent;transform:none;box-shadow:none;position:relative}.cabin-rack .room-record.is-selected{z-index:3}
+.showroom-artwork{position:relative;display:block;width:100%;height:100%;aspect-ratio:1;overflow:hidden;background:#25221d}.showroom-artwork img{display:block;width:100%;height:100%;object-fit:cover;user-select:none}.showroom-art-placeholder{display:grid;place-content:center;text-align:center;gap:10px;height:100%;padding:12px;color:#d3c5ad}.showroom-art-placeholder strong{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;font-size:12px;line-height:16px}
+.cabin-rack .showroom-artwork{background:#1c1711}
+.pixel-artwork canvas{display:none;position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated}.pixel-artwork canvas.is-painted{display:block}.cabin-empty-slot{position:absolute;inset:0;display:grid;place-content:center;justify-items:center;gap:7px;background:var(--px-surface-inset);box-shadow:inset 0 8px 0 rgba(0,0,0,.35),inset 0 -4px 0 rgba(255,255,255,.04);color:var(--px-ink-faint);font-size:12px;transition:color 120ms steps(2,end)}.cabin-empty-slot>*{opacity:.95;transition:opacity 120ms steps(2,end)}.cabin-empty-slot:hover{color:var(--px-ink-dim)}.cabin-empty-slot:hover>*{opacity:1}.cabin-empty-slot svg{width:clamp(16px,2vw,30px);height:auto}
+.cabin-scene .room-empty{position:absolute;text-align:center;z-index:4}.room-empty p{color:#f4d1a2}.room-empty button{padding:10px 16px}
+@media(max-width:800px){.cabin-scene .room-empty{font-size:12px}}
 
 /* Short, local feedback: no room zoom, parallax or perpetual UI movement. */
 @keyframes cabin-scene-reveal{from{opacity:.35}to{opacity:1}}
-@media(prefers-reduced-motion:no-preference){
-  html:not([data-desktop-reduce-motion=true]) .cabin-scene-art{animation:cabin-scene-reveal .28s ease-out}
-  html:not([data-desktop-reduce-motion=true]) .cabin-rack .room-record{transition:translate .16s ease-out,filter .16s ease-out}
-  html:not([data-desktop-reduce-motion=true]) .cabin-rack .room-record:hover{translate:0 -3px;filter:brightness(1.08)}
-}
+.cabin-scene-art{animation:cabin-scene-reveal .28s steps(4,end)}
+
+/* The cabin is a fixed stage, never a scroller. overflow:hidden boxes can still be
+   scrolled by scrollIntoView / focus / automation retries (the 1280×800 tour jumped
+   160px when a record was scrolled to block:start). overflow:clip forbids that. */
+.cabin-room, .cabin-scene.room-scene, .cabin-rack .room-record-slot, .ambient-life, .cabin-atmosphere, .wallpaper-room { overflow: hidden; overflow: clip; }
+.cabin-scene.room-scene { overscroll-behavior: none; }
+/* Short windows scale the art down to keep deck + shelf clear of the toolbar and
+   footer (roomGeometry band). The side gutters show the scene's own solid colour
+   (RoomScene sets it) with a 2-step shade against each art edge: no mirrored,
+   dimmed copy of the art that reads as a seam. */
+.cabin-scene.room-scene::before { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: linear-gradient(90deg, transparent calc(var(--scene-x) - 16px), #0d080540 calc(var(--scene-x) - 16px) calc(var(--scene-x) - 8px), #0d080580 calc(var(--scene-x) - 8px) var(--scene-x),
+    transparent var(--scene-x) calc(var(--scene-x) + 1448px * var(--scene-k)), #0d080580 calc(var(--scene-x) + 1448px * var(--scene-k)) calc(calc(var(--scene-x) + 1448px * var(--scene-k)) + 8px), #0d080540 calc(calc(var(--scene-x) + 1448px * var(--scene-k)) + 8px) calc(calc(var(--scene-x) + 1448px * var(--scene-k)) + 16px), transparent calc(calc(var(--scene-x) + 1448px * var(--scene-k)) + 16px)); }
+/* The stage re-fits when the focus panel opens/closes: stepped, like a camera
+   nudging along the pixel grid. Reduced motion jumps (guards layer). */
+.cabin-scene-canvas { transition: left 240ms steps(4, end), top 240ms steps(4, end), width 240ms steps(4, end), height 240ms steps(4, end); }
+
+/* Sleeves sit inside an opaque recess, behind a narrow wooden front lip.
+   The whole cell stays clickable; decoration never intercepts input. */
+.cabin-rack .room-record-slot { isolation: isolate; --shelf-lip: #734821; --shelf-lip-light: #a27340; }
+.cabin-rack .room-record-slot::after { content: ''; position: absolute; z-index: 5; inset: auto 0 0; height: 3.2%; min-height: 2px; pointer-events: none; background: var(--shelf-lip); box-shadow: inset 0 1px 0 var(--shelf-lip-light), 0 -1px 0 #120b0688; }
+.cabin-scene[data-room-look='forest'] .room-record-slot { --shelf-lip: #666747; --shelf-lip-light: #939270; }
+.cabin-scene[data-room-look='seaside'] .room-record-slot { --shelf-lip: #9a7b53; --shelf-lip-light: #c1a77a; }
+.cabin-scene[data-room-look='starlight'] .room-record-slot { --shelf-lip: #575063; --shelf-lip-light: #8c7f96; }
+/* The button itself never moves or glows: the sleeve inside it does. */
+.cabin-rack .room-record:is(:hover, :active, :focus-visible, .is-selected) { outline: none; }
+.room-record-sleeve { position: absolute; z-index: 2; left: 5%; bottom: 2%; width: 90%; aspect-ratio: 1; pointer-events: none; background: #d8c8a9; border: 1px solid #18120cb3; box-shadow: 2px 2px 0 #130d08a6, 0 2px 0 #0d080580; transition: translate var(--px-dur-fast) steps(2, end); }
+.room-record-sleeve::after { content: ''; position: absolute; z-index: 3; inset: 0; pointer-events: none; box-shadow: inset 1px 1px 0 #fff5d533, inset -1px -1px 0 #130b0555; }
+/* Hover lifts the sleeve one art cell (4 art px at the scene scale), like taking a record from the crate. */
+.cabin-rack .room-record:hover .room-record-sleeve { translate: 0 round(calc(-4px * var(--scene-k, .5)), 1px); }
+.cabin-rack .room-record.is-selected .room-record-sleeve { outline: 2px solid var(--px-accent-hi); outline-offset: 1px; }
+.cabin-rack .room-record:focus-visible .room-record-sleeve { outline: 2px dashed #fff7df; outline-offset: 2px; }
+.cabin-rack .room-record:active .room-record-sleeve { translate: 0 1px; transition-duration: 0s; }
+@media (prefers-reduced-motion: reduce) { .cabin-rack .room-record:hover .room-record-sleeve { translate: none; } }
+html[data-desktop-reduce-motion='true'] .cabin-rack .room-record:hover .room-record-sleeve { translate: none; }
+/* Empty shelf slots read as soft carved recesses, not UI tiles. */
+.cabin-empty-slot { opacity: .55; transition: opacity var(--px-dur-med) var(--px-ease); }
+.room-record-slot:hover .cabin-empty-slot { opacity: .8; }
+
+/* Shelf paging: pixel chrome in every scene. */
+.cabin-room .room-shelf-navigation { background: #27170bf0; border: 2px solid #d4a46b88; box-shadow: 4px 4px 0 #0d0805aa; }
+.cabin-room .room-shelf-navigation button { border: 2px solid #deb57055; background: #7c542d; }
+/* 月夜书桌: the cabinet reaches the right edge, so shelf paging sits on the wall
+   left of the cabinet (art x≈812), centred on the middle row — never on a record. */
+.cabin-night-study .room-shelf-navigation { right: auto; left: calc(var(--scene-x) + 812px * var(--scene-k)); top: calc(var(--scene-y) + 471px * var(--scene-k)); translate: -100% -50%; transition: left 240ms steps(4, end), top 240ms steps(4, end); }
+
+/* Immersive: the console is fully gone (not 8% ghost on the window art) and
+   steps back in when the pointer comes near it (CabinRoom → data-console-near). */
+.room-zen:not(.room-zen-tools) .room-turntable { opacity: 0; visibility: hidden; pointer-events: none;
+  transition: opacity var(--px-dur-med) steps(3, end), visibility 0s linear var(--px-dur-med); }
+.room-zen:not(.room-zen-tools) .room-turntable:focus-within, .room-zen[data-console-near='true'] .room-turntable, html.room-zen[data-console-near='true'] .room-turntable {
+  opacity: 1; visibility: visible; pointer-events: auto; transition: opacity var(--px-dur-med) steps(3, end), visibility 0s; }
 
 /* Imported playlists sit on the shelf like albums, with a small paper tag. */
-/* Playlist mark: a corner tab bottom-right, clear of the cover's own title lettering. */
-.cabin-rack .room-record-tag{position:absolute;z-index:4;right:0;bottom:0;padding:2px 4px;font:400 12px/12px var(--px-font-cn);color:var(--px-ink-on-accent,#1c120b);background:var(--px-accent,#e0ad69);box-shadow:-2px -2px 0 var(--px-shadow,#0d0805);pointer-events:none;-webkit-font-smoothing:none}
+.cabin-rack .room-record-tag{position:absolute;z-index:4;right:0;bottom:0;padding:2px 4px;font:400 12px/12px var(--px-font-cn);color:var(--px-ink-on-accent);background:var(--px-accent);box-shadow:-2px -2px 0 var(--px-shadow);pointer-events:none}
+}

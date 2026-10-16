@@ -83,7 +83,7 @@ export default function CabinRoom({ items, loading, loadError = '', openRecord, 
   const cat = <RoomCat petId={petId} focus={catFocus} playing={grooving} track={deck.nowTrack} reduceMotion={reduced} hidden={Boolean(pet.active)}/>;
   const petLabel = petId === 'cat' ? (pet.active ? '让小猫回家' : '小猫出门') : (pet.active ? '让伙伴回家' : '伙伴出门');
   const queued = player.queue.ids.includes(selected?.id);
-  return <div className={`listening-room cabin-room cabin-${look}`} style={{ '--amber': getRoomScene(look).style.accent }}>
+  return <div className={`listening-room cabin-room cabin-${look}`} style={{ '--scene-accent': getRoomScene(look).style.accent }}>
     <nav className="cabin-toolbar" aria-label="小屋工具">
       {focus && !zen && !fullscreen && <span className="zen-keep cabin-toolbar-group"><button type="button" aria-pressed={zen} aria-keyshortcuts="Z" title="沉浸模式 · Z" onClick={chrome.toggleZen}><EyeSlash size={17}/><span>沉浸</span></button></span>}
       <span className="cabin-toolbar-group">

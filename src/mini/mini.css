@@ -1,13 +1,14 @@
+@layer guards, reset, features, skin, overrides;
+@layer features {
 html, body, #root { margin: 0; height: 100%; background: transparent; overflow: hidden; user-select: none; }
-.mini-bar { box-sizing: border-box; height: 100%; display: flex; align-items: center; gap: 8px; padding: 6px 10px; color: var(--px-ink, #f3e3c3); font: 12px/1.2 var(--px-font-cn, sans-serif); background: #1c120bcc; border: 2px solid var(--px-shadow, #0d0805); box-shadow: 3px 3px 0 #0d080599; image-rendering: pixelated; cursor: default; }
-.mini-disc { flex: none; width: 22px; height: 22px; background: radial-gradient(circle, var(--px-accent, #e8a25a) 0 3px, #120b07 3px 9px, #2a1a10 9px); box-shadow: 0 0 0 2px var(--px-shadow, #0d0805); }
-.mini-bar.is-playing .mini-disc { animation: mini-spin 1.6s steps(8, end) infinite; }
+.mini-bar { height: 100%; display: flex; align-items: center; gap: 8px; padding: 6px 10px; color: var(--px-ink); font: 12px/1.2 var(--px-font-cn); background: #1c120bcc; border: 2px solid var(--px-shadow); box-shadow: 3px 3px 0 #0d080599; image-rendering: pixelated; cursor: default; }
+.mini-disc { flex: none; width: 22px; height: 22px; background: radial-gradient(circle, var(--px-accent) 0 3px, #120b07 3px 9px, #2a1a10 9px); box-shadow: 0 0 0 2px var(--px-shadow); }
+.mini-bar.is-playing .mini-disc { animation: px-spin 1.6s steps(8, end) infinite; }
 .mini-track { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mini-actions { display: flex; gap: 3px; opacity: 0; transition: opacity 160ms steps(3, end); }
 .mini-bar:hover .mini-actions, .mini-bar:focus-within .mini-actions { opacity: 1; }
 .mini-bar:hover .mini-track { display: none; }
-.mini-actions button { padding: 3px 5px; letter-spacing: -2px; color: var(--px-ink, #f3e3c3); background: var(--px-surface-2, #3a2416); border: 2px solid var(--px-shadow, #0d0805); font: inherit; cursor: pointer; }
-.mini-actions button:active { transform: translate(1px, 1px); }
-.mini-actions button.is-primary { color: #24170d; background: var(--px-accent, #e8a25a); }
-@keyframes mini-spin { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .mini-bar.is-playing .mini-disc { animation: none; } .mini-actions { transition: none; } }
+.mini-actions button { min-width: var(--px-hit); min-height: var(--px-hit); padding: 2px 5px; letter-spacing: -2px; color: var(--px-ink); background: var(--px-surface-2); border: 2px solid var(--px-shadow); font: inherit; cursor: pointer; }
+.mini-actions button:active { translate: 1px 1px; }
+.mini-actions button.is-primary { color: var(--px-ink-on-accent); background: var(--px-accent); }
+}

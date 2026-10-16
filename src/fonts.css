@@ -1,17 +1,8 @@
-/* Original, unmodified HarmonyOS Sans SC files are bundled under public/fonts. */
-@font-face { font-family: 'HarmonyOS Sans SC Bundled'; src: url('/fonts/HarmonyOS_Sans_SC_Thin.ttf') format('truetype'); font-weight: 250; font-style: normal; font-display: swap; }
-@font-face { font-family: 'HarmonyOS Sans SC Bundled'; src: url('/fonts/HarmonyOS_Sans_SC_Light.ttf') format('truetype'); font-weight: 300; font-style: normal; font-display: swap; }
-@font-face { font-family: 'HarmonyOS Sans SC Bundled'; src: url('/fonts/HarmonyOS_Sans_SC_Regular.ttf') format('truetype'); font-weight: 400; font-style: normal; font-display: swap; }
-@font-face { font-family: 'HarmonyOS Sans SC Bundled'; src: url('/fonts/HarmonyOS_Sans_SC_Medium.ttf') format('truetype'); font-weight: 500; font-style: normal; font-display: swap; }
-@font-face { font-family: 'HarmonyOS Sans SC Bundled'; src: url('/fonts/HarmonyOS_Sans_SC_Bold.ttf') format('truetype'); font-weight: 700; font-style: normal; font-display: swap; }
-@font-face { font-family: 'HarmonyOS Sans SC Bundled'; src: url('/fonts/HarmonyOS_Sans_SC_Black.ttf') format('truetype'); font-weight: 900; font-style: normal; font-display: swap; }
+/* Main window type defaults: the HarmonyOS faces are declared once in tokens.css. */
+@layer guards, reset, features, skin, overrides;
+@layer reset {
 :root { --desktop-font: 'HarmonyOS Sans SC Bundled', sans-serif; --desktop-weight: 400; --desktop-heading-weight: 700; }
 html, body, button, input, textarea, select { font-family: var(--desktop-font); font-synthesis: none; }
 body, input, textarea, select { font-weight: var(--desktop-weight); }
 h1, h2, h3, h4, strong, b { font-weight: var(--desktop-heading-weight); }
-html[data-desktop-reduce-motion='true'] *,
-html[data-desktop-reduce-motion='true'] *::before,
-html[data-desktop-reduce-motion='true'] *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }

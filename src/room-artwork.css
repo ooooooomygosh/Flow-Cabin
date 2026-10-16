@@ -1,12 +1,15 @@
 /* Generated sleeve for records without a cover (RoomArtwork GeneratedSleeve):
    the 32×32 cabin-palette scene fills the sleeve; the title sits on a printed
    strip at the foot, two lines at most, in whole pixels. */
-.showroom-art-placeholder.is-generated { container-type: size; position: relative; display: block; height: 100%; padding: 0; overflow: hidden; background: var(--px-bg, #1c120b); }
+@layer guards, reset, features, skin, overrides;
+@layer features {
+.showroom-art-placeholder.is-generated { container-type: size; position: relative; display: block; height: 100%; padding: 0; overflow: hidden; background: var(--px-bg); }
 .showroom-art-placeholder.is-generated canvas { display: block; position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
 .showroom-art-placeholder.is-generated strong { position: absolute; left: 0; right: 0; bottom: 0; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
-  padding: 3px 6px 0; border-bottom: 4px solid var(--px-shadow, #0d0805); font: 400 12px/14px var(--px-font-cn, inherit); color: var(--px-ink, #ffe9cb); text-align: left; text-overflow: clip; white-space: normal; overflow-wrap: anywhere;
-  background: var(--px-shadow, #0d0805); box-shadow: 0 -2px 0 var(--px-accent-lo, #a8743c); -webkit-font-smoothing: none; }
+  padding: 3px 6px 0; border-bottom: 4px solid var(--px-shadow); font: 400 12px/14px var(--px-font-cn); color: var(--px-ink); text-align: left; text-overflow: clip; white-space: normal; overflow-wrap: anywhere;
+  background: var(--px-shadow); box-shadow: 0 -2px 0 var(--px-accent-lo); }
 /* Small shelves (≤ 960 px windows): one line, so the scene stays the sleeve. */
 @container (max-width: 100px) { .showroom-art-placeholder.is-generated strong { -webkit-line-clamp: 1; padding-inline: 4px; } }
 /* The playlist corner tab (cabin-room.css) sits on the strip's right end. */
 .room-record-sleeve:has(> .room-record-tag) .showroom-art-placeholder.is-generated strong { padding-right: 40px; }
+}

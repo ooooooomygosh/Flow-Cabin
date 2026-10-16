@@ -1,83 +1,83 @@
 /*
  * Flow Cabin · pixel UI skin (owner: beauty / art direction).
- * Loaded after every feature stylesheet. It only re-skins shared chrome —
- * buttons, panels, dialogs, inputs, sliders, bubbles — with the tokens in
- * tokens.css: pixel fonts on a 12px grid, 9-slice notched frames, hard
- * stepped shadows and steps() motion. Feature layouts stay in their files.
+ * Lives in the `skin` cascade layer, after `features`, so it wins over feature
+ * files in dev and in the shipped build alike — without !important. It only
+ * re-skins shared chrome (buttons, panels, dialogs, inputs, sliders, bubbles)
+ * with the tokens in tokens.css: pixel fonts on a 12px grid, 9-slice notched
+ * frames, hard stepped shadows and steps() motion. Layout stays in feature files.
  */
-
-/* ── type: pixel display face for UI chrome, readable body face for prose ── */
-html { -webkit-font-smoothing: none; font-smooth: never; text-rendering: optimizeSpeed; }
+@layer guards, reset, features, skin, overrides;
+@layer skin {
+/* ── type: pixel display face for UI chrome, readable body face for prose.
+   Smoothing is switched off only where a pixel face is drawn; prose keeps it. ── */
 .app-brand strong, .cabin-dialog-header h2, .record-card-copy h3, .room-selection-copy h2,
-.turntable-copy > strong, .turntable-heading, .room-empty > p, .cabin-welcome h2, .cabin-welcome h1 {
-  font-family: var(--px-font-cn); font-weight: 400; letter-spacing: 0;
-}
+.turntable-copy > strong, .turntable-heading, .room-empty > p,
 .pixel-button, .cabin-room .cabin-toolbar button, .room-selection-actions button, .room-selection-actions a,
-.dialog-tabs button, .segmented button, .room-cat-bubble, .app-toast, .room-shelf-navigation,
+.dialog-tabs button, .segmented button, .room-cat-bubble, .app-toast, .room-shelf-navigation, .focus-badge,
 .cabin-scene .room-empty button, .turntable-controls button, .turntable-source, .backup-stats dt,
 .record-card-kicker, .room-selection-copy small, .app-brand small, .scene-choice strong, .pet-choice strong {
-  font-family: var(--px-font-cn); font-weight: 400; letter-spacing: 0;
+  font-family: var(--px-font-cn); font-weight: 400; letter-spacing: 0; -webkit-font-smoothing: none;
 }
-/* Pixel glyphs are drawn on a 12px grid: snap chrome text to 12 / 24px. */
+/* Pixel glyphs are drawn on a 12px grid: chrome text is 12 / 24px only. */
 .pixel-button, .cabin-room .cabin-toolbar button, .room-selection-actions button, .room-selection-actions a,
 .dialog-tabs button, .segmented button, .app-toast, .room-cat-bubble, .room-shelf-navigation,
-.turntable-controls button, .turntable-heading, .app-brand small, .room-selection-copy small,
+.turntable-controls button, .turntable-heading, .turntable-copy > strong, .app-brand small, .room-selection-copy small,
 .record-card-kicker, .backup-stats dt, .scene-choice strong, .pet-choice strong { font-size: 12px; line-height: 16px; }
-.app-brand strong, .cabin-dialog-header h2, .room-selection-copy h2, .turntable-copy > strong, .room-empty > p { font-size: 24px; line-height: 28px; }
-.turntable-copy > strong { font-size: 12px; line-height: 16px; }
+.app-brand strong, .cabin-dialog-header h2, .room-selection-copy h2, .room-empty > p { font-size: 24px; line-height: 28px; }
 .record-card-copy h3 { font-size: 24px; line-height: 30px; }
-.room-selection-copy h2 { font-size: 24px; }
-.room-empty > p { font-size: 24px; }
-.cabin-dialog-header h2 { font-size: 24px; }
 .room-selection-copy p, .turntable-artist, .turntable-track { font-family: var(--px-font-body); }
-
-/* Latin numerals / labels in Silkscreen where they are short codes. */
-.turntable-heading > small, .turntable-brand, .px-latin { font-family: var(--px-font-en); font-size: 8px; letter-spacing: .08em; }
+/* The provider tag is CJK (仅展示 / 本地音乐): the pixel CJK face at 12px, never 8px Latin. */
+.turntable-heading > small { font: 400 12px/16px var(--px-font-cn); letter-spacing: 0; }
 
 /* ── buttons: bevel + hover lift + click squish, all in frames ─────────── */
 .pixel-button, .room-selection-actions button, .room-selection-actions a, .cabin-scene .room-empty button,
-.add-manual > .pixel-button, .record-card-tools .record-tools-button, .record-card-tools .discogs-link {
-  border-radius: 0 !important;
-  box-shadow: inset 2px 2px 0 #ffffff1f, inset -2px -2px 0 #0000004d, var(--px-shadow-2) !important;
+.add-manual > .pixel-button, .record-card-tools .record-tools-button, .record-card-tools .discogs-link, .personalization-footer .record-primary {
+  box-shadow: inset 2px 2px 0 #ffffff1f, inset -2px -2px 0 #0000004d, var(--px-shadow-2);
   transition: translate var(--px-dur-fast) steps(2, end), box-shadow var(--px-dur-fast) steps(2, end), background-color var(--px-dur-fast) steps(2, end), filter var(--px-dur-fast) steps(2, end);
 }
 .pixel-button:hover:not(:disabled), .room-selection-actions button:hover, .room-selection-actions a:hover,
-.cabin-scene .room-empty button:hover, .record-card-tools .record-tools-button:hover, .record-card-tools .discogs-link:hover {
-  translate: 0 -2px; box-shadow: inset 2px 2px 0 #ffffff29, inset -2px -2px 0 #0000004d, 4px 6px 0 var(--px-shadow) !important; filter: brightness(1.06);
+.cabin-scene .room-empty button:hover, .record-card-tools .record-tools-button:hover, .record-card-tools .discogs-link:hover, .personalization-footer .record-primary:hover {
+  translate: 0 -2px; box-shadow: inset 2px 2px 0 #ffffff29, inset -2px -2px 0 #0000004d, 4px 6px 0 var(--px-shadow); filter: brightness(1.06);
 }
 .pixel-button:active:not(:disabled), .room-selection-actions button:active, .room-selection-actions a:active,
-.cabin-scene .room-empty button:active, .record-card-tools .record-tools-button:active, .record-card-tools .discogs-link:active {
-  translate: 2px 2px; box-shadow: inset 2px 2px 0 #0000004d, inset -2px -2px 0 #ffffff14, 1px 1px 0 var(--px-shadow) !important; transition-duration: 0s;
+.cabin-scene .room-empty button:active, .record-card-tools .record-tools-button:active, .record-card-tools .discogs-link:active, .personalization-footer .record-primary:active {
+  translate: 2px 2px; box-shadow: inset 2px 2px 0 #0000004d, inset -2px -2px 0 #ffffff14, 1px 1px 0 var(--px-shadow); transition-duration: 0s;
 }
-.pixel-button.is-primary, .cabin-room .room-selection-actions .room-open-album, .cabin-scene .room-empty button:not(.room-welcome-focus) {
-  color: #24170d; background: var(--px-accent); border-color: var(--px-accent-hi) !important;
-  box-shadow: inset 2px 2px 0 var(--px-accent-hi), inset -2px -2px 0 var(--px-accent-lo), var(--px-shadow-2) !important;
+.pixel-button.is-primary, .cabin-scene .room-empty button:not(.room-welcome-focus), .personalization-footer .record-primary {
+  color: var(--px-ink-on-accent); background: var(--px-accent); border-color: var(--px-accent-hi);
+  box-shadow: inset 2px 2px 0 var(--px-accent-hi), inset -2px -2px 0 var(--px-accent-lo), var(--px-shadow-2);
 }
-.pixel-button.is-primary:hover:not(:disabled), .cabin-room .room-selection-actions .room-open-album:hover {
-  box-shadow: inset 2px 2px 0 #fff0cc, inset -2px -2px 0 var(--px-accent-lo), 4px 6px 0 var(--px-shadow) !important;
+.pixel-button.is-primary:hover:not(:disabled), .personalization-footer .record-primary:hover { box-shadow: inset 2px 2px 0 #fff0cc, inset -2px -2px 0 var(--px-accent-lo), 4px 6px 0 var(--px-shadow); }
+/* The selection card's primary action takes the scene's own accent (CabinRoom sets --scene-accent). */
+.cabin-room .room-selection-actions .room-open-album {
+  color: var(--px-ink-on-accent); background: var(--scene-accent); border-color: color-mix(in srgb, var(--scene-accent) 55%, #fff);
+  box-shadow: inset 2px 2px 0 color-mix(in srgb, var(--scene-accent) 55%, #fff), inset -2px -2px 0 color-mix(in srgb, var(--scene-accent) 65%, #000), var(--px-shadow-2);
 }
-.pixel-button.is-quiet { box-shadow: none !important; }
-.pixel-button.is-quiet:hover:not(:disabled) { box-shadow: var(--px-shadow-1) !important; }
+.cabin-room .room-selection-actions .room-open-album:hover { box-shadow: inset 2px 2px 0 color-mix(in srgb, var(--scene-accent) 40%, #fff), inset -2px -2px 0 color-mix(in srgb, var(--scene-accent) 65%, #000), 4px 6px 0 var(--px-shadow); }
+.pixel-button.is-quiet { box-shadow: none; }
+.pixel-button.is-quiet:hover:not(:disabled) { box-shadow: var(--px-shadow-1); }
 
-/* Toolbar: a single framed strip per group, keys light up like lamp buttons. */
-.cabin-toolbar-group {
-  border: 4px solid transparent !important; border-image: var(--px-frame-img) 2 / 4px stretch; background-clip: padding-box !important;
-  background-color: #24160fe8 !important; box-shadow: var(--px-shadow-2) !important; padding: 2px !important;
+/* HUD chips (toolbar groups, 沉浸, the focus badge): one framed strip each, 40px tall,
+   keys light up like lamp buttons. A running timer lights the badge frame. */
+.cabin-toolbar-group, .cabin-room > .focus-badge {
+  border: 4px solid transparent; border-image: var(--px-frame-img-quiet) 2 / 4px stretch; background-clip: padding-box;
+  background-color: var(--px-surface-hud); box-shadow: var(--px-shadow-2);
 }
-.cabin-room .cabin-toolbar button { border-radius: 0 !important; transition: background-color var(--px-dur-fast) steps(2, end), color var(--px-dur-fast) steps(2, end), translate var(--px-dur-fast) steps(2, end); }
+.cabin-toolbar-group { padding: 2px; }
+.cabin-room > .focus-badge.is-running { border-image-source: var(--px-frame-img-accent); }
+.cabin-room .cabin-toolbar button { transition: background-color var(--px-dur-fast) steps(2, end), color var(--px-dur-fast) steps(2, end), translate var(--px-dur-fast) steps(2, end); }
 .cabin-room .cabin-toolbar button:hover:not(:disabled) { background: #ffd99c1f; color: var(--px-ink); translate: 0 -1px; }
 .cabin-room .cabin-toolbar button:active:not(:disabled) { translate: 0 1px; transition-duration: 0s; }
 .cabin-room .cabin-toolbar button svg, .pixel-button svg { shape-rendering: crispEdges; }
 
 /* ── panels: 9-slice notched pixel frames ─────────────────────────────── */
 .cabin-room .room-now-playing, .shelf-filters, .cabin-scene .room-empty, .cabin-dialog, .record-dialog, .music-settings {
-  border: 6px solid transparent !important; border-image: var(--px-frame-img) 2 / 6px stretch !important;
-  background-clip: padding-box !important; border-radius: 0 !important;
+  border: 6px solid transparent; border-image: var(--px-frame-img) 2 / 6px stretch; background-clip: padding-box;
 }
-.cabin-dialog, .record-dialog, .music-settings { box-shadow: var(--px-shadow-3) !important; }
-.cabin-dialog-header { background: linear-gradient(var(--px-surface-3), var(--px-surface-2)) !important; border-bottom: 2px solid var(--px-shadow) !important; box-shadow: inset 0 -2px 0 var(--px-border); }
-.cabin-dialog-close, .desktop-controls button { border-radius: 0; transition: background-color var(--px-dur-fast) steps(2, end), color var(--px-dur-fast) steps(2, end); }
-.cabin-dialog::backdrop { background: #0d0805b8; backdrop-filter: none; }
+.cabin-dialog, .record-dialog, .music-settings { box-shadow: var(--px-shadow-3); }
+.cabin-dialog-header { background: linear-gradient(var(--px-surface-3), var(--px-surface-2)); border-bottom: 2px solid var(--px-shadow); box-shadow: inset 0 -2px 0 var(--px-border); }
+.cabin-dialog-close, .desktop-controls button { transition: background-color var(--px-dur-fast) steps(2, end), color var(--px-dur-fast) steps(2, end); }
+:is(.cabin-dialog, .record-dialog, .music-settings)::backdrop { background: #0d0805b8; }
 .cabin-dialog[open], .record-dialog[open], .music-settings[open] { animation: px-dialog-in var(--px-dur-med) var(--px-ease) both; }
 @keyframes px-dialog-in { 0% { opacity: 0; translate: 0 12px; scale: .96; } 100% { opacity: 1; translate: 0; scale: 1; } }
 
@@ -88,165 +88,78 @@ html { -webkit-font-smoothing: none; font-smooth: never; text-rendering: optimiz
 .segmented button[aria-checked=true] { box-shadow: inset 2px 2px 0 var(--px-accent-hi), inset -2px -2px 0 var(--px-accent-lo); }
 
 /* ── inputs, selects, sliders ─────────────────────────────────────────── */
-/* Canonical form controls: dark inset well, amber edge on hover/focus. One chevron SVG, size/position pinned with !important so
-   later `background:` shorthands can't stretch it. Not: .pixel-button, range, checkbox, .segmented.
-   Separate lists per element kind keep specificity at 0,1,1 (select/textarea) and 0,2,1 (typed inputs). */
-:is(.cabin-room, .cabin-dialog, .focus-dock) :is(select, textarea), :is(.cabin-room, .cabin-dialog, .focus-dock) input:is([type=text], [type=search], [type=number], [type=date], [type=url]), :is(.cabin-room, .cabin-dialog, .focus-dock) input:not([type]) {
-  appearance: none; -webkit-appearance: none; box-sizing: border-box; min-height: 32px; font: inherit; border-radius: 0 !important;
-  background-color: var(--px-surface-inset) !important; color: var(--px-ink) !important; border: 2px solid var(--px-border); box-shadow: var(--px-shadow-inset);
+/* Canonical form controls: dark inset well, amber edge on hover/focus, one chevron SVG.
+   Not: .pixel-button, range, checkbox, .segmented. */
+:is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) :is(select, textarea), :is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) input:is([type=text], [type=search], [type=number], [type=date], [type=url]), :is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) input:not([type]) {
+  appearance: none; -webkit-appearance: none; min-height: 32px;
+  background-color: var(--px-surface-inset); color: var(--px-ink); border: 2px solid var(--px-border); box-shadow: var(--px-shadow-inset);
   transition: border-color var(--px-dur-fast) steps(2, end);
 }
-:is(.cabin-room, .cabin-dialog, .focus-dock) :is(select, textarea):hover, :is(.cabin-room, .cabin-dialog, .focus-dock) input:is([type=text], [type=search], [type=number], [type=date], [type=url]):hover, :is(.cabin-room, .cabin-dialog, .focus-dock) input:not([type]):hover { border-color: var(--px-border-hi); }
-:is(.cabin-room, .cabin-dialog, .focus-dock) :is(select, textarea):focus-visible, :is(.cabin-room, .cabin-dialog, .focus-dock) input:is([type=text], [type=search], [type=number], [type=date], [type=url]):focus-visible, :is(.cabin-room, .cabin-dialog, .focus-dock) input:not([type]):focus-visible { border-color: var(--px-accent-hi); }
-:is(.cabin-room, .cabin-dialog, .focus-dock) :is(select, textarea):disabled, :is(.cabin-room, .cabin-dialog, .focus-dock) input:is([type=text], [type=search], [type=number], [type=date], [type=url]):disabled, :is(.cabin-room, .cabin-dialog, .focus-dock) input:not([type]):disabled { opacity: .5; cursor: default; }
-:is(.cabin-room, .cabin-dialog, .focus-dock) textarea::placeholder, :is(.cabin-room, .cabin-dialog, .focus-dock) input:is([type=text], [type=search], [type=number], [type=date], [type=url])::placeholder, :is(.cabin-room, .cabin-dialog, .focus-dock) input:not([type])::placeholder { color: var(--px-ink-faint); opacity: 1; }
-:is(.cabin-room, .cabin-dialog, .focus-dock) select {
-  cursor: pointer; padding-right: 28px !important;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' shape-rendering='crispEdges'%3E%3Cpath fill='%23e0ad69' d='M0 0h10v2H8v2H6v2H4V4H2V2H0z'/%3E%3C/svg%3E") !important;
-  background-repeat: no-repeat !important; background-position: right 10px center !important; background-size: 10px 6px !important;
+:is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) :is(select, textarea, input:is([type=text], [type=search], [type=number], [type=date], [type=url], :not([type]))):hover { border-color: var(--px-border-hi); }
+:is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) :is(select, textarea, input:is([type=text], [type=search], [type=number], [type=date], [type=url], :not([type]))):focus-visible { border-color: var(--px-accent-hi); }
+:is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) :is(select, textarea, input:is([type=text], [type=search], [type=number], [type=date], [type=url], :not([type]))):disabled { opacity: .5; cursor: default; }
+:is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) :is(textarea, input:is([type=text], [type=search], [type=number], [type=date], [type=url], :not([type])))::placeholder { color: var(--px-ink-faint); opacity: 1; }
+:is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) select {
+  cursor: pointer; padding-right: 28px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' shape-rendering='crispEdges'%3E%3Cpath fill='%23e0ad69' d='M0 0h10v2H8v2H6v2H4V4H2V2H0z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center; background-size: 10px 6px;
 }
-:is(.cabin-room, .cabin-dialog, .focus-dock) option { background: #2e1d12; color: #ffe9cb; }
-:is(.cabin-room, .cabin-dialog, .focus-dock) input[type=date] { color-scheme: dark; }
-:is(.cabin-room, .cabin-dialog, .focus-dock) input[type=date]::-webkit-calendar-picker-indicator { filter: invert(72%) sepia(40%) saturate(600%) hue-rotate(345deg); opacity: .9; cursor: pointer; }
+:is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) option { background: var(--px-surface); color: var(--px-ink); }
+:is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) input[type=date] { color-scheme: dark; }
+:is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) input[type=date]::-webkit-calendar-picker-indicator { filter: invert(72%) sepia(40%) saturate(600%) hue-rotate(345deg); opacity: .9; cursor: pointer; }
 /* compact contexts keep their own height (pocket player owns .pocket-track) */
 .cabin-room .pocket-track select, .cabin-room .turntable-source select { min-height: 0; }
+/* 专辑墙 search: the label is the well, the input inside it stays bare. */
+.album-wall-overlay .wall-search > label > input { border: 0; background: transparent; box-shadow: none; }
 input[type=range] { -webkit-appearance: none; appearance: none; height: 16px; background: transparent; cursor: pointer; }
 input[type=range]::-webkit-slider-runnable-track { height: 6px; background: var(--px-shadow); border: 2px solid var(--px-border); box-shadow: inset 0 2px 0 #00000080; }
 input[type=range]::-moz-range-track { height: 6px; background: var(--px-shadow); border: 2px solid var(--px-border); }
 input[type=range]::-moz-range-progress { height: 6px; background: var(--px-accent); }
-input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 10px; height: 14px; margin-top: -6px; border: 0; border-radius: 0; background: var(--px-accent); box-shadow: inset 2px 2px 0 var(--px-accent-hi), inset -2px -2px 0 var(--px-accent-lo), 0 0 0 2px var(--px-shadow); transition: translate var(--px-dur-fast) steps(2, end); }
-input[type=range]::-moz-range-thumb { width: 10px; height: 14px; border: 2px solid var(--px-shadow); border-radius: 0; background: var(--px-accent); }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 10px; height: 14px; margin-top: -6px; border: 0; background: var(--px-accent); box-shadow: inset 2px 2px 0 var(--px-accent-hi), inset -2px -2px 0 var(--px-accent-lo), 0 0 0 2px var(--px-shadow); transition: translate var(--px-dur-fast) steps(2, end); }
+input[type=range]::-moz-range-thumb { width: 10px; height: 14px; border: 2px solid var(--px-shadow); background: var(--px-accent); }
 input[type=range]:hover::-webkit-slider-thumb { translate: 0 -1px; }
 input[type=range]:disabled { opacity: .45; cursor: default; }
 input[type=checkbox], input[type=radio] { accent-color: var(--px-accent); }
 
-/* Focus: stepped dashed lamp ring, never a soft glow. */
-:focus-visible { outline: 2px dashed var(--px-focus) !important; outline-offset: 2px; }
 
 /* ── speech bubble + toast: paper tags with a pixel tail ─────────────── */
 .room-cat-bubble, .app-toast {
-  border: 4px solid transparent !important; border-image: var(--px-frame-img-paper) 2 / 4px stretch !important;
-  background: #fff7e6 !important; background-clip: padding-box !important; color: #3b2a20 !important;
-  box-shadow: var(--px-shadow-1) !important;
+  border: 4px solid transparent; border-image: var(--px-frame-img-paper) 2 / 4px stretch;
+  background: var(--px-paper); background-clip: padding-box; color: var(--px-paper-ink);
+  box-shadow: var(--px-shadow-1);
 }
-.room-cat-bubble::after { content: ''; position: absolute; left: 50%; top: 100%; width: 8px; height: 6px; translate: -50% 2px; rotate: 0deg !important; border: 0 !important;
-  background: linear-gradient(#3b2a20 0 0) 2px 0 / 4px 2px no-repeat, linear-gradient(#3b2a20 0 0) 2px 2px / 4px 2px no-repeat, linear-gradient(#fff7e6 0 0) 2px -2px / 4px 2px no-repeat; }
-.app-toast { animation: px-toast-in var(--px-dur-med) var(--px-ease) both !important; }
+.room-cat-bubble::after { content: ''; position: absolute; left: 50%; top: 100%; width: 8px; height: 6px; translate: -50% 2px; rotate: 0deg; border: 0;
+  background: linear-gradient(var(--px-paper-ink) 0 0) 2px 0 / 4px 2px no-repeat, linear-gradient(var(--px-paper-ink) 0 0) 2px 2px / 4px 2px no-repeat, linear-gradient(var(--px-paper) 0 0) 2px -2px / 4px 2px no-repeat; }
+.app-toast { animation: px-toast-in var(--px-dur-med) var(--px-ease) both; }
 @keyframes px-toast-in { 0% { opacity: 0; translate: -50% 12px; } 100% { opacity: 1; translate: -50% 0; } }
-
-/* Sleeves sit inside an opaque recess, behind a narrow wooden front lip.
-   The whole cell stays clickable; decoration never intercepts input. */
-.cabin-rack .room-record-slot { isolation: isolate; --shelf-lip: #734821; --shelf-lip-light: #a27340; }
-.cabin-rack .room-record-slot::after { content: ''; position: absolute; z-index: 5; inset: auto 0 0; height: 3.2%; min-height: 2px; pointer-events: none; background: var(--shelf-lip); box-shadow: inset 0 1px 0 var(--shelf-lip-light), 0 -1px 0 #120b0688; }
-.cabin-rack .room-record, .cabin-rack .room-record:is(:hover, :active, :focus-visible, .is-selected) { translate: none !important; filter: none !important; outline: none !important; box-shadow: none !important; }
-.cabin-rack .room-record::after { content: none !important; }
-.room-record-sleeve { position: absolute; z-index: 2; left: 5%; bottom: 2%; width: 90%; aspect-ratio: 1; pointer-events: none; background: #d8c8a9; border: 1px solid #18120cb3; box-shadow: 2px 2px 0 #130d08a6, 0 3px 2px #0d080580; }
-.room-record-sleeve::after { content: ''; position: absolute; z-index: 3; inset: 0; pointer-events: none; box-shadow: inset 1px 1px 0 #fff5d533, inset -1px -1px 0 #130b0555; }
-.cabin-rack .room-record:hover .room-record-sleeve { filter: brightness(1.06); }
-.cabin-rack .room-record.is-selected .room-record-sleeve { outline: 2px solid var(--px-accent-hi); outline-offset: 1px; }
-.cabin-rack .room-record:focus-visible .room-record-sleeve { outline: 2px dashed #fff7df; outline-offset: 2px; }
-.cabin-rack .room-record:active .room-record-sleeve { filter: brightness(.96); }
-@media (prefers-reduced-motion: no-preference) {
-  html:not([data-desktop-reduce-motion='true']) .room-record-sleeve { transition: filter var(--px-dur-fast) steps(2, end); }
-}
-.cabin-scene[data-room-look='forest'] .room-record-slot { --shelf-lip: #666747; --shelf-lip-light: #939270; }
-.cabin-scene[data-room-look='seaside'] .room-record-slot { --shelf-lip: #9a7b53; --shelf-lip-light: #c1a77a; }
-.cabin-scene[data-room-look='starlight'] .room-record-slot { --shelf-lip: #575063; --shelf-lip-light: #8c7f96; }
-
-/* Empty shelf slots read as soft carved recesses, not UI tiles. */
-.cabin-empty-slot { opacity: .55; transition: opacity var(--px-dur-med) var(--px-ease); }
-.room-record-slot:hover .cabin-empty-slot { opacity: .8; }
-
-/* ── reduced motion: keep states, drop movement ───────────────────────── */
-@media (prefers-reduced-motion: reduce) {
-  .pixel-button:hover:not(:disabled), .room-record:hover, .cabin-room .cabin-toolbar button:hover:not(:disabled) { translate: none !important; }
-}
-html[data-desktop-reduce-motion='true'] .room-record:hover, html[data-desktop-reduce-motion='true'] .pixel-button:hover:not(:disabled) { translate: none !important; }
-
-/* ── square corners everywhere in the chrome (pixel art has no radii) ──── */
-.record-library-controls select, .record-library-controls > button, .record-tools-button, .record-dialog button,
-.record-dialog input:not([type=checkbox]):not([type=range]):not([type=color]), .record-dialog input[type=color], .record-style-preview > img,
-.record-preview-placeholder, .record-box-membership, .record-box-albums > label, .record-box-albums img, .record-style-fields select,
-.album-wall-overlay button, .wall-project-tools a, .wall-file, .wall-options input:not([type='checkbox']):not([type='range']), .wall-options select,
-.wall-search input, .wall-search select, .wall-search > label, .wall-cover, .wall-add-order, .wall-canvas-wrap, .wall-preview-empty,
-.cabin-welcome, .welcome-scene, .welcome-scene-options button, .welcome-pet-options button, .welcome-scene-options img, .welcome-note,
-.welcome-shortcuts kbd, .cabin-welcome .pixel-button, .room-personalization, .scene-choice, .pet-choice, .room-personalization .personalization-footer .record-primary,
-.music-local-folders li, .local-album-list li, .local-album-list img, .local-album-placeholder, .cabin-room .cabin-toolbar, .wallpaper-error,
-.turntable-controls select, .turntable-source select, .turntable-matches button, .music-settings select, .room-selection-art > .showroom-artwork { border-radius: 0 !important; }
-
-/* Choice cards (scenes / companions): framed tiles that lift and lock in. */
-.scene-choice, .pet-choice { border: 2px solid #8a5a3299 !important; box-shadow: var(--px-shadow-2); transition: translate var(--px-dur-fast) steps(2, end), border-color var(--px-dur-fast) steps(2, end), box-shadow var(--px-dur-fast) steps(2, end); }
-.scene-choice:hover, .pet-choice:hover { translate: 0 -2px; border-color: var(--px-accent) !important; box-shadow: 4px 6px 0 var(--px-shadow); }
-.scene-choice:active, .pet-choice:active { translate: 1px 1px; box-shadow: var(--px-shadow-1); transition-duration: 0s; }
-.scene-choice[aria-pressed=true], .pet-choice[aria-pressed=true] { border-color: var(--px-accent-hi) !important; background: #e0ad6914 !important; box-shadow: 0 0 0 2px var(--px-shadow), var(--px-shadow-2) !important; }
-.scene-choice > img, .welcome-scene-options img, .welcome-scene img { image-rendering: pixelated; }
-.welcome-shortcuts kbd { font-family: var(--px-font-en); font-size: 8px; box-shadow: inset -2px -2px 0 #0000004d, var(--px-shadow-1); }
-
-/* The cabin is a fixed stage, never a scroller. overflow:hidden boxes can still be
-   scrolled by scrollIntoView / focus / automation retries (the 1280×800 tour jumped
-   160px when a record was scrolled to block:start). overflow:clip forbids that. */
-.cabin-room,
-.cabin-scene.room-scene,
-.cabin-rack .room-record-slot,
-.ambient-life,
-.cabin-atmosphere,
-.wallpaper-room { overflow: hidden; overflow: clip; }
-.cabin-scene.room-scene { overscroll-behavior: none; }
-
-/* 月夜书桌 in the pixel direction: pixel view + clean plate + hand atlas share one
-   48-colour palette and the 4px art grid (scripts/art/pixelate-night-study.py).
-   Boxes are snapped to that grid; shadows are hard offsets, no blur. */
-.cabin-scene[data-room-look=night-study] :is(.study-clean-plate, .study-writing-hand) { image-rendering: pixelated; }
-.cabin-scene[data-room-look=night-study] .study-clean-plate { clip-path: polygon(19.337% 45.672%, 26.796% 45.672%, 26.796% 54.512%, 19.337% 54.512%); }
-.cabin-scene[data-room-look=night-study] .study-writing-hand { left: 17.956%; top: 44.199%; width: 9.392%; height: 12.523%; filter: none; }
-
-
-.cabin-scene[data-room-look=night-study] .study-writing-hand { background-image: url('/room-scenes/night-study-hands-pixel.png'); }
-/* The desk scene has no free surface outside the toolbar/console/footer safe areas
-   (cabinet top sits under the toolbar), so the console alone is the turntable here. */
-.cabin-scene[data-room-look=night-study] .scene-deck { display: none; }
-/* Every scene is pixel now: shelf paging uses the pixel chrome everywhere. */
-.cabin-room.cabin-room .room-shelf-navigation { background: #27170bf0; border: 2px solid #d4a46b88; border-radius: 0; box-shadow: 4px 4px 0 #0d0805aa; }
-.cabin-room.cabin-room .room-shelf-navigation button { border-radius: 0; border: 2px solid #deb57055; background: #7c542d; }
-
-
-/* Short windows scale the art down to keep deck + shelf clear of the toolbar and
-   footer (roomGeometry band). Any side gutter shows the same scene, dimmed, so
-   the stage never looks letterboxed. */
-.cabin-scene.room-scene::before { content: ''; display:block; position: absolute; inset: -8%; z-index: -1; pointer-events: none;
-  background: var(--scene-view) center / cover no-repeat; image-rendering: pixelated; filter: brightness(.38) saturate(.8); }
-/* 月夜书桌: the cabinet reaches the right edge, so shelf paging sits on the wall
-   left of the cabinet (art x≈812), centred on the middle row — never on a record. */
-.cabin-night-study .room-shelf-navigation { right: auto; left: calc(var(--scene-x) + 812px * var(--scene-k)); top: calc(var(--scene-y) + 471px * var(--scene-k)); translate: -100% -50%; }
-.room-focus-open.cabin-night-study .room-shelf-navigation { right: auto; }
-
 /* Cat bubble placement (CatBubble.jsx): offset vars, tail follows the side. */
 .room-cat-bubble { translate: calc(-50% + var(--bubble-dx, 0px)) calc(-4px + var(--bubble-dy, 0px)); transition: translate var(--px-dur-fast) steps(2, end); }
 .room-cat-bubble[data-side='left']::after, .room-cat-bubble[data-side='right']::after { top: 50%; translate: 0 -50%; width: 6px; height: 8px;
-  background: linear-gradient(#3b2a20 0 0) 0 2px / 2px 4px no-repeat, linear-gradient(#3b2a20 0 0) 2px 2px / 2px 4px no-repeat; }
+  background: linear-gradient(var(--px-paper-ink) 0 0) 0 2px / 2px 4px no-repeat, linear-gradient(var(--px-paper-ink) 0 0) 2px 2px / 2px 4px no-repeat; }
 .room-cat-bubble[data-side='right']::after { left: -10px; }
 .room-cat-bubble[data-side='left']::after { left: calc(100% + 4px); }
-@media (prefers-reduced-motion: reduce) { .room-cat-bubble { transition: none; } }
-html[data-desktop-reduce-motion='true'] .room-cat-bubble { transition: none; }
 .room-cat-bubble:not([data-side='left']):not([data-side='right'])::after { left: calc(50% - var(--bubble-dx, 0px)); }
 
-/* The stage re-fits when the focus panel opens/closes: stepped, like a camera
-   nudging along the pixel grid. Reduced motion jumps. */
-.cabin-scene-canvas { transition: left 240ms steps(4, end), top 240ms steps(4, end), width 240ms steps(4, end), height 240ms steps(4, end); }
-.cabin-night-study .room-shelf-navigation { transition: left 240ms steps(4, end), top 240ms steps(4, end); }
-@media (prefers-reduced-motion: reduce) { .cabin-scene-canvas, .cabin-night-study .room-shelf-navigation { transition: none; } }
-html[data-desktop-reduce-motion='true'] :is(.cabin-scene-canvas, .cabin-night-study .room-shelf-navigation) { transition: none; }
+/* Choice cards (scenes / companions): framed tiles that lift and lock in. */
+.scene-choice, .pet-choice { border: 2px solid #8a5a3299; box-shadow: var(--px-shadow-2); transition: translate var(--px-dur-fast) steps(2, end), border-color var(--px-dur-fast) steps(2, end), box-shadow var(--px-dur-fast) steps(2, end); }
+.scene-choice:hover, .pet-choice:hover { translate: 0 -2px; border-color: var(--px-accent); box-shadow: 4px 6px 0 var(--px-shadow); }
+.scene-choice:active, .pet-choice:active { translate: 1px 1px; box-shadow: var(--px-shadow-1); transition-duration: 0s; }
+.scene-choice[aria-pressed=true], .pet-choice[aria-pressed=true] { border-color: var(--px-accent-hi); background: #e0ad6914; box-shadow: 0 0 0 2px var(--px-shadow), var(--px-shadow-2); }
+.scene-choice > img { image-rendering: pixelated; }
 
-/* Immersive: the console is fully gone (not 8% ghost on the window art) and
-   steps back in when the pointer comes near it (CabinRoom → data-console-near). */
-.room-zen:not(.room-zen-tools) .room-turntable { opacity: 0 !important; visibility: hidden; pointer-events: none;
-  transition: opacity var(--px-dur-med) steps(3, end), visibility 0s linear var(--px-dur-med) !important; }
-.room-zen:not(.room-zen-tools) .room-turntable:focus-within, .room-zen[data-console-near='true'] .room-turntable, html.room-zen[data-console-near='true'] .room-turntable {
-  opacity: 1 !important; visibility: visible; pointer-events: auto; transition: opacity var(--px-dur-med) steps(3, end), visibility 0s !important; }
-@media (prefers-reduced-motion: reduce) { .room-zen:not(.room-zen-tools) .room-turntable { transition: none !important; } }
-/* Room cat spot (useCatPlacement): floor x, or perched on the console top. */
+/* Square corners for chrome another file still rounds (companion-room.css; handed off). */
+.music-local-folders li { border-radius: 0; }
+
+/* ── reduced motion: keep states, drop movement ───────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .pixel-button:hover:not(:disabled), .cabin-room .cabin-toolbar button:hover:not(:disabled), .scene-choice:hover, .pet-choice:hover { translate: none; }
+}
+html[data-desktop-reduce-motion='true'] :is(.pixel-button:hover:not(:disabled), .cabin-room .cabin-toolbar button:hover:not(:disabled), .scene-choice:hover, .pet-choice:hover) { translate: none; }
+
+/* ── room-cat placement (companion-room.css owns the cat; handed off) ─── */
 /* Moves are WAAPI hops/walks/fades (useCatPlacement.animateCatMove), not transitions.
    --cat-floor is the floor baseline the placement reads (zen/wallpaper sit lower). */
 .room-scene .room-cat { --cat-floor: 118px; left: var(--cat-x, 25%); bottom: var(--cat-floor); transform-origin: 50% 100%; }
 .room-zen:not(.room-zen-tools) .room-scene .room-cat, .wallpaper-room .room-scene .room-cat { --cat-floor: 28px; }
 .room-scene .room-cat[data-perch='console'] { bottom: var(--cat-bottom); z-index: 21; }
+}

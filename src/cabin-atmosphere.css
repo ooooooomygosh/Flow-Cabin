@@ -1,13 +1,15 @@
+@layer guards, reset, features, skin, overrides;
+@layer features {
 .cabin-atmosphere{position:absolute;inset:0;pointer-events:none;overflow:hidden}
 .cabin-atmosphere canvas{position:absolute;display:block;pointer-events:none}
 .atmosphere-pixel canvas{image-rendering:pixelated}
 /* Local pools on the hearth wall and floor, below furniture/UI; never a full-screen flash. */
 .cabin-hearth-light{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;mix-blend-mode:screen;opacity:1}
 .cabin-hearth-light [data-surface]{will-change:opacity}
-@media(prefers-reduced-motion:reduce){.cabin-weather{animation:none!important;transition:none!important}}
 .cabin-atmosphere:not([data-motion=running]):not([data-motion=reduced]):not([data-motion=hidden]) .cabin-hearth-light{visibility:hidden}
 
 .cabin-floor-base{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .atmosphere-pixel .cabin-floor-base{image-rendering:pixelated}
 
 .cabin-atmosphere[data-motion=unavailable]{display:none}
+}
