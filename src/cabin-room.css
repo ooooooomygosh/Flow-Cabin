@@ -25,4 +25,5 @@
 }
 
 /* Imported playlists sit on the shelf like albums, with a small paper tag. */
-.cabin-rack .room-record-tag{position:absolute;z-index:4;left:5%;top:5%;padding:1px 4px;font:400 10px/1.2 var(--px-font-cn);color:var(--px-accent-hi,#ffd99c);background:rgba(28,18,11,.85);border:1px solid var(--px-accent,#e0ad69);pointer-events:none;letter-spacing:.04em}
+/* Playlist mark: a corner tab bottom-right, clear of the cover's own title lettering. */
+.cabin-rack .room-record-tag{position:absolute;z-index:4;right:0;bottom:0;padding:2px 4px;font:400 12px/12px var(--px-font-cn);color:var(--px-ink-on-accent,#1c120b);background:var(--px-accent,#e0ad69);box-shadow:-2px -2px 0 var(--px-shadow,#0d0805);pointer-events:none;-webkit-font-smoothing:none}

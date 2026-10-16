@@ -1,6 +1,20 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Disc3 } from './icons';
 import { artworkResolution } from './artwork-resolution.mjs';
+import { GRID, gridToRgba, proceduralGrid, readPalette } from './player/pixel-cover.mjs';
+import './room-artwork.css';
+
+// No cover (or it failed): a 32×32 sleeve generated from title + artist in the
+// cabin palette (same generator as imported covers), titled on a printed strip.
+// Same record → same sleeve; no black box with an icon.
+function GeneratedSleeve({ item }) {
+  const canvas = useRef(null);
+  useEffect(() => {
+    const context = canvas.current?.getContext('2d'); if (!context) return;
+    let palette; try { palette = readPalette(getComputedStyle(document.documentElement)); } catch { palette = readPalette(null); }
+    context.putImageData(new ImageData(gridToRgba(proceduralGrid(item).grid, GRID, palette), GRID, GRID), 0, 0);
+  }, [item.title, item.artist]);
+  return <span className="showroom-art-placeholder is-generated"><canvas ref={canvas} className="is-painted" width={GRID} height={GRID} aria-hidden="true"/><strong>{item.title}</strong></span>;
+}
 
 export function ShowroomArtwork({ item, className = '', pixel = false }) {
   const [failed, setFailed] = useState(false), [painted, setPainted] = useState(false);
@@ -33,6 +47,6 @@ export function ShowroomArtwork({ item, className = '', pixel = false }) {
     return () => { disposed = true; cancelAnimationFrame(frame); observer.disconnect(); window.removeEventListener('resize', schedule); image.onload = image.onerror = null; };
   }, [item.cover, pixel]);
   return <span ref={root} className={`showroom-artwork ${className} ${pixel ? 'pixel-artwork' : ''}`}>
-    {item.cover && !failed ? <><img src={item.cover} alt={`${item.title} 封面`} width="800" height="800" decoding="async" draggable="false" style={painted ? { visibility: 'hidden' } : undefined} onError={() => setFailed(true)}/>{pixel && <canvas ref={canvas} width="96" height="96" className={painted ? 'is-painted' : ''} aria-hidden="true"/>}</> : <span className="showroom-art-placeholder"><Disc3/><strong>{item.title}</strong></span>}
+    {item.cover && !failed ? <><img src={item.cover} alt={`${item.title} 封面`} width="800" height="800" decoding="async" draggable="false" style={painted ? { visibility: 'hidden' } : undefined} onError={() => setFailed(true)}/>{pixel && <canvas ref={canvas} width="96" height="96" className={painted ? 'is-painted' : ''} aria-hidden="true"/>}</> : <GeneratedSleeve item={item}/>}
   </span>;
 }
