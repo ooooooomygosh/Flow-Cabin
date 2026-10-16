@@ -20,6 +20,7 @@
     const findButton = name => [...document.querySelectorAll('button')].find(e => !panel.contains(e) && visible(e) && (e.getAttribute('aria-label') === name || e.textContent.trim() === name));
     const wait = async (predicate, label, timeout = 10000) => { const end = Date.now() + timeout; while (Date.now() < end) { const result = predicate(); if (result) return result; await new Promise(r => setTimeout(r, 40)); } throw new Error('Timeout: ' + label); };
     const click = async name => { const e = await wait(() => findButton(name), name); e.click(); await new Promise(r => setTimeout(r, 60)); };
+    const openRoom = async () => { await click('设置'); await click('房间与桌宠'); }; // 布置小屋 now lives in 设置 › 房间与桌宠
     const input = async (label, value) => { const e = await wait(() => [...document.querySelectorAll('input,textarea,select')].find(n => visible(n) && (n.getAttribute('aria-label') === label || n.labels?.[0]?.textContent.trim().startsWith(label))), label); const prototype = e.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : e.tagName === 'SELECT' ? HTMLSelectElement.prototype : HTMLInputElement.prototype; Object.getOwnPropertyDescriptor(prototype, 'value').set.call(e, value); e.dispatchEvent(new Event(e.tagName === 'SELECT' ? 'change' : 'input', { bubbles: true })); e.dispatchEvent(new Event('change', { bubbles: true })); e.focus(); e.blur(); await new Promise(r => setTimeout(r, 80)); };
     button.onclick = async () => {
       if (!document.getElementById('qa-preview-banner')?.textContent.includes('交互验证预览')) { status.textContent = '拒绝运行：没有模拟数据标识'; return; }
@@ -41,7 +42,7 @@
         assert(!document.querySelector('dialog[open]'), 'Close existing dialogs before running');
         if (document.querySelector('.focus-dock-close')) await click('收起专注工具');
         pass('fixture room mounted');
-        await click('布置小屋');
+        await openRoom();
         for (const [id, name] of [['pixel', '像素小屋'], ['warm', '琥珀小屋'], ['night-study', '月夜书桌'], ['forest', '林间书屋'], ['seaside', '海边慢屋'], ['starlight', '星夜阁楼']]) {
           await click('选择场景 ' + name); await wait(() => document.querySelector('.cabin-scene')?.dataset.roomLook === id, id); pass('scene ' + id);
           if (['pixel', 'warm'].includes(id)) {
@@ -56,10 +57,10 @@
         for (const [id, name] of [['cat', '奶糖'], ['chick', '蛋挞'], ['bunny', '棉花'], ['bear', '可可'], ['fox', '枫糖']]) { await click('选择桌宠 ' + name); await wait(() => document.querySelector('.room-cat .pixel-cat')?.dataset.petId === id, id); pass('pet ' + id); }
         await click('回到小屋'); assert(document.documentElement.scrollWidth <= innerWidth, 'Horizontal page overflow'); pass('viewport horizontal fit');
         const setSkin = async name => { document.querySelector('.focus-badge').click(); await new Promise(r => setTimeout(r, 80)); await click('统计'); await click(name); await click('收起专注工具'); };
-        await click('布置小屋'); await click('选择桌宠 奶糖'); await click('回到小屋'); await setSkin('黑猫'); assert(document.querySelector('.room-cat canvas').dataset.skin === 'black', 'Cat black skin missing'); pass('cat black palette applies');
+        await openRoom(); await click('选择桌宠 奶糖'); await click('回到小屋'); await setSkin('黑猫'); assert(document.querySelector('.room-cat canvas').dataset.skin === 'black', 'Cat black skin missing'); pass('cat black palette applies');
         for (const [id, name] of [['chick', '蛋挞'], ['bunny', '棉花'], ['bear', '可可'], ['fox', '枫糖']]) {
-          await click('布置小屋'); await click('选择桌宠 ' + name); await click('回到小屋'); const canvas = document.querySelector('.room-cat canvas');
-          assert(canvas.dataset.petId === id && !canvas.hasAttribute('data-skin'), 'Cat palette leaked to ' + id); await click('布置小屋'); const blackChoicePixels = document.querySelector('.pet-choice[aria-pressed=true] canvas').toDataURL(); await click('回到小屋'); await setSkin('橘猫'); await click('布置小屋'); assert(document.querySelector('.pet-choice[aria-pressed=true] canvas').toDataURL() === blackChoicePixels, 'Palette change recolored ' + id); await click('回到小屋'); await setSkin('黑猫'); pass('cat palette leaves ' + id + ' unchanged');
+          await openRoom(); await click('选择桌宠 ' + name); await click('回到小屋'); const canvas = document.querySelector('.room-cat canvas');
+          assert(canvas.dataset.petId === id && !canvas.hasAttribute('data-skin'), 'Cat palette leaked to ' + id); await openRoom(); const blackChoicePixels = document.querySelector('.pet-choice[aria-pressed=true] canvas').toDataURL(); await click('回到小屋'); await setSkin('橘猫'); await openRoom(); assert(document.querySelector('.pet-choice[aria-pressed=true] canvas').toDataURL() === blackChoicePixels, 'Palette change recolored ' + id); await click('回到小屋'); await setSkin('黑猫'); pass('cat palette leaves ' + id + ' unchanged');
         }
         const savedLibrary = () => JSON.parse(localStorage.getItem('album-circle-library-v1-local-owner') || '{}');
         const handle = document.querySelector('.turntable-drag-handle'); assert(handle, 'Movable turntable handle absent');
@@ -70,7 +71,7 @@
         await press('Home'); assert(!savedLibrary().rooms?.['local-room']?.turntable, 'Home did not reset stored position'); pass('turntable Home resets position');
         const initialLook = document.querySelector('.cabin-scene').dataset.roomLook;
         Storage.prototype.setItem = function (key, value) { if (key === 'album-circle-library-v1-local-owner') throw new Error('模拟存储写入失败'); return originalSetItem.call(this, key, value); };
-        await click('布置小屋'); await click('选择场景 林间书屋'); assert(document.querySelector('.cabin-scene').dataset.roomLook === initialLook, 'Failed preference write changed scene'); await wait(() => [...document.querySelectorAll('[role=alert]')].some(e => e.textContent.includes('模拟存储写入失败')), 'storage failure alert');
+        await openRoom(); await click('选择场景 林间书屋'); assert(document.querySelector('.cabin-scene').dataset.roomLook === initialLook, 'Failed preference write changed scene'); await wait(() => [...document.querySelectorAll('[role=alert]')].some(e => e.textContent.includes('模拟存储写入失败')), 'storage failure alert');
         Storage.prototype.setItem = originalSetItem; await click('选择场景 星夜阁楼'); await click('回到小屋'); pass('failed preference write keeps prior state and reports error');
         for (const [mode, expectedColour] of [['auto', '#2a7f93'], ['manual', '#b35f72']]) {
           const sample = document.createElement('canvas'); sample.width = sample.height = 48; const ctx = sample.getContext('2d'); ctx.fillStyle = expectedColour; ctx.fillRect(0, 0, 48, 48); const sampleURL = sample.toDataURL('image/png');

@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import { launchChromium } from './launch-browser.mjs';
 import { showcaseAlbums } from './showcase-albums.mjs';
 import { verifyOnboarding } from './onboarding-checks.mjs';
+import { openRoomSettings } from './settings-actions.mjs';
 import { spawn, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import fs from 'node:fs/promises';
@@ -71,7 +72,7 @@ try {
   assert.equal(await page.locator('.room-shelf-navigation').count(), 0); check('twelve-albums-no-redundant-paging-and-visual-audio-hint');
   await page.locator('.focus-badge').click(); await page.getByRole('button', { name: '开始专注', exact: true }).click(); await page.locator('.focus-badge.is-running').waitFor(); await page.locator('.room-cat-bubble', { hasText: '还剩 25 分钟' }).waitFor(); await shot('focus', true);
   await page.getByRole('button', { name: '暂停', exact: true }).click(); check('focus-start-and-pause-from-visible-tool'); await page.getByRole('button', { name: '收起专注工具' }).click();
-  await page.getByRole('button', { name: '布置小屋', exact: true }).click();
+  await openRoomSettings(page);
   await page.locator('.scene-choice img').evaluateAll(images => Promise.all(images.map(image => image.decode())));
   for (const name of ['奶糖', '蛋挞', '棉花', '可可', '枫糖']) await fits(page.locator('.pet-choice strong', { hasText: name }));
   await fits(page.getByRole('button', { name: '回到小屋', exact: true })); check('six-scene-thumbnails-and-all-partner-names-visible');
@@ -81,8 +82,8 @@ try {
   await page.setViewportSize({ width: 960, height: 600 }); await shot('cabin-960x600');
   const { ROOM_SCENES } = await import('../src/scene-catalog.mjs');
   for (const scene of ROOM_SCENES) {
-    await page.getByRole('button', { name: '布置小屋', exact: true }).click(); await page.getByRole('button', { name: `选择场景 ${scene.label}`, exact: true }).click(); await page.getByRole('button', { name: '回到小屋' }).click(); await shot(`scene-${scene.id}-960x600`);
-    for (const name of ['布置小屋', '音源设置', '添加专辑']) await fits(page.getByRole('button', { name, exact: true }));
+    await openRoomSettings(page); await page.getByRole('button', { name: `选择场景 ${scene.label}`, exact: true }).click(); await page.getByRole('button', { name: '回到小屋' }).click(); await shot(`scene-${scene.id}-960x600`);
+    for (const name of ['设置', '添加专辑']) await fits(page.getByRole('button', { name, exact: true }));
   }
   check('all-six-scenes-compact-controls-fit');
   if (process.env.SHOWCASE_TOUR === '1') {
@@ -106,7 +107,7 @@ try {
     await demo.locator('.focus-badge').click(); await demo.waitForTimeout(1500);
     await demo.getByRole('button', { name: '开始专注', exact: true }).click(); await demo.waitForTimeout(1700);
     await demo.getByRole('button', { name: '收起专注工具', exact: true }).click();
-    await demo.getByRole('button', { name: '布置小屋', exact: true }).click(); await demo.waitForTimeout(1300);
+    await openRoomSettings(demo); await demo.waitForTimeout(1300);
     await demo.getByRole('button', { name: '选择场景 林间书屋', exact: true }).click();
     await demo.getByRole('button', { name: '选择桌宠 枫糖', exact: true }).click(); await demo.waitForTimeout(1200);
     await demo.getByRole('button', { name: '回到小屋', exact: true }).click(); await demo.waitForTimeout(1700);

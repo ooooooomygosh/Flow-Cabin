@@ -2,7 +2,7 @@
 // New turntable sources: a scanned local folder plays exact files, and the
 // system player mirrors onto the deck with transport controls.
 const { _electron } = require('playwright'), fs = require('node:fs'), path = require('node:path'), assert = require('node:assert/strict'), crypto = require('node:crypto');
-const { mountFixture, albums } = require('./ui-fixture.cjs');
+const { mountFixture, albums, openMusicSettings } = require('./ui-fixture.cjs');
 const desktop = path.resolve(__dirname, '..'), output = path.join(desktop, 'test-results'); fs.mkdirSync(output, { recursive: true });
 const profile = path.join(output, `sources-ui-profile-${Date.now()}`);
 const env = { ...process.env, ALBUM_DESKTOP_TEST_PROFILE: profile }; delete env.ELECTRON_RUN_AS_NODE;
@@ -20,7 +20,7 @@ let app, site, host;
   await mountFixture(app, site, { music: true, showroom: 'room', items: [local, ...albums.slice(1)] });
   await app.evaluate(() => globalThis.__qaLocalReady);
 
-  await site.getByRole('button', { name: '音源设置', exact: true }).click();
+  await openMusicSettings(site);
   const settings = site.getByRole('dialog', { name: '音源与账户' });
   await settings.locator('.music-local-status', { hasText: '1 张专辑 · 2 首歌曲' }).waitFor();
   assert.equal(await settings.locator('.music-local-folders li').count(), 1); check('local-folder-scan-is-listed-in-settings');
