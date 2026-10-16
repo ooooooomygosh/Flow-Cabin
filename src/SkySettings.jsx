@@ -19,16 +19,16 @@ export default function SkySettings() {
     : !city ? '固定作息没有地点，先选一座城市。'
     : real?.source === 'real' ? `${city.name}现在${KINDS[real.kind] || '晴'}（${clockText(snapshot.real.fetchedAt)} 更新）。`
     : '正在问天气…连不上时窗外照旧是你装上的窗景。';
-  return <div className="hub-rows">
-    <div className="hub-row"><span><strong>窗外的天色</strong><small>{`日出日落跟着这座城市走，季节不同，天亮的时间也不同。${sky ? `现在：${sky}。` : ''}`}</small></span>
+  return <section aria-labelledby="sky-settings-title"><div className="personalization-heading"><h3 id="sky-settings-title">窗外</h3><span>天色每分钟都在变</span></div><div className="hub-rows">
+    <div className="hub-row"><span><strong>天色跟着哪座城市</strong><small>{`日出日落跟着这座城市走，季节不同，天亮的时间也不同。${sky ? `现在：${sky}。` : ''}`}</small></span>
       <span className="hub-row-actions"><select aria-label="天色跟随的城市" value={settings.place} onChange={(event) => change({ place: event.target.value })}>
         <option value="auto">{`跟随时区${auto ? `（${auto.name}）` : '（固定作息）'}`}</option>
         <option value="clock">固定作息（6:30 日出）</option>
         {SKY_CITIES.map((entry) => <option key={entry.id} value={entry.id}>{entry.name}</option>)}
       </select></span>
     </div>
-    {desktop && <div className="hub-row"><span><strong>跟随真实天气</strong><small>{weatherHint} 只发送城市的大致坐标。天气数据：<a href="https://open-meteo.com/" target="_blank" rel="noreferrer">Open-Meteo.com</a>（CC BY 4.0）</small></span>
+    {desktop && <div className="hub-row"><span><strong>跟随真实天气</strong><small>{weatherHint}只发送城市的大致坐标。天气数据：<a href="https://open-meteo.com/" target="_blank" rel="noreferrer">Open-Meteo.com</a>（CC BY 4.0）</small></span>
       <span className="hub-row-actions"><label className="hub-toggle"><input type="checkbox" aria-label="跟随真实天气" checked={settings.realWeather} onChange={(event) => change({ realWeather: event.target.checked })}/><span>{settings.realWeather ? '开' : '关'}</span></label></span>
     </div>}
-  </div>;
+  </div></section>;
 }
