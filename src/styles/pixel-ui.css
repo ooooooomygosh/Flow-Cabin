@@ -158,10 +158,4 @@ input[type=checkbox], input[type=radio] { accent-color: var(--px-accent); }
 }
 html[data-desktop-reduce-motion='true'] :is(.pixel-button:hover:not(:disabled), .cabin-room .cabin-toolbar button:hover:not(:disabled), .scene-choice:hover, .pet-choice:hover) { translate: none; }
 
-/* ── room-cat placement (companion-room.css owns the cat; handed off) ─── */
-/* Moves are WAAPI hops/walks/fades (useCatPlacement.animateCatMove), not transitions.
-   --cat-floor is the floor baseline the placement reads (zen/wallpaper sit lower). */
-.room-scene .room-cat { --cat-floor: 118px; left: var(--cat-x, 25%); bottom: var(--cat-floor); transform-origin: 50% 100%; }
-.room-zen:not(.room-zen-tools) .room-scene .room-cat, .wallpaper-room .room-scene .room-cat { --cat-floor: 28px; }
-.room-scene .room-cat[data-perch='console'] { bottom: var(--cat-bottom); z-index: 21; }
 }

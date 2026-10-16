@@ -38,12 +38,10 @@ test('!important is only used by the kill switches in the guards layer', () => {
 
 test('every animation names a keyframe that exists', () => {
   const defined = new Set(sheets.flatMap(({ css }) => [...css.matchAll(/@keyframes\s+([\w-]+)/g)].map((m) => m[1])));
-  const KNOWN_MISSING = new Set(['room-spin']); // companion-room.css; the pocket player overrides it with px-spin
   const keywords = /^(none|infinite|both|forwards|backwards|alternate|alternate-reverse|reverse|normal|linear|ease|ease-in|ease-out|ease-in-out|step-start|step-end|paused|running|inherit|initial|unset|end|start|jump-none|jump-both|jump-start|jump-end)$/;
   for (const { file, css } of sheets) for (const m of css.matchAll(/animation(?:-name)?\s*:\s*([^;}]+)/g)) {
     for (const part of m[1].replace(/!important/g, '').replace(/[\w-]*\([^)]*\)/g, '').split(',')) for (const word of part.trim().split(/\s+/)) {
       if (!word || keywords.test(word) || /^[-\d.]/.test(word) || word.startsWith('var') || word === '!important') continue;
-      if (KNOWN_MISSING.has(word) && COMPANION.has(file)) continue;
       assert(defined.has(word), `${file}: animation uses undefined keyframes "${word}"`);
     }
   }

@@ -51,13 +51,13 @@
 .room-focus-open .room-shelf-navigation{display:none}
 .cabin-toolbar-group{display:flex;gap:8px;align-items:center}
 .music-local{display:grid;gap:8px;margin-top:14px}.music-local h3{margin:0}.music-local p{margin:0}
-.music-local-folders{list-style:none;margin:0;padding:0;display:grid;gap:5px}.music-local-folders li{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid #ad80534d;border-radius:8px}.music-local-folders span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.music-local-folders{list-style:none;margin:0;padding:0;display:grid;gap:5px}.music-local-folders li{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid #ad80534d;border-radius:0}.music-local-folders span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .music-local-actions{display:flex;gap:8px;flex-wrap:wrap}.music-local-actions button{display:inline-flex;align-items:center;gap:6px}
 .music-local-status{font-size:12px;opacity:.8}
 .local-music-import{display:grid;gap:8px}.local-music-import h3{display:flex;align-items:center;gap:8px}
 .local-album-list{list-style:none;margin:0;padding:0;display:grid;gap:6px;max-height:260px;overflow:auto}
-.local-album-list li{display:flex;align-items:center;gap:10px;padding:6px;border:1px solid #ad80534d;border-radius:8px}
-.local-album-list img,.local-album-placeholder{width:40px;height:40px;flex:none;object-fit:cover;border-radius:4px;display:grid;place-items:center;background:#0002}
+.local-album-list li{display:flex;align-items:center;gap:10px;padding:6px;border:1px solid #ad80534d;border-radius:0}
+.local-album-list img,.local-album-placeholder{width:40px;height:40px;flex:none;object-fit:cover;border-radius:0;display:grid;place-items:center;background:#0002}
 .local-album-list li>span:not(.local-album-placeholder){flex:1;min-width:0;display:grid}.local-album-list strong,.local-album-list small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .link-button{background:none;border:0;padding:0;color:inherit;text-decoration:underline;cursor:pointer}
 .turntable-collect{display:inline-flex!important;gap:5px;align-items:center;font-size:12px}
@@ -77,11 +77,19 @@
 .turntable-sleeve { position:absolute; left:calc(50% - 74px); top:12px; width:78px; height:78px; display:grid; place-items:center; background:#a3794e; border:2px solid #2a1b13; box-shadow:3px 3px 0 #0007; z-index:2; }
 .turntable-sleeve img { width:100%;height:100%;object-fit:cover; }
 .turntable-record-art .custom-vinyl { position:absolute; width:86px; height:86px; left:calc(50% - 12px); top:8px; border-radius:50%; }
-.turntable-record-art .custom-vinyl.is-spinning { animation:room-spin 5s linear infinite; will-change:transform; }
+.turntable-record-art .custom-vinyl.is-spinning { animation:px-spin 5s steps(8, end) infinite; will-change:transform; }
 .turntable-needle { position:absolute; right:9px; top:14px; width:5px; height:49px; border:1px solid #38251b; background:#d5bd91; transform:rotate(24deg); transform-origin:top; box-shadow:2px 2px #0008; }
 .turntable-needle:after { content:''; position:absolute; width:10px; height:6px; bottom:-2px; left:-3px; background:#ddd0ac; border:1px solid #38251b; }
-.player-visual-note { margin:8px 0 0; font-size:10px; line-height:1.6; opacity:.7; }
+.player-visual-note { margin:8px 0 0; font-size:12px; line-height:1.6; opacity:.7; }
 :root[data-desktop-reduce-motion=true] .turntable-record-art .custom-vinyl { animation:none; }
 @media(prefers-reduced-motion:reduce) { .turntable-record-art .custom-vinyl { animation:none; } }
 @media(max-height:700px) { .turntable-record-art { height:76px; } .turntable-sleeve { width:56px;height:56px;top:8px;left:calc(50% - 53px); } .turntable-record-art .custom-vinyl { width:62px;height:62px;top:5px; } .turntable-needle { height:35px; } }
+}
+@layer skin {
+/* ── room-cat placement (moved from pixel-ui; skin layer keeps its old precedence) ─── */
+/* Moves are WAAPI hops/walks/fades (useCatPlacement.animateCatMove), not transitions.
+   --cat-floor is the floor baseline the placement reads (zen/wallpaper sit lower). */
+.room-scene .room-cat { --cat-floor: 118px; left: var(--cat-x, 25%); bottom: var(--cat-floor); transform-origin: 50% 100%; }
+.room-zen:not(.room-zen-tools) .room-scene .room-cat, .wallpaper-room .room-scene .room-cat { --cat-floor: 28px; }
+.room-scene .room-cat[data-perch='console'] { bottom: var(--cat-bottom); z-index: 21; }
 }
