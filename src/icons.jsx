@@ -1,28 +1,31 @@
 import React from 'react';
-import * as Hero from '@heroicons/react/24/outline';
+import {
+  AcademicCapIcon, AdjustmentsHorizontalIcon, ArrowDownTrayIcon, ArrowLeftIcon, ArrowPathIcon, ArrowTopRightOnSquareIcon,
+  ArrowUpRightIcon, ArrowsPointingInIcon, ArrowsPointingOutIcon, ArrowsRightLeftIcon, BookOpenIcon, BuildingLibraryIcon,
+  ChartBarIcon, CheckIcon, ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon,
+  ClockIcon, Cog6ToothIcon, ComputerDesktopIcon, DocumentArrowUpIcon, EyeIcon, EyeSlashIcon,
+  FolderOpenIcon, ForwardIcon, HeartIcon, LinkIcon, ListBulletIcon, MagnifyingGlassIcon,
+  MinusIcon, MusicalNoteIcon, PauseIcon, PencilSquareIcon, PlayIcon, PlusIcon,
+  QueueListIcon, RectangleStackIcon, SparklesIcon, SpeakerWaveIcon, SpeakerXMarkIcon, Squares2X2Icon,
+  TrashIcon, XMarkIcon,
+} from '@heroicons/react/24/outline';
 
-// All interface glyphs use the official Heroicons outline SVGs (MIT).
-const icon = (name) => function InterfaceIcon({ size = 20, strokeWidth = 1.7, style, ...props }) {
-  const Component = Hero[name];
+// All interface glyphs use the official Heroicons outline SVGs (MIT). Named imports keep the bundle
+// to the icons actually used (a namespace import pulled in every Heroicon).
+const icon = (Component) => function InterfaceIcon({ size = 20, strokeWidth = 1.7, style, ...props }) {
   return <Component aria-hidden="true" data-icon-library="heroicons" width={size} height={size} strokeWidth={strokeWidth} style={{ flexShrink: 0, ...style }} {...props}/>;
 };
-export const Album = icon('RectangleStackIcon'), ArrowUpRight = icon('ArrowUpRightIcon'), BookOpen = icon('BookOpenIcon'), Bot = icon('CpuChipIcon');
-export const ChevronLeft = icon('ChevronLeftIcon'), ChevronRight = icon('ChevronRightIcon'), CirclePlus = icon('PlusCircleIcon'), Disc3 = icon('CircleStackIcon');
-export const DoorOpen = icon('ArrowRightStartOnRectangleIcon'), Grid3X3 = icon('Squares2X2Icon'), Library = icon('BuildingLibraryIcon'), LockKeyhole = icon('LockClosedIcon');
-export const MessageCircle = icon('ChatBubbleLeftEllipsisIcon'), Music2 = icon('MusicalNoteIcon'), Radio = icon('RadioIcon'), Plus = icon('PlusIcon');
-export const Search = icon('MagnifyingGlassIcon'), Send = icon('PaperAirplaneIcon'), Share2 = icon('ShareIcon'), Sparkles = icon('SparklesIcon');
-export const Star = icon('StarIcon'), Trash2 = icon('TrashIcon'), UserRound = icon('UserIcon'), Users = icon('UserGroupIcon'), Wand2 = icon('AdjustmentsHorizontalIcon');
-export const Pause = icon('PauseIcon'), Play = icon('PlayIcon'), Shuffle = icon('ArrowsRightLeftIcon'), X = icon('XMarkIcon');
-export const Expand = icon('ArrowsPointingOutIcon'), Contract = icon('ArrowsPointingInIcon');
-export const Settings = icon('Cog6ToothIcon'), Minus = icon('MinusIcon'), Maximize = icon('StopIcon'), External = icon('ArrowTopRightOnSquareIcon');
-export const Download = icon('ArrowDownTrayIcon'), Check = icon('CheckIcon'), Up = icon('ChevronUpIcon'), Down = icon('ChevronDownIcon');
-export const Info = icon('InformationCircleIcon'), ErrorIcon = icon('ExclamationCircleIcon'), Loading = icon('ArrowPathIcon');
-export const Clock = icon('ClockIcon'), CheckCircle = icon('CheckCircleIcon'), ChartBar = icon('ChartBarIcon'), SpeakerWave = icon('SpeakerWaveIcon'), SpeakerOff = icon('SpeakerXMarkIcon');
-export const Forward = icon('ForwardIcon'), Backward = icon('BackwardIcon'), Gift = icon('GiftIcon'), Bars3 = icon('Bars3Icon'), EyeSlash = icon('EyeSlashIcon'), Eye = icon('EyeIcon');
-export const Pencil = icon('PencilSquareIcon');
-export const ListBullet = icon('ListBulletIcon'), Moon = icon('MoonIcon'), Heart = icon('HeartIcon'), FolderOpen = icon('FolderOpenIcon'), Computer = icon('ComputerDesktopIcon');
-export const QueueList = icon('QueueListIcon'), Link = icon('LinkIcon'), DocumentArrow = icon('DocumentArrowUpIcon'), ArrowLeft = icon('ArrowLeftIcon'), Signal = icon('SignalIcon');
-export const Bookmark = icon('AcademicCapIcon');
+export const Album = icon(RectangleStackIcon), ArrowUpRight = icon(ArrowUpRightIcon), BookOpen = icon(BookOpenIcon), ChevronLeft = icon(ChevronLeftIcon);
+export const ChevronRight = icon(ChevronRightIcon), Grid3X3 = icon(Squares2X2Icon), Library = icon(BuildingLibraryIcon), Music2 = icon(MusicalNoteIcon);
+export const Plus = icon(PlusIcon), Search = icon(MagnifyingGlassIcon), Sparkles = icon(SparklesIcon), Trash2 = icon(TrashIcon);
+export const Wand2 = icon(AdjustmentsHorizontalIcon), Pause = icon(PauseIcon), Play = icon(PlayIcon), Shuffle = icon(ArrowsRightLeftIcon), X = icon(XMarkIcon);
+export const Expand = icon(ArrowsPointingOutIcon), Contract = icon(ArrowsPointingInIcon), Settings = icon(Cog6ToothIcon), Minus = icon(MinusIcon);
+export const External = icon(ArrowTopRightOnSquareIcon), Download = icon(ArrowDownTrayIcon), Check = icon(CheckIcon), Up = icon(ChevronUpIcon);
+export const Down = icon(ChevronDownIcon), Loading = icon(ArrowPathIcon), Clock = icon(ClockIcon), ChartBar = icon(ChartBarIcon), SpeakerWave = icon(SpeakerWaveIcon);
+export const SpeakerOff = icon(SpeakerXMarkIcon), Forward = icon(ForwardIcon), EyeSlash = icon(EyeSlashIcon), Eye = icon(EyeIcon), Pencil = icon(PencilSquareIcon);
+export const ListBullet = icon(ListBulletIcon), Heart = icon(HeartIcon), FolderOpen = icon(FolderOpenIcon), Computer = icon(ComputerDesktopIcon);
+export const QueueList = icon(QueueListIcon), Link = icon(LinkIcon), DocumentArrow = icon(DocumentArrowUpIcon), ArrowLeft = icon(ArrowLeftIcon);
+export const Bookmark = icon(AcademicCapIcon);
 
 // Pixel glyphs for the deck's play modes, on pixelarticons' 24-unit grid
 // (2 units per pixel; MIT, see public/licenses/pixelarticons-LICENSE.txt).
@@ -71,3 +74,17 @@ export const EjectPixel = pixelGlyph('eject', pixels([
   '............', '.....XX.....', '....XXXX....', '...XXXXXX...', '..XXXXXXXX..', '.XXXXXXXXXX.',
   '.XXXXXXXXXX.', '............', '.XXXXXXXXXX.', '.XXXXXXXXXX.', '............', '............'
 ]));
+
+// The record glyph: a 12 × 12 pixel vinyl — outer rim, a half-tone groove and an accent label.
+// Drawn on whole pixels only, so the rendered size snaps to a multiple of 12 (12 / 24 / 36 px).
+const VINYL = [
+  '....XXXX....', '..XX....XX..', '.X..gggg..X.', '.X.g....g.X.', 'X.g......g.X', 'X.g..LL..g.X',
+  'X.g..LL..g.X', 'X.g......g.X', '.X.g....g.X.', '.X..gggg..X.', '..XX....XX..', '....XXXX....'
+];
+const VINYL_RIM = pixels(VINYL), VINYL_GROOVE = pixels(VINYL.map((row) => row.replace(/X/g, '.').replace(/g/g, 'X'))), VINYL_LABEL = pixels(VINYL.map((row) => row.replace(/[Xg]/g, '.').replace(/L/g, 'X')));
+export function Disc3({ size = 24, style, ...props }) {
+  const px = Math.max(12, Math.round(size / 12) * 12);
+  return <svg aria-hidden="true" data-icon="vinyl" data-icon-library="pixel" viewBox="0 0 24 24" width={px} height={px} shapeRendering="crispEdges" style={{ flexShrink: 0, ...style }} {...props}>
+    <g fill="currentColor">{VINYL_RIM}</g><g fill="currentColor" opacity=".5">{VINYL_GROOVE}</g><g fill="var(--px-accent, #e0ad69)">{VINYL_LABEL}</g>
+  </svg>;
+}

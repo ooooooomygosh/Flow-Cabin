@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronRight, Disc3, Pause, Play, X, Plus, Eye, PlayPixel,
 import { ROOM_DRAG_TYPE } from './RoomScene';
 import useTurntablePosition from './useTurntablePosition';
 import { trackNames } from './room-model.mjs';
-import { trackArtist } from './room-playback.mjs';
+import { trackArtist } from './track-meta.mjs';
 import PlayerControls, { PocketProgress } from './player/PlayerControls';
 import { displayTitle } from './display-title.mjs';
 // Wrap the quality token (无损 / FLAC / Hi-Res / 320k MP3…) of a status line in a small badge; the text stays whole.
