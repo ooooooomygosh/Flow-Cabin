@@ -43,6 +43,6 @@ export default function TaskList() {
     </ul>
     <UndoLine offer={undo} clear={clearUndo}/>
     {tasks.length > 1 && <p className="focus-empty">拖动排序，或选中任务后按 Alt + ↑ / ↓ 调整顺序；双击文字可改名。</p>}
-    {tasks.length > 0 && <footer className="focus-task-footer"><span>{open} 项待完成</span>{tasks.length > open && <ConfirmButton className="pixel-button is-quiet" question={`清除 ${tasks.length - open} 项已完成的待办？`} confirmLabel="确认清除" onConfirm={focus.clearDone}>清除已完成</ConfirmButton>}</footer>}
+    {tasks.length > 0 && <footer className="focus-task-footer"><span>{open} 项待完成</span>{tasks.length > open && <ConfirmButton className="" question={`清除 ${tasks.length - open} 项已完成的待办？`} confirmLabel="确认清除" onConfirm={focus.clearDone}>清除已完成</ConfirmButton>}</footer>}
   </div>;
 }

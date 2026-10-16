@@ -50,7 +50,9 @@ export function FocusTimer() {
   const day = dayKey(focus.now), today = useMemo(() => focusStats(focus.state.sessions, focus.now), [focus.state.sessions, day]), preset = activePreset(settings);
   const task = tasks.find((item) => item.id === timer.taskId);
   const number = (key, label, max) => <DurationSetting name={key} label={label} value={settings[key]} max={max} onSave={(value) => focus.settings({ [key]: value })}/>;
-  const check = (key, label) => <label className="focus-check"><input type="checkbox" checked={settings[key]} onChange={(event) => focus.settings({ [key]: event.target.checked })}/>{label}</label>;
+  // 系统通知 asks for permission when it is switched on (the same rule as 设置 › 专注工具).
+  const ask = (key, on) => { if (key === 'notify' && on && typeof Notification !== 'undefined' && Notification.permission === 'default') Notification.requestPermission().catch?.(() => {}); };
+  const check = (key, label) => <label className="focus-check"><input type="checkbox" checked={settings[key]} onChange={(event) => { focus.settings({ [key]: event.target.checked }); ask(key, event.target.checked); }}/>{label}</label>;
   return <div className={`focus-timer phase-${timer.phase} ${timer.paused ? 'is-paused' : ''}`}>
     <p className="focus-phase" role="status">{PHASE_LABELS[timer.phase]}{timer.paused ? ' · 已暂停' : ''}</p>
     <PixelRing progress={progress} running={!idle && !timer.paused}>
@@ -72,7 +74,7 @@ export function FocusTimer() {
     {editing && <div className="focus-settings">
       {!idle && <small>时长修改从下一轮开始生效。</small>}
       <div className="focus-settings-grid">{number('focusMin', '专注（分）', 180)}{number('shortMin', '短休（分）', 60)}{number('longMin', '长休（分）', 90)}{number('longEvery', '几轮长休', 8)}</div>
-      {check('hideSeconds', '隐藏秒数（仅显示剩余分钟）')}{check('autoBreak', '专注结束自动开始休息')}{check('autoFocus', '休息结束自动开始专注')}{check('notify', '系统通知')}{check('chime', '提示音')}{check('autoSound', '开始专注时打开声音')}
+      {check('hideSeconds', '隐藏秒数（仅显示剩余分钟）')}{check('autoBreak', '专注结束自动开始休息')}{check('autoFocus', '休息结束自动开始专注')}{check('notify', '系统通知')}{settings.notify && typeof Notification !== 'undefined' && Notification.permission === 'denied' && <small>系统通知已被拒绝，请在系统设置里允许心流小屋。</small>}{check('chime', '提示音')}{check('autoSound', '开始专注时打开声音')}
     </div>}
   </div>;
 }

@@ -61,7 +61,7 @@
 .focus-task-text span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.is-done .focus-task-text span{text-decoration:line-through;color:var(--px-ink-faint)}
 .focus-task-text small{font-size:12px;flex-shrink:0}
 .focus-task-remove{display:grid;place-items:center;min-width:var(--px-hit);min-height:var(--px-hit);padding:3px;color:#c89c71;background:none;border:0;opacity:.6}.focus-task-list li:hover .focus-task-remove{opacity:1}
-.focus-task-footer{display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-size:12px;color:var(--px-ink-dim)}.focus-task-footer button{color:#e8c08c;background:none;border:0;text-decoration:underline}
+.focus-task-footer{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:6px;margin-top:10px;font-size:12px;color:var(--px-ink-dim)}.focus-task-footer>button{color:#e8c08c;background:none;border:0;text-decoration:underline}
 
 .focus-stat-tiles{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:0}
 .focus-stat-tiles div{padding:8px 10px;background:#34210f;border:1px solid #5d3d24}.focus-stat-tiles dt{font-size:12px;color:var(--px-ink-dim)}.focus-stat-tiles dd{margin:2px 0 0;font-size:15px;font-weight:700;color:#ffe2a8;font-variant-numeric:tabular-nums}

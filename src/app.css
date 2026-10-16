@@ -80,7 +80,8 @@ a{color:var(--px-accent-hi)}
 .status.is-error{margin:8px 0;padding:6px 10px 6px 12px;list-style:none;font-size:12px;line-height:18px;color:var(--px-ink);background:color-mix(in srgb,var(--px-warn) 18%,var(--px-surface));border-left:4px solid var(--px-warn)}
 .status.is-error li+li{margin-top:4px}
 /* In-place confirm (ui/Confirm) and the 撤销 line after a single delete. */
-.confirm-inline{display:inline-flex;align-items:center;flex-wrap:wrap;gap:6px;font-size:12px;line-height:16px;color:var(--px-ink)}
+.confirm-inline{display:inline-flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:6px;margin-left:auto;font-size:12px;line-height:16px;color:var(--px-ink)}
+.confirm-inline .pixel-button,.undo-line .pixel-button{min-height:var(--px-hit);padding:4px 10px;font-size:12px}
 .undo-line{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:6px 0;font-size:12px;color:var(--px-ink-dim)}
 .segmented{display:inline-flex;border:2px solid var(--px-border);box-shadow:3px 3px 0 var(--px-shadow)}
 .segmented button{padding:5px 12px;font-size:12px;color:var(--px-ink-dim);background:var(--px-surface-2);border:0}

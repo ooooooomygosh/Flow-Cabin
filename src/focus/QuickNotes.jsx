@@ -37,7 +37,7 @@ export default function QuickNotes() {
   return <section className="focus-notes" aria-label="随手记">
     <p>先把突然想到的事记下来，继续专注。内容仅保存在本机。</p>
     <label>随手记<textarea aria-label="随手记内容" maxLength={MAX_NOTE_LENGTH} value={notes} placeholder="灵感、会议要点、稍后再做的事…" onChange={(event) => change(event.target.value)} onBlur={() => flush()}/></label>
-    <div className="focus-task-footer"><span>{notes.length} / {MAX_NOTE_LENGTH}</span><ConfirmButton className="pixel-button is-quiet" disabled={!notes} question="清空随手记？清空后无法找回。" confirmLabel="确认清空" onConfirm={() => { clearTimeout(timer.current); timer.current = 0; burst.current = 0; latest.current.draft = null; setDraft(null); write(''); }}>清空</ConfirmButton></div>
+    <div className="focus-task-footer"><span>{notes.length} / {MAX_NOTE_LENGTH}</span><ConfirmButton className="" disabled={!notes} question="清空随手记？清空后无法找回。" confirmLabel="确认清空" onConfirm={() => { clearTimeout(timer.current); timer.current = 0; burst.current = 0; latest.current.draft = null; setDraft(null); write(''); }}>清空</ConfirmButton></div>
     {!focus.error && <small role="status">{draft !== null && draft !== written.current ? '正在保存…' : '已自动保存到本机'}</small>}
   </section>;
 }
