@@ -3,7 +3,7 @@
 // covers), a few days of focus history and the cat in its scarf.
 // Run: npm --prefix desktop run screenshots   (writes docs/images/*.jpg)
 const { _electron } = require('playwright'), fs = require('node:fs'), path = require('node:path');
-const { mountFixture, chooseRoomScene } = require('./ui-fixture.cjs');
+const { mountFixture, chooseRoomScene, openAddToShelf } = require('./ui-fixture.cjs');
 const desktop = path.resolve(__dirname, '..'), output = path.join(desktop, '..', 'docs', 'images'); fs.mkdirSync(output, { recursive: true });
 const env = { ...process.env, ALBUM_DESKTOP_TEST_PROFILE: path.join(desktop, 'test-results', `screenshots-profile-${Date.now()}`) }; delete env.ELECTRON_RUN_AS_NODE;
 const executablePath = process.env.ALBUM_QA_EXE || path.join(desktop, 'node_modules/electron/dist/electron.exe');
@@ -61,7 +61,7 @@ const items = ALBUMS.map(([title, artist, background, accent, motif], index) => 
   await chooseRoomScene(site, 'pixel');
   await site.locator('.room-record').nth(2).click(); await site.getByRole('button', { name: /唱片卡片/ }).click(); await site.locator('.record-card').waitFor(); await shot('record-card.jpg');
   await site.getByRole('button', { name: '关闭唱片卡片' }).click();
-  await site.getByRole('button', { name: '添加专辑' }).click(); const add = site.getByRole('dialog', { name: '添加专辑' });
+  const add = await openAddToShelf(site);
   await add.getByRole('searchbox').fill('lofi winter'); await add.getByRole('button', { name: '搜索' }).click(); await add.locator('.add-results li').first().waitFor(); await shot('add-album.jpg');
   await app.close();
 })().catch((error) => { console.error(error); process.exitCode = 1; });

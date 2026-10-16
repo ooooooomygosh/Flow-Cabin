@@ -1,4 +1,4 @@
-/* Room stage, console geometry, wallpaper, music settings and drag ghosts.
+/* Room stage, console geometry, wallpaper, 账户与文件夹 and drag ghosts.
    The painted 3D deck is gone (the deck is a sprite on the shelf, scene-deck.css);
    the console body itself is styled in player/pocket-player.css. */
 @layer guards, reset, features, skin, overrides;
@@ -27,18 +27,19 @@
 .turntable-copy{min-width:0}.turntable-copy>strong,.turntable-artist,.turntable-track{display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.turntable-artist{margin-top:4px}
 .turntable-status{max-height:48px;overflow:auto}
 .turntable-controls{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:12px}.turntable-controls button{display:grid;place-items:center;border:1px solid #cfaa6660;padding:7px;color:#ffe4b7;background:#644225}.turntable-controls button:disabled{opacity:.3}.turntable-controls .turntable-toggle{background:#dcbb7d;color:#291b0b;padding:9px}.turntable-controls select{flex-basis:100%;width:100%;min-width:0;overflow:hidden;text-overflow:ellipsis;color:#ffe4b7;background-color:#332311;border:1px solid #caa26966;padding:7px;font-size:12px}
-.turntable-source{display:flex;align-items:center;gap:7px;font-size:12px;color:#caa774;margin-top:10px}.turntable-source select{width:100%;min-width:0;flex:1;color:#ffe4b7;background-color:#332311;border:1px solid #caa26966;padding:5px;font:inherit}
 .turntable-audio-sliders{display:grid;gap:5px;margin-top:10px;font-size:12px;color:#cfae7d}.turntable-audio-sliders label{display:flex;align-items:center;gap:7px;flex-wrap:wrap}.turntable-audio-sliders input{min-width:0;flex:1;width:60%;height:12px;accent-color:#d5b575}.turntable-audio-sliders small{flex-basis:100%;text-align:right;font-size:12px}
 .turntable-matches{display:grid;gap:4px;max-height:180px;overflow:auto;margin-top:10px}.turntable-matches button{padding:7px 8px;text-align:left;border:1px solid #cfaa6650;background:#513720;color:#ffe2b4}.turntable-matches button strong{display:block;font-size:12px;font-weight:500}.turntable-matches button span{display:block;font-size:12px;color:#c2a17a}
-@media(max-width:1300px){.room-turntable{left:1.5%;width:22%;min-width:185px}.turntable-heading>small{display:none}.room-shelf-navigation{right:8px}}
+@media(max-width:1300px){.room-turntable{left:1.5%;width:22%;min-width:185px}.room-shelf-navigation{right:8px}}
 @media(max-height:750px){.room-turntable{bottom:19%;width:18%;min-width:165px}.turntable-controls button{padding:5px}.turntable-controls select{padding:5px}.room-shelf-navigation small{display:none}.turntable-console{scrollbar-width:thin;scrollbar-color:#b48753 #352518}.turntable-console>*{max-width:100%}.turntable-status{overflow-wrap:anywhere}}
-@media(max-height:700px){.turntable-audio-sliders{gap:2px}.turntable-source{margin-top:5px}.turntable-status{max-height:28px}}
+@media(max-height:700px){.turntable-audio-sliders{gap:2px}.turntable-status{max-height:28px}}
 /* Only the heading moves the furniture; playback, selects and album drops keep their own gestures. */
 .turntable-drag-handle{display:flex;align-items:center;gap:5px;border:0;padding:3px 0;background:none;color:inherit;font:inherit;cursor:grab;touch-action:none;user-select:none}
 .room-turntable[data-moving=true] .turntable-drag-handle{cursor:grabbing}
 
 .wallpaper-room{position:fixed;inset:0;background:#38200f;color:#ffe9c6}.wallpaper-room .room-turntable{bottom:17%}.wallpaper-caption{position:absolute;bottom:24px;left:25%;right:24px;color:#f5d8a6;text-shadow:2px 2px 0 var(--px-shadow);font-size:14px;letter-spacing:.05em}
-.music-settings h2{display:flex;gap:9px;align-items:center}.record-dialog.music-settings{width:680px}.music-account{display:flex;align-items:center;gap:9px;padding:14px 0;border-bottom:1px solid #dca46c33}.music-account>span{flex:1;display:grid;gap:5px}.music-account strong{font-size:14px}.music-account small{font-size:12px}.music-settings form>p,.music-platform-note{font-size:12px;line-height:1.7;color:#e1b181}.music-settings select{padding:9px;background-color:#3f2c1a;border:1px solid #c57a2e66;color:#f6e8da}.music-settings>p[role=status]{font-size:13px;color:#d7e6b7}
+.music-accounts{display:grid;align-content:start}.music-accounts-intro,.music-accounts-saved{margin:0 0 4px;font-size:12px;line-height:1.7;color:var(--px-ink-dim)}
+.music-account{display:flex;align-items:center;gap:8px;padding:12px 0;border-bottom:2px solid var(--px-border-subtle)}.music-account>span{flex:1;display:grid;gap:4px;min-width:0}.music-account strong{font:400 12px/16px var(--px-font-cn);-webkit-font-smoothing:none}.music-account small{font-size:12px;color:var(--px-ink-dim)}
+.music-accounts form>p,.music-platform-note,.music-accounts details>p{font-size:12px;line-height:1.7;color:var(--px-ink-dim)}.music-accounts select{padding:8px;background-color:var(--px-surface-2);border:2px solid var(--px-border);color:var(--px-ink)}.music-accounts>p[role=status]{font-size:12px;color:var(--px-good)}
 .room-drag-record{position:fixed;left:-1000px;top:0;width:96px;height:96px;pointer-events:none}
 .room-drag-record>.custom-vinyl{position:absolute;inset:0;width:100%;height:100%}
 .room-drag-record>.room-drag-label{position:absolute;inset:35%;border-radius:50%;overflow:hidden}

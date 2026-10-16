@@ -34,6 +34,8 @@
 | 数据与备份 | 收藏与备份、专辑墙、本地音乐文件夹 |
 | 关于 | 版本、项目主页、**重新引导**、快捷键 |
 
+**设计第二轮（D1）之后：** 唱机音源只剩 设置 › 音源 的一组单选（`role=radiogroup`「唱机音源」，名称取自 `providerLabel`）；「账户与文件夹」是 设置 › 音源 里的子页（登录、本地文件夹、Music Assistant），不再另开对话框；音质由 `useSourceStatus().setQuality` 一处修改。专注工具分区直接显示计时设置（与专注坞「计时设置」同一组件 `FocusSettingsForm`）。「桌面」分区改名「显示与桌面」。标题栏只剩「添加到唱片架」（四个标签：曲库搜索 / 我的歌单 / 本地音乐 / 手动填写）；专辑墙移入唱片架旁的「整理唱片架」面板。唱机铭牌上的音源标签打开 设置 › 音源。
+
 唱机上的「布置小屋」「音源设置」按钮已移除（`scripts/cabin-layout-checks.mjs` 断言它们不存在）：场景与伙伴在 设置 › 房间与桌宠；唱机出错按钮（`cabin-open-music-settings`）→ 设置 › 音源 的详情页「音源与账户」；「收藏与备份」从标题栏移入 设置 › 数据与备份；「入门指南」改为 设置 › 关于 › 重新引导。托盘新增「小屋设置…」，应用菜单新增「小屋设置… / 重新引导」，原 ⌘, 改名「显示与字体…」（页面命令 `open-settings`、`open-onboarding`，经 `album-companion-command`）。页面也可派发 `cabin-open-settings` `{section}` 打开指定分区。小屋工具条上的桌面模式/动态背景按钮由 #14 处理，本分支没有改动。
 
 ## 3. 新手引导
@@ -42,7 +44,7 @@
 
 - 状态存在 `localStorage['flow-cabin-onboarding-v1']`：`status: new|active|skipped|done`、`step`、`source`、`quality`、`permissions`、`tested`。
 - 自动弹出：全新小屋（没有任何 `album-circle-*` 旧数据，也没看过 v1.9 入门指南）或上次中途关闭（`active`，从那一步继续）。跳过/完成后不再弹。旧用户不被打断。
-- 网页版：QQ / 网易云 / 系统播放器标为「需要心流小屋桌面版」并禁用；本地音乐改为「选择音乐文件」（打开 添加专辑）。Apple Music 只在 Mac 出现。
+- 网页版：QQ / 网易云 / 系统播放器标为「需要心流小屋桌面版」并禁用；本地音乐改为「选择音乐文件」（打开 添加到唱片架 › 本地音乐）。Apple Music 只在 Mac 出现。
 - 像素样式用 `--px-*` token（均有回退值）；`prefers-reduced-motion` 与桌面「减少动态效果」都会关掉步骤动画。
 
 ## 4. 接口
@@ -55,7 +57,7 @@
 
 | 方法 | 返回 | 引导 / 设置怎么用 |
 | --- | --- | --- |
-| `listSources({ mac })` | `[{ id, label, kind, login, platform?, supported }]` | 隐藏 `supported=false` 与 `ma`（MA 在「音源与账户」详情页）；Apple Music 切到唱机 `appleMusic` 音源 |
+| `listSources({ mac })` | `[{ id, label, kind, login, platform?, supported }]` | 隐藏 `supported=false` 与 `ma`（MA 在 设置 › 音源 ›「账户与文件夹」）；Apple Music 切到唱机 `appleMusic` 音源 |
 | `connectSource(id)` | `Promise<{ ok, cancelled, error }>`，登录/选文件夹结束才 resolve | 按钮显示「等待完成…」，结束后刷新状态；`cancelled` 显示「已取消」 |
 | `getSourceStatus(id)` | `{ id, supported, connected, detail, needsPermission?, app? }` | 显示 `detail`；读不到时显示「暂时读不到状态」 |
 | `requestPermission('appleMusic')` | `{ granted, needsPermission, available, error }` | `granted`→已允许；`available=false`→不支持；否则→未允许 |

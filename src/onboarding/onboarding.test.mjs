@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as m from './onboarding-model.mjs';
-import { createPlayerAdapter, createDesktopAdapter, DESKTOP_MODE_EVENT } from './onboarding-adapter.mjs';
+import { createPlayerAdapter } from './onboarding-adapter.mjs';
 
 const memory = (seed = {}) => { const data = { ...seed }; return { getItem: (k) => (k in data ? data[k] : null), setItem: (k, v) => { data[k] = String(v); }, data, get length() { return Object.keys(data).length; }, ...Object.fromEntries(Object.entries(data)) }; };
 
@@ -125,19 +125,14 @@ test('notification permission maps browser answers', async () => {
   assert.equal(await createPlayerAdapter({ win: {} }).requestPermission('notifications'), 'unsupported');
 });
 
-test('desktop adapter wraps the 沉入桌面 module and reports an unsupported reason', async () => {
-  const calls = [], api = { getDesktopModeStatus: () => ({ active: false, supported: false, reason: '需要 macOS 13+' }), enterDesktopMode: () => calls.push('enter'), exitDesktopMode: () => { throw new Error('busy'); } };
-  const real = createDesktopAdapter({ api });
-  assert.deepEqual(await real.status(), { active: false, busy: false, supported: false, via: '', reason: '需要 macOS 13+' });
-  assert.equal(await real.enter(), true); assert.deepEqual(calls, ['enter']); assert.equal(await real.exit(), false);
-  assert.equal(typeof real.subscribe(() => {}), 'function', 'no change source still returns an unsubscribe');
-  assert.equal(DESKTOP_MODE_EVENT, 'cabin:desktop-mode');
-});
-
-test('desktop adapter passes busy/via and prefers onDesktopModeChange', async () => {
-  let cb, offed = false;
-  const api = { getDesktopModeStatus: () => ({ active: true, busy: true, supported: true, via: 'wallpaper', reason: '' }), onDesktopModeChange: (f) => { cb = f; return () => { offed = true; }; } };
-  const a = createDesktopAdapter({ api });
-  assert.deepEqual(await a.status(), { active: true, busy: true, supported: true, via: 'wallpaper', reason: '' });
-  let got; const off = a.subscribe((d) => { got = d; }); cb({ active: false }); assert.deepEqual(got, { active: false }); off(); assert.equal(offed, true);
+// Settings › 显示与桌面 drives 沉入桌面 with the room's own sink state; there is no adapter for it any more.
+test('quality: one path that tells the deck, and the standard tiers when the server lists none', async () => {
+  const win = new EventTarget(), heard = [], sent = [];
+  win.addEventListener('album-music-settings', () => heard.push('settings'));
+  const adapter = createPlayerAdapter({ api: {}, env: { desktop: true }, win, request: async (path, body) => { sent.push([path, body]); if (path === '/quality' && body.quality === 'bad') throw new Error('no'); return { quality: '', qualities: [] }; } });
+  assert.deepEqual((await adapter.qualities()).options.map((q) => q.id), ['standard', 'exhigh', 'lossless']);
+  assert.equal(await adapter.setQuality('lossless'), true); assert.deepEqual(heard, ['settings'], 'a saved tier reaches the deck');
+  assert.equal(await adapter.setQuality('bad'), false); assert.deepEqual(heard, ['settings'], 'a refused tier changes nothing');
+  assert.equal(await createPlayerAdapter({ api: {}, env: { desktop: true } }).setQuality('lossless'), false, 'no music server, no change');
+  assert.equal(await createPlayerAdapter({ api: {}, env: { desktop: false }, request: async () => ({ qualities: ['x'] }) }).qualities(), null, 'web has no quality choice');
 });

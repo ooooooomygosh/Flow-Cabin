@@ -16,7 +16,7 @@
 .onboarding-layout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:calc(var(--ob-u)*6)}
 .onboarding-scene{position:relative;min-height:240px;overflow:hidden;background:var(--ob-well);border:2px solid var(--ob-edge);image-rendering:pixelated}
 .onboarding-scene>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.75}
-.onboarding-scene>.pixel-cat{position:absolute;width:72px;height:72px;left:50%;bottom:44px;translate:-50% 0}
+.onboarding-scene>.pixel-cat{position:absolute;width:64px;height:64px;left:50%;bottom:44px;translate:-50% 0}
 .onboarding-scene>span{position:absolute;left:0;right:0;bottom:0;padding:8px;background:#0009;font-size:12px;text-align:center}
 .onboarding-step{min-width:0;animation:onboarding-in var(--px-dur-med) steps(4,end)}
 .onboarding-eyebrow{font-size:12px;letter-spacing:.12em;color:var(--ob-accent)}
@@ -26,11 +26,11 @@
 /* One numbered chip for step tabs and list items. */
 .onboarding-list b{display:inline-grid;place-items:center;width:20px;height:20px;margin-right:10px;border:2px solid var(--ob-edge);color:var(--ob-accent);font:400 12px/1 var(--px-font-cn);-webkit-font-smoothing:none}
 .onboarding-sources{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:12px}
-.onboarding-sources button,.onboarding-scenes button,.onboarding-pets button{position:relative;display:grid;gap:4px;text-align:left;padding:10px;min-width:0;background:var(--ob-well);color:var(--ob-ink);border:2px solid var(--ob-edge);border-radius:0;cursor:pointer;transition:border-color var(--px-dur-fast) steps(2,end)}
+.onboarding-sources button{position:relative;display:grid;gap:4px;text-align:left;padding:10px;min-width:0;background:var(--ob-well);color:var(--ob-ink);border:2px solid var(--ob-edge);border-radius:0;cursor:pointer;transition:border-color var(--px-dur-fast) steps(2,end)}
 .onboarding-sources button:disabled{opacity:.5;cursor:not-allowed}
 .onboarding-sources small{font-size:12px;line-height:1.5;color:var(--ob-dim)}
 .onboarding-sources svg{position:absolute;right:6px;top:6px;color:var(--ob-accent)}
-:is(.onboarding-sources,.onboarding-scenes,.onboarding-pets) button:is([aria-checked=true],[aria-pressed=true]){border-color:var(--ob-accent);box-shadow:inset 0 0 0 2px var(--ob-accent)}
+.onboarding-sources button[aria-checked=true]{border-color:var(--ob-accent);box-shadow:inset 0 0 0 2px var(--ob-accent)}
 
 .onboarding-connect,.hub-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:4px 12px;min-height:46px;background:var(--ob-well);border:2px solid var(--ob-edge);margin-bottom:8px}
 .onboarding-connect>span,.hub-row>span:first-child{display:grid;gap:3px;min-width:0}
@@ -44,35 +44,43 @@
 .onboarding-permissions li{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--ob-well);border:2px solid var(--ob-edge)}
 .onboarding-permissions li>span:first-child{display:grid;gap:3px;flex:1;min-width:0}.onboarding-permissions small{font-size:12px;color:var(--ob-dim)}
 .onboarding-permissions em{font-style:normal;font-size:12px;margin-left:8px;padding:1px 5px;border:1px solid var(--ob-edge);color:var(--ob-dim)}
-.onboarding-scenes{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
-.onboarding-scenes button,.onboarding-pets button{justify-items:center;padding:4px;font-size:12px}
-.onboarding-scenes img{width:100%;aspect-ratio:4/3;object-fit:cover;image-rendering:pixelated}
-.onboarding-pets{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin:10px 0}
-.onboarding-pets .pixel-cat{width:44px;height:44px}
-.onboarding-scenes span,.onboarding-pets span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .onboarding-test{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px}.onboarding-test>span{display:flex;gap:8px}
 .onboarding-summary{display:grid;grid-template-columns:auto 1fr;gap:8px 16px;margin:0 0 14px;padding:12px;background:var(--ob-well);border:2px solid var(--ob-edge);font-size:13px}.onboarding-summary dt{color:var(--ob-dim)}.onboarding-summary dd{margin:0}
 .onboarding-footer{display:flex;align-items:center;gap:14px;margin-top:calc(var(--ob-u)*5);padding-top:calc(var(--ob-u)*4);border-top:2px solid var(--ob-edge)}
 .onboarding-footer>small{font-size:12px;color:var(--ob-dim)}.onboarding-footer>div{margin-left:auto;display:flex;gap:8px}
 @keyframes onboarding-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 @media(max-height:700px){.onboarding-layout{min-height:0}.onboarding-step h3{font-size:20px}.onboarding-progress{padding:10px 0}.onboarding-footer{margin-top:12px;padding-top:10px}}
-@media(max-width:760px){.onboarding-layout{grid-template-columns:1fr}.onboarding-scene{display:none}.onboarding-scenes{grid-template-columns:repeat(3,minmax(0,1fr))}.onboarding-footer{flex-wrap:wrap}.onboarding-footer>small{display:none}}
+@media(max-width:760px){.onboarding-layout{grid-template-columns:1fr}.onboarding-scene{display:none}.onboarding-footer{flex-wrap:wrap}.onboarding-footer>small{display:none}}
 
-/* settings hub */
-.settings-hub-layout{display:grid;grid-template-columns:150px minmax(0,1fr);gap:calc(var(--ob-u)*5)}
-.settings-hub-nav{display:grid;align-content:start;gap:4px;position:sticky;top:0}
+/* settings hub: one fixed size, so switching tabs never resizes the dialog; the panel scrolls. */
+.settings-hub.cabin-dialog.is-wide{width:min(920px,calc(100vw - 32px));height:min(640px,calc(100dvh - 32px));max-height:none}
+.settings-hub .cabin-dialog-body{display:flex;flex:1;min-height:0;overflow:hidden;padding:0}
+.settings-hub-layout{flex:1;display:grid;grid-template-columns:150px minmax(0,1fr);min-height:0}
+.settings-hub-nav{display:grid;align-content:start;gap:4px;padding:16px 0 16px 16px;overflow:auto}
 .settings-hub-nav button{text-align:left;padding:8px 10px;background:none;color:var(--ob-dim);border:2px solid transparent;border-radius:0;font-size:12px;cursor:pointer}
 .settings-hub-nav button:hover{color:var(--ob-ink)}
 .settings-hub-nav button[aria-selected=true]{color:var(--ob-ink);background:var(--ob-well);border-color:var(--ob-accent)}
-.settings-hub-panel{min-width:0}
+.settings-hub-panel{min-width:0;min-height:0;overflow:auto;padding:16px 20px 20px;scrollbar-gutter:stable}
 .hub-rows{display:grid}.hub-row-actions{display:flex;flex-shrink:0;max-width:100%;flex-wrap:wrap;gap:8px;justify-content:flex-end}
 .hub-row-actions .segmented button{white-space:nowrap}
-.hub-current{font-size:13px;color:var(--ob-dim);margin:0 0 12px}.hub-current strong{color:var(--ob-ink)}
+.hub-row-actions .pixel-button svg{order:1}
 .hub-toggle{display:inline-flex;align-items:center;gap:8px;font-size:12px}.hub-toggle input{width:18px;height:18px;accent-color:var(--ob-accent)}
-.hub-row select,.settings-hub .turntable-source select{flex:none;width:200px;max-width:100%;min-height:32px;height:32px;font-size:12px}
-.settings-hub .turntable-source{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:46px;margin:0 0 8px;padding:6px 12px;font-size:12px;color:var(--ob-ink);background:var(--ob-well);border:2px solid var(--ob-edge)}
+.hub-row select{flex:none;width:200px;max-width:100%;min-height:32px;height:32px;font-size:12px}
 .hub-led{display:inline-block;flex:none;width:6px;height:6px;margin-right:8px;vertical-align:middle;background:var(--px-ink-muted);box-shadow:0 0 0 1px var(--px-shadow)}.hub-led.is-on{background:var(--px-good)}
-@media(max-width:700px){.settings-hub-layout{grid-template-columns:1fr}.settings-hub-nav{grid-auto-flow:column;grid-auto-columns:max-content;overflow-x:auto;position:static}.hub-row{flex-wrap:wrap}}
+/* 唱机音源: one radio row per source, the lamp shows connected / in use. */
+.hub-sources{display:grid;gap:4px;margin-bottom:12px}
+.hub-sources button{display:flex;align-items:center;gap:4px;min-height:44px;padding:4px 12px;text-align:left;color:var(--ob-ink);background:var(--ob-well);border:2px solid var(--ob-edge);border-radius:0;font:inherit;cursor:pointer}
+.hub-sources button>span:not(.onboarding-ok){display:grid;gap:1px;flex:1;min-width:0}
+.hub-sources strong{font:400 12px/16px var(--px-font-cn);-webkit-font-smoothing:none}
+.hub-sources small{font-size:12px;line-height:1.35;color:var(--ob-dim)}
+.hub-sources button:hover:not(:disabled){border-color:var(--px-border-hi)}
+.hub-sources button[aria-checked=true]{border-color:var(--ob-accent);box-shadow:inset 0 0 0 2px var(--ob-accent)}
+.hub-sources button:disabled{opacity:.55;cursor:not-allowed}
+.hub-subpage{display:grid;align-content:start;gap:8px}
+.hub-back{justify-self:start;display:inline-flex;align-items:center;gap:4px;padding:4px 8px 4px 4px;color:var(--ob-dim);background:none;border:2px solid transparent;font-size:12px;cursor:pointer}.hub-back:hover{color:var(--ob-ink);border-color:var(--ob-edge)}
+.hub-focus-settings{padding:12px;background:var(--ob-well);border:2px solid var(--ob-edge)}
+.hub-focus-settings .focus-settings-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media(max-width:700px){.settings-hub-layout{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}.settings-hub-nav{grid-auto-flow:column;grid-auto-columns:max-content;padding:8px 12px 0}.settings-hub-panel{padding:12px}.hub-row{flex-wrap:wrap}.hub-focus-settings .focus-settings-grid{grid-template-columns:1fr 1fr}}
 /* moved from the retired cabin-welcome.css */
 @media(prefers-reduced-motion:no-preference){html:not([data-desktop-reduce-motion=true]) .focus-dock,html:not([data-desktop-reduce-motion=true]) .shelf-filters{animation:welcome-step-in .18s ease-out}}
 @keyframes welcome-step-in{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}

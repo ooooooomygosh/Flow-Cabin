@@ -44,7 +44,7 @@ a{color:var(--px-accent-hi)}
 .cabin-room .cabin-toolbar button:hover:not(:disabled){background:#ffffff14}
 .cabin-room .cabin-toolbar button[aria-pressed=true],.cabin-room .cabin-toolbar button[aria-expanded=true],.cabin-room .cabin-toolbar button.is-active{color:var(--px-ink-on-accent);background:var(--scene-accent)}
 .cabin-room .cabin-toolbar button:disabled{opacity:.5}
-.room-zen .cabin-room .cabin-toolbar{top:12px;left:auto}
+.room-zen:not(.room-zen-tools) .cabin-room .cabin-toolbar{top:12px;left:auto}
 .shelf-filters{position:absolute;z-index:25;top:calc(var(--px-titlebar) + 58px);left:14px;width:min(700px,calc(100% - 28px));max-height:calc(100% - var(--px-titlebar) - 200px);overflow:auto;padding:14px 16px 4px;color:var(--px-ink);background:#27180ef5;border:2px solid var(--px-brass);box-shadow:6px 6px 0 #0d0805cc}
 .shelf-filter-row{display:flex;gap:14px;flex-wrap:wrap}.shelf-filter-row label{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--px-ink-dim)}
 .shelf-filters select{padding:6px 8px;font-size:13px;color:var(--px-ink);background-color:var(--px-surface-2);border:1px solid var(--px-border);border-radius:0}
@@ -125,19 +125,20 @@ a{color:var(--px-accent-hi)}
 .backup-stats div{padding:10px;text-align:center;background:var(--px-surface-2);border:1px solid #8a5a3288}.backup-stats dt{font-size:12px;color:var(--px-ink-faint)}.backup-stats dd{margin:2px 0 0;font-size:18px;font-weight:700;color:var(--px-accent-hi)}
 .backup-actions{display:flex;gap:10px;margin:14px 0 8px}
 
-/* Older dialogs (vinyl editor, music sources) share the cabin frame */
-.record-dialog,.music-settings{color:var(--px-ink);background:var(--px-surface)}
-.music-local p,.music-settings section>p{font-size:12px;line-height:1.7;color:var(--px-ink-dim)}
-.music-local h3,.music-settings h3{font-size:15px}
-.music-advanced{margin-top:20px;padding:14px 0;border-top:1px solid #dca46c33;border-bottom:1px solid #dca46c33}
+/* The vinyl editor dialog shares the cabin frame; 账户与文件夹 sections */
+.record-dialog{color:var(--px-ink);background:var(--px-surface)}
+.music-local p{font-size:12px;line-height:1.7;color:var(--px-ink-dim)}
+.music-local h3{font-size:12px}
+.music-advanced{margin-top:16px;padding:12px 0;border-top:2px solid var(--px-border-subtle);border-bottom:2px solid var(--px-border-subtle)}
 .music-advanced summary{cursor:pointer;font-size:13px;color:var(--px-ink);line-height:1.8}
 .music-advanced summary:focus-visible{outline-offset:4px}
 .music-advanced form{padding:8px 0 0}.music-advanced form>p{font-size:12px;line-height:1.7;color:var(--px-ink-dim)}
-.record-dialog,.music-settings{border-radius:0;border:2px solid var(--px-brass);box-shadow:8px 8px 0 #0d0805dd}
-.record-dialog::backdrop,.music-settings::backdrop{background:#0d0805a8}
-.record-dialog button,.music-settings button{border-radius:0}
+.record-dialog{border-radius:0;border:2px solid var(--px-brass);box-shadow:8px 8px 0 #0d0805dd}
+.record-dialog::backdrop{background:#0d0805a8}
+.record-dialog button{border-radius:0}
 
-@media (max-width:1100px){.app-actions .pixel-button span,.cabin-toolbar-group:not(.zen-keep) button span{display:none}.app-actions .pixel-button.is-primary span{display:inline}}
+@media (max-width:1100px){.app-actions .pixel-button span{display:none}.app-actions .pixel-button.is-primary span{display:inline}}
+@media (max-width:800px){.cabin-toolbar-group:not(.zen-keep) button span{display:none}}
 @media (max-width:760px){.record-card{grid-template-columns:1fr}.record-card-sleeve{max-width:260px}.add-manual-grid{grid-template-columns:1fr}.backup-stats{grid-template-columns:repeat(2,1fr)}}
 
 /* Toolbar groups may wrap as a whole, but never clip reachable controls. */

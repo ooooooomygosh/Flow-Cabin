@@ -1,9 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Plus, Grid3X3, QueueList } from './icons';
+import { Plus } from './icons';
 import { isNewCabin } from './onboarding/onboarding-model.mjs';
 import CabinRoom from './CabinRoom';
 import AddAlbum from './AddAlbum';
-import PlaylistLibrary from './PlaylistLibrary';
 import RecordCard from './RecordCard';
 import BackupDialog from './BackupDialog';
 import AlbumWall from './AlbumWall';
@@ -30,7 +29,7 @@ export default function App() {
   const [firstVisit] = useState(() => isNewCabin(localStorage));
   const [hubRequest, setHubRequest] = useState(null);
   const [items, setItems] = useState([]), [loading, setLoading] = useState(true), [error, setError] = useState('');
-  const [playlists, setPlaylists] = useState(false), [adding, setAdding] = useState(null), [recordId, setRecordId] = useState(''), [backup, setBackup] = useState(false), [wall, setWall] = useState(false);
+  const [adding, setAdding] = useState(null), [recordId, setRecordId] = useState(''), [backup, setBackup] = useState(false), [wall, setWall] = useState(false);
   const [toast, notify] = useToast();
   const reload = useCallback(async () => {
     setLoading(true);
@@ -40,10 +39,9 @@ export default function App() {
   useEffect(() => {
     // "收藏这张" on the turntable searches the catalog for the playing album.
     const receive = (event) => setAdding({ query: String(event.detail?.query || '').slice(0, 200) });
-    const openPlaylists = () => setPlaylists(true);
-    window.addEventListener('album-quick-search', receive); window.addEventListener('cabin-open-playlists', openPlaylists);
-    return () => { window.removeEventListener('album-quick-search', receive); window.removeEventListener('cabin-open-playlists', openPlaylists); };
+    window.addEventListener('album-quick-search', receive); return () => window.removeEventListener('album-quick-search', receive);
   }, []);
+  const addToShelf = useCallback((item) => setItems((list) => [item, ...list.filter((entry) => entry.id !== item.id)]), []);
   const record = items.find((item) => item.id === recordId);
   const replaceItem = (item) => setItems((list) => list.map((entry) => entry.id === item.id ? item : entry));
   const remove = async (item) => {
@@ -56,9 +54,7 @@ export default function App() {
       <header className="app-titlebar">
         <div className="app-brand"><PixelCat pose="idle" accessory="headphones" className="app-brand-cat" label="心流小屋"/><span><strong>心流小屋</strong><small>{loading ? '整理唱片中…' : `${items.length} 张唱片`}</small></span></div>
         <div className="app-actions">
-          <button type="button" className="pixel-button is-primary" aria-label="添加专辑" title="添加专辑" onClick={() => setAdding({ query: '' })}><Plus size={17}/><span>添加专辑</span></button>
-          <button type="button" className="pixel-button" aria-label="我的歌单" title="导入网易云 / QQ 音乐 / Apple Music 歌单" onClick={() => setPlaylists(true)}><QueueList size={17}/><span>我的歌单</span></button>
-          <button type="button" className="pixel-button" aria-label="专辑墙" onClick={() => setWall(true)} title="挑选专辑，生成专辑墙图片"><Grid3X3 size={17}/><span>专辑墙</span></button>
+          <button type="button" className="pixel-button is-primary" aria-label="添加到唱片架" title="曲库搜索、我的歌单、本地音乐或手动填写" onClick={() => setAdding({ query: '' })}><Plus size={17}/><span>添加到唱片架</span></button>
         </div>
         <DesktopControls onSettings={() => setHubRequest({ section: 'music', at: Date.now() })} onError={notify}/>
       </header>
@@ -68,8 +64,7 @@ export default function App() {
       </main>
       {toast && <p className="app-toast" role="status" key={toast.at}>{toast.text}</p>}
     </div>
-    {playlists && <PlaylistLibrary items={items} close={() => setPlaylists(false)} onAdded={(item) => setItems((list) => [item, ...list.filter((entry) => entry.id !== item.id)])}/>}
-    {adding && <AddAlbum items={items} initialQuery={adding.query} close={() => setAdding(null)} onAdded={(item) => setItems((list) => [item, ...list.filter((entry) => entry.id !== item.id)])}/>}
+    {adding && <AddAlbum items={items} initialQuery={adding.query} initialTab={adding.tab} close={() => setAdding(null)} onAdded={addToShelf}/>}
     {record && <RecordCard key={record.id} item={record} close={() => setRecordId('')} onChanged={replaceItem} onRemove={remove}/>}
     {backup && <BackupDialog items={items} reload={reload} close={() => setBackup(false)}/>}
     {wall && <AlbumWall items={items} onClose={() => setWall(false)}/>}
