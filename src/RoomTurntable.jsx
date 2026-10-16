@@ -9,7 +9,7 @@ import { trackArtist } from './track-meta.mjs';
 import { providerLabel } from './player/providers.mjs';
 import PlayerControls, { PocketProgress } from './player/PlayerControls';
 import { displayTitle } from './display-title.mjs';
-const EMPTY_DECK_HINT = '双击封面、按回车或拖到这里';
+const EMPTY_DECK_HINT = '双击封面或拖到这里'; // Enter is spelled out on the selection strip (双击或回车放盘).
 // Wrap the quality token (无损 / FLAC / Hi-Res / 320k MP3…) of a status line in a small badge; the text stays whole.
 const QUALITY = /(\d{2,4}\s?k(?:bps)?(?:\s?(?:MP3|AAC|OGG))?|Hi-?Res|FLAC|无损)/i;
 const statusNode = (text) => { const match = typeof text === 'string' && QUALITY.exec(text); return match ? <>{text.slice(0, match.index)}<span className="turntable-quality">{match[0]}</span>{text.slice(match.index + match[0].length)}</> : text; };

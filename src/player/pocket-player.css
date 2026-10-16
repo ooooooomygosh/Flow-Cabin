@@ -135,6 +135,14 @@
 .room-turntable .pocket-volume .player-volume { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--px-ink-dim); }
 .room-turntable .pocket-volume input[type=range] { flex: 1; min-width: 0; }
 
+/* Narrow consoles (night study, 720p): the sleeve alone, so the song and status keep their lines. */
+.room-turntable .pocket-screen { container-type: inline-size; }
+@container (max-width: 230px) {
+  .room-turntable .pocket-now { grid-template-columns: 56px minmax(0, 1fr); }
+  .room-turntable .pocket-screen .turntable-record-art { width: 56px; }
+  .room-turntable .pocket-screen .turntable-record-art .custom-vinyl { display: none; }
+}
+
 /* Small screens: a smaller wheel. */
 @media (max-width: 1300px), (max-height: 800px) { .room-turntable .pocket-wheel { --wh: 104px; } }
 @media (max-height: 700px), (max-width: 700px) {

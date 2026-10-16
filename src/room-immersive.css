@@ -14,7 +14,7 @@
 .cabin-room .room-selection-copy h2{margin:3px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cabin-room .room-selection-copy p{font-size:12px}.cabin-room .room-selection-actions button,.cabin-room .room-selection-actions a{white-space:nowrap;margin:0}
 .room-shelf-navigation{position:absolute;right:18px;top:45%;z-index:12;display:grid;justify-items:center;gap:9px;padding:10px;color:#f7dbb0;font-size:12px}
-.room-shelf-navigation button{display:grid;place-items:center;padding:7px;color:#ffe1af}.room-shelf-navigation button:disabled{opacity:.3}.room-shelf-navigation small{font-size:12px;writing-mode:vertical-rl;letter-spacing:.1em}
+.room-shelf-navigation button{display:grid;place-items:center;padding:7px;color:#ffe1af}.room-shelf-navigation button:disabled{opacity:.3}.room-shelf-navigation small{font-size:12px;writing-mode:vertical-rl;text-orientation:upright;letter-spacing:.1em}
 .wallpaper-error{position:absolute;z-index:26;left:25%;right:20px;top:132px;display:flex;align-items:center;gap:12px;overflow-wrap:anywhere;background:#471f14ed;color:#ffe0bd;padding:10px 16px;border:2px solid #e6ae67;font-size:13px}
 .wallpaper-error button{margin-left:auto;flex:none;min-width:24px;min-height:24px;border:0;background:none;color:inherit;font-size:20px;cursor:pointer}
 
