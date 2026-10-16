@@ -6,14 +6,16 @@ import './room-artwork.css';
 // No cover (or it failed): a 32×32 sleeve generated from title + artist in the
 // cabin palette (same generator as imported covers), titled on a printed strip.
 // Same record → same sleeve; no black box with an icon.
+// Painted at 3× (96 px, the cover canvases' floor) so CSS stretches it no more than a cover.
+const SLEEVE_SCALE = 3, SLEEVE_SIDE = GRID * SLEEVE_SCALE;
 function GeneratedSleeve({ item }) {
   const canvas = useRef(null);
   useEffect(() => {
     const context = canvas.current?.getContext('2d'); if (!context) return;
     let palette; try { palette = readPalette(getComputedStyle(document.documentElement)); } catch { palette = readPalette(null); }
-    context.putImageData(new ImageData(gridToRgba(proceduralGrid(item).grid, GRID, palette), GRID, GRID), 0, 0);
+    context.putImageData(new ImageData(gridToRgba(proceduralGrid(item).grid, GRID, palette, SLEEVE_SCALE), SLEEVE_SIDE, SLEEVE_SIDE), 0, 0);
   }, [item.title, item.artist]);
-  return <span className="showroom-art-placeholder is-generated"><canvas ref={canvas} className="is-painted" width={GRID} height={GRID} aria-hidden="true"/><strong>{item.title}</strong></span>;
+  return <span className="showroom-art-placeholder is-generated"><canvas ref={canvas} className="is-painted" width={SLEEVE_SIDE} height={SLEEVE_SIDE} aria-hidden="true"/><strong>{item.title}</strong></span>;
 }
 
 export function ShowroomArtwork({ item, className = '', pixel = false }) {
