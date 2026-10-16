@@ -33,8 +33,6 @@
 .cabin-scene[data-room-look=pixel],.cabin-scene[data-room-look=warm]{--scene-floor:880}
 .cabin-scene[data-room-look=night-study]{--scene-floor:1000}
 .cabin-scene:is([data-room-look=forest],[data-room-look=seaside],[data-room-look=starlight]){--scene-floor:900}
-.cabin-scene.room-scene .room-cat{--cat-floor:var(--cat-floor-scene,118px)}
-.room-zen:not(.room-zen-tools) .cabin-scene.room-scene .room-cat,.wallpaper-room .cabin-scene.room-scene .room-cat{--cat-floor:var(--cat-floor-scene,28px)}
 /* bubble showing: lift the cat above the console (.room-turntable z10) — both live in .room-scene's isolated stacking context, so this stays under the focus dock/dialogs */
 .room-scene .room-cat:has(> .room-cat-bubble){z-index:var(--z-room-pet,22);pointer-events:none}
 /* …but the pet itself stays pokeable (专注暂停中 too): only a body-sized zone catches the pointer, so the lifted
@@ -92,7 +90,7 @@
 /* ── room-cat placement (moved from pixel-ui; skin layer keeps its old precedence) ─── */
 /* Moves are WAAPI hops/walks/fades (useCatPlacement.animateCatMove), not transitions.
    --cat-floor is the floor baseline the placement reads (zen/wallpaper sit lower). */
-.room-scene .room-cat { --cat-floor: 118px; left: var(--cat-x, 25%); bottom: var(--cat-floor); transform-origin: 50% 100%; }
-.room-zen:not(.room-zen-tools) .room-scene .room-cat, .wallpaper-room .room-scene .room-cat { --cat-floor: 28px; }
+.room-scene .room-cat { --cat-floor: var(--cat-floor-scene, 118px); left: var(--cat-x, 25%); bottom: var(--cat-floor); transform-origin: 50% 100%; }
+.room-zen:not(.room-zen-tools) .room-scene .room-cat, .wallpaper-room .room-scene .room-cat { --cat-floor: var(--cat-floor-scene, 28px); }
 .room-scene .room-cat[data-perch='console'] { bottom: var(--cat-bottom); z-index: 21; }
 }
