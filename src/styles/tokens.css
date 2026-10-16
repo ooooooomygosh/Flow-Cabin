@@ -4,15 +4,15 @@
  * moss/teal accents, night-blue windows. Every size is a multiple of --px-unit
  * so frames, shadows and offsets land on whole "pixels".
  * Owner: beauty (art direction). Teammates: consume, don't redefine — add new
- * tokens here instead so the palette stays in one place.
- * Mirrored in tokens.ts for JS/canvas use; keep both in sync.
+ * tokens here instead so the palette stays in one place. Canvas code reads the
+ * live values (getComputedStyle) with a local fallback (player/pixel-cover.mjs).
  */
 /* Cascade order for every window. Earlier layers lose for normal declarations,
    but an !important in an earlier layer beats every later one: the kill switches
    live in `guards` and are the only !important in the app. Build chunking can't
    reorder layers, so the shipped build cascades exactly like the dev server.
-   guards → reset (tokens, fonts, base) → features (component files) → shell
-   (room + app shell) → skin (pixel-ui) → overrides (流畅模式). */
+   guards → reset (tokens, fonts, base) → features (component + shell files)
+   → skin (pixel-ui) → overrides (流畅模式). */
 @layer guards, reset, features, skin, overrides;
 
 @layer guards {
@@ -113,6 +113,8 @@ html[data-desktop-reduce-motion='true'] *::after { animation: none !important; t
   --z-scene: 0; --z-props: 10; --z-room-console: 10; --z-room-pet: 22; --z-hud: 20; --z-titlebar: 30; --z-chrome: 90; --z-overlay: 80; --z-toast: 100;
 }
 * { box-sizing: border-box; }
+/* Form controls take the surrounding type; a feature may still size its own control. */
+:is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) :is(select, textarea, input) { font: inherit; }
 /* Keyboard focus: a stepped dashed lamp ring, never a soft glow. Features may move it (outline-offset). */
 :focus-visible { outline: 2px dashed var(--px-focus); outline-offset: 2px; }
 /* The one spin: records, discs and LEDs turn in 8 frames (pixel motion, no permanent layer). */

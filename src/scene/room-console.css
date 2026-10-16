@@ -63,7 +63,7 @@
 .turntable-room-tools svg { flex: none; }
 .cabin-room .shelf-filters { left: min(calc(var(--room-tools-right, 304px) + 12px), calc(100% - min(700px, calc(100% - 28px)) - 14px)); }
 .shelf-filters-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; font-size: 13px; }
-.shelf-filters-header button { padding: 5px 10px; background: var(--px-surface-3); border: 1px solid #d4a46b; color: var(--px-ink); }
+.shelf-filters-header button { padding: 5px 10px; background: var(--px-surface-3); border: 1px solid var(--px-brass); color: var(--px-ink); }
 
 /* Queue open (待播) or long match lists must never push the volume/progress
    row out of reach: the console scrolls, the sliders stay pinned to its

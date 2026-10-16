@@ -5,8 +5,7 @@
 .update-status[data-status=error]{color:var(--ob-warn,var(--px-warn))}
 .update-progress{display:block;height:calc(var(--ob-u,4px) * 2);margin-top:4px;background:var(--ob-bg,var(--px-surface));border:2px solid var(--ob-edge,var(--px-border))}
 .update-progress i{display:block;height:100%;background:var(--ob-accent,var(--px-accent));transition:width var(--px-dur-fast) steps(4,end)}
-.update-notes summary{cursor:pointer;font-size:11px;color:var(--ob-dim,var(--px-ink-dim))}
-.update-notes pre{max-height:160px;overflow:auto;white-space:pre-wrap;font:11px/1.5 var(--px-font-cn);margin:6px 0 0;padding:8px;background:var(--ob-bg,var(--px-surface));border:2px solid var(--ob-edge,var(--px-border))}
-.update-auto{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ob-dim,var(--px-ink-dim));margin-top:4px}
-@media (prefers-reduced-motion:reduce){.update-progress i{transition:none}}
+.update-notes summary{cursor:pointer;font-size:12px;color:var(--ob-dim,var(--px-ink-dim))}
+.update-notes pre{max-height:160px;overflow:auto;white-space:pre-wrap;font:12px/1.5 var(--px-font-cn);margin:6px 0 0;padding:8px;background:var(--ob-bg,var(--px-surface));border:2px solid var(--ob-edge,var(--px-border))}
+.update-auto{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ob-dim,var(--px-ink-dim));margin-top:4px}
 }

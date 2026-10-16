@@ -89,7 +89,7 @@
 /* Canonical form controls: dark inset well, amber edge on hover/focus, one chevron SVG.
    Not: .pixel-button, range, checkbox, .segmented. */
 :is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) :is(select, textarea), :is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) input:is([type=text], [type=search], [type=number], [type=date], [type=url]), :is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) input:not([type]) {
-  appearance: none; -webkit-appearance: none; box-sizing: border-box; min-height: 32px; font: inherit;
+  appearance: none; -webkit-appearance: none; box-sizing: border-box; min-height: 32px;
   background-color: var(--px-surface-inset); color: var(--px-ink); border: 2px solid var(--px-border); box-shadow: var(--px-shadow-inset);
   transition: border-color var(--px-dur-fast) steps(2, end);
 }

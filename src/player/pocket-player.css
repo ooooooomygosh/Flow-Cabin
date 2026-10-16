@@ -8,7 +8,7 @@
 .room-turntable {
   --pk-body: #3d2717; --pk-body-hi: #6b4a30; --pk-body-lo: #1a0f08; --pk-ink: var(--px-ink);
   --pk-lcd: #1b140a; --pk-lcd-ink: #ffcf86; --pk-lcd-hi: #fff0c8; --pk-lcd-dim: #c08a4a; --pk-lcd-faint: #7d5a32;
-  --pk-wheel: #e8d6b4; --pk-wheel-hi: #fff3dc; --pk-wheel-lo: #b39a74; --pk-wheel-ink: #4a3424; --pk-outline: #0d0805;
+  --pk-wheel: #e8d6b4; --pk-wheel-hi: #fff3dc; --pk-wheel-lo: #b39a74; --pk-wheel-ink: #4a3424; --pk-outline: var(--px-shadow);
   --pk-led: #ff9a4a; --pk-led-off: #4b2f1d;
   --pk-circle: polygon(62.5% 0%,62.5% 4.1667%,75% 4.1667%,75% 8.3333%,79.1667% 8.3333%,79.1667% 12.5%,83.3333% 12.5%,83.3333% 16.6667%,87.5% 16.6667%,87.5% 20.8333%,91.6667% 20.8333%,91.6667% 25%,95.8333% 25%,95.8333% 29.1667%,95.8333% 33.3333%,95.8333% 37.5%,100% 37.5%,100% 41.6667%,100% 45.8333%,100% 50%,100% 54.1667%,100% 58.3333%,100% 62.5%,95.8333% 62.5%,95.8333% 66.6667%,95.8333% 70.8333%,95.8333% 75%,91.6667% 75%,91.6667% 79.1667%,87.5% 79.1667%,87.5% 83.3333%,83.3333% 83.3333%,83.3333% 87.5%,79.1667% 87.5%,79.1667% 91.6667%,75% 91.6667%,75% 95.8333%,62.5% 95.8333%,62.5% 100%,37.5% 100%,37.5% 95.8333%,25% 95.8333%,25% 91.6667%,20.8333% 91.6667%,20.8333% 87.5%,16.6667% 87.5%,16.6667% 83.3333%,12.5% 83.3333%,12.5% 79.1667%,8.3333% 79.1667%,8.3333% 75%,4.1667% 75%,4.1667% 70.8333%,4.1667% 66.6667%,4.1667% 62.5%,0% 62.5%,0% 58.3333%,0% 54.1667%,0% 50%,0% 45.8333%,0% 41.6667%,0% 37.5%,4.1667% 37.5%,4.1667% 33.3333%,4.1667% 29.1667%,4.1667% 25%,8.3333% 25%,8.3333% 20.8333%,12.5% 20.8333%,12.5% 16.6667%,16.6667% 16.6667%,16.6667% 12.5%,20.8333% 12.5%,20.8333% 8.3333%,25% 8.3333%,25% 4.1667%,37.5% 4.1667%,37.5% 0%);
   --pk-circle-inner: polygon(62.5% 4.1667%,62.5% 8.3333%,75% 8.3333%,75% 12.5%,79.1667% 12.5%,79.1667% 16.6667%,83.3333% 16.6667%,83.3333% 20.8333%,87.5% 20.8333%,87.5% 25%,91.6667% 25%,91.6667% 29.1667%,91.6667% 33.3333%,91.6667% 37.5%,95.8333% 37.5%,95.8333% 41.6667%,95.8333% 45.8333%,95.8333% 50%,95.8333% 54.1667%,95.8333% 58.3333%,95.8333% 62.5%,91.6667% 62.5%,91.6667% 66.6667%,91.6667% 70.8333%,91.6667% 75%,87.5% 75%,87.5% 79.1667%,83.3333% 79.1667%,83.3333% 83.3333%,79.1667% 83.3333%,79.1667% 87.5%,75% 87.5%,75% 91.6667%,62.5% 91.6667%,62.5% 95.8333%,37.5% 95.8333%,37.5% 91.6667%,25% 91.6667%,25% 87.5%,20.8333% 87.5%,20.8333% 83.3333%,16.6667% 83.3333%,16.6667% 79.1667%,12.5% 79.1667%,12.5% 75%,8.3333% 75%,8.3333% 70.8333%,8.3333% 66.6667%,8.3333% 62.5%,4.1667% 62.5%,4.1667% 58.3333%,4.1667% 54.1667%,4.1667% 50%,4.1667% 45.8333%,4.1667% 41.6667%,4.1667% 37.5%,8.3333% 37.5%,8.3333% 33.3333%,8.3333% 29.1667%,8.3333% 25%,12.5% 25%,12.5% 20.8333%,16.6667% 20.8333%,16.6667% 16.6667%,20.8333% 16.6667%,20.8333% 12.5%,25% 12.5%,25% 8.3333%,37.5% 8.3333%,37.5% 4.1667%);
@@ -32,9 +32,9 @@
   background: repeating-linear-gradient(0deg, transparent 0 2px, #00000030 2px 3px), radial-gradient(120% 90% at 20% 0%, #ffb45a1f, transparent 60%), var(--pk-lcd);
   box-shadow: 0 0 0 2px var(--pk-outline), 0 0 0 4px #5a3a24, 0 0 0 6px var(--pk-outline), inset 2px 2px 0 #00000099, inset 0 0 0 1px #ffb45a1a;
 }
-.room-turntable .pocket-statusbar { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding-bottom: 4px; font-size: 10px; line-height: 12px; color: var(--pk-lcd-dim); border-bottom: 1px dashed #ffcf8633; }
+.room-turntable .pocket-statusbar { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding-bottom: 4px; font-size: 12px; line-height: 12px; color: var(--pk-lcd-dim); border-bottom: 1px dashed #ffcf8633; }
 .pocket-statusbar .pocket-state, .pocket-statusbar .pocket-flags { display: inline-flex; align-items: center; gap: 4px; }
-.pocket-statusbar .pocket-flags b { font: 400 9px/12px var(--px-font-en); color: var(--pk-lcd-ink); }
+.pocket-statusbar .pocket-flags b { font: 400 8px/12px var(--px-font-en); color: var(--pk-lcd-ink); }
 .pocket-statusbar .pocket-dot { width: 6px; height: 6px; background: var(--pk-lcd-faint); }
 .pocket-screen[data-state='playing'] .pocket-state { color: var(--pk-lcd-ink); }
 .pocket-screen[data-state='busy'] .pocket-dot { background: var(--pk-lcd-ink); animation: pocket-blink 600ms steps(2, end) infinite; }
@@ -47,6 +47,7 @@
 .room-turntable .pocket-screen .turntable-record-art { width: 88px; height: 58px; margin: 0; background: none; border: 0; overflow: visible; }
 .room-turntable .pocket-screen .turntable-sleeve { left: 0; top: 1px; width: 56px; height: 56px; border: 0; box-shadow: 0 0 0 2px var(--pk-outline), 2px 2px 0 2px #00000080; background: #2a1b11; }
 .room-turntable .pocket-screen .turntable-record-art .custom-vinyl { left: 32px; top: 3px; width: 52px; height: 52px; }
+.room-turntable .turntable-record-art .custom-vinyl.is-spinning { animation: px-spin 1.8s steps(8, end) infinite; will-change: auto; }
 .room-turntable .pocket-screen .turntable-needle { display: none; }
 .room-turntable .pocket-screen .turntable-copy { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .room-turntable .pocket-screen .turntable-track { order: -1; margin: 0; font-size: 13px; line-height: 17px; color: var(--pk-lcd-hi); text-shadow: 0 0 6px #ffb45a40; }
@@ -54,8 +55,8 @@
 .room-turntable .pocket-screen .turntable-copy > strong { overflow: hidden; margin-top: 2px; font-size: 12px; line-height: 16px; font-weight: 400; color: var(--px-accent); white-space: nowrap; text-overflow: ellipsis; }
 .room-turntable .pocket-screen .turntable-artist { overflow: hidden; font-size: 12px; line-height: 16px; color: var(--px-ink-dim); white-space: nowrap; text-overflow: ellipsis; }
 .room-turntable .pocket-screen .turntable-artist em { font-style: normal; color: var(--px-accent); }
-.room-turntable .pocket-screen .turntable-status { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-top: 3px; font-size: 11px; line-height: 14px; color: var(--px-ink-faint); }
-.turntable-status .turntable-quality { display: inline-block; margin: 0 2px; padding: 0 4px; font-size: 10px; line-height: 13px; color: var(--px-accent-2); border: 1px solid var(--px-accent-2); }
+.room-turntable .pocket-screen .turntable-status { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-top: 3px; font-size: 12px; line-height: 14px; color: var(--px-ink-faint); }
+.turntable-status .turntable-quality { display: inline-block; margin: 0 2px; padding: 0 4px; font-size: 12px; line-height: 13px; color: var(--px-accent-2); border: 1px solid var(--px-accent-2); }
 .pocket-screen[data-state='error'] .turntable-status { color: #f0a080; }
 
 /* Progress on the screen: a segmented LCD bar, elapsed and remaining time. */
@@ -69,7 +70,7 @@
 .room-turntable .pocket-progress input[type=range]::-moz-range-progress { height: 6px; background: var(--pk-lcd-ink); }
 .room-turntable .pocket-progress input[type=range]::-webkit-slider-thumb { width: 4px; height: 10px; margin-top: -2px; background: var(--pk-lcd-hi); box-shadow: 0 0 0 1px var(--pk-outline); }
 .room-turntable .pocket-progress input[type=range]::-moz-range-thumb { width: 4px; height: 10px; border: 1px solid var(--pk-outline); background: var(--pk-lcd-hi); }
-.room-turntable .pocket-progress small { display: flex; justify-content: space-between; font: 400 9px/11px var(--px-font-en); color: var(--pk-lcd-dim); font-variant-numeric: tabular-nums; }
+.room-turntable .pocket-progress small { display: flex; justify-content: space-between; font: 400 8px/11px var(--px-font-en); color: var(--pk-lcd-dim); font-variant-numeric: tabular-nums; }
 
 /* Control deck: a walnut wheel with a brass rim and an amber centre, then one 32px rail: two keys and the track selector. */
 .room-turntable .pocket-deck { display: grid; grid-template-columns: 32px 32px minmax(0, 1fr); align-items: center; gap: 10px 6px; margin: 0; container-type: inline-size; }
@@ -77,11 +78,11 @@
 .room-turntable .pocket-deck > .pocket-keys { display: contents; }
 .room-turntable .pocket-wheel { --wh: 120px; position: relative; width: var(--wh); height: var(--wh); filter: drop-shadow(-2px 0 0 var(--pk-outline)) drop-shadow(2px 0 0 var(--pk-outline)) drop-shadow(0 -2px 0 var(--pk-outline)) drop-shadow(0 2px 0 var(--pk-outline)) drop-shadow(0 2px 0 var(--pk-outline)); }
 .room-turntable .pocket-wheel::before, .room-turntable .pocket-wheel::after { content: ''; position: absolute; clip-path: var(--pk-circle); }
-.room-turntable .pocket-wheel::before { inset: 0; background: linear-gradient(135deg, #ffd99c 0 4px, #c98d4c 4px 14%, #a8743c 40%, #7a4f26 100%); }
-.room-turntable .pocket-wheel::after { inset: 0; clip-path: var(--pk-circle-inner); background: radial-gradient(circle at 50% 50%, #1f130b 0 calc(var(--wh) * .25), #120a05 calc(var(--wh) * .25) calc(var(--wh) * .25 + 1px), transparent calc(var(--wh) * .25 + 1px)), linear-gradient(180deg, #4d311c, #2e1d12); }
+.room-turntable .pocket-wheel::before { inset: 0; background: linear-gradient(135deg, var(--px-accent-hi) 0 4px, #c98d4c 4px 14%, var(--px-accent-lo) 40%, #7a4f26 100%); }
+.room-turntable .pocket-wheel::after { inset: 0; clip-path: var(--pk-circle-inner); background: radial-gradient(circle at 50% 50%, #1f130b 0 calc(var(--wh) * .25), #120a05 calc(var(--wh) * .25) calc(var(--wh) * .25 + 1px), transparent calc(var(--wh) * .25 + 1px)), linear-gradient(180deg, var(--px-surface-3), var(--px-surface)); }
 .room-turntable .pocket-wheel .pocket-wheel-key {
   position: absolute; z-index: 1; display: grid; place-items: center; width: 40px; height: 24px; padding: 0; border: 0;
-  color: var(--px-ink-dim); background: transparent; box-shadow: none; font: inherit; font-size: 10px; letter-spacing: .1em; line-height: 1; cursor: pointer; transition: color 90ms steps(2, end);
+  color: var(--px-ink-dim); background: transparent; box-shadow: none; font: inherit; font-size: 12px; letter-spacing: .1em; line-height: 1; cursor: pointer; transition: color 90ms steps(2, end);
 }
 .room-turntable .pocket-wheel .pocket-wheel-key:disabled { color: #8a6c4c; cursor: default; }
 .room-turntable .pocket-wheel .pocket-wheel-key:hover:not(:disabled) { color: var(--px-accent-hi); translate: none; background: transparent; }
@@ -90,23 +91,23 @@
 .room-turntable .pocket-wheel .is-bottom { left: calc(var(--wh) / 2 - 20px); bottom: 5px; }
 .room-turntable .pocket-wheel .is-left { left: 5px; top: calc(var(--wh) / 2 - 12px); width: 24px; }
 .room-turntable .pocket-wheel .is-right { right: 5px; top: calc(var(--wh) / 2 - 12px); width: 24px; }
-.room-turntable .pocket-wheel .is-top b { position: absolute; top: -3px; right: -4px; min-width: 13px; height: 13px; padding: 0 3px; font-size: 9px; letter-spacing: 0; line-height: 13px; color: #1c120b; background: var(--px-accent); box-shadow: 1px 1px 0 var(--pk-outline); }
+.room-turntable .pocket-wheel .is-top b { position: absolute; top: -3px; right: -4px; min-width: 13px; height: 13px; padding: 0 3px; font-size: 12px; letter-spacing: 0; line-height: 13px; color: var(--px-bg); background: var(--px-accent); box-shadow: 1px 1px 0 var(--pk-outline); }
 .room-turntable .pocket-wheel .is-top[aria-expanded=true] { color: var(--px-accent-hi); }
 /* Centre button: an amber stepped circle, pressed in while playing. */
 .room-turntable .pocket-wheel .pocket-center {
   position: absolute; z-index: 1; left: calc(var(--wh) / 2 - 24px); top: calc(var(--wh) / 2 - 24px); width: 48px; height: 48px; padding: 0; border: 0; clip-path: var(--pk-button);
-  display: grid; place-items: center; color: #1c120b;
-  background: #e0ad69; box-shadow: inset 2px 2px 0 #ffd99c, inset -2px -2px 0 #a8743c; transition: none;
+  display: grid; place-items: center; color: var(--px-bg);
+  background: var(--px-accent); box-shadow: inset 2px 2px 0 var(--px-accent-hi), inset -2px -2px 0 var(--px-accent-lo); transition: none;
 }
 .room-turntable .pocket-wheel .pocket-center:hover:not(:disabled) { translate: none; background: #eab877; }
-.room-turntable .pocket-wheel .pocket-center.is-playing, .room-turntable .pocket-wheel .pocket-center:active:not(:disabled) { translate: none; box-shadow: inset 2px 2px 0 #a8743c, inset -2px -2px 0 #ffd99c; }
+.room-turntable .pocket-wheel .pocket-center.is-playing, .room-turntable .pocket-wheel .pocket-center:active:not(:disabled) { translate: none; box-shadow: inset 2px 2px 0 var(--px-accent-lo), inset -2px -2px 0 var(--px-accent-hi); }
 .room-turntable .pocket-wheel .pocket-center:disabled { opacity: .6; }
 .room-turntable .pocket-wheel .pocket-center.is-busy { opacity: 1; }
 
 /* Rail keys: square 32px toggles with a light. */
 .room-turntable .turntable-controls .pocket-key {
   position: relative; grid-row: 2; display: grid; place-items: center; box-sizing: border-box; width: 32px; min-width: 0; height: 32px; margin: 0; padding: 0;
-  color: var(--px-ink-dim); background: #3a2416; border: 2px solid var(--px-border); box-shadow: 2px 2px 0 var(--pk-outline); cursor: pointer; transition: border-color 90ms steps(2, end);
+  color: var(--px-ink-dim); background: var(--px-surface-2); border: 2px solid var(--px-border); box-shadow: 2px 2px 0 var(--pk-outline); cursor: pointer; transition: border-color 90ms steps(2, end);
 }
 .room-turntable .pocket-keys .pocket-key:nth-child(1) { grid-column: 1; }
 .room-turntable .pocket-keys .pocket-key:nth-child(2) { grid-column: 2; }
@@ -114,18 +115,18 @@
 .room-turntable .turntable-controls .pocket-key small { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
 .room-turntable .turntable-controls .pocket-key .pocket-led { position: absolute; top: 2px; right: 2px; width: 4px; height: 4px; background: var(--px-surface-3); }
 .room-turntable .turntable-controls .pocket-key[aria-pressed=true] { color: var(--px-accent-hi); border-color: var(--px-accent); box-shadow: inset 2px 2px 0 #090503, 2px 2px 0 var(--pk-outline); translate: none; }
-.room-turntable .turntable-controls .pocket-key[aria-pressed=true] .pocket-led { background: #9ccf8c; }
+.room-turntable .turntable-controls .pocket-key[aria-pressed=true] .pocket-led { background: var(--px-good); }
 .room-turntable .turntable-controls .pocket-key:hover:not(:disabled) { translate: none; border-color: var(--px-border-hi); }
 .room-turntable .turntable-controls .pocket-key[aria-pressed=true]:hover:not(:disabled) { border-color: var(--px-accent-hi); }
 .room-turntable .turntable-controls .pocket-key:active:not(:disabled) { translate: 0 1px; }
 
 /* Track selector: an input group on the same rail. */
-.room-turntable .pocket-track { grid-column: 3; grid-row: 2; display: flex; align-items: stretch; gap: 0; min-width: 0; margin: 0; font-size: 11px; color: var(--px-ink-dim); }
+.room-turntable .pocket-track { grid-column: 3; grid-row: 2; display: flex; align-items: stretch; gap: 0; min-width: 0; margin: 0; font-size: 12px; color: var(--px-ink-dim); }
 .room-turntable .pocket-track span { box-sizing: border-box; display: grid; place-items: center; flex: none; width: 40px; height: 32px; padding: 0; font-size: 12px; line-height: 1; color: var(--px-ink); background: var(--px-surface-3); border: 2px solid var(--px-border); border-right: 0; }
 .room-turntable .pocket-track select { box-sizing: border-box; flex: 1; min-width: 0; height: 32px; margin: 0; color: var(--pk-ink); border: 2px solid var(--px-border); font: inherit; font-size: 12px; font-variant-numeric: tabular-nums; }
 @container (max-width: 220px) { .room-turntable .pocket-track { grid-column: 1 / -1; grid-row: 3; } }
 .room-turntable .turntable-audio-sliders.pocket-volume { display: block; margin: 10px -12px -12px; padding: 8px 12px 10px; background: linear-gradient(#34211499, #24160f); box-shadow: 0 -2px 0 #00000059; }
-.room-turntable .pocket-volume .player-volume { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--px-ink-dim); }
+.room-turntable .pocket-volume .player-volume { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--px-ink-dim); }
 .room-turntable .pocket-volume input[type=range] { flex: 1; min-width: 0; }
 
 /* Small screens: a smaller wheel. */
@@ -134,8 +135,6 @@
   .room-turntable .pocket-screen .turntable-record-art { display: none; }
   .room-turntable .pocket-now { grid-template-columns: minmax(0, 1fr); }
 }
-[data-desktop-reduce-motion=true] .pocket-screen .pocket-dot { animation: none; }
-@media (prefers-reduced-motion: reduce) { .pocket-screen .pocket-dot { animation: none; } }
 /* The device is taller than the old panel: give it room before it scrolls. */
 .room-turntable .turntable-console { max-height: min(74vh, 600px); }
 @media (max-height: 760px) { .room-turntable .turntable-console { max-height: calc(100vh - 260px); } }

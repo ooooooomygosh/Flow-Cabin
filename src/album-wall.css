@@ -4,7 +4,7 @@
 @layer features {
 .album-wall-overlay{position:fixed;inset:0;z-index:200;display:flex;flex-direction:column;background:var(--px-bg);color:var(--px-ink);isolation:isolate;font:14px/1.5 var(--px-font-body)}
 .album-wall-overlay button,.album-wall-overlay input,.album-wall-overlay select{font:inherit;font-size:12px;color:inherit}
-.album-wall-overlay button,.wall-project-tools a,.wall-file{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:var(--px-hit);border:2px solid var(--px-shadow);background:var(--px-surface-2);color:var(--px-ink);font-family:var(--px-font-cn);-webkit-font-smoothing:none;cursor:pointer;padding:6px 10px;text-decoration:none;box-shadow:inset 2px 2px 0 #ffffff1a,inset -2px -2px 0 #0000004d,var(--px-shadow-1);transition:background-color var(--px-dur-fast) steps(2,end),translate var(--px-dur-fast) steps(2,end)}
+.album-wall-overlay button,.wall-project-tools a,.wall-file{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:var(--px-hit);border:2px solid var(--px-shadow);background:var(--px-surface-2);color:var(--px-ink);font:400 12px/16px var(--px-font-cn);-webkit-font-smoothing:none;cursor:pointer;padding:6px 10px;text-decoration:none;box-shadow:inset 2px 2px 0 #ffffff1a,inset -2px -2px 0 #0000004d,var(--px-shadow-1);transition:background-color var(--px-dur-fast) steps(2,end),translate var(--px-dur-fast) steps(2,end)}
 .album-wall-overlay button:hover:not(:disabled),.wall-project-tools a:hover,.wall-file:hover{background:var(--px-surface-3);translate:0 -1px}
 .album-wall-overlay button:active:not(:disabled),.wall-project-tools a:active{translate:1px 1px;box-shadow:inset 2px 2px 0 #0000004d;transition-duration:0s}
 .album-wall-overlay button:disabled{opacity:.4;cursor:default}

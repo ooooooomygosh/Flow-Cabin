@@ -23,6 +23,7 @@
 :is([data-room-look='pixel'], [data-room-look='warm'])[data-time-of-day='dusk'] .ambient-shaft { --shaft: .2; background: linear-gradient(180deg, #ffb06a 0 30%, #ffb06aaa 30% 55%, #ffb06a55 55% 80%, transparent 80%); }
 @keyframes ambient-shaft { from { opacity: calc(var(--shaft, 0) * .7); } to { opacity: var(--shaft, 0); } }
 
-@media (prefers-reduced-motion: reduce) { .ambient-mote, .ambient-shaft { animation: none; } .ambient-mote { opacity: .3; } .ambient-shaft { opacity: var(--shaft, 0); } }
-html[data-desktop-reduce-motion='true'] .ambient-mote, html[data-desktop-reduce-motion='true'] .ambient-shaft { animation: none; }
+/* Reduced motion freezes the motes (guards layer); they rest faint and the shaft holds its level. */
+@media (prefers-reduced-motion: reduce) { .ambient-mote { opacity: .3; } .ambient-shaft { opacity: var(--shaft, 0); } }
+html[data-desktop-reduce-motion='true'] .ambient-mote { opacity: .3; } html[data-desktop-reduce-motion='true'] .ambient-shaft { opacity: var(--shaft, 0); }
 }
