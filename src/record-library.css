@@ -27,11 +27,12 @@
 .record-dialog footer{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}
 .record-error{color:var(--px-warn);font-size:14px;margin:12px 0}
 
-.record-editor-grid{display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:center}
-.record-style-preview{aspect-ratio:1.22;position:relative;isolation:isolate;margin-right:14px}
-.record-style-preview>img,.record-preview-placeholder{position:absolute;left:0;top:8%;width:78%;height:86%;object-fit:cover;z-index:2;border:2px solid var(--px-shadow);box-shadow:var(--px-shadow-2)}
-.record-preview-placeholder{display:grid;place-content:center;background:var(--px-surface-3);text-align:center;padding:20px}
-.record-style-preview>.custom-vinyl{position:absolute;right:-5%;top:8%;width:80%;height:auto;aspect-ratio:1;z-index:0}
+.record-editor-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px;align-items:center}
+/* Live preview: the 48px pixel record at 5x (4x on small windows) half out of its sleeve. */
+.record-style-preview{--rec:240px;position:relative;width:calc(var(--rec) * 1.6);max-width:100%;height:var(--rec);isolation:isolate}
+.record-style-disc{position:absolute;left:calc(var(--rec) * .6);top:0;width:var(--rec);height:var(--rec);image-rendering:pixelated}
+.record-style-cover{position:absolute;left:0;top:0;width:var(--rec);height:var(--rec);object-fit:cover;z-index:2;border:2px solid var(--px-shadow);box-shadow:var(--px-shadow-2)}
+@media(max-width:1000px),(max-height:700px){.record-style-preview{--rec:192px}}
 .record-style-fields{display:grid;gap:10px}
 .record-style-fields>label:not(.record-checkbox){display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;font-size:14px}
 .record-style-fields>label>input[type=range]{flex-basis:100%}
@@ -51,21 +52,20 @@
 .record-box-batch{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
 .record-box-albums{max-height:330px;overflow:auto;display:grid;gap:4px}
 .record-box-albums>label{padding:8px;background:var(--px-surface-card)}
-.record-box-albums img{width:44px;height:44px;object-fit:cover;image-rendering:pixelated}
+/* List thumbnails are photos shrunk ~10x: averaged (auto), never nearest-neighbour, which aliases. */
+.record-box-albums img,.record-box-sleeve{flex:none;width:44px;height:44px;object-fit:cover;image-rendering:auto}
 .record-box-albums label>span{display:grid;gap:4px;min-width:0}
 .record-box-albums strong{font-size:14px;font-weight:500;overflow-wrap:anywhere}
 .record-delete-box{margin-top:14px;color:var(--px-warn)}
 .record-delete-confirm{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;margin-top:16px}
-.record-palette-presets{display:flex;gap:6px;flex-wrap:wrap}
-.record-dialog .record-palette-presets button{padding:4px 8px}
-.record-palette-presets button>span{display:flex;gap:2px}
-.record-palette-presets i{display:block;width:8px;height:14px}
+.record-palette-presets{display:flex;gap:8px;flex-wrap:wrap}
+.record-dialog .record-palette-presets button{flex-direction:column;gap:4px;padding:6px 10px}
+.record-dialog .record-palette-presets button[aria-pressed=true]{border-color:var(--px-accent-hi);background:var(--px-surface-3)}
+.record-palette-presets .pixel-record{display:block;width:48px;height:48px;image-rendering:pixelated}
 .record-mix-description{line-height:1.6}
 .record-preview-column{display:grid;gap:14px;justify-items:center}
-.record-preview-column>.record-style-preview{width:100%}
-.record-style-preview.is-disc-only{aspect-ratio:1}
-.record-style-preview.is-disc-only>img,.record-style-preview.is-disc-only>.record-preview-placeholder{visibility:hidden}
-.record-style-preview.is-disc-only>.custom-vinyl{width:86%;left:7%;right:auto;top:0}
+.record-style-preview.is-disc-only .record-style-cover{visibility:hidden}
+.record-style-preview.is-disc-only .record-style-disc{left:calc(var(--rec) * .3)}
 
 /* The disc: a true circle (the one place a radius is allowed), hard drop shadow. */
 .custom-vinyl{display:block;border-radius:50%;position:relative;overflow:hidden;isolation:isolate;background:radial-gradient(circle at 30% 25%,#ffffff18,transparent 40%),var(--vinyl-base,#241a0f);opacity:var(--vinyl-alpha,1);box-shadow:inset 0 0 0 1px #ffffff24,2px 2px 0 #0d080580}
@@ -77,5 +77,5 @@
 .cabin-rack .showroom-artwork{z-index:2}
 .cabin-rack .room-record{isolation:isolate}
 
-@media(max-width:700px){.record-dialog{padding:18px}.record-editor-grid{grid-template-columns:1fr;gap:20px}.record-style-preview{max-width:300px;width:90%;margin:auto}.record-box-manager-grid{grid-template-columns:1fr}.record-box-manager nav{max-height:120px;grid-template-columns:repeat(2,minmax(0,1fr))}.record-library-controls select{max-width:165px}.record-library-controls{gap:10px}.shelf-filters .record-library-controls{padding:14px 18px}}
+@media(max-width:700px){.record-dialog{padding:18px}.record-editor-grid{grid-template-columns:1fr;gap:20px}.record-style-preview{margin:auto}.record-box-manager-grid{grid-template-columns:1fr}.record-box-manager nav{max-height:120px;grid-template-columns:repeat(2,minmax(0,1fr))}.record-library-controls select{max-width:165px}.record-library-controls{gap:10px}.shelf-filters .record-library-controls{padding:14px 18px}}
 }

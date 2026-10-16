@@ -52,7 +52,8 @@ export function hashString(text) { let h = 0x811c9dc5; for (const ch of String(t
 export function seededRandom(seed) { let a = seed >>> 0; return () => { a = (a + 0x6d2b79f5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 
 const P = Object.fromEntries(PALETTE_TOKENS.map(([name], index) => [name.replace('--px-', ''), index]));
-export const SCENES = ['window', 'hills', 'vinyl', 'cabin'];
+// Eight motifs, one per record (seeded): the cabin's own still lifes.
+export const SCENES = ['window', 'hills', 'vinyl', 'cabin', 'rain', 'lamp', 'cassette', 'lake'];
 
 // Procedural 32×32 cover: returns palette indices. Scenes share the same
 // sky/ground language so a shelf of generated covers looks like one set.
@@ -91,6 +92,51 @@ export function proceduralGrid({ title = '', artist = '' } = {}) {
     disc(16, 19, 3, [P.warn, P['accent-2'], P.accent, P.good][Math.floor(rand() * 4)]); set(16, 19, P.ink);
     set(12, 14, P['ink-dim']); set(11, 15, P['ink-dim']);
   }
+  if (scene === 'rain') {
+    // Night window streaked with rain; the room's lamp reflected in the glass, a mug on the sill.
+    rect(0, 0, n, n, P.surface); rect(4, 3, 24, 20, P.bg); rect(4, 3, 24, 9, P.night);
+    for (let i = 0; i < 9; i++) { const x = 5 + Math.floor(rand() * 22), y = 4 + Math.floor(rand() * 14), len = 2 + Math.floor(rand() * 3); for (let k = 0; k < len; k++) set(x - Math.floor(k / 2), y + k, k ? P['accent-2'] : P.ink); }
+    rect(15, 3, 2, 20, P['surface-3']); rect(4, 12, 24, 2, P['surface-3']); rect(4, 3, 24, 1, P['border-hi']); rect(3, 3, 1, 20, P['border-hi']);
+    rect(20, 15, 3, 3, P['accent-lo']); rect(21, 16, 1, 1, P['accent-hi']);
+    rect(2, 23, 28, 2, P.border); rect(2, 23, 28, 1, P['border-hi']); rect(2, 25, 28, 1, P.shadow);
+    rect(7, 19, 4, 4, P.ink); rect(7, 19, 4, 1, P['ink-dim']); rect(11, 20, 1, 2, P.ink); set(8, 17, P['ink-dim']); set(9, 16, P['ink-dim']);
+    for (let x = 4; x < 28; x += 3) set(x + Math.floor(rand() * 2), 22, P['accent-2']);
+    rect(0, 26, n, n - 26, P['surface-2']);
+  }
+  if (scene === 'lamp') {
+    // Desk lamp at night: an angled brass arm, the shade's light falling in hard bands
+    // (no blur) onto the desk, where a book stack and a cup sit in the pool.
+    rect(0, 0, n, n, P.bg);
+    const sx = 13 + Math.floor(rand() * 3), sy = 7, pool = sx + 3;
+    for (const [grow, colour] of [[10, P.surface], [7, P['surface-2']], [4, P['surface-3']]]) for (let y = sy + 3; y < 22; y++) { const half = 1 + Math.floor((y - sy - 3) * grow / 12); rect(pool - half, y, half * 2 + 1, 1, colour); }
+    rect(0, 22, n, 10, P.border); rect(0, 22, n, 1, P['border-hi']); rect(pool - 7, 22, 15, 1, P['accent-hi']); rect(pool - 5, 23, 11, 1, P['accent-lo']);
+    for (let x = 2; x < n; x += 10) rect(x, 27, 6, 1, P.surface);
+    rect(3, 20, 6, 2, P['accent-lo']); rect(3, 20, 6, 1, P.accent);
+    for (let i = 0; i <= 10; i++) { const x = 5 + Math.round(i * (sx - 6) / 10), y = 19 - i; set(x, y, P.accent); set(x + 1, y, P['accent-lo']); }
+    set(sx - 1, 9, P['accent-hi']);
+    rect(sx, sy, 7, 3, P['accent-lo']); rect(sx + 1, sy - 1, 5, 1, P.accent); rect(sx, sy, 7, 1, P.accent); rect(sx + 1, sy + 3, 5, 1, P['accent-hi']);
+    const bx = pool - 1 + Math.floor(rand() * 3);
+    rect(bx, 19, 10, 3, P.warn); rect(bx + 1, 17, 8, 2, P['accent-2']); rect(bx, 15, 7, 2, P.good); rect(bx, 19, 10, 1, P['accent-hi']); rect(bx + 1, 17, 8, 1, P.ink); rect(bx, 15, 7, 1, P['ink-dim']);
+    rect(bx - 5, 18, 3, 4, P.ink); rect(bx - 5, 18, 3, 1, P['ink-dim']); set(bx - 2, 19, P.ink); set(bx - 4, 16, P['ink-dim']);
+  }
+  if (scene === 'cassette') {
+    // A cassette on a printed colour field: shell, label strip, two reels and the tape window.
+    const field = [P['accent-2'], P.warn, P.good, P.accent][Math.floor(rand() * 4)];
+    rect(0, 0, n, n, field); for (let y = 2; y < n; y += 4) rect(0, y, n, 1, field === P.accent ? P['accent-lo'] : P.surface);
+    rect(4, 8, 24, 16, P.shadow); rect(5, 9, 22, 14, P['surface-2']); rect(5, 9, 22, 1, P['surface-3']);
+    rect(7, 11, 18, 7, P.ink); rect(7, 11, 18, 2, field); rect(8, 14, 10, 1, P['ink-dim']);
+    rect(11, 15, 10, 3, P.bg); for (const cx of [13, 19]) { rect(cx - 1, 15, 3, 3, P['ink-dim']); set(cx, 16, P.shadow); }
+    rect(9, 20, 14, 3, P.surface); rect(10, 21, 1, 1, P['border-hi']); rect(21, 21, 1, 1, P['border-hi']);
+    for (const [x, y] of [[6, 10], [25, 10], [6, 21], [25, 21]]) set(x, y, P['border-hi']);
+  }
+  if (scene === 'lake') {
+    // Still lake: far shore of pines, the moon or sun laid on the water in broken stripes.
+    const shore = 17;
+    for (let x = 0; x < n; x++) { const h = 2 + ((x * 7 + Math.floor(rand() * 3)) % 5); for (let y = shore - h; y < shore; y++) set(x, y, P.shadow); }
+    rect(0, shore, n, n - shore, dusk ? P['accent-2'] : P.night);
+    for (let y = shore + 2; y < n; y += 2) for (let x = Math.floor(rand() * 4); x < n; x += 5 + Math.floor(rand() * 4)) rect(x, y, 2, 1, dusk ? P.night : P.bg);
+    for (let y = shore + 1, w = 5; y < n - 2; y += 2, w = Math.max(1, w - 1)) rect(sunX - Math.floor(w / 2), y, w, 1, dusk ? P['accent-hi'] : P['ink-dim']);
+  }
   // 1px frame like a printed sleeve edge.
   for (let i = 0; i < n; i++) { set(i, 0, P.shadow); set(i, n - 1, P.shadow); set(0, i, P.shadow); set(n - 1, i, P.shadow); }
   return { grid, scene, dusk };
@@ -114,6 +160,15 @@ function gridToDataUrl(grid, palette) {
   const context = canvas.getContext('2d');
   context.putImageData(new ImageData(gridToRgba(grid, GRID, palette, OUT / GRID), OUT, OUT), 0, 0);
   return canvas.toDataURL('image/png');
+}
+// The sleeve's own colour for a record's label (deck, mini player): the most used
+// bright ink of the generated scene, so a coverless record still has a matching label.
+const TONE_INKS = new Set([P.accent, P['accent-hi'], P['accent-2'], P.good, P.warn, P['ink-dim'], P['border-hi']]);
+export function sleeveTone(item) {
+  const counts = new Map();
+  for (const index of proceduralGrid(item).grid) if (TONE_INKS.has(index)) counts.set(index, (counts.get(index) || 0) + 1);
+  const best = [...counts].sort((a, b) => b[1] - a[1])[0]?.[0] ?? P.accent;
+  return PALETTE_TOKENS[best][1];
 }
 export function generatedCover(item) { return gridToDataUrl(proceduralGrid(item).grid, paletteFromDocument()); }
 

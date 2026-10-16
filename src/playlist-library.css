@@ -43,21 +43,19 @@
 .playlist-sleeve { --sleeve: 132px; position: relative; display: block; width: var(--sleeve); height: var(--sleeve); flex: 0 0 auto; }
 .playlist-sleeve.is-lg { --sleeve: 168px; }
 .playlist-sleeve.is-xl { --sleeve: 196px; }
-.playlist-sleeve-cover { position: relative; z-index: 1; display: block; width: 100%; height: 100%; object-fit: cover; background: var(--px-surface-2); border: 2px solid var(--px-border); box-shadow: 2px 2px 0 var(--px-shadow), inset 0 0 0 2px #ffffff1a; image-rendering: auto; }
-.playlist-sleeve-disc { position: absolute; z-index: 0; top: 6%; left: 6%; width: 88%; height: 88%; border-radius: 50%; background:
-  radial-gradient(circle, #0000 0 17%, #000000aa 17.5% 18.5%, #0000 19%),
-  repeating-radial-gradient(circle, #161210 0 1.6px, #221b17 1.6px 3.1px),
-  #161210;
-  box-shadow: 0 0 0 2px var(--px-shadow), 3px 3px 0 #0d080580; transition: transform var(--px-dur-slow) var(--px-ease-smooth); }
-.playlist-sleeve-disc::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(from 210deg, #fff0 0 8%, #ffffff26 12%, #fff0 18% 58%, #ffffff1a 62%, #fff0 68%); }
-.playlist-sleeve-label { position: absolute; inset: 33%; border-radius: 50%; background-size: cover; background-position: center; box-shadow: 0 0 0 2px var(--px-shadow); }
-.playlist-sleeve-label::after { content: ''; position: absolute; inset: 42%; border-radius: 50%; background: var(--px-shadow); }
-.playlist-card:hover .playlist-sleeve-disc, .playlist-card:focus-visible .playlist-sleeve-disc { transform: translateX(34%) rotate(40deg); }
-.playlist-hero .playlist-sleeve-disc { transform: translateX(38%); animation: playlist-disc-out var(--px-dur-slow) var(--px-ease-smooth) both; }
+/* Photo covers shrink here (averaged, auto); generated sleeves and the record are pixel art at whole multiples. */
+.playlist-sleeve-cover, .playlist-sleeve > .record-sleeve { position: absolute; inset: 0; z-index: 1; display: block; width: 100%; height: 100%; object-fit: cover; background: var(--px-surface-2); border: 2px solid var(--px-border); box-shadow: 2px 2px 0 var(--px-shadow), inset 0 0 0 2px #ffffff1a; image-rendering: auto; }
+.playlist-sleeve-cover { z-index: 2; }
+/* The 48px pixel record at 2x / 3x / 4x, centred behind the sleeve; it slides out in frames. */
+.playlist-sleeve-disc { --disc: 96px; position: absolute; z-index: 0; top: calc((var(--sleeve) - var(--disc)) / 2); left: calc((var(--sleeve) - var(--disc)) / 2); width: var(--disc); height: var(--disc); transition: translate var(--px-dur-med) steps(4, end); }
+.playlist-sleeve.is-lg .playlist-sleeve-disc { --disc: 144px; }
+.playlist-sleeve.is-xl .playlist-sleeve-disc { --disc: 192px; }
+.playlist-sleeve-disc .pixel-record { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+.playlist-card:hover .playlist-sleeve-disc, .playlist-card:focus-visible .playlist-sleeve-disc { translate: 34% 0; }
+.playlist-hero .playlist-sleeve-disc { translate: 38% 0; animation: playlist-disc-out var(--px-dur-slow) steps(4, end) both; }
 .playlist-hero .playlist-sleeve { margin-right: 74px; }
-.playlist-grid.is-featured .playlist-sleeve-disc { transform: translateX(28%) rotate(20deg); }
-.playlist-grid.is-featured .playlist-card:hover .playlist-sleeve-disc { transform: translateX(36%) rotate(70deg); }
-.playlist-sleeve.is-spinning .playlist-sleeve-disc { animation: px-spin 1.8s steps(8, end) infinite; }
+.playlist-grid.is-featured .playlist-sleeve-disc { translate: 24% 0; }
+.playlist-grid.is-featured .playlist-card:hover .playlist-sleeve-disc { translate: 36% 0; }
 
 /* ── grid ─────────────────────────────────────────────────────── */
 .playlist-groups section + section { margin-top: 22px; }
@@ -139,7 +137,7 @@
 
 @keyframes playlist-rise { from { opacity: 0; transform: translateY(6px); } }
 @keyframes playlist-row-in { from { opacity: 0; transform: translateX(-4px); } }
-@keyframes playlist-disc-out { from { transform: translateX(0) rotate(-60deg); } }
+@keyframes playlist-disc-out { from { translate: 0 0; } }
 @keyframes playlist-pulse { 50% { opacity: .55; } }
 
 @media (max-width: 760px) {

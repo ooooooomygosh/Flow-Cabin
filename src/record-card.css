@@ -1,0 +1,49 @@
+/* 唱片卡片: the sleeve with its record pulled out to the label (both in whole art pixels, the
+   48px record at 4× / 5×), and the album's facts and track list on a paper liner
+   insert. Notes and actions stay on the cabin wood below it. */
+@layer guards, reset, features, skin, overrides;
+@layer features {
+.record-card { --card-sleeve: 192px; display: grid; grid-template-columns: calc(var(--card-sleeve) * 1.6 + 8px) minmax(0, 1fr); gap: 28px; }
+@media (min-width: 1100px) and (min-height: 760px) { .record-card { --card-sleeve: 240px; } }
+.record-card-art { display: grid; align-content: start; gap: 20px; }
+.record-card-sleeve { position: relative; width: calc(var(--card-sleeve) * 1.6); height: calc(var(--card-sleeve) + 8px); }
+.record-card-sleeve .record-card-vinyl { position: absolute; left: calc(var(--card-sleeve) * .6); top: 0; width: var(--card-sleeve); height: var(--card-sleeve); image-rendering: pixelated; }
+.record-card-sleeve .record-card-cover { position: absolute; left: 0; top: 0; width: var(--card-sleeve); height: var(--card-sleeve); z-index: 1; border: 2px solid var(--px-shadow); box-shadow: var(--px-shadow-2); }
+/* The sleeve's open edge: a dark slot line where the record leaves it. */
+.record-card-sleeve .record-card-cover::after { content: ''; position: absolute; z-index: 4; top: 4px; bottom: 4px; right: 0; width: 2px; background: var(--px-shadow); pointer-events: none; }
+.record-card-tools { display: flex; flex-wrap: wrap; gap: 8px; }
+.record-card-tools .record-tools-button, .record-card-tools .discogs-link { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; font-size: 12px; color: var(--px-ink); background: var(--px-surface-2); border: 2px solid var(--px-border); box-shadow: var(--px-shadow-1); text-decoration: none; }
+/* 压片档案: an inventory slip on the wood, the record at 1x as its swatch. */
+.record-card-slip { display: flex; align-items: center; gap: 14px; padding: 10px 12px; background: var(--px-surface-card); border: 2px solid var(--px-shadow); box-shadow: inset 2px 2px 0 var(--px-surface-3), var(--px-shadow-1); }
+.record-card-slip-disc { flex: none; width: 48px; height: 48px; image-rendering: pixelated; }
+.record-card-slip dl { display: grid; gap: 4px; margin: 0; min-width: 0; }
+.record-card-slip dl div { display: flex; gap: 10px; min-width: 0; font-size: 12px; line-height: 16px; }
+.record-card-slip dt { flex: none; width: 36px; color: var(--px-ink-faint); }
+.record-card-slip dd { margin: 0; min-width: 0; color: var(--px-ink); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.record-card-copy { min-width: 0; display: grid; align-content: start; gap: 12px; }
+
+/* Liner notes: paper 9-slice, paper ink, ruled like a printed insert. */
+.record-card-liner { display: grid; gap: 10px; padding: 16px 20px 18px; color: var(--px-paper-ink); background: var(--px-paper) padding-box; border: 6px solid transparent; border-image: var(--px-frame-img-paper) 2 / 6px; box-shadow: var(--px-shadow-2); }
+.record-card-kicker { color: var(--px-accent-lo); }
+.record-card-copy h3 { margin: 0; color: var(--px-paper-ink); overflow-wrap: anywhere; }
+.record-card-artist { margin: -4px 0 0; font-size: 14px; color: var(--px-paper-ink); }
+.record-card-facts { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
+.record-card-facts div { padding: 4px 10px; border: 2px solid var(--px-paper-ink); box-shadow: 2px 2px 0 #e9d6b4; }
+.record-card-facts dt { font-size: 12px; color: var(--px-accent-lo); }
+.record-card-facts dd { margin: 0; font-size: 12px; font-variant-numeric: tabular-nums; }
+.record-card-tracks { list-style: none; margin: 0; padding: 0; max-height: min(30vh, 264px); overflow: auto; border-top: 2px solid var(--px-paper-ink); scrollbar-width: thin; scrollbar-color: var(--px-accent-lo) transparent; }
+.record-card-tracks button { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; gap: 8px; width: 100%; min-height: var(--px-hit); padding: 6px 4px; text-align: left; color: inherit; background: none; border: 0; border-bottom: 2px dotted #e9d6b4; cursor: pointer; }
+.record-card-tracks button:hover { background: #f6e6c6; }
+.record-card-tracks button:hover strong::before { content: '▶ '; color: var(--px-accent-lo); }
+.record-card-tracks span { font: 400 12px/16px var(--px-font-cn); color: var(--px-accent-lo); font-variant-numeric: tabular-nums; -webkit-font-smoothing: none; }
+.record-card-tracks strong { font-weight: 500; font-size: 14px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.record-card-tracks small { font-size: 12px; color: var(--px-accent-lo); font-variant-numeric: tabular-nums; }
+.record-card-empty { margin: 0; color: var(--px-accent-lo); font-size: 12px; }
+
+.record-card-notes { display: grid; gap: 6px; font-size: 12px; color: var(--px-ink-dim); }
+.record-card-saved { display: flex; align-items: center; gap: 4px; min-height: 16px; font-size: 12px; color: var(--px-good); }
+.record-card-footer { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; font-size: 12px; }
+.record-card-footer a { display: inline-flex; align-items: center; gap: 4px; }
+.record-card-spacer { flex: 1; }
+@media (max-width: 760px) { .record-card { grid-template-columns: 1fr; } }
+}

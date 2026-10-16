@@ -1,7 +1,9 @@
 import React, { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import useCoverColour from '../useCoverColour';
-import { ARM_FRAMES, DECK_BODY, DECK_H, DECK_W, SHEEN_FRAMES, recordRuns } from './deck-sprite.mjs';
+import { sleeveTone } from '../player/pixel-cover.mjs';
+import { DEFAULT_RECORD_STYLE } from '../record-library.mjs';
+import { ARM_FRAMES, DECK_BODY, DECK_H, DECK_SHADOW, DECK_W, SHEEN_FRAMES, recordRuns } from './deck-sprite.mjs';
 import { bindEnergyVar } from './playback-listener.mjs';
 import './scene-deck.css';
 import './room-console.css';
@@ -29,7 +31,10 @@ function SceneDeck({ anchor, item, spinning = false, vinyl, readOnly = false, on
   // glow and note rate through CSS variables — no React re-render per tick.
   // Quantised to eighths and written only on change, so it restyles the deck ≤ 8 levels.
   useEffect(() => bindEnergyVar(() => deck.current, '--deck-energy'), []);
-  const label = useCoverColour(item?.cover);
+  // Label in the cover's own colour; a coverless record takes its generated sleeve's ink.
+  // If the cover's pixels can't be read (useCoverColour falls back to the default base), the sleeve's ink is used too.
+  const coverLabel = useCoverColour(item?.cover), sleeveLabel = useMemo(() => item ? sleeveTone(item) : null, [item?.title, item?.artist]);
+  const label = item && (!item.cover || coverLabel === DEFAULT_RECORD_STYLE.base) ? sleeveLabel : coverLabel;
   const [dropping, setDropping] = useState(false);
   // The 22×56 record grid only changes with the record, its vinyl colour and label.
   const record = useMemo(() => item ? recordRuns(darken(vinyl?.base || "#2a201a", .45), label) : null, [item?.id, vinyl?.base, label]);
@@ -41,11 +46,9 @@ function SceneDeck({ anchor, item, spinning = false, vinyl, readOnly = false, on
     onDrop={readOnly ? undefined : (event) => { event.preventDefault(); setDropping(false); onDropRecord?.(event.dataTransfer.getData(dragType)); }}>
     <span className="scene-deck-glow" aria-hidden="true"/>
     <svg className="scene-deck-sprite" viewBox={`0 0 ${DECK_W} ${DECK_H}`} preserveAspectRatio="none" shapeRendering="crispEdges" aria-hidden="true">
-      <rect className="scene-deck-shadow" x="1" y={DECK_H - 3} width={DECK_W - 2} height="1" fill="#0d0805"/>
-      <rect className="scene-deck-shadow" x="3" y={DECK_H - 2} width={DECK_W - 6} height="1" fill="#0d0805"/>
+      <Rects list={DECK_SHADOW} className="scene-deck-shadow"/>
       <Rects list={DECK_BODY}/>
       {record && <g className="scene-deck-record" key={item.id}><Rects list={record}/></g>}
-      <rect x="45" y="15" width="2" height="1" fill="#57352a"/>
     </svg>
     {/* Moving parts live outside the SVG: animations on SVG children can't be
         composited and forced a full style recalculation every frame. The eight
