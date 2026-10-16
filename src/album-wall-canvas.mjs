@@ -69,5 +69,3 @@ export async function paintWall(canvas, albums, value, images, requestedScale = 
   }
   return { width: canvas.width, height: canvas.height, missing: images.filter((image) => !image).length };
 }
-// Kept for existing importers; the helper lives in lib/download.mjs.
-export { downloadBlob } from './lib/download.mjs';

@@ -5,7 +5,8 @@ import { ConfirmButton } from './ui/Confirm';
 import { Grid3X3, Search, X, Plus, Download, Up, Down, Trash2, External } from './icons';
 import { useDesktopAppearance } from './desktop-client';
 import { wallKey, normalizeWall, orderAlbums, readWall, WALL_STORAGE_KEY } from './album-wall-model.mjs';
-import { downloadBlob, loadWallCover, paintWall, releaseWallCovers } from './album-wall-canvas.mjs';
+import { loadWallCover, paintWall, releaseWallCovers } from './album-wall-canvas.mjs';
+import { downloadBlob } from './lib/download.mjs';
 import { buildSearchInput } from './music-search.mjs';
 
 function lightweight(item) { return { type: 'album', id: item.id || wallKey(item), title: item.title, artist: item.artist || '未知艺人', cover: item.cover || '', year: item.year || '', externalIds: item.externalIds || {} }; }

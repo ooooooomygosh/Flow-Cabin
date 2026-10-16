@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { clampNumber } from './clamp-number.mjs';
 
-export { clampNumber };
 
 // A number input that never saves a half-typed value: an empty or invalid field is not written
 // (clearing it does not mean 0), Enter / blur commit the clamped number, Escape and blur restore.
