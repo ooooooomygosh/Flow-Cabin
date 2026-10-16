@@ -1,8 +1,8 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import useCoverColour from '../useCoverColour';
 import { ARM_FRAMES, DECK_BODY, DECK_H, DECK_W, SHEEN_FRAMES, recordRuns } from './deck-sprite.mjs';
-import { onCabinPlayback } from './playback-listener.mjs';
+import { bindEnergyVar } from './playback-listener.mjs';
 import './scene-deck.css';
 import './room-console.css';
 
@@ -15,7 +15,7 @@ const darken = (hex, k = .35) => { const n = parseInt(String(hex).slice(1, 7), 1
  * transport controls stays in RoomTurntable; this is the physical deck.
  * Rendered through a portal into `.cabin-scene-canvas` so it scales with the art.
  */
-export default function SceneDeck({ anchor, item, spinning = false, vinyl, readOnly = false, onActivate, onDropRecord, dragType }) {
+function SceneDeck({ anchor, item, spinning = false, vinyl, readOnly = false, onActivate, onDropRecord, dragType }) {
   const [host, setHost] = useState(null), deck = useRef(null);
   useLayoutEffect(() => { setHost(anchor.current?.closest('.room-scene')?.querySelector('.cabin-scene-canvas') || null); }, [anchor]);
   // Tonearm swings over four frames whenever the deck starts or stops.
@@ -27,18 +27,17 @@ export default function SceneDeck({ anchor, item, spinning = false, vinyl, readO
   }, [arm, spinning, item]);
   // Player energy (0..1) from Grok Bot's `cabin:playback` event drives the
   // glow and note rate through CSS variables — no React re-render per tick.
-  useEffect(() => onCabinPlayback((detail) => {
-    const element = deck.current; if (!element) return;
-    element.style.setProperty('--deck-energy', String(detail.playing ? detail.energy : 0));
-  }), []);
+  // Quantised to eighths and written only on change, so it restyles the deck ≤ 8 levels.
+  useEffect(() => bindEnergyVar(() => deck.current, '--deck-energy'), []);
   const label = useCoverColour(item?.cover);
   const [dropping, setDropping] = useState(false);
+  // The 22×56 record grid only changes with the record, its vinyl colour and label.
+  const record = useMemo(() => item ? recordRuns(darken(vinyl?.base || "#2a201a", .45), label) : null, [item?.id, vinyl?.base, label]);
   if (!host) return null;
-  const record = item ? recordRuns(darken(vinyl?.base || "#2a201a", .45), label) : null;
   const playing = Boolean(item && spinning && arm === 3);
   return createPortal(<div ref={deck} className={`scene-deck ${playing ? 'is-playing' : ''} ${dropping ? 'is-drop-target' : ''}`} data-loaded={item ? 'true' : 'false'} data-arm={arm}
     onDragOver={readOnly ? undefined : (event) => { if (event.dataTransfer.types.includes(dragType)) { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; setDropping(true); } }}
-    onDragLeave={() => setDropping(false)}
+    onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setDropping(false); }}
     onDrop={readOnly ? undefined : (event) => { event.preventDefault(); setDropping(false); onDropRecord?.(event.dataTransfer.getData(dragType)); }}>
     <span className="scene-deck-glow" aria-hidden="true"/>
     <svg className="scene-deck-sprite" viewBox={`0 0 ${DECK_W} ${DECK_H}`} preserveAspectRatio="none" shapeRendering="crispEdges" aria-hidden="true">
@@ -62,3 +61,4 @@ export default function SceneDeck({ anchor, item, spinning = false, vinyl, readO
     {!readOnly && <button type="button" className="scene-deck-hit" aria-label={item ? (spinning ? `唱机：暂停《${item.title}》` : `唱机：播放《${item.title}》`) : '唱机：双击封面或把唱片拖到这里'} title={item ? '点一下播放 / 暂停' : '把唱片拖到唱机上'} onClick={onActivate}/>}
   </div>, host);
 }
+export default memo(SceneDeck);

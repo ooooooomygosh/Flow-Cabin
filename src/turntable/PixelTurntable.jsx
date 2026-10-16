@@ -4,6 +4,7 @@ import { paintDeck, paintRecord, paintSheen, drawFrame } from './turntable-rende
 import { playDeckSound } from './deck-sfx.mjs';
 import { frameClock } from '../frame-clock.mjs';
 import { frameBudget, performanceLevel, onPerformanceChange } from '../perf-profile.mjs';
+import useReducedMotion from '../useReducedMotion';
 
 // Close-up pixel turntable. `playing` drives the motor; `progress` (0…1 of the
 // side) places the needle; `gaps` are the quiet rings between songs. Dragging
@@ -20,6 +21,8 @@ const useImage = (src) => {
 };
 
 export default function PixelTurntable({ item, vinyl, playing = false, progress = 0, gaps = [], energy = 0, speed = 33, reduceMotion = false, onToggle, onSeek, onSpeed, label = '唱机', className = '' }) {
+  // The OS preference counts as well as the desktop setting passed in.
+  const systemReduced = useReducedMotion(); reduceMotion = Boolean(reduceMotion || systemReduced);
   const canvas = useRef(null), physics = useRef(null), drag = useRef(null), frame = useRef(0), last = useRef(0), live = useRef({});
   physics.current ||= createDeckPhysics({ speed });
   const [cursor, setCursor] = useState('default');
@@ -45,7 +48,8 @@ export default function PixelTurntable({ item, vinyl, playing = false, progress 
       previousLift = state.lift;
       drawFrame(context, { deck, record: now.record, sheen, physics: state, speed: now.speed, motor: now.playing, glow: now.energy });
       // Keep animating while anything moves; otherwise sleep until props change.
-      const settled = !now.playing && state.omega === 0 && Math.abs((target ?? REST_ANGLE) - state.arm) < .002 && (state.lift > .99 || state.lift < .01) && !drag.current;
+      // Reduced motion never spins, so a playing record settles too (one still frame).
+      const settled = (now.reduceMotion || !now.playing) && state.omega === 0 && Math.abs((target ?? REST_ANGLE) - state.arm) < .002 && (state.lift > .99 || state.lift < .01) && !drag.current;
       if (!(visible && (!settled || !now.reduceMotion && now.playing))) sleep();
     };
     const wake = () => { if (!off) { off = frameClock().subscribe(render, { fps: frameBudget(performanceLevel()).deck }); frame.current = 1; } };

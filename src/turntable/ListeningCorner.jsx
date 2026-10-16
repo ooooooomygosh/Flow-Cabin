@@ -8,6 +8,7 @@ import { displayTitle } from '../display-title.mjs';
 import { trackNames } from '../room-model.mjs';
 import { trackArtist } from '../room-playback.mjs';
 import { formatDuration } from '../playlist-model.mjs';
+import { bindEnergyVar } from '../scene/playback-listener.mjs';
 import { ChevronLeft, ChevronRight, Pause, Play, X, SpeakerWave, SpeakerOff, Disc3 } from '../icons';
 import './listening-corner.css';
 
@@ -51,10 +52,12 @@ export default function ListeningCorner({ item, items = [], vinyl, provider, spi
       else if (event.shiftKey && (current === first || current === root.current || !root.current.contains(current))) { event.preventDefault(); last.focus(); }
       else if (!event.shiftKey && (current === last || !root.current.contains(current))) { event.preventDefault(); first.focus(); }
     };
-    const energyListener = (event) => { const value = event.detail?.playing ? Math.min(1, Math.max(0, Number(event.detail.energy) || 0)) : 0; root.current?.style.setProperty('--corner-energy', value.toFixed(3)); setEnergyStep(Math.round(value * 4) / 4); };
-    document.addEventListener('keydown', key); window.addEventListener('cabin:playback', energyListener);
+    // Energy lights only the lamp and the deck glow (not the whole modal subtree),
+    // in eighths, through the rAF-coalesced playback listener.
+    const offEnergy = bindEnergyVar(() => [root.current?.querySelector('.corner-lamp'), deckRef.current], '--corner-energy', 8, (level) => setEnergyStep(Math.round(level * 4) / 4));
+    document.addEventListener('keydown', key);
     document.documentElement.classList.add('room-corner-open');
-    return () => { document.removeEventListener('keydown', key); window.removeEventListener('cabin:playback', energyListener); document.documentElement.classList.remove('room-corner-open'); previous?.focus?.({ preventScroll: true }); };
+    return () => { document.removeEventListener('keydown', key); offEnergy(); document.documentElement.classList.remove('room-corner-open'); previous?.focus?.({ preventScroll: true }); };
   }, []);
   useEffect(() => { list.current?.querySelector('[aria-current="true"]')?.scrollIntoView({ block: 'nearest' }); }, [trackIndex, item?.id]);
   const toggle = () => audible ? playback.toggle() : toggleVisual?.();

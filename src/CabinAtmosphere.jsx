@@ -2,7 +2,8 @@ import React, { useEffect, useId, useRef } from 'react';
 import { ATMOSPHERE, atmosphereFrame, createAtmosphereLoop } from './cabin-atmosphere.mjs';
 import './cabin-atmosphere.css';
 import { createFirePainter } from './cabin-fire.mjs';
-import { frameClock, onBackgroundChange } from './frame-clock.mjs';
+import { frameClock, onBackgroundChange, onOcclusionChange } from './frame-clock.mjs';
+import { onReducedMotionChange } from './motion-preference.mjs';
 import { performanceLevel, onPerformanceChange } from './perf-profile.mjs';
 
 const placement = ({ x, y, width, height }) => ({ left: `${x / 1448 * 100}%`, top: `${y / 1086 * 100}%`, width: `${width / 1448 * 100}%`, height: `${height / 1086 * 100}%` });
@@ -67,23 +68,23 @@ export default function CabinAtmosphere({ look, weather }) {
     const rate = () => pixel ? (performanceLevel() === 'low' ? 8 : 12) : (performanceLevel() === 'low' ? 12 : 24);
     const loop = createAtmosphereLoop({ draw, request: requestAnimationFrame, cancel: cancelAnimationFrame, now: () => performance.now(), fps: rate(), clock: frameClock() });
     const offPerformance = onPerformanceChange(() => loop.setFps(rate()));
-    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
-    let background = frameClock().paused;
+    // One policy for every room loop: hidden/minimized (frame clock), covered by
+    // 唱机特写 (occlusion) and the combined OS + desktop reduced-motion switch.
+    let background = frameClock().paused, occluded = false, reduced = false;
     const update = () => {
-      const reduced = media.matches || document.documentElement.dataset.desktopReduceMotion === 'true';
       if (!ready) return;
-      const mode = background ? 'hidden' : reduced ? 'reduced' : 'running';
+      const mode = background || occluded ? 'hidden' : reduced ? 'reduced' : 'running';
       element.dataset.motion = mode; loop.setMode(mode);
     };
-    const observer = new MutationObserver(update); observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-desktop-reduce-motion'] });
-    media.addEventListener('change', update);
+    const offReduced = onReducedMotionChange((value) => { reduced = value; update(); });
+    const offOcclusion = onOcclusionChange((value) => { occluded = value; update(); });
     // Share the clock's hidden/minimized policy; ordinary blur keeps the room alive.
     const offBackground = onBackgroundChange((value) => { background = value; update(); });
     element.dataset.motion = 'loading';
     clean.onload = () => { if (disposed) return; windowBackdrop = crop(clean, geometry.window, snowContext); fireBackdrop = crop(clean, geometry.fire, fireContext); ready = true; draw(0); update(); };
     clean.onerror = () => { if (!disposed) element.dataset.motion = 'unavailable'; };
     clean.src = `/room-scenes/${look}-cabin-clean.png`;
-    return () => { disposed = true; clean.onload = clean.onerror = null; loop.dispose(); offPerformance(); observer.disconnect(); media.removeEventListener('change', update); offBackground(); };
+    return () => { disposed = true; clean.onload = clean.onerror = null; loop.dispose(); offPerformance(); offReduced(); offOcclusion(); offBackground(); };
   }, [look, weather, geometry]);
   return <div ref={root} className={`cabin-atmosphere atmosphere-${look}`} aria-hidden="true">
     {/* Edited illumination is sampled only on bare floor; all other original
