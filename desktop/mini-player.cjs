@@ -9,7 +9,7 @@ const { cleanCompanion } = require('./wallpaper-model.cjs');
 const { createCompanionPoller, sendCompanionCommand } = require('./companion-sync.cjs');
 const URL = 'album-desktop://mini/mini.html';
 const WIDTH = 300, HEIGHT = 64;
-const MINI_COMMANDS = new Set(['play-toggle', 'sound-toggle', 'focus-toggle']);
+const MINI_COMMANDS = new Set(['sound-toggle', 'focus-toggle']);
 // Player relay: IPC channel 'cabin:player-command' → DOM event 'cabin:player-command' {detail:{action}} in the cabin page.
 const PLAYER_CHANNEL = 'cabin:player-command';
 const PLAYER_ACTIONS = new Set(['toggle', 'play', 'pause', 'next', 'previous']);
