@@ -49,7 +49,7 @@ function CatalogSearch({ initialQuery, onAdded, added }) {
   return <div className="add-panel">
     <form className="add-search" onSubmit={search} role="search">
       <Search size={18}/><input ref={input} type="search" name="cabin-album-search" aria-label="搜索专辑、歌手或粘贴 QQ 音乐专辑链接" placeholder="歌手 · 专辑 · 歌曲，或粘贴 QQ 音乐专辑链接" value={query} onChange={(event) => setQuery(event.target.value)}/>
-      <button type="submit" className="pixel-button is-primary" disabled={status === 'searching'}>{status === 'searching' ? <Loading size={16}/> : '搜索'}</button>
+      <button type="submit" className="pixel-button is-primary" disabled={status === 'searching'}>{status === 'searching' ? <Loading size={16} className="player-spin"/> : '搜索'}</button>
     </form>
     <div className="add-options">
       <Segmented label="曲库" items={CATALOGS} value={provider} onChange={(value) => { if (provider !== value) { request.current?.abort(); setResults([]); setStatus(''); setProvider(value); } try { localStorage.setItem('album-circle-search-provider-v2', value); } catch {} }}/>
@@ -57,6 +57,7 @@ function CatalogSearch({ initialQuery, onAdded, added }) {
     </div>
     {status && status !== 'searching' && <p className="add-status" role="status">{status}</p>}
     {status === 'searching' && <p className="add-status" role="status">正在翻找唱片…</p>}
+    {!status && !results.length && <p className="add-hint"><Disc3 size={16}/>输入歌手或专辑名，找到后点「放上唱片架」，封面和曲目一起带回小屋。</p>}
     <ul className="add-results" aria-label="搜索结果">{results.map((candidate) => {
       const done = added.has(candidate.id);
       return <li key={candidate.id}><Cover src={candidate.cover} title={candidate.title}/>

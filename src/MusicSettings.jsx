@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { FolderOpen, Trash2, Loading } from './icons';
+import { FolderOpen, Trash2, Refresh } from './icons';
 import { desktopCommand, useDesktopAppearance } from './desktop-client';
 import { musicRequest, normalizeLocalLibrary } from './room-playback.mjs';
 import { requestPermission } from './player/sources.mjs';
@@ -77,7 +77,7 @@ function LocalMusicSettings() {
   return <section className="music-local"><h3>本地音乐</h3>
     <p>选择电脑里的音乐文件夹，按标签整理成专辑。音乐留在原位置播放，不会复制或上传；在「添加到唱片架 › 本地音乐」里把专辑放上唱片架。</p>
     {summary?.folders?.length > 0 && <ul className="music-local-folders">{summary.folders.map((folder) => <li key={folder.path} title={folder.path}><FolderOpen size={16}/><span>{folder.name}</span><button type="button" aria-label={`移除文件夹 ${folder.name}`} disabled={busy} onClick={() => act('/local/remove-folder', { path: folder.path })}><Trash2 size={15}/></button></li>)}</ul>}
-    <div className="music-local-actions"><button type="button" disabled={busy} onClick={() => { if (pending.current || busy) return; pending.current = true; revision.current++; setBusy(true); setMessage('请选择音乐文件夹…'); desktopCommand('local-music-folder'); }}><FolderOpen size={16}/>添加音乐文件夹</button>{summary?.folders?.length > 0 && <button type="button" disabled={busy} onClick={() => act('/local/rescan', {})}><Loading size={16}/>重新扫描</button>}</div>
+    <div className="music-local-actions"><button type="button" disabled={busy} onClick={() => { if (pending.current || busy) return; pending.current = true; revision.current++; setBusy(true); setMessage('请选择音乐文件夹…'); desktopCommand('local-music-folder'); }}><FolderOpen size={16}/>添加音乐文件夹</button>{summary?.folders?.length > 0 && <button type="button" disabled={busy} onClick={() => act('/local/rescan', {})}><Refresh size={16}/>重新扫描</button>}</div>
     <p role="status" className="music-local-status">{message || (summary ? `${summary.albumCount} 张专辑 · ${summary.trackCount} 首歌曲` : '')}</p>
   </section>;
 }
