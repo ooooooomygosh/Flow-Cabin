@@ -80,7 +80,7 @@
 .turntable-record-art .custom-vinyl.is-spinning { animation:px-spin 5s steps(8, end) infinite; will-change:transform; }
 .turntable-needle { position:absolute; right:9px; top:14px; width:5px; height:49px; border:1px solid #38251b; background:#d5bd91; transform:rotate(24deg); transform-origin:top; box-shadow:2px 2px #0008; }
 .turntable-needle:after { content:''; position:absolute; width:10px; height:6px; bottom:-2px; left:-3px; background:#ddd0ac; border:1px solid #38251b; }
-.player-visual-note { margin:8px 0 0; font-size:12px; line-height:1.6; opacity:.7; }
+.player-visual-note { margin:8px 0 0; font-size:12px; line-height:16px; opacity:.7; overflow-wrap:anywhere; }
 :root[data-desktop-reduce-motion=true] .turntable-record-art .custom-vinyl { animation:none; }
 @media(prefers-reduced-motion:reduce) { .turntable-record-art .custom-vinyl { animation:none; } }
 @media(max-height:700px) { .turntable-record-art { height:76px; } .turntable-sleeve { width:56px;height:56px;top:8px;left:calc(50% - 53px); } .turntable-record-art .custom-vinyl { width:62px;height:62px;top:5px; } .turntable-needle { height:35px; } }
