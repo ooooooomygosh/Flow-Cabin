@@ -1,6 +1,6 @@
 'use strict';
 const { _electron } = require('playwright'), fs = require('node:fs'), path = require('node:path'), assert = require('node:assert/strict');
-const { mountFixture, albums } = require('./ui-fixture.cjs');
+const { mountFixture, albums, openRecordTools, closeRecordCard } = require('./ui-fixture.cjs');
 const desktop = path.resolve(__dirname, '..'), output = path.join(desktop, 'test-results/improvements'); fs.mkdirSync(output, { recursive: true });
 const env = { ...process.env, ALBUM_DESKTOP_TEST_PROFILE: path.join(output, `profile-${Date.now()}`) }; delete env.ELECTRON_RUN_AS_NODE;
 const executablePath = process.env.ALBUM_QA_EXE || path.join(desktop, 'node_modules/electron/dist/electron.exe');
@@ -27,22 +27,22 @@ let app, site;
     Object.defineProperty(event, 'dataTransfer', { value: { setData() {}, setDragImage(element) { preview = element.querySelector('.custom-vinyl').style.getPropertyValue('--vinyl-base'); } } });
     node.dispatchEvent(event); return preview;
   }); assert.equal(dragImage, '#d23c1e');
-  await site.getByRole('button', { name: '自定义唱片', exact: true }).click();
+  await openRecordTools(site);
   const editor = site.getByRole('dialog', { name: '自定义唱片' });
   // The editor starts its own asynchronous cover sample after mounting.
   await site.waitForFunction((input) => input.value === '#d23c1e', await editor.getByLabel('黑胶底色', { exact: true }).elementHandle());
   assert.equal(await editor.getByLabel('黑胶底色', { exact: true }).inputValue(), '#d23c1e');
-  await editor.getByLabel('黑胶底色', { exact: true }).fill('#2255aa'); await editor.getByRole('button', { name: '保存唱片设置', exact: true }).click();
+  await editor.getByLabel('黑胶底色', { exact: true }).fill('#2255aa'); await editor.getByRole('button', { name: '保存唱片设置', exact: true }).click(); await closeRecordCard(site);
   await site.waitForFunction(() => document.querySelector('.room-turntable .custom-vinyl')?.style.getPropertyValue('--vinyl-base') === '#2255aa');
   assert.equal(await site.locator('.room-drag-record .custom-vinyl').first().evaluate((node) => node.style.getPropertyValue('--vinyl-base')), '#2255aa'); check('manual-colour-wins-in-editor-turntable-and-drag-preview');
 
   await site.locator('.room-record').nth(3).click();
-  await site.getByRole('button', { name: '自定义唱片', exact: true }).click();
+  await openRecordTools(site);
   await editor.getByLabel('黑胶底色', { exact: true }).fill('#00aa77');
   await app.evaluate(() => globalThis.__qaReleaseImage());
   await site.waitForFunction(() => document.querySelectorAll('.room-drag-record .custom-vinyl')[3]?.style.getPropertyValue('--vinyl-base') === '#d23c1e');
   assert.equal(await editor.getByLabel('黑胶底色', { exact: true }).inputValue(), '#00aa77');
-  await editor.getByRole('button', { name: '保存唱片设置', exact: true }).click();
+  await editor.getByRole('button', { name: '保存唱片设置', exact: true }).click(); await closeRecordCard(site);
   check('late-cover-result-cannot-overwrite-an-in-progress-manual-colour');
 
   const handle = site.getByRole('button', { name: '移动唱机', exact: true }), deck = site.locator('.room-turntable');

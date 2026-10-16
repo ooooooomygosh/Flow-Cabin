@@ -14,7 +14,7 @@
 .turntable-copy > strong, .turntable-heading, .room-empty > p,
 .pixel-button, .cabin-room .cabin-toolbar button, .room-selection-actions button, .room-selection-actions a,
 .dialog-tabs button, .segmented button, .room-cat-bubble, .app-toast, .room-shelf-navigation, .focus-badge,
-.cabin-scene .room-empty button, .turntable-controls button, .turntable-source, .backup-stats dt,
+.cabin-scene .room-empty button, .turntable-controls button, .backup-stats dt,
 .record-card-kicker, .room-selection-copy small, .app-brand small, .scene-choice strong, .pet-choice strong {
   font-family: var(--px-font-cn); font-weight: 400; letter-spacing: 0; -webkit-font-smoothing: none;
 }
@@ -31,23 +31,23 @@
 
 /* ── buttons: bevel + hover lift + click squish, all in frames ─────────── */
 .pixel-button, .room-selection-actions button, .room-selection-actions a, .cabin-scene .room-empty button,
-.add-manual > .pixel-button, .record-card-tools .record-tools-button, .record-card-tools .discogs-link, .personalization-footer .record-primary {
+.add-manual > .pixel-button, .record-card-tools .record-tools-button, .record-card-tools .discogs-link {
   box-shadow: inset 2px 2px 0 #ffffff1f, inset -2px -2px 0 #0000004d, var(--px-shadow-2);
   transition: translate var(--px-dur-fast) steps(2, end), box-shadow var(--px-dur-fast) steps(2, end), background-color var(--px-dur-fast) steps(2, end), filter var(--px-dur-fast) steps(2, end);
 }
 .pixel-button:hover:not(:disabled), .room-selection-actions button:hover, .room-selection-actions a:hover,
-.cabin-scene .room-empty button:hover, .record-card-tools .record-tools-button:hover, .record-card-tools .discogs-link:hover, .personalization-footer .record-primary:hover {
+.cabin-scene .room-empty button:hover, .record-card-tools .record-tools-button:hover, .record-card-tools .discogs-link:hover {
   translate: 0 -2px; box-shadow: inset 2px 2px 0 #ffffff29, inset -2px -2px 0 #0000004d, 4px 6px 0 var(--px-shadow); filter: brightness(1.06);
 }
 .pixel-button:active:not(:disabled), .room-selection-actions button:active, .room-selection-actions a:active,
-.cabin-scene .room-empty button:active, .record-card-tools .record-tools-button:active, .record-card-tools .discogs-link:active, .personalization-footer .record-primary:active {
+.cabin-scene .room-empty button:active, .record-card-tools .record-tools-button:active, .record-card-tools .discogs-link:active {
   translate: 2px 2px; box-shadow: inset 2px 2px 0 #0000004d, inset -2px -2px 0 #ffffff14, 1px 1px 0 var(--px-shadow); transition-duration: 0s;
 }
-.pixel-button.is-primary, .cabin-scene .room-empty button:not(.room-welcome-focus), .personalization-footer .record-primary {
+.pixel-button.is-primary, .cabin-scene .room-empty button:not(.room-welcome-focus) {
   color: var(--px-ink-on-accent); background: var(--px-accent); border-color: var(--px-accent-hi);
   box-shadow: inset 2px 2px 0 var(--px-accent-hi), inset -2px -2px 0 var(--px-accent-lo), var(--px-shadow-2);
 }
-.pixel-button.is-primary:hover:not(:disabled), .personalization-footer .record-primary:hover { box-shadow: inset 2px 2px 0 #fff0cc, inset -2px -2px 0 var(--px-accent-lo), 4px 6px 0 var(--px-shadow); }
+.pixel-button.is-primary:hover:not(:disabled) { box-shadow: inset 2px 2px 0 #fff0cc, inset -2px -2px 0 var(--px-accent-lo), 4px 6px 0 var(--px-shadow); }
 /* The selection card's primary action takes the scene's own accent (CabinRoom sets --scene-accent). */
 .cabin-room .room-selection-actions .room-open-album {
   color: var(--px-ink-on-accent); background: var(--scene-accent); border-color: color-mix(in srgb, var(--scene-accent) 55%, #fff);
@@ -57,28 +57,29 @@
 .pixel-button.is-quiet { box-shadow: none; }
 .pixel-button.is-quiet:hover:not(:disabled) { box-shadow: var(--px-shadow-1); }
 
-/* HUD chips (toolbar groups, 沉浸, the focus badge): one framed strip each, 40px tall,
-   keys light up like lamp buttons. A running timer lights the badge frame. */
-.cabin-toolbar-group, .cabin-room > .focus-badge {
+/* HUD chips (the toolbar's groups: the focus badge, then the room actions): one framed
+   strip each, 40px tall, keys light up like lamp buttons. A running timer lights its frame. */
+.cabin-toolbar-group {
   border: 4px solid transparent; border-image: var(--px-frame-img-quiet) 2 / 4px stretch; background-clip: padding-box;
   background-color: var(--px-surface-hud); box-shadow: var(--px-shadow-2);
 }
 .cabin-toolbar-group { padding: 2px; }
-.cabin-room > .focus-badge.is-running { border-image-source: var(--px-frame-img-accent); }
+.cabin-toolbar-group:has(> .focus-badge.is-running) { border-image-source: var(--px-frame-img-accent); }
+.cabin-room .cabin-toolbar button.is-on > svg { color: var(--px-good); }
 .cabin-room .cabin-toolbar button { transition: background-color var(--px-dur-fast) steps(2, end), color var(--px-dur-fast) steps(2, end), translate var(--px-dur-fast) steps(2, end); }
 .cabin-room .cabin-toolbar button:hover:not(:disabled) { background: #ffd99c1f; color: var(--px-ink); translate: 0 -1px; }
 .cabin-room .cabin-toolbar button:active:not(:disabled) { translate: 0 1px; transition-duration: 0s; }
 .cabin-room .cabin-toolbar button svg, .pixel-button svg { shape-rendering: crispEdges; }
 
 /* ── panels: 9-slice notched pixel frames ─────────────────────────────── */
-.cabin-room .room-now-playing, .shelf-filters, .cabin-scene .room-empty, .cabin-dialog, .record-dialog, .music-settings {
+.cabin-room .room-now-playing, .shelf-filters, .cabin-scene .room-empty, .cabin-dialog, .record-dialog {
   border: 6px solid transparent; border-image: var(--px-frame-img) 2 / 6px stretch; background-clip: padding-box;
 }
-.cabin-dialog, .record-dialog, .music-settings { box-shadow: var(--px-shadow-3); }
+.cabin-dialog, .record-dialog { box-shadow: var(--px-shadow-3); }
 .cabin-dialog-header { background: linear-gradient(var(--px-surface-3), var(--px-surface-2)); border-bottom: 2px solid var(--px-shadow); box-shadow: inset 0 -2px 0 var(--px-border); }
 .cabin-dialog-close, .desktop-controls button { transition: background-color var(--px-dur-fast) steps(2, end), color var(--px-dur-fast) steps(2, end); }
-:is(.cabin-dialog, .record-dialog, .music-settings)::backdrop { background: #0d0805b8; }
-.cabin-dialog[open], .record-dialog[open], .music-settings[open] { animation: px-dialog-in var(--px-dur-med) var(--px-ease) both; }
+:is(.cabin-dialog, .record-dialog)::backdrop { background: #0d0805b8; }
+.cabin-dialog[open], .record-dialog[open] { animation: px-dialog-in var(--px-dur-med) var(--px-ease) both; }
 @keyframes px-dialog-in { 0% { opacity: 0; translate: 0 12px; scale: .96; } 100% { opacity: 1; translate: 0; scale: 1; } }
 
 /* Tabs and segmented controls: sliding lamp-lit key. */
@@ -108,7 +109,7 @@
 :is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) input[type=date] { color-scheme: dark; }
 :is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) input[type=date]::-webkit-calendar-picker-indicator { filter: invert(72%) sepia(40%) saturate(600%) hue-rotate(345deg); opacity: .9; cursor: pointer; }
 /* compact contexts keep their own height (pocket player owns .pocket-track) */
-.cabin-room .pocket-track select, .cabin-room .turntable-source select { min-height: 0; }
+.cabin-room .pocket-track select { min-height: 0; }
 /* 专辑墙 search: the label is the well, the input inside it stays bare. */
 .album-wall-overlay .wall-search > label > input { border: 0; background: transparent; box-shadow: none; }
 input[type=range] { -webkit-appearance: none; appearance: none; height: 16px; background: transparent; cursor: pointer; }

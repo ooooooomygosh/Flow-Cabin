@@ -2,7 +2,7 @@
 @layer guards, reset, features, skin, overrides;
 @layer features {
 .focus-badge{font-variant-numeric:tabular-nums}
-.cabin-room > .focus-badge{position:absolute;z-index:21;top:calc(var(--px-titlebar) + 10px);right:16px;display:flex;align-items:center;gap:8px;padding:8px 12px;color:var(--px-ink-dim);font:inherit;font-size:12px;line-height:16px;cursor:pointer;transition:color var(--px-dur-fast) steps(2,end)}
+.cabin-toolbar .focus-badge{color:var(--px-ink-dim);cursor:pointer}
 .focus-badge:hover{color:var(--px-ink)}
 .focus-badge.is-running{color:var(--px-accent-hi)}
 .focus-badge.is-running::before{content:"";order:0;flex:none;width:6px;height:6px;background:var(--px-accent);animation:focus-lamp 1s steps(1,end) infinite}
@@ -12,10 +12,6 @@
 .focus-badge.phase-shortBreak::before,.focus-badge.phase-longBreak::before{background:var(--px-good)}
 .focus-badge.is-open .focus-badge-time{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 @keyframes focus-lamp{50%{background:var(--px-accent-lo)}}
-.cabin-room > .focus-badge:focus-visible{outline-offset:3px}
-.cabin-room.cabin-room .cabin-toolbar{right:180px}
-.room-zen:not(.room-zen-tools) .cabin-room > .focus-badge{top:12px}
-.room-zen .cabin-room .cabin-toolbar{right:200px}
 .cabin-toolbar .focus-badge.is-running{color:var(--px-accent-hi)}
 .cabin-toolbar .focus-badge.phase-shortBreak,.cabin-toolbar .focus-badge.phase-longBreak{color:var(--px-good)}
 .focus-dock{position:absolute;z-index:20;top:calc(var(--room-header-bottom,82px) + 58px);right:16px;width:min(360px,calc(100% - 32px));max-height:calc(100% - var(--room-header-bottom,82px) - 90px);display:flex;flex-direction:column;color:var(--px-ink);background:#27180ef2;border:2px solid var(--px-brass);box-shadow:6px 6px 0 #120b06b3;image-rendering:pixelated;font-size:13px}

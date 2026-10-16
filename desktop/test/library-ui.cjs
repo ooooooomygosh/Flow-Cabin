@@ -1,6 +1,6 @@
 'use strict';
 const { _electron } = require('playwright'), fs = require('node:fs'), path = require('node:path'), assert = require('node:assert/strict');
-const { mountFixture, albums, chooseRoomScene } = require('./ui-fixture.cjs');
+const { mountFixture, albums, chooseRoomScene, openRecordTools, closeRecordCard } = require('./ui-fixture.cjs');
 const desktop = path.resolve(__dirname, '..'), output = path.join(desktop, 'test-results');
 const env = { ...process.env, ALBUM_DESKTOP_TEST_PROFILE: path.join(output, `library-ui-profile-${Date.now()}`) }; delete env.ELECTRON_RUN_AS_NODE;
 const executablePath = process.env.ALBUM_QA_EXE || path.join(desktop, 'node_modules/electron/dist/electron.exe');
@@ -15,7 +15,7 @@ const ROOM = 'local-room';
   for (let i = 0; i < 100; i++) { site = app.context().pages().find((p) => p.url().startsWith('https://album-circle.vercel.app')); if (site) break; await new Promise((r) => setTimeout(r, 100)); }
   site.on('pageerror', (error) => report.pageErrors.push(error.message));
   await mountFixture(app, site, { items });
-  const filters = site.getByRole('button', { name: /筛选与唱片盒/ });
+  const filters = site.getByRole('button', { name: '整理唱片架', exact: true });
   await filters.click(); await site.getByRole('button', { name: '管理唱片盒', exact: true }).click();
   const manager = site.getByRole('dialog', { name: '管理唱片盒' });
   await manager.getByLabel('新唱片盒名称').fill('周末收藏'); await manager.getByRole('button', { name: '新建唱片盒', exact: true }).click();
@@ -33,14 +33,14 @@ const ROOM = 'local-room';
   check('create-rename-boxes-and-filter-the-shelf');
 
   await filters.click(); await site.locator('.room-record').first().click();
-  await site.getByRole('button', { name: '自定义唱片', exact: true }).click();
+  await openRecordTools(site);
   const editor = site.getByRole('dialog', { name: '自定义唱片' });
   await editor.getByLabel('黑胶底色', { exact: true }).fill('#a23856'); await editor.getByLabel('黑胶透明度').fill('62');
   await editor.getByRole('button', { name: '复古金彩', exact: true }).click(); await editor.getByLabel('泼溅颜色数量', { exact: true }).selectOption('3');
   await editor.getByLabel('泼溅颜色 1', { exact: true }).fill('#f4db92'); await editor.getByLabel('泼溅颜色 2', { exact: true }).fill('#a53d45'); await editor.getByLabel('泼溅颜色 3', { exact: true }).fill('#eadbc0');
   await editor.getByLabel('流派标签', { exact: true }).fill('爵士，电子');
   await editor.screenshot({ path: path.join(output, 'custom-vinyl.png') });
-  await editor.getByRole('button', { name: '保存唱片设置', exact: true }).click();
+  await editor.getByRole('button', { name: '保存唱片设置', exact: true }).click(); await closeRecordCard(site);
   await site.locator('.room-record').first().dblclick();
   const vinyl = site.locator('.room-turntable .custom-vinyl');
   assert.equal(await vinyl.getAttribute('data-splatter'), 'true');

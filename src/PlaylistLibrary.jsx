@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import Dialog from './Dialog';
-import { QueueList, Play, ShufflePixel, Plus, Check, Heart, Search, Loading, Link, DocumentArrow, ArrowLeft, Music2, ListBullet } from './icons';
+import { Play, ShufflePixel, Plus, Check, Heart, Search, Loading, Link, DocumentArrow, ArrowLeft, Music2, ListBullet } from './icons';
 import { addItem, updateItem } from './collection-api.mjs';
 import { musicRequest } from './room-playback.mjs';
 import { desktopCommand, useDesktopAppearance } from './desktop-client';
@@ -9,9 +8,9 @@ import { parsePlaylistFile } from './playlist-files.mjs';
 import { PLAYLIST_SOURCES, playlistItem, playlistKey, playlistRefreshPatch, mergePlaylistPage, PLAYLIST_TRACK_LIMIT, filterTracks, formatDuration, totalDuration } from './playlist-model.mjs';
 import './playlist-library.css';
 
-// 「我的歌单」: account playlists from 网易云 / QQ 音乐 / Apple Music, public
-// share links and exported files. A playlist is a sleeve on the shelf: put it
-// on the turntable, shuffle it, or queue it after the current record.
+// 「添加到唱片架 › 我的歌单」: account playlists from 网易云 / QQ 音乐 / Apple Music,
+// public share links and exported files. A playlist is a sleeve on the shelf: put
+// it on the turntable, shuffle it, or queue it after the current record.
 const isMac = typeof navigator !== 'undefined' && /Mac/i.test(navigator.platform || navigator.userAgent || '');
 const TABS = [
   { id: 'netease', label: '网易云音乐', hint: '我的歌单 · 收藏' },
@@ -139,7 +138,7 @@ function LinkAndFile({ openDetail, busy, setBusy, setError, compact = false, app
   </div>;
 }
 
-export default function PlaylistLibrary({ items, close, onAdded }) {
+export default function PlaylistImport({ items, close, onAdded }) {
   const desktop = useDesktopAppearance().client;
   const [tab, setTab] = useState(() => { try { const stored = localStorage.getItem('album-circle-playlist-tab-v1'); return TABS.some(t => t.id === stored) ? stored : 'netease'; } catch { return 'netease'; } });
   const [config, setConfig] = useState(null), [lists, setLists] = useState({}), [detail, setDetail] = useState(null), [busy, setBusy] = useState(false), [busyId, setBusyId] = useState(''), [error, setError] = useState(''), [notice, setNotice] = useState(''), [signing, setSigning] = useState('');
@@ -164,7 +163,8 @@ export default function PlaylistLibrary({ items, close, onAdded }) {
   const choose = (next) => { if (next === tab) return; cancelMore(); setTab(next); setDetail(null); setError(''); setNotice(''); setBusyId(''); try { localStorage.setItem('album-circle-playlist-tab-v1', next); } catch {} };
   const listProvider = tab === 'apple' ? 'apple-local' : tab;
   const loggedIn = tab === 'netease' ? config?.neteaseLoggedIn : tab === 'qq' ? config?.qqLoggedIn : false;
-  const refreshConfig = async () => { try { setConfig(await musicRequest('/config')); } catch (cause) { setConfig({}); setError(cause.message); } };
+  // On the web there is no desktop music service: the sign-in panel already says so, so no raw network error.
+  const refreshConfig = async () => { try { setConfig(await musicRequest('/config')); } catch (cause) { setConfig({}); if (desktop) setError(cause.message); } };
   const loadList = async (provider, force = false) => {
     if (!force && lists[provider]?.playlists) return;
     const current = ++listGen.current;
@@ -208,8 +208,7 @@ export default function PlaylistLibrary({ items, close, onAdded }) {
   };
   const state = lists[listProvider];
   const signIn = (provider) => { setSigning(provider); setError(''); desktopCommand('music-login', { provider }); };
-  return <Dialog title="我的歌单" icon={<QueueList size={20}/>} close={close} wide className="playlist-dialog">
-    <div className="playlist-shell">
+  return <div className="playlist-shell">
       <nav className="playlist-rail" role="tablist" aria-label="歌单来源">{TABS.map((entry) => {
         const connected = (entry.id === 'netease' ? config?.neteaseLoggedIn : entry.id === 'qq' ? config?.qqLoggedIn : false) && lists[entry.id]?.loggedIn !== false;
         return <button type="button" role="tab" disabled={busy} key={entry.id} aria-selected={tab === entry.id} className={`playlist-rail-tab is-${entry.id}`} onClick={() => choose(entry.id)}>
@@ -238,6 +237,5 @@ export default function PlaylistLibrary({ items, close, onAdded }) {
           : state?.playlists ? <div className="playlist-signin"><h3>{state.warning ? '部分歌单未能读取' : '还没有歌单'}</h3><p>{state.warning ? '请重试，暂时无法确认完整歌单列表。' : `在${PLAYLIST_SOURCES[tab].label}里创建或收藏歌单后，点刷新。`}</p><button type="button" className="pixel-button" onClick={() => loadList(tab, true)}>刷新</button></div>
           : null}
       </section>
-    </div>
-  </Dialog>;
+  </div>;
 }

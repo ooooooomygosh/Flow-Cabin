@@ -91,7 +91,7 @@ function NowPlayingWidget({ layout, move, item, provider, playback, player, spin
           <button type="button" aria-label="下一首" disabled={!player?.canNext} onClick={() => player?.next()}><ChevronRight size={15}/></button>
         </span>
       </div>
-    </div> : <p className="desktop-widget-empty">双击唱片架上的封面放一张唱片，或打开「我的歌单」。</p>}
+    </div> : <p className="desktop-widget-empty">双击唱片架上的封面放一张唱片，或在「添加到唱片架」里导入歌单。</p>}
   </Widget>;
 }
 
@@ -148,8 +148,9 @@ export default function DesktopWidgets({ mode = 'desktop', exit, ...music }) {
 
 // A persistent, small recovery control: fullscreen never removes interaction.
 // 沉浸模式 is a toggle: its label stays put and aria-pressed carries the state.
-// `tools` (显示工具) may be owned by the room so the zen clock can step aside.
-export function ImmersiveChrome({ zen, fullscreen, exitFullscreen, toggleZen, openStudy, tools: ownedTools, setTools: setOwnedTools }) {
+// `tools` (显示工具) may be owned by the room so the zen clock can step aside;
+// with the tools shown, the toolbar's 专注 badge opens every focus tool.
+export function ImmersiveChrome({ zen, fullscreen, exitFullscreen, toggleZen, tools: ownedTools, setTools: setOwnedTools }) {
   const [localTools, setLocalTools] = useState(false);
   const tools = setOwnedTools ? Boolean(ownedTools) : localTools, setTools = setOwnedTools || setLocalTools;
   useEffect(() => {
@@ -161,7 +162,6 @@ export function ImmersiveChrome({ zen, fullscreen, exitFullscreen, toggleZen, op
   return <div className={`immersive-exit is-visible${zen ? ' is-zen' : ''}`} role="toolbar" aria-label="全屏与沉浸工具">
     <button type="button" aria-pressed={zen} aria-keyshortcuts="Z" title={zen ? '回到正常模式 · Z' : '沉浸模式 · Z'} onClick={toggleZen}>沉浸模式</button>
     {zen && <button type="button" aria-expanded={tools} onClick={() => setTools((value) => !value)}>{tools ? '收起工具' : '显示工具'}</button>}
-    {zen && tools && <button type="button" onClick={openStudy}>学习</button>}
     {fullscreen && zen && !tools && <button type="button" onClick={exitFullscreen}>退出全屏</button>}
   </div>;
 }

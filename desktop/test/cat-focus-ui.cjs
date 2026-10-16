@@ -23,7 +23,7 @@ let app, site, host;
   await chooseRoomScene(site, 'pixel');
   await openRoomSettings(site);
   await site.getByRole('button', { name: '选择桌宠 奶糖', exact: true }).click();
-  await site.getByRole('button', { name: '回到小屋', exact: true }).click();
+  await site.getByRole('button', { name: '关闭设置', exact: true }).click(); await site.getByRole('dialog', { name: '设置', exact: true }).waitFor({ state: 'hidden' });
   const cat = site.locator('.room-cat .pixel-cat'); await cat.waitFor();
   await site.clock.fastForward(89000);
   assert.notEqual(await cat.getAttribute('data-pose'), 'walk');

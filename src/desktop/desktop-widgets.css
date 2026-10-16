@@ -3,9 +3,10 @@
 @layer guards, reset, features, skin, overrides;
 @layer guards {
 /* 桌面模式 hides the room chrome outright; the zen clock ignores its saved inline
-   position (only !important beats an inline style). */
+   position (only !important beats an inline style) and sits bottom-right, clear of
+   the console that steps back in on the left. */
 :root.room-desktop :is(.app-titlebar, .cabin-toolbar, .room-now-playing, .room-shelf-navigation, .focus-dock) { display: none !important; }
-.desktop-widgets.is-zen .desktop-widget.is-clock { left: 2.5% !important; top: auto !important; bottom: 5% !important; }
+.desktop-widgets.is-zen .desktop-widget.is-clock { left: auto !important; right: 2.5%; top: auto !important; bottom: 5% !important; text-align: right; }
 }
 @layer features {
 .desktop-widgets { position: absolute; inset: 0; z-index: 45; pointer-events: none; }
@@ -81,7 +82,7 @@
 .immersive-exit button[aria-pressed=true] { color: var(--px-ink-on-accent); background: var(--px-accent); box-shadow: inset 2px 2px 0 var(--px-accent-hi), inset -2px -2px 0 var(--px-accent-lo); }
 /* Titlebar visible (fullscreen, or zen with tools): sit centred inside the 56px band; narrow windows slide it clear of the right-hand actions. */
 .immersive-exit:not(.is-zen), :root.room-zen-tools .immersive-exit { top: calc((var(--px-titlebar) - 32px) / 2); }
-@media (max-width: 1100px) { .immersive-exit:not(.is-zen), :root.room-zen-tools .immersive-exit { left: 200px; translate: none; } .immersive-exit.is-zen { left: 12px; translate: none; } }
+@media (max-width: 1100px) { .immersive-exit:not(.is-zen), :root.room-zen-tools .immersive-exit { left: 200px; translate: none; } }
 
 @keyframes widget-in { from { opacity: 0; transform: translateY(6px); } }
 @keyframes clock-colon { 50% { opacity: .35; } }

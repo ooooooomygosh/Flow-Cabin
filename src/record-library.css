@@ -12,16 +12,10 @@
 .shelf-filters .record-library-controls{padding:16px 28px;background:var(--px-surface)}
 
 /* A bare <dialog class=record-dialog> (音源与账户) draws its own frame; inside the shared Dialog only the form skin applies. */
-.record-dialog:not(.cabin-dialog){color:var(--px-ink);background:var(--px-surface);padding:24px;max-width:min(900px,calc(100vw - 40px));width:860px;max-height:calc(100vh - 60px);overflow:auto;scrollbar-width:thin;scrollbar-color:var(--px-border) transparent}
-.record-dialog:not(.cabin-dialog)>header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:8px}
-.record-dialog:not(.cabin-dialog) h2{margin:0;font:400 24px/28px var(--px-font-cn);-webkit-font-smoothing:none;color:var(--px-ink)}
-.record-dialog:not(.cabin-dialog)>header button{padding:4px;min-width:var(--px-hit)}
 .record-dialog .cabin-dialog-body{scrollbar-width:thin;scrollbar-color:var(--px-border) transparent}
 .record-dialog button:not(.cabin-dialog-close){display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:var(--px-hit);border:2px solid var(--px-shadow);background:var(--px-surface-2);color:var(--px-ink);padding:6px 12px;cursor:pointer;font:400 12px/16px var(--px-font-cn);-webkit-font-smoothing:none;box-shadow:inset 2px 2px 0 #ffffff1a,inset -2px -2px 0 #0000004d;transition:background-color var(--px-dur-fast) steps(2,end)}
 .record-dialog button:not(.cabin-dialog-close):hover:not(:disabled){background:var(--px-surface-3)}
 .record-dialog button:not(.cabin-dialog-close):active:not(:disabled){translate:1px 1px;box-shadow:inset 2px 2px 0 #0000004d;transition-duration:0s}
-.record-dialog .record-primary{background:var(--px-accent);color:var(--px-ink-on-accent);box-shadow:inset 2px 2px 0 var(--px-accent-hi),inset -2px -2px 0 var(--px-accent-lo)}
-.record-dialog .record-primary:hover:not(:disabled){background:var(--px-accent-hi)}
 .record-dialog-intro{color:var(--px-ink-dim);font-size:14px;line-height:1.6;margin:4px 0 20px}
 .record-dialog-intro strong{color:var(--px-ink)}
 .record-dialog form>label{display:grid;gap:8px;font-size:14px;margin:14px 0}

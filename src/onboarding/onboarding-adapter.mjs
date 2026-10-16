@@ -7,15 +7,13 @@
 //   requestPermission('appleMusic') -> Promise<{ granted, needsPermission, available, error }>
 //   testPlayback({ provider, seconds }) -> Promise<{ ok, provider, quality, title } | { ok:false, error }>
 //   Audio quality: GET /desktop-music/config { quality, qualities }, POST /desktop-music/quality { quality }.
-// Desktop (src/desktop/desktop-sink-client.mjs, docs/desktop.md): 沉入桌面 status / enter / exit,
-//   and src/desktop/autostart-client.mjs for 开机时打开小屋.
+// Desktop: src/desktop/autostart-client.mjs for 开机时打开小屋. 沉入桌面 is not wrapped here:
+//   Settings uses the room's own sink state and toggle (src/room/useRoomChrome.js).
 // Every call is wrapped so a failure never pretends a login or permission succeeded.
 import * as playerSources from '../player/sources.mjs';
-import * as desktopSink from '../desktop/desktop-sink-client.mjs';
 import { setAutostart } from '../desktop/autostart-client.mjs';
 import { sourceOptions } from './onboarding-model.mjs';
 
-export const DESKTOP_MODE_EVENT = desktopSink.DESKTOP_MODE_EVENT;
 const call = async (api, name, ...args) => {
   if (typeof api?.[name] !== 'function') return { missing: true };
   try { return { value: await api[name](...args) }; } catch (error) { return { error: error?.message || String(error) }; }
@@ -37,7 +35,7 @@ export function createPlayerAdapter({ api = playerSources, env = {}, request, wi
     },
     async connectSource(id) {
       if (!env.desktop) {
-        if (id === 'local') return { ok: false, fallback: 'add-album', error: '网页版请在「添加专辑 › 本地音乐」里直接选择音乐文件。' };
+        if (id === 'local') return { ok: false, fallback: 'add-album', error: '网页版请在「添加到唱片架 › 本地音乐」里直接选择音乐文件。' };
         return { ok: false, error: '需要在心流小屋桌面版中连接。' };
       }
       if (id === 'system' || id === 'appleMusic') return { ok: true };
@@ -47,6 +45,9 @@ export function createPlayerAdapter({ api = playerSources, env = {}, request, wi
     },
     async getSourceStatus(id) {
       const result = await call(api, 'getSourceStatus', id, options);
+      // On the web the desktop endpoints are absent: an unconnected source keeps its own hint
+      // rather than a raw network error ("Failed to fetch", "HTTP 404").
+      if (result.value && !env.desktop && !result.value.connected) return { connected: false, detail: '' };
       if (result.value) return { connected: Boolean(result.value.connected), detail: String(result.value.detail || ''), needsPermission: Boolean(result.value.needsPermission) };
       return { connected: false, detail: env.desktop ? '暂时读不到状态' : '' };
     },
@@ -76,32 +77,23 @@ export function createPlayerAdapter({ api = playerSources, env = {}, request, wi
       if (result.missing) return { ok: false, error: '这个版本还不能试听。' };
       return result.error ? { ok: false, error: result.error } : { kind: 'track', ...(result.value || {}), ok: Boolean(result.value?.ok) };
     },
+    // The tier the platforms are asked for; an older music server that lists none gets the three standard tiers.
     async qualities() {
       if (!env.desktop || !request) return null;
       try {
         const c = await request('/config');
-        if (!Array.isArray(c.qualities) || !c.qualities.length) return null;
-        return { options: c.qualities.map((q) => typeof q === 'string' ? { id: q, label: q } : { id: q.id ?? q.value, label: q.label ?? q.id }), current: c.quality || '' };
+        const list = Array.isArray(c.qualities) && c.qualities.length ? c.qualities : DEFAULT_QUALITIES;
+        return { options: list.map((q) => typeof q === 'string' ? { id: q, label: q } : { id: q.id ?? q.value, label: q.label ?? q.id }), current: c.quality || '' };
       } catch { return null; }
     },
-    async setQuality(id) { try { await request('/quality', { quality: id }); return true; } catch { return false; } }
-  };
-}
-
-// 沉入桌面 for the settings hub: the same desktop-sink module the toolbar uses.
-export function createDesktopAdapter({ api = desktopSink } = {}) {
-  return {
-    async status() {
-      const result = await call(api, 'getDesktopModeStatus');
-      const value = result.value || {};
-      return { active: Boolean(value.active), busy: Boolean(value.busy), supported: value.supported !== false && !result.error, via: String(value.via || ''), reason: String(value.reason || result.error || '') };
-    },
-    async enter() { return !(await call(api, 'enterDesktopMode')).error; },
-    async exit() { return !(await call(api, 'exitDesktopMode')).error; },
-    subscribe(listener) {
-      if (typeof api?.onDesktopModeChange !== 'function') return () => {};
-      const off = api.onDesktopModeChange((detail) => listener(detail || {}));
-      return typeof off === 'function' ? off : () => {};
+    // The one 音质 path (Settings and the first-run guide): the deck hears
+    // `album-music-settings` and resumes the current song at its position.
+    async setQuality(id) {
+      if (!request) return false;
+      try { await request('/quality', { quality: id }); } catch { return false; }
+      win.dispatchEvent?.(new Event('album-music-settings'));
+      return true;
     }
   };
 }
+const DEFAULT_QUALITIES = [{ id: 'standard', label: '标准 · 128k' }, { id: 'exhigh', label: '高品质 · 320k' }, { id: 'lossless', label: '无损 · FLAC' }];

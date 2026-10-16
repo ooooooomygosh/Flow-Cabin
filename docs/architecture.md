@@ -17,7 +17,7 @@ Electron 主进程负责系统能力与本机数据，React 渲染进程负责�
 | `src/scene-catalog.mjs` | 六个稳定 ID：pixel（默认）、warm、night-study、forest、seaside、starlight；画面、可访问文本、唱片格几何（月夜书桌九格，其余十二格）；非法值回退 pixel |
 | `src/pet/pet-catalog.mjs` | cat 奶糖、chick 蛋挞、bunny 棉花、bear 可可、fox 枫糖；非法值回退 cat |
 | `src/pet/pet-sprites.mjs` | 原创代码生成不同物种的像素轮廓、动作与配饰；保留旧猫；边界化缓存与像素命中 |
-| `src/RoomPersonalization.jsx` | 「布置小屋」选择与预览，经收藏设置保存；不创建新的播放或计时实例 |
+| `src/RoomPickers.jsx` | 场景与伙伴选择（设置 › 房间与桌宠、首次引导「房间」步共用），经收藏设置保存；不创建新的播放或计时实例 |
 | `src/focus/FocusDock.jsx` | `BUILTIN_FOCUS_TOOLS` 固定注册 timer、tasks、stats、sound、notes |
 | `src/focus/QuickNotes.jsx` | 纯文本、本机保存、长度上限、清空确认、保存失败提示 |
 

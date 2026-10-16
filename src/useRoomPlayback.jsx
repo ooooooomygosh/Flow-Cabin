@@ -161,7 +161,7 @@ export default function useRoomPlayback(record, trackIndex, provider, onNext, op
       const name = trackNames(record)[trackIndex]; if (!name) { update({ status: 'error', error: '原始资料没有曲目，无法定位音频。' }); return; }
       // Files picked in this session play directly, whichever audio source is selected.
       const sessionUrl = sessionTrackUrl(record, trackIndex); if (sessionUrl) { await resolve({ sessionUrl, provider: 'local', title: name }); return; }
-      if (isSessionAlbum(record) && provider === 'local') { update({ status: 'error', error: '这张专辑是从文件临时导入的，重新打开小屋后需要再选一次文件：「添加专辑 › 本地音乐 › 选择音乐文件」。' }); return; }
+      if (isSessionAlbum(record) && provider === 'local') { update({ status: 'error', error: '这张专辑是从文件临时导入的，重新打开小屋后需要再选一次文件：「添加到唱片架 › 本地音乐 › 选择音乐文件」。' }); return; }
       // Matched while the previous track played: start at once. A stale entry
       // simply falls through to a fresh match.
       if (ready) {

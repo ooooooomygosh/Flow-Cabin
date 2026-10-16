@@ -28,7 +28,7 @@ export async function verifyQQRegression({ browser, origin, check }) {
     return route.continue();
   });
   const page = await context.newPage(); page.setDefaultTimeout(12000); page.on('pageerror', e => errors.push(e.message));
-  const open = async next => { mode = next; await page.goto(origin); await page.getByRole('button', { name: '我的歌单', exact: true }).click(); };
+  const open = async next => { mode = next; await page.goto(origin); await page.getByRole('button', { name: '添加到唱片架', exact: true }).click(); await page.getByRole('tab', { name: '我的歌单', exact: true }).click(); };
   try {
     await open('expired'); await page.getByRole('button', { name: '登录QQ 音乐', exact: true }).waitFor();
     assert.equal(await page.getByRole('heading', { name: '还没有歌单', exact: true }).count(), 0);
@@ -42,10 +42,13 @@ export async function verifyQQRegression({ browser, origin, check }) {
     check('qq-partial-list-keeps-liked-and-retry-clears-warning');
     await open('partial-empty'); await page.getByRole('heading', { name: '部分歌单未能读取' }).waitFor();
     assert.equal(await page.getByRole('heading', { name: '还没有歌单', exact: true }).count(), 0); check('qq-unconfirmed-empty-is-not-reported-as-empty-account');
-    await page.keyboard.press('Escape'); await page.getByRole('button', { name: '设置', exact: true }).click();
-    await page.getByRole('tab', { name: '专注工具', exact: true }).click(); await page.getByRole('button', { name: '打开学习' }).click();
-    await page.getByRole('tab', { name: '学习', exact: true }).waitFor(); assert.equal(await page.getByRole('tab', { name: '学习', exact: true }).getAttribute('aria-selected'), 'true');
-    check('settings-learning-shortcut-opens-existing-study-dock');
+    // 学习 has one entry: the toolbar's 专注 badge opens the dock, 学习 is its tab (设置 holds only preferences).
+    await page.keyboard.press('Escape'); await page.getByRole('button', { name: '设置', exact: true }).click(); await page.getByRole('tab', { name: '专注工具', exact: true }).click();
+    assert.equal(await page.getByRole('dialog', { name: '设置', exact: true }).getByRole('button', { name: /打开学习|打开番茄钟|查看统计/ }).count(), 0, 'no action rows in 设置');
+    await page.getByLabel('专注（分）').waitFor(); await page.keyboard.press('Escape');
+    await page.locator('.cabin-toolbar .focus-badge').click(); await page.getByRole('tab', { name: '学习', exact: true }).click();
+    assert.equal(await page.getByRole('tab', { name: '学习', exact: true }).getAttribute('aria-selected'), 'true'); await page.locator('.focus-dock').waitFor();
+    check('toolbar-focus-badge-opens-study-dock-and-settings-holds-preferences');
     assert.deepEqual(errors, []);
   } finally { await context.close(); }
 }

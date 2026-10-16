@@ -11,6 +11,7 @@ import PixelClock from './PixelClock';
 import TaskList from './TaskList';
 import FocusStats from './FocusStats';
 import QuickNotes from './QuickNotes';
+import FocusSettingsForm from './FocusSettingsForm';
 // The study tab (FSRS scheduler, word books) is a separate chunk, fetched as
 // soon as the dock opens; once loaded it renders synchronously like any tab.
 let LoadedStudy = null, studyLoad = null;
@@ -28,20 +29,6 @@ import './focus.css';
 export const BUILTIN_FOCUS_TOOLS = Object.freeze([['timer', '番茄钟', Clock, FocusTimer], ['tasks', '待办', ListBullet, TaskList], ['stats', '统计', ChartBar, FocusStats], ['study', '学习', Study, StudyPanel], ['sound', '声音', SpeakerWave, SoundMixer], ['notes', '随手记', BookOpen, QuickNotes]]);
 const TABS = BUILTIN_FOCUS_TOOLS, TAB_ITEMS = TABS.map(([id, label, Icon]) => ({ id, label: <span>{label}</span>, icon: <Icon size={16}/> }));
 
-function DurationSetting({ name, label, value, max, onSave }) {
-  const [draft, setDraft] = useState(String(value));
-  useEffect(() => setDraft(String(value)), [value]);
-  const save = () => {
-    if (!draft.trim() || !Number.isFinite(Number(draft))) { setDraft(String(value)); return; }
-    const next = Math.max(name === 'longEvery' ? 2 : 1, Math.min(max, Math.round(Number(draft))));
-    setDraft(String(next)); onSave(next);
-  };
-  return <label>{label}<input type="number" min={name === 'longEvery' ? 2 : 1} max={max} step="1" value={draft} onChange={(event) => setDraft(event.target.value)} onBlur={save} onKeyDown={(event) => {
-    if (event.key === 'Enter') { event.preventDefault(); save(); }
-    if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); setDraft(String(value)); }
-  }}/></label>;
-}
-
 export function FocusTimer() {
   const focus = useFocus(), { timer, settings, tasks } = focus.state, [editing, setEditing] = useState(false);
   const idle = timer.phase === 'idle', remaining = idle ? phaseDuration(settings, 'focus') : focus.remaining;
@@ -49,10 +36,6 @@ export function FocusTimer() {
   const progress = phaseProgress(timer.paused ? timer : { ...timer, endsAt: focus.now + displayRemaining }, settings, focus.now);
   const day = dayKey(focus.now), today = useMemo(() => focusStats(focus.state.sessions, focus.now), [focus.state.sessions, day]), preset = activePreset(settings);
   const task = tasks.find((item) => item.id === timer.taskId);
-  const number = (key, label, max) => <DurationSetting name={key} label={label} value={settings[key]} max={max} onSave={(value) => focus.settings({ [key]: value })}/>;
-  // 系统通知 asks for permission when it is switched on (the same rule as 设置 › 专注工具).
-  const ask = (key, on) => { if (key === 'notify' && on && typeof Notification !== 'undefined' && Notification.permission === 'default') Notification.requestPermission().catch?.(() => {}); };
-  const check = (key, label) => <label className="focus-check"><input type="checkbox" checked={settings[key]} onChange={(event) => { focus.settings({ [key]: event.target.checked }); ask(key, event.target.checked); }}/>{label}</label>;
   return <div className={`focus-timer phase-${timer.phase} ${timer.paused ? 'is-paused' : ''}`}>
     <p className="focus-phase" role="status">{PHASE_LABELS[timer.phase]}{timer.paused ? ' · 已暂停' : ''}</p>
     <PixelRing progress={progress} running={!idle && !timer.paused}>
@@ -71,11 +54,7 @@ export function FocusTimer() {
     <p className="focus-today" aria-label={`今天完成 ${today.todaySessions} 轮，专注 ${today.today} 分钟`}><span>今日</span><b>{today.todaySessions}</b> 轮<span aria-hidden="true">·</span><b>{today.today}</b> 分钟{today.streak > 1 && <><span aria-hidden="true">·</span>连续 <b>{today.streak}</b> 天</>}</p>
     <label className="focus-current-task">当前任务<select aria-label="当前专注任务" value={timer.taskId} onChange={(event) => focus.selectTask(event.target.value)}><option value="">自由专注</option>{tasks.filter((item) => !item.done || item.id === timer.taskId).map((item) => <option key={item.id} value={item.id}>{item.text}</option>)}</select></label>
     {task && <p className="focus-task-now" title={task.text}>正在：{task.text}</p>}
-    {editing && <div className="focus-settings">
-      {!idle && <small>时长修改从下一轮开始生效。</small>}
-      <div className="focus-settings-grid">{number('focusMin', '专注（分）', 180)}{number('shortMin', '短休（分）', 60)}{number('longMin', '长休（分）', 90)}{number('longEvery', '几轮长休', 8)}</div>
-      {check('hideSeconds', '隐藏秒数（仅显示剩余分钟）')}{check('autoBreak', '专注结束自动开始休息')}{check('autoFocus', '休息结束自动开始专注')}{check('notify', '系统通知')}{settings.notify && typeof Notification !== 'undefined' && Notification.permission === 'denied' && <small>系统通知已被拒绝，请在系统设置里允许心流小屋。</small>}{check('chime', '提示音')}{check('autoSound', '开始专注时打开声音')}
-    </div>}
+    {editing && <FocusSettingsForm running={!idle}/>}
   </div>;
 }
 
