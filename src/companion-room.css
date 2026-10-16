@@ -37,6 +37,9 @@
 .room-zen:not(.room-zen-tools) .cabin-scene.room-scene .room-cat,.wallpaper-room .cabin-scene.room-scene .room-cat{--cat-floor:var(--cat-floor-scene,28px)}
 /* bubble showing: lift the cat above the console (.room-turntable z10) — both live in .room-scene's isolated stacking context, so this stays under the focus dock/dialogs */
 .room-scene .room-cat:has(> .room-cat-bubble){z-index:var(--z-room-pet,22);pointer-events:none}
+/* …but the pet itself stays pokeable (专注暂停中 too): only a body-sized zone catches the pointer, so the lifted
+   box and the bubble never swallow clicks on the console beneath. A pseudo-element hit lands on the button. */
+.room-scene button.room-cat:has(> .room-cat-bubble)::after{content:'';position:absolute;left:18%;right:18%;top:30%;bottom:4%;pointer-events:auto}
 .room-cat .pixel-cat{display:block;width:100%;height:100%;image-rendering:pixelated}
 .room-cat:focus-visible{outline:2px solid #ffe2a8;outline-offset:3px}
 .room-cat-bubble{position:absolute;left:50%;bottom:100%;translate:-50% -4px;white-space:nowrap;padding:5px 9px;font-size:clamp(10px,.8vw,14px);line-height:1.2;color:#3b2a20;background:#fff7e6;border:2px solid #3b2a20;box-shadow:3px 3px 0 #3b2a2066;pointer-events:none;animation:bubble-pop .18s ease-out}
