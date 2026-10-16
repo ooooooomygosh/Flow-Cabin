@@ -1,4 +1,4 @@
-// Every keyboard shortcut of the cabin in one table: the settings help row is
+// Every keyboard shortcut of the cabin in one table: 设置 › 显示与桌面 › 快捷键 is
 // rendered from it and buttons take `aria-keyshortcuts` from `keys`.
 // scope: 'room' (the cabin, no dialog open), 'deck' (a record is on the deck),
 // 'corner' (唱机特写), 'app' (anywhere in the desktop app).
@@ -21,5 +21,3 @@ export const SHORTCUTS = Object.freeze([
 ]);
 export const shortcut = (id) => SHORTCUTS.find((entry) => entry.id === id);
 export const ariaKeys = (id) => shortcut(id)?.keys || undefined;
-// One line for help text: "空格 播放 / 暂停 · Z 沉浸 · …".
-export const shortcutHelp = (list = SHORTCUTS) => list.map((entry) => `${entry.label} ${entry.action}`).join(' · ');

@@ -15,7 +15,7 @@ import { version } from '../../package.json';
 import UpdatePanel from '../desktop/UpdatePanel';
 import './onboarding.css';
 import { CROSSFADE_OPTIONS, crossfadeSeconds, setCrossfadeSeconds, onCrossfadeChange } from '../player/crossfade.mjs';
-import { shortcutHelp } from '../shortcuts.mjs';
+import { SHORTCUTS } from '../shortcuts.mjs';
 
 export const HUB_SECTIONS = Object.freeze([
   { id: 'music', label: '音源' }, { id: 'room', label: '房间与桌宠' }, { id: 'focus', label: '专注工具' },
@@ -128,6 +128,6 @@ function DisplaySection({ env, desktop }) {
     </Row>
     {env.desktop && <AutostartRow/>}
     {env.desktop && <Row title="显示与字体" hint="界面缩放、字体、减少动态效果。"><button type="button" className="pixel-button" onClick={() => desktopCommand('settings')}>打开显示与字体</button></Row>}
-    <Row title="快捷键" hint={shortcutHelp()}/>
+    <div className="hub-row hub-shortcuts-row"><span><strong>快捷键</strong><dl className="hub-shortcuts">{SHORTCUTS.map((entry) => <div key={entry.id}><dt>{entry.label}</dt><dd>{entry.action}</dd></div>)}</dl></span></div>
   </div>;
 }

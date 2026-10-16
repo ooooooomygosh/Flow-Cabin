@@ -65,6 +65,12 @@
 .hub-row-actions .segmented button{white-space:nowrap}
 .hub-row-actions .pixel-button svg{order:1}
 .hub-toggle{display:inline-flex;align-items:center;gap:8px;font-size:12px}.hub-toggle input{width:18px;height:18px;accent-color:var(--ob-accent)}
+/* 快捷键: key caps in a grid instead of one long sentence. */
+.hub-shortcuts-row{align-items:flex-start;padding:8px 12px}.hub-shortcuts-row>span:first-child{flex:1}
+.hub-shortcuts{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:4px 16px;margin:4px 0 0}
+.hub-shortcuts div{display:flex;align-items:baseline;gap:8px;min-width:0;font-size:12px;line-height:20px}
+.hub-shortcuts dt{flex:none;padding:0 5px;line-height:18px;color:var(--px-ink);background:var(--px-surface-3);border:1px solid var(--ob-edge);box-shadow:1px 1px 0 var(--px-shadow);white-space:nowrap}
+.hub-shortcuts dd{margin:0;min-width:0;color:var(--ob-dim)}
 .hub-row select{flex:none;width:200px;max-width:100%;min-height:32px;height:32px;font-size:12px}
 .hub-led{display:inline-block;flex:none;width:6px;height:6px;margin-right:8px;vertical-align:middle;background:var(--px-ink-muted);box-shadow:0 0 0 1px var(--px-shadow)}.hub-led.is-on{background:var(--px-good)}
 /* 唱机音源: one radio row per source, the lamp shows connected / in use. */
