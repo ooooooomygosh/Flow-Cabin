@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Search, Plus, Check, FolderOpen, Disc3, Loading } from './icons';
 import Dialog from './Dialog';
+import { Tabs, Segmented, tabPanelProps } from './ui/Roving';
 import { buildSearchInput } from './music-search.mjs';
 import { addItem } from './collection-api.mjs';
 import { localAlbumItem, musicRequest, normalizeLocalLibrary } from './room-playback.mjs';
@@ -11,7 +12,8 @@ import { generatedCover } from './player/pixel-cover.mjs';
 
 // Every way onto the shelf, in one dialog: catalog search, account playlists / links /
 // files, scanned local folders and picked files, or typed by hand.
-export const ADD_TABS = [['catalog', '曲库搜索'], ['playlists', '我的歌单'], ['local', '本地音乐'], ['manual', '手动填写']];
+const ADD_TABS = [{ id: 'catalog', label: '曲库搜索' }, { id: 'playlists', label: '我的歌单' }, { id: 'local', label: '本地音乐' }, { id: 'manual', label: '手动填写' }];
+const CATALOGS = [{ id: 'itunes', label: 'Apple 曲库' }, { id: 'qq', label: 'QQ 音乐' }], RESULT_TYPES = [{ id: 'album', label: '专辑' }, { id: 'song', label: '单曲' }, { id: 'all', label: '全部' }];
 const looseTitle = (value) => String(value || '').toLowerCase().replace(/[\s\-_:：·()（）[\]【】.,'"!?]/g, '');
 const readProvider = () => { try { return localStorage.getItem('album-circle-search-provider-v2') === 'qq' ? 'qq' : 'itunes'; } catch { return 'itunes'; } };
 
@@ -50,8 +52,8 @@ function CatalogSearch({ initialQuery, onAdded, added }) {
       <button type="submit" className="pixel-button is-primary" disabled={status === 'searching'}>{status === 'searching' ? <Loading size={16}/> : '搜索'}</button>
     </form>
     <div className="add-options">
-      <div className="segmented" role="radiogroup" aria-label="曲库">{[['itunes', 'Apple 曲库'], ['qq', 'QQ 音乐']].map(([value, label]) => <button type="button" role="radio" key={value} aria-checked={provider === value} onClick={() => { if (provider !== value) { request.current?.abort(); setResults([]); setStatus(''); setProvider(value); } try { localStorage.setItem('album-circle-search-provider-v2', value); } catch {} }}>{label}</button>)}</div>
-      <div className="segmented" role="radiogroup" aria-label="类型">{[['album', '专辑'], ['song', '单曲'], ['all', '全部']].map(([value, label]) => <button type="button" role="radio" key={value} aria-checked={type === value} onClick={() => { if (type !== value) { request.current?.abort(); setResults([]); setStatus(''); setType(value); } }}>{label}</button>)}</div>
+      <Segmented label="曲库" items={CATALOGS} value={provider} onChange={(value) => { if (provider !== value) { request.current?.abort(); setResults([]); setStatus(''); setProvider(value); } try { localStorage.setItem('album-circle-search-provider-v2', value); } catch {} }}/>
+      <Segmented label="类型" items={RESULT_TYPES} value={type} onChange={(value) => { if (type !== value) { request.current?.abort(); setResults([]); setStatus(''); setType(value); } }}/>
     </div>
     {status && status !== 'searching' && <p className="add-status" role="status">{status}</p>}
     {status === 'searching' && <p className="add-status" role="status">正在翻找唱片…</p>}
@@ -129,20 +131,15 @@ function ManualAdd({ onAdded }) {
 }
 
 export default function AddAlbum({ items, close, initialQuery = '', initialTab = 'catalog', onAdded }) {
-  const [tab, setTab] = useState(() => ADD_TABS.some(([id]) => id === initialTab) ? initialTab : 'catalog'), [added, setAdded] = useState(() => new Set()), [notice, setNotice] = useState('');
+  const [tab, setTab] = useState(() => ADD_TABS.some(({ id }) => id === initialTab) ? initialTab : 'catalog'), [added, setAdded] = useState(() => new Set()), [notice, setNotice] = useState('');
   const handleAdded = (item, duplicate, candidateId) => {
     setAdded((old) => new Set([...old, candidateId || item.id]));
     setNotice(duplicate ? `《${item.title}》已经在唱片架上了。` : `《${item.title}》已放上唱片架。`);
     onAdded(item);
   };
-  const navigate = (event) => {
-    const index = ADD_TABS.findIndex(([id]) => id === tab), step = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
-    const next = step ? (index + step + ADD_TABS.length) % ADD_TABS.length : event.key === 'Home' ? 0 : event.key === 'End' ? ADD_TABS.length - 1 : -1;
-    if (next < 0) return; event.preventDefault(); setTab(ADD_TABS[next][0]); document.getElementById(`add-tab-${ADD_TABS[next][0]}`)?.focus();
-  };
   return <Dialog title="添加到唱片架" icon={<Plus size={20}/>} close={close} size="lg" className={`add-album-dialog is-${tab}`}>
-    <nav className="dialog-tabs" role="tablist" aria-label="添加方式">{ADD_TABS.map(([id, label]) => <button type="button" role="tab" key={id} id={`add-tab-${id}`} aria-selected={tab === id} aria-controls="add-panel" tabIndex={tab === id ? 0 : -1} onKeyDown={navigate} onClick={() => { setTab(id); setNotice(''); }}>{label}</button>)}</nav>
-    <div id="add-panel" role="tabpanel" aria-labelledby={`add-tab-${tab}`} className="add-album-panel">
+    <Tabs className="dialog-tabs" label="添加方式" idPrefix="add-tab" items={ADD_TABS} value={tab} onChange={(id) => { setTab(id); setNotice(''); }}/>
+    <div {...tabPanelProps('add-tab', tab)} className="add-album-panel">
       {notice && tab !== 'playlists' && <p className="add-notice" role="status"><Check size={16}/>{notice}</p>}
       {tab === 'catalog' && <CatalogSearch initialQuery={initialQuery} added={added} onAdded={handleAdded}/>}
       {tab === 'playlists' && <PlaylistImport items={items} close={close} onAdded={onAdded}/>}

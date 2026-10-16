@@ -30,7 +30,7 @@ export default function useShelf({ items, look, stage }) {
   useEffect(() => { setRow(0); setSelectedId(visible[0]?.id || ''); }, [signature, look]);
   useEffect(() => {
     const wheel = { amount: 0, time: 0 }, element = stage.current;
-    const blocked = (target) => target?.closest?.('input,textarea,select,[contenteditable="true"],dialog,.room-turntable,.shelf-filters,.focus-dock,.listening-corner,.album-wall-overlay') || document.querySelector('dialog[open], .listening-corner, .album-wall-overlay');
+    const blocked = (target) => target?.closest?.('input,textarea,select,[contenteditable="true"],dialog,.room-turntable,.shelf-filters,.focus-dock') || document.querySelector('dialog[open]');
     const keydown = (event) => {
       if (blocked(event.target) || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
       if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;

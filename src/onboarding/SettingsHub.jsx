@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { PERFORMANCE_MODES, performanceMode, performanceLevel, setPerformanceMode, onPerformanceChange } from '../perf-profile.mjs';
 import Dialog from '../Dialog';
+import { Tabs, Segmented, tabPanelProps } from '../ui/Roving';
 import RoomPickers from '../RoomPickers';
 import MusicAccounts from '../MusicSettings';
 import FocusSettingsForm from '../focus/FocusSettingsForm';
@@ -34,20 +35,10 @@ export default function SettingsHub({ section = 'music', setSection, close, env,
     change(); query.addEventListener('change', change);
     return () => query.removeEventListener('change', change);
   }, []);
-  const navigateTabs = event => {
-    if (event.altKey || event.ctrlKey || event.metaKey) return;
-    const index = HUB_SECTIONS.findIndex(item => item.id === tab), count = HUB_SECTIONS.length;
-    const next = ['ArrowDown', 'ArrowRight'].includes(event.key) ? (index + 1) % count
-      : ['ArrowUp', 'ArrowLeft'].includes(event.key) ? (index + count - 1) % count
-      : event.key === 'Home' ? 0 : event.key === 'End' ? count - 1 : -1;
-    if (next < 0) return;
-    event.preventDefault(); setSection(HUB_SECTIONS[next].id);
-    document.getElementById(`hub-tab-${HUB_SECTIONS[next].id}`)?.focus();
-  };
   return <Dialog title="设置" label="设置" close={close} className="settings-hub" size="lg">
     <div className="settings-hub-layout">
-      <nav className="settings-hub-nav" role="tablist" aria-label="设置分区" aria-orientation={compact ? 'horizontal' : 'vertical'}>{HUB_SECTIONS.map((item) => <button type="button" role="tab" key={item.id} id={`hub-tab-${item.id}`} aria-selected={tab === item.id} aria-controls="hub-panel" tabIndex={tab === item.id ? 0 : -1} onKeyDown={navigateTabs} onClick={() => setSection(item.id)}>{item.label}</button>)}</nav>
-      <section id="hub-panel" role="tabpanel" aria-labelledby={`hub-tab-${tab}`} className="settings-hub-panel">
+      <Tabs className="settings-hub-nav" label="设置分区" idPrefix="hub-tab" orientation={compact ? 'horizontal' : 'vertical'} arrows="both" items={HUB_SECTIONS} value={tab} onChange={setSection}/>
+      <section {...tabPanelProps('hub-tab', tab)} className="settings-hub-panel">
         {section === 'music' && <MusicSection env={env} player={player} provider={provider} useSource={useSource} openAccounts={() => setSection('music/accounts')}/>}
         {section === 'music/accounts' && <div className="hub-subpage" role="region" aria-label="账户与文件夹">
           <button type="button" className="hub-back" onClick={() => setSection('music')}><ChevronLeft size={14}/>音源</button>
@@ -108,11 +99,12 @@ function CrossfadeRow() {
   </Row>;
 }
 
+const PERFORMANCE_ITEMS = PERFORMANCE_MODES.map(([id, label]) => ({ id, label }));
 function PerformanceRow() {
   const [mode, setMode] = useState(performanceMode), [level, setLevel] = useState(performanceLevel);
   useEffect(() => onPerformanceChange((detail) => { setLevel(detail.level); setMode(detail.mode); }), []);
   return <Row title="流畅模式" hint={`电脑带不动时少画一些：减少飘尘、降低雪与炉火的刷新率、关掉模糊阴影。现在：${level === 'low' ? '流畅优先' : '完整画质'}${mode === 'auto' ? '（自动判断）' : ''}。`}>
-    <span className="segmented" role="radiogroup" aria-label="流畅模式">{PERFORMANCE_MODES.map(([id, label]) => <button type="button" role="radio" key={id} aria-checked={mode === id} onClick={() => { setLevel(setPerformanceMode(id)); setMode(id); }}>{label}</button>)}</span>
+    <Segmented label="流畅模式" items={PERFORMANCE_ITEMS} value={mode} onChange={(id) => { setLevel(setPerformanceMode(id)); setMode(id); }}/>
   </Row>;
 }
 

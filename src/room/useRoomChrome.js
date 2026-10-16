@@ -6,7 +6,7 @@ import { readJSON, writeJSON } from './room-storage.mjs';
 
 const DOCK_KEY = 'album-circle-focus-dock-v1';
 // A layer above the room owns the keyboard: modal dialogs, 唱机特写, the album wall.
-export const roomCovered = (doc = document) => Boolean(doc.querySelector('dialog[open], .listening-corner, .album-wall-overlay'));
+export const roomCovered = (doc = document) => Boolean(doc.querySelector('dialog[open]'));
 
 // Everything around the room: 沉浸 (zen) and its tools, 唱机特写 (corner), the
 // focus dock, the filter panel, 桌面模式 / 沉入桌面, fullscreen and the
@@ -38,7 +38,7 @@ export default function useRoomChrome({ client, notify }) {
   const live = useRef(null); live.current = { zen, corner, dock };
   useEffect(() => {
     const key = (event) => {
-      if (event.defaultPrevented || event.repeat || event.target?.closest?.('input,textarea,select,[contenteditable="true"]') || event.altKey || event.ctrlKey || event.metaKey || document.querySelector('dialog[open], .album-wall-overlay')) return;
+      if (event.defaultPrevented || event.repeat || event.target?.closest?.('input,textarea,select,[contenteditable="true"]') || event.altKey || event.ctrlKey || event.metaKey || roomCovered()) return;
       const { zen: isZen, corner: isCorner, dock: panel } = live.current;
       // 唱机特写 is modal: only T (close it again) reaches the room behind it.
       if ((event.key === 'z' || event.key === 'Z') && !isCorner) { event.preventDefault(); setZen((value) => !value); }

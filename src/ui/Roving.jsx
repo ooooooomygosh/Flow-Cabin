@@ -16,9 +16,10 @@ function useRoving(items, value, onChange, orientation) {
   return { refs, onKeyDown, tabIndex: (id) => id === current ? 0 : -1 };
 }
 
-// One tablist. Pair it with <div {...tabPanelProps(idPrefix, value)}>.
-export function Tabs({ items, value, onChange, label, idPrefix, orientation = 'horizontal', className = '' }) {
-  const fallback = useId(), prefix = idPrefix || fallback, { refs, onKeyDown, tabIndex } = useRoving(items, value, onChange, orientation);
+// One tablist. Pair it with <div {...tabPanelProps(idPrefix, value)}>. `arrows`
+// widens the keys (a rail that flips orientation with the window takes 'both').
+export function Tabs({ items, value, onChange, label, idPrefix, orientation = 'horizontal', arrows = orientation, className = '' }) {
+  const fallback = useId(), prefix = idPrefix || fallback, { refs, onKeyDown, tabIndex } = useRoving(items, value, onChange, arrows);
   return <nav role="tablist" aria-label={label} aria-orientation={orientation} className={className}>{items.map((item) => <button type="button" role="tab" key={item.id} ref={(node) => { refs.current[item.id] = node; }} id={`${prefix}-${item.id}`} aria-controls={`${prefix}-panel`} aria-selected={item.id === value} tabIndex={tabIndex(item.id)} disabled={item.disabled} title={item.title} onKeyDown={onKeyDown} onClick={() => onChange(item.id)}>{item.icon}{item.label}</button>)}</nav>;
 }
 export const tabPanelProps = (idPrefix, value) => ({ role: 'tabpanel', id: `${idPrefix}-panel`, 'aria-labelledby': `${idPrefix}-${value}` });
