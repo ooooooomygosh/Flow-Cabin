@@ -35,9 +35,9 @@ const row = () => site.locator('.room-rack-grid').getAttribute('data-start-row')
   assert.deepEqual(await site.locator('.room-rack').boundingBox(), rack); await site.keyboard.press('ArrowUp'); assert.equal(await row(), '0');
   await site.mouse.move(rack.x + rack.width * .6, rack.y + rack.height * .5); await site.mouse.wheel(0, 120); await site.waitForFunction(() => document.querySelector('.room-rack-grid').dataset.startRow === '1');
   assert.deepEqual(await site.locator('.room-rack').boundingBox(), rack); await site.keyboard.press('End'); assert.equal(await row(), '3'); await site.keyboard.press('Home'); assert.equal(await row(), '0'); check('shelf-keys-wheel-and-fixed-cabinet');
-  await site.getByRole('button', { name: '筛选与唱片盒', exact: true }).click(); await site.getByLabel('筛选流派').focus(); await site.keyboard.press('ArrowDown'); assert.equal(await row(), '0');
+  await site.getByRole('button', { name: '整理唱片架', exact: true }).click(); await site.getByLabel('筛选流派').focus(); await site.keyboard.press('ArrowDown'); assert.equal(await row(), '0');
   await site.getByLabel('筛选流派').selectOption('all');
-  await site.getByRole('button', { name: '筛选与唱片盒', exact: true }).click(); check('filters-and-select-keyboard-do-not-scroll-cabinet');
+  await site.getByRole('button', { name: '整理唱片架', exact: true }).click(); check('filters-and-select-keyboard-do-not-scroll-cabinet');
   await site.locator('.room-record').nth(1).dblclick(); await site.waitForFunction((id) => document.querySelector('.room-turntable').dataset.loadedId === id, items[1].id);
   const furniture = await site.evaluate(() => {
     const css = (selector) => getComputedStyle(document.querySelector(selector));

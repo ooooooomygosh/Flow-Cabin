@@ -1,6 +1,6 @@
 'use strict';
 const { _electron } = require('playwright'), fs = require('node:fs'), path = require('node:path'), assert = require('node:assert/strict');
-const { mountFixture, albums } = require('./ui-fixture.cjs');
+const { mountFixture, albums, openRecordTools, closeRecordCard } = require('./ui-fixture.cjs');
 const desktop = path.resolve(__dirname, '..'), output = path.join(desktop, 'test-results/cover-editor'); fs.mkdirSync(output, { recursive: true });
 const env = { ...process.env, ALBUM_DESKTOP_TEST_PROFILE: path.join(output, `profile-${Date.now()}`) }; delete env.ELECTRON_RUN_AS_NODE;
 const executablePath = process.env.ALBUM_QA_EXE || path.join(desktop, 'node_modules/electron/dist/electron.exe');
@@ -16,7 +16,7 @@ const report = { fixtureData: true, checks: [], pageErrors: [] }; let app, site;
     const item = { ...albums[0], id, title: scenario, externalIds: undefined, collectionId: undefined, cover: `https://album-circle.vercel.app/qa-colour.png?qa-slow-cover=${testCase}` };
     if (scenario === 'reset-base') await site.evaluate((key) => localStorage.setItem('album-circle-library-v1-local-owner', JSON.stringify({ styles: { [key]: { base: '#2255aa' } } })), key);
     await mountFixture(app, site, { items: [item], coverResponse: cover, slowCover: true });
-    await site.locator('.room-record').first().click(); await site.getByRole('button', { name: '自定义唱片', exact: true }).click();
+    await site.locator('.room-record').first().click(); await openRecordTools(site);
     const editor = site.getByRole('dialog', { name: '自定义唱片' });
     assert.equal(await editor.getByLabel('黑胶底色', { exact: true }).inputValue(), scenario === 'reset-base' ? '#2255aa' : '#16191d');
     if (scenario === 'manual-base') await editor.getByLabel('黑胶底色', { exact: true }).fill('#00aa77');
@@ -27,7 +27,7 @@ const report = { fixtureData: true, checks: [], pageErrors: [] }; let app, site;
       await editor.getByLabel('泼溅颜色数量', { exact: true }).selectOption('2');
       await editor.getByLabel('泼溅颜色 1', { exact: true }).fill('#cc00aa');
     }
-    if (earlySave) await editor.getByRole('button', { name: '保存唱片设置', exact: true }).click();
+    if (earlySave) { await editor.getByRole('button', { name: '保存唱片设置', exact: true }).click(); await closeRecordCard(site); }
     await app.evaluate(() => globalThis.__qaReleaseImage());
     const expected = scenario === 'manual-base' ? '#00aa77' : '#d23c1e';
     // Wait on the independent shelf result first, then assert the editor did not
@@ -40,7 +40,7 @@ const report = { fixtureData: true, checks: [], pageErrors: [] }; let app, site;
         assert.equal(await editor.getByLabel('泼溅颜色数量', { exact: true }).inputValue(), '2');
         assert.equal(await editor.getByLabel('泼溅颜色 1', { exact: true }).inputValue(), '#cc00aa');
       }
-      await editor.getByRole('button', { name: '保存唱片设置', exact: true }).click();
+      await editor.getByRole('button', { name: '保存唱片设置', exact: true }).click(); await closeRecordCard(site);
     }
     const saved = await site.evaluate((key) => JSON.parse(localStorage.getItem('album-circle-library-v1-local-owner')).styles[key], key);
     assert.equal(saved.base, earlySave && scenario !== 'manual-base' ? '#16191d' : expected); assert.equal(saved.opacity, 62);

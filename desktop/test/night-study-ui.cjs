@@ -79,7 +79,7 @@ async function startWallpaper() {
   await app.evaluate(({ webContents }) => { const contents = webContents.getAllWebContents().find(c => c.getURL().startsWith('https://album-circle.vercel.app')); contents.sendInputEvent({ type: 'keyDown', keyCode: 'ESC' }); contents.sendInputEvent({ type: 'keyUp', keyCode: 'ESC' }); });
   await site.waitForFunction(() => document.documentElement.dataset.desktopFullscreen === 'false'); check('native-fullscreen-covers-monitor-keeps-interaction-survives-reload-and-escape-restores');
   await openMusicSettings(site);
-  const musicDialog = site.getByRole('dialog', { name: '音源与账户', exact: true, includeHidden: true }); await musicDialog.waitFor();
+  const musicDialog = site.getByRole('dialog', { name: '设置', exact: true, includeHidden: true }); await musicDialog.getByRole('region', { name: '账户与文件夹', exact: true }).waitFor();
   const nativeKey = keyCode => app.evaluate(({ webContents }, keyCode) => { const c = webContents.getAllWebContents().find(c => c.getURL().startsWith('https://album-circle.vercel.app')); c.sendInputEvent({ type: 'keyDown', keyCode }); c.sendInputEvent({ type: 'keyUp', keyCode }); }, keyCode);
   await nativeKey('F11'); await site.waitForFunction(() => document.documentElement.dataset.desktopFullscreen === 'true');
   assert.equal(await musicDialog.isVisible(), true);
