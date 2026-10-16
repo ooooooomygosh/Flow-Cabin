@@ -121,19 +121,25 @@ function paintClouds(data, mask, pal, amount, wind, seconds) {
     const left = Math.max(0, Math.floor(cx - r0 * 2.2)), right = Math.min(width - 1, Math.ceil(cx + r0 * 2.2)), top = Math.max(0, Math.floor(cy - r0 * 1.3)), bottom = Math.min(height - 1, Math.ceil(cy + r0 * .7));
     for (let y = top; y <= bottom; y++) for (let x = left; x <= right; x++) {
       const i = y * width + x; if (!back[i] || bayer(x, y) >= weight) continue;
-      let inside = false, edge = 2;
-      for (const [px, py, pr] of cloud.puffs) { const dx = x + .5 - (cx + px * r0), dy = y + .5 - (cy + py * r0), rr = pr * r0, d = Math.hypot(dx, dy) - rr; if (d <= 0) { inside = true; edge = Math.min(edge, -d / rr); } }
+      let inside = false, edge = 0; // depth inside the deepest puff: only the outer rim is lit
+      for (const [px, py, pr] of cloud.puffs) { const dx = x + .5 - (cx + px * r0), dy = y + .5 - (cy + py * r0), rr = pr * r0, d = Math.hypot(dx, dy) - rr; if (d <= 0) { inside = true; edge = Math.max(edge, -d / rr); } }
       if (!inside || y + .5 > cy + r0 * .45) continue;
       const below = (y + .5 - (cy - r0 * .6)) / (r0 * 1.05);
       put(data, i, below > .78 ? pal.cloudDeep : below > .5 ? pal.cloudShade : edge < .18 && below < .3 ? pal.cloudLit : pal.cloud);
     }
   }
 }
-// Overcast veil: a dithered grey ceiling that thickens with heavy cloud.
+// Overcast veil: a flat grey ceiling that deepens with heavy cloud, two solid steps with a
+// two-row dithered seam each (a ramp, not a checkerboard over the whole sky).
 function paintVeil(data, mask, pal, amount) {
   if (amount <= .55) return;
-  const { width, height, back } = mask, strength = (amount - .55) / .45;
-  for (let y = 0; y < height; y++) { const v = strength * (1 - y / height * .8) * .85; for (let x = 0; x < width; x++) { const i = y * width + x; if (back[i] && bayer(x, y) < v) put(data, i, pal.cloudShade, .9); } }
+  const { width, height, back } = mask, strength = (amount - .55) / .45, low = Math.round(height * (.2 + .45 * strength)), high = Math.round(low * .45);
+  for (let y = 0; y < Math.min(height, low + 2); y++) for (let x = 0; x < width; x++) {
+    const i = y * width + x; if (!back[i]) continue;
+    const seam = (edge) => y >= edge && y < edge + 2 ? bayer(x, y) < (edge + 2 - y) / 3 : y < edge;
+    if (seam(high)) put(data, i, pal.cloudDeep, .55 + strength * .3);
+    else if (seam(low)) put(data, i, pal.cloudShade, .5 + strength * .3);
+  }
 }
 function paintBolt(data, mask, pal, seed) {
   const { width, height, back } = mask; let x = Math.floor(width * (.2 + hash(seed + .2) * .6));
@@ -154,6 +160,7 @@ export function paintSky(data, mask, frame) {
   if (b.moon.visible || layers.starry > .5) { const moon = b.moon.visible ? b.moon : { ...b.moon, y: Math.round(mask.height * .22) }; if (overcast < .85) paintMoon(data, mask, pal, moon, sky.moon?.phase ?? .5); }
   if (b.sun.visible && layers.starry <= .5 && overcast < .9) paintSun(data, mask, pal, b.sun);
   paintVeil(data, mask, pal, overcast);
+  if (layers.fog > .02) { const { back } = mask; for (let i = 0; i < back.length; i++) if (back[i]) put(data, i, pal.fog, layers.fog * .5); } // distant haze
   if (layers.clouds > .02) paintClouds(data, mask, pal, layers.clouds, layers.wind, reduced ? 0 : seconds);
   if (!reduced) {
     const { flash, seed } = lightningAt(seconds, layers.storm);
@@ -162,7 +169,7 @@ export function paintSky(data, mask, frame) {
   return layers.clouds > .02 || layers.storm > .05 || layers.starry > .5;
 }
 
-const DROPS = Array.from({ length: 64 }, (_, i) => ({ x0: hash(i + 300), y0: hash(i + 400), speed: .9 + hash(i + 500) * .6, len: 2 + Math.floor(hash(i + 600) * 2.5), tone: hash(i + 700) }));
+const DROPS = Array.from({ length: 64 }, (_, i) => ({ x0: hash(i + 300), y0: hash(i + 400), speed: .9 + hash(i + 500) * .6, len: 3 + Math.floor(hash(i + 600) * 3), tone: hash(i + 700) }));
 const FLAKES = Array.from({ length: 64 }, (_, i) => { const depth = hash(i + 9); return { depth, speed: 9 + depth * 21, x0: hash(i + 21), y0: hash(i + 61), alpha: .5 + depth * .45 }; });
 const BEADS = Array.from({ length: 12 }, (_, i) => ({ x: hash(i + 800), y: hash(i + 900) * .8, cycle: 6 + hash(i + 1000) * 9, hold: .35 + hash(i + 1100) * .4, run: 3 + Math.floor(hash(i + 1200) * 6) }));
 // Paints the weather in the glass (over the art). Returns true when something moves.
@@ -170,14 +177,19 @@ export function paintWeather(data, mask, frame) {
   data.fill(0);
   const { width, height, front } = mask, { layers, pal, seconds: s = 0, reduced = false } = frame, wind = layers.wind;
   if (layers.fog > .02) {
+    // Three drifting banks with wavy tops: a translucent core and a dithered fringe, 1 px per 3 s.
     const drift = reduced ? 0 : Math.floor(s / 3);
-    for (const [center, thick, speed] of [[.48, .1, 1], [.64, .12, -1], [.8, .1, 1]]) {
-      const cy = height * center, half = height * thick;
-      for (let y = Math.max(0, Math.floor(cy - half)); y < Math.min(height, Math.ceil(cy + half)); y++) {
-        const profile = 1 - Math.abs(y + .5 - cy) / half, v = layers.fog * profile * .8;
-        for (let x = 0; x < width; x++) { const i = y * width + x; if (front[i] && bayer(x + drift * speed, y) < v) put(data, i, pal.fog, .62); }
+    [[.5, .09, 1], [.66, .11, -1], [.82, .1, 1]].forEach(([center, thick, dir], band) => {
+      const half = height * thick * (.6 + layers.fog * .5);
+      for (let x = 0; x < width; x++) {
+        const cy = height * center + Math.round(Math.sin((x + drift * dir) * .21 + band * 2.1) * 1.5 + Math.sin((x - drift * dir) * .07 + band) * 2);
+        for (let y = Math.max(0, Math.floor(cy - half)); y < Math.min(height, Math.ceil(cy + half)); y++) {
+          const i = y * width + x; if (!front[i]) continue;
+          const core = 1 - Math.abs(y + .5 - cy) / half;
+          if (core > .3 || bayer(x + drift * dir, y) < core / .3 * .45) put(data, i, pal.fog, .32 + layers.fog * .18);
+        }
       }
-    }
+    });
   }
   const slant = -wind * .9;
   const rainCount = Math.round(DROPS.length * Math.min(1, layers.rain));
@@ -186,7 +198,7 @@ export function paintWeather(data, mask, frame) {
     const x0 = Math.floor(fract(drop.x0 + (y / height) * slant * .25 + s * wind * .02) * (width + 4)) - 2;
     for (let k = 0; k < drop.len; k++) {
       const yy = y - k, xx = Math.round(x0 - k * slant); if (yy < 0 || yy >= height || xx < 0 || xx >= width) continue;
-      const i = yy * width + xx; if (front[i]) put(data, i, pal.rain, k ? .38 + drop.tone * .2 : .7);
+      const i = yy * width + xx; if (front[i]) put(data, i, pal.rain, k ? .3 + drop.tone * .25 - k * .04 : .78);
     }
   }
   const snowCount = Math.round(FLAKES.length * Math.min(1, layers.snow));

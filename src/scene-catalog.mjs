@@ -11,6 +11,25 @@ export const DECK_BAND = Object.freeze({ top: 96, bottom: 701, left: 430, right:
 export const CAMERA_ANCHOR = Object.freeze({ x: 774, y: 448 });
 // `floor` (art px): y of the painted floor where the room cat's feet rest, in front of
 // the furniture near the cat's home column. Mirrored as --scene-floor in companion-room.css.
+// `windows` (art px): where the live sky and weather go (src/CabinAtmosphereSky.jsx).
+// box [x, y, w, h]; shape (relative to the box) rect | ellipse | arch; panes = glass rects,
+// mullions = frame bars; horizon = fraction of the box where land / sea starts; sun marks the
+// window the sun and moon appear in; painted: 'night' when the art shows a night view (the
+// land is lifted by day instead of darkened at night); sky: false = the art keeps its own painted (moonlit) sky,
+// and the weather keeps to its dark-blue night pixels (mask: 'night').
+const cabinWindow = (panes) => [{ box: [188, 170, 218, 286], panes, horizon: .74, sun: true, painted: 'night' }];
+const WINDOWS = {
+  pixel: cabinWindow([[5, 7, 94, 102], [115, 7, 91, 102], [5, 126, 94, 157], [115, 126, 91, 157]]),
+  warm: cabinWindow([[2, 3, 99, 109], [115, 3, 98, 109], [2, 124, 99, 156], [115, 124, 98, 156]]),
+  'night-study': [{ box: [320, 120, 420, 344], sky: false, mask: 'night' }],
+  forest: [{ box: [80, 120, 284, 480], shape: { type: 'arch', cx: 142, cy: 142, rx: 140, ry: 140 }, mullions: [[137, 0, 10, 480], [0, 216, 284, 10]], horizon: .82, sun: true }],
+  seaside: [
+    { box: [84, 172, 284, 284], shape: { type: 'ellipse', cx: 142, cy: 143, rx: 139, ry: 139 }, horizon: .59, sun: true },
+    { box: [1184, 128, 264, 656], shape: { type: 'arch', cx: 159, cy: 170, rx: 159, ry: 170 }, mullions: [[137, 0, 12, 656], [0, 274, 264, 12]], horizon: .43 }
+  ],
+  starlight: [{ box: [84, 220, 292, 292], shape: { type: 'ellipse', cx: 145, cy: 145, rx: 143, ry: 143 }, mullions: [[141, 0, 8, 292], [0, 141, 292, 8]], horizon: .63, sun: true }]
+};
+const deepFreeze = (value) => { if (value && typeof value === 'object') { Object.values(value).forEach(deepFreeze); Object.freeze(value); } return value; };
 const freezeGeometry = (geometry) => Object.freeze({
   columns: Object.freeze(geometry.columns.map((pair) => Object.freeze([...pair]))),
   rows: Object.freeze(geometry.rows.map((pair) => Object.freeze([...pair])))
@@ -24,7 +43,7 @@ const scenes = [
   { id: 'starlight', floor: 900, labelEn: 'Starry Night', label: '星夜阁楼', description: '星光落在深夜的唱片上', art: '/room-scenes/starlight-cabin.svg', pixelArt: '/room-scenes/starlight-cabin-pixel.png', alt: '星夜阁楼，星空圆窗、望远镜、十二格唱片架与暖灯阅读椅', band: DECK_BAND, geometry: pixelGeometry, pixel: true, style: { accent: '#c1b7db', background: '#303b50' } }
 ];
 
-export const ROOM_SCENES = Object.freeze(scenes.map((scene) => Object.freeze({ ...scene, view: scene.pixelArt || scene.art, geometry: freezeGeometry(scene.geometry), band: Object.freeze({ ...scene.band }), shelfFrame: Object.freeze(scene.id === 'night-study' ? { left: 800, right: 1424 } : { left: 430, right: 1120 }), style: Object.freeze(scene.style) })));
+export const ROOM_SCENES = Object.freeze(scenes.map((scene) => Object.freeze({ ...scene, view: scene.pixelArt || scene.art, geometry: freezeGeometry(scene.geometry), band: Object.freeze({ ...scene.band }), shelfFrame: Object.freeze(scene.id === 'night-study' ? { left: 800, right: 1424 } : { left: 430, right: 1120 }), style: Object.freeze(scene.style), windows: deepFreeze(WINDOWS[scene.id] || []) })));
 export const ROOM_SCENE_IDS = Object.freeze(ROOM_SCENES.map(({ id }) => id));
 const byId = new Map(ROOM_SCENES.map((scene) => [scene.id, scene]));
 export function normalizeRoomSceneId(id) { return byId.has(id) ? id : 'pixel'; }

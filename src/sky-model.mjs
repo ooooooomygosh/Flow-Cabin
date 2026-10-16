@@ -76,5 +76,18 @@ export function skyColors({ altitude, rising }, overcast = 0) {
   }
   return { ...out, light: Math.round(light * 100) / 100, stars: Math.round(clamp01((-altitude - 3) / 9) * (1 - clamp01(overcast)) * 100) / 100 };
 }
+// Soft-light tint for the painted land / sea inside a window: 50 % grey changes nothing; it
+// darkens toward night blue when the sky is darker than the art was painted (`painted`: 1 a
+// daylight view, 0 a night view) and lifts toward pale day when it is brighter; low sun
+// borrows the horizon's rose or amber. Returns '#rrggbb'.
+export function landTint({ altitude }, colors, painted = 1) {
+  const light = colors.light ?? clamp01((altitude + 6) / 18), delta = light - painted;
+  let rgb = [128, 128, 128];
+  if (delta < 0) rgb = mixRgba(rgb, [34, 40, 96], Math.min(1, -delta) * .85);
+  else rgb = mixRgba(rgb, [214, 226, 244], Math.min(1, delta) * .75);
+  const glow = clamp01(1 - Math.abs(altitude) / 9) * .45;
+  if (glow) rgb = mixRgba(rgb, parse(colors.horizon).slice(0, 3), glow);
+  return toHex(rgb);
+}
 // The CSS variables RoomScene writes (registered with @property in companion-room.css).
 export const skyVariables = (colors) => ({ '--sky-top': colors.top, '--sky-horizon': colors.horizon, '--sky-glow': colors.glow, '--sky-ambient': colors.ambient, '--sky-shade': colors.shade, '--sky-light': String(colors.light) });
