@@ -5,6 +5,11 @@
 [data-room-look='forest'] .scene-deck { left: calc(590 / 1448 * 100%); top: calc(103 / 1086 * 100%); }
 [data-room-look='seaside'] .scene-deck { left: calc(556 / 1448 * 100%); top: calc(103 / 1086 * 100%); }
 [data-room-look='starlight'] .scene-deck { left: calc(528 / 1448 * 100%); top: calc(103 / 1086 * 100%); }
+/* Per-scene wood (deck-sprite.mjs DECK_PALETTES): the walnut deck belongs to the
+   warm cabins; cool rooms get a deck graded from their own shelf. */
+[data-room-look='forest'] .scene-deck { --deck-2: #5a4a32; --deck-3: #6e5c3f; --deck-4: #3b3020; --deck-5: #7d6a48; --deck-6: #94805a; --deck-12: #2e261a; }
+[data-room-look='seaside'] .scene-deck { --deck-2: #9c8462; --deck-3: #b09774; --deck-4: #735f45; --deck-5: #bca684; --deck-6: #cfbc98; --deck-12: #5a4a36; }
+[data-room-look='starlight'] .scene-deck { --deck-2: #3d4660; --deck-3: #55607e; --deck-4: #262c3d; --deck-5: #6b7596; --deck-6: #8a93b0; --deck-12: #1e2333; }
 .scene-deck-sprite { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; image-rendering: pixelated; }
 .scene-deck-shadow { opacity: .35; }
 
