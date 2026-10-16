@@ -3,9 +3,7 @@
 const { app, BrowserWindow, WebContentsView, Menu, Tray, dialog, ipcMain, clipboard, shell, protocol, screen, net, safeStorage, nativeImage, powerSaveBlocker, globalShortcut, powerMonitor } = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
-const { SITE_ORIGIN, SHELL_URL, isSiteUrl, isShellUrl, isExternalUrl, safeSavedWindow, localDownloadType, saveDialog } = require('./policy.cjs');
-const { createQQMusic } = require('./qq-music.cjs');
-const { createSiteRouter } = require('./site-router.cjs');
+const { SITE_ORIGIN, SHELL_URL, isSiteUrl, isShellUrl, isExternalUrl, safeSavedWindow } = require('./policy.cjs');
 const { DEFAULT_SETTINGS, normalizeSettings, appearanceScript, listSystemFonts, setSettingsVisibility } = require('./settings.cjs');
 const { registerShellProtocol } = require('./shell-protocol.cjs');
 const { createWallpaper } = require('./wallpaper.cjs');
@@ -14,7 +12,6 @@ const { createDesktopMode } = require('./desktop-mode.cjs');
 const { createDesktopSink, migrateDesktopPreferences } = require('./desktop-sink.cjs');
 const { createMiniPlayer } = require('./mini-player.cjs');
 const { trayIconPath, createTrayPet } = require('./tray-icons.cjs');
-const SINK_HOTKEY = 'CommandOrControl+Alt+D';
 const { createCollectionStore } = require('./collection-store.cjs');
 const { createMusicService } = require('./music-service.cjs');
 const { openQQLogin, openNeteaseLogin, clearQQLogin, clearNeteaseLogin } = require('./music-login.cjs');
@@ -22,10 +19,14 @@ const { createPet } = require('./pet.cjs');
 const { createNowPlaying } = require('./now-playing.cjs');
 const { createAppleMusic } = require('./apple-music.cjs');
 const { createLocalApps } = require('./local-app.cjs');
-const { createUpdater, compareVersions } = require('./updater.cjs');
-const { createMacUpdater } = require('./mac-updater.cjs');
 const { createLocalMusic } = require('./local-music.cjs');
 const { sendCompanionCommand } = require('./companion-sync.cjs');
+// The main process is split by concern: page commands, the page session, updates, menus, login item.
+const { createSiteCommands } = require('./main/site-commands.cjs');
+const { wireSiteSession } = require('./main/site-session.cjs');
+const { createUpdates } = require('./main/updates.cjs');
+const { appMenuTemplate, trayMenuTemplate, ABOUT_DETAIL, SINK_HOTKEY } = require('./main/menus.cjs');
+const { createAutostart, autostartScript } = require('./main/autostart.cjs');
 
 protocol.registerSchemesAsPrivileged([{ scheme: 'album-desktop', privileges: { standard: true, secure: true, supportFetchAPI: true } }]);
 app.setName('心流小屋');
@@ -84,17 +85,11 @@ function refreshTray() {
       companionTray.on('double-click', () => desktopSink?.active ? desktopSink.exit() : restoreMainWindow());
     }
     companionTray.setToolTip('心流小屋');
-    companionTray.setContextMenu(Menu.buildFromTemplate([
-      { label: '打开小屋', click: restoreMainWindow },
-      { label: '小屋设置…', click: () => { restoreMainWindow(); sendCompanionCommand(siteView?.webContents, 'open-settings'); } },
-      { label: '检查更新…', click: checkUpdatesFromMenu },
-      { label: '开始 / 暂停专注', click: () => sendCompanionCommand(siteView?.webContents, 'focus-toggle') },
-      { label: '开关小屋声音', click: () => sendCompanionCommand(siteView?.webContents, 'sound-toggle') },
-      { type: 'separator' },
-      petState.active ? { label: '让伙伴回家', click: () => pet.stop() } : { label: '伙伴出门（桌宠）', click: () => pet.start().catch((error) => writeLog('pet-error', error.message)) },
-      desktopSink?.active || desktopSink?.busy ? { label: '浮出桌面（回到窗口）', accelerator: SINK_HOTKEY, click: () => desktopSink.exit() } : { label: '沉入桌面', accelerator: SINK_HOTKEY, click: () => desktopSink?.enter() },
-      { type: 'separator' }, { label: '退出应用', click: () => app.quit() }
-    ]));
+    companionTray.setContextMenu(Menu.buildFromTemplate(trayMenuTemplate({
+      restore: restoreMainWindow, companion: (command) => sendCompanionCommand(siteView?.webContents, command), checkUpdates: () => updates.checkFromMenu(),
+      petActive: petState.active, petStart: () => pet.start().catch((error) => writeLog('pet-error', error.message)), petStop: () => pet.stop(),
+      sinkActive: Boolean(desktopSink?.active || desktopSink?.busy), sinkEnter: () => desktopSink?.enter(), sinkExit: () => desktopSink.exit(), quit: () => app.quit()
+    })));
   } else if (companionTray) {
     companionTray.destroy(); companionTray = null;
     if (!quitting && mainWindow && !mainWindow.isVisible()) restoreMainWindow();
@@ -275,12 +270,12 @@ async function wireRemoteView() {
     wallpaperStatus(wallpaperState); petStatus(petState);
     if (desktopMode) notifySite(`document.documentElement.dataset.desktopMode = '${desktopMode.active}';`);
     if (desktopSink) notifySinkStatus(desktopSink.status());
-    pushUpdateState();
+    updates.push(); autostart.publish();
     siteView.setVisible(!settingsOpen);
     if (mainWindow && !mainWindow.isDestroyed() && !contents.isDestroyed() && (!mainWindow.isVisible() || mainWindow.isMinimized())) await contents.executeJavaScript("window.dispatchEvent(new Event('blur'));").catch(() => {});
     sendState();
     writeLog('page-ready');
-    confirmUpdatedCabinStartup();
+    updates.confirmStartup();
   });
   contents.on('did-stop-loading', () => { if (!currentError) loading = false; sendState(); });
   contents.on('did-navigate-in-page', () => {
@@ -302,72 +297,17 @@ async function wireRemoteView() {
     if (input.alt && input.key === 'ArrowLeft' && contents.navigationHistory.canGoBack()) { event.preventDefault(); contents.navigationHistory.goBack(); }
     if (input.alt && input.key === 'ArrowRight' && contents.navigationHistory.canGoForward()) { event.preventDefault(); contents.navigationHistory.goForward(); }
   });
-  const session = contents.session;
-  const qq = createQQMusic((url, options) => net.fetch(url, { ...options, bypassCustomProtocolHandlers: true }));
-  if (await session.protocol.isProtocolHandled('https')) session.protocol.unhandle('https');
-  const route = createSiteRouter({
-    webRoot: path.join(__dirname, 'web'),
-    forward: (request) => session.fetch(request, { bypassCustomProtocolHandlers: true }),
-    qq, collection, catalog, getAppearance: () => ({ ...appearance, platform: process.platform }),
-    music: (request, pathname) => music.proxy(request, pathname, (url, options) => net.fetch(url, options))
-  });
-  session.protocol.handle('https', async (request) => {
-    try { return await route(request); }
-    catch (error) { writeLog('route-error', error.message); return new Response('Unavailable', { status: 502 }); }
-  });
-  session.setPermissionRequestHandler((webContents, permission, callback) => {
-    // Notifications announce the end of a focus round.
-    callback(isSiteUrl(webContents.getURL()) && ['clipboard-sanitized-write', 'notifications'].includes(permission));
-  });
-  session.setPermissionCheckHandler((_webContents, permission, requestingOrigin) => {
-    return isSiteUrl(requestingOrigin) && ['clipboard-sanitized-write', 'notifications'].includes(permission);
-  });
-  session.on('will-download', (event, item, source) => {
-    const type = source === contents && isSiteUrl(contents.getURL()) && localDownloadType({ url:item.getURL(), filename:item.getFilename(), bytes:item.getTotalBytes(), mimeType:item.getMimeType() });
-    if (!type) { event.preventDefault(); return; }
-    const dialog = saveDialog(type);
-    item.setSaveDialogOptions({ title:dialog.title, defaultPath:path.join(app.getPath('downloads'), path.basename(item.getFilename())), filters:[{ name:dialog.filter, extensions:[dialog.extension] }] });
-  });
-  // Request URLs, tokens and room identifiers are intentionally not written to logs.
-  session.webRequest.onHeadersReceived({ urls: [`${SITE_ORIGIN}/*`] }, (details, callback) => {
-    if (details.resourceType === 'mainFrame' && details.statusCode >= 400) {
-      documentHttpFailed = true;
-      setImmediate(() => showFailure('小屋暂时没能打开，请重新载入。'));
-    }
-    const headers = { ...details.responseHeaders };
-    if (details.resourceType === 'mainFrame' && !Object.keys(headers).some((key) => key.toLowerCase() === 'content-security-policy')) {
-      headers['Content-Security-Policy'] = ["default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data: blob:; font-src 'self' https: data:; connect-src 'self' https:; media-src 'self' https: blob:; worker-src 'self' blob:; frame-src 'none'; object-src 'none'; base-uri 'self'"];
-    }
-    callback({ responseHeaders: headers });
-  });
+  await wireSiteSession({ contents, net, webRoot: path.join(__dirname, 'web'), collection, catalog, music: () => music, getAppearance: () => ({ ...appearance, platform: process.platform }), downloads: () => app.getPath('downloads'), writeLog,
+    onDocumentFailed: () => { documentHttpFailed = true; setImmediate(() => showFailure('小屋暂时没能打开，请重新载入。')); } });
 }
 
-function handleSiteCommand(value) {
-  let url; try { url = new URL(value); } catch { return false; }
-  if (url.protocol !== 'album-desktop:' || url.hostname !== 'action' || url.username || url.password || !isSiteUrl(siteView?.webContents.getURL())) return false;
-  switch (url.pathname) {
-    case '/settings': toggleSettings(true); break;
-    case '/update-check': case '/update-download': case '/update-install': case '/update-relaunch': case '/update-open': case '/update-auto': case '/update-state': handleUpdateCommand(url.pathname, url.searchParams); break;
-    case '/fullscreen': toggleFullscreen(); break;
-    case '/fullscreen-exit': setFullscreen(false); break;
-    // 沉入桌面. The old desktop-mode / wallpaper commands are kept as aliases.
-    case '/desktop-sink': case '/desktop-mode': desktopSink.toggle(); break;
-    case '/desktop-sink-enter': case '/wallpaper-start': desktopSink.enter(); break;
-    case '/desktop-sink-exit': case '/desktop-mode-exit': case '/wallpaper-stop': desktopSink.exit(); break;
-    case '/tray-pet': trayPet.setTrayPet(url.searchParams.get('id')); break;
-    case '/minimize': mainWindow.minimize(); break;
-    case '/maximize': if (desktopSink.active) desktopSink.exit(); else if (isFullscreen()) setFullscreen(false); else if (mainWindow.isMaximized()) mainWindow.unmaximize(); else mainWindow.maximize(); break;
-    case '/close': mainWindow.close(); break;
-    case '/pet-start': pet.start().catch((error) => writeLog('pet-error', error.message)); break;
-    case '/pet-stop': pet.stop(); break;
-    case '/local-music-folder': chooseMusicFolder(); break;
-    case '/music-login': if (['qq', 'netease'].includes(url.searchParams.get('provider'))) music.login(url.searchParams.get('provider')).then((result) => notifyMusic(result)).catch((error) => notifyMusic({ error: error.message })); break;
-    case '/music-logout': if (['qq', 'netease'].includes(url.searchParams.get('provider'))) music.logout(url.searchParams.get('provider')).then(() => notifyMusic({ ok: true })).catch((error) => notifyMusic({ error: error.message })); break;
-    case '/appearance': if (['true', 'false'].includes(url.searchParams.get('reduceMotion'))) saveAppearance({ ...appearance, reduceMotion: url.searchParams.get('reduceMotion') === 'true', ...(['cover', 'simple'].includes(url.searchParams.get('theme')) ? { theme: url.searchParams.get('theme') } : {}) }).catch(() => {}); break;
-    default: return false;
-  }
-  return true;
-}
+const siteCommands = createSiteCommands({
+  isSitePage: () => isSiteUrl(siteView?.webContents.getURL()), mainWindow: () => mainWindow, desktopSink: () => desktopSink, pet: () => pet, music: () => music, appearance: () => appearance, trayPet,
+  toggleSettings, toggleFullscreen, setFullscreen, isFullscreen, chooseMusicFolder, notifyMusic, saveAppearance, writeLog,
+  handleUpdateCommand: (pathname, params) => updates.handle(pathname, params),
+  get autostart() { return autostart; }
+});
+const handleSiteCommand = (value) => siteCommands.handle(value);
 async function chooseMusicFolder() {
   const result = await dialog.showOpenDialog(mainWindow, { title: '选择本地音乐文件夹', properties: ['openDirectory'] });
   if (result.canceled || !result.filePaths[0]) { notifyLocalMusic({ cancelled: true }); return; }
@@ -381,65 +321,10 @@ function notifyLocalMusic(detail) {
 function notifySinkStatus(state) {
   notifySite(`window.cabinDesktopStatus = ${JSON.stringify(state)}; document.documentElement.dataset.desktopSink = '${state.active}'; window.dispatchEvent(new CustomEvent('cabin:desktop-mode', {detail: window.cabinDesktopStatus}));`);
 }
-// 检查更新 (desktop/updater.cjs). State reaches the page as
-// window.cabinUpdateState + CustomEvent 'cabin:update-state'.
-let updater = null, macUpdater = null;
-async function confirmUpdatedCabinStartup() {
-  const contents = siteView?.webContents;
-  if (!macUpdater || !startupComplete || loading || currentError || documentHttpFailed || !contents || contents.isDestroyed() || !isSiteUrl(contents.getURL())) return;
-  // A loaded Electron shell can still contain a failed/blank React page.
-  const cabinReady = await contents.executeJavaScript(`new Promise(resolve => {
-    const timer = setTimeout(() => { observer.disconnect(); resolve(false); }, 10000);
-    const check = () => { if (!document.querySelector('.cabin-room')) return; observer.disconnect(); clearTimeout(timer); setTimeout(() => resolve(Boolean(document.querySelector('.cabin-room'))), 500); };
-    const observer = new MutationObserver(check); observer.observe(document.documentElement, { childList: true, subtree: true }); check();
-  })`).catch(() => false);
-  if (cabinReady === true && contents === siteView?.webContents && !contents.isDestroyed() && !loading && !currentError && !documentHttpFailed) {
-    macUpdater.confirmStartup({ cabinReady: true });
-    if (macUpdater.startupWarning) { writeLog('update-recovery', macUpdater.startupWarning); if (macUpdater.listenerCount('error')) macUpdater.emit('error', new Error(macUpdater.startupWarning)); }
-  }
-}
-function updateSettings() {
-  const file = path.join(app.getPath('userData'), 'update.json');
-  return { get: () => { try { return JSON.parse(fs.readFileSync(file, 'utf8')).autoDownload !== false; } catch { return true; } }, set: (value) => { try { fs.writeFileSync(file, JSON.stringify({ autoDownload: Boolean(value) })); } catch {} } };
-}
-function pushUpdateState(state = updater?.state) {
-  if (state) notifySite(`window.cabinUpdateState = ${JSON.stringify(state)}; window.dispatchEvent(new CustomEvent('cabin:update-state', { detail: window.cabinUpdateState }));`);
-}
-function startUpdater() {
-  const { updateMode } = require('./updater.cjs');
-  // macOS: ad-hoc builds update themselves (desktop/mac-updater.cjs). net.fetch
-  // follows the system proxy settings.
-  if (process.platform === 'darwin' && app.isPackaged) macUpdater = createMacUpdater({ app, fetch: (url, options) => net.fetch(url, options), bundlePath: path.resolve(process.execPath, '..', '..', '..'), directory: path.join(app.getPath('userData'), 'updates') });
-  confirmUpdatedCabinStartup();
-  const macUpdatable = macUpdater ? macUpdater.canSelfUpdate({ isPackaged: app.isPackaged }) : null;
-  const native = updateMode({ isPackaged: app.isPackaged, macUpdatable }).mode === 'install';
-  updater = createUpdater({ currentVersion: app.getVersion(), isPackaged: app.isPackaged, macUpdatable, autoUpdater: native ? macUpdater || require('electron-updater').autoUpdater : null, openExternal: (url) => shell.openExternal(url), installedVersion: () => macUpdater?.installedVersion() || '', relaunch: relaunchInstalledCopy, settings: updateSettings(), onState: (state) => pushUpdateState(state) });
-  if (!process.env.ALBUM_DESKTOP_TEST_PROFILE) updater.start();
-}
-// The .app on disk was replaced (a DMG dragged over it) while this older
-// process kept running in the background: start the installed copy instead.
-function relaunchInstalledCopy() {
-  if (macUpdater) macUpdater.autoInstallOnAppQuit = false; // the newer copy wins; never swap a staged older one over it
-  app.relaunch(); app.quit(); return true;
-}
-// Reopening the app (Dock, Launchpad, Finder) while it only ran in the
-// background starts the newer installed copy; with the window open the
-// About row offers 「重启到新版本」 instead.
-function newerCopyInstalled() {
-  const installed = macUpdater?.installedVersion() || '';
-  return Boolean(installed) && compareVersions(installed, app.getVersion()) > 0;
-}
-function checkUpdatesFromMenu() { restoreMainWindow(); sendCompanionCommand(siteView?.webContents, 'open-about'); updater?.check({ manual: true }); }
-function handleUpdateCommand(pathname, params) {
-  if (!updater) return;
-  if (pathname === '/update-check') updater.check({ manual: true });
-  else if (pathname === '/update-download') updater.download();
-  else if (pathname === '/update-install') updater.install();
-  else if (pathname === '/update-relaunch') updater.restart();
-  else if (pathname === '/update-open') updater.openRelease();
-  else if (pathname === '/update-auto' && ['true', 'false'].includes(params.get('enabled'))) updater.setAutoDownload(params.get('enabled') === 'true');
-  else if (pathname === '/update-state') pushUpdateState();
-}
+const updates = createUpdates({ app, net, shell, writeLog, notifySite: (script) => notifySite(script), getContents: () => siteView?.webContents,
+  pageReady: () => startupComplete && !loading && !currentError && !documentHttpFailed && isSiteUrl(siteView?.webContents.getURL()),
+  openAbout: () => { restoreMainWindow(); sendCompanionCommand(siteView?.webContents, 'open-about'); } });
+const autostart = createAutostart({ app, publish: (state) => notifySite(autostartScript(state)) });
 function notifySite(script) {
   if (siteView && !siteView.webContents.isDestroyed()) siteView.webContents.executeJavaScript(script).catch(() => {});
 }
@@ -459,39 +344,14 @@ function showToolbarMenu() {
 }
 
 function createMenus() {
-  Menu.setApplicationMenu(Menu.buildFromTemplate([
-    { label: '应用', submenu: [
-      { label: '小屋设置…', click: () => sendCompanionCommand(siteView?.webContents, 'open-settings') },
-      { label: '显示与字体…', accelerator: 'CmdOrCtrl+,', click: () => toggleSettings(true) },
-      { label: '重新引导', click: () => sendCompanionCommand(siteView?.webContents, 'open-onboarding') },
-      { label: '检查更新…', click: checkUpdatesFromMenu },
-      { label: '重新载入小屋', accelerator: 'CmdOrCtrl+R', click: () => navigate(`${SITE_ORIGIN}/`) },
-      { type: 'separator' },
-        { type: 'separator' },
-      { role: 'quit', label: '退出' }
-    ]},
-    { label: '编辑', submenu: [
-      { role: 'undo', label: '撤销' }, { role: 'redo', label: '重做' }, { type: 'separator' },
-      { role: 'cut', label: '剪切' }, { role: 'copy', label: '复制' },
-      { role: 'paste', label: '粘贴' }, { role: 'selectAll', label: '全选' }
-    ]},
-    { label: '查看', submenu: [
-      { label: '放大', accelerator: 'CmdOrCtrl+Plus', click: () => saveAppearance({ ...appearance, zoom: appearance.zoom + 5 }).catch(() => {}) },
-      { label: '缩小', accelerator: 'CmdOrCtrl+-', click: () => saveAppearance({ ...appearance, zoom: appearance.zoom - 5 }).catch(() => {}) },
-      { label: '实际大小', accelerator: 'CmdOrCtrl+0', click: () => saveAppearance({ ...appearance, zoom: 100 }).catch(() => {}) },
-      { id: 'cabin-fullscreen', type: 'checkbox', checked: isFullscreen(), label: '交互全屏', accelerator: 'F11', click: toggleFullscreen },
-      { label: '沉入桌面', accelerator: SINK_HOTKEY, registerAccelerator: false, click: () => desktopSink.toggle() }
-    ]},
-    { label: '帮助', submenu: [
-      { label: '打开数据文件夹', click: () => shell.openPath(app.getPath('userData')) },
-      { label: '关于心流小屋', click: () => dialog.showMessageBox(mainWindow, {
-        type: 'info', title: '心流小屋', message: `心流小屋 ${app.getVersion()}`,
-        detail: '像素 Lo-fi 小屋：收藏专辑、听歌和专注。\n所有收藏与专注记录保存在这台电脑。\n\n使用 HarmonyOS Sans SC 字体，Copyright 2021 Huawei Device Co., Ltd.，字体原文件与授权协议随应用打包。\nQQ / 网易云播放模块来自 Simple Music（GPL-3.0）；曲库搜索来自 iTunes Search 与 MusicBrainz。'
-      }) }
-    ]}
-  ]));
+  const zoom = (step) => saveAppearance({ ...appearance, zoom: step ? appearance.zoom + step : 100 }).catch(() => {});
+  Menu.setApplicationMenu(Menu.buildFromTemplate(appMenuTemplate({
+    companion: (command) => sendCompanionCommand(siteView?.webContents, command), toggleSettings, checkUpdates: () => updates.checkFromMenu(),
+    reload: () => navigate(`${SITE_ORIGIN}/`), zoom, fullscreen: isFullscreen(), toggleFullscreen, toggleSink: () => desktopSink.toggle(),
+    openData: () => shell.openPath(app.getPath('userData')),
+    about: () => dialog.showMessageBox(mainWindow, { type: 'info', title: '心流小屋', message: `心流小屋 ${app.getVersion()}`, detail: ABOUT_DETAIL })
+  })));
 }
-
 
 function registerIpc() {
   ipcMain.handle('desktop:command', async (event, command) => {
@@ -621,7 +481,7 @@ else {
     localMusic = createLocalMusic({ directory: app.getPath('userData'), resizeCover: (buffer) => { const image = nativeImage.createFromBuffer(buffer); return image.isEmpty() ? null : image.resize({ width: Math.min(600, image.getSize().width), quality: 'good' }).toJPEG(86); } });
     const nowPlaying = createNowPlaying({ helperPath: app.isPackaged ? path.join(process.resourcesPath, 'native', 'NowPlaying.exe') : path.join(__dirname, 'native', 'bin', 'NowPlaying.exe') });
     music = createMusicService({ directory: app.getPath('userData'), safeStorage, nowPlaying, localMusic, appleMusic: createAppleMusic({ country: app.getLocaleCountryCode() }), localApps: createLocalApps({ openExternal: (url) => shell.openExternal(url), appForProtocol: (url) => app.getApplicationNameForProtocol(url) }), login: (provider) => provider === 'qq' ? openQQLogin(mainWindow) : openNeteaseLogin(mainWindow), logout: (provider) => provider === 'qq' ? clearQQLogin() : clearNeteaseLogin() });
-    writeLog('started', app.getVersion()); await createWindow(); try { startUpdater(); } catch (error) { writeLog('updater-error', error.message); }
+    writeLog('started', app.getVersion()); await createWindow(); try { updates.start(); } catch (error) { writeLog('updater-error', error.message); }
   }).catch((error) => {
     writeLog('startup-error', error.message);
     dialog.showErrorBox('心流小屋启动失败', '请关闭后重新打开应用。\n' + error.message);
@@ -629,9 +489,9 @@ else {
   });
   app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
   app.on('activate', () => {
-    if (newerCopyInstalled()) {
-      if (!mainWindow || mainWindow.isDestroyed() || !mainWindow.isVisible()) { writeLog('relaunch-installed', macUpdater.installedVersion()); relaunchInstalledCopy(); return; }
-      updater?.checkInstalled();
+    if (updates.newerCopyInstalled()) {
+      if (!mainWindow || mainWindow.isDestroyed() || !mainWindow.isVisible()) { writeLog('relaunch-installed', updates.installedVersion()); updates.relaunchInstalledCopy(); return; }
+      updates.checkInstalled();
     }
     if (mainWindow) restoreMainWindow(); else createWindow().catch((error) => writeLog('startup-error', error.message));
   });
