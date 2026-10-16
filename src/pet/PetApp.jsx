@@ -47,11 +47,17 @@ function PetApp() {
     const current = drag.current; if (!current) return;
     const dx = event.screenX - current.x, dy = event.screenY - current.y; if (!dx && !dy) return;
     current.x = event.screenX; current.y = event.screenY; current.moved += Math.abs(dx) + Math.abs(dy);
-    if (current.moved > 3) { if (!dragging) setDragging(true); api?.moveBy(dx, dy); }
+    if (current.moved > 3) { if (!dragging) setDragging(true); queueMove(dx, dy); }
   };
+  // One `pet:move` IPC per frame, not per pointermove (120 Hz+ mice sent 2–4 per frame).
+  const pending = useRef({ dx: 0, dy: 0, frame: 0 });
+  const flushMove = () => { const p = pending.current; cancelAnimationFrame(p.frame); p.frame = 0; if (p.dx || p.dy) api?.moveBy(p.dx, p.dy); p.dx = p.dy = 0; };
+  const queueMove = (dx, dy) => { const p = pending.current; p.dx += dx; p.dy += dy; if (!p.frame) p.frame = requestAnimationFrame(flushMove); };
+  useEffect(() => () => cancelAnimationFrame(pending.current.frame), []);
   const up = (event) => {
     const current = drag.current; drag.current = null; setDragging(false);
     if (!current) return;
+    flushMove(); // the last step lands before dragEnd settles the window
     if (current.moved > 3) api?.dragEnd(); else if (event.type === 'pointerup') cat.poke();
   };
   return <div className="pet-stage" data-reduce-motion={cat.reduced} onContextMenu={(event) => { event.preventDefault(); api?.menu(); }}>
