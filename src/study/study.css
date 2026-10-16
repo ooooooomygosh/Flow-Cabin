@@ -38,7 +38,7 @@
 .study-back:hover { color: var(--px-ink); }
 .study-card { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; min-height: 180px; padding: 22px 16px; color: var(--px-paper-ink); text-align: center; background: linear-gradient(var(--px-paper), #f3e3c3); border: 2px solid var(--px-paper-ink); box-shadow: inset 0 -4px 0 #e2cca4, 4px 4px 0 #0d080599; font: inherit; cursor: pointer; animation: study-card-in var(--px-dur-med) var(--px-ease) both; }
 .study-card.is-flipped { cursor: default; animation: study-flip 260ms steps(4, end); }
-.study-card-front { font-family: var(--px-font-cn); font-size: 22px; line-height: 1.35; overflow-wrap: anywhere; }
+.study-card-front { font-family: var(--px-font-cn); font-size: 24px; line-height: 1.35; overflow-wrap: anywhere; }
 .study-card-back { max-width: 100%; padding-top: 10px; font-size: 15px; line-height: 1.6; border-top: 2px dashed var(--px-ink-dim); white-space: pre-wrap; overflow-wrap: anywhere; }
 .study-card-hint { font-size: 12px; color: #8a6a4a; }
 .study-stage { position: absolute; top: 8px; left: 8px; padding: 1px 6px; font-size: 12px; color: var(--px-paper); background: var(--px-accent-2); border: 2px solid var(--px-paper-ink); }
@@ -52,7 +52,7 @@
 .study-ratings kbd { position: absolute; top: 2px; right: 4px; font-family: var(--px-font-en); font-size: 8px; color: var(--px-ink-faint); }
 .study-ratings .is-again { border-bottom-color: #c8322a; } .study-ratings .is-hard { border-bottom-color: #d08a4a; } .study-ratings .is-good { border-bottom-color: var(--px-good); } .study-ratings .is-easy { border-bottom-color: #6a8fd0; }
 .study-done { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 26px 10px; text-align: center; color: var(--px-good); }
-.study-done strong { font-family: var(--px-font-cn); font-weight: 400; font-size: 15px; color: var(--px-ink); }
+.study-done strong { font-family: var(--px-font-cn); font-weight: 400; font-size: 12px; color: var(--px-ink); }
 .study-done small { font-size: 12px; color: var(--px-ink-dim); }
 .study-add { display: grid; gap: 6px; }
 .study-add label { display: grid; gap: 6px; font-size: 12px; color: var(--px-ink-dim); }

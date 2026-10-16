@@ -36,7 +36,6 @@
 .pixel-clock{width:min(260px,100%);height:auto;fill:#ffe2a8;filter:drop-shadow(3px 3px 0 #6b3d1a)}
 .phase-shortBreak .pixel-clock,.phase-longBreak .pixel-clock{fill:#bfe6b9;filter:drop-shadow(3px 3px 0 #2e4b2a)}
 .is-paused .pixel-clock{opacity:.6}
-.focus-progress{width:100%;height:8px;background:#3e281a;border:2px solid #6b4528}.focus-progress span{display:block;height:100%;background:repeating-linear-gradient(90deg,var(--px-accent) 0 6px,#c98d4a 6px 8px);transition:width .5s linear}
 .focus-rounds{display:flex;gap:6px}.focus-rounds span{width:10px;height:10px;background:#3e281a;border:2px solid #8a5f3a}.focus-rounds .is-done{background:var(--px-warn);border-color:#ffb08f}.focus-rounds .is-active{background:var(--px-accent);animation:focus-pulse 1.2s steps(2) infinite}
 @keyframes focus-pulse{50%{opacity:.4}}
 .focus-current-task{display:grid;gap:4px;width:100%;text-align:left;color:#d3b58f;font-size:12px}
