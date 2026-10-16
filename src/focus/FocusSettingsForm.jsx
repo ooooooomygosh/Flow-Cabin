@@ -21,7 +21,8 @@ function DurationSetting({ name, label, value, max, onSave }) {
   };
   return <label>{label}<input type="number" min={name === 'longEvery' ? 2 : 1} max={max} step="1" value={draft} onChange={(event) => setDraft(event.target.value)} onBlur={save} onKeyDown={(event) => {
     if (event.key === 'Enter') { event.preventDefault(); save(); }
-    if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); setDraft(String(value)); }
+    // Escape first drops an unsaved edit; with nothing pending it closes the dialog as usual.
+    if (event.key === 'Escape' && draft !== String(value)) { event.preventDefault(); event.stopPropagation(); setDraft(String(value)); }
   }}/></label>;
 }
 

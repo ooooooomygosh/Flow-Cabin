@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { launchChromium } from './launch-browser.mjs';
 import { showcaseAlbums } from './showcase-albums.mjs';
 import { verifyOnboarding } from './onboarding-checks.mjs';
-import { openRoomSettings } from './settings-actions.mjs';
+import { openRoomSettings, closeSettings } from './settings-actions.mjs';
 import { spawn, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import fs from 'node:fs/promises';
@@ -63,7 +63,7 @@ try {
     await page.getByRole('button', { name: '先专注一会儿' }).click(); await page.getByRole('button', { name: '开始专注', exact: true }).waitFor();
     assert.equal(await page.getByRole('tab', { name: '番茄钟' }).getAttribute('aria-selected'), 'true'); assert.equal(await page.locator('.focus-badge').getAttribute('aria-expanded'), 'true');
     await fits(page.getByRole('button', { name: '开始专注', exact: true })); await page.getByRole('button', { name: '收起专注工具' }).click();
-    await page.getByRole('button', { name: '添加第一张专辑' }).click(); await page.getByRole('dialog', { name: '添加专辑' }).waitFor(); await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: '添加第一张专辑' }).click(); await page.getByRole('dialog', { name: '添加到唱片架' }).waitFor(); await page.keyboard.press('Escape');
     check(`welcome-two-paths-and-visible-controls-${viewport.width}x${viewport.height}`);
   }
   items = albums; await page.setViewportSize({ width: 1440, height: 900 }); await page.reload(); await page.locator('.room-record').first().waitFor();
@@ -76,15 +76,15 @@ try {
   await openRoomSettings(page);
   await page.locator('.scene-choice img').evaluateAll(images => Promise.all(images.map(image => image.decode())));
   for (const name of ['奶糖', '蛋挞', '棉花', '可可', '枫糖']) await fits(page.locator('.pet-choice strong', { hasText: name }));
-  await fits(page.getByRole('button', { name: '回到小屋', exact: true })); check('six-scene-thumbnails-and-all-partner-names-visible');
-  await shot('personalization', true); await page.getByRole('button', { name: '回到小屋' }).click();
+  await fits(page.getByRole('button', { name: '关闭设置', exact: true })); check('six-scene-thumbnails-and-all-partner-names-visible');
+  await shot('personalization', true); await closeSettings(page);
   await page.locator('.room-cat').click(); await page.locator('.room-cat-bubble').waitFor(); check('partner-poke-shows-response');
   await page.keyboard.press('z'); assert(await page.evaluate(() => document.documentElement.classList.contains('room-zen'))); await shot('immersive'); await page.keyboard.press('Escape'); check('immersive-enter-and-exit');
   await page.setViewportSize({ width: 960, height: 600 }); await shot('cabin-960x600');
   const { ROOM_SCENES } = await import('../src/scene-catalog.mjs');
   for (const scene of ROOM_SCENES) {
-    await openRoomSettings(page); await page.getByRole('button', { name: `选择场景 ${scene.label}`, exact: true }).click(); await page.getByRole('button', { name: '回到小屋' }).click(); await shot(`scene-${scene.id}-960x600`);
-    for (const name of ['设置', '添加专辑']) await fits(page.getByRole('button', { name, exact: true }));
+    await openRoomSettings(page); await page.getByRole('button', { name: `选择场景 ${scene.label}`, exact: true }).click(); await closeSettings(page); await shot(`scene-${scene.id}-960x600`);
+    for (const name of ['设置', '添加到唱片架']) await fits(page.getByRole('button', { name, exact: true }));
   }
   check('all-six-scenes-compact-controls-fit');
   if (process.env.SHOWCASE_TOUR === '1') {
@@ -111,7 +111,7 @@ try {
     await openRoomSettings(demo); await demo.waitForTimeout(1300);
     await demo.getByRole('button', { name: '选择场景 林间书屋', exact: true }).click();
     await demo.getByRole('button', { name: '选择桌宠 枫糖', exact: true }).click(); await demo.waitForTimeout(1200);
-    await demo.getByRole('button', { name: '回到小屋', exact: true }).click(); await demo.waitForTimeout(1700);
+    await closeSettings(demo); await demo.waitForTimeout(1700);
     await demo.keyboard.press('z'); await demo.waitForTimeout(2000);
     const video = demo.video(); await tour.close();
     await promisify(execFile)('ffmpeg', ['-y', '-i', await video.path(), '-an', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '25', '-movflags', '+faststart', path.join(output, 'cabin-tour.mp4')], { timeout: 60000 });
