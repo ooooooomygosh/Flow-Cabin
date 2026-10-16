@@ -8,7 +8,7 @@ import { downloadBlob } from '../lib/download.mjs';
 import { NumberField } from '../lib/NumberField.jsx';
 
 // 每天新词: one number field; an empty field while typing does not save 0.
-const NewPerDay = ({ study }) => <label className="study-limit">每天新词<NumberField live min={0} max={200} list="study-new-per-day" aria-label="词书每日新词" value={study.state.newPerDay} onCommit={study.setNewPerDay}/>个<datalist id="study-new-per-day"><option value="5"/><option value="10"/><option value="20"/></datalist></label>;
+const NewPerDay = ({ study }) => <label className="study-limit">每天新词（个）<NumberField live min={0} max={200} list="study-new-per-day" aria-label="词书每日新词" value={study.state.newPerDay} onCommit={study.setNewPerDay}/><datalist id="study-new-per-day"><option value="5"/><option value="10"/><option value="20"/></datalist></label>;
 
 // 学习: today's review in a deck (Space flips, 1–4 rates), a quick way to add
 // or paste many cards, and the countdowns that keep the goal in view.

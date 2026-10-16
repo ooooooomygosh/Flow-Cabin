@@ -41,13 +41,16 @@ export default function BackupDialog({ items, close, reload }) {
     finally { setBusy(false); }
   };
   const replace = () => {
-    const { parsed, replacements, summary } = pending, warnings = [...pending.warnings];
-    for (const { id } of replacements) {
+    const { parsed, replacements, summary } = pending, warnings = [...pending.warnings], done = [];
+    for (const entry of replacements) {
+      const { id } = entry, before = warnings.length;
       if (id === 'focus' && !focus.replace(restoreFocus(parsed.focus, focus.state))) warnings.push('专注记录、待办与随手记未能保存，原有内容保持不变');
       if (id === 'study' && !study.replace(parsed.study)) warnings.push('学习记录未能保存');
       if (id === 'sound') { try { soundscape.replaceMix(parsed.sound); } catch { warnings.push('声音设置未能保存'); } }
+      if (warnings.length === before) done.push(entry.label.replace(/（.*）$/, ''));
     }
-    setPending(null); setNotice(withWarnings(`${summary} 已用备份替换${replacements.map((entry) => entry.label.replace(/（.*）$/, '')).join('、')}。`, warnings));
+    // Only what was actually written is reported as replaced.
+    setPending(null); setNotice(withWarnings(done.length ? `${summary} 已用备份替换${done.join('、')}。` : summary, warnings));
   };
   const keep = () => { setNotice(withWarnings(`${pending.summary} 这台电脑上的其他记录保持不变。`, pending.warnings)); setPending(null); };
   return <Dialog title="收藏与备份" icon={<Library size={20}/>} close={close} className="backup-dialog">
