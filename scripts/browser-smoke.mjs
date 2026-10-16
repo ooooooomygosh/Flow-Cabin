@@ -176,6 +176,7 @@ try {
   await page.getByRole('button', { name: '从待播移除 测试唱片 3', exact: true }).click(); await page.getByRole('button', { name: '待播唱片 1 张', exact: true }).click(); await page.locator('.room-record').nth(1).click();
   check('queue-priority-and-repeat-state-match-playback');
   // Album import from picked files (session playback) + pixel covers.
+  localAlbumCalls = 0; // the onboarding 播放测试 also reads /local/albums (first local track)
   await page.getByRole('button', { name: '添加专辑', exact: true }).click(); await page.getByRole('tab', { name: '本地音乐' }).click();
   await page.getByRole('tab', { name: '手动填写' }).click(); await page.getByRole('tab', { name: '本地音乐' }).click(); // {} first, then a partial album
   await page.locator('.add-results[aria-label="本地专辑"] li', { hasText: '残缺资料' }).getByText('未知歌手 · 0 首').waitFor(); check('local-music-empty-or-partial-response-renders');
