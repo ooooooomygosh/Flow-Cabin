@@ -1,5 +1,7 @@
 /* 学习 · flashcards and countdowns inside the focus dock. */
-.study-panel, .study-review, .study-editor { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; gap: 10px; outline: none; }
+@layer guards, reset, features, skin, overrides;
+@layer features {
+.study-panel, .study-review, .study-editor { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; gap: 10px; }
 .study-summary { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--px-ink-dim); }
 .study-summary b { color: var(--px-accent-hi); font-weight: 600; }
 .study-decks { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
@@ -9,14 +11,14 @@
 .study-deck-open strong { font-family: var(--px-font-cn); font-weight: 400; font-size: 14px; }
 .study-deck-open small { font-size: 11.5px; color: var(--px-ink-faint); }
 .study-deck-badge { position: absolute; top: -6px; left: -6px; min-width: 20px; padding: 1px 5px; font-family: var(--px-font-en); font-size: 10px; text-align: center; color: #24170d; background: var(--px-accent); border: 2px solid var(--px-shadow); pointer-events: none; }
-.study-deck-edit { align-self: stretch; padding: 0 12px; color: var(--px-ink-dim); background: transparent; border: 2px solid var(--px-border-subtle, rgba(138,90,50,.42)); font: inherit; font-size: 12px; cursor: pointer; }
+.study-deck-edit { align-self: stretch; padding: 0 12px; color: var(--px-ink-dim); background: transparent; border: 2px solid var(--px-border-subtle); font: inherit; font-size: 12px; cursor: pointer; }
 .study-deck-edit:hover { color: var(--px-ink); border-color: var(--px-border); }
 .study-new-deck, .study-countdown-add { display: flex; align-items: stretch; gap: 6px; }
 .study-new-deck > *, .study-countdown-add > * { min-height: 32px; box-sizing: border-box; }
 .study-countdown-add input[type=date] { flex: none; width: 132px; }
-.study-countdown-add button[type=submit] { flex: none; display: grid; place-items: center; width: 32px; padding: 0; color: var(--px-ink-on-accent, #1c120b); background: var(--px-accent, #e0ad69); border-color: var(--px-accent-hi, #ffd99c); }
+.study-countdown-add button[type=submit] { flex: none; display: grid; place-items: center; width: 32px; padding: 0; color: var(--px-ink-on-accent); background: var(--px-accent); border-color: var(--px-accent-hi); }
 .study-countdown-add button[type=submit]:disabled { opacity: .45; }
-.study-new-deck input, .study-countdown-add input, .study-add textarea, .study-limit input { min-width: 0; padding: 6px 8px; color: var(--px-ink, #ffe9cb); background: var(--px-surface-inset, #160d07); border: 2px solid var(--px-border, #8a5a32); box-shadow: var(--px-shadow-inset, inset 2px 2px 0 #090503); font: inherit; font-size: 12.5px; outline: none; }
+.study-new-deck input, .study-countdown-add input, .study-add textarea, .study-limit input { min-width: 0; padding: 6px 8px; color: var(--px-ink); background: var(--px-surface-inset); border: 2px solid var(--px-border); box-shadow: var(--px-shadow-inset); font: inherit; font-size: 12.5px; }
 .study-new-deck input, .study-countdown-add input:first-child { flex: 1; }
 .study-new-deck input:focus, .study-countdown-add input:focus, .study-add textarea:focus { border-color: var(--px-accent); }
 .study-limit { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--px-ink-dim); }
@@ -71,24 +73,24 @@
 /* Focus heatmap and daily goal (统计). */
 .focus-heatmap { display: grid; gap: 8px; margin: 14px 0 0; }
 .focus-heatmap-grid { display: grid; grid-auto-flow: column; grid-template-columns: repeat(18, 1fr); grid-template-rows: repeat(7, auto); gap: 3px; }
-.focus-heatmap-grid span { width: 100%; aspect-ratio: 1; min-width: 8px; background: var(--px-heat-0, #180e08); box-shadow: inset 0 0 0 1px rgba(138,90,50,.28); }
-.focus-heatmap-grid span[data-level='1'] { background: var(--px-heat-1, #5c3b1e); } .focus-heatmap-grid span[data-level='2'] { background: var(--px-heat-2, #8f5d2e); }
-.focus-heatmap-grid span[data-level='3'] { background: var(--px-heat-3, #c48745); } .focus-heatmap-grid span[data-level='4'] { background: var(--px-heat-4, #ffd99c); }
+.focus-heatmap-grid span { width: 100%; aspect-ratio: 1; min-width: 8px; background: var(--px-heat-0); box-shadow: inset 0 0 0 1px rgba(138,90,50,.28); }
+.focus-heatmap-grid span[data-level='1'] { background: var(--px-heat-1); } .focus-heatmap-grid span[data-level='2'] { background: var(--px-heat-2); }
+.focus-heatmap-grid span[data-level='3'] { background: var(--px-heat-3); } .focus-heatmap-grid span[data-level='4'] { background: var(--px-heat-4); }
 .focus-heatmap-grid span.is-future { visibility: hidden; }
 .focus-heatmap-legend { display: flex; align-items: center; justify-content: flex-end; gap: 3px; font-size: 10.5px; color: var(--px-ink-faint); }
 .focus-heatmap-legend span { width: 9px; height: 9px; box-shadow: inset 0 0 0 1px rgba(138,90,50,.28); }
-.study-review:focus, .study-review:focus-visible { outline: none !important; box-shadow: none !important; }
+.study-review:focus, .study-review:focus-visible { outline: none; box-shadow: none; }
 .focus-goal { display: grid; gap: 4px; margin-top: 8px; font-size: 12.5px; color: var(--px-ink-dim); }
 .focus-goal-bar { height: 8px; background: #0d080599; box-shadow: inset 0 0 0 1px #0d0805; }
 .focus-goal-bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--px-accent-lo), var(--px-accent)); }
 .focus-goal.is-met .focus-goal-bar i { background: var(--px-good); }
 .focus-goal label { display: inline-flex; align-items: center; gap: 4px; }
-.focus-goal input { width: 56px; padding: 2px 4px; color: var(--px-ink, #ffe9cb); background: var(--px-surface-inset, #160d07); border: 2px solid var(--px-border, #8a5a32); font: inherit; font-size: 12px; }
+.focus-goal input { width: 56px; padding: 2px 4px; color: var(--px-ink); background: var(--px-surface-inset); border: 2px solid var(--px-border); font: inherit; font-size: 12px; }
 
 @keyframes study-card-in { from { opacity: 0; transform: translateY(6px); } }
 @keyframes study-flip { 0% { transform: scaleX(1); } 50% { transform: scaleX(.04); } 100% { transform: scaleX(1); } }
-:root[data-desktop-reduce-motion=true] .study-card { animation: none !important; }
-@media (prefers-reduced-motion: reduce) { .study-card { animation: none !important; } }
+:root[data-desktop-reduce-motion=true] .study-card { animation: none; }
+@media (prefers-reduced-motion: reduce) { .study-card { animation: none; } }
 
 .study-card-search { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 14px 0 8px; font-size: 12px; }
 .study-card-search input { flex: 1; min-width: 150px; }
@@ -118,3 +120,4 @@
 .study-guide ol { padding-left:18px; }
 .study-import input[type=file] { max-width:100%; font-size:11px; }
 .study-import-columns { display:flex; flex-wrap:wrap; gap:8px; margin:8px 0; }
+}

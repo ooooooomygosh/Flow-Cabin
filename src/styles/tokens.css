@@ -7,10 +7,43 @@
  * tokens here instead so the palette stays in one place.
  * Mirrored in tokens.ts for JS/canvas use; keep both in sync.
  */
+/* Cascade order for every window. Earlier layers lose for normal declarations,
+   but an !important in an earlier layer beats every later one: the kill switches
+   live in `guards` and are the only !important in the app. Build chunking can't
+   reorder layers, so the shipped build cascades exactly like the dev server.
+   guards → reset (tokens, fonts, base) → features (component files) → shell
+   (room + app shell) → skin (pixel-ui) → overrides (流畅模式). */
+@layer guards, reset, features, skin, overrides;
+
+@layer guards {
+/* Reduced motion (OS setting or the in-app switch): keep states, drop movement. */
+html[data-desktop-reduce-motion='true'] *,
+html[data-desktop-reduce-motion='true'] *::before,
+html[data-desktop-reduce-motion='true'] *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+/* Electron keeps a minimized / unfocused main window "visible" (backgroundThrottling
+   is off), so CSS animations would keep running. frame-clock.mjs sets this flag; the
+   wallpaper and pet windows are exempt and never receive it. */
+:root[data-app-background='true'] *,
+:root[data-app-background='true'] *::before,
+:root[data-app-background='true'] *::after { animation-play-state: paused !important; }
+}
+
+@layer reset {
 /* Pixel fonts (SIL OFL 1.1) — see public/fonts/pixel/README.md */
 @font-face { font-family: 'Fusion Pixel 12'; src: url('/fonts/pixel/fusion-pixel-12-zh_hans.subset.woff2') format('woff2'); font-weight: 400 900; font-display: swap; }
 @font-face { font-family: 'Silkscreen'; src: url('/fonts/pixel/silkscreen-regular.woff2') format('woff2'); font-weight: 400; font-display: swap; }
 @font-face { font-family: 'Silkscreen'; src: url('/fonts/pixel/silkscreen-bold.woff2') format('woff2'); font-weight: 700; font-display: swap; }
+/* Original, unmodified HarmonyOS Sans SC files are bundled under public/fonts (lazy: only used weights load). */
+@font-face { font-family: 'HarmonyOS Sans SC Bundled'; src: url('/fonts/HarmonyOS_Sans_SC_Thin.ttf') format('truetype'); font-weight: 250; font-style: normal; font-display: swap; }
+@font-face { font-family: 'HarmonyOS Sans SC Bundled'; src: url('/fonts/HarmonyOS_Sans_SC_Light.ttf') format('truetype'); font-weight: 300; font-style: normal; font-display: swap; }
+@font-face { font-family: 'HarmonyOS Sans SC Bundled'; src: url('/fonts/HarmonyOS_Sans_SC_Regular.ttf') format('truetype'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: 'HarmonyOS Sans SC Bundled'; src: url('/fonts/HarmonyOS_Sans_SC_Medium.ttf') format('truetype'); font-weight: 500; font-style: normal; font-display: swap; }
+@font-face { font-family: 'HarmonyOS Sans SC Bundled'; src: url('/fonts/HarmonyOS_Sans_SC_Bold.ttf') format('truetype'); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: 'HarmonyOS Sans SC Bundled'; src: url('/fonts/HarmonyOS_Sans_SC_Black.ttf') format('truetype'); font-weight: 900; font-style: normal; font-display: swap; }
+
 
 :root {
   /* ── palette (16-colour cabin ramp) ───────────────────────────── */
@@ -27,9 +60,9 @@
   --px-accent-2: #7fb8a8;    /* teal window-light — secondary accent */
   --px-good: #9ccf8c;        /* moss */
   --px-warn: #e06a4e;        /* ember */
-  --px-night: #22304a;       /* window night sky */
   --px-border: #8a5a32;      /* frame line */
   --px-border-hi: #b07a46;   /* frame highlight bevel */
+  --px-brass: #d4a46b;       /* brass frame edge (also the 9-slice highlight) */
   --px-shadow: #0d0805;      /* hard drop shadow */
   --px-focus: #ffd99c;       /* keyboard focus ring */
   --px-surface-hud: rgba(42, 26, 16, .92); /* floating HUD chips */
@@ -37,34 +70,27 @@
   --px-surface-card: #24160d;
   --px-ink-muted: #6e553b;      /* decorative only, not for text */
   --px-ink-on-accent: #1c120b;
+  --px-paper: #fff7e6;          /* speech bubble / toast paper */
+  --px-paper-ink: #3b2a20;
   --px-border-subtle: rgba(138, 90, 50, .42);
   --px-shadow-inset: inset 2px 2px 0 #090503, inset -1px -1px 0 rgba(255, 217, 156, .10);
   --px-heat-0: #180e08; --px-heat-1: #5c3b1e; --px-heat-2: #8f5d2e; --px-heat-3: #c48745; --px-heat-4: #ffd99c;
+  /* The current scene's accent: CabinRoom sets it per scene on .cabin-room. */
+  --scene-accent: var(--px-accent);
 
-  /* ── type ─────────────────────────────────────────────────────── */
+  /* ── type: pixel faces are drawn on a 12px grid, so they come in 12 / 24 / 48 only;
+     the body face (HarmonyOS) carries prose at 12–16. ─────────────── */
   --px-font-cn: 'Fusion Pixel 12', 'Fusion Pixel', 'Zpix', 'HarmonyOS Sans SC Bundled', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   --px-font-en: 'Silkscreen', 'Fusion Pixel 12', 'Press Start 2P', monospace;
   --px-font-body: 'HarmonyOS Sans SC Bundled', 'PingFang SC', 'Microsoft YaHei', sans-serif; /* long-form/small text where pixel CJK hurts legibility */
-  --px-text-xs: 12px;        /* pixel fonts are drawn on a 12px grid: use multiples */
-  --px-text-2xs: 10px;
-  --px-text-sm: 13px;
-  --px-text-md: 15px;
-  --px-text-lg: 20px;
-  --px-text-xl: 32px;
+  --px-text-chrome: 12px; --px-text-title: 24px; --px-text-display: 48px;
+  --px-text-body-sm: 12px; --px-text-body: 14px; --px-text-body-lg: 16px;
 
   /* ── geometry ─────────────────────────────────────────────────── */
   --px-unit: 4px;            /* one art pixel at 1x */
-  --px-1: calc(var(--px-unit) * 1);
-  --px-2: calc(var(--px-unit) * 2);
-  --px-3: calc(var(--px-unit) * 3);
-  --px-4: calc(var(--px-unit) * 4);
-  --px-6: calc(var(--px-unit) * 6);
-  --px-8: calc(var(--px-unit) * 8);
-  --px-radius: 0;
   --px-border-w: 2px;
-
-  /* pixel bevel frame: 2px outline + inner hi/lo bevel + stepped hard shadow */
-  --px-frame: 0 0 0 var(--px-border-w) var(--px-shadow), inset 2px 2px 0 var(--px-border-hi), inset -2px -2px 0 rgba(0, 0, 0, .35);
+  --px-titlebar: 56px;       /* main-window title bar height */
+  --px-hit: 24px;            /* smallest pointer target (WCAG 2.5.8) */
   --px-shadow-1: 2px 2px 0 var(--px-shadow);
   --px-shadow-2: 4px 4px 0 var(--px-shadow);
   --px-shadow-3: 4px 4px 0 var(--px-shadow), 8px 8px 0 rgba(13, 8, 5, .45);
@@ -83,15 +109,12 @@
   --px-ease: steps(4, end);
   --px-ease-fine: steps(8, end);
   --px-ease-smooth: cubic-bezier(.2, .8, .2, 1); /* only for opacity/large panels */
-  --px-z-scene: 0;
-  --px-z-props: 10;
-  --px-z-pet: 20;
-  --px-z-hud: 40;
-  --px-z-overlay: 80;
-  --px-z-toast: 100;
   /* z table (inside .cabin-room): pet-with-bubble lifts above the console, under the dock/HUD */
   --z-scene: 0; --z-props: 10; --z-room-console: 10; --z-room-pet: 22; --z-hud: 20; --z-titlebar: 30; --z-chrome: 90; --z-overlay: 80; --z-toast: 100;
 }
-
-/* Images that are pixel art must never be smoothed. */
-.px-crisp, .px-crisp img, .px-crisp canvas { image-rendering: pixelated; image-rendering: crisp-edges; }
+* { box-sizing: border-box; }
+/* Keyboard focus: a stepped dashed lamp ring, never a soft glow. Features may move it (outline-offset). */
+:focus-visible { outline: 2px dashed var(--px-focus); outline-offset: 2px; }
+/* The one spin: records, discs and LEDs turn in 8 frames (pixel motion, no permanent layer). */
+@keyframes px-spin { to { rotate: 360deg; } }
+}

@@ -1,5 +1,7 @@
 /* Scene-integrated turntable (owner: beauty). Positions are in art pixels of
    the 1448×1086 scene: left = x/1448, top = (shelfTop − 80)/1086. */
+@layer guards, reset, features, skin, overrides;
+@layer features {
 .scene-deck { position: absolute; z-index: 3; left: calc(636 / 1448 * 100%); top: calc(106 / 1086 * 100%); width: calc(224 / 1448 * 100%); height: calc(88 / 1086 * 100%); --deck-energy: 0; pointer-events: auto; }
 [data-room-look='warm'] .scene-deck { left: calc(638 / 1448 * 100%); top: calc(102 / 1086 * 100%); }
 [data-room-look='forest'] .scene-deck { left: calc(590 / 1448 * 100%); top: calc(103 / 1086 * 100%); }
@@ -50,4 +52,4 @@
 
 @media (prefers-reduced-motion: reduce) { .scene-deck-record, .scene-deck.is-playing .scene-deck-sheen-strip, .scene-deck.is-playing .scene-deck-notes i, .scene-deck.is-playing .scene-deck-led { animation: none !important; }  }
 html[data-desktop-reduce-motion='true'] .scene-deck * { animation: none !important; }
-
+}

@@ -1,6 +1,8 @@
 /* Focus dock: pixel-cosy panel that floats over the right side of the room. */
+@layer guards, reset, features, skin, overrides;
+@layer features {
 .focus-badge{font-variant-numeric:tabular-nums}
-.cabin-room > .focus-badge{position:absolute;z-index:21;top:calc(var(--titlebar,56px) + 10px);right:16px;display:flex;align-items:center;gap:7px;padding:6px 10px;color:var(--px-ink-dim);background:var(--px-surface-hud);border:2px solid var(--px-border);box-shadow:2px 2px 0 var(--px-shadow);font:inherit;font-size:12px;cursor:pointer;transition:border-color var(--px-dur-fast) steps(2,end),color var(--px-dur-fast) steps(2,end)}
+.cabin-room > .focus-badge{position:absolute;z-index:21;top:calc(var(--px-titlebar) + 10px);right:16px;display:flex;align-items:center;gap:7px;padding:6px 10px;color:var(--px-ink-dim);background:var(--px-surface-hud);border:2px solid var(--px-border);box-shadow:2px 2px 0 var(--px-shadow);font:inherit;font-size:12px;cursor:pointer;transition:border-color var(--px-dur-fast) steps(2,end),color var(--px-dur-fast) steps(2,end)}
 .focus-badge:hover{border-color:var(--px-border-hi)}
 .focus-badge.is-running{color:var(--px-accent-hi)}
 .focus-badge.is-running::before{content:"";order:0;flex:none;width:6px;height:6px;background:var(--px-accent);animation:focus-lamp 1s steps(1,end) infinite}
@@ -11,24 +13,24 @@
 .focus-badge.is-open .focus-badge-time{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 @keyframes focus-lamp{50%{background:var(--px-accent-lo)}}
 @media (prefers-reduced-motion:reduce){.focus-badge.is-running::before{animation:none}}
-.cabin-room > .focus-badge:focus-visible{outline:2px solid #ffe0a8;outline-offset:3px}
+.cabin-room > .focus-badge:focus-visible{outline-offset:3px}
 .cabin-room.cabin-room .cabin-toolbar{right:180px}
 .room-zen:not(.room-zen-tools) .cabin-room > .focus-badge{top:12px}
 .room-zen .cabin-room .cabin-toolbar{right:200px}
-.cabin-toolbar .focus-badge.is-running{background:var(--px-surface-hud)!important;color:var(--px-accent-hi)!important;border-color:var(--px-border)!important}
-.cabin-toolbar .focus-badge.phase-shortBreak,.cabin-toolbar .focus-badge.phase-longBreak{background:var(--px-surface-hud)!important;color:var(--px-good)!important}
+.cabin-toolbar .focus-badge.is-running{background:var(--px-surface-hud);color:var(--px-accent-hi);border-color:var(--px-border)}
+.cabin-toolbar .focus-badge.phase-shortBreak,.cabin-toolbar .focus-badge.phase-longBreak{background:var(--px-surface-hud);color:var(--px-good)}
 .focus-dock{position:absolute;z-index:20;top:calc(var(--room-header-bottom,82px) + 58px);right:16px;width:min(360px,calc(100% - 32px));max-height:calc(100% - var(--room-header-bottom,82px) - 90px);display:flex;flex-direction:column;color:#ffe9cb;background:#27180ef2;border:2px solid #d4a46b;box-shadow:6px 6px 0 #120b06b3;image-rendering:pixelated;font-size:13px}
 .room-zen:not(.room-zen-tools) .focus-dock{top:70px;max-height:calc(100% - 100px)}
-.focus-dock-header{display:flex;align-items:flex-end;padding-top:4px;border-bottom:2px solid var(--px-border,#8a5a32);background:var(--px-surface-inset,#160d07)}
+.focus-dock-header{display:flex;align-items:flex-end;padding-top:4px;border-bottom:2px solid var(--px-border);background:var(--px-surface-inset)}
 .focus-dock-header nav{display:flex;flex:1;min-width:0}
-.focus-dock-header nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 4px 7px;color:var(--px-ink-dim,#c9a47a);background:var(--px-surface-2,#3a2416);border:2px solid var(--px-border-subtle,rgba(138,90,50,.42));border-bottom:0;margin:0 0 0 2px;font-size:11px;transition:color 80ms steps(2,end),background 80ms steps(2,end)}.focus-dock-header nav button:hover{color:var(--px-ink,#ffe9cb)}
-.focus-dock-header nav button[aria-selected=true]{color:var(--px-accent-hi,#ffd99c);background:#27180e;border-color:var(--px-border,#8a5a32);border-top:2px solid var(--px-accent,#e0ad69);margin-bottom:-2px;padding-bottom:9px}
+.focus-dock-header nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 4px 7px;color:var(--px-ink-dim);background:var(--px-surface-2);border:2px solid var(--px-border-subtle);border-bottom:0;margin:0 0 0 2px;font-size:11px;transition:color 80ms steps(2,end),background 80ms steps(2,end)}.focus-dock-header nav button:hover{color:var(--px-ink)}
+.focus-dock-header nav button[aria-selected=true]{color:var(--px-accent-hi);background:#27180e;border-color:var(--px-border);border-top:2px solid var(--px-accent);margin-bottom:-2px;padding-bottom:9px}
 .focus-dock-close{padding:0 12px;color:#e7c79b;background:none;border:0}
 .focus-save-error{flex-shrink:0;padding:10px 14px;border-bottom:2px solid #8a5a32;color:#ffc2a6;line-height:1.5;background:#472519}
 .focus-save-error .pixel-button{margin-left:4px;padding:4px 8px;min-height:28px;font-size:12px}
 .focus-dock-body{overflow:auto;padding:14px 16px 16px;background:#27180e}
 .focus-dock button{cursor:pointer;font:inherit}
-.focus-dock input,.focus-dock select{font:inherit;color:var(--px-ink,#ffe9cb);background-color:var(--px-surface-inset,#160d07);border:2px solid var(--px-border,#8a5a32);padding:6px 8px;border-radius:0}
+.focus-dock input,.focus-dock select{font:inherit;color:var(--px-ink);background-color:var(--px-surface-inset);border:2px solid var(--px-border);padding:6px 8px;border-radius:0}
 
 .focus-timer{display:grid;gap:10px;justify-items:center;text-align:center}
 .focus-phase{margin:0;color:#e6bf89;font-size:12px;letter-spacing:.12em}
@@ -65,21 +67,21 @@
 
 .focus-stat-tiles{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:0}
 .focus-stat-tiles div{padding:8px 10px;background:#34210f;border:1px solid #5d3d24}.focus-stat-tiles dt{font-size:11px;color:#c9a47a}.focus-stat-tiles dd{margin:2px 0 0;font-size:15px;font-weight:700;color:#ffe2a8;font-variant-numeric:tabular-nums}
-.stats-chart-well{margin:14px 0 0;padding:12px;background:var(--px-surface-inset,#160d07);border:2px solid var(--px-border-subtle,rgba(138,90,50,.42));box-shadow:var(--px-shadow-inset,inset 2px 2px 0 #090503,inset -1px -1px 0 rgba(255,217,156,.10))}
+.stats-chart-well{margin:14px 0 0;padding:12px;background:var(--px-surface-inset);border:2px solid var(--px-border-subtle);box-shadow:var(--px-shadow-inset)}
 .focus-week-bars{display:flex;align-items:flex-end;gap:6px;height:110px}
-.focus-week-day{flex:1;display:grid;grid-template-rows:14px 1fr 16px;align-items:end;justify-items:center;height:100%;font-size:10px;color:var(--px-ink-dim,#c9a47a)}
-.focus-week-bar{width:100%;background:repeating-linear-gradient(0deg,var(--px-accent-lo,#a8743c) 0 4px,transparent 4px 5px);align-self:end}.focus-week-bar.is-today{background:repeating-linear-gradient(0deg,var(--px-accent-hi,#ffd99c) 0 4px,transparent 4px 5px)}
-.focus-week-value{color:var(--px-ink,#ffe9cb);font-variant-numeric:tabular-nums}.focus-week-day:has(.is-today) small{color:var(--px-accent-hi,#ffd99c)}.focus-week figcaption{margin-top:8px;font-size:10px;color:var(--px-ink-faint,#a88a68);text-align:right}
+.focus-week-day{flex:1;display:grid;grid-template-rows:14px 1fr 16px;align-items:end;justify-items:center;height:100%;font-size:10px;color:var(--px-ink-dim)}
+.focus-week-bar{width:100%;background:repeating-linear-gradient(0deg,var(--px-accent-lo) 0 4px,transparent 4px 5px);align-self:end}.focus-week-bar.is-today{background:repeating-linear-gradient(0deg,var(--px-accent-hi) 0 4px,transparent 4px 5px)}
+.focus-week-value{color:var(--px-ink);font-variant-numeric:tabular-nums}.focus-week-day:has(.is-today) small{color:var(--px-accent-hi)}.focus-week figcaption{margin-top:8px;font-size:10px;color:var(--px-ink-faint);text-align:right}
 .focus-rewards{display:grid;gap:7px;margin-top:14px;padding-top:12px;border-top:2px dashed #5d3d24}
 .focus-rewards header{display:flex;justify-content:space-between;align-items:center}.focus-rewards header strong{color:#ffe2a8}
 .focus-rewards small{color:#c9a47a;font-size:11px}
-.focus-xp{height:12px;background:var(--px-surface-inset,#160d07);border:2px solid var(--px-border-subtle,rgba(138,90,50,.42));box-shadow:var(--px-shadow-inset,inset 2px 2px 0 #090503)}.focus-xp span{display:block;height:100%;background:repeating-linear-gradient(90deg,var(--px-good,#9ccf8c) 0 6px,transparent 6px 8px)}
+.focus-xp{height:12px;background:var(--px-surface-inset);border:2px solid var(--px-border-subtle);box-shadow:var(--px-shadow-inset)}.focus-xp span{display:block;height:100%;background:repeating-linear-gradient(90deg,var(--px-good) 0 6px,transparent 6px 8px)}
 .focus-unlocks{display:grid;gap:8px}.focus-unlocks fieldset{display:flex;flex-wrap:wrap;gap:5px;margin:0;padding:6px 8px 8px;border:1px solid #5d3d24}
 .focus-unlocks legend{padding:0 4px;font-size:11px;color:#c9a47a}
-.focus-unlocks button{display:inline-flex;align-items:center;gap:5px;padding:4px 8px;font-size:11px;color:var(--px-ink,#ffe9cb);background:var(--px-surface-3,#4d311c);border:1px solid var(--px-border-subtle,rgba(138,90,50,.42));transition:border-color 80ms steps(2,end)}
-.focus-unlocks button:not(:disabled):hover{border-color:var(--px-border-hi,#b07a46)}
-.focus-unlocks button[aria-pressed=true]{color:var(--px-ink-on-accent,#1c120b);background:var(--px-accent,#e0ad69);border:1px solid var(--px-accent-hi,#ffd99c);box-shadow:inset 0 0 0 1px var(--px-accent-hi,#ffd99c),inset -2px -2px 0 var(--px-accent-lo,#a8743c)}
-.focus-unlocks button:disabled{opacity:1;cursor:not-allowed;color:var(--px-ink-faint,#a88a68);background:rgba(13,8,5,.45);border:1px dashed var(--px-ink-muted,#6e553b)}
+.focus-unlocks button{display:inline-flex;align-items:center;gap:5px;padding:4px 8px;font-size:11px;color:var(--px-ink);background:var(--px-surface-3);border:1px solid var(--px-border-subtle);transition:border-color 80ms steps(2,end)}
+.focus-unlocks button:not(:disabled):hover{border-color:var(--px-border-hi)}
+.focus-unlocks button[aria-pressed=true]{color:var(--px-ink-on-accent);background:var(--px-accent);border:1px solid var(--px-accent-hi);box-shadow:inset 0 0 0 1px var(--px-accent-hi),inset -2px -2px 0 var(--px-accent-lo)}
+.focus-unlocks button:disabled{opacity:1;cursor:not-allowed;color:var(--px-ink-faint);background:rgba(13,8,5,.45);border:1px dashed var(--px-ink-muted)}
 .focus-lock{position:relative;flex:none;width:7px;height:5px;margin-top:3px;background:currentColor}.focus-lock::before{content:"";position:absolute;left:1px;bottom:5px;width:3px;height:3px;border:1px solid currentColor;border-bottom:0}
 
 .sound-mixer{display:grid;gap:12px}
@@ -91,7 +93,7 @@
 .sound-lofi small{font-size:11px;color:#9ccf8c}
 .sound-ambience{display:grid;gap:4px}
 .sound-slider{display:grid;grid-template-columns:72px 1fr;align-items:center;gap:8px;font-size:12px;color:#e7c79b}
-.sound-slider input{width:100%;accent-color:#e0ad69;padding:0!important;border:0!important;background:none!important}
+.sound-slider input{width:100%;accent-color:#e0ad69;padding:0;border:0;background:none}
 .sound-note{font-size:10px;color:#a88a68}
 
 @media (max-width:900px){
@@ -103,16 +105,16 @@
 .focus-check{justify-content:flex-start;text-align:left}
 .cabin-room .cabin-toolbar-actions{min-width:0;overflow-x:auto;scrollbar-width:none}
 
-.focus-dock :is(button,input,select):focus-visible{outline:2px solid #ffe0a8;outline-offset:3px}
+.focus-dock :is(button,input,select):focus-visible{outline-offset:3px}
 @media(prefers-reduced-motion:reduce){.focus-rounds .is-active{animation:none}.focus-progress span{transition:none}}
 
-.focus-notes{display:grid;gap:10px}.focus-notes p{margin:0;color:#d3b58f;font-size:12px;line-height:1.6}.focus-notes label{display:grid;gap:6px}.focus-notes textarea{width:100%;min-height:180px;resize:vertical;box-sizing:border-box;font:inherit;line-height:1.6;color:#ffe9cb;background:#3e281a;border:1px solid #9c7048;padding:8px}.focus-notes small{color:#c9a47a}.focus-notes textarea:focus-visible{outline:2px solid #ffe0a8;outline-offset:3px}
+.focus-notes{display:grid;gap:10px}.focus-notes p{margin:0;color:#d3b58f;font-size:12px;line-height:1.6}.focus-notes label{display:grid;gap:6px}.focus-notes textarea{width:100%;min-height:180px;resize:vertical;box-sizing:border-box;font:inherit;line-height:1.6;color:#ffe9cb;background:#3e281a;border:1px solid #9c7048;padding:8px}.focus-notes small{color:#c9a47a}.focus-notes textarea:focus-visible{outline-offset:3px}
 .focus-clock-unit{display:block;text-align:center;color:#cbb79a;font-size:12px;margin:0 0 8px}
 
 /* Pomodoro ring, rhythm presets and todo polish.
    Local --focus-* variables are the single source for these pieces; they map
    onto the shared cabin design tokens when that file defines them. */
-.focus-dock{--focus-accent:var(--px-accent,#e0ad69);--focus-accent-deep:var(--px-accent-lo,#c98d4a);--focus-ink:var(--px-bg,#24170d);--focus-cream:var(--px-ink,#ffe2a8);--focus-muted:var(--px-ink-dim,#c9a47a);--focus-well:var(--px-surface-2,#3e281a);--focus-edge:var(--px-border,#6b4528);--focus-rest:var(--px-good,#9ccf8c);--focus-tomato:var(--px-warn,#e06a4e);--focus-shadow:var(--px-shadow,#120b06aa);--focus-fast:var(--px-dur-fast,.12s);--focus-med:var(--px-dur-med,.25s)}
+.focus-dock{--focus-accent:var(--px-accent);--focus-accent-deep:var(--px-accent-lo);--focus-ink:var(--px-bg);--focus-cream:var(--px-ink);--focus-muted:var(--px-ink-dim);--focus-well:var(--px-surface-2);--focus-edge:var(--px-border);--focus-rest:var(--px-good);--focus-tomato:var(--px-warn);--focus-shadow:var(--px-shadow);--focus-fast:var(--px-dur-fast);--focus-med:var(--px-dur-med)}
 .focus-ring{position:relative;width:min(220px,72%,max(150px,calc(100vh - 430px)));aspect-ratio:1;display:grid;place-items:center;color:var(--focus-accent)}
 .phase-shortBreak .focus-ring,.phase-longBreak .focus-ring{color:var(--focus-rest)}
 .focus-ring-track{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
@@ -141,8 +143,9 @@
 .focus-task-list li:hover{border-color:var(--focus-accent-deep)}
 .focus-task-list li.is-done .focus-task-check{animation:focus-pop var(--focus-med) steps(3)}
 @keyframes focus-pop{50%{scale:1.25}}
-.focus-task-edit{flex:1;min-width:0;padding:3px 6px!important}
+.focus-task-edit{flex:1;min-width:0;padding:3px 6px}
 .focus-task-rename{padding:3px;color:var(--focus-muted);background:none;border:0;opacity:0}
 .focus-task-list li:hover .focus-task-rename,.focus-task-rename:focus-visible{opacity:1}
 @media(hover:none){.focus-task-rename{opacity:.7}}
 @media(prefers-reduced-motion:reduce){.focus-ring-track rect.is-head,.focus-ring.is-running .focus-ring-face,.focus-task-list li.is-done .focus-task-check{animation:none}.focus-presets button,.focus-task-meter-bar span{transition:none}}
+}
