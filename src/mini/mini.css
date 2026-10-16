@@ -8,7 +8,7 @@ html, body, #root { margin: 0; height: 100%; background: transparent; overflow: 
 .mini-actions { display: flex; gap: 3px; opacity: 0; transition: opacity 160ms steps(3, end); }
 .mini-bar:hover .mini-actions, .mini-bar:focus-within .mini-actions { opacity: 1; }
 .mini-bar:hover .mini-track { display: none; }
-.mini-actions button { min-width: var(--px-hit); min-height: var(--px-hit); padding: 2px 5px; letter-spacing: -2px; color: var(--px-ink); background: var(--px-surface-2); border: 2px solid var(--px-shadow); font: inherit; cursor: pointer; }
+.mini-actions button { display: grid; place-items: center; min-width: var(--px-hit); min-height: var(--px-hit); padding: 2px 5px; color: var(--px-ink); background: var(--px-surface-2); border: 2px solid var(--px-shadow); font: inherit; cursor: pointer; }
 .mini-actions button:active { translate: 1px 1px; }
 .mini-actions button.is-primary { color: var(--px-ink-on-accent); background: var(--px-accent); }
 }

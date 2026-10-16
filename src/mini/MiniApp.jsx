@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import '../styles/tokens.css';
 import './mini.css';
+import { PlayPixel, PausePixel, PreviousPixel, NextPixel, NotePixel, ClockPixel } from '../pixel-icons';
 
 // 沉入桌面 mini player. Idle: a quiet pixel strip with the track name.
 // Hover: play / sound / focus / 浮出 buttons. Double-click: back to the window.
@@ -13,11 +14,11 @@ export function MiniPlayer({ snapshot, command, player = () => {}, exit }) {
     <span className="mini-disc" aria-hidden="true"/>
     <span className="mini-track">{track}</span>
     <nav className="mini-actions" aria-label="迷你唱机">
-      <button type="button" aria-label="上一首" onClick={() => player('previous')}>◀◀</button>
-      <button type="button" aria-label={playing ? '暂停' : '播放'} onClick={() => player('toggle')}>{playing ? '❚❚' : '▶'}</button>
-      <button type="button" aria-label="下一首" onClick={() => player('next')}>▶▶</button>
-      <button type="button" aria-label="开关小屋声音" onClick={() => command('sound-toggle')}>♪</button>
-      <button type="button" aria-label={focusLabel} onClick={() => command('focus-toggle')}>◷</button>
+      <button type="button" aria-label="上一首" onClick={() => player('previous')}><PreviousPixel size={12}/></button>
+      <button type="button" aria-label={playing ? '暂停' : '播放'} onClick={() => player('toggle')}>{playing ? <PausePixel size={12}/> : <PlayPixel size={12}/>}</button>
+      <button type="button" aria-label="下一首" onClick={() => player('next')}><NextPixel size={12}/></button>
+      <button type="button" aria-label="开关小屋声音" onClick={() => command('sound-toggle')}><NotePixel size={12}/></button>
+      <button type="button" aria-label={focusLabel} onClick={() => command('focus-toggle')}><ClockPixel size={12}/></button>
       <button type="button" className="is-primary" aria-label="浮出桌面" onClick={exit}>浮出</button>
     </nav>
   </div>;

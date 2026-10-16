@@ -11,10 +11,10 @@ button,input,select,textarea{font:inherit;color:inherit}button{cursor:pointer}bu
 a{color:var(--px-accent-hi)}
 
 /* Buttons */
-.pixel-button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:34px;padding:7px 13px;font-size:13px;line-height:1.2;white-space:nowrap;color:var(--px-ink);background:var(--px-surface-2);border:2px solid var(--px-border);box-shadow:3px 3px 0 var(--px-shadow);text-decoration:none;transition:background .12s,translate .06s}
+.pixel-button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:34px;padding:7px 13px;font-size:13px;line-height:1.2;white-space:nowrap;color:var(--px-ink);background:var(--px-surface-2);border:2px solid var(--px-border);text-decoration:none}
+/* Bevel, hover lift, press and the primary (accent) face: styles/pixel-ui.css. One primary look: .pixel-button.is-primary. */
 .pixel-button:hover:not(:disabled){background:var(--px-surface-3)}
-.pixel-button:active:not(:disabled){translate:2px 2px;box-shadow:1px 1px 0 var(--px-shadow)}
-.pixel-button.is-primary{color:#24170d;background:var(--px-accent);border-color:var(--px-accent-hi);font-weight:700}.pixel-button.is-primary:hover:not(:disabled){background:#ebbd7c}
+.pixel-button.is-primary{font-weight:700}
 .pixel-button.is-danger{color:#fff3ea;background:#a8392b;border-color:var(--px-warn)}
 .pixel-button.is-quiet{background:transparent;box-shadow:none;border-color:#8a5a3266;color:var(--px-ink-dim)}
 .pixel-button:disabled,.pixel-button.is-disabled{opacity:.45;box-shadow:none}
