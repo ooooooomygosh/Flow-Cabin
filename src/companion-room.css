@@ -1,27 +1,28 @@
 /* Window weather and daylight over the cabin artwork, plus the room cat. */
 @layer guards, reset, features, skin, overrides;
 @layer features {
-.cabin-weather{position:absolute;left:13.15%;top:15.9%;width:14.7%;height:25%;pointer-events:none;opacity:0;transition:opacity 1.2s;clip-path:polygon(0 0,46% 0,46% 45%,0 45%,0 0,0 55%,46% 55%,46% 100%,0 100%,0 55%,54% 55%,100% 55%,100% 100%,54% 100%,54% 55%,54% 45%,100% 45%,100% 0,54% 0,54% 45%)}
-.cabin-scene[data-weather=rain] .cabin-weather{opacity:.85}
-/* Rain streaks scroll on the compositor: oversized pseudo layers translate instead of animating background-position. */
-.cabin-scene[data-weather=rain] .cabin-weather{background-image:linear-gradient(#22324c88,#22324c88);background-size:100% 100%}
-.cabin-scene[data-weather=rain] .cabin-weather::before,.cabin-scene[data-weather=rain] .cabin-weather::after{content:'';position:absolute;left:0;will-change:transform}
-.cabin-scene[data-weather=rain] .cabin-weather::before{top:-70px;right:-18px;bottom:0;background:repeating-linear-gradient(105deg,transparent 0 9px,#cfe3ff55 9px 10px,transparent 10px 23px) 0 0/90px 70px;animation:cabin-rain-a .55s linear infinite}
-.cabin-scene[data-weather=rain] .cabin-weather::after{top:-95px;right:-16px;bottom:0;background:repeating-linear-gradient(100deg,transparent 0 15px,#dcecff3d 15px 16px,transparent 16px 31px) 0 0/120px 95px;animation:cabin-rain-b .55s linear infinite}
-@keyframes cabin-rain-a{to{transform:translate3d(-18px,70px,0)}}
-@keyframes cabin-rain-b{to{transform:translate3d(-16px,95px,0)}}
-@media(prefers-reduced-motion:reduce){.cabin-weather::before,.cabin-weather::after{animation:none!important}}
-.cabin-scene[data-weather=starry] .cabin-weather{opacity:1;background-image:linear-gradient(#0b1230aa,#1a235066)}
-/* Stars twinkle by fading their own layer (compositor opacity) instead of a brightness filter on the whole element. */
-.cabin-scene[data-weather=starry] .cabin-weather::before{content:'';position:absolute;inset:0;background:radial-gradient(circle,#fff6 1px,transparent 1.6px) 3px 4px/23px 29px,radial-gradient(circle,#ffe7a8aa 1.2px,transparent 2px) 11px 19px/61px 47px;animation:cabin-twinkle 3.2s ease-in-out infinite alternate}
-@keyframes cabin-twinkle{from{opacity:.55}to{opacity:1}}
-.cabin-scene[data-weather=clear] .cabin-weather{opacity:.5;background:linear-gradient(170deg,#c6dcff22,transparent 60%)}
-.cabin-daylight{position:absolute;inset:0;pointer-events:none;mix-blend-mode:soft-light;transition:background 2s,opacity 2s;opacity:0}
-.cabin-scene[data-time-of-day=morning] .cabin-daylight{opacity:.55;background:linear-gradient(115deg,#d9ecff 0%,#fff3d6 45%,transparent 75%)}
-.cabin-scene[data-time-of-day=day] .cabin-daylight{opacity:.4;background:linear-gradient(115deg,#fffbe8,#ffe9c0 60%,transparent)}
-.cabin-scene[data-time-of-day=dusk] .cabin-daylight{opacity:.5;background:linear-gradient(115deg,#ff9b5a,#b34a6d 70%,transparent)}
-.cabin-scene[data-time-of-day=night] .cabin-daylight{opacity:.45;mix-blend-mode:multiply;background:radial-gradient(ellipse at 88% 70%,transparent 18%,#3a3f6e 85%)}
-[data-desktop-reduce-motion=true] .cabin-weather,[data-desktop-reduce-motion=true] .cabin-weather::before,[data-desktop-reduce-motion=true] .cabin-weather::after{animation:none!important}
+/* Window sky, under the room art (its sky pixels are transparent): RoomScene writes the
+   sun-altitude colours once a minute (src/sky-model.mjs) and the registered properties at
+   the end of this file let CSS ease each change in six stepped frames, not a 60 fps tween.
+   Pixel-art banding: six hard-stop steps from zenith to the horizon line (--sky-h). */
+.cabin-scene.room-scene[data-sky=live]{transition:--sky-top 3s steps(6,end),--sky-horizon 3s steps(6,end),--sky-glow 3s steps(6,end),--sky-ambient 3s steps(6,end),--sky-shade 3s steps(6,end),--sky-light 3s steps(6,end)}
+.cabin-sky-window{position:absolute;pointer-events:none;background:var(--sky-horizon) linear-gradient(180deg,var(--sky-top) 0 17%,color-mix(in oklab,var(--sky-top) 80%,var(--sky-horizon)) 17% 34%,color-mix(in oklab,var(--sky-top) 60%,var(--sky-horizon)) 34% 50%,color-mix(in oklab,var(--sky-top) 40%,var(--sky-horizon)) 50% 66%,color-mix(in oklab,var(--sky-top) 20%,var(--sky-horizon)) 66% 83%,var(--sky-horizon) 83%) 0 0/100% calc(var(--sky-h,.7) * 100%) no-repeat}
+/* 星空窗景 keeps a night window whatever the hour (the room's own light still follows the sun). */
+.cabin-scene[data-weather=starry] .cabin-sky-window{--sky-top:#0b1030;--sky-horizon:#1a2244}
+.cabin-sky-canvas{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated}
+/* Weather in the glass, over the art: canvases at 1 px = 4 art px, clipped to the panes in JS. */
+.cabin-window-weather{position:absolute;inset:0;pointer-events:none}
+.cabin-weather-canvas,.cabin-land-canvas{position:absolute;display:block;image-rendering:pixelated}
+/* The painted land / sea in each window takes the sky's light: soft-light, glass only. */
+.cabin-land-canvas{mix-blend-mode:soft-light}
+/* Daylight on the room: soft-light glow from the window side, and a multiply shade at night
+   that leaves a hole around the room's own lamp (--lamp-x/y per scene). */
+.cabin-daylight,.cabin-nightshade{position:absolute;inset:0;pointer-events:none}
+.cabin-daylight{mix-blend-mode:soft-light;background:linear-gradient(115deg,var(--sky-glow) 0%,var(--sky-ambient) 45%,transparent 75%)}
+.cabin-nightshade{mix-blend-mode:multiply;background:radial-gradient(ellipse 42% 58% at var(--lamp-x,88%) var(--lamp-y,70%),transparent 22%,var(--sky-shade) 100%)}
+.cabin-scene[data-room-look=forest]{--lamp-x:80%;--lamp-y:52%}
+.cabin-scene[data-room-look=starlight]{--lamp-x:81%;--lamp-y:52%}
+.cabin-scene[data-room-look=seaside]{--lamp-x:10%;--lamp-y:12%}
 
 /* The cat sits on the visible floor, clear of the deck, footer and focus dock. */
 .room-cat{position:absolute;left:25%;bottom:118px;width:clamp(96px,8.5vw,168px);aspect-ratio:1;z-index:9;pointer-events:auto;cursor:pointer;background:none;border:0;padding:0;filter:drop-shadow(0 3px 0 #1a0f0866)}
@@ -63,16 +64,6 @@
 .link-button{background:none;border:0;padding:0;color:inherit;text-decoration:underline;cursor:pointer}
 .turntable-collect{display:inline-flex!important;gap:5px;align-items:center;font-size:12px}
 
-/* The new illustrated rooms have reading lamps, not a fireplace. Weather stays
-   inside each new window rather than floating over the wall or the album rack. */
-.cabin-scene:is([data-room-look=forest],[data-room-look=seaside],[data-room-look=starlight]) .cabin-fire-glow{display:none}
-.cabin-scene[data-room-look=forest] :is(.cabin-weather,.cabin-snow){left:5.66%;top:11.25%;width:19.34%;height:43.7%;clip-path:inset(0 round 50% 50% 0 0)}
-.cabin-scene[data-room-look=seaside] :is(.cabin-weather,.cabin-snow){left:6.0%;top:16.2%;width:19.2%;height:25.6%;clip-path:circle(48%)}
-.cabin-scene[data-room-look=starlight] :is(.cabin-weather,.cabin-snow){left:5.94%;top:20.44%;width:19.75%;height:26.34%;clip-path:circle(48%)}
-
-.cabin-scene:not([data-weather=snow]) .cabin-snow{opacity:0}
-.cabin-scene:not([data-weather=snow]) .cabin-snow::before,.cabin-scene:not([data-weather=snow]) .cabin-snow::after{animation:none}
-
 /* The console shares the collection's original vinyl material and album art. */
 .turntable-record-art { position:relative; display:block; width:100%; height:104px; margin:8px 0 10px; padding:0; background:#1c160f; border:1px solid #795737; overflow:hidden; cursor:pointer; }
 .turntable-sleeve { position:absolute; left:calc(50% - 74px); top:12px; width:78px; height:78px; display:grid; place-items:center; background:#a3794e; border:2px solid #2a1b13; box-shadow:3px 3px 0 #0007; z-index:2; }
@@ -94,3 +85,10 @@
 .room-zen:not(.room-zen-tools) .room-scene .room-cat, .wallpaper-room .room-scene .room-cat { --cat-floor: var(--cat-floor-scene, 28px); }
 .room-scene .room-cat[data-perch='console'] { bottom: var(--cat-bottom); z-index: 21; }
 }
+/* Sky colours are registered so transitions interpolate them (initial: night). */
+@property --sky-top{syntax:'<color>';inherits:true;initial-value:#0b1030}
+@property --sky-horizon{syntax:'<color>';inherits:true;initial-value:#1a2244}
+@property --sky-glow{syntax:'<color>';inherits:true;initial-value:transparent}
+@property --sky-ambient{syntax:'<color>';inherits:true;initial-value:transparent}
+@property --sky-shade{syntax:'<color>';inherits:true;initial-value:transparent}
+@property --sky-light{syntax:'<number>';inherits:true;initial-value:0}

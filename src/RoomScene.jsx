@@ -1,12 +1,12 @@
 import { getRoomScene } from './scene-catalog.mjs';
 import React, { memo, useLayoutEffect, useRef, useState } from 'react';
 import CabinAtmosphere from './CabinAtmosphere';
+import CabinAtmosphereSky, { useSky } from './CabinAtmosphereSky';
 import AmbientLife from './scene/AmbientLife';
 import { VinylDisc } from './RecordLibrary';
 import { Disc3 } from './icons';
 import { roomGeometryAroundPanel } from './room-model.mjs';
 import { ShowroomArtwork } from './RoomArtwork';
-import { normalizeWeather, timeOfDay } from './room-ambience.mjs';
 import StudyWriting from './StudyWriting';
 import { flyRecord } from './turntable/record-flight.mjs';
 import './study-room.css';
@@ -33,8 +33,10 @@ const RoomRack = memo(function RoomRack({ items, selectedId, select, load, start
         })}
       </div></div>;
 });
-function RoomScene({ look = 'warm', items = [], selectedId, select, load, startRow = 0, weather = 'snow', hour = new Date().getHours(), cat = null, children }) {
+function RoomScene({ look = 'warm', items = [], selectedId, select, load, startRow = 0, weather = 'snow', hour, cat = null, children }) {
   const scene = getRoomScene(look);
+  // Sky variables (sun-altitude colours, once a minute) and the effective weather.
+  const sky = useSky(weather, hour);
   const viewport = useRef(null), [geometry, setGeometry] = useState({});
   useLayoutEffect(() => {
     const room = viewport.current.closest('.cabin-room');
@@ -76,15 +78,17 @@ function RoomScene({ look = 'warm', items = [], selectedId, select, load, startR
   // Fallback for engines without overflow:clip: the stage never keeps a scroll offset.
   const pinStage = (event) => { const el = event.currentTarget; if (el.scrollTop || el.scrollLeft) { el.scrollTop = 0; el.scrollLeft = 0; } };
   const { columns, rows } = scene.geometry;
-  return <div ref={viewport} className="room-scene cabin-scene" onScroll={pinStage} style={{ background: scene.style.background, '--scene-x': `${geometry.left || 0}px`, '--scene-y': `${geometry.top || 0}px`, '--scene-k': (geometry.width || 1448) / 1448, '--scene-view': `url(${scene.view || scene.art})` }} aria-label={scene.label} data-scene-scale={(geometry.width || 1448) < 1448 ? 'down' : 'up'} data-room-look={look} data-weather={normalizeWeather(weather)} data-time-of-day={timeOfDay(hour)}>
+  return <div ref={viewport} className="room-scene cabin-scene" onScroll={pinStage} style={{ background: scene.style.background, '--scene-x': `${geometry.left || 0}px`, '--scene-y': `${geometry.top || 0}px`, '--scene-k': (geometry.width || 1448) / 1448, '--scene-view': `url(${scene.view || scene.art})`, ...sky.vars }} aria-label={scene.label} data-scene-scale={(geometry.width || 1448) < 1448 ? 'down' : 'up'} data-room-look={look} data-weather={sky.weather.kind} data-time-of-day={sky.bucket} data-sky={sky.ready ? 'live' : undefined}>
     <div className="cabin-scene-canvas" style={geometry}>
-      <img key={scene.id} className="cabin-scene-art" src={scene.view || scene.art} alt={scene.alt} width="1448" height="1086" draggable="false"/>
+      <CabinAtmosphereSky windows={scene.windows} art={scene.view || scene.art} weather={sky.weather} state={sky.state} colors={sky.colors} instant={!sky.ready}>
+        <img key={scene.id} className="cabin-scene-art" src={scene.view || scene.art} alt={scene.alt} width="1448" height="1086" draggable="false"/>
+      </CabinAtmosphereSky>
       {scene.id === 'night-study' && <StudyWriting/>}
       <RoomRack items={items} selectedId={selectedId} select={select} load={load} startRow={startRow} columns={columns} rows={rows} pixel={scene.pixel}/>
-      {['warm', 'pixel'].includes(scene.id) ? <CabinAtmosphere look={scene.id} weather={normalizeWeather(weather)}/> : scene.id !== 'night-study' && normalizeWeather(weather) === 'snow' && <div className="cabin-snow" aria-hidden="true"/>}
-      <div className="cabin-weather" aria-hidden="true"/>
+      {['warm', 'pixel'].includes(scene.id) && <CabinAtmosphere look={scene.id}/>}
       <div className="cabin-daylight" aria-hidden="true"/>
-      <AmbientLife look={scene.id} time={timeOfDay(hour)}/>
+      <div className="cabin-nightshade" aria-hidden="true"/>
+      <AmbientLife look={scene.id} time={sky.bucket}/>
     </div>
     {cat}
     {children}

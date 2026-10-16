@@ -18,9 +18,8 @@
 .ambient-shaft { position: absolute; left: 12%; top: 15%; width: 34%; height: 70%; opacity: 0; transform-origin: 0 0;
   background: linear-gradient(180deg, #fff4d4 0 30%, #fff4d4aa 30% 55%, #fff4d455 55% 80%, transparent 80%); /* hard stops = stepped pixel falloff */
   clip-path: polygon(0 0, 46% 0, 100% 100%, 42% 100%); mix-blend-mode: soft-light; animation: ambient-shaft 9s steps(6, end) infinite alternate; }
-:is([data-room-look='pixel'], [data-room-look='warm'])[data-time-of-day='morning'] .ambient-shaft { --shaft: .26; }
-:is([data-room-look='pixel'], [data-room-look='warm'])[data-time-of-day='day'] .ambient-shaft { --shaft: .18; }
-:is([data-room-look='pixel'], [data-room-look='warm'])[data-time-of-day='dusk'] .ambient-shaft { --shaft: .2; background: linear-gradient(180deg, #ffb06a 0 30%, #ffb06aaa 30% 55%, #ffb06a55 55% 80%, transparent 80%); }
+:is([data-room-look='pixel'], [data-room-look='warm']):is([data-time-of-day='morning'], [data-time-of-day='day'], [data-time-of-day='dusk']) .ambient-shaft { --shaft: calc(.06 + var(--sky-light, 1) * .16); } /* follows the sun (RoomScene sky variables) */
+:is([data-room-look='pixel'], [data-room-look='warm'])[data-time-of-day='dusk'] .ambient-shaft { background: linear-gradient(180deg, #ffb06a 0 30%, #ffb06aaa 30% 55%, #ffb06a55 55% 80%, transparent 80%); }
 @keyframes ambient-shaft { from { opacity: calc(var(--shaft, 0) * .7); } to { opacity: var(--shaft, 0); } }
 
 /* Reduced motion freezes the motes (guards layer); they rest faint and the shaft holds its level. */

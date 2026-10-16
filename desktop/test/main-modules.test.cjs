@@ -14,7 +14,8 @@ function fixture({ sitePage = true } = {}) {
     toggleSettings: log('settings'), toggleFullscreen: log('fullscreen'), setFullscreen: log('setFullscreen'), isFullscreen: () => false,
     chooseMusicFolder: log('folder'), notifyMusic: log('notifyMusic'), saveAppearance: log('appearance'), writeLog: log('log'),
     handleUpdateCommand: (pathname, params) => calls.push(['update', pathname, params.get('enabled')]),
-    autostart: { set: log('autostart.set'), publish: log('autostart.publish') }
+    autostart: { set: log('autostart.set'), publish: log('autostart.publish') },
+    weather: { set: log('weather.set'), publish: log('weather.publish') }
   });
   return { calls, commands };
 }
@@ -31,6 +32,13 @@ test('site commands: one table, aliases explicit, hostile input refused', () => 
   assert.equal(fixture({ sitePage: false }).commands.handle('album-desktop://action/close'), false, 'only the cabin page may command the shell');
   assert.equal(parseSiteCommand('album-desktop://action/x')?.pathname, '/x');
   assert.ok(commands.commands.includes('/fullscreen-exit') && commands.commands.includes('/autostart'));
+});
+
+test('site commands: weather is opt-in by an explicit flag; anything else only re-publishes', () => {
+  const { calls, commands } = fixture();
+  for (const value of ['album-desktop://action/weather?enabled=true&lat=31.23&lng=121.47', 'album-desktop://action/weather?enabled=false', 'album-desktop://action/weather?enabled=yes&lat=1&lng=2']) assert.equal(commands.handle(value), true, value);
+  assert.deepEqual(calls, [['weather.set', { enabled: true, lat: '31.23', lng: '121.47' }], ['weather.set', { enabled: false, lat: null, lng: null }], ['weather.publish']]);
+  assert.ok(commands.commands.includes('/weather'));
 });
 
 test('autostart registers a login item only in a packaged macOS / Windows app', () => {

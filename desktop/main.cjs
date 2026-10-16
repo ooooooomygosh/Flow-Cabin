@@ -27,6 +27,7 @@ const { wireSiteSession } = require('./main/site-session.cjs');
 const { createUpdates } = require('./main/updates.cjs');
 const { appMenuTemplate, trayMenuTemplate, ABOUT_DETAIL, SINK_HOTKEY } = require('./main/menus.cjs');
 const { createAutostart, autostartScript } = require('./main/autostart.cjs');
+const { createWeather, weatherScript } = require('./weather.cjs');
 
 protocol.registerSchemesAsPrivileged([{ scheme: 'album-desktop', privileges: { standard: true, secure: true, supportFetchAPI: true } }]);
 app.setName('心流小屋');
@@ -270,7 +271,7 @@ async function wireRemoteView() {
     wallpaperStatus(wallpaperState); petStatus(petState);
     if (desktopMode) notifySite(`document.documentElement.dataset.desktopMode = '${desktopMode.active}'; window.dispatchEvent(new CustomEvent('album-desktop-mode', {detail: {active: ${Boolean(desktopMode.active)}}}));`);
     if (desktopSink) notifySinkStatus(desktopSink.status());
-    updates.push(); autostart.publish();
+    updates.push(); autostart.publish(); weather.publish();
     siteView.setVisible(!settingsOpen);
     if (mainWindow && !mainWindow.isDestroyed() && !contents.isDestroyed() && (!mainWindow.isVisible() || mainWindow.isMinimized())) await contents.executeJavaScript("window.dispatchEvent(new Event('blur'));").catch(() => {});
     sendState();
@@ -305,7 +306,8 @@ const siteCommands = createSiteCommands({
   isSitePage: () => isSiteUrl(siteView?.webContents.getURL()), mainWindow: () => mainWindow, desktopSink: () => desktopSink, pet: () => pet, music: () => music, appearance: () => appearance, trayPet,
   toggleSettings, toggleFullscreen, setFullscreen, isFullscreen, chooseMusicFolder, notifyMusic, saveAppearance, writeLog,
   handleUpdateCommand: (pathname, params) => updates.handle(pathname, params),
-  get autostart() { return autostart; }
+  get autostart() { return autostart; },
+  get weather() { return weather; }
 });
 const handleSiteCommand = (value) => siteCommands.handle(value);
 async function chooseMusicFolder() {
@@ -325,6 +327,7 @@ const updates = createUpdates({ app, net, shell, writeLog, notifySite: (script) 
   pageReady: () => startupComplete && !loading && !currentError && !documentHttpFailed && isSiteUrl(siteView?.webContents.getURL()),
   openAbout: () => { restoreMainWindow(); sendCompanionCommand(siteView?.webContents, 'open-about'); } });
 const autostart = createAutostart({ app, publish: (state) => notifySite(autostartScript(state)) });
+const weather = createWeather({ fetch: (url, options) => net.fetch(url, options), publish: (state) => notifySite(weatherScript(state)), writeLog });
 function notifySite(script) {
   if (siteView && !siteView.webContents.isDestroyed()) siteView.webContents.executeJavaScript(script).catch(() => {});
 }
@@ -495,5 +498,5 @@ else {
     }
     if (mainWindow) restoreMainWindow(); else createWindow().catch((error) => writeLog('startup-error', error.message));
   });
-  app.on('before-quit', () => { quitting = true; if (awakeBlocker !== null) { powerSaveBlocker.stop(awakeBlocker); awakeBlocker = null; } globalShortcut.unregisterAll(); desktopSink?.stop(); miniPlayer?.hide(); wallpaper?.stop(); pet?.stop(); music?.stop(); companionTray?.destroy(); companionTray = null; if (startupComplete) writeLog('closed'); });
+  app.on('before-quit', () => { quitting = true; if (awakeBlocker !== null) { powerSaveBlocker.stop(awakeBlocker); awakeBlocker = null; } globalShortcut.unregisterAll(); desktopSink?.stop(); miniPlayer?.hide(); wallpaper?.stop(); pet?.stop(); weather.dispose(); music?.stop(); companionTray?.destroy(); companionTray = null; if (startupComplete) writeLog('closed'); });
 }

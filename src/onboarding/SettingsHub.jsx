@@ -3,6 +3,7 @@ import { PERFORMANCE_MODES, performanceMode, performanceLevel, setPerformanceMod
 import Dialog from '../Dialog';
 import { Tabs, Segmented, tabPanelProps } from '../ui/Roving';
 import RoomPickers from '../RoomPickers';
+import SkySettings from '../SkySettings';
 import MusicAccounts from '../MusicSettings';
 import FocusSettingsForm from '../focus/FocusSettingsForm';
 import { desktopCommand } from '../desktop-client';
@@ -44,7 +45,7 @@ export default function SettingsHub({ section = 'music', setSection, close, env,
           <button type="button" className="hub-back" onClick={() => setSection('music')}><ChevronLeft size={14}/>音源</button>
           <MusicAccounts/>
         </div>}
-        {tab === 'room' && <><p className="personalization-intro">选一个今天想待着的地方，再找一位安静的伙伴。换装不会打断音乐和专注。</p><RoomPickers look={look} petId={petId} onChange={onRoomChange} reduceMotion={reduceMotion}/>{error && <p role="alert" className="record-error">{error}</p>}</>}
+        {tab === 'room' && <><p className="personalization-intro">选一个今天想待着的地方，再找一位安静的伙伴。换装不会打断音乐和专注。</p><RoomPickers look={look} petId={petId} onChange={onRoomChange} reduceMotion={reduceMotion}/><SkySettings/>{error && <p role="alert" className="record-error">{error}</p>}</>}
         {tab === 'focus' && <><p className="personalization-intro">番茄钟的时长和提醒。计时、待办、学习和声音在右上角「专注」里。</p><FocusSettingsForm className="hub-focus-settings"/></>}
         {tab === 'desktop' && <DisplaySection env={env} desktop={desktop}/>}
         {tab === 'data' && <div className="hub-rows">

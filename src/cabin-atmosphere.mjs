@@ -1,7 +1,8 @@
-// Original scene-specific animation. Coordinates are in the unchanged 1448×1086 artwork.
+// Hearth animation for the two raster cabins. Coordinates are in the 1448×1086 artwork
+// (their windows are scene-catalog `windows`, shared with every room).
 export const ATMOSPHERE = {
-  warm: { window: { x: 188, y: 170, width: 218, height: 286 }, panes: [[2, 3, 99, 109], [115, 3, 98, 109], [2, 124, 99, 156], [115, 124, 98, 156]], fire: { x: 1354, y: 538, width: 94, height: 180 }, opening: [[8, 8], [94, 24], [94, 171], [8, 155]] },
-  pixel: { window: { x: 188, y: 170, width: 218, height: 286 }, panes: [[5, 7, 94, 102], [115, 7, 91, 102], [5, 126, 94, 157], [115, 126, 91, 157]], fire: { x: 1354, y: 538, width: 94, height: 192 }, opening: [[9, 13], [94, 18], [94, 188], [9, 172]] }
+  warm: { fire: { x: 1354, y: 538, width: 94, height: 180 }, opening: [[8, 8], [94, 24], [94, 171], [8, 155]] },
+  pixel: { fire: { x: 1354, y: 538, width: 94, height: 192 }, opening: [[9, 13], [94, 18], [94, 188], [9, 172]] }
 };
 const fract = (value) => value - Math.floor(value);
 const hash = (index) => fract(Math.sin(index * 127.1 + 311.7) * 43758.5453);
@@ -10,24 +11,12 @@ export function gentleNoise(time, seed = 1) {
   const cell = Math.floor(time), part = fract(time), weight = part * part * (3 - 2 * part);
   return hash(cell + seed * 101) * (1 - weight) + hash(cell + 1 + seed * 101) * weight;
 }
-// Per-flake constants never change, so they are computed once instead of on every paint.
-const FLAKES = Array.from({ length: 64 }, (_, i) => { const depth = hash(i + 9); return { depth, speed: 9 + depth * 21, x0: hash(i + 21), y0: hash(i + 61), radius: .6 + depth * 1.25, alpha: .28 + depth * .48 }; });
-const NO_SNOW = Object.freeze([]);
-// `out` is an optional caller-owned buffer ({ snow, surfaces }) that is rewritten
-// in place so the render loop allocates nothing; without it every call is fresh.
-export function atmosphereFrame(seconds, look = 'warm', weather = 'snow', out = null) {
-  const geometry = ATMOSPHERE[look] || ATMOSPHERE.warm, { width, height } = geometry.window;
-  let snow = NO_SNOW;
-  if (weather === 'snow') {
-    snow = out?.snow?.length === FLAKES.length ? out.snow : FLAKES.map(() => ({ x: 0, y: 0, radius: 0, alpha: 0 }));
-    for (let i = 0; i < FLAKES.length; i++) {
-      const f = FLAKES[i], flake = snow[i];
-      flake.x = fract(f.x0 + Math.sin(seconds * .21 + i) * .035 + seconds * (.003 + f.depth * .002)) * width;
-      flake.y = (f.y0 * height + seconds * f.speed) % height; flake.radius = f.radius; flake.alpha = f.alpha;
-    }
-  }
+// Window snow, rain and sky are painted by sky-paint.mjs for every scene; this frame is the
+// hearth's light. `out` is an optional caller-owned buffer ({ surfaces }) rewritten in place
+// so the render loop allocates nothing; without it every call is fresh.
+export function atmosphereFrame(seconds, look = 'warm', out = null) {
   const heat = gentleNoise(seconds * .23, 87) * .7 + gentleNoise(seconds * .51, 92) * .3;
-  const frame = out || {}; frame.snow = snow; frame.light = .065 + heat * .045; frame.surfaces = surfaceLighting(seconds, look, out?.surfaces);
+  const frame = out || {}; frame.light = .065 + heat * .045; frame.surfaces = surfaceLighting(seconds, look, out?.surfaces);
   return frame;
 }
 // A single bounded loop for both canvases and the composited light. Hidden windows

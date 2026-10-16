@@ -26,8 +26,9 @@ export async function verifyWeatherMotion(browser, origin, check) {
       try {
         // Use the actual entry points, so fonts.css is present only in main.
         await page.goto(surface === 'wallpaper-room' ? `${origin}/wallpaper.html` : origin);
-        const selector = weather === 'snow' ? '.cabin-snow' : '.cabin-weather';
-        const names = weather === 'rain' ? ['cabin-rain-a', 'cabin-rain-b'] : weather === 'snow' ? ['cabin-snowfall-a', 'cabin-snowfall-b'] : ['cabin-twinkle'];
+        // Window weather is pixel canvases on the shared frame clock: rain and snow fall in the
+        // glass (front canvas), the starry sky twinkles behind the art (sky canvas).
+        const selector = `.${surface} ${weather === 'starry' ? '.cabin-sky-canvas' : '.cabin-weather-canvas'}`;
         const snapshots = [];
         for (const [system, reduced] of [['no-preference', false], ['no-preference', true], ['no-preference', false], ['reduce', false]]) {
           await page.emulateMedia({ reducedMotion: system });
@@ -35,47 +36,36 @@ export async function verifyWeatherMotion(browser, origin, check) {
             if (surface === 'wallpaper-room') window.pushWeatherSnapshot({ ...window.weatherSnapshot, reduceMotion: reduced });
             else document.documentElement.dataset.desktopReduceMotion = String(reduced);
           }, { surface, reduced });
-          await page.locator(`.${surface} .cabin-scene[data-weather="${weather}"] ${selector}`).waitFor();
-          const read = () => page.locator(selector).evaluate((element, names) => ({
-            systemReduced: matchMedia('(prefers-reduced-motion: reduce)').matches,
-            appReduced: document.documentElement.dataset.desktopReduceMotion,
-            pseudo: ['::before', '::after'].slice(0, names.length).map(pseudo => {
-              const css = getComputedStyle(element, pseudo);
-              return { name: css.animationName, state: css.animationPlayState, content: css.content, transform: css.transform, opacity: css.opacity };
-            }),
-            animations: element.getAnimations({ subtree: true }).filter(a => names.includes(a.animationName)).map(a => ({ name: a.animationName, state: a.playState, time: a.currentTime }))
-          }), names);
-          await page.waitForFunction(({ selector, names, reduced }) => {
-            const element = document.querySelector(selector);
-            return element && document.documentElement.dataset.desktopReduceMotion === String(reduced) &&
-              names.every((name, index) => getComputedStyle(element, index ? '::after' : '::before').animationName ===
-                (reduced || matchMedia('(prefers-reduced-motion: reduce)').matches ? 'none' : name));
-          }, { selector, names, reduced });
+          const still = reduced || system === 'reduce';
+          await page.locator(`.${surface} .cabin-scene[data-weather="${weather}"] .cabin-window-weather[data-motion="${still ? 'reduced' : 'running'}"]`).waitFor();
+          assert.equal(await page.locator(`.${surface} .cabin-snow, .${surface} .cabin-weather`).count(), 0, 'no CSS pseudo weather is left');
+          const read = () => page.locator(selector).first().evaluate((canvas) => {
+            const data = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
+            let hash = 0, lit = 0;
+            for (let i = 0; i < data.length; i += 4) { if (data[i + 3]) lit++; hash = (hash * 31 + data[i] + data[i + 1] * 7 + data[i + 2] * 13 + data[i + 3] * 17) | 0; }
+            return { hash, lit, systemReduced: matchMedia('(prefers-reduced-motion: reduce)').matches, appReduced: document.documentElement.dataset.desktopReduceMotion, motion: document.querySelector('.cabin-window-weather').dataset.motion };
+          });
           const before = await read();
-          if (!reduced && system === 'no-preference') {
+          if (!still) {
             await page.waitForFunction(({ selector, previous }) => {
-              const animations = document.querySelector(selector).getAnimations({ subtree: true });
-              return previous.every(old => animations.some(a => a.animationName === old.name && a.currentTime > old.time));
-            }, { selector, previous: before.animations }, { polling: 50, timeout: 10000 });
-          } else await page.waitForTimeout(150);
+              const canvas = document.querySelector(selector), data = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
+              let hash = 0; for (let i = 0; i < data.length; i += 4) hash = (hash * 31 + data[i] + data[i + 1] * 7 + data[i + 2] * 13 + data[i + 3] * 17) | 0;
+              return hash !== previous;
+            }, { selector, previous: before.hash }, { polling: 50, timeout: 10000 });
+          } else await page.waitForTimeout(700);
           const after = await read();
           assert.equal(after.systemReduced, system === 'reduce'); assert.equal(after.appReduced, String(reduced));
-          if (reduced || system === 'reduce') {
-            assert(after.pseudo.every(p => p.name === 'none'), `${surface}/${weather}: pseudo animations must be disabled`);
-            assert.deepEqual(after.animations, []);
-            assert.deepEqual(after.pseudo, before.pseudo, 'reduced weather must remain still');
+          assert(after.lit > 0 && before.lit > 0, `${surface}/${weather}: the weather must stay visible`);
+          if (still) {
+            assert.equal(after.motion, 'reduced');
+            assert.deepEqual(after, before, `${surface}/${weather}: reduced weather must remain still`);
           } else {
-            assert.deepEqual(after.pseudo.map(p => p.name), names);
-            assert(after.pseudo.every(p => p.state === 'running' && !['none', 'normal'].includes(p.content)));
-            assert.equal(after.animations.length, names.length);
-            for (const animation of after.animations) {
-              assert.equal(animation.state, 'running');
-              assert(animation.time > before.animations.find(a => a.name === animation.name)?.time, `${surface}/${weather}: animation must advance ${JSON.stringify({ before, after })}`);
-            }
+            assert.equal(after.motion, 'running');
+            assert.notEqual(after.hash, before.hash, `${surface}/${weather}: weather must move`);
           }
           snapshots.push({ system, reduced, ...after });
         }
-        check(`weather-pseudo-motion-${surface}-${weather}`, { snapshots });
+        check(`weather-canvas-motion-${surface}-${weather}`, { snapshots });
         assert.deepEqual(errors, []); assert.deepEqual(external, []);
       } finally { await context.close(); }
     }

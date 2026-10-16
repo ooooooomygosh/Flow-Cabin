@@ -8,8 +8,7 @@
 .study-clean-plate{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;clip-path:polygon(19.337% 45.672%,26.796% 45.672%,26.796% 54.512%,19.337% 54.512%)}
 .study-writing-hand{position:absolute;left:17.956%;top:44.199%;width:9.392%;height:12.523%;image-rendering:pixelated;background:url('/room-scenes/night-study-hands-pixel.png') 0 0/400% 400% no-repeat}
 .cabin-scene[data-room-look=night-study] .showroom-artwork{filter:brightness(.78) saturate(.83)}
-.cabin-scene[data-room-look=night-study] .cabin-daylight{display:none}
-.cabin-scene[data-room-look=night-study] .cabin-weather{left:22.1%;top:11.3%;width:28.8%;height:31.4%;clip-path:inset(0)}
+.cabin-scene[data-room-look=night-study] :is(.cabin-daylight,.cabin-nightshade){display:none}
 /* The desk scene has no free surface outside the toolbar/console/footer safe areas
    (cabinet top sits under the toolbar), so the console alone is the turntable here. */
 .cabin-scene[data-room-look=night-study] .scene-deck{display:none}

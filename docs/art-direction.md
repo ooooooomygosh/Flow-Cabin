@@ -13,13 +13,15 @@ nothing glossy or rounded. Owner of this document: art direction (beauty).
 | Shape | No radii. Panels use the 9-slice notched frame `border-image: var(--px-frame-img) 2 / 6px`; buttons get a 2 px bevel + hard shadow (`--px-shadow-*`). |
 | Motion | `steps()` easing (`--px-ease`), durations `--px-dur-fast/med/slow`. Animate `translate/scale/opacity` only. Every animation has a reduced-motion fallback (`prefers-reduced-motion` and `html[data-desktop-reduce-motion=true]`). |
 | Images | Pixel art always `image-rendering: pixelated` (`.px-crisp`). Covers are box-filtered to 64×64 then upscaled. |
-| Scenes | All six rooms are pixel art — Pixel Cabin 像素小屋 (default), Amber Cabin 琥珀小屋, Moonlit Study 月夜书桌, Forest Glade 林间书屋, Seaside 海边慢屋, Starry Night 星夜阁楼 (`labelEn` in `scene-catalog.mjs`). Vector sources stay in `public/room-scenes/*.svg`; the room shows `*-cabin-pixel.png` (`scene.view`), made with `scripts/art/pixelate-scene.py`. |
+| Scenes | All six rooms are pixel art — Pixel Cabin 像素小屋 (default), Amber Cabin 琥珀小屋, Moonlit Study 月夜书桌, Forest Glade 林间书屋, Seaside 海边慢屋, Starry Night 星夜阁楼 (`labelEn` in `scene-catalog.mjs`). Vector sources stay in `public/room-scenes/*.svg`; the room shows `*-cabin-pixel.png` (`scene.view`), made with `scripts/art/pixelate-scene.py`; Forest / Seaside / Starry Night are repainted by `scripts/art/paint-scenes.mjs` + `paint-scene.py` (wood grain, boards, planks, rug weave, sparse grain, one warm lamp in five dithered steps with hue-shifted ramps and a 1 px rim, 56 colours, 4× nearest). Every window's sky is transparent in the art: the live sky shows through it. |
 
 ## Live layers on top of the art
 
 - **Turntable** — `src/scene/SceneDeck.jsx` + `deck-sprite.mjs`: a 56×22-cell sprite (1 cell = 4 art px) sitting on the shelf top, per-scene position in `scene-deck.css`. Record seats in 4 frames, sheen orbits in 8, tonearm swings in 4, LED + notes while playing, halo follows `cabin:playback` energy. The painted turntable was removed from the pixel/amber art so there is only one deck. Wood is graded per scene (`DECK_PALETTES`: walnut for Pixel/Amber, own-shelf tones for Forest/Seaside/Starry Night) through `--deck-N` CSS variables. The room cat stands on each scene's painted `floor` line (`scene-catalog.mjs`, art px) at 32 cells × 4 art px × k, snapped to a whole multiple of 32 CSS px; records without a cover get a generated 32×32 cabin-palette sleeve.
 - **Console** — `src/scene/room-console.css`: compact framed panel bottom-left; audio sliders stay pinned when the 待播 queue is open.
-- **Ambient** — `src/scene/AmbientLife.jsx`: dust motes + window light beam (time-of-day aware). Snow / fire / daylight remain in `CabinAtmosphere`.
+- **Sky** — `src/CabinAtmosphereSky.jsx` for every scene's `windows` (`scene-catalog.mjs`, art px): a minute clock (`sky-clock.mjs`) takes the sun's altitude from vendored SunCalc for the chosen city (`sky-cities.mjs`, default from the time zone; 固定作息 = a fixed 6:30–18:30 curve) and picks colours from separate morning / evening keyframe sets in sun-altitude space (`sky-model.mjs`). They land as `--sky-*` variables registered with `@property`, eased by CSS in `steps(6)`; the bucket strings (`morning/day/dusk/night`) stay for older selectors. Behind the art: a hard-banded gradient plus a pixel canvas (stars, moon with its real phase, sun, clouds, distant fog, contained lightning). Over painted land / sea in the glass: a once-a-minute soft-light tint. Room: `.cabin-daylight` (glow) and `.cabin-nightshade` (multiply, with a hole around the scene's lamp).
+- **Weather** — `sky-weather.mjs`: `{kind, intensity, wind}` → layers (clouds, fog, rain, snow, storm, starry) cross-fading over 30 s from absolute time. `sky-paint.mjs` writes 1 canvas px = 4 art px with Bayer coverage, clipped to each window's glass (mullions excluded): rain streaks, snow, fog banks, beads on the glass when it rains. Frame budget on the shared frame clock: rain / snow / storm 12 fps (8 on 流畅), drifting cloud / fog / twinkle 2 fps (1), clear sky 0 (the loop stops); hidden, occluded or reduced motion stop it (reduced shows a still frame, no lightning). Real weather is opt-in and desktop-only (`desktop/weather.cjs`, Open-Meteo).
+- **Ambient** — `src/scene/AmbientLife.jsx`: dust motes + window light beam (strength follows `--sky-light`). Fire / hearth light remain in `CabinAtmosphere` (Pixel / Amber).
 - **Companion** — `src/pet/PetLife.jsx`: breathing, hover perk, poke squish + hearts, drag dangle, Zzz, focus dots, sparkles, music bop scaled by `--pet-energy`.
 
 ## Events consumed
@@ -34,6 +36,10 @@ nothing glossy or rounded. Owner of this document: art direction (beauty).
 | Silkscreen (subset) | github.com/google/fonts `ofl/silkscreen` | SIL OFL 1.1 |
 | Turntable, notes, hearts, Zzz, sparkles, frames | drawn in code in this repo | project licence |
 | Scene pixel renders | derived from the repo's own scene art | project licence |
+| Sky, weather, moon, repainted Forest / Seaside / Starry Night | drawn in code in this repo (`src/sky-paint.mjs`, `scripts/art/paint-scene.py`) | project licence |
+| SunCalc (sun / moon position, moon phase) | github.com/mourner/suncalc @21449f3, vendored as `src/sky-suncalc.mjs` | BSD-2-Clause (`public/licenses/suncalc-LICENSE.txt`) |
+| Weather data (desktop, opt-in) | open-meteo.com forecast API, fetched in the Electron main process | data CC BY 4.0, attributed in 设置 › 房间与桌宠 |
+| Cloud puff layout idea | Skycons (darkskyapp/skycons) | CC0 — idea only, no code |
 
 ## Moonlit Study 月夜书桌 (night-study)
 
