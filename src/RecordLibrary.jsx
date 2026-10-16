@@ -93,7 +93,7 @@ function RecordEditor({ item, close }) {
         </div>
       </div>
       <label htmlFor={id + '-genres'}>流派标签<input id={id + '-genres'} type="text" value={genres} maxLength="400" aria-describedby={id + '-genre-help'} placeholder="例如：摇滚，爵士，电子；逗号分隔" onChange={(event) => setGenres(event.target.value)}/></label><small id={id + '-genre-help'}>沿用条目已有标签，可手动修改；最多 12 个标签。</small>
-      <fieldset className="record-box-membership"><legend>放入唱片盒（可多选）</legend>{boxes.length ? boxes.map((box) => <label className="record-checkbox" key={box.id}><input type="checkbox" checked={memberships.includes(box.id)} onChange={(event) => setMemberships((old) => event.target.checked ? [...old, box.id] : old.filter((value) => value !== box.id))}/>{box.name}</label>) : <p>先在「筛选与唱片盒 › 管理唱片盒」里创建一个。</p>}</fieldset>
+      <fieldset className="record-box-membership"><legend>放入唱片盒（可多选）</legend>{boxes.length ? boxes.map((box) => <label className="record-checkbox" key={box.id}><input type="checkbox" checked={memberships.includes(box.id)} onChange={(event) => setMemberships((old) => event.target.checked ? [...old, box.id] : old.filter((value) => value !== box.id))}/>{box.name}</label>) : <p>先在「整理唱片架 › 管理唱片盒」里创建一个。</p>}</fieldset>
       {error && <p role="alert" className="record-error">{error}</p>}<footer><button type="button" onClick={close}>取消</button><button className="pixel-button is-primary" type="submit">保存唱片设置</button></footer>
     </form>
   </Dialog>;
