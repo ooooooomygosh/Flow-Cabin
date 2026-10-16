@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { createCoverCache } from './cover-cache.mjs';
 import { downloadBlob } from './download.mjs';
 import { formatDuration, formatSeconds } from './time-format.mjs';
+import { clampNumber } from './clamp-number.mjs';
 
 test('track lengths round to the nearest second; live clocks floor', () => {
   assert.equal(formatDuration(119600), '2:00'); assert.equal(formatDuration(59600), '1:00'); assert.equal(formatDuration(269000), '4:29'); assert.equal(formatDuration(3723000), '1:02:03');
@@ -41,4 +42,9 @@ test('downloadBlob clicks an attached anchor and revokes the URL later', () => {
   const urls = { createObjectURL: () => 'blob:x', revokeObjectURL: (url) => events.push('revoke:' + url) };
   downloadBlob({}, '小屋词书模板.tsv', { document: { createElement: () => anchor, body }, url: urls, keepMs: 0 });
   assert.deepEqual(events, ['append', 'click:小屋词书模板.tsv:true', 'remove']); assert.equal(anchor.href, 'blob:x');
+});
+
+test('clampNumber keeps the old value for blank or invalid input and clamps the rest', () => {
+  assert.equal(clampNumber('', 0, 720, 100), 100); assert.equal(clampNumber('  ', 0, 720, 100), 100); assert.equal(clampNumber('abc', 0, 720, 100), 100);
+  assert.equal(clampNumber('0', 0, 720, 100), 0); assert.equal(clampNumber('999', 0, 720, 100), 720); assert.equal(clampNumber('-5', 0, 720, 100), 0); assert.equal(clampNumber('12.6', 0, 720, 100), 13);
 });

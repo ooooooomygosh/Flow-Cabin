@@ -5,15 +5,10 @@ import { Plus, Trash2, ArrowLeft, Check, BookOpen, Clock } from '../icons';
 import './study.css';
 import { WORD_BOOKS, previewWordImport } from './word-books.mjs';
 import { downloadBlob } from '../lib/download.mjs';
+import { NumberField } from '../lib/NumberField.jsx';
 
-// 每天新词: one number field. An empty field while typing does not save 0; leaving it restores the saved value.
-function NewPerDay({ study }) {
-  const saved = study.state.newPerDay, [draft, setDraft] = useState(String(saved));
-  useEffect(() => setDraft(String(saved)), [saved]);
-  return <label className="study-limit">每天新词<input type="number" inputMode="numeric" min="0" max="200" list="study-new-per-day" aria-label="词书每日新词" value={draft}
-    onChange={(event) => { setDraft(event.target.value); if (event.target.value !== '') study.setNewPerDay(Math.max(0, Math.min(200, Math.round(Number(event.target.value)) || 0))); }}
-    onBlur={() => setDraft(String(saved))}/>个<datalist id="study-new-per-day"><option value="5"/><option value="10"/><option value="20"/></datalist></label>;
-}
+// 每天新词: one number field; an empty field while typing does not save 0.
+const NewPerDay = ({ study }) => <label className="study-limit">每天新词<NumberField live min={0} max={200} list="study-new-per-day" aria-label="词书每日新词" value={study.state.newPerDay} onCommit={study.setNewPerDay}/>个<datalist id="study-new-per-day"><option value="5"/><option value="10"/><option value="20"/></datalist></label>;
 
 // 学习: today's review in a deck (Space flips, 1–4 rates), a quick way to add
 // or paste many cards, and the countdowns that keep the goal in view.
