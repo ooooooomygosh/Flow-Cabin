@@ -34,6 +34,8 @@ nothing glossy or rounded. Owner of this document: art direction (beauty).
 | Silkscreen (subset) | github.com/google/fonts `ofl/silkscreen` | SIL OFL 1.1 |
 | Turntable, notes, hearts, Zzz, sparkles, frames | drawn in code in this repo | project licence |
 | Scene pixel renders | derived from the repo's own scene art | project licence |
+| Focus faces (专注画面), pixel digits | drawn in code in this repo (`src/focus/faces/`, `src/focus/pixel-digits.mjs`) | project licence |
+| Flip-card maths (squash + darken) | ported from github.com/alexanderk23/gluqlo `render_digits()` (font not used) | ISC-style, notice in `public/licenses/gluqlo-LICENSE.txt` |
 
 ## Moonlit Study 月夜书桌 (night-study)
 
