@@ -134,7 +134,7 @@
 
 <div align="center">
 <img src="docs/assets/cabin-tour.gif" width="100%" alt="小屋实录：入门指南、开始专注、切换场景与伙伴、进入沉浸模式">
-<sub>真实界面录屏（无音轨）：三步入门 → 开始专注 → 布置小屋 → 沉浸模式。<a href="docs/assets/cabin-tour.mp4">高清 MP4</a></sub>
+<sub>真实界面录屏（无音轨，录于入口收拢前）：三步入门 → 开始专注 → 换场景与伙伴 → 沉浸模式。<a href="docs/assets/cabin-tour.mp4">高清 MP4</a></sub>
 </div>
 
 <table>
