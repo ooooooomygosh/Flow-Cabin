@@ -30,6 +30,7 @@
 .turntable-audio-sliders{display:grid;gap:5px;margin-top:10px;font-size:12px;color:#cfae7d}.turntable-audio-sliders label{display:flex;align-items:center;gap:7px;flex-wrap:wrap}.turntable-audio-sliders input{min-width:0;flex:1;width:60%;height:12px;accent-color:#d5b575}.turntable-audio-sliders small{flex-basis:100%;text-align:right;font-size:12px}
 .turntable-matches{display:grid;gap:4px;max-height:180px;overflow:auto;margin-top:10px}.turntable-matches button{padding:7px 8px;text-align:left;border:1px solid #cfaa6650;background:#513720;color:#ffe2b4}.turntable-matches button strong{display:block;font-size:12px;font-weight:500}.turntable-matches button span{display:block;font-size:12px;color:#c2a17a}
 @media(max-width:1300px){.room-turntable{left:1.5%;width:22%;min-width:185px}.room-shelf-navigation{right:8px}}
+@media(max-width:700px){.room-shelf-navigation small{display:none}}
 @media(max-height:750px){.room-turntable{bottom:19%;width:18%;min-width:165px}.turntable-controls button{padding:5px}.turntable-controls select{padding:5px}.room-shelf-navigation small{display:none}.turntable-console{scrollbar-width:thin;scrollbar-color:#b48753 #352518}.turntable-console>*{max-width:100%}.turntable-status{overflow-wrap:anywhere}}
 @media(max-height:700px){.turntable-audio-sliders{gap:2px}.turntable-status{max-height:28px}}
 /* Only the heading moves the furniture; playback, selects and album drops keep their own gestures. */

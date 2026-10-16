@@ -9,6 +9,7 @@ import { trackArtist } from './track-meta.mjs';
 import { providerLabel } from './player/providers.mjs';
 import PlayerControls, { PocketProgress } from './player/PlayerControls';
 import { displayTitle } from './display-title.mjs';
+const EMPTY_DECK_HINT = '双击封面、按回车或拖到这里';
 // Wrap the quality token (无损 / FLAC / Hi-Res / 320k MP3…) of a status line in a small badge; the text stays whole.
 const QUALITY = /(\d{2,4}\s?k(?:bps)?(?:\s?(?:MP3|AAC|OGG))?|Hi-?Res|FLAC|无损)/i;
 const statusNode = (text) => { const match = typeof text === 'string' && QUALITY.exec(text); return match ? <>{text.slice(0, match.index)}<span className="turntable-quality">{match[0]}</span>{text.slice(match.index + match[0].length)}</> : text; };
@@ -16,7 +17,7 @@ const statusNode = (text) => { const match = typeof text === 'string' && QUALITY
 export default function RoomTurntable({ item, spinning, trackIndex = 0, style, items = [], load, toggle, track, eject, readOnly = false, provider = 'visual', setProvider, playback, statusText, actualTrack, system, player, tools }) {
   const [dragging, setDragging] = useState(false), names = trackNames(item), deckAnchor = useRef(null);
   const placement = useTurntablePosition(readOnly);
-  const trackName = actualTrack || playback?.actualTrack || names[trackIndex] || (item ? '暂无曲目信息' : '双击封面、按回车或拖到这里');
+  const trackName = actualTrack || playback?.actualTrack || names[trackIndex] || (item ? '暂无曲目信息' : EMPTY_DECK_HINT);
   const audible = provider !== 'visual' && provider !== 'system';
   const screenState = provider === 'system' ? (system?.playing ? 'playing' : system?.active ? 'paused' : 'idle') : !audible ? (item && spinning ? 'playing' : 'idle')
     : playback?.playing ? 'playing' : ['loading', 'searching', 'buffering'].includes(playback?.status) ? 'busy' : playback?.status === 'error' ? 'error' : playback?.status === 'paused' ? 'paused' : 'idle';
@@ -43,7 +44,7 @@ export default function RoomTurntable({ item, spinning, trackIndex = 0, style, i
       <span className="turntable-sleeve">{item?.cover ? <img src={item.cover} alt="" referrerPolicy="no-referrer"/> : <Disc3 size={32}/>}</span>
       <VinylDisc item={item || undefined} value={style} className={spinning ? 'is-spinning' : ''}/><span className="turntable-needle" aria-hidden="true"/>
     </button>
-    <div className="turntable-copy"><strong title={item?.title}>{displayTitle(item?.title) || '等一张唱片'}</strong><span className="turntable-artist">{item?.type === 'playlist' ? <>{trackArtist(item, trackIndex) || '歌单'} · <em>歌单</em></> : item?.artist || ''}</span><p className="turntable-track" title={trackName}>{item && names.length ? `${String(trackIndex + 1).padStart(2, '0')} · ` : ''}{displayTitle(trackName)}</p><small className="turntable-status" role="status">{statusNode(statusText || (provider === 'system' ? system?.statusText : provider === 'visual' ? (item ? spinning ? '展示中 · 无音频' : '旋转已暂停 · 无音频' : '等待放盘 · 无音频') : playback?.statusText))}</small></div>
+    <div className="turntable-copy"><strong title={item?.title}>{displayTitle(item?.title) || '等一张唱片'}</strong><span className="turntable-artist">{item?.type === 'playlist' ? <>{trackArtist(item, trackIndex) || '歌单'} · <em>歌单</em></> : item?.artist || ''}</span><p className={trackName === EMPTY_DECK_HINT ? 'turntable-track is-hint' : 'turntable-track'} title={trackName}>{item && names.length ? `${String(trackIndex + 1).padStart(2, '0')} · ` : ''}{displayTitle(trackName)}</p><small className="turntable-status" role="status">{statusNode(statusText || (provider === 'system' ? system?.statusText : provider === 'visual' ? (item ? spinning ? '展示中 · 无音频' : '旋转已暂停 · 无音频' : '等待放盘 · 无音频') : playback?.statusText))}</small></div>
     </div>
     {!readOnly && item && playback && !['visual', 'system', 'ma'].includes(provider) && <PocketProgress playback={playback}/>}
     </div>
