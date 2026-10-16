@@ -23,7 +23,8 @@ export default function Dialog({ title, icon, close, className = '', children, s
     node.showModal();
     const target = typeof initialFocus === 'string' ? node.querySelector(initialFocus) : initialFocus?.current;
     (target || node.querySelector('[data-autofocus]') || node.querySelector('[role=tab][aria-selected=true]') || node.querySelector('.cabin-dialog-title') || node).focus({ preventScroll: true });
-    return () => previous?.focus?.({ preventScroll: true });
+    // Layout cleanup runs while the node is still modal: close it first, or the opener is still inert.
+    return () => { if (node.open) node.close(); previous?.focus?.({ preventScroll: true }); };
   }, []);
   const outside = (event) => {
     if (event.target !== dialog.current) return false;

@@ -225,7 +225,7 @@ try {
   });
   await run('companion-generated-lofi-tempo-reaches-pet',async page=>{
     const { cleanCompanion } = createRequire(path.join(root,'desktop/package.json'))('./wallpaper-model.cjs');
-    await openFocus(page,'声音');await page.getByRole('checkbox',{name:'Lofi 电台 · 实时生成',exact:true}).check(); // enabling lo-fi starts sound itself
+    await openFocus(page,'声音');await page.getByRole('checkbox',{name:'Lo-fi 电台 · 实时生成',exact:true}).check(); // enabling lo-fi starts sound itself
     await page.waitForFunction(()=>window.albumCompanionSnapshot?.().sound?.lofi===true,null,{timeout:30000});
     const source=await page.evaluate(()=>window.albumCompanionSnapshot());const tempo=Number((await page.locator('.sound-section').innerText()).match(/(\d+) BPM/)[1]);
     await screenshot(page,'lofi-source-playing');assert.equal(source.lofiBpm,tempo,'generated lo-fi snapshot carries its actual section tempo');assert.equal(source.musicPlaying,false);assert.equal(source.bpm,0);assert.equal(source.energy,0);
