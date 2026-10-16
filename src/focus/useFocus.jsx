@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import * as model from './focus-model.mjs';
+import { playChime } from '../lib/chime.mjs';
 
 // Two contexts: the record and its actions change only on commits; the clock
 // ticks once per displayed second while a timer runs. Only the time displays
@@ -9,19 +10,6 @@ const FocusContext = createContext(null), FocusClockContext = createContext(0);
 // Next moment the shown remaining time (whole seconds, rounded up) changes.
 export const nextSecondDelay = (endsAt, now) => { const left = endsAt - now; return left > 0 ? Math.max(40, left % 1000 || 1000) + 8 : 1000; };
 const NOTICE = { focus: ['专注完成', '辛苦啦，起来伸个懒腰吧。+1 小鱼干'], shortBreak: ['休息结束', '准备好就开始下一轮专注。'], longBreak: ['长休息结束', '状态回来了吗？开始新一轮吧。'] };
-
-export function playChime() {
-  try {
-    const context = new (window.AudioContext || window.webkitAudioContext)(), now = context.currentTime;
-    [[659.25, 0], [880, .18], [1046.5, .36]].forEach(([frequency, offset]) => {
-      const osc = context.createOscillator(), gain = context.createGain();
-      osc.type = 'triangle'; osc.frequency.value = frequency;
-      gain.gain.setValueAtTime(0, now + offset); gain.gain.linearRampToValueAtTime(.16, now + offset + .02); gain.gain.exponentialRampToValueAtTime(.0001, now + offset + .9);
-      osc.connect(gain).connect(context.destination); osc.start(now + offset); osc.stop(now + offset + 1);
-    });
-    setTimeout(() => context.close().catch(() => {}), 1800);
-  } catch { /* Audio is optional. */ }
-}
 
 export function FocusProvider({ userId, children }) {
   const key = model.FOCUS_PREFIX + userId;
@@ -55,7 +43,7 @@ export function FocusProvider({ userId, children }) {
     if (!event) return;
     const settings = current.current.settings, [title, body] = NOTICE[event.phase] || [];
     window.dispatchEvent(new CustomEvent('album-focus-phase', { detail: event }));
-    if (settings.chime) playChime();
+    if (settings.chime) playChime('focus');
     if (settings.notify && title && event.completed && 'Notification' in window && Notification.permission === 'granted') {
       try { new Notification(title, { body: event.unlocked?.length ? `${body}\n解锁：${event.unlocked.join('、')}` : body, silent: true, tag: 'album-focus' }); } catch {}
     }

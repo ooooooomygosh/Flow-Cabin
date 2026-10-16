@@ -23,7 +23,6 @@ export function onCabinPlayback(fn) {
   if (!attached) { window.addEventListener(PLAYBACK_EVENT, receive); attached = true; }
   return () => { listeners.delete(fn); if (!listeners.size && attached) { window.removeEventListener(PLAYBACK_EVENT, receive); attached = false; } };
 }
-export const latestPlayback = () => latest;
 
 // Mirrors playback energy into a CSS custom property on `target()` (an element
 // or element list getter, so it may mount later), quantised to 1/steps and written only when

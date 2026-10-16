@@ -4,10 +4,8 @@ import { getPet, normalizePetId } from './pet-catalog.mjs';
 import { useCatMotion } from './useCatMotion';
 import { startPetAnimation } from './pet-animation.mjs';
 
-// Preserve the original cat-only signatures for existing callers.
-export const cachedFrame = (pose, index, accessory, petId = 'cat') => cachedPetFrame(petId, pose, index, accessory);
+// Hit-testing for the desktop pet window (cat-only signature kept for PetApp).
 export const opaqueAt = (pose, index, accessory, rx, ry, petId = 'cat') => petOpaqueAt(petId, pose, index, accessory, rx, ry);
-export function useReducedPetMotion(requested = false) { return useCatMotion(requested).reduced; }
 export default function PixelCat({ petId = 'cat', skin = 'orange', pose = 'idle', accessory = '', reduceMotion = false, className = '', label, onFrame, ...props }) {
   const id = normalizePetId(petId), motion = useCatMotion(reduceMotion);
   const catSkin = id === 'cat' && skin === 'black' ? 'black' : 'orange';

@@ -40,7 +40,6 @@ export function catFloorOffset({ height, sceneY = 0, k = 1, floor }) {
 /** Choose where the room cat sits (and where its bubble goes) so neither covers
  * a record cell or a panel: floor spots along its baseline, or perched on top of
  * the turntable console. Keeps the current spot while it is still clear. */
-export const CAT_OBSTACLES = BUBBLE_OBSTACLES;
 const inset = (r, k) => { const dx = (r.right - r.left) * k, dy = (r.bottom - r.top) * k; return { left: r.left + dx, right: r.right - dx, top: r.top + dy, bottom: r.bottom }; };
 /** preferPerch: the cat wants to be back on the console top (immersive hover held);
  * any clear perch spot wins over staying on the floor. */
