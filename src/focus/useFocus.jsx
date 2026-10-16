@@ -1,7 +1,13 @@
-import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import * as model from './focus-model.mjs';
 
-const FocusContext = createContext(null);
+// Two contexts: the record and its actions change only on commits; the clock
+// ticks once per displayed second while a timer runs. Only the time displays
+// (badge, ring, widgets) read the clock, so a running timer no longer
+// re-renders the whole cabin twice a second.
+const FocusContext = createContext(null), FocusClockContext = createContext(0);
+// Next moment the shown remaining time (whole seconds, rounded up) changes.
+export const nextSecondDelay = (endsAt, now) => { const left = endsAt - now; return left > 0 ? Math.max(40, left % 1000 || 1000) + 8 : 1000; };
 const NOTICE = { focus: ['专注完成', '辛苦啦，起来伸个懒腰吧。+1 小鱼干'], shortBreak: ['休息结束', '准备好就开始下一轮专注。'], longBreak: ['长休息结束', '状态回来了吗？开始新一轮吧。'] };
 
 export function playChime() {
@@ -79,11 +85,12 @@ export function FocusProvider({ userId, children }) {
       const result = model.tick(current.current, time);
       if (result.event && commit(result.state, { volatile: true }).applied) announce(result.event);
     };
-    advance();
-    const timer = setInterval(advance, 500);
-    window.addEventListener('focus', advance);
-    document.addEventListener('visibilitychange', advance);
-    return () => { clearInterval(timer); window.removeEventListener('focus', advance); document.removeEventListener('visibilitychange', advance); };
+    let timer = 0;
+    const loop = () => { advance(); clearTimeout(timer); timer = setTimeout(loop, nextSecondDelay(current.current.timer.endsAt, Date.now())); };
+    loop();
+    window.addEventListener('focus', loop);
+    document.addEventListener('visibilitychange', loop);
+    return () => { clearTimeout(timer); window.removeEventListener('focus', loop); document.removeEventListener('visibilitychange', loop); };
   }, [state.timer.phase, state.timer.paused, state.timer.endsAt]);
   useEffect(() => {
     const sync = (event) => { if (event.key !== key) return; if (dirty.current) { conflicted.current = true; setError(conflictMessage); return; } const next = model.readFocus(localStorage, userId); current.current = next; setState(next); setNow(Date.now()); };
@@ -102,7 +109,8 @@ export function FocusProvider({ userId, children }) {
     window.addEventListener('album-companion-command', receive);
     return () => window.removeEventListener('album-companion-command', receive);
   }, []);
-  const actions = {
+  // Actions only use refs and state setters: built once per storage key.
+  const actions = useMemo(() => ({
     toggle: () => { if (current.current.settings.notify && 'Notification' in window && Notification.permission === 'default') Notification.requestPermission().catch?.(() => {}); return applyTimer(model.toggle); },
     start: (phase = 'focus', taskId) => applyTimer((s, t) => model.startPhase(s, phase, t, taskId)),
     skip: () => applyTimer(model.skip),
@@ -120,8 +128,17 @@ export function FocusProvider({ userId, children }) {
     equip: (kind, value) => apply((s) => model.equip(s, kind, value)),
     retrySave: () => commit(current.current, { volatile: true, overwriteConflict: true }).persisted,
     replace: (value) => commit({ ...model.normalizeFocus(value), timer: current.current.timer }).persisted
-  };
-  const value = { state, now, error, hasUnsavedChanges: dirty.current, remaining: model.remainingMs(state.timer, now), snapshot: () => model.focusSnapshot(current.current, Date.now()), ...actions };
-  return <FocusContext.Provider value={value}>{children}</FocusContext.Provider>;
+  }), [key]);
+  const unsaved = dirty.current;
+  const value = useMemo(() => ({ state, error, hasUnsavedChanges: unsaved, snapshot: () => model.focusSnapshot(current.current, Date.now()), ...actions }), [state, error, unsaved, actions]);
+  return <FocusContext.Provider value={value}><FocusClockContext.Provider value={now}>{children}</FocusClockContext.Provider></FocusContext.Provider>;
 }
-export function useFocus() { return useContext(FocusContext); }
+// Record + actions only: no re-render on clock ticks.
+export function useFocusState() { return useContext(FocusContext); }
+// The ticking time (ms) while a timer runs.
+export function useFocusNow() { return useContext(FocusClockContext); }
+// Compatibility shape: state, actions, `now` and `remaining`. Ticks with the clock.
+export function useFocus() {
+  const focus = useContext(FocusContext), now = useContext(FocusClockContext);
+  return useMemo(() => focus && { ...focus, now, remaining: model.remainingMs(focus.state.timer, now) }, [focus, now]);
+}

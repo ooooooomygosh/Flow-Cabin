@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useFocus } from '../focus/useFocus';
+import { useFocus, useFocusState } from '../focus/useFocus';
 import { useStudy } from '../study/useStudy';
 import { nextCountdown } from '../study/study-model.mjs';
 import { formatClock, PHASE_LABELS, phaseProgress } from '../focus/focus-model.mjs';
 import { trackNames } from '../room-model.mjs';
 import { trackArtist } from '../room-playback.mjs';
+import { usePlaybackDuration, usePlaybackPosition } from '../deck/usePlaybackClock';
 import { ChevronLeft, ChevronRight, Pause, Play, Forward, Plus, Eye, Clock, ListBullet, Music2 } from '../icons';
 import { clampWidget, defaultWidgetLayout, readWidgetLayout, writeWidgetLayout } from './widget-layout.mjs';
 import './desktop-widgets.css';
@@ -61,7 +62,8 @@ function NowPlayingWidget({ layout, move, item, provider, playback, player, spin
   const audible = provider !== 'visual' && provider !== 'system' && playback;
   const playing = audible ? playback.playing : spinning;
   const name = audible && playback.actualTrack || trackNames(item)[trackIndex] || '';
-  const progress = audible && playback.duration ? Math.min(100, playback.position / playback.duration * 100) : 0;
+  const duration = usePlaybackDuration(audible ? playback : null), position = usePlaybackPosition(audible ? playback : null, Math.max(.25, duration / 400));
+  const progress = duration ? Math.min(100, position / duration * 100) : 0;
   return <Widget id="music" title="正在播放" icon={<Music2 size={13}/>} layout={layout} move={move}>
     {item ? <div className="desktop-music">
       <button type="button" className="desktop-music-cover" aria-label="打开唱机特写" title="唱机特写" onClick={() => window.dispatchEvent(new Event('cabin-open-corner'))}>{item.cover ? <img src={item.cover} alt="" referrerPolicy="no-referrer"/> : <span/>}<i className={playing ? 'is-spinning' : ''} aria-hidden="true"/></button>
@@ -99,7 +101,7 @@ function FocusWidget({ layout, move }) {
 }
 
 function TodoWidget({ layout, move }) {
-  const focus = useFocus(), [text, setText] = useState('');
+  const focus = useFocusState(), [text, setText] = useState('');
   if (!focus) return null;
   const open = focus.state.tasks.filter((task) => !task.done).slice(0, 6), doneToday = focus.state.tasks.filter((task) => task.done && task.doneAt && new Date(task.doneAt).toDateString() === new Date().toDateString()).length;
   return <Widget id="todo" title="待办" icon={<ListBullet size={13}/>} layout={layout} move={move}>
@@ -129,8 +131,11 @@ export default function DesktopWidgets({ mode = 'desktop', exit, ...music }) {
 }
 
 // A persistent, small recovery control: fullscreen never removes interaction.
-export function ImmersiveChrome({ zen, fullscreen, exitFullscreen, toggleZen, openStudy }) {
-  const [tools, setTools] = useState(false);
+// 沉浸模式 is a toggle: its label stays put and aria-pressed carries the state.
+// `tools` (显示工具) may be owned by the room so the zen clock can step aside.
+export function ImmersiveChrome({ zen, fullscreen, exitFullscreen, toggleZen, openStudy, tools: ownedTools, setTools: setOwnedTools }) {
+  const [localTools, setLocalTools] = useState(false);
+  const tools = setOwnedTools ? Boolean(ownedTools) : localTools, setTools = setOwnedTools || setLocalTools;
   useEffect(() => {
     document.documentElement.classList.toggle('room-zen-tools', zen && tools);
     window.dispatchEvent(new Event('resize'));
@@ -138,7 +143,7 @@ export function ImmersiveChrome({ zen, fullscreen, exitFullscreen, toggleZen, op
   }, [zen, tools]);
   if (!zen && !fullscreen) return null;
   return <div className={`immersive-exit is-visible${zen ? ' is-zen' : ''}`} role="toolbar" aria-label="全屏与沉浸工具">
-    <button type="button" aria-pressed={zen} onClick={toggleZen}>{zen ? '正常模式' : '沉浸模式'}</button>
+    <button type="button" aria-pressed={zen} aria-keyshortcuts="Z" title={zen ? '回到正常模式 · Z' : '沉浸模式 · Z'} onClick={toggleZen}>沉浸模式</button>
     {zen && <button type="button" aria-expanded={tools} onClick={() => setTools((value) => !value)}>{tools ? '收起工具' : '显示工具'}</button>}
     {zen && tools && <button type="button" onClick={openStudy}>学习</button>}
     {fullscreen && zen && !tools && <button type="button" onClick={exitFullscreen}>退出全屏</button>}

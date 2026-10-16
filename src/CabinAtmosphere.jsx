@@ -1,4 +1,4 @@
-import React, { useEffect, useId, useRef } from 'react';
+import React, { memo, useEffect, useId, useRef } from 'react';
 import { ATMOSPHERE, atmosphereFrame, createAtmosphereLoop } from './cabin-atmosphere.mjs';
 import './cabin-atmosphere.css';
 import { createFirePainter } from './cabin-fire.mjs';
@@ -38,7 +38,7 @@ function paintFire(ctx, geometry, seconds, backdrop, renderFire) {
   renderFire(ctx, width, height, seconds);
   ctx.restore();
 }
-export default function CabinAtmosphere({ look, weather }) {
+function CabinAtmosphere({ look, weather }) {
   const gradient = useId().replace(/:/g, '');
   const root = useRef(null), snow = useRef(null), fire = useRef(null), light = useRef(null);
   const geometry = ATMOSPHERE[look] || ATMOSPHERE.warm;
@@ -119,3 +119,4 @@ export default function CabinAtmosphere({ look, weather }) {
     </svg>
   </div>;
 }
+export default memo(CabinAtmosphere);

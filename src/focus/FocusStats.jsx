@@ -7,9 +7,9 @@ import '../study/study.css';
 const hours = (minutes) => minutes >= 60 ? `${Math.floor(minutes / 60)} 小时 ${minutes % 60} 分` : `${minutes} 分钟`;
 export default function FocusStats() {
   const focus = useFocus(), { sessions, rewards } = focus.state;
-  const stats = focusStats(sessions, focus.now), peak = Math.max(30, ...stats.week.map((day) => day.minutes));
+  const today = dayKey(focus.now), stats = useMemo(() => focusStats(sessions, focus.now), [sessions, today]), peak = Math.max(30, ...stats.week.map((day) => day.minutes));
   const level = levelInfo(rewards.xp), unlocked = unlockedIds(rewards.xp);
-  const goal = focus.state.settings.dailyGoal, today = dayKey(focus.now), weeks = useMemo(() => heatmap(minutesByDay(sessions), focus.now, 18), [sessions, today]), activeDays = weeks.flat().filter((day) => day.minutes > 0).length;
+  const goal = focus.state.settings.dailyGoal, weeks = useMemo(() => heatmap(minutesByDay(sessions), focus.now, 18), [sessions, today]), activeDays = weeks.flat().filter((day) => day.minutes > 0).length;
   return <div className="focus-stats">
     <dl className="focus-stat-tiles">
       <div><dt>今日专注</dt><dd>{hours(stats.today)}</dd></div>

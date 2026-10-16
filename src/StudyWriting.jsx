@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { memo, useEffect, useRef, useState } from 'react';
 import useReducedMotion from './useReducedMotion';
 import { onBackgroundChange, onOcclusionChange } from './frame-clock.mjs';
 
@@ -9,7 +9,7 @@ export const WRITING_TIMELINE = [
   [6, 420], [7, 160], [8, 120], [9, 120], [10, 120], [11, 170],
   [12, 200], [13, 180], [14, 180], [15, 350]
 ];
-export default function StudyWriting() {
+function StudyWriting() {
   const reduceMotion = useReducedMotion(); // OS preference or the desktop setting
   const hand = useRef(null), [ready, setReady] = useState(false);
   useEffect(() => {
@@ -52,3 +52,4 @@ export default function StudyWriting() {
     <span ref={hand} className="study-writing-hand" data-pose="0" style={reduceMotion ? { backgroundPosition: '0% 0%' } : undefined}/>
   </div> : null;
 }
+export default memo(StudyWriting);

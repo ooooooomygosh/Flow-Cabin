@@ -9,6 +9,7 @@ import { trackNames } from '../room-model.mjs';
 import { trackArtist } from '../room-playback.mjs';
 import { formatDuration } from '../playlist-model.mjs';
 import { bindEnergyVar } from '../scene/playback-listener.mjs';
+import { usePlaybackDuration, usePlaybackPosition } from '../deck/usePlaybackClock';
 import { ChevronLeft, ChevronRight, Pause, Play, X, SpeakerWave, SpeakerOff, Disc3 } from '../icons';
 import './listening-corner.css';
 
@@ -32,7 +33,9 @@ export default function ListeningCorner({ item, items = [], vinyl, provider, spi
   const names = trackNames(item), durations = (item?.trackDetails || []).map((track) => track?.lengthMillis || 0);
   const lengths = names.map((_, index) => durations[index] || 0);
   const visualSeconds = useVisualClock(!audible && spinning && Boolean(item), `${item?.id}|${trackIndex}`);
-  const position = audible ? playback.position || 0 : visualSeconds;
+  // Whole seconds are all the needle and the clock show: one render a second.
+  const playhead = usePlaybackPosition(audible ? playback : null, 1), duration = usePlaybackDuration(audible ? playback : null);
+  const position = audible ? playhead : visualSeconds;
   const { progress, gaps } = useMemo(() => sideProgress(lengths.length ? lengths : [0], trackIndex, position), [lengths.join(), trackIndex, Math.floor(position)]);
   const [speed, setSpeed] = useState(33), [light, setLight] = useState(() => { try { return localStorage.getItem('album-circle-corner-light-v1') || 'lamp'; } catch { return 'lamp'; } });
   const [sounds, setSounds] = useState(deckSoundsEnabled), [energyStep, setEnergyStep] = useState(0), [query, setQuery] = useState(''), [notice, setNotice] = useState('');
@@ -42,7 +45,12 @@ export default function ListeningCorner({ item, items = [], vinyl, provider, spi
     const previous = document.activeElement; root.current?.focus({ preventScroll: true });
     const key = (event) => {
       if (document.querySelector('dialog[open]')) return;
-      if (event.key === 'Escape') { event.preventDefault(); close(); return; }
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        // Esc in a filled crate search clears it first; the next Esc leaves the corner.
+        if (event.target?.matches?.('input[type=search]') && event.target.value) { setQuery(''); return; }
+        close(); return;
+      }
       if (event.key !== 'Tab') return;
       const controls = [...root.current.querySelectorAll('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex]:not([tabindex="-1"])')].filter(element => element.getClientRects().length);
       const first = controls[0], last = controls.at(-1), current = document.activeElement;
@@ -85,7 +93,7 @@ export default function ListeningCorner({ item, items = [], vinyl, provider, spi
       <span className="corner-bar-actions">
         <span className="segmented corner-light" role="radiogroup" aria-label="灯光">{LIGHTS.map(([value, label]) => <button type="button" role="radio" key={value} aria-checked={light === value} onClick={() => { setLight(value); try { localStorage.setItem('album-circle-corner-light-v1', value); } catch {} }}>{label}</button>)}</span>
         <button type="button" className="pixel-button is-quiet" aria-pressed={sounds} title="唱针落下、抬起与唱片出套的声音" onClick={() => { setDeckSounds(!sounds); setSounds(!sounds); }}>{sounds ? <SpeakerWave size={15}/> : <SpeakerOff size={15}/>}唱机声音</button>
-        <button type="button" className="pixel-button" onClick={close}><X size={15}/>回到小屋 · Esc</button>
+        <button type="button" className="pixel-button" aria-keyshortcuts="Escape T" onClick={close}><X size={15}/>回到小屋 · Esc</button>
       </span>
     </header>
     <div className="corner-stage">
@@ -107,7 +115,7 @@ export default function ListeningCorner({ item, items = [], vinyl, provider, spi
             <button type="button" aria-label="上一首" disabled={!player?.canPrevious} onClick={() => player?.previous()}><ChevronLeft size={18}/></button>
             <button type="button" className="corner-play" aria-label={playing ? '暂停' : '播放'} onClick={toggle}>{playing ? <Pause size={20}/> : <Play size={20}/>}</button>
             <button type="button" aria-label="下一首" disabled={!player?.canNext} onClick={() => player?.next()}><ChevronRight size={18}/></button>
-            <span className="corner-time">{audible && playback.duration ? `${clock(position)} / ${clock(playback.duration)}` : provider === 'visual' ? '仅动画 · 无音频' : ''}</span>
+            <span className="corner-time">{audible && duration ? `${clock(position)} / ${clock(duration)}` : provider === 'visual' ? '仅动画 · 无音频' : ''}</span>
           </div>
           {audible && playback.statusText && !playback.playing && <p className="corner-status" role="status">{playback.statusText}</p>}
           <ol ref={list} className="corner-tracks" aria-label="本面曲目">{names.map((name, index) => <li key={index}><button type="button" aria-current={index === trackIndex ? 'true' : undefined} onClick={() => setTrackIndex(index)}><b>{String(index + 1).padStart(2, '0')}</b><span>{displayTitle(name)}</span><small>{lengths[index] ? formatDuration(lengths[index]) : ''}</small></button></li>)}</ol>
