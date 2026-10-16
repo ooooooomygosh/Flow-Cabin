@@ -1,10 +1,11 @@
 import { normalizeMix } from './ambience.mjs';
+import { createIdleSuspend } from './idle-suspend.mjs';
 
 // All async work is fenced by generations. Injected audio/timer factories keep
 // cancellation, rapid toggles and import restoration testable without a browser.
-export function createSoundscapeController({ initialMix, createContext, createAmbience, loadPlayer, onChange = () => {}, persist = () => {}, schedule = setTimeout, cancel = clearTimeout }) {
+export function createSoundscapeController({ initialMix, createContext, createAmbience, loadPlayer, onChange = () => {}, persist = () => {}, schedule = setTimeout, cancel = clearTimeout, idleSuspend = (context) => createIdleSuspend(context, { ms: 1500 }) }) {
   let alive = false, wanted = false, generation = 0, musicGeneration = 0;
-  let context = null, ambience = null, player = null, loading = null, restart = null;
+  let context = null, ambience = null, player = null, loading = null, restart = null, idle = null;
   let state = { mix: normalizeMix(initialMix), enabled: false, section: null, lofiState: 'off', error: '', ducked: false };
   const emit = (patch) => { state = { ...state, ...patch }; if (alive) onChange(state); };
   const safely = (fn) => { try { const result = fn(); result?.catch?.(() => {}); } catch {} };
@@ -53,6 +54,7 @@ export function createSoundscapeController({ initialMix, createContext, createAm
   const turnOff = () => {
     wanted = false; generation++;
     emit({ enabled: false }); stopMusic(); safely(syncAmbience);
+    idle?.idle(); // after the fade-out, the silent ambience context stops waking the audio thread
   };
   const turnOn = async () => {
     if (!alive || wanted) return;
@@ -60,7 +62,8 @@ export function createSoundscapeController({ initialMix, createContext, createAm
     const token = ++generation;
     emit({ error: '' });
     try {
-      if (!context) { context = createContext(); ambience = createAmbience(context); }
+      if (!context) { context = createContext(); ambience = createAmbience(context); idle = idleSuspend(context); }
+      idle?.cancel();
       const current = context;
       if (current.state === 'suspended') await current.resume();
       if (!alive || !wanted || token !== generation) return;
@@ -68,7 +71,7 @@ export function createSoundscapeController({ initialMix, createContext, createAm
     } catch {
       if (!alive || token !== generation) return;
       turnOff();
-      safely(() => ambience?.stop()); ambience = null;
+      safely(() => ambience?.stop()); ambience = null; idle?.cancel(); idle = null;
       safely(() => context?.close()); context = null;
       emit({ error: '音频无法启动，请检查浏览器权限或系统音频后重试。' });
     }
@@ -82,7 +85,7 @@ export function createSoundscapeController({ initialMix, createContext, createAm
     activate() { alive = true; },
     dispose() {
       alive = false; turnOff();
-      safely(() => ambience?.stop()); ambience = null;
+      safely(() => ambience?.stop()); ambience = null; idle?.cancel(); idle = null;
       const old = context; context = null; safely(() => old?.close());
     },
     turnOn, turnOff,

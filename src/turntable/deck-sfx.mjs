@@ -1,16 +1,21 @@
 // Tiny synthesized deck sounds: the needle touching down (a soft thump with
 // a crackle), lifting off (a short tick) and a sleeve sliding out. Generated
 // with Web Audio, quiet by design, silent until the listener has interacted.
+import { createIdleSuspend } from '../audio/idle-suspend.mjs';
+
 const KEY = 'album-circle-deck-sfx-v1';
-let context = null;
+let context = null, idle = null, awake = false;
 export function deckSoundsEnabled() { try { return localStorage.getItem(KEY) !== 'off'; } catch { return true; } }
 export function setDeckSounds(on) { try { localStorage.setItem(KEY, on ? 'on' : 'off'); } catch {} }
 function ctx() {
   const Context = globalThis.AudioContext || globalThis.webkitAudioContext;
   if (!Context) return null;
-  context ||= new Context({ latencyHint: 'interactive' });
-  if (context.state === 'suspended') context.resume().catch(() => {});
-  return context.state === 'running' ? context : null;
+  if (!context) { context = new Context({ latencyHint: 'interactive' }); idle = createIdleSuspend(context, { ms: 2000 }); }
+  if (context.state === 'running') awake = true;
+  idle.wake(); idle.idle();
+  // Silent until the listener has interacted (no burst of queued sounds later); once it
+  // has run, a context we put to sleep wakes and plays this sound a few ms late.
+  return awake && context.state !== 'closed' ? context : null;
 }
 function noise(audio, seconds, shape) {
   const buffer = audio.createBuffer(1, Math.max(1, Math.floor(audio.sampleRate * seconds)), audio.sampleRate), data = buffer.getChannelData(0);

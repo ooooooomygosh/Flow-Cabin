@@ -1,7 +1,7 @@
 // Procedural lo-fi generator. The idea of an endless, seeded Tone.js lo-fi
 // stream follows meel-hd/lofi-engine (MIT); this implementation is original.
 // Named imports: only these Tone members reach the vendor-tone chunk (this module is itself loaded lazily).
-import { start as startTone, FMSynth, Filter, Gain, Loop, MembraneSynth, MonoSynth, Noise, NoiseSynth, PolySynth, Reverb, Synth, getDraw, getTransport } from 'tone';
+import { start as startTone, getContext, FMSynth, Filter, Gain, Loop, MembraneSynth, MonoSynth, Noise, NoiseSynth, PolySynth, Reverb, Synth, getDraw, getTransport } from 'tone';
 import { mulberry32 } from './ambience.mjs';
 
 const NOTE_NAMES = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
@@ -95,6 +95,8 @@ export async function createLofiPlayer({ onSection } = {}) {
         if (activePlayers.size === 0) transport.stop();
       }
       [keys, lead, bass, kick, snare, hat, crackle, snareBand, hatHigh, crackleHigh, crackleLevel, space, tape, out].forEach((node) => node.dispose());
+      // With no player left, Tone's own context sleeps; startTone() wakes it for the next one.
+      if (activePlayers.size === 0) { const raw = getContext().rawContext; setTimeout(() => { if (activePlayers.size === 0 && raw.state === 'running') raw.suspend?.().catch?.(() => {}); }, 1500); }
     }
   };
 }

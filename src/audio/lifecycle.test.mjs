@@ -105,7 +105,7 @@ test('context creation and resume failures are caught, exposed and retryable', a
 test('player start failure disposes partial player and reports an error', async () => {
   const f = fixture(); await f.controller.turnOn(); await flush();
   const player = fakePlayer(); player.start = () => { throw Error('failed'); };
-  f.loads[0].resolve(player); await flush(); assert.equal(player.disposals, 1); assert.equal(f.controller.getState().lofiState, 'off'); assert.match(f.controller.getState().error, /Lofi/);
+  f.loads[0].resolve(player); await flush(); assert.equal(player.disposals, 1); assert.equal(f.controller.getState().lofiState, 'off'); assert.match(f.controller.getState().error, /Lo-fi/);
 });
 
 test('strict-mode cleanup/reactivation permits a fresh start but rejects old work', async () => {
@@ -153,4 +153,11 @@ test('restore storage failure still invalidates a pending context resume', async
   assert.throws(() => f.controller.replaceMix({ lofiOn: true }), /storage unavailable/);
   resumed.resolve(); await start; await flush();
   assert.equal(f.controller.getState().enabled, false); assert.equal(f.loads.length, 0);
+});
+
+test('turning sound off lets the ambience context sleep; turning it on cancels that', async () => {
+  const calls = []; const f = fixture({ idleSuspend: () => ({ idle: () => calls.push('idle'), cancel: () => calls.push('cancel') }) });
+  await f.controller.turnOn(); assert.deepEqual(calls, ['cancel']);
+  f.controller.turnOff(); assert.deepEqual(calls, ['cancel', 'idle']);
+  await f.controller.turnOn(); f.controller.dispose(); assert.deepEqual(calls, ['cancel', 'idle', 'cancel', 'idle', 'cancel']);
 });
