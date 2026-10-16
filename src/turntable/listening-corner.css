@@ -7,7 +7,7 @@
 .listening-corner {
   --corner-paper: #ead9b6; --corner-paper-2: #d9c39a; --corner-paper-3: #bfa47a; --corner-ink: var(--px-paper-ink); --corner-ink-2: #6b5038;
   --corner-wood: #4a2a16; --corner-wood-hi: #8a5530; --corner-wood-lo: #2f1a0d; --corner-floor: #120a06; --corner-lamp: #ffcf86; --corner-beam: #1e100a;
-  position: fixed; inset: 0; overflow: hidden; color: var(--px-ink); background: var(--corner-floor);
+  position: fixed; inset: 0; overflow: clip; color: var(--px-ink); background: var(--corner-floor);
   animation: corner-in var(--px-dur-slow) steps(4, end) both; }
 .listening-corner[open] { display: block; }
 .listening-corner.is-dusk { --corner-paper: #e6c9ad; --corner-paper-2: #d4b092; --corner-paper-3: #b98f72; --corner-ink-2: #6e4636; --corner-wood: #4d2a1c; --corner-wood-hi: #8c5536; --corner-wood-lo: #311a12; --corner-floor: #160a08; --corner-lamp: #ff9a6a; --corner-beam: #24100e; }
@@ -96,14 +96,18 @@ button[aria-current=true] > .corner-groove { background: var(--px-accent-lo); }
 .corner-empty-side { margin: auto; font-size: 13px; line-height: 20px; text-align: center; color: var(--corner-ink-2); }
 
 /* ── the crate: records filed spine-out in a walnut bin along the desk ── */
-.corner-crate { position: absolute; z-index: 3; bottom: 0; }
-.corner-crate-spines { position: absolute; left: 24px; right: 24px; top: 0; bottom: 24px; display: flex; gap: 2px; margin: 0; padding: 14px 16px 0; overflow-x: auto; overflow-y: hidden; list-style: none;
+.corner-crate { position: absolute; z-index: 3; }
+.corner-crate-spines { position: absolute; left: 24px; right: 24px; top: 0; bottom: 24px; display: flex; gap: var(--spine-gap, 2px); margin: 0; padding: 14px 16px 0; overflow-x: auto; overflow-y: hidden; list-style: none;
   background: linear-gradient(var(--px-shadow) 0 14px, var(--corner-wood-lo) 14px 16px, var(--px-shadow) 16px); scrollbar-width: none; }
 .corner-crate-spines::-webkit-scrollbar { display: none; }
 .corner-crate-spines li { flex: none; height: 100%; }
-.corner-spine { position: relative; display: block; width: 22px; height: 100%; padding: 0; overflow: hidden; background: var(--px-surface-2); border: 0; cursor: pointer;
+.corner-spine { position: relative; display: block; width: var(--spine-w, 22px); height: 100%; padding: 0; overflow: hidden; background: var(--px-surface-2); border: 0; cursor: pointer;
   box-shadow: inset 2px 0 0 #ffffff26, inset -2px 0 0 #00000066; transition: translate 150ms steps(3, end); }
-.corner-spine-art { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 50%; z-index: -1; }
+.corner-spine-art { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; image-rendering: pixelated; }
+/* The title printed down the spine, in paper ink with a hard 1 px outline so it reads on any colour. */
+.corner-spine-title { position: absolute; left: 0; right: 0; top: calc(12% + 8px); bottom: 6px; overflow: hidden; display: flex; justify-content: center;
+  font: 400 12px/1 var(--px-font-cn); color: var(--corner-paper); writing-mode: vertical-rl; text-orientation: upright; white-space: nowrap; letter-spacing: 1px; -webkit-font-smoothing: none;
+  text-shadow: 1px 0 0 var(--px-shadow), -1px 0 0 var(--px-shadow), 0 1px 0 var(--px-shadow), 0 -1px 0 var(--px-shadow); pointer-events: none; }
 .corner-spine { isolation: isolate; }
 /* Printed label band near the top, and a darker top cap. */
 .corner-spine::before { content: ''; position: absolute; left: 3px; right: 3px; top: 12%; height: 4px; background: var(--corner-paper); box-shadow: 0 1px 0 #0d080599; }
@@ -130,6 +134,8 @@ button[aria-current=true] > .corner-groove { background: var(--px-accent-lo); }
 .corner-crate-peek { position: absolute; z-index: 2; bottom: calc(100% - 4px); width: 180px; display: none; grid-template-columns: 56px minmax(0, 1fr); gap: 8px; align-items: center; padding: 8px; color: var(--corner-ink); background: var(--corner-paper);
   border: 2px solid var(--px-shadow); box-shadow: 4px 4px 0 var(--px-shadow); }
 .corner-crate:is(:hover, :focus-within) .corner-crate-peek { display: grid; animation: corner-peek 120ms steps(2, end) both; }
+/* Wide windows: the preview stands beside the crate on the floor, never over the deck's controls. */
+.corner-crate.is-peek-right .corner-crate-peek { left: calc(100% - 4px); bottom: 8px; }
 .corner-crate-peek img { border: 1px solid var(--px-shadow); }
 .corner-crate-peek span { display: grid; min-width: 0; }
 .corner-crate-peek b { overflow: hidden; font: 400 12px/16px var(--px-font-cn); white-space: nowrap; text-overflow: ellipsis; -webkit-font-smoothing: none; }
@@ -167,5 +173,5 @@ button[aria-current=true] > .corner-groove { background: var(--px-accent-lo); }
 .is-narrow .corner-head { gap: 12px; }
 .is-narrow :is(.corner-next, .corner-now) { display: none; }
 .corner-tracks li { min-height: 32px; }
-@media (max-height: 640px) { .corner-next { display: none; } .corner-side { gap: 8px; padding: 12px; } }
+@media (max-height: 640px) { :is(.corner-next, .corner-now) { display: none; } .corner-side { gap: 8px; padding: 12px; } }
 }

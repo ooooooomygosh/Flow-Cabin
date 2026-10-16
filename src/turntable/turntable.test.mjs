@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { GEOMETRY, LABEL_FRAMES, MOTION, REST_ANGLE, RPM, createDeckPhysics, grooveAngle, hitZone, labelFps, labelFrame, progressAngle, progressFromPoint, seekTarget, sideProgress, stylusPoint } from './turntable-physics.mjs';
-import { cornerLayout, sceneProps } from './corner-scene.mjs';
+import { cornerLayout, sceneProps, PEEK_W } from './corner-scene.mjs';
 
 const within = (inner, outer, margin = 0) => inner.x - margin >= outer.x && inner.y - margin >= outer.y && inner.x + inner.w + margin <= outer.x + outer.w && inner.y + inner.h + margin <= outer.y + outer.h;
 const centre = (r) => [r.x + r.w / 2, r.y + r.h / 2];
@@ -106,7 +106,24 @@ test('corner layout: deck, liner notes and crate fit every supported window at a
     assert.equal(deck.x % layout.s, 0); assert.equal(deck.y % layout.s, 0);
     const props = sceneProps(layout);
     assert(props.window.x >= 0 && props.window.x + props.window.w <= layout.art.w, 'window on the wall');
+    // The crate stands on the floor with boards showing below it, inside the window.
+    const { crate, spine } = layout;
+    assert(crate.y + crate.h <= height - 12 && crate.y === layout.crateTop, `${width}×${height}: floor margin under the crate`);
+    assert(crate.x >= layout.gutter && crate.x + crate.w <= width - layout.gutter, `${width}×${height}: crate inside the gutters`);
+    assert.equal(spine.w, Math.max(18, Math.round(11 * layout.s)), 'spines on the room scale');
+    if (!layout.narrow) {
+      // The preview pops out beside the crate, never above it over the deck's front controls.
+      assert.equal(crate.peek, 'right'); assert(crate.x + crate.w - 4 + PEEK_W - 12 <= width - layout.gutter + 4, `${width}×${height}: preview fits right of the crate`);
+      // Some sky stays in view: the window is not hidden behind the deck or the notes.
+      const D = layout.D, w = props.window, behindDeck = w.x < D.x + D.w && w.x + w.w > D.x && w.y + w.h > D.y;
+      const C = { x: layout.card.x / layout.s, y: layout.card.y / layout.s, w: layout.card.w / layout.s }, behindCard = w.x < C.x + C.w && w.x + w.w > C.x && w.y + w.h > C.y;
+      assert(!behindDeck && !behindCard && w.h >= 40, `${width}×${height}: window in view (${JSON.stringify(w)})`);
+      assert(props.speaker && props.rug && props.speaker.x >= props.crate.x + props.crate.w, `${width}×${height}: floor right of the crate is furnished`);
+    }
   }
+  // Many records: the crate never grows over the preview's room.
+  const full = cornerLayout({ width: 1440, height: 900, records: 120 });
+  assert(full.crate.x + full.crate.w + PEEK_W <= 1440 - full.gutter);
   // Device pixels: a 2× screen gets the in-between sizes.
   const retina = cornerLayout({ width: 1440, height: 900, dpr: 2 });
   assert(retina.k >= 4 && Number.isInteger(retina.k) && retina.s === retina.k / 2);

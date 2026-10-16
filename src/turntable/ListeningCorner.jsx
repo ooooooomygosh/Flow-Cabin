@@ -38,7 +38,7 @@ function useVisualClock(running, key) {
   return seconds;
 }
 const measure = () => ({ width: window.innerWidth, height: window.innerHeight, dpr: window.devicePixelRatio || 1 });
-function useCornerLayout() {
+function useCornerLayout(records) {
   const [size, setSize] = useState(measure);
   useEffect(() => {
     let frame = 0;
@@ -46,7 +46,7 @@ function useCornerLayout() {
     window.addEventListener('resize', update);
     return () => { cancelAnimationFrame(frame); window.removeEventListener('resize', update); };
   }, []);
-  return useMemo(() => cornerLayout(size), [size]);
+  return useMemo(() => cornerLayout({ ...size, records }), [size, records]);
 }
 const box = ({ x, y, w, h }) => ({ left: x, top: y, width: w, height: h });
 // The sleeve: the cover, or a generated pixel sleeve when there is none (or it fails).
@@ -73,6 +73,23 @@ function PixelSleeve({ item }) {
   }, [item?.id, item?.cover]);
   return <canvas ref={canvas} width="64" height="64" role="img" aria-label={`${item.title} 封套`}/>;
 }
+// A record's spine: the colours along the cover's left edge, averaged into five
+// blocks (drawn, never read back), under the title printed down the spine. A
+// crop of the cover would show a sliver of its picture, which reads as noise.
+function SpineArt({ item }) {
+  const canvas = useRef(null);
+  useEffect(() => {
+    const ctx = canvas.current?.getContext('2d'); if (!ctx) return;
+    let alive = true;
+    const draw = (source) => { if (!alive) return; const w = source.naturalWidth || source.width, h = source.naturalHeight || source.height; if (!w || !h) return; ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high'; ctx.drawImage(source, 0, 0, Math.max(1, Math.round(w * .35)), h, 0, 0, 1, 5); };
+    const fallback = () => { const art = sleeveCanvas(item); if (art) draw(art); };
+    if (!item?.cover) { fallback(); return () => { alive = false; }; }
+    const image = new Image(); image.decoding = 'async'; image.referrerPolicy = 'no-referrer';
+    image.onload = () => draw(image); image.onerror = fallback; image.src = item.cover;
+    return () => { alive = false; };
+  }, [item?.id, item?.cover]);
+  return <><canvas ref={canvas} className="corner-spine-art" width="1" height="5" aria-hidden="true"/><span className="corner-spine-title" aria-hidden="true">{displayTitle(item.title)}</span></>;
+}
 
 export default function ListeningCorner({ item, items = [], vinyl, provider, spinning, trackIndex = 0, setTrackIndex, playback, player, toggleVisual, load, close, reduceMotion = false }) {
   const audible = provider !== 'visual' && provider !== 'system' && playback;
@@ -87,7 +104,7 @@ export default function ListeningCorner({ item, items = [], vinyl, provider, spi
   const { progress, gaps } = useMemo(() => sideProgress(lengths.length ? lengths : [0], trackIndex, position), [lengths.join(), trackIndex, Math.floor(position)]);
   const [speed, setSpeed] = useState(33), [light, setLight] = useState(() => { try { const value = localStorage.getItem(LIGHT_KEY); return LIGHTS.some((entry) => entry.id === value) ? value : 'lamp'; } catch { return 'lamp'; } });
   const [sounds, setSounds] = useState(deckSoundsEnabled), [query, setQuery] = useState(''), [notice, setNotice] = useState(''), [activeId, setActiveId] = useState(item?.id || null);
-  const layout = useCornerLayout(), scene = useRef(null), crateList = useRef(null), deckRef = useRef(null), list = useRef(null), dialogRoot = () => deckRef.current?.closest('.listening-corner');
+  const layout = useCornerLayout(Math.min(120, items.length)), scene = useRef(null), crateList = useRef(null), deckRef = useRef(null), list = useRef(null), dialogRoot = () => deckRef.current?.closest('.listening-corner');
   const hint = useId();
   // The room's weather and hour (the cabin behind keeps them on its scene).
   const ambience = useMemo(() => { const room = document.querySelector('.room-scene'); return { weather: normalizeWeather(room?.dataset.weather), time: room?.dataset.timeOfDay || timeOfDay(new Date().getHours()) }; }, []);
@@ -163,6 +180,7 @@ export default function ListeningCorner({ item, items = [], vinyl, provider, spi
   // The peek card floats above the active spine.
   const [peekLeft, setPeekLeft] = useState(0);
   const placePeek = () => {
+    if (layout.crate.peek !== 'top') return;
     const listNode = crateList.current, spine = listNode?.querySelectorAll('.corner-spine')[activeIndex];
     if (!listNode || !spine) return;
     const nav = listNode.closest('.corner-crate').getBoundingClientRect(), at = spine.getBoundingClientRect();
@@ -172,9 +190,6 @@ export default function ListeningCorner({ item, items = [], vinyl, provider, spi
   const upNext = (player?.queue.ids || []).map((id) => items.find((entry) => entry.id === id)).filter(Boolean).slice(0, 3);
   const count = names.length, sideTotal = lengths.reduce((sum, value) => sum + value, 0);
   const style = { '--corner-s': `${layout.s}px` };
-  // The crate is as long as its records (a bin, not a shelf), under the deck.
-  const crateW = Math.min(layout.width - layout.gutter * 2, Math.max(440, crate.length * 24 + 96));
-  const crateX = Math.round(Math.max(layout.gutter, Math.min(layout.width - layout.gutter - crateW, layout.narrow ? (layout.width - crateW) / 2 : layout.deck.x + layout.deck.w / 2 - crateW / 2)));
   const s = layout.s;
   return <Dialog variant="full" title="唱机特写" close={close} onKeyDown={keys} deckKeys className={`listening-corner is-${light}${layout.narrow ? ' is-narrow' : ''}`} container={document.querySelector('.cabin-room')}>
     <div className="corner-room" style={style} aria-hidden="true">
@@ -195,7 +210,7 @@ export default function ListeningCorner({ item, items = [], vinyl, provider, spi
         label={item ? `唱机特写：${item.title}${playing ? '，正在播放' : '，已暂停'}` : '唱机特写：还没有放唱片'} onToggle={item ? toggle : undefined} onSeek={item ? seek : undefined} onSpeed={changeSpeed}/>
       {!item && <p className="corner-empty">从下面的唱片箱挑一张，或回到小屋双击封面。</p>}
     </div>
-    <aside ref={card} className="corner-side" aria-label="正在播放" style={{ left: layout.card.x, width: layout.card.w, maxHeight: layout.card.h, ...(layout.narrow ? { top: layout.card.y, height: layout.card.h } : { bottom: layout.height - layout.card.y - layout.card.h }), '--corner-sleeve': layout.narrow ? Math.round(40 * s) : Math.min(Math.round(64 * s), Math.round(layout.card.w * .4)) }}>
+    <aside ref={card} className="corner-side" aria-label="正在播放" style={{ left: layout.card.x, width: layout.card.w, maxHeight: layout.card.h, ...(layout.narrow ? { top: layout.card.y, height: layout.card.h } : { bottom: layout.height - layout.card.y - layout.card.h }), '--corner-sleeve': layout.narrow ? Math.round(40 * s) : Math.min(Math.round((layout.height < 640 ? 48 : 64) * s), Math.round(layout.card.w * .4)) }}>
       {item ? <>
         <div className="corner-head">
           <div className="corner-sleeve"><PixelSleeve item={item}/></div>
@@ -226,15 +241,15 @@ export default function ListeningCorner({ item, items = [], vinyl, provider, spi
         {upNext.length > 0 && <div className="corner-next"><small>接下来</small><ul>{upNext.map((entry) => <li key={entry.id} title={`${entry.title} · ${entry.artist}`}><Sleeve item={entry}/><span>{displayTitle(entry.title)}</span></li>)}</ul></div>}
       </> : <p className="corner-empty-side">唱机上还没有唱片。<br/>从唱片箱里抽一张吧。</p>}
     </aside>
-    {items.length > 0 && <nav className="corner-crate" aria-label="唱片箱" style={{ left: crateX, width: crateW, height: layout.crateH }}>
+    {items.length > 0 && <nav className={`corner-crate is-peek-${layout.crate.peek}`} aria-label="唱片箱" style={{ left: layout.crate.x, width: layout.crate.w, height: layout.crate.h, bottom: layout.floorGap, '--spine-w': `${layout.spine.w}px`, '--spine-gap': `${layout.spine.gap}px` }}>
       {player?.queueError && <p role="alert">{player.queueError}</p>}
       <ul ref={crateList} className="corner-crate-spines" aria-describedby={hint} onScroll={placePeek}>{crate.map((entry, index) => <li key={entry.id} data-id={entry.id}>
         <button type="button" className={`corner-spine${entry.id === item?.id ? ' is-current' : ''}${index === activeIndex ? ' is-active' : ''}`} tabIndex={index === activeIndex ? 0 : -1} aria-label={`放上《${entry.title}》`} title={`${entry.title} · ${entry.artist}`}
           onClick={() => pick(entry)} onFocus={() => setActiveId(entry.id)} onPointerEnter={() => setActiveId(entry.id)} onKeyDown={(event) => spineKeys(event, index)}>
-          <Sleeve item={entry} className="corner-spine-art" lazy/>
+          <SpineArt item={entry}/>
         </button>
       </li>)}</ul>
-      {active && <div className="corner-crate-peek" style={{ left: peekLeft }}>
+      {active && <div className="corner-crate-peek" style={layout.crate.peek === 'top' ? { left: peekLeft } : undefined}>
         <Sleeve item={active}/>
         <span><b title={active.title}>{displayTitle(active.title)}</b><small>{active.artist}</small></span>
         {player && active.id !== item?.id && <button type="button" className="corner-crate-queue" aria-label={`加入待播 ${active.title}`} disabled={queued(active)} onClick={() => queueRecord(active)}><Plus size={12}/>{queued(active) ? '已入队' : '待播'}</button>}

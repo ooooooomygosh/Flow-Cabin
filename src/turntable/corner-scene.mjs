@@ -14,22 +14,26 @@ const AIR = 1.3;
 
 // Window size (CSS px) → where everything goes. `s` is CSS px per art pixel;
 // rects are CSS px on that grid. Pure: unit-tested at the supported sizes.
-export function cornerLayout({ width, height, dpr = 1 }) {
+// The preview card that pops out beside the crate (CSS px, with its overlap).
+export const PEEK_W = 196;
+export function cornerLayout({ width, height, dpr = 1, records = 24 }) {
   const ratio = Math.max(1, dpr), narrow = width < 900 || width / height < 1.15;
-  const crateH = height >= 760 ? 136 : height >= 640 ? 120 : 108, gutter = clamp(Math.round(width * .025), 16, 40);
+  const crateH = height >= 760 && width >= 900 ? 136 : height >= 640 && width >= 900 ? 120 : 108, gutter = clamp(Math.round(width * .025), 16, 40);
+  // Floor showing in front of the crate: it stands on the boards, not on the window edge.
+  const floorGap = clamp(Math.round(height * .022), 12, 24);
   const fit = (w, h) => Math.floor(Math.min(w * ratio / GEOMETRY.width, h * ratio / GEOMETRY.height));
   let k, cardW, stageW, stageH;
   if (narrow) {
-    stageW = width - gutter * 2; stageH = height - BAR - crateH;
+    stageW = width - gutter * 2; stageH = height - BAR - crateH - floorGap;
     k = Math.max(1, fit(stageW, stageH * .7));
   } else {
-    cardW = clamp(Math.round(width * .29), 300, 420); stageW = width - cardW - gutter * 3; stageH = height - BAR - crateH - 8;
+    cardW = clamp(Math.round(width * .29), 300, 420); stageW = width - cardW - gutter * 3; stageH = height - BAR - crateH - floorGap - 8;
     const kFit = fit(stageW, stageH), kAir = Math.floor(stageH * ratio / (GEOMETRY.height * AIR));
     k = Math.max(1, Math.max(Math.min(kFit, kAir), Math.min(kFit, Math.round(2 * ratio))));
   }
   const s = k / ratio, snap = (value) => Math.round(value / s) * s;
   const deckW = GEOMETRY.width * s, deckH = GEOMETRY.height * s;
-  const crateTop = height - crateH;
+  const crateTop = height - floorGap - crateH;
   let deck, card;
   if (narrow) {
     deck = { x: snap((width - deckW) / 2), y: snap(BAR + 4), w: deckW, h: deckH };
@@ -39,7 +43,9 @@ export function cornerLayout({ width, height, dpr = 1 }) {
     const bottom = snap(crateTop - 10 * s);
     deck = { x: snap(gutter + (stageW - deckW) / 2), y: bottom - deckH, w: deckW, h: deckH };
     const cardBottom = Math.round(bottom - 12 * s), cardH = Math.round(Math.min(stageH - 8, Math.max(deckH * .9, 400)));
-    card = { x: width - gutter - cardW, y: Math.max(BAR + 8, cardBottom - cardH), w: cardW, h: Math.min(cardH, cardBottom - BAR - 8) };
+    // Short windows leave no wall above the deck: keep wall above the notes for the window instead.
+    const cardTop = (deck.y - BAR) / s < 60 ? BAR + Math.round(56 * s) : BAR + 8;
+    card = { x: width - gutter - cardW, y: Math.max(cardTop, cardBottom - cardH), w: cardW, h: Math.min(cardH, cardBottom - cardTop) };
   }
   const down = (value) => Math.floor(value / s) * s;
   card = { x: snap(card.x), y: snap(card.y), w: down(card.w), h: down(card.h) };
@@ -47,17 +53,24 @@ export function cornerLayout({ width, height, dpr = 1 }) {
   const art = { w: Math.ceil(width / s), h: Math.ceil(height / s) };
   const D = { x: Math.round(deck.x / s), y: Math.round(deck.y / s), w: GEOMETRY.width, h: GEOMETRY.height };
   const deskBack = D.y + 62, deskFront = narrow ? Math.round((card.y + card.h) / s) + 2 : D.y + D.h + 4;
-  return { k, s, dpr: ratio, narrow, width, height, gutter, crateH, crateTop, deck, card, art, D, deskBack, deskFront };
+  // The crate: as long as its records (a bin, not a shelf), spines on the room's pixel scale,
+  // centred under the deck; in wide windows the preview pops out to its right, clear of the deck.
+  const spine = { w: Math.max(18, Math.round(11 * s)), gap: Math.max(2, Math.round(s)) };
+  const n = clamp(records, 1, 120), roomW = width - gutter * 2 - (narrow ? 0 : PEEK_W);
+  const crateW = Math.min(roomW, Math.max(440, n * (spine.w + spine.gap) + 96));
+  const crateX = Math.round(clamp(narrow ? (width - crateW) / 2 : deck.x + deck.w / 2 - crateW / 2, gutter, gutter + roomW - crateW));
+  const crate = { x: crateX, y: crateTop, w: crateW, h: crateH, peek: narrow ? 'top' : 'right' };
+  return { k, s, dpr: ratio, narrow, width, height, gutter, crateH, crateTop, floorGap, crate, spine, deck, card, art, D, deskBack, deskFront };
 }
 
 // ── Palettes: three light modes as full swaps, not overlays ──────────────
 export const SCENE_PALETTES = Object.freeze({
   lamp: { wall: ['#1e100a', '#2f1a0d', '#3c2213', '#4a2a16', '#5a331b'], desk: ['#2f1a0d', '#4a2a16', '#5d351c', '#6b3f22', '#8a5530'], floor: '#120a06', shadow: '#0d0805',
-    pool: '#ffcf86', poolAt: 'lamp', lampOn: true, brass: ['#5e3f22', '#a8743c', '#d4a46b', '#ffd99c'], shade: ['#1d3a2c', '#2c5a42', '#3f7a58'], glass: '#ffe9b8', frame: ['#2a170c', '#4a2a16', '#6b3f22', '#8a5530'] },
+    pool: '#ffcf86', poolAt: 'lamp', lampOn: true, brass: ['#5e3f22', '#a8743c', '#d4a46b', '#ffd99c'], shade: ['#1d3a2c', '#2c5a42', '#3f7a58'], glass: '#ffe9b8', frame: ['#2a170c', '#4a2a16', '#6b3f22', '#8a5530'], rug: ['#3a1712', '#6a2a1e', '#9a4a2c', '#d0975e'], cloth: ['#4a3826', '#5e4a32', '#7a6444'] },
   dusk: { wall: ['#26121a', '#3a1d26', '#47242c', '#552c33', '#66363b'], desk: ['#33191a', '#4f2a26', '#62352d', '#714033', '#8c5540'], floor: '#160a0c', shadow: '#110607',
-    pool: '#ff9a6a', poolAt: 'window', lampOn: false, brass: ['#5e3a24', '#a86c42', '#d69a6c', '#ffcf9e'], shade: ['#1f2f2a', '#2c4a3c', '#3a5e4a'], glass: '#6a4a3a', frame: ['#2c140d', '#4a2619', '#6c3b28', '#8c5536'] },
+    pool: '#ff9a6a', poolAt: 'window', lampOn: false, brass: ['#5e3a24', '#a86c42', '#d69a6c', '#ffcf9e'], shade: ['#1f2f2a', '#2c4a3c', '#3a5e4a'], glass: '#6a4a3a', frame: ['#2c140d', '#4a2619', '#6c3b28', '#8c5536'], rug: ['#341219', '#5e2430', '#8c4440', '#d08a68'], cloth: ['#4a3030', '#5e4040', '#785450'] },
   night: { wall: ['#0e0d16', '#161420', '#1f1c2c', '#28243a', '#322c46'], desk: ['#1d110a', '#2c1a10', '#3f2717', '#4f311d', '#5f3b22'], floor: '#07060b', shadow: '#05040a',
-    pool: '#e7c48a', poolAt: 'lamp', lampOn: true, small: true, brass: ['#4a3420', '#87613a', '#b98d5c', '#e7c48a'], shade: ['#16241f', '#22382e', '#2e4a3c'], glass: '#ffe0a8', frame: ['#120f18', '#1f1a28', '#2c2538', '#3a3248'] }
+    pool: '#e7c48a', poolAt: 'lamp', lampOn: true, small: true, brass: ['#4a3420', '#87613a', '#b98d5c', '#e7c48a'], shade: ['#16241f', '#22382e', '#2e4a3c'], glass: '#ffe0a8', frame: ['#120f18', '#1f1a28', '#2c2538', '#3a3248'], rug: ['#141224', '#25223e', '#3e3a5e', '#9a8a6a'], cloth: ['#24202c', '#2e2a38', '#3c3848'] }
 });
 const SKIES = {
   morning: ['#f2d6a8', '#e9c49a', '#c9b8a8', '#9fb3c4', '#7f9fb8'], day: ['#9cc4dc', '#8ab8d6', '#7aaccf', '#6aa0c8', '#5a94bf'],
@@ -74,9 +87,17 @@ export function sceneProps(layout, { light = 'lamp' } = {}) {
   const top = Math.ceil(BAR / s), cardX = narrow ? art.w : Math.floor(card.x / s);
   const wallRoom = D.y - top;
   // Window: upper right of the deck, never under the liner notes.
-  const wh = clamp(Math.round(wallRoom * .64), 52, 100), ww = clamp(Math.round(wh * .9), 64, 112);
-  const wx = clamp(Math.round(D.x + D.w * .66 - ww / 2), 8, Math.max(8, cardX - ww - 10)), wy = top + clamp(Math.round((wallRoom - wh) * .4), 6, 40);
-  const win = { x: wx, y: wy, w: ww, h: wh };
+  // Short wide windows have no wall above the deck: the window goes above the
+  // liner notes instead, as a wider landscape window, so the sky stays in view.
+  const cardTop = Math.floor(card.y / s), cardW = Math.floor(card.w / s), overNotes = !narrow && wallRoom < 60 && cardTop - top >= 44;
+  let win;
+  if (overNotes) {
+    const wh = clamp(cardTop - top - 16, 40, 100), ww = clamp(Math.round(wh * 1.6), 64, cardW - 24);
+    win = { x: cardX + Math.round((cardW - ww) / 2), y: top + clamp(Math.round((cardTop - top - wh - 8) * .4), 4, 40), w: ww, h: wh };
+  } else {
+    const wh = clamp(Math.round(wallRoom * .64), 52, 100), ww = clamp(Math.round(wh * .9), 64, 112);
+    win = { x: clamp(Math.round(D.x + D.w * .66 - ww / 2), 8, Math.max(8, cardX - ww - 10)), y: top + clamp(Math.round((wallRoom - wh) * .4), 6, 40), w: ww, h: wh };
+  }
   // Lamp: a brass banker's lamp on the desk when there is room left of the
   // deck, else a swing-arm lamp on the wall above the deck's left corner.
   const standing = D.x >= 66;
@@ -91,9 +112,21 @@ export function sceneProps(layout, { light = 'lamp' } = {}) {
   // A record ledge on the wall over the liner notes, level with the sill, and a
   // framed print above the lamp: the wall is part of the room, not a backdrop.
   const sill = win.y + win.h + 4, ledgeX = narrow ? 0 : cardX + 8, ledgeW = narrow ? 0 : Math.min(art.w - ledgeX - 6, Math.floor(card.w / s) - 16);
-  const ledge = !narrow && ledgeW > 60 && sill - 34 > top + 4 ? { x: ledgeX, y: sill, w: ledgeW } : null;
+  const ledge = !narrow && !overNotes && ledgeW > 60 && sill - 34 > top + 4 ? { x: ledgeX, y: sill, w: ledgeW } : null;
   const printH = 56, print = lamp.kind === 'desk' && lamp.y - 8 - (win.y + 4) >= printH ? { x: lamp.x - 4, y: Math.max(win.y + 4, lamp.y - 12 - printH), w: 46, h: printH } : null;
-  return { top, window: win, lamp, ledge, print, bulb, poolCenter, poolRadius, plant, deskBack, deskFront, panes: { x: win.x + 4, y: win.y + 4, w: win.w - 8, h: win.h - 8 } };
+  // The floor in front of the desk: the crate stands on a rug; in wide windows
+  // a floor speaker stands under the liner notes, on the same rug.
+  const floorY = layout.floorGap != null ? Math.round((layout.height - layout.floorGap) / s) : art.h;
+  const cr = layout.crate ? { x: Math.round(layout.crate.x / s), y: Math.round(layout.crate.y / s), w: Math.round(layout.crate.w / s), h: Math.round(layout.crate.h / s) } : null;
+  let speaker = null;
+  if (!narrow && cr) {
+    const h = Math.min(80, cr.h + 8), w = Math.round(h * .7) & ~1;
+    const x = Math.max(Math.round(cardX + cardW / 2 - w / 2), cr.x + cr.w + 16);
+    if (x + w <= art.w - 6) speaker = { x, y: floorY - h, w, h };
+  }
+  const rugX = cr ? Math.max(2, cr.x - 20) : 0, rugEnd = cr ? Math.min(art.w - 2, speaker ? speaker.x + speaker.w + 24 : cr.x + cr.w + 20) : 0;
+  const rug = cr && floorY - 16 > deskFront + 14 ? { x: rugX, y: floorY - 14, w: rugEnd - rugX, h: 17 } : null;
+  return { top, window: win, overNotes, lamp, ledge, print, bulb, poolCenter, poolRadius, plant, deskBack, deskFront, floorY, crate: cr, speaker, rug, panes: { x: win.x + 4, y: win.y + 4, w: win.w - 8, h: win.h - 8 } };
 }
 
 // Paints the room into `ctx` at art resolution (layout.art.w × layout.art.h).
@@ -154,6 +187,9 @@ export function paintScene(ctx, layout, { light = 'lamp', weather = 'snow', time
     if (x < C.x + C.w && y < C.y + C.h) continue;
     if (x < C.x + C.w + 2 && y < C.y + C.h + 2) set(x, y, shadow); else if ((x + y) % 2 === 0) set(x, y, shadow);
   }
+  if (props.rug) paintRug(set, rect, props.rug, P);
+  if (props.crate) for (let i = -2; i < props.crate.w + 4; i++) for (let j = 0; j < 3; j++) if (j === 0 || (i + j) % 2 === 0) set(props.crate.x + i + j, props.floorY + j, shadow); // crate contact shadow
+  if (props.speaker) paintSpeaker(set, rect, props.speaker, P);
   paintWindow(set, rect, win, P, { weather, time: light === 'dusk' ? 'dusk' : light === 'night' ? 'night' : time, random });
   paintLamp(set, rect, lamp, P, props.bulb);
   paintPlant(set, rect, props.plant, P, desk);
@@ -274,26 +310,81 @@ function paintPlant(set, rect, plant, P, desk) {
   }
 }
 
-// A walnut ledge with sleeves standing face-out, leaning on the wall.
+// A walnut ledge with records standing face-out against the wall: each sleeve
+// has a lit top/left edge, a darker spine side, ring wear where the disc presses
+// through, an opening on the right with the record peeking out, and a cast shadow.
 function paintLedge(set, rect, { x, y, w }, P, random) {
-  const frame = P.frame.map(hex), shadow = hex(P.shadow), ink = hex('#ffe9cb');
+  const frame = P.frame.map(hex), shadow = hex(P.shadow), ink = hex('#ffe9cb'), vinyl = ['#0e0b0a', '#1c1714', '#2c2622', '#4a423c'].map(hex);
   const covers = [['#6a2f26', '#e0ad69'], ['#2f4450', '#c9a47a'], ['#3a4a30', '#e8d8b0'], ['#4a3442', '#e98a5b'], ['#a8743c', '#2e1d12']].map((pair) => pair.map(hex));
-  const size = 30, count = Math.max(1, Math.min(4, Math.floor((w - 8) / (size + 8))));
+  const size = 30, peek = 6, count = Math.max(1, Math.min(4, Math.floor((w - 8) / (size + peek + 8))));
   for (let n = 0; n < count; n++) {
-    const [bg, fg] = covers[Math.floor(random() * covers.length)], sx = x + 6 + n * (size + 10) + Math.round(random() * 4), sy = y - size - 1, motif = Math.floor(random() * 3);
-    rect(sx + 3, sy + 3, size, size, shadow);
+    const [bg, fg] = covers[(n * 2 + Math.floor(random() * 2)) % covers.length], sx = x + 6 + n * (size + peek + 6), sy = y - size - 1, motif = n % 3;
+    const out = n % 2 ? peek : peek - 2, cx = sx + size / 2 + out - .5, cy = sy + size / 2 - .5, r = size / 2 - 1;
+    // Shadow of sleeve and disc together.
+    for (let j = 0; j < size; j++) for (let i = 0; i < size + out; i++) {
+      const inDisc = Math.hypot(i + sx - cx, j + sy - cy) <= r;
+      if (i < size || inDisc) { if (i < 2 || (i + j) % 2 === 0 || i < size) set(sx + i + 3, sy + j + 2, shadow); }
+    }
+    // The record, peeking out of the sleeve's open side.
+    for (let j = 0; j < size; j++) for (let i = size - 2; i < size + out; i++) {
+      const d = Math.hypot(sx + i - cx, sy + j - cy); if (d > r) continue;
+      const rgb = d > r - 1 ? vinyl[0] : d < 5 ? (d < 1.5 ? vinyl[0] : fg) : (Math.round(d) % 3 === 0 ? vinyl[2] : vinyl[1]);
+      set(sx + i, sy + j, (j < size / 2 && d > 6 && d < r - 1 && Math.abs(sy + j - cy + (sx + i - cx) * .6) < 1.2) ? vinyl[3] : rgb);
+    }
+    // The sleeve.
     for (let j = 0; j < size; j++) for (let i = 0; i < size; i++) {
       let rgb = bg;
-      const dx = i - size / 2, dy = j - size / 2;
-      if (motif === 0 && Math.hypot(dx, dy) < 9) rgb = Math.hypot(dx, dy) < 3 ? bg : fg;
+      const dx = i - size / 2 + .5, dy = j - size / 2 + .5, d = Math.hypot(dx, dy);
+      if (motif === 0 && d < 9) rgb = d < 3 ? bg : fg;
       else if (motif === 1 && j > size * .55 + Math.sin(i * .4) * 2) rgb = fg;
       else if (motif === 2 && (i + j) % 10 < 3 && j > 6) rgb = fg;
-      if (i === 0 || j === 0) rgb = toward(rgb, ink, .35); else if (i === size - 1 || j === size - 1) rgb = toward(rgb, [0, 0, 0], .45);
+      if (Math.abs(d - (r - 2)) < .6 && (i + j) % 2 === 0) rgb = toward(rgb, ink, .18); // ring wear
+      if (i === 0 || j === 0) rgb = toward(rgb, ink, .4);
+      else if (i === 1 || j === 1) rgb = toward(rgb, ink, .15);
+      else if (j === size - 1) rgb = toward(rgb, [0, 0, 0], .5);
+      else if (i === size - 1) rgb = toward(rgb, [0, 0, 0], .35); // the open side, a shade darker
       set(sx + i, sy + j, rgb);
     }
+    rect(sx + 3, sy + size - 6, 10, 2, toward(fg, ink, .5)); // title strip
   }
   rect(x, y, w, 4, frame[2]); rect(x, y, w, 1, frame[3]); rect(x, y + 3, w, 1, frame[0]); rect(x + 2, y + 4, w, 2, shadow);
   for (const bx of [x + 10, x + w - 14]) { rect(bx, y + 4, 4, 6, frame[1]); rect(bx, y + 4, 1, 6, frame[2]); rect(bx + 4, y + 6, 1, 4, shadow); }
+}
+// A flat-woven rug: a dark border, a stepped diamond band, fringe at both ends.
+// Seen almost edge-on, so it is a band of rows, not a rectangle in plan.
+function paintRug(set, rect, { x, y, w, h }, P) {
+  const rug = P.rug.map(hex), shadow = hex(P.shadow);
+  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+    const edge = j < 2 || j >= h - 2, band = j === 2 || j === h - 3, mid = Math.abs(j - (h >> 1));
+    const diamond = (Math.abs(((i + 6) % 12) - 6) + mid) <= 4, inner = (Math.abs(((i + 6) % 12) - 6) + mid) <= 1;
+    const tone = edge ? 0 : band ? 3 : inner ? 3 : diamond ? 2 : ((i + j) % 2 === 0 && mid > 4) ? 0 : 1;
+    set(x + i, y + j, j === 0 ? toward(rug[1], rug[3], .25) : rug[tone]);
+  }
+  for (let i = 0; i < w; i++) set(x + i, y + h, shadow);
+  for (const fx of [x - 3, x + w]) for (let j = 1; j < h - 1; j += 2) { set(fx, y + j, rug[3]); set(fx + 1, y + j, rug[3]); set(fx + 2, y + j, toward(rug[3], shadow, .4)); }
+}
+// A floor speaker: walnut cabinet lit on the top and left, woven grille cloth,
+// a brass badge, on two short tapered feet with a contact shadow.
+function paintSpeaker(set, rect, { x, y, w, h }, P) {
+  const wood = P.frame.map(hex), desk = P.desk.map(hex), cloth = P.cloth.map(hex), brass = P.brass.map(hex), shadow = hex(P.shadow);
+  const legs = 5, body = h - legs;
+  for (let i = -1; i < w + 5; i++) for (let j = 0; j < 3; j++) if (j === 0 || (i + j) % 2 === 0) set(x + i + 2, y + h + j - 1, shadow);
+  rect(x + 3, y + 3, w, body - 3, shadow); // cast shadow, lit from the top-left
+  for (const lx of [x + 4, x + w - 8]) { rect(lx, y + body, 4, legs, wood[1]); set(lx, y + body, wood[3]); rect(lx + 3, y + body, 1, legs, wood[0]); rect(lx + 1, y + h - 1, 2, 1, wood[0]); }
+  rect(x, y, w, body, desk[2]);
+  rect(x, y, w, 2, desk[4]); rect(x, y, 2, body, desk[3]); rect(x + w - 2, y, 2, body, desk[0]); rect(x, y + body - 2, w, 2, desk[0]);
+  for (let j = 4; j < body - 4; j += 5) for (let i = 3; i < w - 3; i++) if ((i * 7 + j) % 11 === 0) set(x + i, y + j, desk[1]); // grain
+  const gx = x + 4, gy = y + 5, gw = w - 8, gh = body - 12;
+  rect(gx - 1, gy - 1, gw + 2, gh + 2, wood[0]);
+  for (let j = 0; j < gh; j++) for (let i = 0; i < gw; i++) {
+    const weave = (i + (j >> 1)) % 2 === 0 ? 1 : 0, lit = i < 2 || j < 2;
+    set(gx + i, gy + j, lit ? cloth[2] : cloth[weave]);
+  }
+  // The drivers press faintly through the cloth: a small tweeter ring, a large woofer ring.
+  const ring = (cx, cy, r) => { for (let a = 0; a < 64; a++) { const px = Math.round(cx + Math.cos(a / 64 * Math.PI * 2) * r), py = Math.round(cy + Math.sin(a / 64 * Math.PI * 2) * r); if ((px + py) % 2 === 0) set(px, py, cloth[2]); } };
+  ring(gx + gw / 2, gy + Math.round(gh * .2), Math.max(2, Math.round(gw * .14)));
+  ring(gx + gw / 2, gy + Math.round(gh * .64), Math.max(4, Math.round(gw * .36)));
+  rect(gx + gw / 2 - 4, gy + gh - 4, 8, 2, brass[2]); set(gx + gw / 2 - 4, gy + gh - 4, brass[3]); rect(gx + gw / 2 - 4, gy + gh - 3, 8, 1, brass[1]);
 }
 // A small framed print: hills under the same sky as the window.
 function paintPrint(set, rect, { x, y, w, h }, P, time) {
