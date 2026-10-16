@@ -1,7 +1,7 @@
 .study-writing{position:absolute;inset:0;pointer-events:none}
 /* Only replace the removed hand region; retain the supplied room pixel for pixel. */
 .study-clean-plate{position:absolute;inset:0;width:100%;height:100%;mask-image:linear-gradient(#000,#000);clip-path:polygon(19.5% 46%,26.8% 46%,26.8% 54.3%,19.5% 54.3%)}
-.study-writing-hand{position:absolute;left:17.887%;top:44.20%;width:9.254%;height:12.339%;background:url('/room-scenes/night-study-hands.png') 0 0/400% 400% no-repeat;filter:drop-shadow(1px 2px 1px #30170777)}
+.study-writing-hand{position:absolute;left:17.887%;top:44.20%;width:9.254%;height:12.339%;background:url('/room-scenes/night-study-hands-pixel.png') 0 0/400% 400% no-repeat;filter:drop-shadow(1px 2px 1px #30170777)}
 .cabin-scene[data-room-look=night-study] .room-record{position:relative;filter:none;box-shadow:7px 6px 8px #1009029c,inset 0 0 0 1px #e4ba8140}
 .cabin-scene[data-room-look=night-study] .showroom-artwork{filter:brightness(.78) saturate(.83)}
 .cabin-scene[data-room-look=night-study] .room-record:after{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(120deg,#7043240d,#130a06);opacity:var(--shelf-shade,.3);box-shadow:inset 0 12px 13px -6px #140a08c4,inset -9px 0 12px -6px #140a0888}

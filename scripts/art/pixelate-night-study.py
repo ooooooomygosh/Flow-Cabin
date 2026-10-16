@@ -11,16 +11,18 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
+# Hi-res sources live beside this script (not shipped); outputs go to public/.
+S = Path(__file__).resolve().parent / 'sources'
 R = Path(__file__).resolve().parents[2] / 'public/room-scenes'
 colours = int(sys.argv[1]) if len(sys.argv) > 1 else 48
-src = Image.open(R / 'night-study.png').convert('RGB')
+src = Image.open(S / 'night-study.png').convert('RGB')
 pal = src.resize((362, 272), Image.BOX).quantize(colors=colours, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE)
 up = lambda q: q.convert('RGB').resize((1448, 1088), Image.NEAREST).crop((0, 0, 1448, 1086))
 up(pal).save(R / 'night-study-pixel.png', optimize=True)
-clean = Image.open(R / 'night-study-clean.png').convert('RGB').resize((362, 272), Image.BOX)
+clean = Image.open(S / 'night-study-clean.png').convert('RGB').resize((362, 272), Image.BOX)
 up(clean.quantize(palette=pal, dither=Image.Dither.NONE)).save(R / 'night-study-clean-pixel.png', optimize=True)
 
-hands, cell = Image.open(R / 'night-study-hands.png').convert('RGBA'), 1254 / 4
+hands, cell = Image.open(S / 'night-study-hands.png').convert('RGBA'), 1254 / 4
 atlas = Image.new('RGBA', (136 * 4, 136 * 4), (0, 0, 0, 0))
 for i in range(16):
     cx, cy = i % 4, i // 4

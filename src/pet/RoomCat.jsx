@@ -42,8 +42,8 @@ export default function RoomCat({ focus, playing, track, reduceMotion, petId = '
     return () => ['pointermove', 'keydown', 'wheel'].forEach((name) => window.removeEventListener(name, mark));
   }, [interactive, hidden]);
   const pet = getPet(petId), catRef = useRef(null), bubbleRef = useRef(null);
-  useCatPlacement(catRef, bubbleRef, !hidden);
   const cat = useCatBehaviour({ focus, playing, track, petId: pet.id, lastActivity: interactive ? activity : 0, reduceMotion, hidden });
+  useCatPlacement(catRef, bubbleRef, !hidden, [cat.pose, cat.bubble, cat.x]);
   if (hidden) return null;
   const body = <><PetLife pose={cat.pose} pokedAt={cat.pokedAt} reduced={cat.reduced}><PixelCat petId={pet.id} pose={cat.pose} accessory={focus?.accessory || ''} skin={focus?.catSkin} reduceMotion={cat.reduced} style={{ transform: `translateX(${cat.x}px)` }} label={`像素${pet.species} · ${pet.name} · ${{ idle: '发呆', groove: '跟着音乐摇摆', celebrate: '庆祝', walk: '散步', sleep: '睡觉', focus: '陪你专注' }[cat.pose]}`}/></PetLife>{cat.bubble && <CatBubble ref={bubbleRef} text={cat.bubble}/>}</>;
   return interactive

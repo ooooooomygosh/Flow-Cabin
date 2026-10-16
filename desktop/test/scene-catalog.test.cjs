@@ -42,9 +42,9 @@ test('all assets exist and original SVG scenes are self-contained accessible ill
 
 test('scene geometries fit nine or twelve covers and preserve existing calibrated shelf bounds', async () => {
   const { ROOM_SCENES, getRoomScene } = await catalog;
-  const { SHELF } = await import('../../src/room-model.mjs');
-  assert.deepEqual(getRoomScene('warm').geometry, SHELF.warm);
-  assert.deepEqual(getRoomScene('pixel').geometry, SHELF.pixel);
+  // Calibrated against the painted cabinets; the catalog is now the only copy.
+  assert.deepEqual(getRoomScene('warm').geometry, { columns: [[437, 156], [604, 162], [776, 164], [949, 163]], rows: [[200, 155], [371, 154], [536, 158]] });
+  assert.deepEqual(getRoomScene('pixel').geometry, { columns: [[445, 150], [606, 160], [776, 161], [946, 160]], rows: [[208, 150], [374, 152], [542, 159]] });
   for (const scene of ROOM_SCENES) {
     const { columns, rows } = scene.geometry;
     assert.equal(columns.length * rows.length, scene.id === 'night-study' ? 9 : 12);

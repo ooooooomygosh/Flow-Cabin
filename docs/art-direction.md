@@ -17,7 +17,7 @@ nothing glossy or rounded. Owner of this document: art direction (beauty).
 
 ## Live layers on top of the art
 
-- **Turntable** — `src/scene/SceneDeck.jsx` + `deck-sprite.mjs`: a 56×22-cell sprite (1 cell = 4 art px) sitting on the shelf top, per-scene position in `scene-deck.css`. Record seats in 4 frames, sheen orbits in 8, tonearm swings in 4, LED + notes while playing, halo follows `cabin:playback` energy. The painted turntable was removed from the pixel/amber art so there is only one deck.
+- **Turntable** — `src/scene/SceneDeck.jsx` + `deck-sprite.mjs`: a 56×22-cell sprite (1 cell = 4 art px) sitting on the shelf top, per-scene position in `scene-deck.css`. Record seats in 4 frames, sheen orbits in 8, tonearm swings in 4, LED + notes while playing, halo follows `cabin:playback` energy. The painted turntable was removed from the pixel/amber art so there is only one deck. Wood is graded per scene (`DECK_PALETTES`: walnut for Pixel/Amber, own-shelf tones for Forest/Seaside/Starry Night) through `--deck-N` CSS variables. The room cat stands on each scene's painted `floor` line (`scene-catalog.mjs`, art px) at 32 cells × 4 art px × k, snapped to a whole multiple of 32 CSS px; records without a cover get a generated 32×32 cabin-palette sleeve.
 - **Console** — `src/scene/room-console.css`: compact framed panel bottom-left; audio sliders stay pinned when the 待播 queue is open.
 - **Ambient** — `src/scene/AmbientLife.jsx`: dust motes + window light beam (time-of-day aware). Snow / fire / daylight remain in `CabinAtmosphere`.
 - **Companion** — `src/pet/PetLife.jsx`: breathing, hover perk, poke squish + hearts, drag dangle, Zzz, focus dots, sparkles, music bop scaled by `--pet-energy`.
@@ -38,7 +38,7 @@ nothing glossy or rounded. Owner of this document: art direction (beauty).
 ## Moonlit Study 月夜书桌 (night-study)
 
 The illustrated desk scene from PR #8 follows the same pipeline:
-`python3 scripts/art/pixelate-night-study.py` writes `night-study-pixel.png`
+`python3 scripts/art/pixelate-night-study.py` reads the hi-res sources in `scripts/art/sources/` (not shipped) and writes `night-study-pixel.png`
 (48 colours, 4px grid), plus a clean plate and the 4×4 hand-pose atlas quantised
 with the *same* palette and snapped to the grid (hand box art x260 y480, 136×136),
 so the writing / pen-spin poses swap whole art pixels. The pose timeline in

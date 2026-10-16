@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { chooseBubbleOffset } from './bubble-placement.mjs';
+import { CAT_FLOOR_MIN, catFloorOffset, chooseBubbleOffset } from './bubble-placement.mjs';
+import { ROOM_SCENES } from '../scene-catalog.mjs';
+import { readFileSync } from 'node:fs';
 
 const view = { left: 0, right: 1000, top: 0, bottom: 700 };
 const cat = { left: 400, right: 500, top: 500, bottom: 600 };
@@ -24,4 +26,20 @@ test('console to the left: bubble leans right when both sides are equally free',
   const leaning = chooseBubbleOffset(base, cat, blockers, view, 6, consoleRect);
   assert.ok(plain.dx < 0, 'without a console the first (left) candidate wins the tie');
   assert.ok(leaning.dx > 0, 'with the console on the left the right candidate wins');
+});
+
+test('cat floor: the painted floor line maps to a bottom offset, clamped to the window edge', () => {
+  // 600px stage, art drawn at y=70 with k=.5: floor art y 880 sits at 510px → 90px from the bottom.
+  assert.equal(catFloorOffset({ height: 600, sceneY: 70, k: .5, floor: 880 }), 90);
+  // Floor cropped below the window (1440×900 cover): stay CAT_FLOOR_MIN above the edge.
+  assert.equal(catFloorOffset({ height: 900, sceneY: 23.5, k: .994, floor: 900 }), CAT_FLOOR_MIN);
+  assert.equal(catFloorOffset({ height: 900, sceneY: 0, k: 1, floor: Number.NaN }), null);
+});
+test('every scene has a floor on the painted floor, mirrored in companion-room.css', () => {
+  const css = readFileSync(new URL('../companion-room.css', import.meta.url), 'utf8');
+  for (const scene of ROOM_SCENES) {
+    assert.ok(scene.floor > Math.max(...scene.geometry.rows.map(([y, h]) => y + h)) && scene.floor < 1086, `${scene.id} floor is below the shelf, inside the art`);
+    const rule = [...css.matchAll(/([^{}]+)\{--scene-floor:(\d+)\}/g)].find(([, selector]) => selector.includes(`[data-room-look=${scene.id}]`));
+    assert.equal(Number(rule?.[2]), scene.floor, `${scene.id} --scene-floor`);
+  }
 });

@@ -1,24 +1,22 @@
+import { CAMERA_ANCHOR, DECK_BAND, getRoomScene } from './scene-catalog.mjs';
 export const ROOM_SIZE = { width: 1448, height: 1086 };
-export const SHELF = {
-  warm: { columns: [[437, 156], [604, 162], [776, 164], [949, 163]], rows: [[200, 155], [371, 154], [536, 158]] },
-  pixel: { columns: [[445, 150], [606, 160], [776, 161], [946, 160]], rows: [[208, 150], [374, 152], [542, 159]] }
-};
-export function roomGeometry(width, height, safeArea, geometry = SHELF.warm) {
+// Shelf geometry lives in scene-catalog.mjs only; callers pass the scene's.
+export function roomGeometry(width, height, safeArea, geometry = getRoomScene('warm').geometry) {
   // Fill both edges. Keep the cabinet's centre anchored while the floor is cropped.
   const coverScale = Math.max(width / ROOM_SIZE.width, height / ROOM_SIZE.height);
   const safeTop = Math.max(0, safeArea?.top || 0), safeBottom = Math.max(0, safeArea?.bottom || 0);
   const lastBottom = geometry.rows.at(-1)[0] + geometry.rows.at(-1)[1];
   // `band` (art px) is what must stay between the toolbar and footer: the shelf, plus
   // the shelf-top deck where a scene has one. Short windows shrink the art to fit.
-  const shelfTop = geometry.band?.top ?? (lastBottom > 701 ? geometry.rows[0][0] : 200);
-  const shelfBottom = geometry.band?.bottom ?? Math.max(701, lastBottom);
+  const shelfTop = geometry.band?.top ?? (lastBottom > DECK_BAND.bottom ? geometry.rows[0][0] : 200);
+  const shelfBottom = geometry.band?.bottom ?? Math.max(DECK_BAND.bottom, lastBottom);
   const safeLeft = Math.max(0, safeArea?.left || 0), safeRight = Math.max(0, safeArea?.right || 0);
   const bandLeft = geometry.band?.left ?? geometry.columns[0][0], bandRight = geometry.band?.right ?? geometry.columns.at(-1)[0] + geometry.columns.at(-1)[1];
   const scale = safeArea ? Math.min(coverScale, Math.max(100, height - safeTop - safeBottom) / (shelfBottom - shelfTop), Math.max(100, width - safeLeft - safeRight) / (bandRight - bandLeft)) : coverScale;
   const artWidth = ROOM_SIZE.width * scale, artHeight = ROOM_SIZE.height * scale;
-  let left = artWidth < width ? (width - artWidth) / 2 : Math.max(width - artWidth, Math.min(0, width / 2 - 774 * scale));
+  let left = artWidth < width ? (width - artWidth) / 2 : Math.max(width - artWidth, Math.min(0, width / 2 - CAMERA_ANCHOR.x * scale));
   if (safeArea) left = Math.max(safeLeft - bandLeft * scale, Math.min(left, width - safeRight - bandRight * scale));
-  let top = Math.max(height - artHeight, Math.min(0, height / 2 - 448 * scale));
+  let top = Math.max(height - artHeight, Math.min(0, height / 2 - CAMERA_ANCHOR.y * scale));
   if (safeArea) top = Math.max(safeTop - shelfTop * scale, Math.min(top, height - safeBottom - shelfBottom * scale));
   return { width: artWidth, height: artHeight, left, top };
 }
@@ -27,7 +25,7 @@ export function roomGeometry(width, height, safeArea, geometry = SHELF.warm) {
 export function roomGeometryAroundPanel(width, height, safeArea, geometry, panel) {
   const base = roomGeometry(width, height, safeArea, geometry);
   if (!panel || !safeArea) return base;
-  const band = geometry.band || { left: geometry.columns[0][0], right: geometry.columns.at(-1)[0] + geometry.columns.at(-1)[1], top: 200, bottom: 701 };
+  const band = geometry.band || { left: geometry.columns[0][0], right: geometry.columns.at(-1)[0] + geometry.columns.at(-1)[1], top: 200, bottom: DECK_BAND.bottom };
   const bounds = art => { const k = art.width / ROOM_SIZE.width; return { left: art.left + band.left * k, right: art.left + band.right * k, top: art.top + band.top * k, bottom: art.top + band.bottom * k }; };
   const overlaps = art => { const b = bounds(art); return b.left < panel.right + 12 && b.right > panel.left - 12 && b.top < panel.bottom + 12 && b.bottom > panel.top - 12; };
   if (!overlaps(base)) return base;
