@@ -38,7 +38,7 @@ nothing glossy or rounded. Owner of this document: art direction (beauty).
 ## Moonlit Study 月夜书桌 (night-study)
 
 The illustrated desk scene from PR #8 follows the same pipeline:
-`python3 scripts/art/pixelate-night-study.py` writes `night-study-pixel.png`
+`python3 scripts/art/pixelate-night-study.py` reads the hi-res sources in `scripts/art/sources/` (not shipped) and writes `night-study-pixel.png`
 (48 colours, 4px grid), plus a clean plate and the 4×4 hand-pose atlas quantised
 with the *same* palette and snapped to the grid (hand box art x260 y480, 136×136),
 so the writing / pen-spin poses swap whole art pixels. The pose timeline in
