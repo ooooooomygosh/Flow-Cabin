@@ -1,19 +1,20 @@
 'use strict';
 const { test } = require('node:test'), assert = require('node:assert/strict');
 const model = import('../../src/cabin-atmosphere.mjs');
-test('scene-specific particles are deterministic, bounded and weather-aware', async () => {
+test('hearth frames are deterministic and bounded; the cabin windows live in the scene catalog', async () => {
   const { ATMOSPHERE, atmosphereFrame } = await model;
+  const { getRoomScene } = await import('../../src/scene-catalog.mjs');
   for (const look of ['warm', 'pixel']) {
-    const g = ATMOSPHERE[look];
-    assert.equal(g.panes.length, 4); assert.ok(g.fire.x + g.fire.width <= 1448);
-    for (const [x, y, w, h] of g.panes) { assert.ok(x >= 0 && y >= 0 && x + w <= g.window.width && y + h <= g.window.height); }
+    const g = ATMOSPHERE[look], [win] = getRoomScene(look).windows;
+    assert.ok(g.fire.x + g.fire.width <= 1448); assert.equal('panes' in g, false); assert.equal('window' in g, false);
+    assert.equal(win.panes.length, 4); const [, , width, height] = win.box;
+    for (const [x, y, w, h] of win.panes) { assert.ok(x >= 0 && y >= 0 && x + w <= width && y + h <= height); }
     for (const time of [0, .5, 5, 3600]) {
       const frame = atmosphereFrame(time, look); assert.deepEqual(frame, atmosphereFrame(time, look));
-      assert.equal(frame.snow.length, 64);
-      for (const flake of frame.snow) { assert.ok(flake.x >= 0 && flake.x < g.window.width && flake.y >= 0 && flake.y < g.window.height); }
+      assert.equal('snow' in frame, false, 'window weather is painted by sky-paint.mjs');
       assert.ok(frame.light >= .065 && frame.light <= .11);
+      const buffer = {}; assert.equal(atmosphereFrame(time, look, buffer), buffer); assert.deepEqual(buffer, frame);
     }
-    assert.equal(atmosphereFrame(10, look, 'clear').snow.length, 0);
     assert.notDeepEqual(atmosphereFrame(0, look), atmosphereFrame(1, look));
   }
 });

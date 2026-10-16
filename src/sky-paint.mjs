@@ -220,9 +220,9 @@ export function paintWeather(data, mask, frame) {
   if (!reduced) { const { flash } = lightningAt(s, layers.storm); if (flash) for (let i = 0; i < front.length; i++) if (front[i] && bayer(i % width, Math.floor(i / width)) < (flash === 2 ? .5 : .25)) put(data, i, pal.glass, .35); }
   return layers.rain > .02 || layers.snow > .02 || layers.fog > .02;
 }
-// Frames per second each mix needs: falling rain/snow 12; drifting cloud/fog/twinkle 4; else 0 (still).
+// Frames per second each mix needs: falling rain/snow 12; drifting cloud/fog/twinkle 2; else 0 (still).
 export function weatherFps(layers, low = false) {
   if (layers.rain > .02 || layers.snow > .02 || layers.storm > .05) return low ? 8 : 12;
-  if (layers.clouds > .02 || layers.fog > .02 || layers.starry > .5) return low ? 2 : 4;
+  if (layers.clouds > .02 || layers.fog > .02 || layers.starry > .5) return low ? 1 : 2;
   return 0;
 }

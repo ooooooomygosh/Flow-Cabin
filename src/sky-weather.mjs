@@ -51,8 +51,8 @@ export const LIGHTNING_SLOT = 20;
 export function lightningAt(seconds, storm) {
   if (!(storm > .05)) return { flash: 0, seed: 0 };
   const slot = Math.floor(seconds / LIGHTNING_SLOT), at = slot * LIGHTNING_SLOT + 2 + hash(slot) * 15, dt = seconds - at;
-  if (hash(slot + .5) > storm * .9 || dt < 0 || dt >= .3) return { flash: 0, seed: slot };
-  return { flash: dt < .09 ? 2 : dt < .2 ? 0 : 1, seed: slot };
+  if (hash(slot + .5) > storm * .9 || dt < 0 || dt >= .36) return { flash: 0, seed: slot };
+  return { flash: dt < .12 ? 2 : dt < .24 ? 0 : 1, seed: slot };
 }
 
 // Real weather (desktop opt-in) wins while it is fresh; otherwise the equipped 窗景.
