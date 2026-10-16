@@ -44,7 +44,7 @@ export default function SettingsHub({ section = 'music', setSection, close, env,
     event.preventDefault(); setSection(HUB_SECTIONS[next].id);
     document.getElementById(`hub-tab-${HUB_SECTIONS[next].id}`)?.focus();
   };
-  return <Dialog title="设置" label="设置" close={close} className="settings-hub" wide>
+  return <Dialog title="设置" label="设置" close={close} className="settings-hub" size="lg">
     <div className="settings-hub-layout">
       <nav className="settings-hub-nav" role="tablist" aria-label="设置分区" aria-orientation={compact ? 'horizontal' : 'vertical'}>{HUB_SECTIONS.map((item) => <button type="button" role="tab" key={item.id} id={`hub-tab-${item.id}`} aria-selected={tab === item.id} aria-controls="hub-panel" tabIndex={tab === item.id ? 0 : -1} onKeyDown={navigateTabs} onClick={() => setSection(item.id)}>{item.label}</button>)}</nav>
       <section id="hub-panel" role="tabpanel" aria-labelledby={`hub-tab-${tab}`} className="settings-hub-panel">

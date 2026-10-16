@@ -48,7 +48,7 @@ export default function RecordCard({ item, close, onChanged, onRemove }) {
   useEffect(() => () => { clearTimeout(timer.current); if (!removing.current && latest.current !== persisted.current) updateItem(item.id, { notes: latest.current }).then((result) => onChanged(result.item)).catch(() => {}); }, [item.id]);
   const play = (track = 0) => { window.dispatchEvent(new CustomEvent('cabin-play', { detail: { id: item.id, track } })); close(); };
   const links = [item.collectionViewUrl && ['Apple Music', item.collectionViewUrl], item.externalIds?.qqAlbumMid && ['QQ 音乐', `https://y.qq.com/n/ryqq/albumDetail/${encodeURIComponent(item.externalIds.qqAlbumMid)}`]].filter(Boolean);
-  return <Dialog title="唱片卡片" icon={<Disc3 size={20}/>} close={close} wide className="record-card-dialog" label={`唱片卡片：${item.title}`}>
+  return <Dialog title="唱片卡片" icon={<Disc3 size={20}/>} close={close} size="lg" className="record-card-dialog" label={`唱片卡片：${item.title}`}>
     <div className="record-card">
       <div className="record-card-art">
         <div className="record-card-sleeve"><VinylDisc item={item} className="record-card-vinyl"/><ShowroomArtwork item={item} className="record-card-cover"/></div>

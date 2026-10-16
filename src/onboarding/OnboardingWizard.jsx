@@ -18,7 +18,7 @@ export default function OnboardingWizard({ state, update, env, player, look, pet
   useEffect(() => { if (first.current) { first.current = false; return; } heading.current?.focus({ preventScroll: true }); }, [step]);
   const go = (fn) => update(fn(state));
   const scene = getRoomScene(look);
-  return <Dialog title="新手引导" label="新手引导" close={() => close('later')} className="onboarding" wide>
+  return <Dialog title="新手引导" label="新手引导" close={() => close('later')} className="onboarding" size="lg">
     <ol className="onboarding-progress" aria-label="引导进度">{model.STEPS.map((id, i) => <li key={id} aria-current={id === step ? 'step' : undefined} className={i < index ? 'is-done' : ''}><span aria-hidden="true">{i < index ? '✓' : i + 1}</span>{model.STEP_LABELS[id]}</li>)}</ol>
     <div className="onboarding-layout">
       <aside className="onboarding-scene" aria-hidden="true"><img src={sceneThumb(scene)} alt="" width="362" height="272"/><PixelCat petId={petId} pose={step === 'test' || step === 'done' ? 'groove' : 'idle'} reduceMotion={reduceMotion}/><span>{scene.label}</span></aside>

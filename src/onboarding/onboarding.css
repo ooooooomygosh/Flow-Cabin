@@ -53,7 +53,7 @@
 @media(max-width:760px){.onboarding-layout{grid-template-columns:1fr}.onboarding-scene{display:none}.onboarding-footer{flex-wrap:wrap}.onboarding-footer>small{display:none}}
 
 /* settings hub: one fixed size, so switching tabs never resizes the dialog; the panel scrolls. */
-.settings-hub.cabin-dialog.is-wide{width:min(920px,calc(100vw - 32px));height:min(640px,calc(100dvh - 32px));max-height:none}
+.settings-hub.cabin-dialog.is-lg{width:min(920px,calc(100vw - 32px));height:min(640px,calc(100dvh - 32px));max-height:none}
 .settings-hub .cabin-dialog-body{display:flex;flex:1;min-height:0;overflow:hidden;padding:0}
 .settings-hub-layout{flex:1;display:grid;grid-template-columns:150px minmax(0,1fr);min-height:0}
 .settings-hub-nav{display:grid;align-content:start;gap:4px;padding:16px 0 16px 16px;overflow:auto}

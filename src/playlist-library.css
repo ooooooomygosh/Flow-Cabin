@@ -4,7 +4,7 @@
    track table), dressed as record sleeves in the cabin's pixel style. */
 @layer guards, reset, features, skin, overrides;
 @layer features {
-.add-album-dialog.cabin-dialog.is-wide { width: min(1040px, calc(100vw - 32px)); height: min(760px, calc(100dvh - 48px)); max-height: none; }
+.add-album-dialog.cabin-dialog.is-lg { width: min(1040px, calc(100vw - 32px)); height: min(760px, calc(100dvh - 48px)); max-height: none; }
 .add-album-dialog .cabin-dialog-body { padding: 0; display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
 .add-album-dialog .dialog-tabs { flex: none; margin: 0; padding: 8px 20px 0; overflow-x: auto; }
 .add-album-panel { flex: 1; min-height: 0; overflow: auto; padding: 16px 20px 20px; }
@@ -146,7 +146,8 @@
   .playlist-shell { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
   .playlist-rail { flex-direction: row; overflow-x: auto; padding: 8px; border-right: 0; border-bottom: 2px solid var(--px-shadow); }
   .playlist-rail-tab { flex: 0 0 auto; width: auto; }
-  .playlist-rail-tab small { display: none; }
+  /* Narrow rail: the caption (已登录 / hint) leaves the eye, not the accessible name; the green dot carries 已登录. */
+  .playlist-rail-tab small { position: absolute; width: 1px; height: 1px; margin: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .playlist-hero { flex-direction: column; align-items: flex-start; }
   .playlist-track { grid-template-columns: 30px 30px minmax(0, 1fr) 40px; }
   .playlist-track-album { display: none; }

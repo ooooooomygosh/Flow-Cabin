@@ -8,14 +8,14 @@ export const focusables = (root) => [...root.querySelectorAll(FOCUSABLE)].filter
 
 // THE modal of the app: a native <dialog> opened with showModal(), so the room
 // behind is inert and every room shortcut that checks `dialog[open]` stands down.
-// - size: sm | md (default) | lg | xl (`wide` = lg); variant 'full' covers the window
+// - size: sm | md (default) | lg | xl; variant 'full' covers the window
 //   and renders its own chrome (唱机特写, 专辑墙).
 // - First focus: `initialFocus` (ref or selector), else [data-autofocus], else the
 //   selected tab, else the heading (the close × never starts with the ring).
 // - Tab wraps inside; Escape closes once (a held key never unwinds layers);
 //   the backdrop closes only when a press both starts and ends outside the box.
 // - Focus returns to whatever opened the dialog.
-export default function Dialog({ title, icon, close, className = '', children, size, wide = false, label, footer, initialFocus, variant = 'panel', container, onKeyDown, deckKeys = false, closeLabel }) {
+export default function Dialog({ title, icon, close, className = '', children, size, label, footer, initialFocus, variant = 'panel', container, onKeyDown, deckKeys = false, closeLabel }) {
   const dialog = useRef(null), heading = useId(), pressedOutside = useRef(false), full = variant === 'full';
   const closeRef = useRef(close); closeRef.current = close;
   useLayoutEffect(() => {
@@ -41,7 +41,7 @@ export default function Dialog({ title, icon, close, className = '', children, s
     if (event.shiftKey && (current === first || !list.includes(current))) { event.preventDefault(); last.focus(); }
     else if (!event.shiftKey && (current === last || !list.includes(current))) { event.preventDefault(); first.focus(); }
   };
-  const tone = full ? 'is-full' : `is-${SIZES.has(size) ? size : wide ? 'lg is-wide' : 'md'}`; // is-wide: legacy hook for `wide` callers
+  const tone = full ? 'is-full' : `is-${SIZES.has(size) ? size : 'md'}`;
   return createPortal(<dialog ref={dialog} tabIndex={-1} className={`${full ? 'cabin-modal' : 'cabin-dialog cabin-modal'} ${tone} ${className}`} aria-label={label || (full ? title : undefined)} aria-labelledby={label || full ? undefined : heading} data-deck-keys={deckKeys ? 'true' : undefined}
     onCancel={(event) => { event.preventDefault(); closeRef.current(); }} onKeyDown={keyDown}
     onPointerDown={(event) => { pressedOutside.current = outside(event); }}

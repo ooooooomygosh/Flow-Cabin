@@ -32,7 +32,7 @@ export async function verifyQQRegression({ browser, origin, check }) {
   try {
     await open('expired'); await page.getByRole('button', { name: '登录QQ 音乐', exact: true }).waitFor();
     assert.equal(await page.getByRole('heading', { name: '还没有歌单', exact: true }).count(), 0);
-    assert.equal(await page.getByRole('tab', { name: /QQ 音乐/ }).getByLabel('已登录').count(), 0);
+    const qqTab = page.getByRole('tab', { name: /QQ 音乐/ }); assert.doesNotMatch(await qqTab.textContent(), /已登录/); assert.equal(await qqTab.locator('.playlist-rail-dot').count(), 0);
     check('qq-expired-response-overrides-stored-cookie-in-renderer');
     await open('error'); await page.getByRole('heading', { name: '歌单暂时读不出来' }).waitFor();
     await page.getByRole('button', { name: '重新登录', exact: true }).waitFor(); check('qq-service-failure-exposes-retry-and-sign-in');

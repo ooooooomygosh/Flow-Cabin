@@ -140,7 +140,7 @@ export default function AddAlbum({ items, close, initialQuery = '', initialTab =
     const next = step ? (index + step + ADD_TABS.length) % ADD_TABS.length : event.key === 'Home' ? 0 : event.key === 'End' ? ADD_TABS.length - 1 : -1;
     if (next < 0) return; event.preventDefault(); setTab(ADD_TABS[next][0]); document.getElementById(`add-tab-${ADD_TABS[next][0]}`)?.focus();
   };
-  return <Dialog title="添加到唱片架" icon={<Plus size={20}/>} close={close} wide className={`add-album-dialog is-${tab}`}>
+  return <Dialog title="添加到唱片架" icon={<Plus size={20}/>} close={close} size="lg" className={`add-album-dialog is-${tab}`}>
     <nav className="dialog-tabs" role="tablist" aria-label="添加方式">{ADD_TABS.map(([id, label]) => <button type="button" role="tab" key={id} id={`add-tab-${id}`} aria-selected={tab === id} aria-controls="add-panel" tabIndex={tab === id ? 0 : -1} onKeyDown={navigate} onClick={() => { setTab(id); setNotice(''); }}>{label}</button>)}</nav>
     <div id="add-panel" role="tabpanel" aria-labelledby={`add-tab-${tab}`} className="add-album-panel">
       {notice && tab !== 'playlists' && <p className="add-notice" role="status"><Check size={16}/>{notice}</p>}
