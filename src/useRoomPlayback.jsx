@@ -9,16 +9,14 @@ import { isSessionAlbum, sessionTrackUrl } from './player/session-files.mjs';
 import { createResolutionCache, createFader, resolutionKey, shouldAutoSkip, playbackErrorMessage, PREFETCH_PROVIDERS, AUTO_SKIP_DELAY_MS } from './player/playback-cache.mjs';
 import { crossfadeSeconds, crossfadeStartsAt, onCrossfadeChange } from './player/crossfade.mjs';
 import { seekWhenReady } from './player/media-position.mjs';
+import { createPositionStore } from './deck/position-store.mjs';
+import { onBackgroundChange } from './frame-clock.mjs';
+import { readVolume, writeVolume, clampVolume, mediaErrorMessage, deckStatusText, accountChangeEffect } from './deck/deck-status.mjs';
 
-const VOLUME_KEY = 'album-circle-player-volume-v1';
-const readVolume = () => { try { const value = JSON.parse(localStorage.getItem(VOLUME_KEY)); return { volume: Number.isFinite(value?.volume) ? Math.max(0, Math.min(1, value.volume)) : .65, muted: Boolean(value?.muted) }; } catch { return { volume: .65, muted: false }; } };
-// Plain-language messages for media element failures (MediaError codes).
-const MEDIA_ERRORS = { 1: '播放被中断，请重新播放。', 2: '网络中断，音频没有加载完。检查网络后点「重试」。', 3: '这个音频文件无法解码，可能已损坏或格式不受支持。', 4: '音源地址不可用或格式不受支持。可能需要重新登录平台，或换一个音源。' };
 const FADE_IN_MS = 420, FADE_OUT_MS = 220, PREFETCH_DELAY_MS = 1500;
 // The next song is buffered on the idle deck; a failed attempt marks that track
 // so the queue steps over it, then the one after is tried (a few per song).
 const BUFFER_TIMEOUT_MS = 20000, BLOCK_MS = 5 * 60 * 1000, PREFETCH_FAILURE_LIMIT = 3;
-const clampVolume = (value) => Math.max(0, Math.min(1, value));
 // One cache for the whole deck: the next track is matched while this one plays.
 const resolutions = createResolutionCache();
 // Which candidate really played for each track (survives restarts).
@@ -46,10 +44,16 @@ export default function useRoomPlayback(record, trackIndex, provider, onNext, op
   const opts = useRef(options); opts.current = options;
   const canNext = () => Boolean(typeof opts.current.canNext === 'function' ? opts.current.canNext() : opts.current.canNext);
   next.current = onNext;
-  const [state, setState] = useState({ status: 'idle', playing: false, candidates: [], position: 0, duration: 0, error: '', trial: false });
+  const [state, setState] = useState({ status: 'idle', playing: false, candidates: [], error: '', trial: false });
+  const live$ = useRef(state); live$.current = state;
+  // The playhead is not React state (see deck/position-store.mjs): only the
+  // time displays subscribe. `moved` (is the playhead past 0?) is the one bit
+  // the room needs, for 上一首 restarting the current song.
+  const clock = useMemo(() => createPositionStore(), []), [moved, setMoved] = useState(false);
+  useEffect(() => clock.subscribe(({ position }) => setMoved(position > 0)), [clock]);
   const [{ volume, muted }, setVolumeState] = useState(readVolume);
   const sound = useRef({ volume, muted }); sound.current = { volume, muted };
-  const setSound = (patch) => setVolumeState((old) => { const next = { ...old, ...patch }; next.volume = Math.max(0, Math.min(1, Number(next.volume) || 0)); try { localStorage.setItem(VOLUME_KEY, JSON.stringify(next)); } catch {} return next; });
+  const setSound = (patch) => setVolumeState((old) => { const next = { ...old, ...patch }; next.volume = clampVolume(Number(next.volume) || 0); writeVolume(next); return next; });
   // One volume ramp per deck; the listener's volume multiplies both.
   const faders = useRef(null);
   faders.current ||= [0, 1].map((index) => createFader({ apply: (gain) => { const element = decks.current[index]; if (element) element.volume = clampVolume(sound.current.volume * gain); } }));
@@ -101,7 +105,7 @@ export default function useRoomPlayback(record, trackIndex, provider, onNext, op
       release(outgoing, blend || FADE_OUT_MS);
     } else { dropStandby(); resetAudio(outgoing); }
     const element = audio.current; prefetchFailures.current = 0;
-    update({ status: 'idle', playing: false, candidates: [], position: 0, duration: 0, error: '', trial: false, actualTrack: '', actualCover: '', remote: false, quality: '', notice: '', handoff: false });
+    clock.reset(); update({ status: 'idle', playing: false, candidates: [], error: '', trial: false, actualTrack: '', actualCover: '', remote: false, quality: '', notice: '', handoff: false });
     const active = () => sequence.current === current && !controller.signal.aborted;
     let resolution = 0;
     const request = (path, value) => musicRequest(path, value, controller.signal);
@@ -111,7 +115,7 @@ export default function useRoomPlayback(record, trackIndex, provider, onNext, op
         remote.current = candidate.provider;
         appleHandoff.current = candidate.provider === 'appleMusic' && result.catalog ? { target: candidate, bound: null } : null;
         if (element.getAttribute('src')) resetAudio(element);
-        update({ status: appleHandoff.current ? 'handoff' : 'loading', handoff: Boolean(appleHandoff.current), playing: false, position: 0, duration: 0, actualTrack: '', remote: true, resolvedProvider: candidate.provider, notice: result.notice || '' });
+        clock.reset(); update({ status: appleHandoff.current ? 'handoff' : 'loading', handoff: Boolean(appleHandoff.current), playing: false, actualTrack: '', remote: true, resolvedProvider: candidate.provider, notice: result.notice || '' });
       }
       else {
         remote.current = false;
@@ -128,7 +132,7 @@ export default function useRoomPlayback(record, trackIndex, provider, onNext, op
         // Standby metadata events were deliberately ignored. Transfer the
         // already-known duration with ownership instead of waiting for an
         // event which will not fire again on a buffered source.
-        update({ position: element.currentTime || 0, duration: Number.isFinite(element.duration) ? element.duration : 0 });
+        clock.set(element.currentTime || 0, Number.isFinite(element.duration) ? element.duration : 0, { force: true });
         await ensureAnalyser(element); // energy for cabin:playback; no-op for cross-origin audio
         if (!owns()) return;
         let timer;
@@ -246,7 +250,25 @@ export default function useRoomPlayback(record, trackIndex, provider, onNext, op
   }, [state.status, state.error, record?.id, trackIndex]);
   useEffect(() => { skips.current = 0; }, [record?.id, provider]);
 
-  useEffect(() => { const changed = () => { resolutions.clear(); blocked.current.clear(); /* a new login or source setting can change which version is playable */ setAccountEpoch((value) => value + 1); }; window.addEventListener('album-music-account', changed); window.addEventListener('album-music-settings', changed); return () => { window.removeEventListener('album-music-account', changed); window.removeEventListener('album-music-settings', changed); }; }, []);
+  // A new login or source setting can change which version is playable. A
+  // cancelled / failed login changes nothing; otherwise the cached matches are
+  // dropped (the next track uses the new tier) and only a deck that is not
+  // playing well — or the server deck whose settings changed — re-resolves,
+  // resuming where it was instead of restarting the song from 0:00.
+  const accountLive = useRef(null); accountLive.current = { provider, hasRecord: Boolean(record) };
+  useEffect(() => {
+    const changed = (type) => (event) => {
+      const effect = accountChangeEffect({ type, detail: event?.detail, ...accountLive.current, status: live$.current.status, trial: live$.current.trial });
+      if (effect === 'ignore') return;
+      resolutions.clear(); blocked.current.clear(); setBlockedVersion((count) => count + 1);
+      if (effect !== 'reload') return;
+      if (!remote.current && audio.current?.getAttribute('src')) resumeAt.current = audio.current.currentTime || 0;
+      setAccountEpoch((value) => value + 1);
+    };
+    const account = changed('account'), settings = changed('settings');
+    window.addEventListener('album-music-account', account); window.addEventListener('album-music-settings', settings);
+    return () => { window.removeEventListener('album-music-account', account); window.removeEventListener('album-music-settings', settings); };
+  }, []);
   useEffect(() => {
     if (!REMOTE_PROVIDERS.has(provider) || !record) return;
     let disposed = false, busy = false;
@@ -260,18 +282,24 @@ export default function useRoomPlayback(record, trackIndex, provider, onNext, op
           if (provider === 'appleMusic' && handoff) {
             handoff.bound = bindAppleHandoff(handoff.target, result, handoff.identity);
             if (handoff.bound) handoff.identity ||= handoff.bound;
-            if (!handoff.bound) { update({ playing: false, status: 'handoff', handoff: true, position: 0, duration: 0, actualTrack: '', error: '' }); return; }
+            if (!handoff.bound) { clock.reset(); update({ playing: false, status: 'handoff', handoff: true, actualTrack: '', error: '' }); return; }
           }
-          update({ handoff: false, playing: result.state === 'playing', status: result.state === 'playing' ? 'playing' : result.state === 'paused' ? 'paused' : 'waiting', position: result.elapsed, duration: result.duration, actualTrack: result.title });
+          clock.set(result.elapsed, result.duration);
+          const next = { handoff: false, playing: result.state === 'playing', status: result.state === 'playing' ? 'playing' : result.state === 'paused' ? 'paused' : 'waiting', actualTrack: result.title }, old = live$.current;
+          // The server answers every 1.5 s; most answers change nothing the room shows.
+          if (Object.keys(next).some((key) => old[key] !== next[key])) update(next);
         }
       }
       catch (error) { if (!disposed && sequence.current === current) {
-        if (appleHandoff.current) { appleHandoff.current.bound = null; update({ status: 'handoff', handoff: true, playing: false, position: 0, duration: 0, actualTrack: '', error: '', notice: error.message }); }
+        if (appleHandoff.current) { appleHandoff.current.bound = null; clock.reset(); update({ status: 'handoff', handoff: true, playing: false, actualTrack: '', error: '', notice: error.message }); }
         else update({ status: 'error', error: error.message, playing: false });
       } }
       finally { busy = false; }
     };
-    const timer = setInterval(poll, 1500); return () => { disposed = true; clearInterval(timer); };
+    // Paused while the window is hidden / minimised; one poll at once on return.
+    let timer = 0, resumed = false;
+    const off = onBackgroundChange((background) => { clearInterval(timer); timer = 0; if (!background) { if (resumed) poll(); timer = setInterval(poll, 1500); } resumed = true; });
+    return () => { disposed = true; off(); clearInterval(timer); };
   }, [provider, record?.id, trackIndex, accountEpoch]);
   useEffect(() => { decks.current.forEach((element, index) => { if (element) { element.volume = clampVolume(volume * faders.current[index].gain); element.muted = muted; } }); }, [volume, muted]);
   useEffect(() => () => { if (remote.current) commandRemote(remote.current, remote.current === 'appleMusic' ? 'pause' : 'stop').catch(() => {}); }, []);
@@ -291,7 +319,7 @@ export default function useRoomPlayback(record, trackIndex, provider, onNext, op
       }
       else { const sessionUrl = sessionTrackUrl(record, trackIndex); if (sessionUrl) await resolveRef.current?.({ sessionUrl, provider: 'local', title: trackNames(record)[trackIndex] }); else setAccountEpoch((value) => value + 1); }
     } catch (error) { if (owns()) {
-      if (appleHandoff.current) { appleHandoff.current.bound = null; update({ status: 'handoff', handoff: true, playing: false, position: 0, duration: 0, actualTrack: '', error: '', notice: error.message }); }
+      if (appleHandoff.current) { appleHandoff.current.bound = null; clock.reset(); update({ status: 'handoff', handoff: true, playing: false, actualTrack: '', error: '', notice: error.message }); }
       else update({ status: 'error', error: playbackErrorMessage(error) || '音频加载失败。' });
     } }
     finally { controlling.current = false; }
@@ -304,12 +332,12 @@ export default function useRoomPlayback(record, trackIndex, provider, onNext, op
     onWaiting: own(() => { if (audio.current?.getAttribute('src') && !audio.current.paused) update({ playing: false, status: 'buffering' }); }),
     onPause: own(() => { if (audio.current?.getAttribute('src')) update({ playing: false, status: 'paused' }); }),
     onTimeUpdate: own(() => {
-      const element = audio.current; update({ position: element.currentTime });
+      const element = audio.current; clock.set(element.currentTime);
       // 歌曲过渡: start the buffered next song early and overlap the two.
       const seconds = crossfade.current, ready = standby.current, upcoming = seconds && ready && !handover.current && !element.paused ? opts.current.peekNext?.() : null;
       if (upcoming?.item && element.currentTime >= crossfadeStartsAt(element.duration, seconds) && resolutionKey(provider, upcoming.item, upcoming.index) === ready.key) { handover.current = seconds * 1000; if (!next.current?.()) handover.current = 0; }
     }),
-    onDurationChange: own(() => update({ duration: Number.isFinite(audio.current.duration) ? audio.current.duration : 0 })),
+    onDurationChange: own(() => clock.set(undefined, Number.isFinite(audio.current.duration) ? audio.current.duration : 0)),
     onEnded: own(() => { update({ playing: false, status: 'ended' }); next.current?.(); }),
     onError: own(() => {
       const element = audio.current;
@@ -320,12 +348,12 @@ export default function useRoomPlayback(record, trackIndex, provider, onNext, op
         recovered.current = key; resumeAt.current = at; resolutions.clear();
         update({ playing: false, status: 'buffering', error: '' }); setAccountEpoch((value) => value + 1); return;
       }
-      update({ playing: false, status: 'error', error: MEDIA_ERRORS[code] || '音频加载失败。请重新播放，或检查平台权限与网络。' });
+      update({ playing: false, status: 'error', error: mediaErrorMessage(code) });
     })
   };
   const skipping = state.status === 'error' && shouldAutoSkip({ error: state.error, status: state.status, consecutive: skips.current, canNext: canNext() });
-  const statusText = (state.error && (skipping ? `${state.error} 稍后自动播放下一首…` : state.error)) || ({ idle: '待播放', loading: '正在连接音源…', searching: '正在匹配原始曲目…', choose: '请选择对应的曲目版本', playing: `${provider === 'ma' ? '服务器播放器正在播放' : provider === 'appleMusic' ? '正在“音乐”App 中播放' : provider === 'local' ? '正在播放本地文件' : '正在播放'}${state.trial ? ' · 试听片段' : ''}${state.quality && !state.remote && provider !== 'local' ? ` · ${state.quality}` : ''}`, paused: '播放已暂停', ended: '本曲播放结束', waiting: provider === 'appleMusic' ? '等待“音乐”App' : '等待服务器播放器', buffering: '正在缓冲音频…' }[state.status] || '待播放');
-  const seek = (value) => { if (audio.current && !remote.current && Number.isFinite(value) && Number.isFinite(audio.current.duration)) audio.current.currentTime = Math.max(0, Math.min(value, audio.current.duration)); };
+  const statusText = deckStatusText(state, provider, skipping);
+  const seek = (value) => { if (audio.current && !remote.current && Number.isFinite(value) && Number.isFinite(audio.current.duration)) { audio.current.currentTime = Math.max(0, Math.min(value, audio.current.duration)); clock.set(audio.current.currentTime, undefined, { force: true }); } };
   // Same track again ("repeat one", or "previous" after 3 s).
   const restart = async () => {
     if (remote.current || !audio.current?.getAttribute('src')) { setAccountEpoch((value) => value + 1); return; }
@@ -334,7 +362,7 @@ export default function useRoomPlayback(record, trackIndex, provider, onNext, op
     element.currentTime = 0;
     try { if (element.paused) { ramp.set(0); await element.play(); if (owns()) ramp.to(1, FADE_IN_MS); } } catch (error) { if (owns()) update({ status: 'error', error: playbackErrorMessage(error) || '音频加载失败。' }); }
   };
-  return { ...state, statusText: state.handoff ? APPLE_HANDOFF_STATUS : statusText, skipping, rate: rate.current, setRate: (value) => { rate.current = Math.max(.5, Math.min(2, Number(value) || 1)); applyRate(); update({}); },
+  return { ...state, clock, moved, get position() { return clock.position; }, get duration() { return clock.duration; }, statusText: state.handoff ? APPLE_HANDOFF_STATUS : statusText, skipping, rate: rate.current, setRate: (value) => { rate.current = Math.max(.5, Math.min(2, Number(value) || 1)); applyRate(); update({}); },
     // Seek into a track that is about to start (dragging the needle across songs).
     startAt: (seconds) => { resumeAt.current = Math.max(0, Number(seconds) || 0); }, audio, events, toggle, choose: (candidate) => resolveRef.current?.(candidate),
     // Labelled hand-off: opens the song in the QQ 音乐 / 网易云 app (or its web page).

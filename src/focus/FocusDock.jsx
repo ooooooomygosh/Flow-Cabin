@@ -1,15 +1,24 @@
-import React, { useEffect, useId, useState } from 'react';
+import React, { useEffect, useId, useMemo, useState } from 'react';
 import { Clock, ListBullet, ChartBar, SpeakerWave, SpeakerOff, Play, Pause, Forward, Loading, X, Settings, Shuffle, BookOpen, Bookmark } from '../icons';
-import { useFocus } from './useFocus';
+import { useFocus, useFocusState } from './useFocus';
 import { useSoundscape } from '../audio/useSoundscape';
 import { AMBIENCE_TRACKS } from '../audio/ambience.mjs';
-import { activePreset, focusStats, formatClock, FOCUS_PRESETS, PHASE_LABELS, phaseDuration, phaseProgress } from './focus-model.mjs';
+import { activePreset, dayKey, focusStats, formatClock, FOCUS_PRESETS, PHASE_LABELS, phaseDuration, phaseProgress } from './focus-model.mjs';
 import PixelRing from './PixelRing';
 import PixelClock from './PixelClock';
 import TaskList from './TaskList';
 import FocusStats from './FocusStats';
 import QuickNotes from './QuickNotes';
-import StudyPanel from '../study/StudyPanel';
+// The study tab (FSRS scheduler, word books) is a separate chunk, fetched as
+// soon as the dock opens; once loaded it renders synchronously like any tab.
+let LoadedStudy = null, studyLoad = null;
+export const loadStudy = () => (studyLoad ||= import('../study/StudyPanel').then((module) => { LoadedStudy = module.default; return LoadedStudy; }, (error) => { studyLoad = null; throw error; }));
+function StudyPanel() {
+  const [, setReady] = useState(Boolean(LoadedStudy)), [failed, setFailed] = useState(false);
+  useEffect(() => { if (LoadedStudy) return; let alive = true; loadStudy().then(() => alive && setReady(true), () => alive && setFailed(true)); return () => { alive = false; }; }, []);
+  if (LoadedStudy) return <LoadedStudy/>;
+  return <p className="focus-loading" role="status">{failed ? '学习工具没有打开，请关闭专注工具后重试。' : '正在打开学习…'}</p>;
+}
 import { useStudy } from '../study/useStudy';
 import './focus.css';
 
@@ -36,7 +45,7 @@ export function FocusTimer() {
   const idle = timer.phase === 'idle', remaining = idle ? phaseDuration(settings, 'focus') : focus.remaining;
   const displayRemaining = settings.hideSeconds ? Math.ceil(remaining / 60000) * 60000 : remaining;
   const progress = phaseProgress(timer.paused ? timer : { ...timer, endsAt: focus.now + displayRemaining }, settings, focus.now);
-  const today = focusStats(focus.state.sessions, focus.now), preset = activePreset(settings);
+  const day = dayKey(focus.now), today = useMemo(() => focusStats(focus.state.sessions, focus.now), [focus.state.sessions, day]), preset = activePreset(settings);
   const task = tasks.find((item) => item.id === timer.taskId);
   const number = (key, label, max) => <DurationSetting name={key} label={label} value={settings[key]} max={max} onSave={(value) => focus.settings({ [key]: value })}/>;
   const check = (key, label) => <label className="focus-check"><input type="checkbox" checked={settings[key]} onChange={(event) => focus.settings({ [key]: event.target.checked })}/>{label}</label>;
@@ -94,13 +103,14 @@ export function FocusBadge({ onClick, open = false }) {
 }
 
 export default function FocusDock({ open, close, tab, setTab }) {
-  const tabId = useId(), focus = useFocus(), study = useStudy();
+  const tabId = useId(), focus = useFocusState(), study = useStudy();
   useEffect(() => {
     if (!open) return;
     const escape = event => { if (event.key === 'Escape' && !event.repeat && !event.defaultPrevented && !document.querySelector('dialog[open], .listening-corner')) { event.preventDefault(); close(); document.querySelector('.focus-badge')?.focus(); } };
     document.addEventListener('keydown', escape);
     return () => document.removeEventListener('keydown', escape);
   }, [open, close]);
+  useEffect(() => { if (open) loadStudy().catch(() => {}); }, [open]);
   const Panel = TABS.find(([id]) => id === tab)?.[3] || FocusTimer;
   if (!open) return null;
   const navigateTabs = (event) => {

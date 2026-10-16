@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { useFocus } from './focus/useFocus';
+import { useFocusState as useFocus } from './focus/useFocus'; // read on demand: no clock re-renders
 import { useSoundscape } from './audio/useSoundscape';
 import { focusSnapshot } from './focus/focus-model.mjs';
 import { PLAYBACK_EVENT } from './player/playback-signal.mjs';

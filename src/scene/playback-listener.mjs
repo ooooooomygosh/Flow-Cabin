@@ -24,3 +24,17 @@ export function onCabinPlayback(fn) {
   return () => { listeners.delete(fn); if (!listeners.size && attached) { window.removeEventListener(PLAYBACK_EVENT, receive); attached = false; } };
 }
 export const latestPlayback = () => latest;
+
+// Mirrors playback energy into a CSS custom property on `target()` (an element
+// or element list getter, so it may mount later), quantised to 1/steps and written only when
+// the level changes: 15 Hz raw energy becomes a handful of style changes.
+export const quantiseEnergy = (detail, steps = 8) => detail?.playing ? Math.round(Math.max(0, Math.min(1, Number(detail.energy) || 0)) * steps) / steps : 0;
+export function bindEnergyVar(target, name, steps = 8, onLevel = null) {
+  let shown = null;
+  return onCabinPlayback((detail) => {
+    const level = quantiseEnergy(detail, steps), elements = [].concat(target() || []).filter(Boolean);
+    if (level === shown || !elements.length) return;
+    shown = level; for (const element of elements) element.style.setProperty(name, String(level));
+    onLevel?.(level);
+  });
+}

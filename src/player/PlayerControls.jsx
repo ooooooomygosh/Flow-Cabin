@@ -3,6 +3,7 @@ import { X, SpeakerWave, SpeakerOff, Loading, Music2, RepeatPixel, RepeatOnePixe
 import { trackNames } from '../room-model.mjs';
 import { displayTitle } from '../display-title.mjs';
 import { formatSeconds } from '../lib/time-format.mjs';
+import { usePlaybackDuration, usePlaybackPosition } from '../deck/usePlaybackClock';
 import './player.css';
 import './pocket-player.css';
 
@@ -14,10 +15,18 @@ const REPEAT_LABEL = { off: '顺序播放', all: '整张循环', one: '单曲循
 // selector and a volume slider. Progress lives on the screen (PocketProgress).
 // Labels are stable — tests and screen readers depend on them.
 const REPEAT_SHORT = { off: '顺序', all: '循环', one: '单曲' };
+// Dragging the thumb only previews the time; the seek happens once, on release
+// (or on the native change event a keyboard step / programmatic fill fires),
+// so the thumb no longer jumps back with every timeupdate.
 export function PocketProgress({ playback }) {
-  const duration = playback?.duration || 0, position = Math.min(playback?.position || 0, duration || 1);
+  const duration = usePlaybackDuration(playback), playhead = usePlaybackPosition(playback, .1);
+  const [scrub, setScrub] = useState(null), pending = useRef(null), input = useRef(null);
+  const commit = () => { const value = pending.current; pending.current = null; setScrub(null); if (value !== null) playback?.seek(value); };
+  const commitRef = useRef(commit); commitRef.current = commit;
+  useEffect(() => { const element = input.current, change = () => commitRef.current(); element?.addEventListener('change', change); return () => element?.removeEventListener('change', change); }, []);
+  const position = Math.min(scrub ?? playhead, duration || 1);
   return <div className="pocket-progress">
-    <input type="range" aria-label="音乐播放进度" min="0" max={duration || 1} step=".1" value={position} disabled={!duration} onChange={(event) => playback.seek(Number(event.target.value))} style={{ '--player-progress': `${duration ? Math.min(100, position / duration * 100) : 0}%` }}/>
+    <input ref={input} type="range" aria-label="音乐播放进度" min="0" max={duration || 1} step=".1" value={position} disabled={!duration} onChange={(event) => { pending.current = Number(event.target.value); setScrub(pending.current); }} onPointerUp={commit} onPointerCancel={commit} onBlur={commit} style={{ '--player-progress': `${duration ? Math.min(100, position / duration * 100) : 0}%` }}/>
     <small><span>{formatSeconds(position)}</span><span>-{formatSeconds(Math.max(0, duration - position))}</span></small>
   </div>;
 }

@@ -1,5 +1,5 @@
 import { getRoomScene } from './scene-catalog.mjs';
-import React, { useLayoutEffect, useRef, useState } from 'react';
+import React, { memo, useLayoutEffect, useRef, useState } from 'react';
 import CabinAtmosphere from './CabinAtmosphere';
 import AmbientLife from './scene/AmbientLife';
 import { VinylDisc } from './RecordLibrary';
@@ -12,7 +12,28 @@ import { flyRecord } from './turntable/record-flight.mjs';
 import './study-room.css';
 
 export const ROOM_DRAG_TYPE = 'application/x-album-circle-record';
-export default function RoomScene({ look = 'warm', items = [], selectedId, select, load, startRow = 0, weather = 'snow', hour = new Date().getHours(), cat = null, children }) {
+// Put a shelf record on the deck: the sleeve flies to the scene deck first
+// (unless that record is already loaded). Shared by double-click, Enter on a
+// selected record and the footer's 「放上唱机」 button.
+export function placeRecord(item, from, load) {
+  const deck = document.querySelector('.scene-deck');
+  if (load && deck && document.querySelector('.room-turntable')?.dataset.loadedId !== item.id) flyRecord({ from, to: deck.querySelector('.scene-deck-sprite') || deck, target: deck, cover: item.cover });
+  load?.(item);
+}
+// The twelve sleeves re-render only when the shelf itself changes, not with
+// every room render (deck state, focus, weather…).
+const RoomRack = memo(function RoomRack({ items, selectedId, select, load, startRow, columns, rows, pixel }) {
+  return <div className="room-rack cabin-rack"><div className="room-rack-grid" role="list" aria-label="木质唱片架" data-start-row={startRow}>
+        {Array.from({ length: columns.length * rows.length }, (_, index) => {
+          const column = index % columns.length, row = Math.floor(index / columns.length);
+          const item = items[index], [x, width] = columns[column], [y, height] = rows[row];
+          return <div className={`room-record-slot ${item ? '' : 'room-record-empty'}`} style={{ left: `${x / 1448 * 100}%`, top: `${y / 1086 * 100}%`, width: `${width / 1448 * 100}%`, height: `${height / 1086 * 100}%`, '--shelf-shade': .18 + column * .08 + row * .025 }} role={item ? 'listitem' : undefined} key={index} aria-hidden={item ? undefined : 'true'}>
+            {item ? <button type="button" key={item.id} className={`room-record ${selectedId === item.id ? 'is-selected' : ''}`} aria-label={`选择 ${item.artist} 的 ${item.title}`} aria-pressed={selectedId === item.id} title={`${item.title} · ${item.artist}；双击或拖到唱机放盘`} draggable={Boolean(load)} onDragStart={(event) => { event.dataTransfer.setData(ROOM_DRAG_TYPE, item.id); event.dataTransfer.effectAllowed = 'copy'; const ghost = event.currentTarget.querySelector('.room-drag-record'); if (ghost) event.dataTransfer.setDragImage(ghost, 48, 48); }} onClick={() => select?.(item.id)} onDoubleClick={(event) => placeRecord(item, event.currentTarget, load)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.repeat && load && selectedId === item.id) { event.preventDefault(); placeRecord(item, event.currentTarget, load); } }}><span className="room-record-sleeve"><ShowroomArtwork item={item} pixel={pixel}/>{item.type === 'playlist' && <span className="room-record-tag" aria-hidden="true">歌单</span>}</span>{load && <span className="room-drag-record" aria-hidden="true"><VinylDisc item={item}/><ShowroomArtwork item={item} className="room-drag-label"/></span>}</button> : <span className="cabin-empty-slot"><Disc3/><span>待收藏</span></span>}
+          </div>;
+        })}
+      </div></div>;
+});
+function RoomScene({ look = 'warm', items = [], selectedId, select, load, startRow = 0, weather = 'snow', hour = new Date().getHours(), cat = null, children }) {
   const scene = getRoomScene(look);
   const viewport = useRef(null), [geometry, setGeometry] = useState({});
   useLayoutEffect(() => {
@@ -59,21 +80,14 @@ export default function RoomScene({ look = 'warm', items = [], selectedId, selec
     <div className="cabin-scene-canvas" style={geometry}>
       <img key={scene.id} className="cabin-scene-art" src={scene.view || scene.art} alt={scene.alt} width="1448" height="1086" draggable="false"/>
       {scene.id === 'night-study' && <StudyWriting/>}
-      <div className="room-rack cabin-rack"><div className="room-rack-grid" role="list" aria-label="木质唱片架" data-start-row={startRow}>
-        {Array.from({ length: columns.length * rows.length }, (_, index) => {
-          const column = index % columns.length, row = Math.floor(index / columns.length);
-          const item = items[index], [x, width] = columns[column], [y, height] = rows[row];
-          return <div className={`room-record-slot ${item ? '' : 'room-record-empty'}`} style={{ left: `${x / 1448 * 100}%`, top: `${y / 1086 * 100}%`, width: `${width / 1448 * 100}%`, height: `${height / 1086 * 100}%`, '--shelf-shade': .18 + column * .08 + row * .025 }} role={item ? 'listitem' : undefined} key={index} aria-hidden={item ? undefined : 'true'}>
-            {item ? <button type="button" key={item.id} className={`room-record ${selectedId === item.id ? 'is-selected' : ''}`} aria-label={`选择 ${item.artist} 的 ${item.title}`} aria-pressed={selectedId === item.id} title={`${item.title} · ${item.artist}；双击或拖到唱机放盘`} draggable={Boolean(load)} onDragStart={(event) => { event.dataTransfer.setData(ROOM_DRAG_TYPE, item.id); event.dataTransfer.effectAllowed = 'copy'; const ghost = event.currentTarget.querySelector('.room-drag-record'); if (ghost) event.dataTransfer.setDragImage(ghost, 48, 48); }} onClick={() => select?.(item.id)} onDoubleClick={(event) => { const deck = document.querySelector('.scene-deck'); if (load && deck && document.querySelector('.room-turntable')?.dataset.loadedId !== item.id) flyRecord({ from: event.currentTarget, to: deck.querySelector('.scene-deck-sprite') || deck, target: deck, cover: item.cover }); load?.(item); }}><span className="room-record-sleeve"><ShowroomArtwork item={item} pixel={scene.pixel}/>{item.type === 'playlist' && <span className="room-record-tag" aria-hidden="true">歌单</span>}</span>{load && <span className="room-drag-record" aria-hidden="true"><VinylDisc item={item}/><ShowroomArtwork item={item} className="room-drag-label"/></span>}</button> : <span className="cabin-empty-slot"><Disc3/><span>待收藏</span></span>}
-          </div>;
-        })}
-      </div></div>
+      <RoomRack items={items} selectedId={selectedId} select={select} load={load} startRow={startRow} columns={columns} rows={rows} pixel={scene.pixel}/>
       {['warm', 'pixel'].includes(scene.id) ? <CabinAtmosphere look={scene.id} weather={normalizeWeather(weather)}/> : scene.id !== 'night-study' && normalizeWeather(weather) === 'snow' && <div className="cabin-snow" aria-hidden="true"/>}
       <div className="cabin-weather" aria-hidden="true"/>
       <div className="cabin-daylight" aria-hidden="true"/>
-      <AmbientLife/>
+      <AmbientLife look={scene.id} time={timeOfDay(hour)}/>
     </div>
     {cat}
     {children}
   </div>;
 }
+export default memo(RoomScene);

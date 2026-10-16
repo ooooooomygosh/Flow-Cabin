@@ -10,6 +10,7 @@ import { version } from '../../package.json';
 import UpdatePanel from '../desktop/UpdatePanel';
 import './onboarding.css';
 import { CROSSFADE_OPTIONS, crossfadeSeconds, setCrossfadeSeconds, onCrossfadeChange } from '../player/crossfade.mjs';
+import { shortcutHelp } from '../shortcuts.mjs';
 
 export const HUB_SECTIONS = Object.freeze([
   { id: 'music', label: '音源' }, { id: 'room', label: '房间与桌宠' }, { id: 'focus', label: '专注工具' },
@@ -51,7 +52,7 @@ export default function SettingsHub({ section = 'music', setSection, close, env,
         {section === 'about' && <div className="hub-rows">
           <UpdatePanel version={version} desktop={Boolean(env.desktop)}/>
           <Row title="重新引导" hint="再走一遍新手引导，之前的选择会保留。"><button type="button" className="pixel-button is-primary" onClick={restartOnboarding}>重新引导</button></Row>
-          <Row title="快捷键" hint="空格 播放/暂停 · Z 沉浸 · M 静音 · F11 全屏 · Ctrl/⌘+Alt+D 退出沉入桌面 · Ctrl/⌘+, 软件设置"/>
+          <Row title="快捷键" hint={shortcutHelp()}/>
         </div>}
         <footer className="personalization-footer"><small>设置只保存在本机。</small><button type="button" className="record-primary" onClick={close}>回到小屋</button></footer>
       </section>

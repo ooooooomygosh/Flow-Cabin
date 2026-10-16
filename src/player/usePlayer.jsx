@@ -4,6 +4,7 @@ import { createPlaybackBroadcaster, rmsEnergy, smoothEnergy, estimatedEnergy, EN
 import { analyserFor } from './audio-graph.mjs';
 import { createBeatTracker } from './beat-tracker.mjs';
 import { trackNames } from '../room-model.mjs';
+import { onBackgroundChange } from '../frame-clock.mjs';
 
 const readQueue = () => { try { return normalizeQueue(JSON.parse(localStorage.getItem(QUEUE_KEY))); } catch { return normalizeQueue(null); } };
 
@@ -69,6 +70,9 @@ export function usePlayerShortcuts({ playback, player, provider, toggleVisual, r
       if (!current) return;
       const audible = source !== 'visual' && source !== 'system', key = event.key;
       const act = (fn) => { event.preventDefault(); fn(); };
+      // Held keys repeat seek and volume, never the toggles (play, mute, repeat, shuffle, track skips).
+      if (event.repeat && !['ArrowLeft', 'ArrowRight', '-', '_', '=', '+'].includes(key)) { if (key === ' ' || key === 'Spacebar') event.preventDefault(); return; }
+      if (event.repeat && event.shiftKey) return;
       if (key.startsWith('Arrow') && event.target?.closest?.('.room-turntable,[role=tablist],[role=listbox],[role=menu],[role=radiogroup],.focus-dock')) return; // arrows nudge the deck while its handle is focused
       if (key === ' ' || key === 'Spacebar') { if (event.target?.closest?.('button,a,[role=button],[role=slider]')) return; act(() => audible ? pb.toggle() : source === 'visual' && spin()); }
       else if (event.shiftKey && key === 'ArrowRight') act(() => pl.next());
@@ -143,10 +147,18 @@ export function usePlaybackBroadcast({ playing, provider, spinning, record, trac
   useEffect(() => { energy.current = 0; tracker.current.reset(); sample(); }, [playing, provider, spinning, track?.id, track?.index, track?.title]);
   useEffect(() => {
     if (!playing) return;
-    const timer = setInterval(sample, ENERGY_INTERVAL_MS);
-    // The bass band is read ~60 times a second for beat tracking (cheap: 2048-point FFT).
-    const listen = setInterval(() => { const graph = analyserFor(audio?.current); if (graph?.bass && audio.current && !audio.current.paused) tracker.current.push(performance.now(), graph.bass()); }, Math.round(1000 / 60));
-    return () => { clearInterval(timer); clearInterval(listen); };
+    let timer = 0, listen = 0;
+    const start = (background) => {
+      clearInterval(timer); clearInterval(listen); listen = 0;
+      // Hidden / minimised with no desktop pet or wallpaper watching: no beat
+      // tracking, and the energy broadcast slows to 2 Hz (play state still flows).
+      const idle = background && !window.albumPetState?.active && !document.documentElement.classList.contains('room-desktop');
+      timer = setInterval(sample, idle ? 500 : ENERGY_INTERVAL_MS);
+      // The bass band is read ~60 times a second for beat tracking (cheap: 2048-point FFT).
+      if (!idle) listen = setInterval(() => { const graph = analyserFor(audio?.current); if (graph?.bass && audio.current && !audio.current.paused) tracker.current.push(performance.now(), graph.bass()); }, Math.round(1000 / 60));
+    };
+    const off = onBackgroundChange(start);
+    return () => { off(); clearInterval(timer); clearInterval(listen); };
   }, [playing]);
   useEffect(() => () => cast.current?.update({ playing: false, provider: '', track: null }), []);
 }
