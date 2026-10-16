@@ -1,9 +1,9 @@
 import React, { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { reportTrayPet } from './desktop/desktop-sink-client.mjs';
 import { getRoomScene } from './scene-catalog.mjs';
-import { normalizePetId } from './pet/pet-catalog.mjs';
+import { normalizePetId, getPet } from './pet/pet-catalog.mjs';
 import { setBeat } from './player/beat-clock.mjs';
-import { Up, Down, ArrowUpRight, Wand2, EyeSlash, Heart, Plus, ListBullet, Check, Computer, Play, SpeakerWave, SpeakerOff, Grid3X3 } from './icons';
+import { Up, Down, ArrowUpRight, Wand2, EyeSlash, Heart, Plus, ListBullet, Check, Computer, Play, SpeakerWave, SpeakerOff, Grid3X3, Refresh } from './icons';
 import { RecordBoxControls, useRecordLibrary, useRecordStyle } from './RecordLibrary';
 import { desktopCommand, useDesktopAppearance } from './desktop-client';
 import useReducedMotion from './useReducedMotion';
@@ -46,7 +46,7 @@ const snapshotItem = (item) => item ? ({ id: item.id, title: item.title, artist:
 // What the wallpaper and the desktop pet see (window.albumRoomSnapshot), built only when they ask.
 const buildSnapshot = ({ items, record, look, ...rest }) => ({ ...rest, look, roomName: getRoomScene(look).label, items: items.map(snapshotItem), record: snapshotItem(record) });
 
-export default function CabinRoom({ items, loading, loadError = '', openRecord, openAdd, firstVisit = false, hubRequest = null, openBackup, openWall, notify }) {
+export default function CabinRoom({ items, loading, loadError = '', reload, openRecord, openAdd, firstVisit = false, hubRequest = null, openBackup, openWall, notify }) {
   const appearance = useDesktopAppearance(), reduced = useReducedMotion();
   const stage = useRef(null);
   const flow = useOnboardingFlow({ client: appearance.client, loading, loadError, firstVisit, itemCount: items.length, hubRequest, notify });
@@ -79,7 +79,7 @@ export default function CabinRoom({ items, loading, loadError = '', openRecord, 
   // Not memoised on purpose: the cat's placement re-measures the console and
   // footer after every room commit (useCatPlacement), which room renders now are rare.
   const cat = <RoomCat petId={petId} focus={catFocus} playing={grooving} track={deck.nowTrack} reduceMotion={reduced} hidden={Boolean(pet.active)}/>;
-  const petLabel = petId === 'cat' ? (pet.active ? '让小猫回家' : '小猫出门') : (pet.active ? '让伙伴回家' : '伙伴出门');
+  const petLabel = pet.active ? '让伙伴回家' : '伙伴出门', petName = getPet(petId).name;
   const queued = player.queue.ids.includes(selected?.id);
   return <div className={`listening-room cabin-room cabin-${look}`} style={{ '--scene-accent': getRoomScene(look).style.accent }}>
     {/* One row of room actions, right-aligned: focus · sound · companion · 沉入桌面 · 沉浸.
@@ -88,7 +88,7 @@ export default function CabinRoom({ items, loading, loadError = '', openRecord, 
       {focus && <span className="zen-keep cabin-toolbar-group"><FocusBadge open={dock.open && dock.tab !== 'sound'} onClick={() => saveDock({ open: !(dock.open && dock.tab !== 'sound'), ...(dock.tab === 'sound' ? { tab: 'timer' } : {}) })}/></span>}
       <span className="cabin-toolbar-group">
         {sound && <button type="button" className={sound.enabled ? 'is-on' : ''} aria-label={sound.enabled ? '小屋声音（开）' : '小屋声音（关）'} aria-expanded={dock.open && dock.tab === 'sound'} title="Lo-fi 电台与环境音" onClick={() => saveDock(dock.open && dock.tab === 'sound' ? { open: false } : { open: true, tab: 'sound' })}>{sound.enabled ? <SpeakerWave size={17}/> : <SpeakerOff size={17}/>}<span>声音</span></button>}
-        <button type="button" aria-label={petLabel} title={pet.active ? '让伙伴回家' : '伙伴出门：到桌面上散步'} aria-pressed={Boolean(pet.active)} onClick={() => desktopCommand(pet.active ? 'pet-stop' : 'pet-start')}><Heart size={17}/><span>{petLabel}</span></button>
+        <button type="button" aria-label={petLabel} title={pet.active ? `让${petName}回家` : `${petName}出门：到桌面上散步`} aria-pressed={Boolean(pet.active)} onClick={() => desktopCommand(pet.active ? 'pet-stop' : 'pet-start')}><Heart size={17}/><span>{petLabel}</span></button>
         <button type="button" aria-label={sink.busy ? '取消沉入桌面' : sink.active ? '浮出桌面' : '沉入桌面'} aria-pressed={Boolean(sink.active)} disabled={appearance.client && !sink.supported} title={sink.active ? '浮出桌面：回到小屋窗口 · Ctrl/⌘+Alt+D' : sink.reason || '沉入桌面：窗口收起，小屋变成桌面背景，伙伴和迷你唱机还能点 · Ctrl/⌘+Alt+D'} onClick={chrome.toggleDesktopMode}><Computer size={17}/><span>{sink.busy ? '正在沉入…' : sink.active ? '浮出桌面' : '沉入桌面'}</span></button>
         {!zen && !fullscreen && <button type="button" aria-pressed={false} aria-keyshortcuts="Z" title="沉浸模式：只留房间和时钟 · Z" onClick={chrome.toggleZen}><EyeSlash size={17}/><span>沉浸</span></button>}
       </span>
@@ -110,7 +110,8 @@ export default function CabinRoom({ items, loading, loadError = '', openRecord, 
         <button type="button" aria-label="整理唱片架" title="排序、筛选、唱片盒与专辑墙" aria-controls="cabin-shelf-filters" aria-expanded={filtersOpen} className={filtered ? 'is-active' : ''} onClick={() => setFiltersOpen(!filtersOpen)}><Wand2 size={17}/><span>整理唱片架{filtered ? ` · ${visible.length}` : ''}</span></button>
       </nav>}/>
       {!visible.length && <div className="room-empty">
-        <p>{loading ? '正在整理唱片…' : loadError ? '唱片暂时没有读出来，请重试。' : items.length ? '没有符合筛选的唱片。' : '木屋的唱片架，等你放上第一张。'}</p>
+        {/* A failed read is explained once, in the titlebar alert; the shelf offers the way back. */}
+        {loadError && !loading ? <button type="button" onClick={reload}><Refresh size={16}/>重新读取唱片</button> : <p>{loading ? '正在整理唱片…' : items.length ? '没有符合筛选的唱片。' : '木屋的唱片架，等你放上第一张。'}</p>}
         {!loading && !loadError && (items.length ? <button type="button" onClick={() => setFilters({ ...filters, ...DEFAULT_FILTERS, sort: filters.sort })}>清除筛选</button> : <>
           <small>也可以先专注一会儿，收藏慢慢来。</small>
           <div className="room-welcome-actions"><button type="button" onClick={() => openAdd()}><Plus size={16}/>添加第一张专辑</button>{focus && <button type="button" className="room-welcome-focus" onClick={() => saveDock({ open: true, tab: 'timer' })}>先专注一会儿</button>}</div>
