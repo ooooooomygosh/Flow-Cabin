@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { VinylDisc } from './RecordLibrary';
 import SceneDeck from './scene/SceneDeck';
-import { ChevronLeft, ChevronRight, Disc3, Pause, Play, Plus, PlayPixel, PausePixel, RepeatPixel, RepeatOnePixel, ShufflePixel } from './icons';
+import { ChevronLeft, ChevronRight, Disc3, Pause, Play, Plus, PlayPixel, PausePixel, RepeatPixel, RepeatOnePixel, ShufflePixel, GripPixel } from './icons';
 import { ROOM_DRAG_TYPE } from './RoomScene';
 import useTurntablePosition from './useTurntablePosition';
 import { trackNames } from './room-model.mjs';
@@ -16,7 +16,7 @@ const statusNode = (text) => { const match = typeof text === 'string' && QUALITY
 export default function RoomTurntable({ item, spinning, trackIndex = 0, style, items = [], load, toggle, track, eject, readOnly = false, provider = 'visual', setProvider, playback, statusText, actualTrack, system, player, tools }) {
   const [dragging, setDragging] = useState(false), names = trackNames(item), deckAnchor = useRef(null);
   const placement = useTurntablePosition(readOnly);
-  const trackName = actualTrack || playback?.actualTrack || names[trackIndex] || (item ? '原始资料暂无曲目' : '双击封面，或将唱片拖到这里');
+  const trackName = actualTrack || playback?.actualTrack || names[trackIndex] || (item ? '暂无曲目信息' : '双击封面、按回车或拖到这里');
   const audible = provider !== 'visual' && provider !== 'system';
   const screenState = provider === 'system' ? (system?.playing ? 'playing' : system?.active ? 'paused' : 'idle') : !audible ? (item && spinning ? 'playing' : 'idle')
     : playback?.playing ? 'playing' : ['loading', 'searching', 'buffering'].includes(playback?.status) ? 'busy' : playback?.status === 'error' ? 'error' : playback?.status === 'paused' ? 'paused' : 'idle';
@@ -31,7 +31,7 @@ export default function RoomTurntable({ item, spinning, trackIndex = 0, style, i
       onDropRecord={(id) => { const found = items.find((candidate) => candidate.id === id); if (found && !readOnly) load?.(found); }}/>
     <div className="turntable-side-cabinet">
       <div className="turntable-console">
-    <div className="turntable-heading">{readOnly ? <span><Disc3 size={15}/>木屋唱机</span> : <button type="button" className="turntable-drag-handle" aria-label="移动唱机" title="拖动移动唱机 · 方向键微调 · 双击或 Home 复位" {...placement.handle}><Disc3 size={15}/>木屋唱机 ⠿</button>}{readOnly ? <small className="turntable-source-chip">{providerLabel(provider, 'short')}</small> : <button type="button" className="turntable-source-chip" aria-label={`音源 ${providerLabel(provider, 'short')} · 更换`} title={`唱机音源：${providerLabel(provider)} · 在「设置 › 音源」里更换`} onClick={() => window.dispatchEvent(new Event('cabin-open-music-settings'))}>{providerLabel(provider, 'short')}<span aria-hidden="true">▾</span></button>}</div>
+    <div className="turntable-heading">{readOnly ? <span><Disc3 size={15}/>木屋唱机</span> : <button type="button" className="turntable-drag-handle" aria-label="移动唱机" title="拖动移动唱机 · 方向键微调 · 双击或 Home 复位" {...placement.handle}><Disc3 size={15}/>木屋唱机<GripPixel size={12}/></button>}{readOnly ? <small className="turntable-source-chip">{providerLabel(provider, 'short')}</small> : <button type="button" className="turntable-source-chip" aria-label={`音源 ${providerLabel(provider, 'short')} · 更换`} title={`唱机音源：${providerLabel(provider)} · 在「设置 › 音源」里更换`} onClick={() => window.dispatchEvent(new Event('cabin-open-music-settings'))}>{providerLabel(provider, 'short')}<span aria-hidden="true">▾</span></button>}</div>
     {!readOnly && tools}
     {/* Two decks take turns: one plays, the other buffers the next song. */}
     {!readOnly && playback && playback.deckRefs.map((ref, index) => <audio key={index} ref={ref} {...playback.events} preload="auto"/>)}
@@ -43,7 +43,7 @@ export default function RoomTurntable({ item, spinning, trackIndex = 0, style, i
       <span className="turntable-sleeve">{item?.cover ? <img src={item.cover} alt="" referrerPolicy="no-referrer"/> : <Disc3 size={32}/>}</span>
       <VinylDisc item={item || undefined} value={style} className={spinning ? 'is-spinning' : ''}/><span className="turntable-needle" aria-hidden="true"/>
     </button>
-    <div className="turntable-copy"><strong title={item?.title}>{displayTitle(item?.title) || '让收藏转起来'}</strong><span className="turntable-artist">{item?.type === 'playlist' ? <>{trackArtist(item, trackIndex) || '歌单'} · <em>歌单</em></> : item?.artist || '专辑库原始封面与曲目'}</span><p className="turntable-track" title={trackName}>{item && names.length ? `${String(trackIndex + 1).padStart(2, '0')} · ` : ''}{displayTitle(trackName)}</p><small className="turntable-status" role="status">{statusNode(statusText || (provider === 'system' ? system?.statusText : provider === 'visual' ? (item ? spinning ? '展示中 · 无音频' : '旋转已暂停 · 无音频' : '等待放盘 · 无音频') : playback?.statusText))}</small></div>
+    <div className="turntable-copy"><strong title={item?.title}>{displayTitle(item?.title) || '等一张唱片'}</strong><span className="turntable-artist">{item?.type === 'playlist' ? <>{trackArtist(item, trackIndex) || '歌单'} · <em>歌单</em></> : item?.artist || ''}</span><p className="turntable-track" title={trackName}>{item && names.length ? `${String(trackIndex + 1).padStart(2, '0')} · ` : ''}{displayTitle(trackName)}</p><small className="turntable-status" role="status">{statusNode(statusText || (provider === 'system' ? system?.statusText : provider === 'visual' ? (item ? spinning ? '展示中 · 无音频' : '旋转已暂停 · 无音频' : '等待放盘 · 无音频') : playback?.statusText))}</small></div>
     </div>
     {!readOnly && item && playback && !['visual', 'system', 'ma'].includes(provider) && <PocketProgress playback={playback}/>}
     </div>

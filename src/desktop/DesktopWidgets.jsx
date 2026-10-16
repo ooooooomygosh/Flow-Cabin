@@ -141,7 +141,7 @@ export default function DesktopWidgets({ mode = 'desktop', exit, ...music }) {
       <span><Eye size={14}/>桌面模式</span>
       <button type="button" onClick={() => window.dispatchEvent(new Event('cabin-open-corner'))}>唱机特写</button>
       <button type="button" onClick={reset}>整理小组件</button>
-      <button type="button" className="is-primary" onClick={exit}>回到窗口</button>
+      <button type="button" className="is-primary" onClick={exit}>浮出桌面</button>
     </nav>
   </div>;
 }

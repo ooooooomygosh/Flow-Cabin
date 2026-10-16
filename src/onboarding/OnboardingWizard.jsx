@@ -75,7 +75,7 @@ function SourceStep({ heading, state, update, env, player, useSource, openMusicS
   };
   const selected = sources.find((item) => item.id === state.source);
   return <>
-    <Heading heading={heading} eyebrow="第 1 步 · 音源">想从哪里听歌？</Heading>
+    <Heading heading={heading} eyebrow="音源">想从哪里听歌？</Heading>
     <p>选一个就好，之后可以在「设置 › 音源」里加更多。</p>
     <div className="onboarding-sources" role="radiogroup" aria-label="音乐来源">{sources.map((source) => <button type="button" role="radio" key={source.id} aria-checked={state.source === source.id} disabled={!source.available} aria-label={`音源 ${source.label}`} onClick={() => choose(source)}>
       <strong>{source.label}</strong><small>{source.available ? source.hint : source.reason}</small>{state.source === source.id && <Check size={14}/>}
@@ -96,7 +96,7 @@ function PermissionStep({ heading, state, update, env, player }) {
   const [busy, setBusy] = useState('');
   const ask = async (item) => { setBusy(item.id); const result = await player.requestPermission(item.id); setBusy(''); update(model.setPermission(state, item.id, result)); };
   return <>
-    <Heading heading={heading} eyebrow="第 2 步 · 权限">只开需要的权限</Heading>
+    <Heading heading={heading} eyebrow="权限">只开需要的权限</Heading>
     <p>每一项都会弹出系统询问，拒绝也能正常使用小屋。</p>
     {items.length ? <ul className="onboarding-permissions">{items.map((item) => { const result = state.permissions[item.id]; return <li key={item.id}>
       <span><strong>{item.label}{item.optional ? <em>可选</em> : null}</strong><small>{result ? PERMISSION_TEXT[result] : item.hint}</small></span>
@@ -110,7 +110,7 @@ function PermissionStep({ heading, state, update, env, player }) {
 
 function RoomStep({ heading, look, petId, onRoomChange, reduceMotion, error }) {
   return <>
-    <Heading heading={heading} eyebrow="第 3 步 · 房间与伙伴">选一个房间，再挑个伙伴</Heading>
+    <Heading heading={heading} eyebrow="房间与伙伴">选一个房间，再挑个伙伴</Heading>
     <RoomPickers look={look} petId={petId} onChange={onRoomChange} reduceMotion={reduceMotion} compact/>
     {error && <p role="alert" className="record-error">{error}</p>}
   </>;
@@ -121,7 +121,7 @@ function TestStep({ heading, state, update, player, openMusicSettings }) {
   const play = async () => { setPhase('playing'); const next = await player.testPlayback(state.source === 'appleMusic' || state.source === 'system' ? 'auto' : model.providerFor(state.source) || 'auto'); setResult(next); if (!next.ok) { setPhase('answered'); update(model.setTested(state, 'failed')); } else setPhase('ask'); };
   const answer = (value) => { setPhase('answered'); update(model.setTested(state, value)); };
   return <>
-    <Heading heading={heading} eyebrow="第 4 步 · 试听">放一段声音试试</Heading>
+    <Heading heading={heading} eyebrow="试听">放一段声音试试</Heading>
     <p>{result?.kind === 'track' ? `会从你选的音源低音量试放几秒${result.title ? `（《${result.title}》）` : ''}。` : '会播放一小段提示音，确认电脑的扬声器或耳机有声音。'}</p>
     <div className="onboarding-test">
       <button type="button" className="pixel-button is-primary" disabled={phase === 'playing'} onClick={play}>{phase === 'playing' ? '正在播放…' : state.tested ? '再试一次' : '播放测试'}</button>
