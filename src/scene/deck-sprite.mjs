@@ -113,7 +113,7 @@ export const mix = (hex, toward, amount) => { const a = rgbOf(hex), b = rgbOf(to
 // track-gap ring, and the label in the cover's own colour (shaded underneath).
 const luma = (hex) => { const [r, g, b] = rgbOf(hex); return r * .3 + g * .59 + b * .11; };
 // A label darker than this vanishes into the vinyl at deck size; lift it toward paper.
-export const liftLabel = (hex, min = 120) => { let out = hex; for (let i = 0; i < 6 && luma(out) < min; i++) out = mix(out, '#fff7e6', .18); return out; };
+export const liftLabel = (hex, min = 135) => { let out = hex; for (let i = 0; i < 6 && luma(out) < min; i++) out = mix(out, '#fff7e6', .18); return out; };
 export function recordRuns(vinyl = '#16110e', label = '#c9a47a') {
   label = liftLabel(label);
   const g = grid(), { cx, rx, ry } = PLATTER, cy = PLATTER.cy - .4;
@@ -125,10 +125,13 @@ export function recordRuns(vinyl = '#16110e', label = '#c9a47a') {
     if (r > .62 && r < .74) g[y][x] = 'g';
     else if (r > .8 && x < cx - 3 && y < cy) g[y][x] = 'h';
   }
-  ellipse(g, cx, cy, 4, 1.5, 'l');
-  for (let x = cx - 4; x <= cx + 4; x++) if (g[Math.round(cy) + 1]?.[x] === 'l') put(g, x, Math.round(cy) + 1, 'd');
+  // A lit run-out ring frames the label so it reads as the cover colour at deck size;
+  // only the label's two lower corners are shaded, the rest is the colour itself.
+  ellipse(g, cx, cy, 5.6, 2.2, 'r');
+  ellipse(g, cx, cy, 4.6, 1.5, 'l');
+  const low = Math.round(cy) + 1; for (const x of [cx - 4, cx - 3, cx + 3, cx + 4]) if (g[low]?.[x] === 'l') put(g, x, low, 'd');
   put(g, cx - 3, Math.round(cy) - 1, 'i'); put(g, cx - 2, Math.round(cy) - 1, 'i'); put(g, cx, Math.round(cy), 's');
-  return runs(g, { v: vinyl, g: mix(vinyl, '#000000', .45), h: mix(vinyl, '#e4dfcc', .28), l: label, d: mix(label, '#0d0805', .35), i: mix(label, '#fff7e6', .45), s: '#e7dcc0' });
+  return runs(g, { v: vinyl, g: mix(vinyl, '#000000', .45), h: mix(vinyl, '#e4dfcc', .28), r: mix(vinyl, '#e4dfcc', .42), l: label, d: mix(label, '#0d0805', .35), i: mix(label, '#fff7e6', .45), s: '#e7dcc0' });
 }
 // Eight frames of the lamp's reflection travelling round the grooves.
 export const SHEEN_FRAMES = Object.freeze(Array.from({ length: 8 }, (_, i) => {

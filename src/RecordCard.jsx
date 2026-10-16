@@ -4,10 +4,10 @@ import { pixelCover } from './player/pixel-cover.mjs';
 import './player/player.css';
 import Dialog from './Dialog';
 import DiscogsLink from './DiscogsLink';
-import { PixelVinyl, RecordTools, useRecordLibrary } from './RecordLibrary';
+import { PixelVinyl, RecordTools, useRecordLibrary, useRecordStyle } from './RecordLibrary';
 import './record-card.css';
 import { ShowroomArtwork } from './RoomArtwork';
-import { genresFor } from './record-library.mjs';
+import { albumKey, genresFor } from './record-library.mjs';
 import { trackNames } from './room-model.mjs';
 import { updateItem } from './collection-api.mjs';
 import { formatDuration } from './lib/time-format.mjs';
@@ -34,6 +34,22 @@ function PixelCoverTool({ item, onChanged }) {
 }
 
 const duration = (ms) => ms > 0 ? formatDuration(ms) : '';
+// 压片档案: a small inventory slip under the tools: this pressing's vinyl, running time
+// and the boxes it lives in, with the record itself at 1x as the swatch.
+function PressingSlip({ item, names, library }) {
+  const style = useRecordStyle(item), key = albumKey(item);
+  const total = (item.trackDetails || []).reduce((sum, track) => sum + (track?.lengthMillis > 0 ? track.lengthMillis : 0), 0);
+  const boxes = library ? library.boxes.filter((box) => box.keys.includes(key)).map((box) => box.name) : [];
+  const vinyl = [style.splatter && style.splashes.length ? `${style.splashes.length} 色放射泼溅` : '素色黑胶', style.opacity < 100 ? `透明度 ${style.opacity}%` : ''].filter(Boolean).join(' · ');
+  return <section className="record-card-slip" aria-label="压片档案">
+    <PixelVinyl item={item} className="record-card-slip-disc"/>
+    <dl>
+      <div><dt>黑胶</dt><dd>{vinyl}</dd></div>
+      <div><dt>曲目</dt><dd>{names.length ? `${names.length} 首${total ? ` · ${formatDuration(total)}` : ''}` : '待补充'}</dd></div>
+      {library && item.type === 'album' && <div><dt>唱片盒</dt><dd>{boxes.length ? boxes.join('、') : '未分组'}</dd></div>}
+    </dl>
+  </section>;
+}
 // One album: cover and vinyl, track list that plays on the deck, personal notes.
 export default function RecordCard({ item, close, onChanged, onRemove }) {
   const library = useRecordLibrary(), names = trackNames(item), genres = library ? genresFor(item, library.data) : [];
@@ -55,6 +71,7 @@ export default function RecordCard({ item, close, onChanged, onRemove }) {
         {/* The record pulled half out of its sleeve, both drawn in whole art pixels. */}
         <div className="record-card-sleeve"><PixelVinyl item={item} className="record-card-vinyl"/><ShowroomArtwork item={item} pixel className="record-card-cover"/></div>
         <div className="record-card-tools"><button type="button" className="pixel-button is-primary" onClick={() => play(0)}><Play size={16}/>放上唱机</button><RecordTools item={item}/><DiscogsLink item={item}/><PixelCoverTool item={item} onChanged={onChanged}/></div>
+        <PressingSlip item={item} names={names} library={library}/>
       </div>
       <div className="record-card-copy">
         {/* Liner notes: the album's facts and side A on a paper insert. */}

@@ -2,6 +2,7 @@ import React, { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { createPortal } from 'react-dom';
 import useCoverColour from '../useCoverColour';
 import { sleeveTone } from '../player/pixel-cover.mjs';
+import { DEFAULT_RECORD_STYLE } from '../record-library.mjs';
 import { ARM_FRAMES, DECK_BODY, DECK_H, DECK_SHADOW, DECK_W, SHEEN_FRAMES, recordRuns } from './deck-sprite.mjs';
 import { bindEnergyVar } from './playback-listener.mjs';
 import './scene-deck.css';
@@ -31,8 +32,9 @@ function SceneDeck({ anchor, item, spinning = false, vinyl, readOnly = false, on
   // Quantised to eighths and written only on change, so it restyles the deck ≤ 8 levels.
   useEffect(() => bindEnergyVar(() => deck.current, '--deck-energy'), []);
   // Label in the cover's own colour; a coverless record takes its generated sleeve's ink.
-  const coverLabel = useCoverColour(item?.cover), sleeveLabel = useMemo(() => item && !item.cover ? sleeveTone(item) : null, [item?.title, item?.artist, item?.cover]);
-  const label = sleeveLabel || coverLabel;
+  // If the cover's pixels can't be read (useCoverColour falls back to the default base), the sleeve's ink is used too.
+  const coverLabel = useCoverColour(item?.cover), sleeveLabel = useMemo(() => item ? sleeveTone(item) : null, [item?.title, item?.artist]);
+  const label = item && (!item.cover || coverLabel === DEFAULT_RECORD_STYLE.base) ? sleeveLabel : coverLabel;
   const [dropping, setDropping] = useState(false);
   // The 22×56 record grid only changes with the record, its vinyl colour and label.
   const record = useMemo(() => item ? recordRuns(darken(vinyl?.base || "#2a201a", .45), label) : null, [item?.id, vinyl?.base, label]);

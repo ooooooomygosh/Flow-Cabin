@@ -60,7 +60,7 @@ export function VinylDisc({ item, value, className = '' }) {
 // library, label in the cover's colour (or the generated sleeve's ink when coverless).
 export function PixelVinyl({ item, value, className = '' }) {
   const style = useRecordStyle(item, value), cover = useCoverColour(item?.cover);
-  const label = item && !item.cover ? sleeveTone(item) : liftLabel(cover, 100);
+  const label = item && (!item.cover || cover === DEFAULT_RECORD_STYLE.base) ? sleeveTone(item) : liftLabel(cover, 100);
   return <PixelRecord className={className} base={style.base} opacity={style.opacity} splatter={style.splatter} splashes={style.splashes} label={label} seed={albumKey(item)}/>;
 }
 

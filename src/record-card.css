@@ -13,6 +13,13 @@
 .record-card-sleeve .record-card-cover::after { content: ''; position: absolute; z-index: 4; top: 4px; bottom: 4px; right: 0; width: 2px; background: var(--px-shadow); pointer-events: none; }
 .record-card-tools { display: flex; flex-wrap: wrap; gap: 8px; }
 .record-card-tools .record-tools-button, .record-card-tools .discogs-link { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; font-size: 12px; color: var(--px-ink); background: var(--px-surface-2); border: 2px solid var(--px-border); box-shadow: var(--px-shadow-1); text-decoration: none; }
+/* 压片档案: an inventory slip on the wood, the record at 1x as its swatch. */
+.record-card-slip { display: flex; align-items: center; gap: 14px; padding: 10px 12px; background: var(--px-surface-card); border: 2px solid var(--px-shadow); box-shadow: inset 2px 2px 0 var(--px-surface-3), var(--px-shadow-1); }
+.record-card-slip-disc { flex: none; width: 48px; height: 48px; image-rendering: pixelated; }
+.record-card-slip dl { display: grid; gap: 4px; margin: 0; min-width: 0; }
+.record-card-slip dl div { display: flex; gap: 10px; min-width: 0; font-size: 12px; line-height: 16px; }
+.record-card-slip dt { flex: none; width: 36px; color: var(--px-ink-faint); }
+.record-card-slip dd { margin: 0; min-width: 0; color: var(--px-ink); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .record-card-copy { min-width: 0; display: grid; align-content: start; gap: 12px; }
 
 /* Liner notes: paper 9-slice, paper ink, ruled like a printed insert. */

@@ -63,7 +63,9 @@ test('the record label carries the cover colour, shaded underneath', () => {
   const luma = (hex) => { const n = parseInt(hex.slice(1), 16); return (n >> 16) * .3 + ((n >> 8) & 255) * .59 + (n & 255) * .11; };
   assert.ok(luma(liftLabel('#16191d')) >= 120 && luma(liftLabel('#355d6a')) >= 120, 'a dark cover colour is lifted so the label reads on black vinyl');
   const runs = recordRuns('#16110e', '#e0ad69'), fills = runs.map((r) => r.fill);
-  assert.ok(fills.filter((f) => f === '#e0ad69').length >= 2);
+  const labelCells = runs.filter((r) => r.fill === '#e0ad69').reduce((n, r) => n + r.w, 0);
+  assert.ok(labelCells >= 18, `label reads at deck size (${labelCells} cells in the cover colour)`);
+  assert.ok(runs.some((r) => r.fill !== '#e0ad69' && luma(r.fill) > luma('#16110e') + 60), 'a lit run-out ring frames the label');
   assert.ok(fills.some((f) => f !== '#e0ad69' && luma(f) < luma('#e0ad69') * .8), 'a darker label shade');
   assert.ok(recordRuns('#16110e', '#355d6a').some((r) => r.fill === liftLabel('#355d6a')), 'dark labels are drawn lifted');
 });

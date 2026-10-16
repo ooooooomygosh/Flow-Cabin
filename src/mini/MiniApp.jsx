@@ -6,6 +6,7 @@ import { PlayPixel, PausePixel, PreviousPixel, NextPixel, NotePixel, ClockPixel 
 import RecordSleeve from '../ui/RecordSleeve';
 import PixelRecord from '../ui/PixelRecord';
 import { sleeveTone } from '../player/pixel-cover.mjs';
+import { liftLabel } from '../scene/deck-sprite.mjs';
 
 // The lamp's reflection travelling round the record: 8 frames in one strip that a
 // CSS animation steps through (8 fps), so the record reads as turning without
@@ -22,10 +23,10 @@ export function MiniPlayer({ snapshot, command, player = () => {}, exit }) {
   const track = snapshot?.track || (playing ? '正在播放' : '唱机休息中');
   const focusState = phase === 'idle' ? '' : paused ? '专注暂停' : phase === 'focus' ? '专注中' : '休息中';
   const status = [playing ? '正在播放' : snapshot?.track ? '已暂停' : '双击回到小屋', focusState].filter(Boolean).join(' · ');
-  const record = useMemo(() => ({ title: snapshot?.track || '心流小屋', artist: 'mini' }), [snapshot?.track]), tone = useMemo(() => sleeveTone(record), [record]);
+  const record = useMemo(() => ({ title: snapshot?.track || '心流小屋', artist: 'mini' }), [snapshot?.track]), tone = useMemo(() => liftLabel(sleeveTone(record), 150), [record]);
   return <div className={`mini-bar ${playing ? 'is-playing' : ''}`} onDoubleClick={exit} title="双击回到小屋窗口">
     <span className="mini-deck" aria-hidden="true">
-      <span className="mini-record"><PixelRecord base="#16191d" label={tone} seed={record.title}/><span className="mini-sheen"><svg viewBox="0 0 384 48" shapeRendering="crispEdges">{SHEEN.map(([x, y, ox, oy], i) => <g key={i} fill="#e4dfcc"><rect x={i * 48 + x - 1} y={y - 1} width="2" height="2"/><rect x={i * 48 + ox} y={oy} width="1" height="1" opacity=".6"/></g>)}</svg></span></span>
+      <span className="mini-record"><PixelRecord base="#2b2420" label={tone} seed={record.title}/><span className="mini-sheen"><svg viewBox="0 0 384 48" shapeRendering="crispEdges">{SHEEN.map(([x, y, ox, oy], i) => <g key={i} fill="#e4dfcc"><rect x={i * 48 + x - 1} y={y - 1} width="2" height="2"/><rect x={i * 48 + ox} y={oy} width="1" height="1" opacity=".6"/></g>)}</svg></span></span>
       <RecordSleeve item={record} title={false} className="mini-sleeve"/>
     </span>
     <span className="mini-copy">
