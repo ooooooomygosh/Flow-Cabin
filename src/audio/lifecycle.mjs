@@ -40,7 +40,7 @@ export function createSoundscapeController({ initialMix, createContext, createAm
     }).catch(() => {
       if (!valid()) return;
       stopMusic();
-      emit({ error: 'Lofi 生成器无法启动，请检查系统音频。' });
+      emit({ error: 'Lo-fi 电台没有响，请检查系统音频后重试。' });
     }).finally(() => { if (loading === pending) loading = null; });
     loading = pending;
   };

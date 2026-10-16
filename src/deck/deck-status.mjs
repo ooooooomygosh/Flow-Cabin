@@ -14,7 +14,7 @@ export const mediaErrorMessage = (code) => MEDIA_ERRORS[code] || '音频加载�
 
 export function deckStatusText({ status = 'idle', error = '', trial = false, quality = '', remote = false } = {}, provider = '', skipping = false) {
   if (error) return skipping ? `${error} 稍后自动播放下一首…` : error;
-  const playing = `${provider === 'ma' ? '服务器播放器正在播放' : provider === 'appleMusic' ? '正在“音乐”App 中播放' : provider === 'local' ? '正在播放本地文件' : '正在播放'}${trial ? ' · 试听片段' : ''}${quality && !remote && provider !== 'local' ? ` · ${quality}` : ''}`;
+  const playing = `${provider === 'ma' ? '服务器播放器正在播放' : provider === 'appleMusic' ? '正在「音乐」App 中播放' : provider === 'local' ? '正在播放本地文件' : '正在播放'}${trial ? ' · 试听片段' : ''}${quality && !remote && provider !== 'local' ? ` · ${quality}` : ''}`;
   return { idle: '待播放', loading: '正在连接音源…', searching: '正在匹配原始曲目…', choose: '请选择对应的曲目版本', playing, paused: '播放已暂停', ended: '本曲播放结束', waiting: provider === 'appleMusic' ? '等待“音乐”App' : '等待服务器播放器', buffering: '正在缓冲音频…' }[status] || '待播放';
 }
 

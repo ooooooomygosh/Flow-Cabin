@@ -97,7 +97,7 @@ export default function ListeningCorner({ item, items = [], vinyl, provider, spi
           <div className="corner-copy">
             <small>{item.type === 'playlist' ? '歌单' : item.year || '唱片'}{speed === 45 ? ' · 45 转加速' : ''}</small>
             <h2 title={item.title}>{displayTitle(item.title)}</h2>
-            <p title={names[trackIndex]}>{String(trackIndex + 1).padStart(2, '0')} · {displayTitle(audible && playback.actualTrack || names[trackIndex] || '原始资料暂无曲目')}</p>
+            <p title={names[trackIndex]}>{String(trackIndex + 1).padStart(2, '0')} · {displayTitle(audible && playback.actualTrack || names[trackIndex] || '暂无曲目信息')}</p>
             <p className="corner-artist">{item.type === 'playlist' ? trackArtist(item, trackIndex) : item.artist}</p>
           </div>
           <div className="corner-transport">

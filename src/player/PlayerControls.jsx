@@ -67,7 +67,7 @@ export default function PlayerControls({ item, items = [], provider, spinning, t
     </div>}
     {player?.queueError && <p className="player-error" role="alert">{player.queueError}</p>}
     {failed && <div className="player-error" role="alert"><span>{playback.error}</span><span className="player-error-actions"><button type="button" onClick={playback.retry}>重试</button><button type="button" onClick={() => window.dispatchEvent(new Event('cabin-open-music-settings'))}>音源设置</button></span></div>}
-    {visual && item && <p className="player-visual-note">仅展示唱片 · 声音可在「设置 → 音源」中开启</p>}
+    {visual && item && <p className="player-visual-note">仅展示 · 声音可在「设置 › 音源」中开启</p>}
     {audible && provider !== 'ma' && item && <div className="turntable-audio-sliders pocket-volume">
       <label className="player-volume"><button type="button" className="player-mute" aria-label={playback.muted ? '取消静音' : '静音'} title="静音 · M" aria-pressed={playback.muted} onClick={() => playback.setMuted(!playback.muted)}>{playback.muted || playback.volume === 0 ? <SpeakerOff size={14}/> : <SpeakerWave size={14}/>}</button>音量<input type="range" aria-label="音乐音量" min="0" max="1" step=".01" value={playback.muted ? 0 : playback.volume} onChange={(event) => playback.setVolume(Number(event.target.value))}/></label>
     </div>}

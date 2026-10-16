@@ -55,7 +55,7 @@ export default function RecordCard({ item, close, onChanged, onRemove }) {
         <div className="record-card-tools"><button type="button" className="pixel-button is-primary" onClick={() => play(0)}><Play size={16}/>放上唱机</button><RecordTools item={item}/><DiscogsLink item={item}/><PixelCoverTool item={item} onChanged={onChanged}/></div>
       </div>
       <div className="record-card-copy">
-        <small className="record-card-kicker">{item.type === 'song' ? 'SINGLE · 单曲' : 'ALBUM · 专辑'}{item.source === 'local-music' ? ' · 本地文件' : ''}</small>
+        <small className="record-card-kicker">{item.type === 'song' ? '单曲' : item.type === 'playlist' ? '歌单' : '专辑'}{item.source === 'local-music' ? ' · 本地文件' : ''}</small>
         <h3>{item.title}</h3>
         <p className="record-card-artist">{item.artist}</p>
         <dl className="record-card-facts">

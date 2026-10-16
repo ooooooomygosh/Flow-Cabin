@@ -43,7 +43,7 @@ export async function verifyAppleHandoff({ browser, origin, output, check }) {
       return route.continue();
     });
     const page = await context.newPage(); page.setDefaultTimeout(8000); page.on('pageerror', error => errors.push(error.message));
-    const waiting = () => page.getByText('请在“音乐”App 播放所选歌曲', { exact: true }).first().waitFor();
+    const waiting = () => page.getByText('请在「音乐」App 播放所选歌曲', { exact: true }).first().waitFor();
     const progress = page.getByRole('slider', { name: '音乐播放进度', exact: true });
     const pollAgain = async () => { const previous = polls; for (let i = 0; i < 40 && polls <= previous; i++) await page.waitForTimeout(100); assert.ok(polls > previous); await page.waitForTimeout(100); };
     try {
