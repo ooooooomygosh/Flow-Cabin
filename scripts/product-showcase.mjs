@@ -47,6 +47,7 @@ try {
     if (url.pathname === '/api/items') return route.fulfill({ json: { items } });
     if (url.pathname === '/desktop-music/config') return route.fulfill({ json: { qqLoggedIn: false, neteaseLoggedIn: false } });
     if (url.pathname === '/desktop-music/local/summary') return route.fulfill({ json: { folders: [], albumCount: 0, trackCount: 0 } });
+    if (url.pathname === '/desktop-music/local/albums') return route.fulfill({ json: { albums: [] } }); // empty library: 播放测试 plays the chime
     if (/^\/(api|desktop-music)\//.test(url.pathname)) { report.unexpectedRequests.push(url.pathname); return route.abort(); }
     return route.continue();
   };
@@ -68,7 +69,7 @@ try {
   items = albums; await page.setViewportSize({ width: 1440, height: 900 }); await page.reload(); await page.locator('.room-record').first().waitFor();
   await page.waitForFunction(() => document.querySelectorAll('.pixel-artwork canvas.is-painted').length >= 12);
   await page.locator('.room-record').nth(5).dblclick(); await page.locator('.room-turntable[data-loaded-id="showcase-5"]').waitFor();
-  await page.locator('.player-quick-source').waitFor(); await page.waitForTimeout(400); await shot('cabin', true);
+  await page.locator('.turntable-status', { hasText: '无音频' }).waitFor(); // the quick-source row is gone; visual mode says so in the status await page.waitForTimeout(400); await shot('cabin', true);
   assert.equal(await page.locator('.room-shelf-navigation').count(), 0); check('twelve-albums-no-redundant-paging-and-visual-audio-hint');
   await page.locator('.focus-badge').click(); await page.getByRole('button', { name: '开始专注', exact: true }).click(); await page.locator('.focus-badge.is-running').waitFor(); await page.locator('.room-cat-bubble', { hasText: '还剩 25 分钟' }).waitFor(); await shot('focus', true);
   await page.getByRole('button', { name: '暂停', exact: true }).click(); check('focus-start-and-pause-from-visible-tool'); await page.getByRole('button', { name: '收起专注工具' }).click();
