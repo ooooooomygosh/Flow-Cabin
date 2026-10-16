@@ -23,6 +23,16 @@
 
 /* The cat sits on the visible floor, clear of the deck, footer and focus dock. */
 .room-cat{position:absolute;left:25%;bottom:118px;width:clamp(96px,8.5vw,168px);aspect-ratio:1;z-index:9;pointer-events:auto;cursor:pointer;background:none;border:0;padding:0;filter:drop-shadow(0 3px 0 #1a0f0866)}
+/* In a scene the 32-cell sprite takes the room's own pixel: 4 art px × --scene-k per
+   cell, snapped to a whole multiple of 32 CSS px (2×, 3×, 4×…) so every cell is even. */
+.cabin-scene.room-scene .room-cat{width:max(64px,round(nearest,128px * var(--scene-k,1),32px))}
+/* Feet on the scene's painted floor (scene-catalog `floor`, art px). useCatPlacement maps
+   it to --cat-floor-scene px (≥28px from the edge); before that, the old baselines. */
+.cabin-scene[data-room-look=pixel],.cabin-scene[data-room-look=warm]{--scene-floor:880}
+.cabin-scene[data-room-look=night-study]{--scene-floor:1000}
+.cabin-scene:is([data-room-look=forest],[data-room-look=seaside],[data-room-look=starlight]){--scene-floor:900}
+.cabin-scene.room-scene .room-cat{--cat-floor:var(--cat-floor-scene,118px)}
+.room-zen:not(.room-zen-tools) .cabin-scene.room-scene .room-cat,.wallpaper-room .cabin-scene.room-scene .room-cat{--cat-floor:var(--cat-floor-scene,28px)}
 /* bubble showing: lift the cat above the console (.room-turntable z10) — both live in .room-scene's isolated stacking context, so this stays under the focus dock/dialogs */
 .room-scene .room-cat:has(> .room-cat-bubble){z-index:var(--z-room-pet,22);pointer-events:none}
 .room-cat .pixel-cat{display:block;width:100%;height:100%;image-rendering:pixelated}
@@ -34,7 +44,6 @@
 /* Zen mode keeps only the room, the cat, the timer badge and an exit. */
 .room-zen:not(.room-zen-tools) .app-titlebar,.room-zen:not(.room-zen-tools) .cabin-room .room-now-playing,.room-zen:not(.room-zen-tools) .room-shelf-navigation,.room-zen:not(.room-zen-tools) .cabin-room .cabin-toolbar>:not(.zen-keep),.room-zen:not(.room-zen-tools) .shelf-filters{display:none!important}
 .room-zen:not(.room-zen-tools) .cabin-room .cabin-toolbar{top:14px;left:auto;right:16px;background:#27180d99}
-.room-zen:not(.room-zen-tools) .room-cat,.wallpaper-room .room-cat{bottom:28px}
 .room-zen:not(.room-zen-tools) .room-turntable{opacity:.08;transition:opacity .3s}.room-zen:not(.room-zen-tools) .room-turntable:hover,.room-zen:not(.room-zen-tools) .room-turntable:focus-within{opacity:1}
 /* The focus dock covers the shelf buttons; the wheel and arrow keys still page. */
 .room-focus-open .room-shelf-navigation{display:none}
