@@ -106,7 +106,7 @@
 
 /* Rail keys: square 32px toggles with a light. */
 .room-turntable .turntable-controls .pocket-key {
-  position: relative; grid-row: 2; display: grid; place-items: center; box-sizing: border-box; width: 32px; min-width: 0; height: 32px; margin: 0; padding: 0;
+  position: relative; grid-row: 2; display: grid; place-items: center; width: 32px; min-width: 0; height: 32px; margin: 0; padding: 0;
   color: var(--px-ink-dim); background: var(--px-surface-2); border: 2px solid var(--px-border); box-shadow: 2px 2px 0 var(--pk-outline); cursor: pointer; transition: border-color 90ms steps(2, end);
 }
 .room-turntable .pocket-keys .pocket-key:nth-child(1) { grid-column: 1; }
@@ -122,8 +122,8 @@
 
 /* Track selector: an input group on the same rail. */
 .room-turntable .pocket-track { grid-column: 3; grid-row: 2; display: flex; align-items: stretch; gap: 0; min-width: 0; margin: 0; font-size: 12px; color: var(--px-ink-dim); }
-.room-turntable .pocket-track span { box-sizing: border-box; display: grid; place-items: center; flex: none; width: 40px; height: 32px; padding: 0; font-size: 12px; line-height: 1; color: var(--px-ink); background: var(--px-surface-3); border: 2px solid var(--px-border); border-right: 0; }
-.room-turntable .pocket-track select { box-sizing: border-box; flex: 1; min-width: 0; height: 32px; margin: 0; color: var(--pk-ink); border: 2px solid var(--px-border); font: inherit; font-size: 12px; font-variant-numeric: tabular-nums; }
+.room-turntable .pocket-track span { display: grid; place-items: center; flex: none; width: 40px; height: 32px; padding: 0; font-size: 12px; line-height: 1; color: var(--px-ink); background: var(--px-surface-3); border: 2px solid var(--px-border); border-right: 0; }
+.room-turntable .pocket-track select { flex: 1; min-width: 0; height: 32px; margin: 0; color: var(--pk-ink); border: 2px solid var(--px-border); font: inherit; font-size: 12px; font-variant-numeric: tabular-nums; }
 @container (max-width: 220px) { .room-turntable .pocket-track { grid-column: 1 / -1; grid-row: 3; } }
 .room-turntable .turntable-audio-sliders.pocket-volume { display: block; margin: 10px -12px -12px; padding: 8px 12px 10px; background: linear-gradient(#34211499, #24160f); box-shadow: 0 -2px 0 #00000059; }
 .room-turntable .pocket-volume .player-volume { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--px-ink-dim); }

@@ -13,7 +13,7 @@
 .app-brand strong, .cabin-dialog-header h2, .record-card-copy h3, .room-selection-copy h2,
 .turntable-copy > strong, .turntable-heading, .room-empty > p,
 .pixel-button, .cabin-room .cabin-toolbar button, .room-selection-actions button, .room-selection-actions a,
-.dialog-tabs button, .segmented button, .room-cat-bubble, .app-toast, .room-shelf-navigation,
+.dialog-tabs button, .segmented button, .room-cat-bubble, .app-toast, .room-shelf-navigation, .focus-badge,
 .cabin-scene .room-empty button, .turntable-controls button, .turntable-source, .backup-stats dt,
 .record-card-kicker, .room-selection-copy small, .app-brand small, .scene-choice strong, .pet-choice strong {
   font-family: var(--px-font-cn); font-weight: 400; letter-spacing: 0; -webkit-font-smoothing: none;
@@ -57,12 +57,14 @@
 .pixel-button.is-quiet { box-shadow: none; }
 .pixel-button.is-quiet:hover:not(:disabled) { box-shadow: var(--px-shadow-1); }
 
-/* HUD chips (toolbar groups, 沉浸, the focus badge): one framed strip each,
-   keys light up like lamp buttons. */
-.cabin-toolbar-group {
+/* HUD chips (toolbar groups, 沉浸, the focus badge): one framed strip each, 40px tall,
+   keys light up like lamp buttons. A running timer lights the badge frame. */
+.cabin-toolbar-group, .cabin-room > .focus-badge {
   border: 4px solid transparent; border-image: var(--px-frame-img-quiet) 2 / 4px stretch; background-clip: padding-box;
-  background-color: var(--px-surface-hud); box-shadow: var(--px-shadow-2); padding: 2px;
+  background-color: var(--px-surface-hud); box-shadow: var(--px-shadow-2);
 }
+.cabin-toolbar-group { padding: 2px; }
+.cabin-room > .focus-badge.is-running { border-image-source: var(--px-frame-img-accent); }
 .cabin-room .cabin-toolbar button { transition: background-color var(--px-dur-fast) steps(2, end), color var(--px-dur-fast) steps(2, end), translate var(--px-dur-fast) steps(2, end); }
 .cabin-room .cabin-toolbar button:hover:not(:disabled) { background: #ffd99c1f; color: var(--px-ink); translate: 0 -1px; }
 .cabin-room .cabin-toolbar button:active:not(:disabled) { translate: 0 1px; transition-duration: 0s; }
@@ -89,7 +91,7 @@
 /* Canonical form controls: dark inset well, amber edge on hover/focus, one chevron SVG.
    Not: .pixel-button, range, checkbox, .segmented. */
 :is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) :is(select, textarea), :is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) input:is([type=text], [type=search], [type=number], [type=date], [type=url]), :is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) input:not([type]) {
-  appearance: none; -webkit-appearance: none; box-sizing: border-box; min-height: 32px;
+  appearance: none; -webkit-appearance: none; min-height: 32px;
   background-color: var(--px-surface-inset); color: var(--px-ink); border: 2px solid var(--px-border); box-shadow: var(--px-shadow-inset);
   transition: border-color var(--px-dur-fast) steps(2, end);
 }

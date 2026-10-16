@@ -25,10 +25,12 @@
 .cabin-room, .cabin-scene.room-scene, .cabin-rack .room-record-slot, .ambient-life, .cabin-atmosphere, .wallpaper-room { overflow: hidden; overflow: clip; }
 .cabin-scene.room-scene { overscroll-behavior: none; }
 /* Short windows scale the art down to keep deck + shelf clear of the toolbar and
-   footer (roomGeometry band). Any side gutter shows the same scene, dimmed, so
-   the stage never looks letterboxed. */
-.cabin-scene.room-scene::before { content: ''; display: block; position: absolute; inset: -8%; z-index: -1; pointer-events: none;
-  background: var(--scene-view) center / cover no-repeat; image-rendering: pixelated; filter: brightness(.38) saturate(.8); }
+   footer (roomGeometry band). The side gutters show the scene's own solid colour
+   (RoomScene sets it) with a 2-step shade against each art edge: no mirrored,
+   dimmed copy of the art that reads as a seam. */
+.cabin-scene.room-scene::before { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: linear-gradient(90deg, transparent calc(var(--scene-x) - 16px), #0d080540 calc(var(--scene-x) - 16px) calc(var(--scene-x) - 8px), #0d080580 calc(var(--scene-x) - 8px) var(--scene-x),
+    transparent var(--scene-x) calc(var(--scene-x) + 1448px * var(--scene-k)), #0d080580 calc(var(--scene-x) + 1448px * var(--scene-k)) calc(calc(var(--scene-x) + 1448px * var(--scene-k)) + 8px), #0d080540 calc(calc(var(--scene-x) + 1448px * var(--scene-k)) + 8px) calc(calc(var(--scene-x) + 1448px * var(--scene-k)) + 16px), transparent calc(calc(var(--scene-x) + 1448px * var(--scene-k)) + 16px)); }
 /* The stage re-fits when the focus panel opens/closes: stepped, like a camera
    nudging along the pixel grid. Reduced motion jumps (guards layer). */
 .cabin-scene-canvas { transition: left 240ms steps(4, end), top 240ms steps(4, end), width 240ms steps(4, end), height 240ms steps(4, end); }
@@ -44,8 +46,8 @@
 .cabin-rack .room-record:is(:hover, :active, :focus-visible, .is-selected) { outline: none; }
 .room-record-sleeve { position: absolute; z-index: 2; left: 5%; bottom: 2%; width: 90%; aspect-ratio: 1; pointer-events: none; background: #d8c8a9; border: 1px solid #18120cb3; box-shadow: 2px 2px 0 #130d08a6, 0 2px 0 #0d080580; transition: translate var(--px-dur-fast) steps(2, end); }
 .room-record-sleeve::after { content: ''; position: absolute; z-index: 3; inset: 0; pointer-events: none; box-shadow: inset 1px 1px 0 #fff5d533, inset -1px -1px 0 #130b0555; }
-/* Hover pulls the sleeve up two pixels, like lifting a record from the crate (composited). */
-.cabin-rack .room-record:hover .room-record-sleeve { translate: 0 -2px; }
+/* Hover lifts the sleeve one art cell (4 art px at the scene scale), like taking a record from the crate. */
+.cabin-rack .room-record:hover .room-record-sleeve { translate: 0 round(calc(-4px * var(--scene-k, .5)), 1px); }
 .cabin-rack .room-record.is-selected .room-record-sleeve { outline: 2px solid var(--px-accent-hi); outline-offset: 1px; }
 .cabin-rack .room-record:focus-visible .room-record-sleeve { outline: 2px dashed #fff7df; outline-offset: 2px; }
 .cabin-rack .room-record:active .room-record-sleeve { translate: 0 1px; transition-duration: 0s; }

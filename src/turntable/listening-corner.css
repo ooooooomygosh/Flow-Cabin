@@ -20,7 +20,7 @@
   radial-gradient(circle at 70% 28%, var(--px-ink) 0 6px, #ffe9cb33 7px 16px, transparent 17px), var(--window);
   box-shadow: 0 0 0 6px #4a2a16, 0 0 0 8px var(--px-shadow), 8px 10px 0 8px #0d080588; }
 .is-dusk .corner-window { background-image: linear-gradient(90deg, transparent calc(50% - 3px), #2a1a11 calc(50% - 3px) calc(50% + 3px), transparent calc(50% + 3px)), linear-gradient(180deg, transparent calc(50% - 3px), #2a1a11 calc(50% - 3px) calc(50% + 3px), transparent calc(50% + 3px)), linear-gradient(180deg, #e98a5b, #8a4a5c 60%, #4a2a40); }
-.corner-lamp { position: absolute; left: 4%; top: 0; width: 52%; height: 88%; background: radial-gradient(ellipse 50% 46% at 50% 68%, color-mix(in srgb, var(--lamp) 34%, transparent), color-mix(in srgb, var(--lamp) 10%, transparent) 55%, transparent 72%);
+.corner-lamp { position: absolute; left: 4%; top: 0; width: 52%; height: 88%; background: radial-gradient(ellipse 50% 46% at 50% 68%, color-mix(in srgb, var(--lamp) 34%, transparent) 0 22%, color-mix(in srgb, var(--lamp) 24%, transparent) 22% 40%, color-mix(in srgb, var(--lamp) 14%, transparent) 40% 56%, color-mix(in srgb, var(--lamp) 6%, transparent) 56% 72%, transparent 72%);
   opacity: calc(.8 + var(--corner-energy) * .2); transition: opacity 240ms steps(3, end); }
 .corner-dust { position: absolute; left: 10%; top: 10%; width: 40%; height: 50%; --dust: radial-gradient(#ffe9cb88 1px, transparent 1.5px), radial-gradient(#ffe9cb55 1px, transparent 1.5px); opacity: .5; overflow: hidden; }
 /* Dust drifts as one composited layer, one tile per loop, in 32 stepped frames (no background-position repaint). */
@@ -36,8 +36,8 @@
 .corner-stage { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(260px, 1fr); align-items: end; gap: clamp(16px, 3vw, 44px); min-height: 0; padding: 0 clamp(16px, 4vw, 64px) clamp(8px, 2vh, 20px); }
 .corner-deck { position: relative; display: grid; place-items: end center; min-height: 0; height: 100%; }
 .pixel-turntable { display: block; width: 100%; max-width: 960px; max-height: 100%; aspect-ratio: 240 / 150; height: auto; image-rendering: pixelated; touch-action: none; }
-/* Warm glow: a static, pre-blurred gradient behind the canvas; only opacity/transform follow the music. */
-.corner-deck::before { content: ''; position: absolute; z-index: -1; inset: -8% -6% 0; pointer-events: none; background: radial-gradient(ellipse 50% 46% at 50% 55%, color-mix(in srgb, var(--lamp) 30%, transparent), color-mix(in srgb, var(--lamp) 10%, transparent) 55%, transparent 72%);
+/* Warm glow: a static, 4-band stepped gradient behind the canvas; only opacity/transform follow the music. */
+.corner-deck::before { content: ''; position: absolute; z-index: -1; inset: -8% -6% 0; pointer-events: none; background: radial-gradient(ellipse 50% 46% at 50% 55%, color-mix(in srgb, var(--lamp) 34%, transparent) 0 22%, color-mix(in srgb, var(--lamp) 24%, transparent) 22% 40%, color-mix(in srgb, var(--lamp) 14%, transparent) 40% 56%, color-mix(in srgb, var(--lamp) 6%, transparent) 56% 72%, transparent 72%);
   opacity: calc(.45 + var(--corner-energy) * .55); transform: scale(calc(.94 + var(--corner-energy) * .08)); transition: opacity 240ms steps(3, end), transform 240ms steps(3, end); will-change: opacity, transform; }
 .corner-empty { position: absolute; left: 50%; bottom: 46%; transform: translateX(-50%); padding: 8px 12px; font-size: 13px; color: var(--px-ink-dim); background: #0d0805cc; border: 2px solid var(--px-border); white-space: nowrap; }
 

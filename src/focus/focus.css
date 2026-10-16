@@ -2,8 +2,8 @@
 @layer guards, reset, features, skin, overrides;
 @layer features {
 .focus-badge{font-variant-numeric:tabular-nums}
-.cabin-room > .focus-badge{position:absolute;z-index:21;top:calc(var(--px-titlebar) + 10px);right:16px;display:flex;align-items:center;gap:7px;padding:6px 10px;color:var(--px-ink-dim);background:var(--px-surface-hud);border:2px solid var(--px-border);box-shadow:2px 2px 0 var(--px-shadow);font:inherit;font-size:12px;cursor:pointer;transition:border-color var(--px-dur-fast) steps(2,end),color var(--px-dur-fast) steps(2,end)}
-.focus-badge:hover{border-color:var(--px-border-hi)}
+.cabin-room > .focus-badge{position:absolute;z-index:21;top:calc(var(--px-titlebar) + 10px);right:16px;display:flex;align-items:center;gap:8px;padding:8px 12px;color:var(--px-ink-dim);font:inherit;font-size:12px;line-height:16px;cursor:pointer;transition:color var(--px-dur-fast) steps(2,end)}
+.focus-badge:hover{color:var(--px-ink)}
 .focus-badge.is-running{color:var(--px-accent-hi)}
 .focus-badge.is-running::before{content:"";order:0;flex:none;width:6px;height:6px;background:var(--px-accent);animation:focus-lamp 1s steps(1,end) infinite}
 .focus-badge svg{order:-1}
@@ -16,8 +16,8 @@
 .cabin-room.cabin-room .cabin-toolbar{right:180px}
 .room-zen:not(.room-zen-tools) .cabin-room > .focus-badge{top:12px}
 .room-zen .cabin-room .cabin-toolbar{right:200px}
-.cabin-toolbar .focus-badge.is-running{background:var(--px-surface-hud);color:var(--px-accent-hi);border-color:var(--px-border)}
-.cabin-toolbar .focus-badge.phase-shortBreak,.cabin-toolbar .focus-badge.phase-longBreak{background:var(--px-surface-hud);color:var(--px-good)}
+.cabin-toolbar .focus-badge.is-running{color:var(--px-accent-hi)}
+.cabin-toolbar .focus-badge.phase-shortBreak,.cabin-toolbar .focus-badge.phase-longBreak{color:var(--px-good)}
 .focus-dock{position:absolute;z-index:20;top:calc(var(--room-header-bottom,82px) + 58px);right:16px;width:min(360px,calc(100% - 32px));max-height:calc(100% - var(--room-header-bottom,82px) - 90px);display:flex;flex-direction:column;color:var(--px-ink);background:#27180ef2;border:2px solid var(--px-brass);box-shadow:6px 6px 0 #120b06b3;image-rendering:pixelated;font-size:13px}
 .room-zen:not(.room-zen-tools) .focus-dock{top:70px;max-height:calc(100% - 100px)}
 .focus-dock-header{display:flex;align-items:flex-end;padding-top:4px;border-bottom:2px solid var(--px-border);background:var(--px-surface-inset)}
@@ -83,8 +83,9 @@
 .focus-lock{position:relative;flex:none;width:7px;height:5px;margin-top:3px;background:currentColor}.focus-lock::before{content:"";position:absolute;left:1px;bottom:5px;width:3px;height:3px;border:1px solid currentColor;border-bottom:0}
 
 .sound-mixer{display:grid;gap:12px}
-.sound-power{display:flex;justify-content:center;align-items:center;gap:8px;padding:9px;color:#ffe2b4;background:#5b3a22;border:2px solid #a8784a;box-shadow:3px 3px 0 #120b06aa}
-.sound-power.is-on{color:#24170d;background:var(--px-good);border-color:#d5f2c8}
+.sound-power{display:flex;justify-content:center;align-items:center;gap:8px;padding:9px;color:var(--px-ink);background:var(--px-surface-3);border:2px solid var(--px-shadow);box-shadow:inset 2px 2px 0 #ffffff1a,inset -2px -2px 0 #0000004d,var(--px-shadow-1)}
+/* On: the standard amber key with a moss LED, not a mint slab. */
+.sound-power.is-on{color:var(--px-ink-on-accent);background:var(--px-accent);box-shadow:inset 2px 2px 0 var(--px-accent-hi),inset -2px -2px 0 var(--px-accent-lo),var(--px-shadow-1)}.sound-power.is-on::before{content:'';width:6px;height:6px;background:var(--px-good);box-shadow:0 0 0 2px var(--px-shadow)}
 .sound-lofi{display:grid;gap:6px;padding:10px;background:#34210f;border:1px solid #5d3d24}
 .sound-lofi header{display:flex;justify-content:space-between;align-items:center}.sound-lofi header button{display:grid;place-items:center;padding:4px;color:#ffe2b4;background:#4a2f1a;border:1px solid #8a5f3a}
 .sound-section{margin:0;font-size:12px;color:var(--px-ink-dim);font-variant-numeric:tabular-nums}

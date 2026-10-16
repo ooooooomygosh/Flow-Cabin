@@ -13,43 +13,46 @@
 .room-turntable .turntable-controls button:hover:not(:disabled) { translate: 0 -1px; }
 .room-turntable .turntable-controls button:active:not(:disabled) { translate: 1px 1px; box-shadow: inset 2px 2px 0 #00000059; transition-duration: 0s; }
 .room-turntable .turntable-controls .turntable-toggle { background: var(--px-accent); color: var(--px-ink-on-accent); box-shadow: inset 2px 2px 0 var(--px-accent-hi), inset -2px -2px 0 var(--px-accent-lo), var(--px-shadow-1); }
-.room-turntable .turntable-hint { margin: 8px 0 0; font-size: 12px; color: var(--px-ink-faint); }
+/* The empty console title already says 双击封面… (AES-14): the repeat line stays hidden. */
+.room-turntable .turntable-hint { display: none; }
 
 /* The selected album sits below the rack, with the same outer frame width.
    Alpha belongs to the background only; labels and controls stay opaque.
-   A stable viewport-based height breaks the card-width → wrapping → art-size
-   feedback loop. Tight cards use labelled/accessible icon actions below. */
+   A fixed height (one row, never wrapping) breaks the card-width → wrapping →
+   art-size feedback loop. Tight cards drop labels to accessible icon actions. */
 .room-now-playing { display: flex; justify-content: space-between; align-items: center; }
 .room-selection-copy { min-width: 0; flex: 1; }
 .room-selection-copy > small { letter-spacing: .14em; color: #c49662; }
 .room-selection-copy h2 { overflow-wrap: anywhere; color: var(--px-ink); }
 .room-selection-copy p { font-size: 13px; color: #d3b58f; margin: 0; }
-.room-selection-actions { display: flex; gap: 10px; align-items: center; justify-content: flex-end; flex-wrap: wrap; }
+.room-selection-actions { display: flex; gap: 10px; align-items: center; justify-content: flex-end; }
 .room-selection-actions button, .room-selection-actions a { display: inline-flex; gap: 8px; align-items: center; padding: 9px 13px; background: #573722; color: #ffe0b6; text-decoration: none; }
 .cabin-room .room-now-playing {
   container-type: inline-size; position: absolute; z-index: 12;
   left: var(--room-shelf-left, 30%); right: auto; width: var(--room-shelf-width, 48%);
-  max-width: calc(100% - 24px); height: 104px; bottom: 14px; padding: 10px 12px;
+  max-width: calc(100% - 24px); height: 88px; bottom: 14px; padding: 6px 12px;
   background: rgb(36 22 15 / 70%); box-shadow: 5px 5px 0 #0d0805aa;
-  flex-direction: row; flex-wrap: wrap; gap: 8px 12px;
+  flex-direction: row; flex-wrap: nowrap; gap: 12px;
 }
-.cabin-room .room-now-playing .room-selection-copy { flex: 1 1 210px; }
-.cabin-room .room-now-playing .room-selection-copy p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.cabin-room .room-now-playing .room-selection-actions { flex: 0 1 auto; max-width: 100%; flex-wrap: wrap; gap: 6px; }
-.cabin-room .room-now-playing .room-selection-actions :is(button,a) { font-size: 12px; padding: 6px 8px; }
-@media (max-width: 1399px), (max-height: 700px) { .cabin-room .room-now-playing { height: 144px; } }
-@media (max-width: 800px), (max-height: 550px) { .cabin-room .room-now-playing { height: 160px; } }
-@media (max-width: 800px) { .room-selection-actions { justify-content: flex-start; } }
-@container (max-width: 520px) {
-  .room-now-playing .room-selection-actions span { display: none; }
-  .cabin-room .room-now-playing .room-selection-actions { justify-content: flex-start; }
-  .cabin-room .room-now-playing .room-selection-actions :is(button,a) { padding: 5px; }
-}
+/* One row at every size: the copy column gives way (ellipsis), the actions never wrap. */
+.cabin-room .room-now-playing .room-selection-copy { flex: 1 1 0; min-width: 0; }
+.cabin-room .room-now-playing .room-selection-copy h2 { margin: 0; }
+.cabin-room .room-now-playing .room-selection-copy p { line-height: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cabin-room .room-now-playing .room-selection-actions { flex: none; flex-wrap: nowrap; gap: 6px; }
+.cabin-room .room-now-playing .room-selection-actions :is(button,a) { font-size: 12px; min-height: var(--px-hit); padding: 6px 8px; }
 @container (max-width: 700px) {
   .room-now-playing:has(.room-queue-add) .room-selection-actions span { display: none; }
   .cabin-room .room-now-playing:has(.room-queue-add) .room-selection-actions :is(button,a) { padding: 5px; }
 }
-@container (max-width: 340px) { .room-now-playing .room-selection-copy > small { display: none; } }
+/* Mid-size windows keep the taller two-row card: its footprint is the safe area the room
+   geometry and the companion placement are tuned for (browser-smoke layout checks). */
+@media (max-width: 1399px) and (min-width: 1001px), (max-height: 700px) and (min-height: 621px) { .cabin-room .room-now-playing { height: 144px; flex-wrap: wrap; align-content: center; } .cabin-room .room-now-playing .room-selection-copy { flex-basis: 210px; } .cabin-room .room-now-playing .room-selection-actions { flex: 0 1 auto; flex-wrap: wrap; } }
+/* Compact windows (AES-16): a slimmer strip so the floor and the companion stay in view. */
+@media (max-width: 1000px), (max-height: 620px) { .cabin-room .room-now-playing { height: 72px; } .cabin-room .room-now-playing .room-selection-copy > small { display: none; } }
+@container (max-width: 520px) {
+  .room-now-playing .room-selection-actions span, .room-now-playing .room-selection-copy > small { display: none; }
+  .cabin-room .room-now-playing .room-selection-actions :is(button,a) { padding: 5px; }
+}
 
 /* These are ordinary buttons below the heading, outside its drag handle. */
 .turntable-room-tools { display: grid; gap: 3px; margin: 0 0 9px; }

@@ -1,7 +1,7 @@
 @layer guards, reset, features, skin, overrides;
 @layer features {
 html, body, #root { margin: 0; height: 100%; background: transparent; overflow: hidden; user-select: none; }
-.mini-bar { box-sizing: border-box; height: 100%; display: flex; align-items: center; gap: 8px; padding: 6px 10px; color: var(--px-ink); font: 12px/1.2 var(--px-font-cn); background: #1c120bcc; border: 2px solid var(--px-shadow); box-shadow: 3px 3px 0 #0d080599; image-rendering: pixelated; cursor: default; }
+.mini-bar { height: 100%; display: flex; align-items: center; gap: 8px; padding: 6px 10px; color: var(--px-ink); font: 12px/1.2 var(--px-font-cn); background: #1c120bcc; border: 2px solid var(--px-shadow); box-shadow: 3px 3px 0 #0d080599; image-rendering: pixelated; cursor: default; }
 .mini-disc { flex: none; width: 22px; height: 22px; background: radial-gradient(circle, var(--px-accent) 0 3px, #120b07 3px 9px, #2a1a10 9px); box-shadow: 0 0 0 2px var(--px-shadow); }
 .mini-bar.is-playing .mini-disc { animation: px-spin 1.6s steps(8, end) infinite; }
 .mini-track { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
