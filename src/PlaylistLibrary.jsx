@@ -163,7 +163,8 @@ export default function PlaylistImport({ items, close, onAdded }) {
   const choose = (next) => { if (next === tab) return; cancelMore(); setTab(next); setDetail(null); setError(''); setNotice(''); setBusyId(''); try { localStorage.setItem('album-circle-playlist-tab-v1', next); } catch {} };
   const listProvider = tab === 'apple' ? 'apple-local' : tab;
   const loggedIn = tab === 'netease' ? config?.neteaseLoggedIn : tab === 'qq' ? config?.qqLoggedIn : false;
-  const refreshConfig = async () => { try { setConfig(await musicRequest('/config')); } catch (cause) { setConfig({}); setError(cause.message); } };
+  // On the web there is no desktop music service: the sign-in panel already says so, so no raw network error.
+  const refreshConfig = async () => { try { setConfig(await musicRequest('/config')); } catch (cause) { setConfig({}); if (desktop) setError(cause.message); } };
   const loadList = async (provider, force = false) => {
     if (!force && lists[provider]?.playlists) return;
     const current = ++listGen.current;

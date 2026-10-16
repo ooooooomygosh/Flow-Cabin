@@ -45,6 +45,9 @@ export function createPlayerAdapter({ api = playerSources, env = {}, request, wi
     },
     async getSourceStatus(id) {
       const result = await call(api, 'getSourceStatus', id, options);
+      // On the web the desktop endpoints are absent: an unconnected source keeps its own hint
+      // rather than a raw network error ("Failed to fetch", "HTTP 404").
+      if (result.value && !env.desktop && !result.value.connected) return { connected: false, detail: '' };
       if (result.value) return { connected: Boolean(result.value.connected), detail: String(result.value.detail || ''), needsPermission: Boolean(result.value.needsPermission) };
       return { connected: false, detail: env.desktop ? '暂时读不到状态' : '' };
     },

@@ -32,6 +32,7 @@ const SOURCE_TABLE = [
 export function sourceOptions(env = {}) {
   return SOURCE_TABLE.filter((source) => !source.macOnly || env.mac).map((source) => ({
     ...source,
+    ...(source.id === 'local' && !env.desktop ? { hint: '在「添加到唱片架 › 本地音乐」里选择音乐文件，本次打开期间可播。' } : {}),
     available: !source.desktopOnly || Boolean(env.desktop),
     reason: source.desktopOnly && !env.desktop ? '需要心流小屋桌面版' : ''
   }));
