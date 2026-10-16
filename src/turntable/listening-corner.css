@@ -1,86 +1,150 @@
-/* 唱机特写 · Listening Corner. A desk scene built from pixel gradients: wall,
-   window, lamp pool, walnut desk; the canvas deck is the hero. */
+/* 唱机特写 · Listening Corner. The room is one pixel canvas (corner-scene.mjs)
+   at the deck's own whole-number scale; deck, liner notes and crate sit on it
+   at positions computed by cornerLayout(). Light modes swap palettes here and
+   in the painters — never an overlay tint. */
 @layer guards, reset, features, skin, overrides;
 @layer features {
-.listening-corner { --corner-energy: 0; --wall: #2a1a11; --wall-2: #352116; --desk: #5a3520; --desk-2: #6e4228; --lamp: #ffcf86; --window: #22304a;
-  position: fixed; inset: 0; grid-template-rows: auto minmax(0, 1fr) auto; overflow: hidden; color: var(--px-ink);
-  background: var(--wall); animation: corner-in var(--px-dur-slow) var(--px-ease-smooth) both; }
-.listening-corner[open] { display: grid; }
-.listening-corner.is-dusk { --wall: #3a2117; --wall-2: #4a2a1c; --lamp: #ffb070; --window: #6b3f4a; }
-.listening-corner.is-night { --wall: #161420; --wall-2: #1f1c2c; --lamp: #e7c48a; --window: #121a30; --desk: #3f2717; --desk-2: #4f311d; }
+.listening-corner {
+  --corner-paper: #ead9b6; --corner-paper-2: #d9c39a; --corner-paper-3: #bfa47a; --corner-ink: var(--px-paper-ink); --corner-ink-2: #6b5038;
+  --corner-wood: #4a2a16; --corner-wood-hi: #8a5530; --corner-wood-lo: #2f1a0d; --corner-floor: #120a06; --corner-lamp: #ffcf86; --corner-beam: #1e100a;
+  position: fixed; inset: 0; overflow: clip; color: var(--px-ink); background: var(--corner-floor);
+  animation: corner-in var(--px-dur-slow) steps(4, end) both; }
+.listening-corner[open] { display: block; }
+.listening-corner.is-dusk { --corner-paper: #e6c9ad; --corner-paper-2: #d4b092; --corner-paper-3: #b98f72; --corner-ink-2: #6e4636; --corner-wood: #4d2a1c; --corner-wood-hi: #8c5536; --corner-wood-lo: #311a12; --corner-floor: #160a08; --corner-lamp: #ff9a6a; --corner-beam: #24100e; }
+.listening-corner.is-night { --corner-paper: #b9ab92; --corner-paper-2: #a5967c; --corner-paper-3: #877a63; --corner-ink: #241a14; --corner-ink-2: #4a3a2c; --corner-wood: #2c1a10; --corner-wood-hi: #4f311d; --corner-wood-lo: #1d110a; --corner-floor: #07060b; --corner-lamp: #e7c48a; --corner-beam: #0e0d16; }
 :root.room-corner-open .cabin-toolbar, :root.room-corner-open .room-now-playing, :root.room-corner-open .room-turntable .turntable-console { visibility: hidden; }
 
-.corner-backdrop { position: absolute; inset: 0; pointer-events: none;
-  background:
-    linear-gradient(180deg, transparent 0 66%, var(--px-shadow) 66% calc(66% + 4px), var(--desk-2) calc(66% + 4px) calc(66% + 10px), var(--desk) calc(66% + 10px)),
-    repeating-linear-gradient(90deg, var(--wall) 0 46px, var(--wall-2) 46px 48px); }
-.corner-backdrop::after { content: ''; position: absolute; left: 0; right: 0; top: calc(66% + 10px); bottom: 0; background: repeating-linear-gradient(180deg, #ffffff08 0 2px, transparent 2px 9px), repeating-linear-gradient(90deg, transparent 0 140px, #00000022 140px 142px); }
-.corner-window { position: absolute; left: 34%; top: 9%; width: min(18vw, 260px); aspect-ratio: 4 / 3; background:
-  linear-gradient(90deg, transparent calc(50% - 3px), #2a1a11 calc(50% - 3px) calc(50% + 3px), transparent calc(50% + 3px)),
-  linear-gradient(180deg, transparent calc(50% - 3px), #2a1a11 calc(50% - 3px) calc(50% + 3px), transparent calc(50% + 3px)),
-  radial-gradient(circle at 70% 28%, var(--px-ink) 0 6px, #ffe9cb33 7px 16px, transparent 17px), var(--window);
-  box-shadow: 0 0 0 6px #4a2a16, 0 0 0 8px var(--px-shadow), 8px 10px 0 8px #0d080588; }
-.is-dusk .corner-window { background-image: linear-gradient(90deg, transparent calc(50% - 3px), #2a1a11 calc(50% - 3px) calc(50% + 3px), transparent calc(50% + 3px)), linear-gradient(180deg, transparent calc(50% - 3px), #2a1a11 calc(50% - 3px) calc(50% + 3px), transparent calc(50% + 3px)), linear-gradient(180deg, #e98a5b, #8a4a5c 60%, #4a2a40); }
-.corner-lamp { position: absolute; left: 4%; top: 0; width: 52%; height: 88%; background: radial-gradient(ellipse 50% 46% at 50% 68%, color-mix(in srgb, var(--lamp) 34%, transparent) 0 22%, color-mix(in srgb, var(--lamp) 24%, transparent) 22% 40%, color-mix(in srgb, var(--lamp) 14%, transparent) 40% 56%, color-mix(in srgb, var(--lamp) 6%, transparent) 56% 72%, transparent 72%);
-  opacity: calc(.8 + var(--corner-energy) * .2); transition: opacity 240ms steps(3, end); }
-.corner-dust { position: absolute; left: 10%; top: 10%; width: 40%; height: 50%; --dust: radial-gradient(#ffe9cb88 1px, transparent 1.5px), radial-gradient(#ffe9cb55 1px, transparent 1.5px); opacity: .5; overflow: hidden; }
-/* Dust drifts as one composited layer, one tile per loop, in 32 stepped frames (no background-position repaint). */
-.corner-dust::before { content: ''; position: absolute; left: -180px; top: 0; right: 0; bottom: -140px; background-image: var(--dust); background-size: 90px 70px, 180px 140px; background-position: 0 0, 40px 30px; animation: corner-dust 16s steps(32, end) infinite; }
+/* ── the room ── */
+.corner-room { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+.corner-scene { position: absolute; left: 0; top: 0; image-rendering: pixelated; }
+/* Snow / rain in the window panes: one tile, stepped, compositor-only. */
+.corner-weather { position: absolute; overflow: hidden; }
+.corner-weather::before { content: ''; position: absolute; left: 0; right: 0; top: calc(var(--tile-size) * -1); bottom: 0; background: var(--tile) 0 0 / var(--tile-size) var(--tile-size); image-rendering: pixelated; animation: corner-fall 6s steps(16, end) infinite; }
+.corner-weather.is-rain::before { animation-duration: .9s; animation-timing-function: steps(4, end); }
+/* Lamp pool: dust drifting in the light, and a checker glow that breathes with the music. */
+.corner-pool { position: absolute; clip-path: ellipse(50% 50% at 50% 50%); }
+.corner-pool::before { content: ''; position: absolute; inset: calc(var(--tile-size) * -1) 0 0 calc(var(--tile-size) * -1); background: var(--tile) 0 0 / var(--tile-size) var(--tile-size); image-rendering: pixelated; opacity: .8; animation: corner-dust 18s steps(36, end) infinite; }
+.corner-pool::after { content: ''; position: absolute; inset: 0; background: repeating-conic-gradient(var(--corner-lamp) 0 25%, transparent 0 50%) 0 0 / calc(var(--corner-s) * 2) calc(var(--corner-s) * 2);
+  clip-path: ellipse(34% 36% at 50% 54%); opacity: calc(var(--corner-energy, 0) * .2); transition: opacity 240ms steps(3, end); }
+.is-night .corner-pool::before { opacity: .5; }
 
-.corner-bar { position: relative; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 12px 20px; background: linear-gradient(#0d0805cc, transparent); -webkit-app-region: drag; }
+/* ── top bar: a dark beam along the ceiling ── */
+.corner-bar { position: absolute; z-index: 4; left: 0; right: 0; top: 0; height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 16px;
+  background: var(--corner-beam); box-shadow: 0 2px 0 var(--corner-wood-lo), 0 4px 0 var(--px-shadow); -webkit-app-region: drag; }
 .corner-bar :is(button, input, a) { -webkit-app-region: no-drag; }
-.corner-title { display: flex; align-items: center; gap: 8px; font-family: var(--px-font-cn); font-size: 24px; line-height: 28px; -webkit-font-smoothing: none; }
-.corner-title small { margin-left: 6px; font-family: var(--px-font-body); font-size: 12px; color: var(--px-ink-faint); }
-.corner-bar-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.corner-bar-actions .pixel-button { min-height: 30px; padding: 4px 10px; font-size: 12.5px; }
-.corner-light button { min-height: 28px; padding: 3px 9px; font-size: 12px; }
+.corner-title { display: flex; align-items: center; gap: 8px; min-width: 0; font-family: var(--px-font-cn); font-size: 24px; line-height: 28px; white-space: nowrap; -webkit-font-smoothing: none; color: var(--px-ink); }
+.corner-title svg { color: var(--px-accent); }
+.corner-bar-actions { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.corner-bar-actions .pixel-button { min-height: var(--px-hit); padding: 4px 10px; gap: 6px; }
+.corner-bar-actions kbd { margin-left: 4px; padding: 0 4px; font: 400 12px/16px var(--px-font-cn); color: var(--px-ink-faint); border: 1px solid var(--px-border-subtle); }
+.corner-light button { display: inline-flex; align-items: center; gap: 6px; min-height: var(--px-hit); padding: 4px 10px; }
 
-.corner-stage { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(260px, 1fr); align-items: end; gap: clamp(16px, 3vw, 44px); min-height: 0; padding: 0 clamp(16px, 4vw, 64px) clamp(8px, 2vh, 20px); }
-.corner-deck { position: relative; display: grid; place-items: end center; min-height: 0; height: 100%; }
-.pixel-turntable { display: block; width: 100%; max-width: 960px; max-height: 100%; aspect-ratio: 240 / 150; height: auto; image-rendering: pixelated; touch-action: none; }
-/* Warm glow: a static, 4-band stepped gradient behind the canvas; only opacity/transform follow the music. */
-.corner-deck::before { content: ''; position: absolute; z-index: -1; inset: -8% -6% 0; pointer-events: none; background: radial-gradient(ellipse 50% 46% at 50% 55%, color-mix(in srgb, var(--lamp) 34%, transparent) 0 22%, color-mix(in srgb, var(--lamp) 24%, transparent) 22% 40%, color-mix(in srgb, var(--lamp) 14%, transparent) 40% 56%, color-mix(in srgb, var(--lamp) 6%, transparent) 56% 72%, transparent 72%);
-  opacity: calc(.45 + var(--corner-energy) * .55); transform: scale(calc(.94 + var(--corner-energy) * .08)); transition: opacity 240ms steps(3, end), transform 240ms steps(3, end); will-change: opacity, transform; }
-.corner-empty { position: absolute; left: 50%; bottom: 46%; transform: translateX(-50%); padding: 8px 12px; font-size: 13px; color: var(--px-ink-dim); background: #0d0805cc; border: 2px solid var(--px-border); white-space: nowrap; }
+/* ── the deck ── */
+.corner-deck { position: absolute; z-index: 1; }
+.pixel-turntable { display: block; width: 100%; height: 100%; image-rendering: pixelated; touch-action: none; }
+.corner-empty { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); margin: 0; padding: 8px 12px; font-size: 13px; color: var(--corner-ink); background: var(--corner-paper); border: 2px solid var(--px-shadow); box-shadow: 4px 4px 0 var(--px-shadow); white-space: nowrap; }
 
-.corner-side { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto auto auto minmax(0, 1fr); column-gap: 14px; row-gap: 10px; align-self: stretch; min-height: 0; max-height: 100%; padding: 16px; background: #1c120bd9; border: 2px solid var(--px-shadow); box-shadow: inset 2px 2px 0 #ffffff14, inset -2px -2px 0 #00000059, 6px 6px 0 #0d080580; margin-top: 8px; }
-.corner-sleeve { position: relative; grid-row: 1; width: clamp(96px, 11vw, 150px); aspect-ratio: 1; transform: rotate(-3deg); animation: corner-sleeve-in var(--px-dur-slow) var(--px-ease-smooth) both; }
-.corner-copy { grid-row: 1; align-self: end; min-width: 0; }
-.corner-transport, .corner-status, .corner-tracks { grid-column: 1 / -1; }
-.corner-sleeve img, .corner-sleeve .corner-crate-blank { position: relative; z-index: 1; display: block; width: 100%; height: 100%; object-fit: cover; border: 3px solid var(--px-shadow); box-shadow: 6px 6px 0 #0d080599, inset 0 0 0 2px #ffffff22; }
-.corner-sleeve-shadow { position: absolute; z-index: 0; left: 6%; right: -4%; bottom: -10px; height: 14px; background: #0d080580; }
-.corner-copy small { font-family: var(--px-font-en); font-size: 8px; color: var(--px-accent); letter-spacing: .06em; }
-.corner-copy h2 { margin: 2px 0 4px; overflow: hidden; font-family: var(--px-font-cn); font-size: 24px; line-height: 28px; font-weight: 400; white-space: nowrap; text-overflow: ellipsis; }
-.corner-copy p { margin: 0; overflow: hidden; font-size: 13px; color: var(--px-ink); white-space: nowrap; text-overflow: ellipsis; }
-.corner-copy .corner-artist { margin-top: 2px; color: var(--px-ink-dim); }
-.corner-transport { display: flex; align-items: center; gap: 8px; }
-.corner-transport button { display: grid; place-items: center; width: 36px; height: 36px; padding: 0; color: var(--px-ink); background: var(--px-surface-2); border: 2px solid var(--px-shadow); box-shadow: inset 2px 2px 0 #ffffff1c, 2px 2px 0 var(--px-shadow); cursor: pointer; }
-.corner-transport button:disabled { opacity: .4; cursor: default; }
-.corner-transport button:active:not(:disabled) { translate: 1px 1px; box-shadow: inset 2px 2px 0 #00000040; }
-.corner-transport .corner-play { width: 46px; height: 46px; color: #24170d; background: var(--px-accent); box-shadow: inset 2px 2px 0 var(--px-accent-hi), inset -2px -2px 0 var(--px-accent-lo), 3px 3px 0 var(--px-shadow); }
-.corner-time { margin-left: auto; font-family: var(--px-font-cn); font-size: 12px; color: var(--px-ink-dim); font-variant-numeric: tabular-nums; }
-.corner-status { margin: 0; font-size: 12px; color: var(--px-ink-dim); }
-.corner-tracks { min-height: 0; margin: 0; padding: 6px 8px; overflow-y: auto; list-style: none; border-top: 2px solid #0d080599; background: var(--px-surface-inset); box-shadow: var(--px-shadow-inset); scrollbar-width: thin; scrollbar-color: var(--px-border) var(--px-surface-inset); }
-.corner-tracks::-webkit-scrollbar { width: 6px; } .corner-tracks::-webkit-scrollbar-track { background: var(--px-surface-inset); } .corner-tracks::-webkit-scrollbar-thumb { background: var(--px-border); border-radius: 0; }
-.corner-tracks button { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; align-items: center; gap: 8px; width: 100%; padding: 5px 6px; color: var(--px-ink-dim); text-align: left; scroll-margin: 6px; background: none; border: 0; font: inherit; font-size: 13px; cursor: pointer; }
-.corner-tracks button:hover { color: var(--px-ink); background: #ffffff0d; }
-.corner-tracks button[aria-current=true] { color: var(--px-accent-hi); background: #ffffff1a; box-shadow: inset 3px 0 0 var(--px-accent); padding-left: 9px; }
-.corner-tracks b { font-family: var(--px-font-en); font-size: 8px; font-weight: 400; opacity: .8; }
+/* ── liner notes: a printed card standing on the desk ── */
+.corner-side { position: absolute; z-index: 2; display: flex; flex-direction: column; gap: 10px; min-width: 0; min-height: 0; padding: 16px; color: var(--corner-ink);
+  background: var(--corner-paper); border: 2px solid var(--px-shadow);
+  box-shadow: inset 2px 2px 0 #fff4dc66, inset -2px -2px 0 var(--corner-paper-3); }
+/* Its cast shadow is painted into the room (corner-scene.mjs), on the same pixel grid. */
+.corner-head { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; align-items: end; }
+.corner-sleeve { position: relative; width: calc(var(--corner-sleeve, 64) * 1px); }
+.corner-sleeve canvas, .corner-crate-peek img, .corner-next img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; image-rendering: auto; background: var(--px-surface-2); }
+.corner-sleeve canvas { image-rendering: pixelated; border: 2px solid var(--px-shadow); box-shadow: 2px 2px 0 var(--px-shadow), 6px 6px 0 #0d080566; animation: corner-sleeve-in var(--px-dur-slow) steps(4, end) both; }
+:is(.corner-crate-peek, .corner-next, .corner-spine) img.is-generated { image-rendering: pixelated; }
+.corner-copy { min-width: 0; }
+.corner-copy small { display: block; font: 400 12px/16px var(--px-font-cn); color: var(--corner-ink-2); -webkit-font-smoothing: none; }
+.corner-copy h2 { margin: 4px 0 2px; overflow: hidden; font: 400 24px/28px var(--px-font-cn); white-space: nowrap; text-overflow: ellipsis; color: var(--corner-ink); -webkit-font-smoothing: none; }
+.corner-copy .corner-artist { margin: 0; overflow: hidden; font-size: 13px; line-height: 18px; color: var(--corner-ink-2); white-space: nowrap; text-overflow: ellipsis; }
+.corner-meter { display: flex; align-items: center; gap: 8px; margin: 8px 0 0; font: 400 8px/8px var(--px-font-en); color: var(--corner-ink-2); }
+.corner-meter b { font-weight: 400; color: var(--corner-ink); }
+.corner-meter-bar { display: flex; flex: 1; gap: 2px; min-width: 24px; height: 8px; padding: 2px; background: var(--corner-paper-2); box-shadow: inset 1px 1px 0 var(--corner-paper-3); }
+.corner-meter-bar i { flex: 1; background: var(--corner-paper-3); }
+.corner-meter-bar i.is-done { background: var(--corner-ink-2); }
+.corner-meter-bar i.is-now { background: var(--px-accent-lo); }
+.corner-meter-bar i.is-fill { flex: none; background: var(--px-accent-lo); }
+.corner-now { display: flex; gap: 8px; align-items: baseline; margin: 0; overflow: hidden; font-size: 13px; line-height: 18px; white-space: nowrap; text-overflow: ellipsis; color: var(--corner-ink); }
+.corner-now span { color: var(--px-accent-lo); font-size: 12px; }
+.corner-transport { display: flex; align-items: center; gap: 6px; padding: 8px 0; border-top: 2px solid var(--corner-paper-3); border-bottom: 2px solid var(--corner-paper-3); }
+.corner-transport > button { display: grid; place-items: center; width: 32px; height: 32px; padding: 0; color: var(--corner-paper); background: var(--corner-ink); border: 0; box-shadow: inset 2px 2px 0 #ffffff1f, 2px 2px 0 var(--corner-paper-3); cursor: pointer; }
+.corner-transport > button:disabled { opacity: .35; cursor: default; }
+.corner-transport > button:active:not(:disabled) { translate: 1px 1px; box-shadow: inset 2px 2px 0 #00000040; }
+.corner-transport .corner-play { width: 40px; height: 40px; color: var(--px-ink-on-accent); background: var(--px-accent); box-shadow: inset 2px 2px 0 var(--px-accent-hi), inset -2px -2px 0 var(--px-accent-lo), 2px 2px 0 var(--px-shadow); }
+.corner-time { flex: 1; min-width: 0; overflow: hidden; font: 400 12px/16px var(--px-font-cn); color: var(--corner-ink-2); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; -webkit-font-smoothing: none; }
+.corner-speed { box-shadow: 2px 2px 0 var(--corner-paper-3); border-color: var(--corner-ink); }
+.corner-speed button { min-width: 32px; min-height: var(--px-hit); padding: 2px 6px; }
+.corner-status { margin: 0; font-size: 12px; color: var(--corner-ink-2); }
+.corner-tracks { flex: 1 1 auto; min-height: 0; margin: 0; padding: 0; overflow-y: auto; list-style: none; scrollbar-width: thin; scrollbar-color: var(--corner-paper-3) transparent; }
+.corner-tracks button { position: relative; display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; align-items: center; gap: 8px; width: 100%; padding: 6px 6px 8px; color: var(--corner-ink-2); text-align: left; scroll-margin: 6px; background: none; border: 0; font: inherit; font-size: 13px; cursor: pointer; }
+.corner-tracks button:hover { color: var(--corner-ink); background: var(--corner-paper-2); }
+.corner-tracks button[aria-current=true] { color: var(--corner-ink); background: var(--corner-paper-2); box-shadow: inset 3px 0 0 var(--px-accent-lo); }
+.corner-tracks button[aria-current=true] b { color: var(--px-accent-lo); }
+.corner-tracks b { font: 400 8px/8px var(--px-font-en); }
 .corner-tracks span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.corner-tracks small { font-family: var(--px-font-en); font-size: 8px; opacity: .8; }
-.corner-empty-side { margin: auto; color: var(--px-ink-faint); font-size: 13px; }
+.corner-tracks small { font: 400 8px/8px var(--px-font-en); }
+/* Each song's share of the side, as a groove under its name. */
+.corner-groove { position: absolute; left: 38px; bottom: 3px; height: 2px; max-width: calc(100% - 44px); background: repeating-linear-gradient(90deg, var(--corner-paper-3) 0 2px, transparent 2px 3px); }
+button[aria-current=true] > .corner-groove { background: var(--px-accent-lo); }
+.corner-next { display: grid; gap: 6px; padding-top: 8px; border-top: 2px solid var(--corner-paper-3); }
+.corner-next small { font: 400 12px/16px var(--px-font-cn); color: var(--corner-ink-2); -webkit-font-smoothing: none; }
+.corner-next ul { display: flex; gap: 10px; margin: 0; padding: 0; list-style: none; min-width: 0; }
+.corner-next li { display: grid; grid-template-columns: 32px minmax(0, 1fr); align-items: center; gap: 6px; min-width: 0; flex: 1 1 0; font-size: 12px; color: var(--corner-ink-2); }
+.corner-next img { border: 1px solid var(--px-shadow); box-shadow: 2px 2px 0 var(--corner-paper-3); }
+.corner-next span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.corner-empty-side { margin: auto; font-size: 13px; line-height: 20px; text-align: center; color: var(--corner-ink-2); }
 
-/* The crate: flip through sleeves along the desk edge. */
-.corner-crate { position: relative; z-index: 2; padding: 8px clamp(16px, 4vw, 64px) 14px; background: linear-gradient(transparent, #0d0805aa 40%); }
-.corner-crate ul { display: flex; gap: 10px; margin: 0; padding: 14px 4px 4px; overflow-x: auto; list-style: none; scrollbar-width: thin; scrollbar-color: var(--px-border) transparent; }
-.corner-crate ul::before, .corner-crate ul::after { content: ''; flex: 1 0 0; }
-.corner-crate button { position: relative; display: block; width: 64px; padding: 0; background: none; border: 0; cursor: pointer; transition: translate 160ms steps(3, end); }
-.corner-crate img, .corner-crate-blank { display: block; width: 64px; height: 64px; object-fit: cover; background: repeating-linear-gradient(45deg, #4a2a16 0 6px, var(--px-surface-2) 6px 12px); border: 2px solid var(--px-shadow); box-shadow: 3px 3px 0 #0d080599; }
-.corner-crate button:hover, .corner-crate button:focus-visible { translate: 0 -10px; }
-.corner-crate button:focus-visible img { outline: 2px solid var(--px-focus); outline-offset: 2px; }
-.corner-crate button.is-current img { box-shadow: 0 0 0 2px var(--px-accent), 3px 3px 0 #0d080599; }
-.corner-crate-copy { position: absolute; left: 0; right: 0; top: 100%; margin-top: 2px; overflow: hidden; font-size: 12px; color: var(--px-ink-dim); white-space: nowrap; text-overflow: ellipsis; opacity: 0; transition: opacity 120ms steps(2, end); }
-.corner-crate button:hover .corner-crate-copy, .corner-crate button:focus-visible .corner-crate-copy { opacity: 1; }
+/* ── the crate: records filed spine-out in a walnut bin along the desk ── */
+.corner-crate { position: absolute; z-index: 3; }
+.corner-crate-spines { position: absolute; left: 24px; right: 24px; top: 0; bottom: 24px; display: flex; gap: var(--spine-gap, 2px); margin: 0; padding: 14px 16px 0; overflow-x: auto; overflow-y: hidden; list-style: none;
+  background: linear-gradient(var(--px-shadow) 0 14px, var(--corner-wood-lo) 14px 16px, var(--px-shadow) 16px); scrollbar-width: none; }
+.corner-crate-spines::-webkit-scrollbar { display: none; }
+.corner-crate-spines li { flex: none; height: 100%; }
+.corner-spine { position: relative; display: block; width: var(--spine-w, 22px); height: 100%; padding: 0; overflow: hidden; background: var(--px-surface-2); border: 0; cursor: pointer;
+  box-shadow: inset 2px 0 0 #ffffff26, inset -2px 0 0 #00000066; transition: translate 150ms steps(3, end); }
+.corner-spine-art { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; image-rendering: pixelated; }
+/* The title printed down the spine, in paper ink with a hard 1 px outline so it reads on any colour. */
+.corner-spine-title { position: absolute; left: 0; right: 0; top: calc(12% + 8px); bottom: 6px; overflow: hidden; display: flex; justify-content: center;
+  font: 400 12px/1 var(--px-font-cn); color: var(--corner-paper); writing-mode: vertical-rl; text-orientation: upright; white-space: nowrap; letter-spacing: 1px; -webkit-font-smoothing: none;
+  text-shadow: 1px 0 0 var(--px-shadow), -1px 0 0 var(--px-shadow), 0 1px 0 var(--px-shadow), 0 -1px 0 var(--px-shadow); pointer-events: none; }
+.corner-spine { isolation: isolate; }
+/* Printed label band near the top, and a darker top cap. */
+.corner-spine::before { content: ''; position: absolute; left: 3px; right: 3px; top: 12%; height: 4px; background: var(--corner-paper); box-shadow: 0 1px 0 #0d080599; }
+.corner-spine::after { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: #ffffff33; }
+.corner-spine:hover, .corner-spine.is-active { translate: 0 -12px; }
+.corner-spine.is-current::before { background: var(--px-accent); }
+.corner-spine:focus-visible { outline: 2px solid var(--px-focus); outline-offset: -2px; }
+/* The bin's front: two walnut planks, end boards in perspective, the search on a paper label. */
+.corner-crate-front { position: absolute; left: 12px; right: 12px; bottom: 0; height: 40px; display: flex; align-items: center; gap: 12px; padding: 0 28px;
+  background: linear-gradient(var(--corner-wood-hi) 0 2px, var(--corner-wood) 2px 19px, var(--corner-wood-lo) 19px 20px, var(--corner-wood-hi) 20px 21px, var(--corner-wood) 21px 38px, var(--px-shadow) 38px);
+  box-shadow: 0 -2px 0 var(--px-shadow); }
+.corner-crate-front::before, .corner-crate-front::after { content: ''; position: absolute; top: -26px; bottom: 0; width: 14px; background: linear-gradient(90deg, var(--corner-wood-hi) 0 2px, var(--corner-wood-lo) 2px); }
+.corner-crate-front::before { left: -2px; clip-path: polygon(0 26px, 100% 0, 100% 100%, 0 100%); }
+.corner-crate-front::after { right: -2px; clip-path: polygon(0 0, 100% 26px, 100% 100%, 0 100%); }
+.corner-crate-tools { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex: 1; min-width: 0; font-size: 12px; color: var(--px-ink-dim); }
+.corner-crate-tools label { display: flex; align-items: center; gap: 8px; min-width: 0; font: 400 12px/16px var(--px-font-cn); color: var(--px-ink); -webkit-font-smoothing: none; }
+.corner-crate-tools input { width: 168px; min-width: 0; height: var(--px-hit); padding: 2px 8px; font: inherit; font-size: 12px; }
+.corner-crate-status { overflow: hidden; color: var(--px-accent); white-space: nowrap; text-overflow: ellipsis; }
+.corner-crate-hint { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.corner-crate > [role=alert], .corner-crate-empty, .corner-crate-more { position: absolute; z-index: 1; left: 40px; top: 18px; margin: 0; padding: 4px 8px; font-size: 12px; color: var(--corner-ink); background: var(--corner-paper); border: 2px solid var(--px-shadow); }
+.corner-crate > [role=alert] { color: var(--px-warn); }
+.corner-crate-more { left: auto; right: 40px; }
+/* Peek: the cover of the spine under the pointer / keyboard, with its queue tab. */
+.corner-crate-peek { position: absolute; z-index: 2; bottom: calc(100% - 4px); width: 180px; display: none; grid-template-columns: 56px minmax(0, 1fr); gap: 8px; align-items: center; padding: 8px; color: var(--corner-ink); background: var(--corner-paper);
+  border: 2px solid var(--px-shadow); box-shadow: 4px 4px 0 var(--px-shadow); }
+.corner-crate:is(:hover, :focus-within) .corner-crate-peek { display: grid; animation: corner-peek 120ms steps(2, end) both; }
+/* Wide windows: the preview stands beside the crate on the floor, never over the deck's controls. */
+.corner-crate.is-peek-right .corner-crate-peek { left: calc(100% - 4px); bottom: 8px; }
+.corner-crate-peek img { border: 1px solid var(--px-shadow); }
+.corner-crate-peek span { display: grid; min-width: 0; }
+.corner-crate-peek b { overflow: hidden; font: 400 12px/16px var(--px-font-cn); white-space: nowrap; text-overflow: ellipsis; -webkit-font-smoothing: none; }
+.corner-crate-peek small { overflow: hidden; font-size: 12px; color: var(--corner-ink-2); white-space: nowrap; text-overflow: ellipsis; }
+.corner-crate-peek .corner-crate-queue, .corner-crate-peek em { grid-column: 1 / -1; }
+.corner-crate-queue { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: var(--px-hit); padding: 2px 8px; font: 400 12px/16px var(--px-font-cn); color: var(--corner-paper); background: var(--corner-ink); border: 0; box-shadow: 2px 2px 0 var(--corner-paper-3); cursor: pointer; -webkit-font-smoothing: none; }
+.corner-crate-queue:hover:not(:disabled) { background: var(--px-accent-lo); }
+.corner-crate-queue:disabled { opacity: .55; cursor: default; }
+.corner-crate-peek em { font: 400 12px/16px var(--px-font-cn); font-style: normal; color: var(--px-accent-lo); text-align: center; -webkit-font-smoothing: none; }
 
 /* Flying records (shelf → deck, → queue). */
 .record-flight { position: fixed; z-index: 120; pointer-events: none; transform-origin: center; will-change: transform; }
@@ -91,19 +155,23 @@
 .record-flight.is-queue .record-flight-sleeve { border-width: 1px; }
 .scene-deck.is-awaiting-record .scene-deck-record { opacity: 0; animation: none; }
 
-@keyframes corner-in { from { opacity: 0; transform: scale(1.03); } }
-@keyframes corner-sleeve-in { from { opacity: 0; transform: translateY(14px) rotate(-8deg); } }
-@keyframes corner-dust { to { translate: 180px -140px; } }
-@media (max-width: 900px) {
-  .corner-stage { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); align-items: start; }
-  .corner-title small { display: none; }
+@keyframes corner-in { from { opacity: 0; } }
+@keyframes corner-sleeve-in { from { opacity: 0; transform: translateY(8px); } }
+@keyframes corner-peek { from { opacity: 0; transform: translateY(4px); } }
+@keyframes corner-fall { to { transform: translateY(var(--tile-size)); } }
+@keyframes corner-dust { to { transform: translate(var(--tile-size), var(--tile-size)); } }
+
+/* Compact windows: labels give way to icons, the hint to the tooltip. */
+@media (max-width: 760px) {
+  .corner-sounds span, .corner-bar-actions kbd { display: none; }
+  .corner-light button { padding: 4px 6px; gap: 4px; }
+  .corner-title { font-size: 12px; line-height: 16px; }
+  .corner-title svg { display: none; }
+  .corner-crate-tools input { width: 120px; }
 }
-@media (max-height: 700px) { .corner-sleeve { width: 80px; } .corner-crate img, .corner-crate-blank { width: 48px; height: 48px; } .corner-crate button { width: 48px; } .corner-crate-copy { max-width: 48px; } }
-
-.corner-crate-tools{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--px-ink-dim)}.corner-crate-tools label{display:flex;align-items:center;gap:10px}.corner-crate-tools input{width:160px;min-width:0;background:#1c120bcc;color:var(--px-ink);border:1px solid var(--px-border);padding:5px 8px;font:inherit}.corner-crate-status{color:var(--px-accent)}.corner-crate .corner-crate-queue{margin-top:6px;min-height:var(--px-hit);padding:4px 0;font:inherit;font-size:12px;color:var(--px-ink);background:#1c120bcc;border:1px solid var(--px-border)}.corner-crate .corner-crate-queue:hover{translate:none;background:#573721}.corner-crate .corner-crate-queue:disabled{opacity:.55;cursor:default;translate:none}.corner-crate-copy{position:static;display:block;opacity:1;max-width:64px;margin-top:5px}.corner-crate>p{font-size:12px;color:var(--px-ink-dim)}
-
-/* Keep the horizontal crate from defining the width of the immersive grid. */
-.listening-corner{grid-template-columns:minmax(0,1fr)}
-.corner-bar,.corner-stage,.corner-deck,.corner-side,.corner-crate{min-width:0}
-.corner-crate ul{min-width:0;max-width:100%}
+.is-narrow .corner-side { padding: 12px; gap: 8px; }
+.is-narrow .corner-head { gap: 12px; }
+.is-narrow :is(.corner-next, .corner-now) { display: none; }
+.corner-tracks li { min-height: 32px; }
+@media (max-height: 640px) { :is(.corner-next, .corner-now) { display: none; } .corner-side { gap: 8px; padding: 12px; } }
 }
