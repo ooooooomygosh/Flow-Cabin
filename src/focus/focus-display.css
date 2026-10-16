@@ -1,0 +1,70 @@
+/* 专注画面: the faces (a <canvas> scaled by whole pixels), the picker, the dock's
+   quick switch and the whole-window display. */
+@layer guards, reset, features, skin, overrides;
+@layer features {
+.focus-face { display: grid; justify-items: center; gap: 8px; width: 100%; }
+.focus-face-fit { display: grid; place-items: center; width: 100%; height: 168px; }
+.focus-face-canvas { display: block; image-rendering: pixelated; }
+.focus-face-caption { margin: 0; font: 400 12px/1.4 var(--px-font-cn); color: var(--px-ink-dim); font-variant-numeric: tabular-nums; }
+.focus-face.is-thumb .focus-face-fit { width: 128px; height: 84px; }
+.focus-face.is-wallpaper .focus-face-fit { width: clamp(220px, 20vw, 380px); height: clamp(100px, 11vw, 176px); }
+.focus-face:is(.is-widget, .is-wallpaper, .is-full) .focus-face-canvas { filter: drop-shadow(4px 4px 0 var(--px-shadow)); }
+
+/* Settings › 专注工具: the picker */
+.face-picker { display: grid; gap: 10px; margin-top: 16px; padding-top: 14px; border-top: 2px dashed var(--px-border-subtle); }
+.face-picker header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.face-picker header strong { font-size: 14px; color: var(--px-ink); }
+.face-picker header small { flex: 1; min-width: 200px; font-size: 12px; color: var(--px-ink-dim); }
+.face-picker-reset { padding: 3px 9px; font: inherit; font-size: 12px; color: var(--px-ink); background: var(--px-surface-2); border: 2px solid var(--px-border); cursor: pointer; }
+.face-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(144px, 1fr)); gap: 8px; }
+.face-grid button { display: grid; justify-items: center; gap: 6px; padding: 8px 6px 7px; font: inherit; font-size: 12px; color: var(--px-ink-dim); background: var(--px-surface-inset); border: 2px solid var(--px-border-subtle); box-shadow: var(--px-shadow-inset); cursor: pointer; transition: border-color var(--px-dur-fast) steps(2, end), color var(--px-dur-fast) steps(2, end); }
+.face-grid button:hover { color: var(--px-ink); border-color: var(--px-border-hi); }
+.face-grid button[aria-checked=true] { color: var(--px-ink); border-color: var(--px-accent); box-shadow: inset 0 0 0 2px var(--px-shadow), 2px 2px 0 var(--px-accent-lo); }
+.face-grid button[aria-checked=true] span::before { content: ''; display: inline-block; width: 6px; height: 6px; margin-right: 6px; vertical-align: 1px; background: var(--px-accent); }
+.face-picker-options { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.face-picker-label { font-size: 12px; color: var(--px-ink-dim); }
+.face-show { display: inline-flex; }
+.face-show button { min-height: var(--px-hit); padding: 2px 10px; font: inherit; font-size: 12px; color: var(--px-ink-dim); background: var(--px-surface-2); border: 2px solid var(--px-border); margin-left: -2px; cursor: pointer; }
+.face-show button:first-child { margin-left: 0; }
+.face-show button[aria-checked=true] { color: var(--px-ink-on-accent); background: var(--px-accent); box-shadow: inset 2px 2px 0 var(--px-accent-hi), inset -2px -2px 0 var(--px-accent-lo); }
+
+/* The dock header's quick switch */
+.focus-dock-header { flex-wrap: wrap; }
+.face-switch { flex: 1 0 100%; display: flex; align-items: center; gap: 2px; padding: 0 6px 4px 10px; font-size: 12px; color: var(--px-ink-dim); }
+.face-switch-title { margin-right: 6px; }
+.face-switch strong { min-width: 6em; text-align: center; font-weight: 400; color: var(--px-ink); white-space: nowrap; }
+.face-switch button { display: inline-flex; align-items: center; gap: 4px; min-width: var(--px-hit); min-height: var(--px-hit); padding: 0 4px; font: inherit; color: var(--px-ink-dim); background: none; border: 0; cursor: pointer; }
+.face-switch button:hover { color: var(--px-ink); }
+.face-switch .face-switch-full { margin-left: auto; padding: 0 8px; color: var(--px-ink); background: var(--px-surface-2); border: 2px solid var(--px-border); }
+
+/* The whole window becomes the clock: the room dims to a stepped, lamp-lit vignette. */
+.focus-display { position: fixed; inset: 0; z-index: 85; display: grid; place-items: center; outline: none; cursor: default;
+  background:
+    radial-gradient(ellipse 38% 34% at 50% 44%, color-mix(in srgb, var(--scene-accent) 14%, transparent) 0 62%, color-mix(in srgb, var(--scene-accent) 7%, transparent) 62% 100%, transparent 100%),
+    radial-gradient(ellipse 72% 66% at 50% 44%, rgb(13 8 5 / .5) 0 44%, rgb(13 8 5 / .64) 44% 62%, rgb(13 8 5 / .78) 62% 80%, rgb(13 8 5 / .9) 80%);
+  animation: face-display-in var(--px-dur-med) steps(3, end) both; }
+.focus-display[data-face=minimal] { background: radial-gradient(ellipse 72% 66% at 50% 44%, rgb(13 8 5 / .74) 0 50%, rgb(13 8 5 / .84) 50% 74%, rgb(13 8 5 / .93) 74%); }
+.focus-display.is-idle { cursor: none; }
+.focus-display-stage { display: grid; justify-items: center; gap: 18px; translate: 0 -3vh; }
+.focus-face.is-full .focus-face-fit { width: min(90vw, 1500px); height: 60vh; }
+.focus-face.is-full .focus-face-caption { font-size: 24px; color: var(--px-ink); text-shadow: 2px 2px 0 var(--px-shadow); letter-spacing: .04em; }
+.focus-display-note { margin: 0; max-width: 80vw; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font: 400 16px/1.4 var(--px-font-body); color: var(--px-ink-dim); text-shadow: 2px 2px 0 var(--px-shadow); }
+.focus-display-flash { position: absolute; top: 9vh; left: 50%; translate: -50% 0; margin: 0; padding: 6px 16px; font: 400 24px/1.3 var(--px-font-cn); color: var(--px-ink); background: var(--px-surface-hud); border: 2px solid var(--px-border); box-shadow: var(--px-shadow-2); pointer-events: none; animation: face-flash 1.5s steps(6, end) both; }
+.focus-display-bar { position: absolute; bottom: 24px; left: 50%; translate: -50% 0; display: flex; align-items: center; gap: 0; max-width: calc(100vw - 24px); background: var(--px-surface-hud); border: 2px solid var(--px-border); box-shadow: var(--px-shadow-2); transition: opacity 160ms steps(3, end); }
+.focus-display.is-idle .focus-display-bar:not(:focus-within) { opacity: 0; }
+.focus-display-bar > button { display: inline-flex; align-items: center; gap: 5px; height: 32px; padding: 0 10px; font: inherit; font-size: 12px; white-space: nowrap; color: var(--px-ink-dim); background: var(--px-surface-2); border: 0; border-left: 2px solid var(--px-border); cursor: pointer; }
+.focus-display-bar > button:first-child { border-left: 0; }
+.focus-display-bar > button:hover { color: var(--px-ink); background: var(--px-surface-3); }
+.focus-display-name { min-width: 7em; padding: 0 6px; text-align: center; font: 400 12px/32px var(--px-font-cn); color: var(--px-ink); background: var(--px-surface-2); }
+.focus-display-bar .face-show { border-left: 2px solid var(--px-border); }
+.focus-display-bar .face-show button { height: 32px; border: 0; margin: 0; }
+:root.room-focus-display .immersive-exit { visibility: hidden; }
+@media (max-width: 720px) { .focus-display-bar .face-show, .focus-display-name { display: none; } .focus-face.is-full .focus-face-fit { height: 46vh; } }
+@keyframes face-display-in { from { opacity: 0; } }
+@keyframes face-flash { 0% { opacity: 0; } 12%, 80% { opacity: 1; } 100% { opacity: 0; } }
+}
+@layer overrides {
+/* Under the whole-window display the dimmed room holds still: its canvas loops stop
+   (frame-clock occlusion) and its CSS sprites pause too. */
+:root.room-focus-display .cabin-stage-wrap, :root.room-focus-display .cabin-stage-wrap * { animation-play-state: paused; }
+}

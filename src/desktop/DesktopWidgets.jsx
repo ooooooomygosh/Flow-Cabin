@@ -9,13 +9,16 @@ import { usePlaybackDuration, usePlaybackPosition } from '../deck/usePlaybackClo
 import { ChevronLeft, ChevronRight, Pause, Play, Forward, Plus, Eye, Clock, ListBullet, Music2 } from '../icons';
 import { clampWidget, defaultWidgetLayout, readWidgetLayout, writeWidgetLayout } from './widget-layout.mjs';
 import { createDragGesture, nudgeDelta } from '../drag-gesture.mjs';
+import FocusFace, { faceFocus } from '../focus/FocusFace';
+import { useFocusDisplay, useSceneLook } from '../focus/useFocusDisplay';
+import { faceFor } from '../focus/focus-display.mjs';
+import { dateLine } from '../focus/face-model.mjs';
 import './desktop-widgets.css';
 
 // Desktop widgets: what a desktop needs at a glance, drawn as small cabin
 // cards over the room. Shown in 桌面模式 (all cards) and in immersive mode
 // (the clock only). Each card can be dragged; positions are remembered per
 // screen proportion, so they survive resolution changes.
-const WEEK = ['日', '一', '二', '三', '四', '五', '六'];
 const greeting = (hour) => hour < 5 ? '夜深了' : hour < 11 ? '早上好' : hour < 14 ? '中午好' : hour < 18 ? '下午好' : hour < 22 ? '晚上好' : '夜深了';
 
 function useMinute() {
@@ -64,12 +67,13 @@ function Widget({ id, title, icon, layout, move, children, className = '' }) {
   </section>;
 }
 
+// The clock is the chosen 专注画面 face: the time, or the round while one runs.
 export function ClockWidget({ layout, move, compact = false }) {
-  const now = useMinute(), hours = String(now.getHours()).padStart(2, '0'), minutes = String(now.getMinutes()).padStart(2, '0');
+  const now = useMinute(), focus = useFocusState(), look = useSceneLook(), [display] = useFocusDisplay();
   const study = useStudy(), exam = study ? nextCountdown(study.state, now.getTime()) : null;
   return <Widget id="clock" title="时钟" icon={<Clock size={13}/>} layout={layout} move={move} className={compact ? 'is-compact' : ''}>
-    <p className="desktop-clock" aria-live="off"><time dateTime={now.toISOString()}>{hours}<b>:</b>{minutes}</time></p>
-    <p className="desktop-date">{now.getMonth() + 1} 月 {now.getDate()} 日 · 周{WEEK[now.getDay()]}<span> · {greeting(now.getHours())}</span></p>
+    <FocusFace face={faceFor(display, look)} look={look} focus={faceFocus(focus?.state)} show={display.show} seconds={display.seconds} variant="widget"/>
+    <p className="desktop-date"><time dateTime={now.toISOString()}>{dateLine(now)}</time><span> · {greeting(now.getHours())}</span></p>
     {exam && <p className="desktop-countdown">距离{exam.title}{exam.days === 0 ? '就是今天' : <>还有 <b>{exam.days}</b> 天</>}</p>}
   </Widget>;
 }

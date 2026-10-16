@@ -6,7 +6,7 @@
    position (only !important beats an inline style) and sits bottom-right, clear of
    the console that steps back in on the left. */
 :root.room-desktop :is(.app-titlebar, .cabin-toolbar, .room-now-playing, .room-shelf-navigation, .focus-dock) { display: none !important; }
-.desktop-widgets.is-zen .desktop-widget.is-clock { left: auto !important; right: 2.5%; top: auto !important; bottom: 5% !important; text-align: right; }
+.desktop-widgets.is-zen .desktop-widget.is-clock { left: auto !important; right: 2.5%; top: auto !important; bottom: 4% !important; text-align: right; }
 }
 @layer features {
 .desktop-widgets { position: absolute; inset: 0; z-index: 45; pointer-events: none; }
@@ -21,13 +21,13 @@
 .desktop-widget.is-clock { width: auto; min-width: 230px; background: transparent; border-color: transparent; box-shadow: none; }
 .desktop-widget.is-clock .desktop-widget-handle { opacity: 0; background: transparent; border: 0; transition: opacity 120ms steps(2, end); }
 .desktop-widget.is-clock:hover .desktop-widget-handle, .desktop-widget.is-clock .desktop-widget-handle:focus-visible { opacity: 1; }
-.desktop-clock { margin: 0 10px; font-family: var(--px-font-en); font-size: clamp(56px, 7.5vw, 112px); font-size: round(down, clamp(56px, 7.5vw, 112px), 8px); line-height: 1; color: #fff3df; text-shadow: 4px 4px 0 var(--px-shadow), 8px 8px 0 #ffbe6a26; letter-spacing: .02em; font-variant-numeric: tabular-nums; }
-.desktop-clock b { font-weight: 400; animation: clock-colon 2s steps(1, end) infinite; }
-.desktop-date { margin: 6px 12px 0; font-family: var(--px-font-cn); font-size: 12px; color: var(--px-ink); text-shadow: 2px 2px 0 var(--px-shadow); }
+.desktop-widgets .desktop-widget.is-clock .focus-face-fit { width: clamp(240px, 24vw, 380px); height: clamp(132px, 14vw, 220px); place-items: end center; }
+.desktop-widgets .desktop-widget.is-clock.is-compact .focus-face-fit { width: clamp(220px, 21vw, 340px); height: clamp(112px, 12vw, 190px); }
+.desktop-widgets.is-zen .desktop-widget.is-clock .focus-face-fit { place-items: end; }
+.desktop-date { margin: 8px 12px 0; font-family: var(--px-font-cn); font-size: 12px; color: var(--px-ink); text-shadow: 2px 2px 0 var(--px-shadow); }
 .desktop-date span { color: var(--px-accent-hi); }
 .desktop-countdown { margin: 4px 12px 0; font-family: var(--px-font-cn); font-size: clamp(13px, 1.1vw, 16px); color: var(--px-ink); text-shadow: 2px 2px 0 var(--px-shadow); }
 .desktop-countdown b { font-family: var(--px-font-en); font-weight: 400; color: var(--px-accent-hi); }
-.desktop-widget.is-clock.is-compact .desktop-clock { font-size: clamp(40px, 5vw, 72px); font-size: round(down, clamp(40px, 5vw, 72px), 8px); }
 
 .desktop-music { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 10px; padding: 10px; }
 .desktop-music-cover { position: relative; width: 64px; height: 64px; padding: 0; background: var(--px-surface-2); border: 2px solid var(--px-shadow); cursor: pointer; overflow: visible; }
@@ -85,6 +85,5 @@
 @media (max-width: 1100px) { .immersive-exit:not(.is-zen), :root.room-zen-tools .immersive-exit { left: 200px; translate: none; } }
 
 @keyframes widget-in { from { opacity: 0; transform: translateY(6px); } }
-@keyframes clock-colon { 50% { opacity: .35; } }
 @media (max-width: 760px) { .desktop-widget { width: min(300px, calc(100vw - 32px)); } }
 }
