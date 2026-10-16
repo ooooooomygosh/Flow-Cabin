@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
-import { ARM_FRAMES, DECK_BODY, DECK_COLOURS, DECK_H, DECK_PALETTES, DECK_SHADOW, DECK_W, HEADS, PLATTER, PLINTH, deckPalette, recordRuns } from './deck-sprite.mjs';
+import { ARM_FRAMES, DECK_BODY, DECK_COLOURS, DECK_H, DECK_PALETTES, DECK_SHADOW, DECK_W, HEADS, PLATTER, PLINTH, deckPalette, liftLabel, recordRuns } from './deck-sprite.mjs';
 
 const cells = (list) => { const g = Array.from({ length: DECK_H }, () => Array(DECK_W).fill(null)); for (const r of list) for (let i = 0; i < r.w; i++) g[r.y][r.x + i] = r.fill; return g; };
 const key = (fill) => /^var\(--deck-(\d+),/.exec(fill || '')?.[1];
@@ -59,7 +59,11 @@ test('tonearm: one arm length in every frame, rests off the platter and lands on
   }
 });
 test('the record label carries the cover colour, shaded underneath', () => {
-  const runs = recordRuns('#16110e', '#c8496d'), fills = runs.map((r) => r.fill);
-  assert.ok(fills.filter((f) => f === '#c8496d').reduce((n) => n + 1, 0) >= 2);
-  assert.ok(fills.some((f) => f !== '#c8496d' && f.startsWith('#8')), 'a darker label shade');
+  assert.equal(liftLabel('#e0ad69'), '#e0ad69', 'a bright cover colour is used as is');
+  const luma = (hex) => { const n = parseInt(hex.slice(1), 16); return (n >> 16) * .3 + ((n >> 8) & 255) * .59 + (n & 255) * .11; };
+  assert.ok(luma(liftLabel('#16191d')) >= 120 && luma(liftLabel('#355d6a')) >= 120, 'a dark cover colour is lifted so the label reads on black vinyl');
+  const runs = recordRuns('#16110e', '#e0ad69'), fills = runs.map((r) => r.fill);
+  assert.ok(fills.filter((f) => f === '#e0ad69').length >= 2);
+  assert.ok(fills.some((f) => f !== '#e0ad69' && luma(f) < luma('#e0ad69') * .8), 'a darker label shade');
+  assert.ok(recordRuns('#16110e', '#355d6a').some((r) => r.fill === liftLabel('#355d6a')), 'dark labels are drawn lifted');
 });

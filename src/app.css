@@ -114,29 +114,6 @@ a{color:var(--px-accent-hi)}
 .add-manual input,.add-manual textarea,.record-card-notes textarea{padding:8px 10px;font-size:14px;color:var(--px-ink);background:var(--px-bg);border:2px solid var(--px-border);border-radius:0;resize:vertical}
 .add-manual>.pixel-button{justify-self:start}
 
-/* Record card */
-.record-card{display:grid;grid-template-columns:minmax(220px,300px) minmax(0,1fr);gap:24px}
-.record-card-art{display:grid;align-content:start;gap:14px}
-.record-card-sleeve{position:relative;aspect-ratio:1;margin-right:18%}
-.record-card-sleeve .record-card-vinyl{position:absolute;top:6%;left:30%;width:88%;height:88%}
-.record-card-sleeve .record-card-cover{position:absolute;inset:0;width:100%;height:100%;z-index:1;box-shadow:6px 6px 0 var(--px-shadow);border:2px solid var(--px-shadow)}
-.record-card-tools{display:flex;flex-wrap:wrap;gap:8px}
-.record-card-tools .record-tools-button,.record-card-tools .discogs-link{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;font-size:12px;color:var(--px-ink);background:var(--px-surface-2);border:2px solid var(--px-border);box-shadow:3px 3px 0 var(--px-shadow);text-decoration:none;border-radius:0}
-.record-card-copy{min-width:0;display:grid;align-content:start;gap:10px}
-.record-card-kicker{font-size:12px;letter-spacing:.18em;color:var(--px-ink-dim)}
-.record-card-copy h3{margin:0;font-size:clamp(22px,2.4vw,30px);line-height:1.2;overflow-wrap:anywhere}
-.record-card-artist{margin:0;font-size:15px;color:var(--px-accent-hi)}
-.record-card-facts{display:flex;flex-wrap:wrap;gap:8px;margin:0}
-.record-card-facts div{padding:5px 10px;background:var(--px-surface-2);border:1px solid #8a5a3288}.record-card-facts dt{font-size:12px;color:var(--px-ink-faint)}.record-card-facts dd{margin:0;font-size:13px}
-.record-card-tracks{list-style:none;margin:0;padding:0;max-height:min(34vh,300px);overflow:auto;border:2px solid #8a5a3288;background:var(--px-bg)}
-.record-card-tracks button{display:grid;grid-template-columns:32px minmax(0,1fr) auto;align-items:center;gap:8px;width:100%;padding:7px 10px;text-align:left;background:none;border:0;border-bottom:1px solid #8a5a3233}
-.record-card-tracks button:hover{background:#e0ad691f}.record-card-tracks span{font-size:12px;color:var(--px-ink-faint);font-variant-numeric:tabular-nums}.record-card-tracks strong{font-weight:400;font-size:14px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.record-card-tracks small{font-size:12px;color:var(--px-ink-faint)}
-.record-card-empty{margin:0;color:var(--px-ink-faint);font-size:13px}
-.record-card-notes{display:grid;gap:6px;font-size:12px;color:var(--px-ink-dim)}
-.record-card-saved{display:flex;align-items:center;gap:4px;min-height:16px;font-size:12px;color:var(--px-good)}
-.record-card-footer{display:flex;align-items:center;flex-wrap:wrap;gap:10px;font-size:13px}
-.record-card-footer a{display:inline-flex;align-items:center;gap:5px}.record-card-spacer{flex:1}
-
 /* Backup */
 .backup-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:0 0 14px}
 .backup-stats div{padding:10px;text-align:center;background:var(--px-surface-2);border:1px solid #8a5a3288}.backup-stats dt{font-size:12px;color:var(--px-ink-faint)}.backup-stats dd{margin:2px 0 0;font-size:18px;font-weight:700;color:var(--px-accent-hi)}

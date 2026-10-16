@@ -17,13 +17,20 @@
 .wall-library,.wall-options{min-width:0;overflow-y:auto;padding:20px;scrollbar-width:thin;scrollbar-color:var(--px-border) transparent;background:var(--px-surface)}
 .wall-library{border-right:2px solid var(--px-shadow)}.wall-options{border-left:2px solid var(--px-shadow)}
 .wall-options h2{font:400 24px/28px var(--px-font-cn);-webkit-font-smoothing:none;margin:0 0 20px}
-.wall-options>label{display:flex;flex-direction:column;gap:8px;color:var(--px-ink-dim);font-size:12px;margin-bottom:20px}
+.wall-options>label,.wall-group>label{display:flex;flex-direction:column;gap:8px;color:var(--px-ink-dim);font-size:12px;margin-bottom:16px}
+/* Settings fold into 排版 / 颜色 / 文字; a group header is a plank with a pixel caret. */
+.wall-group{margin:0 0 16px;border-top:2px solid var(--px-border-subtle)}
+.wall-group>summary{display:flex;align-items:center;gap:8px;min-height:var(--px-hit);padding:8px 0;list-style:none;cursor:pointer;color:var(--px-ink);font:400 12px/16px var(--px-font-cn);-webkit-font-smoothing:none}
+.wall-group>summary::-webkit-details-marker{display:none}
+.wall-group>summary::before{content:'';width:8px;height:8px;background:var(--px-accent);clip-path:polygon(0 0,100% 50%,0 100%);transition:rotate var(--px-dur-fast) steps(2,end)}
+.wall-group[open]>summary::before{rotate:90deg}
+.wall-group>summary:hover{color:var(--px-accent-hi)}
 .wall-options input:not([type=checkbox]):not([type=range]):not([type=color]),.wall-options select,.wall-search select{min-width:0;width:100%;padding:6px 10px}
 .wall-options .wall-toggle{flex-direction:row;align-items:center;justify-content:space-between;gap:10px}
 .wall-toggle input{width:18px;height:18px}
 .wall-range{display:flex;align-items:center;gap:12px}.wall-range input{flex:1;min-width:0}
 .wall-range output{width:52px;font-size:12px;text-align:right;color:var(--px-ink);font-variant-numeric:tabular-nums}
-.wall-colors{display:flex;gap:14px;margin-bottom:22px}
+.wall-colors{display:flex;gap:14px;margin-bottom:16px}
 .wall-colors label{flex:1;color:var(--px-ink-dim);font-size:12px;display:flex;align-items:center;justify-content:space-between;gap:8px}
 .wall-colors input{width:44px;height:32px;padding:2px;border:2px solid var(--px-border);background:var(--px-surface-inset);box-shadow:var(--px-shadow-inset);cursor:pointer}
 .wall-source-tabs{display:flex;gap:6px;margin-bottom:16px}.wall-source-tabs button{flex:1}
@@ -37,8 +44,10 @@
 .wall-library-tools small{font-size:12px;color:var(--px-ink-faint);line-height:1.6}
 .wall-library-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 12px}
 .album-wall-overlay .wall-library-grid .wall-library-album{display:flex;flex-direction:column;align-items:stretch;text-align:left;position:relative;border:0;padding:0;background:transparent;box-shadow:none;gap:4px;min-width:0;font-family:var(--px-font-body);-webkit-font-smoothing:auto}
-.wall-cover{display:grid;place-items:center;aspect-ratio:1;overflow:hidden;background:var(--px-surface-inset);width:100%;border:2px solid var(--px-shadow);box-shadow:var(--px-shadow-1);color:var(--px-ink-muted)}
-.wall-cover img{display:block;width:100%;height:100%;object-fit:cover}
+.wall-cover{position:relative;display:block;aspect-ratio:1;overflow:hidden;background:var(--px-surface-inset);width:100%;border:2px solid var(--px-shadow);box-shadow:var(--px-shadow-1)}
+.wall-cover .record-sleeve{position:absolute;inset:0}
+/* Photo thumbnails shrink a large cover ~4x: averaged (auto) so they don't alias; the poster below is smooth too. */
+.wall-cover img{position:relative;z-index:1;display:block;width:100%;height:100%;object-fit:cover;image-rendering:auto}
 .wall-library-album.selected .wall-cover{outline:2px solid var(--px-accent-hi);outline-offset:2px}
 .wall-library-album strong{font-size:12px;line-height:1.5;color:var(--px-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:4px}
 .wall-library-album small{font-size:12px;color:var(--px-ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -48,9 +57,19 @@
 .wall-preview{padding:24px;overflow:auto;min-width:0;background:var(--px-heat-0);scrollbar-width:thin}
 .wall-preview-bar{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:16px;color:var(--px-ink);font:400 12px/16px var(--px-font-cn);-webkit-font-smoothing:none}
 .wall-preview-bar small{color:var(--px-ink-dim);font:12px var(--px-font-body);-webkit-font-smoothing:auto}
-.wall-canvas-wrap{position:relative;min-height:300px;background:repeating-conic-gradient(#ffffff05 0% 25%,transparent 0% 50%) 0/16px 16px;border:2px solid var(--px-shadow);box-shadow:inset 0 0 0 2px var(--px-border-subtle);padding:18px;display:flex;align-items:flex-start;justify-content:center}
-.wall-canvas-wrap canvas{display:block;width:auto;height:auto;max-width:100%;box-shadow:var(--px-shadow-3);image-rendering:auto}
-.wall-preview-empty{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:16px;color:var(--px-ink-dim);background:#1c120bf2;pointer-events:none}
+/* The poster hangs on the cabin's plank wall: 48px boards in two tones, lit left edge, shaded right, 2px seams. */
+.wall-canvas-wrap{position:relative;min-height:360px;padding:40px 32px 36px;display:flex;align-items:flex-start;justify-content:center;border:2px solid var(--px-shadow);box-shadow:inset 0 2px 0 var(--px-border),inset 0 -6px 0 var(--px-surface);
+  background:repeating-linear-gradient(90deg,var(--px-surface-3) 0 2px,transparent 2px 44px,#0000002e 44px 46px,var(--px-shadow) 46px 48px,#ffffff0a 48px 50px,transparent 50px 92px,#0000002e 92px 94px,var(--px-shadow) 94px 96px),repeating-linear-gradient(90deg,var(--px-surface-3) 0 48px,var(--px-surface-2) 48px 96px)}
+/* The exported PNG is a photo collage: its preview is averaged (auto), like the file it previews. */
+.wall-canvas-wrap canvas{display:block;width:auto;height:auto;max-width:100%;border:4px solid var(--px-shadow);box-shadow:0 0 0 2px var(--px-border),var(--px-shadow-3);image-rendering:auto}
+.wall-preview-empty{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:12px;padding:24px;color:var(--px-ink-dim);background:inherit;pointer-events:none}
+/* Ghost poster: one lead sleeve and four more, at 35% like a pencilled layout. */
+.wall-ghost{display:grid;grid-template-columns:128px 62px 62px;grid-template-rows:62px 62px;gap:4px;padding:16px;background:var(--wall-ghost-bg,var(--px-bg));border:4px solid var(--px-shadow);box-shadow:0 0 0 2px var(--px-border),var(--px-shadow-2);opacity:.35}
+.wall-ghost .record-sleeve:first-child{grid-row:span 2;width:128px;height:128px}
+.wall-ghost .record-sleeve{width:62px;height:62px}
+.wall-preview-empty p{display:flex;align-items:center;gap:8px;margin:8px 0 0;color:var(--px-accent)}
+.wall-preview-empty p svg{animation:wall-point 1.2s steps(2,end) infinite}
+@keyframes wall-point{50%{translate:-4px 0}}
 .wall-preview-empty strong{font:400 24px/28px var(--px-font-cn);-webkit-font-smoothing:none;color:var(--px-ink)}
 .wall-preview-empty span{font-size:12px;color:var(--px-ink-dim)}
 .wall-notice{color:var(--px-ink-dim);font-size:12px;line-height:1.8;min-height:24px;margin:16px 0 28px}

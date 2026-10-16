@@ -3,7 +3,9 @@ import { Play, ShufflePixel, Plus, Check, Heart, Search, Loading, Refresh, Link,
 import { addItem, updateItem } from './collection-api.mjs';
 import { musicRequest } from './room-playback.mjs';
 import { desktopCommand, useDesktopAppearance } from './desktop-client';
-import { generatedCover } from './player/pixel-cover.mjs';
+import { generatedCover, sleeveTone } from './player/pixel-cover.mjs';
+import RecordSleeve from './ui/RecordSleeve';
+import PixelRecord from './ui/PixelRecord';
 import { parsePlaylistFile } from './playlist-files.mjs';
 import { PLAYLIST_SOURCES, playlistItem, playlistKey, playlistRefreshPatch, mergePlaylistPage, PLAYLIST_TRACK_LIMIT, filterTracks, formatDuration, totalDuration } from './playlist-model.mjs';
 import './playlist-library.css';
@@ -20,12 +22,16 @@ const TABS = [
 ];
 const KIND_LABEL = { liked: '我喜欢', created: '我创建的', collect: '我收藏的' };
 
-function Sleeve({ src, title, size = 'md', spinning = false }) {
-  const [failed, setFailed] = useState(false);
-  const fallback = useMemo(() => generatedCover({ title, artist: 'playlist' }), [title]);
-  return <span className={`playlist-sleeve is-${size} ${spinning ? 'is-spinning' : ''}`} aria-hidden="true">
-    <span className="playlist-sleeve-disc"><span className="playlist-sleeve-label" style={{ backgroundImage: `url("${!failed && src ? src : fallback}")` }}/></span>
-    <img className="playlist-sleeve-cover" src={!failed && src ? src : fallback} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setFailed(true)}/>
+// A playlist is a sleeve with a pixel record behind it; without a cover (or while it
+// loads) the sleeve is the record's generated print, and the label takes its ink.
+function Sleeve({ src, title, size = 'md' }) {
+  const [state, setState] = useState(src ? 'loading' : 'none');
+  useEffect(() => setState(src ? 'loading' : 'none'), [src]);
+  const record = useMemo(() => ({ title, artist: 'playlist' }), [title]), tone = useMemo(() => sleeveTone(record), [record]);
+  return <span className={`playlist-sleeve is-${size}`} aria-hidden="true">
+    <span className="playlist-sleeve-disc"><PixelRecord base="#16191d" label={tone} seed={title}/></span>
+    {state !== 'ready' && <RecordSleeve item={record} title={false} loading={state === 'loading'}/>}
+    {src && state !== 'failed' && <img className="playlist-sleeve-cover" src={src} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onLoad={() => setState('ready')} onError={() => setState('failed')}/>}
   </span>;
 }
 

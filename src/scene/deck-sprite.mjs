@@ -111,7 +111,11 @@ const rgbOf = (hex) => { const n = parseInt(String(hex).slice(1, 7), 16); return
 export const mix = (hex, toward, amount) => { const a = rgbOf(hex), b = rgbOf(toward); return toHex(a.map((v, i) => v + (b[i] - v) * amount)); };
 // Record on the platter: vinyl with a lit groove band toward the lamp, a quiet
 // track-gap ring, and the label in the cover's own colour (shaded underneath).
+const luma = (hex) => { const [r, g, b] = rgbOf(hex); return r * .3 + g * .59 + b * .11; };
+// A label darker than this vanishes into the vinyl at deck size; lift it toward paper.
+export const liftLabel = (hex, min = 120) => { let out = hex; for (let i = 0; i < 6 && luma(out) < min; i++) out = mix(out, '#fff7e6', .18); return out; };
 export function recordRuns(vinyl = '#16110e', label = '#c9a47a') {
+  label = liftLabel(label);
   const g = grid(), { cx, rx, ry } = PLATTER, cy = PLATTER.cy - .4;
   ellipse(g, cx, cy, rx - 1, ry - .4, 'v');
   // Rotationally symmetric bands (never rotated, so no shimmer): a track gap and the lamp's lit arc.

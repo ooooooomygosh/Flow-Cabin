@@ -4,7 +4,8 @@ import { pixelCover } from './player/pixel-cover.mjs';
 import './player/player.css';
 import Dialog from './Dialog';
 import DiscogsLink from './DiscogsLink';
-import { RecordTools, VinylDisc, useRecordLibrary } from './RecordLibrary';
+import { PixelVinyl, RecordTools, useRecordLibrary } from './RecordLibrary';
+import './record-card.css';
 import { ShowroomArtwork } from './RoomArtwork';
 import { genresFor } from './record-library.mjs';
 import { trackNames } from './room-model.mjs';
@@ -51,10 +52,13 @@ export default function RecordCard({ item, close, onChanged, onRemove }) {
   return <Dialog title="唱片卡片" icon={<Disc3 size={20}/>} close={close} size="lg" className="record-card-dialog" label={`唱片卡片：${item.title}`}>
     <div className="record-card">
       <div className="record-card-art">
-        <div className="record-card-sleeve"><VinylDisc item={item} className="record-card-vinyl"/><ShowroomArtwork item={item} className="record-card-cover"/></div>
+        {/* The record pulled half out of its sleeve, both drawn in whole art pixels. */}
+        <div className="record-card-sleeve"><PixelVinyl item={item} className="record-card-vinyl"/><ShowroomArtwork item={item} pixel className="record-card-cover"/></div>
         <div className="record-card-tools"><button type="button" className="pixel-button is-primary" onClick={() => play(0)}><Play size={16}/>放上唱机</button><RecordTools item={item}/><DiscogsLink item={item}/><PixelCoverTool item={item} onChanged={onChanged}/></div>
       </div>
       <div className="record-card-copy">
+        {/* Liner notes: the album's facts and side A on a paper insert. */}
+        <section className="record-card-liner" aria-label="唱片资料">
         <small className="record-card-kicker">{item.type === 'song' ? '单曲' : item.type === 'playlist' ? '歌单' : '专辑'}{item.source === 'local-music' ? ' · 本地文件' : ''}</small>
         <h3>{item.title}</h3>
         <p className="record-card-artist">{item.artist}</p>
@@ -65,6 +69,7 @@ export default function RecordCard({ item, close, onChanged, onRemove }) {
           <div><dt>放上唱片架</dt><dd>{item.addedAt ? new Date(item.addedAt).toLocaleDateString('zh-CN') : '—'}</dd></div>
         </dl>
         {names.length > 0 ? <ol className="record-card-tracks" aria-label="曲目">{names.map((name, index) => <li key={index}><button type="button" onClick={() => play(index)} title="从这一首开始播放"><span>{String(index + 1).padStart(2, '0')}</span><strong>{name}</strong><small>{duration(item.trackDetails?.[index]?.lengthMillis)}</small></button></li>)}</ol> : <p className="record-card-empty">还没有曲目资料。</p>}
+        </section>
         <label className="record-card-notes">我的笔记<textarea value={notes} maxLength={4000} rows={4} placeholder="第一次听的场景、最喜欢的一首、想记住的一句歌词…" onChange={(event) => { removing.current = false; setNotes(event.target.value); setSaved('dirty'); clearTimeout(timer.current); timer.current = setTimeout(saveNotes, 900); }} onBlur={saveNotes}/></label>
         <small className="record-card-saved" role="status">{{ saving: '正在保存…', error: <>保存失败。<button type="button" className="pixel-button is-quiet" onClick={saveNotes}>重试</button></>, dirty: '', saved: notes ? <><Check size={13}/>已保存在这台电脑</> : '' }[saved]}</small>
         <footer className="record-card-footer">

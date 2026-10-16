@@ -2,13 +2,23 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import Dialog from './Dialog';
 import { Segmented } from './ui/Roving';
 import { ConfirmButton } from './ui/Confirm';
-import { Grid3X3, Search, X, Plus, Download, Up, Down, Trash2, External } from './icons';
+import { Grid3X3, Search, X, Plus, Download, Up, Down, Trash2, External, ArrowLeft } from './icons';
+import RecordSleeve from './ui/RecordSleeve';
 import { useDesktopAppearance } from './desktop-client';
 import { wallKey, normalizeWall, orderAlbums, readWall, WALL_STORAGE_KEY } from './album-wall-model.mjs';
 import { loadWallCover, paintWall, releaseWallCovers } from './album-wall-canvas.mjs';
 import { downloadBlob } from './lib/download.mjs';
 import { buildSearchInput } from './music-search.mjs';
 
+// Library thumbnail: the record's generated sleeve until (or unless) its cover arrives.
+function WallCover({ item }) {
+  const [state, setState] = useState(item.cover ? 'loading' : 'none');
+  useEffect(() => setState(item.cover ? 'loading' : 'none'), [item.cover]);
+  return <span className="wall-cover">{state !== 'ready' && <RecordSleeve item={item} title={false} loading={state === 'loading'}/>}{item.cover && state !== 'failed' && <img src={item.cover} alt={`${item.title} 封面`} loading="lazy" onLoad={() => setState('ready')} onError={() => setState('failed')}/>}</span>;
+}
+// Empty poster: a faint sample of what the wall becomes (one lead record and four
+// more, as generated sleeves), with the lamp-amber arrow toward the library.
+const GHOST = ['晨光', '雨夜来信', '湖畔', 'Blue Hour', '磁带年代'];
 function lightweight(item) { return { type: 'album', id: item.id || wallKey(item), title: item.title, artist: item.artist || '未知艺人', cover: item.cover || '', year: item.year || '', externalIds: item.externalIds || {} }; }
 export default function AlbumWall({ items, onClose }) {
   const saved = useRef(readWall(localStorage)), appearance = useDesktopAppearance();
@@ -68,7 +78,7 @@ export default function AlbumWall({ items, onClose }) {
       const image = document.createElement('canvas'); const result = await paintWall(image, ordered, options, images, options.scale);
       const blob = await new Promise((resolve) => image.toBlob(resolve, 'image/png')); if (!blob) throw new Error('无法生成图片，请降低下载倍率重试。');
       downloadBlob(blob, `Album-Wall-${(options.title || 'Collection').replace(/[<>:"/\\|?*\x00-\x1f]/g, '').slice(0, 60)}.png`);
-      setNotice(`PNG 已生成：${result.width} × ${result.height}。${result.missing ? ` ${result.missing} 张封面未加载，图片中使用文字占位。` : '请选择保存位置。'}`);
+      setNotice(`PNG 已生成：${result.width} × ${result.height}。${result.missing ? ` ${result.missing} 张封面未加载，图片中用生成的唱片封套代替。` : '请选择保存位置。'}`);
     } catch (error) { setNotice(''); setProblem(error.message); }
     finally { setBusy(false); }
   };
@@ -84,23 +94,29 @@ export default function AlbumWall({ items, onClose }) {
       <aside className="wall-library" aria-label="专辑选择"><Segmented className="wall-source-tabs" label="专辑来源" value={source} onChange={changeSource} items={[{ id: 'library', label: '专辑库' }, { id: 'online', label: '搜索添加' }]}/>
         <form className="wall-search" onSubmit={search}><label><Search size={17}/><input aria-label="专辑墙搜索" placeholder={source === 'library' ? '筛选歌手或专辑' : '歌手、专辑或 QQ 链接'} value={query} onChange={(event) => setQuery(event.target.value)}/></label>{source === 'online' && <div><select aria-label="专辑墙搜索来源" value={provider} onChange={(event) => setProvider(event.target.value)}><option value="qq">QQ 音乐</option><option value="itunes">Apple 曲库</option></select><button type="submit" disabled={!query.trim() || searching}>{searching ? '搜索中…' : '搜索'}</button></div>}</form>
         <div className="wall-library-tools"><small>点击右上角添加，数字代表排列顺序。</small><button type="button" onClick={() => setSelected((current) => { const keys = new Set(current.map(wallKey)); return [...current, ...visible.filter((item) => !keys.has(wallKey(item))).map(lightweight)].slice(0, 100); })} disabled={!visible.length}>批量添加当前列表</button></div>
-        <div className="wall-library-grid">{visible.map((item) => { const order = selectedKeys.get(wallKey(item)); return <button type="button" key={wallKey(item)} className={`wall-library-album ${order ? 'selected' : ''}`} aria-label={`${order ? '取消选择' : '添加'} ${item.artist} 的 ${item.title}`} aria-pressed={Boolean(order)} onClick={() => toggle(item)}><span className="wall-cover">{item.cover ? <img src={item.cover} alt={`${item.title} 封面`} loading="lazy"/> : <Grid3X3 size={32}/>}</span><span className="wall-add-order">{order || <Plus size={16}/>}</span><strong>{item.title}</strong><small>{item.artist}</small></button>; })}</div>
+        <div className="wall-library-grid">{visible.map((item) => { const order = selectedKeys.get(wallKey(item)); return <button type="button" key={wallKey(item)} className={`wall-library-album ${order ? 'selected' : ''}`} aria-label={`${order ? '取消选择' : '添加'} ${item.artist} 的 ${item.title}`} aria-pressed={Boolean(order)} onClick={() => toggle(item)}><WallCover item={item}/><span className="wall-add-order">{order || <Plus size={16}/>}</span><strong>{item.title}</strong><small>{item.artist}</small></button>; })}</div>
         {!visible.length && <p className="wall-empty">{searching ? '正在寻找封面…' : source === 'library' ? '这里没有匹配的专辑，可用「搜索添加」寻找。' : '搜索一张专辑，把封面加入海报。'}</p>}
       </aside>
-      <main className="wall-preview"><div className="wall-preview-bar"><span>海报预览</span><small>{painting ? '正在更新…' : metrics ? `${metrics.width} × ${metrics.height}${metrics.missing ? ` · ${metrics.missing} 张封面未加载` : ''}` : ''}</small></div><div className="wall-canvas-wrap"><canvas ref={canvas} aria-label="专辑墙图片预览"/>{!selected.length && <div className="wall-preview-empty"><Grid3X3 size={42}/><strong>从左侧选择第一张专辑</strong><span>添加顺序就是你的榜单顺序。</span></div>}</div><p className="wall-notice" role="status">{notice || (draftError ? '' : '草稿自动保存在本机。下载图片和预览使用相同排版。')}</p>{draftError && <p className="wall-notice status is-error" role="alert">无法保存专辑墙草稿到本机，仍可下载图片或保存工程。</p>}{problem && <p className="wall-notice status is-error" role="alert">{problem}</p>}
+      <main className="wall-preview"><div className="wall-preview-bar"><span>海报预览</span><small>{painting ? '正在更新…' : metrics ? `${metrics.width} × ${metrics.height}${metrics.missing ? ` · ${metrics.missing} 张封面未加载` : ''}` : ''}</small></div><div className="wall-canvas-wrap"><canvas ref={canvas} aria-label="专辑墙图片预览"/>{!selected.length && <div className="wall-preview-empty"><div className="wall-ghost" aria-hidden="true" style={{ '--wall-ghost-bg': options.background }}>{GHOST.map((title) => <RecordSleeve key={title} item={{ title, artist: '专辑墙' }} title={false}/>)}</div><p><ArrowLeft size={24}/><strong>从左侧选择第一张专辑</strong></p><span>添加顺序就是你的榜单顺序。</span></div>}</div><p className="wall-notice" role="status">{notice || (draftError ? '' : '草稿自动保存在本机。下载图片和预览使用相同排版。')}</p>{draftError && <p className="wall-notice status is-error" role="alert">无法保存专辑墙草稿到本机，仍可下载图片或保存工程。</p>}{problem && <p className="wall-notice status is-error" role="alert">{problem}</p>}
         <div className="wall-selected-heading"><strong>已选择 · {selected.length}</strong><ConfirmButton className="" disabled={!selected.length} icon={<Trash2 size={16}/>} question={`清空已选的 ${selected.length} 张？`} confirmLabel="确认清空" onConfirm={() => setSelected([])}>清空</ConfirmButton></div>
         <ol className="wall-selected-list">{ordered.map((item, index) => <li key={wallKey(item)}><span>{String(index + 1).padStart(2, '0')}</span><div><strong>{item.title}</strong><small>{item.artist}</small></div><button type="button" disabled={index === 0} aria-label={`将 ${item.title} 向前移动`} onClick={() => move(index, -1)}><Up size={17}/></button><button type="button" disabled={index === selected.length - 1} aria-label={`将 ${item.title} 向后移动`} onClick={() => move(index, 1)}><Down size={17}/></button><button type="button" aria-label={`移除 ${item.title}`} onClick={() => toggle(item)}><X size={17}/></button></li>)}</ol>
       </main>
-      <aside className="wall-options" aria-label="海报设置"><h2>排版设置</h2>
+      <aside className="wall-options" aria-label="海报设置"><h2>海报设置</h2>
+        <details className="wall-group" open><summary>排版</summary>
         <label>排列方法<select aria-label="排列方法" value={options.layout} onChange={(event) => update({ layout: event.target.value })}><option value="grid">等大网格</option><option value="ranked">榜单 · 前排大封面</option></select></label>
         <label>排列顺序<select aria-label="排列顺序" value={options.sort} onChange={(event) => update({ sort: event.target.value })}><option value="selection">选择顺序</option><option value="title">专辑名称</option><option value="artist">歌手名称</option><option value="year">发行年份</option></select></label>
         {[['columns','每行列数',1,12],['margin','外边距',0,160],['gap','专辑间距',0,60],['border','封面边框',0,12]].map(([key,label,min,max]) => <label key={key}>{label}<span className="wall-range"><input aria-label={label} type="range" min={min} max={max} value={options[key]} onChange={(event) => update({ [key]: Number(event.target.value) })}/><output>{options[key]}{key === 'columns' ? '' : ' px'}</output></span></label>)}
+        </details>
+        <details className="wall-group" open><summary>颜色</summary>
         <div className="wall-colors"><label>背景颜色<input aria-label="专辑墙背景颜色" type="color" value={options.background} onChange={(event) => update({ background: event.target.value })}/></label><label>文字颜色<input aria-label="专辑墙文字颜色" type="color" value={options.textColor} onChange={(event) => update({ textColor: event.target.value })}/></label></div>
+        </details>
+        <details className="wall-group"><summary>文字</summary>
         <label>标题<input aria-label="专辑墙标题" value={options.title} maxLength={120} placeholder="可留空" onChange={(event) => update({ title: event.target.value })}/></label>
         <label>作者 · 可选<input aria-label="专辑墙作者" value={options.author} maxLength={80} placeholder="你的名字" onChange={(event) => update({ author: event.target.value })}/></label>
         <label className="wall-toggle"><span>右侧显示专辑名称</span><input aria-label="右侧显示专辑名称" type="checkbox" checked={options.showNames} onChange={(event) => update({ showNames: event.target.checked })}/></label>
         <label className="wall-toggle"><span>右侧显示歌手名称</span><input aria-label="右侧显示歌手名称" type="checkbox" checked={options.showArtists} onChange={(event) => update({ showArtists: event.target.checked })}/></label>
         <label>海报字体<select aria-label="专辑墙字体" value={options.font} onChange={(event) => update({ font: event.target.value })}><option value="bundled">HarmonyOS Sans SC（内置）</option>{(appearance.fonts || []).filter((font) => font !== 'bundled').map((font) => <option key={font}>{font}</option>)}</select></label>
+        </details>
         <label>下载清晰度<select aria-label="下载清晰度" value={options.scale} onChange={(event) => update({ scale: Number(event.target.value) })}><option value="1">1× · 标准</option><option value="2">2× · 高清</option><option value="3">3× · 超清</option></select></label>
         <div className="wall-project-tools"><button type="button" onClick={() => downloadBlob(new Blob([JSON.stringify({ version: 1, options, selected }, null, 2)], { type: 'application/json' }), 'Album-Wall-project.json')}><Download size={16}/>保存工程</button><label className="wall-file">打开工程<input type="file" accept=".json,application/json" aria-label="打开专辑墙工程" onChange={importFile}/></label><a href="https://topsters.org/" target="_blank" rel="noreferrer"><External size={16}/>打开 Topsters</a><small>Topsters 在浏览器里打开，本机草稿不会带过去。</small></div>
       </aside>
