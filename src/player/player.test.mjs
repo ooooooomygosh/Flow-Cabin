@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { rmsEnergy, smoothEnergy, createPlaybackBroadcaster, PLAYBACK_EVENT, estimatedEnergy } from './playback-signal.mjs';
 import { normalizeQueue, enqueue, playNext, dequeue, pruneQueue, cycleRepeat, nextStep, nextPlayableStep, previousStep, queueAddition, playedBag, QUEUE_LIMIT } from './player-queue.mjs';
-import { proceduralGrid, quantize, readPalette, nearestIndex, gridToRgba, hexToRgb, GRID, PALETTE_TOKENS } from './pixel-cover.mjs';
+import { proceduralGrid, quantize, readPalette, nearestIndex, gridToRgba, hexToRgb, GRID, PALETTE_TOKENS, SCENES, sleeveTone } from './pixel-cover.mjs';
 import { createBeatTracker, bassLevel } from './beat-tracker.mjs';
 import { setBeat, currentBeat, sinceBeat } from './beat-clock.mjs';
 import { readId3, readFlac, readTags, parseFileName, groupAlbums } from './audio-tags.mjs';
@@ -64,7 +64,9 @@ test('pixel covers: deterministic, palette-bound, framed', () => {
   assert.deepEqual(a.grid, b.grid); assert.notDeepEqual(a.grid, c.grid);
   assert.equal(a.grid.length, GRID * GRID); assert.ok([...a.grid].every((i) => i < PALETTE_TOKENS.length));
   assert.equal(a.grid[0], 0); assert.equal(a.grid[GRID * GRID - 1], 0); // shadow frame
-  const scenes = new Set(Array.from({ length: 40 }, (_, i) => proceduralGrid({ title: 'album ' + i }).scene)); assert.equal(scenes.size, 4);
+  const scenes = new Set(Array.from({ length: 80 }, (_, i) => proceduralGrid({ title: 'album ' + i }).scene)); assert.equal(SCENES.length, 8); assert.equal(scenes.size, SCENES.length, 'every motif is reachable');
+  assert.equal(sleeveTone({ title: '晴天', artist: '周杰伦' }), sleeveTone({ title: '晴天', artist: '周杰伦' }), 'label tone is per record');
+  assert.ok(Array.from({ length: 40 }, (_, i) => sleeveTone({ title: 'album ' + i })).every((hex) => PALETTE_TOKENS.some(([, value]) => value === hex) && !['#0d0805', '#1c120b', '#2e1d12'].includes(hex)), 'label tone is a bright palette ink');
   const palette = readPalette({ getPropertyValue: (name) => name === '--px-accent' ? ' #ff0000 ' : '' });
   assert.deepEqual(palette[PALETTE_TOKENS.findIndex(([n]) => n === '--px-accent')], [255, 0, 0], 'live CSS token wins');
   assert.deepEqual(palette[0], hexToRgb('#0d0805'), 'fallback when token missing');
