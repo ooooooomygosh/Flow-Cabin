@@ -44,7 +44,7 @@ export async function verifyPlaylistPagination({ browser, origin, check }) {
   const waitPending = async () => { for (let i = 0; i < 100 && !pending; i++) await new Promise(resolve => setTimeout(resolve, 20)); assert(pending, 'next page request started'); };
   try {
     await page.goto(origin); await page.locator('.room-record').first().waitFor();
-    await page.getByRole('button', { name: '我的歌单', exact: true }).click();
+    await page.getByRole('button', { name: '添加到唱片架', exact: true }).click(); await page.getByRole('tab', { name: '我的歌单', exact: true }).click();
     await page.getByLabel('正在读取歌单').waitFor();
     for (let i = 0; i < 100 && !listPending; i++) await new Promise(resolve => setTimeout(resolve, 20)); assert(listPending);
     await page.getByRole('tab', { name: /网易云音乐/ }).click(); listPending(); listPending = null;
@@ -73,7 +73,7 @@ export async function verifyPlaylistPagination({ browser, origin, check }) {
     await page.evaluate(() => window.dispatchEvent(new CustomEvent('album-music-account', { detail: { provider: 'netease' } })));
     await page.locator('.playlist-card', { hasText: playlist.name }).waitFor(); pending(); pending = null;
     mode = 'ok'; await open(); await count(500); await more().click(); await count(620);
-    assert.equal(await page.locator('.playlist-dialog').evaluate(el => el.scrollWidth <= el.clientWidth), true);
+    assert.equal(await page.locator('.add-album-dialog').evaluate(el => el.scrollWidth <= el.clientWidth), true);
     check('large-playlist-account-switch-discards-late-page-and-can-reopen');
     await page.getByRole('button', { name: '全部歌单' }).click(); await open(); mode = 'short'; await more().click(); await count(619);
     const retryMissing = page.getByRole('button', { name: '重试未返回曲目' }); await retryMissing.waitFor(); assert.equal(await more().count(), 0);

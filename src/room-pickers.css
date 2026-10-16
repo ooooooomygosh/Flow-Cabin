@@ -1,0 +1,32 @@
+/* Scene and companion pickers (Settings › 房间与桌宠, first-run 房间 step). The
+   choice-card lift comes from pixel-ui; cards here are equal-height flex columns.
+   Pet sprites are 32 px, so cards draw them at whole multiples: 64, or 96 on a wide dialog. */
+@layer guards, reset, features, skin, overrides;
+@layer features {
+.room-pickers { container-type: inline-size; }
+.personalization-intro { color: var(--px-ink-dim); font-size: 14px; line-height: 1.7; margin: 0 0 12px; }
+.personalization-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 16px 0 12px; }
+.room-pickers section:first-child .personalization-heading { margin-top: 0; }
+.personalization-heading h3 { font: 400 24px/28px var(--px-font-cn); -webkit-font-smoothing: none; margin: 0; }
+.personalization-heading > span { font-size: 12px; color: var(--px-ink-faint); }
+.scene-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.scene-choice, .pet-choice { position: relative; min-width: 0; display: flex; flex-direction: column; padding: 0; background: var(--px-surface-card); color: inherit; text-align: left; overflow: hidden; cursor: pointer; }
+.scene-choice:hover, .pet-choice:hover { background: var(--px-surface-2); }
+.scene-choice > img { display: block; flex: none; width: 100%; height: auto; aspect-ratio: 4/3; object-fit: cover; border-bottom: 2px solid var(--px-shadow); background: var(--px-surface-2); }
+.choice-copy { flex: 1; display: grid; align-content: start; padding: 8px; gap: 4px; }
+.choice-copy small, .pet-choice small { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; font-size: 12px; line-height: 16px; min-height: 32px; color: var(--px-ink-dim); }
+.choice-copy strong, .pet-choice strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The ✓ on the chosen card: a square lamp key, not a dot. */
+.choice-mark { position: absolute; right: 6px; top: 6px; display: grid; place-items: center; width: 20px; height: 20px; font: 400 12px/1 var(--px-font-cn); background: var(--px-accent); color: var(--px-ink-on-accent); box-shadow: inset 2px 2px 0 var(--px-accent-hi), inset -2px -2px 0 var(--px-accent-lo), var(--px-shadow-1); }
+.choice-mark:empty { display: none; }
+.pet-options { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+.pet-choice { align-items: center; text-align: center; padding: 8px 6px 10px; gap: 6px; }
+.pet-choice .pixel-cat { width: 64px; height: 64px; image-rendering: pixelated; }
+/* All six places in one row once there is room for them. */
+@container (min-width: 600px) { .scene-options { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; } }
+@container (min-width: 900px) { .pet-choice .pixel-cat { width: 96px; height: 96px; } }
+@container (max-width: 420px) { .pet-options { grid-template-columns: repeat(3, minmax(0, 1fr)); } .personalization-heading { align-items: flex-start; flex-direction: column; gap: 4px; } }
+.room-pickers.is-compact .personalization-heading { margin: 8px 0 8px; }
+.room-pickers.is-compact .personalization-heading h3 { font-size: 12px; line-height: 16px; color: var(--px-ink-dim); }
+.room-pickers.is-compact .scene-options, .room-pickers.is-compact .pet-options { gap: 6px; }
+}

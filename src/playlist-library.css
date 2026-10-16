@@ -1,10 +1,14 @@
-/* 我的歌单 · playlist library. Layout borrows the proven library pattern of
+/* 添加到唱片架: one fixed-size dialog for every way onto the shelf (tabs never resize it),
+   and its 我的歌单 tab, the playlist library. Layout borrows the proven library pattern of
    YesPlayMusic / Apple Music (source rail → cover grid → detail with hero +
    track table), dressed as record sleeves in the cabin's pixel style. */
 @layer guards, reset, features, skin, overrides;
 @layer features {
-.playlist-dialog.cabin-dialog.is-wide { width: min(1040px, calc(100vw - 32px)); height: min(760px, calc(100vh - 48px)); }
-.playlist-dialog .cabin-dialog-body { padding: 0; display: flex; flex: 1; min-height: 0; overflow: hidden; }
+.add-album-dialog.cabin-dialog.is-wide { width: min(1040px, calc(100vw - 32px)); height: min(760px, calc(100dvh - 48px)); max-height: none; }
+.add-album-dialog .cabin-dialog-body { padding: 0; display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
+.add-album-dialog .dialog-tabs { flex: none; margin: 0; padding: 8px 20px 0; overflow-x: auto; }
+.add-album-panel { flex: 1; min-height: 0; overflow: auto; padding: 16px 20px 20px; }
+.add-album-dialog.is-playlists .add-album-panel { display: flex; padding: 0; overflow: hidden; }
 .playlist-shell { display: grid; grid-template-columns: 220px minmax(0, 1fr); width: 100%; min-height: 0; }
 
 /* ── source rail ─────────────────────────────────────────────── */

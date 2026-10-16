@@ -268,7 +268,7 @@ async function wireRemoteView() {
     await applyAppearance();
     syncFullscreen();
     wallpaperStatus(wallpaperState); petStatus(petState);
-    if (desktopMode) notifySite(`document.documentElement.dataset.desktopMode = '${desktopMode.active}';`);
+    if (desktopMode) notifySite(`document.documentElement.dataset.desktopMode = '${desktopMode.active}'; window.dispatchEvent(new CustomEvent('album-desktop-mode', {detail: {active: ${Boolean(desktopMode.active)}}}));`);
     if (desktopSink) notifySinkStatus(desktopSink.status());
     updates.push(); autostart.publish();
     siteView.setVisible(!settingsOpen);
@@ -338,7 +338,7 @@ function showToolbarMenu() {
   Menu.buildFromTemplate([
     { label: `心流小屋 · ${app.getVersion()}`, enabled: false },
     { type: 'separator' },
-    { label: '设置', click: () => toggleSettings(true) },
+    { label: '显示与字体…', click: () => toggleSettings(true) },
     { label: '打开数据文件夹', click: () => shell.openPath(app.getPath('userData')) },
   ]).popup({ window: mainWindow, x: Math.max(0, width - 250), y: toolbarHeight });
 }

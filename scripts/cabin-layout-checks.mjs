@@ -1,4 +1,4 @@
-import { openRoomSettings, openMusicSettings, chooseSource } from './settings-actions.mjs';
+import { openRoomSettings, openMusicSettings, closeSettings, settingsDialog, accountsRegion } from './settings-actions.mjs';
 import assert from 'node:assert/strict';
 import { getRoomScene } from '../src/scene-catalog.mjs';
 
@@ -24,31 +24,46 @@ export async function verifyCabinLayout({ page, check = () => {} }) {
   assert.equal(measure.buttonOverflow, false, 'album actions stay inside the card');
   assert(measure.recordBottom <= measure.card.top + 1, 'album card must stay below record interactions');
   const heading = await page.locator('.turntable-heading').boundingBox();
-  const tools = await page.getByRole('navigation', { name: '小屋设置', exact: true }).boundingBox();
+  const tools = await page.getByRole('navigation', { name: '唱片架', exact: true }).boundingBox();
   assert(tools.y >= heading.y + heading.height - 1, 'room tools follow the turntable heading');
-  for (const name of ['筛选与唱片盒']) {
+  for (const name of ['整理唱片架']) {
     const button = page.getByRole('button', { name, exact: true });
     assert.equal(await button.count(), 1, `${name} must have one reachable entry`);
     assert.equal(await button.evaluate(e => Boolean(e.closest('.room-turntable')) && !e.closest('.turntable-drag-handle')), true);
   }
   assert.equal(await page.locator('.room-turntable').getByLabel('唱机音源').count(), 0);
-  for (const name of ['布置小屋', '音源设置']) assert.equal(await page.getByRole('button', { name, exact:true }).count(), 0);
-  await page.getByRole('button', { name: '打开黑胶与专辑特写', exact:true }).waitFor();
+  for (const name of ['布置小屋', '音源设置', '筛选与唱片盒', '打开黑胶与专辑特写']) assert.equal(await page.getByRole('button', { name, exact:true }).count(), 0, `${name} is gone`);
+  // 唱机特写 has one entry on the console: the record art (T on the keyboard).
+  const closeUp = page.locator('.room-turntable').getByRole('button', { name: '唱机特写', exact:true });
+  assert.equal(await closeUp.count(), 1, 'one 唱机特写 entry on the console'); assert.equal(await closeUp.getAttribute('class'), 'turntable-record-art');
+  // The selection card keeps two actions; 自定义唱片 and Discogs live in the record card.
+  assert.equal(await page.locator('.room-now-playing').getByRole('button', { name: /自定义唱片/ }).count() + await page.locator('.room-now-playing a').count(), 0, 'no record tools on the selection card');
+  // One toolbar row, right-aligned, in a fixed order.
+  const toolbar = await page.locator('.cabin-toolbar').evaluate(nav => { const kids = [...nav.querySelectorAll('button')].filter(b => b.getBoundingClientRect().width); return { tops: [...new Set(kids.map(b => Math.round(b.getBoundingClientRect().top)))], right: Math.max(...kids.map(b => b.getBoundingClientRect().right)), width: innerWidth, order: kids.map(b => b.classList.contains('focus-badge') ? '专注' : (b.getAttribute('aria-label') || b.textContent).trim()) }; });
+  assert.equal(toolbar.tops.length, 1, `toolbar is one row: ${toolbar.tops}`); assert(toolbar.width - toolbar.right < 40, 'toolbar sits at the right edge');
+  const kind = name => /^小屋声音/.test(name) ? '声音' : /出门|回家/.test(name) ? '伙伴' : /桌面/.test(name) ? '桌面' : name;
+  assert.deepEqual(toolbar.order.map(kind), ['专注', '声音', '伙伴', '桌面', '沉浸'], `toolbar order: ${toolbar.order}`);
   check('album-card-frame-alignment-background-alpha-and-console-tools');
   return measure;
 }
 
 export async function verifyCabinToolActions({ page, check = () => {} }) {
-  const filter = page.getByRole('button', { name:'筛选与唱片盒', exact:true });
+  const filter = page.getByRole('button', { name:'整理唱片架', exact:true });
   await filter.click(); assert.equal(await filter.getAttribute('aria-expanded'), 'true');
   await page.getByLabel('筛选类型', { exact:true }).selectOption('song');
   await page.getByText('没有符合筛选的唱片。', { exact:true }).waitFor();
   assert.match(await filter.textContent(), /0/); assert.match(await filter.getAttribute('class'), /is-active/);
   await page.getByLabel('筛选类型', { exact:true }).selectOption('all'); await page.locator('.room-record').first().waitFor();
+  assert.equal(await page.getByRole('region', { name: '整理唱片架', exact:true }).getByRole('button', { name: '专辑墙', exact:true }).count(), 1, '专辑墙 opens from the shelf panel');
   await filter.click(); assert.equal(await filter.getAttribute('aria-expanded'), 'false');
-  await openRoomSettings(page); await page.getByRole('dialog').waitFor();
-  await page.getByRole('button', { name:'回到小屋',exact:true }).click();
-  await openMusicSettings(page); await page.getByRole('dialog').waitFor(); await page.keyboard.press('Escape');
+  await openRoomSettings(page); await settingsDialog(page).waitFor();
+  assert.equal(await settingsDialog(page).getByRole('button', { name: '回到小屋', exact:true }).count(), 0, 'the header × and Esc close 设置');
+  await closeSettings(page);
+  // The console's source chip opens 设置 › 音源; 账户与文件夹 is a page inside it, not another dialog.
+  await page.locator('.room-turntable .turntable-source-chip').click(); await settingsDialog(page).getByRole('radiogroup', { name: '唱机音源', exact:true }).waitFor();
+  assert.equal(await settingsDialog(page).getByRole('tab', { name: '音源', exact:true }).getAttribute('aria-selected'), 'true'); await closeSettings(page);
+  await openMusicSettings(page); assert.equal(await page.getByRole('dialog').count(), 1, '账户与文件夹 stays inside 设置');
+  await accountsRegion(page).getByRole('button', { name: '音源', exact:true }).click(); await accountsRegion(page).waitFor({ state: 'detached' }); await page.keyboard.press('Escape'); await settingsDialog(page).waitFor({ state: 'hidden' });
   await page.getByRole('button', { name:'移动唱机',exact:true }).press('Home');
   assert.equal(await page.locator('.room-turntable').getAttribute('data-moving'), 'false', 'tool actions do not start a drag');
   check('relocated-tools-filter-state-and-dialog-actions');

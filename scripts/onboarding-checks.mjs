@@ -1,4 +1,4 @@
-import { openRoomSettings, openMusicSettings, chooseSource } from './settings-actions.mjs';
+import { openRoomSettings, closeSettings } from './settings-actions.mjs';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 
@@ -51,7 +51,10 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
     await heading(page).filter({ hasText: '只开需要的权限' }).waitFor();
     await button(page, '跳过 系统通知').click(); await wizard.getByText('已跳过').waitFor();
     await button(page, '下一步').click();
-    await button(page, '入门选择 林间书屋').click(); await button(page, '入门选择 枫糖').click();
+    // The 房间 step is the same picker as 设置 › 房间与桌宠, on small thumbnails.
+    assert.equal(await wizard.locator('.room-pickers.is-compact .scene-choice img').first().getAttribute('src'), '/room-scenes/thumbs/pixel.png');
+    await button(page, '选择场景 林间书屋').click(); await button(page, '选择桌宠 枫糖').click();
+    assert.equal(await button(page, '选择场景 林间书屋').getAttribute('aria-pressed'), 'true');
     assert.equal(await page.locator('.cabin-scene').getAttribute('data-room-look'), 'forest');
     await button(page, '下一步').click();
     assert.equal(await page.locator('audio[src]').count(), 0, 'no sound before 播放测试');
@@ -70,7 +73,7 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
 
     // 2. 重新引导 from the hub, motion preferences.
     await button(page, '设置').click(); await hubOf(page).waitFor();
-    assert.deepEqual(await page.getByRole('tab').allInnerTexts(), ['音源', '房间与桌宠', '专注工具', '桌面', '数据与备份', '关于']);
+    assert.deepEqual(await page.getByRole('tab').allInnerTexts(), ['音源', '房间与桌宠', '专注工具', '显示与桌面', '数据与备份', '关于']);
     await page.getByRole('tab', { name: '关于' }).click(); await button(page, '重新引导').click();
     await wizardOf(page).waitFor(); await heading(page).filter({ hasText: '欢迎来到心流小屋' }).waitFor();
     assert.equal(await hubOf(page).count(), 0);
@@ -99,17 +102,17 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
     await button(page, '选择场景 海边慢屋').click();
     assert.equal(await page.locator('.cabin-scene').getAttribute('data-room-look'), 'seaside');
     await page.screenshot({ path: path.join(evidence, 'settings-hub-room.png'), animations: 'disabled' });
-    await button(page, '回到小屋').click(); await hubOf(page).waitFor({ state: 'hidden' });
-    await openMusicSettings(page);
-    await page.getByRole('dialog', { name: '音源与账户', exact: true }).waitFor();
-    await page.keyboard.press('Escape');
-    await page.waitForFunction(() => !document.querySelector('dialog[open]'));
-    await button(page, '设置').click(); await hubOf(page).waitFor();
+    await closeSettings(page);
+    // The deck's 音源设置 event opens 设置 › 音源 (web: only 仅动画展示 and 本地音乐 can be chosen).
+    await page.evaluate(() => window.dispatchEvent(new Event('cabin-open-music-settings'))); await hubOf(page).waitFor();
     assert.equal(await page.getByRole('tab', { name: '音源' }).getAttribute('aria-selected'), 'true');
-    await hubOf(page).getByText('唱机现在用').waitFor();
-    await hubOf(page).getByLabel('音质').waitFor();
+    const sources = hubOf(page).getByRole('radiogroup', { name: '唱机音源', exact: true });
+    assert.equal(await sources.getByRole('radio', { name: '仅动画展示', exact: true }).getAttribute('aria-checked'), 'true');
+    assert.equal(await sources.getByRole('radio', { name: 'QQ 音乐', exact: true }).isDisabled(), true, 'platform sources are desktop-only');
+    assert.equal(await hubOf(page).getByRole('button', { name: '账户与文件夹' }).count(), 0, 'web has no accounts page');
+    assert.equal(await hubOf(page).getByLabel('音质').count(), 0, 'web has no quality choice');
     await page.screenshot({ path: path.join(evidence, 'settings-hub-music.png'), animations: 'disabled' });
-    await page.getByRole('tab', { name: '桌面' }).click();
+    await page.getByRole('tab', { name: '显示与桌面' }).click();
     await hubOf(page).getByRole('checkbox', { name: '沉入桌面' }).waitFor();
     assert.equal(await hubOf(page).getByRole('checkbox', { name: '沉入桌面' }).isDisabled(), true, 'browser preview: #14 reports 沉入桌面 as desktop-client only');
     await page.getByRole('tab', { name: '数据与备份' }).click(); await button(page, '收藏与备份').click();
@@ -121,7 +124,7 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
   // 6. 沉入桌面 API says unsupported: toggle disabled, reason shown.
   ({ context, page, failures } = await fresh(() => { if (location.origin === 'null') return; window.cabinDesktop = { getDesktopModeStatus: () => ({ active: false, supported: false, reason: '当前系统不支持沉入桌面' }), enterDesktopMode() {}, exitDesktopMode() {} }; localStorage.setItem('flow-cabin-welcome-v1', 'seen'); }));
   try {
-    await page.goto(origin); await button(page, '设置').click(); await page.getByRole('tab', { name: '桌面' }).click();
+    await page.goto(origin); await button(page, '设置').click(); await page.getByRole('tab', { name: '显示与桌面' }).click();
     await hubOf(page).getByText(/当前系统不支持沉入桌面|沉入桌面需要在心流小屋桌面客户端里使用/).first().waitFor(); // #14's installDesktopApi owns window.cabinDesktop in the page
     assert.equal(await hubOf(page).getByRole('checkbox', { name: '沉入桌面' }).isDisabled(), true);
     check('desktop-mode-unsupported-reason-disables-toggle');
@@ -134,7 +137,7 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
     await page.goto(origin); await wizardOf(page).waitFor();
     await button(page, '开始设置').click(); await button(page, '下一步').click(); await button(page, '下一步').click();
     await page.evaluate(() => { const set = Storage.prototype.setItem; Storage.prototype.setItem = function (key, value) { if (key.startsWith('album-circle-library')) throw new DOMException('Storage full', 'QuotaExceededError'); return set.call(this, key, value); }; });
-    await button(page, '入门选择 海边慢屋').click();
+    await button(page, '选择场景 海边慢屋').click();
     await wizardOf(page).getByRole('alert').waitFor();
     await button(page, '跳过引导').click(); await wizardOf(page).waitFor({ state: 'hidden' });
     check('wizard-storage-failure-is-shown-and-allows-exit');

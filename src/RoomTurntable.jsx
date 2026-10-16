@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { VinylDisc } from './RecordLibrary';
 import SceneDeck from './scene/SceneDeck';
-import { ChevronLeft, ChevronRight, Disc3, Pause, Play, X, Plus, Eye, PlayPixel, PausePixel, RepeatPixel, RepeatOnePixel, ShufflePixel } from './icons';
+import { ChevronLeft, ChevronRight, Disc3, Pause, Play, Plus, PlayPixel, PausePixel, RepeatPixel, RepeatOnePixel, ShufflePixel } from './icons';
 import { ROOM_DRAG_TYPE } from './RoomScene';
 import useTurntablePosition from './useTurntablePosition';
 import { trackNames } from './room-model.mjs';
@@ -12,10 +12,8 @@ import { displayTitle } from './display-title.mjs';
 // Wrap the quality token (无损 / FLAC / Hi-Res / 320k MP3…) of a status line in a small badge; the text stays whole.
 const QUALITY = /(\d{2,4}\s?k(?:bps)?(?:\s?(?:MP3|AAC|OGG))?|Hi-?Res|FLAC|无损)/i;
 const statusNode = (text) => { const match = typeof text === 'string' && QUALITY.exec(text); return match ? <>{text.slice(0, match.index)}<span className="turntable-quality">{match[0]}</span>{text.slice(match.index + match[0].length)}</> : text; };
-// 系统 Apple Music drives the macOS “音乐” App; other systems never see the option.
-const isMacClient = () => typeof navigator !== 'undefined' && /Mac/i.test(navigator.platform || navigator.userAgent || '');
 
-export default function RoomTurntable({ item, spinning, trackIndex = 0, style, items = [], load, toggle, track, eject, readOnly = false, desktopClient = false, provider = 'visual', setProvider, playback, statusText, actualTrack, system, player, tools }) {
+export default function RoomTurntable({ item, spinning, trackIndex = 0, style, items = [], load, toggle, track, eject, readOnly = false, provider = 'visual', setProvider, playback, statusText, actualTrack, system, player, tools }) {
   const [dragging, setDragging] = useState(false), names = trackNames(item), deckAnchor = useRef(null);
   const placement = useTurntablePosition(readOnly);
   const trackName = actualTrack || playback?.actualTrack || names[trackIndex] || (item ? '原始资料暂无曲目' : '双击封面，或将唱片拖到这里');
@@ -32,9 +30,8 @@ export default function RoomTurntable({ item, spinning, trackIndex = 0, style, i
       onActivate={() => deckAnchor.current?.closest('.room-turntable')?.querySelector('.turntable-toggle')?.click()}
       onDropRecord={(id) => { const found = items.find((candidate) => candidate.id === id); if (found && !readOnly) load?.(found); }}/>
     <div className="turntable-side-cabinet">
-      <span className="cabinet-side-face" aria-hidden="true"/><span className="cabinet-leg cabinet-leg-left" aria-hidden="true"/><span className="cabinet-leg cabinet-leg-right" aria-hidden="true"/>
       <div className="turntable-console">
-    <div className="turntable-heading">{readOnly ? <span><Disc3 size={15}/>木屋唱机</span> : <button type="button" className="turntable-drag-handle" aria-label="移动唱机" title="拖动移动唱机 · 方向键微调 · 双击或 Home 复位" {...placement.handle}><Disc3 size={15}/>木屋唱机 ⠿</button>}{!readOnly && <button type="button" className="turntable-closeup" aria-label="唱机特写" title="唱机特写 · T" onClick={() => window.dispatchEvent(new Event('cabin-open-corner'))}><Eye size={14}/></button>}<small>{providerLabel(provider, 'short')}</small></div>
+    <div className="turntable-heading">{readOnly ? <span><Disc3 size={15}/>木屋唱机</span> : <button type="button" className="turntable-drag-handle" aria-label="移动唱机" title="拖动移动唱机 · 方向键微调 · 双击或 Home 复位" {...placement.handle}><Disc3 size={15}/>木屋唱机 ⠿</button>}{readOnly ? <small className="turntable-source-chip">{providerLabel(provider, 'short')}</small> : <button type="button" className="turntable-source-chip" aria-label={`音源 ${providerLabel(provider, 'short')} · 更换`} title={`唱机音源：${providerLabel(provider)} · 在「设置 › 音源」里更换`} onClick={() => window.dispatchEvent(new Event('cabin-open-music-settings'))}>{providerLabel(provider, 'short')}<span aria-hidden="true">▾</span></button>}</div>
     {!readOnly && tools}
     {/* Two decks take turns: one plays, the other buffers the next song. */}
     {!readOnly && playback && playback.deckRefs.map((ref, index) => <audio key={index} ref={ref} {...playback.events} preload="auto"/>)}
@@ -42,7 +39,7 @@ export default function RoomTurntable({ item, spinning, trackIndex = 0, style, i
     <div className="pocket-screen" data-state={screenState}>
     <div className="pocket-statusbar" aria-hidden="true"><span className="pocket-state">{screenState === 'playing' ? <PlayPixel size={12}/> : screenState === 'paused' ? <PausePixel size={12}/> : <i className="pocket-dot"/>}{{ playing: '播放中', paused: '已暂停', busy: '连接中', error: '没接上', idle: item ? '待播放' : '空唱机' }[screenState]}</span><span className="pocket-flags">{player?.queue.repeat === 'one' ? <RepeatOnePixel size={12}/> : player?.queue.repeat === 'all' ? <RepeatPixel size={12}/> : null}{player?.queue.shuffle && <ShufflePixel size={12}/>}{item && names.length > 0 && <b>{trackIndex + 1}/{names.length}</b>}</span></div>
     <div className="pocket-now">
-    <button type="button" className="turntable-record-art" aria-label="打开黑胶与专辑特写" disabled={readOnly} onClick={() => window.dispatchEvent(new Event('cabin-open-corner'))}>
+    <button type="button" className="turntable-record-art" aria-label="唱机特写" title="唱机特写 · T" aria-keyshortcuts="T" disabled={readOnly} onClick={() => window.dispatchEvent(new Event('cabin-open-corner'))}>
       <span className="turntable-sleeve">{item?.cover ? <img src={item.cover} alt="" referrerPolicy="no-referrer"/> : <Disc3 size={32}/>}</span>
       <VinylDisc item={item || undefined} value={style} className={spinning ? 'is-spinning' : ''}/><span className="turntable-needle" aria-hidden="true"/>
     </button>
@@ -60,7 +57,6 @@ export default function RoomTurntable({ item, spinning, trackIndex = 0, style, i
     {!readOnly && !['visual', 'system'].includes(provider) && playback?.candidates.length > 0 && <div className="turntable-matches" aria-label="选择曲目版本">{playback.candidates.map((candidate) => <button type="button" key={`${candidate.provider}:${candidate.id}`} onClick={() => playback.choose(candidate)}><strong>{candidate.title}</strong><span>{candidate.artist} · {candidate.album || '专辑未知'}</span></button>)}</div>}
     {!readOnly && playback?.localApp && <p className="turntable-local-app"><button type="button" onClick={() => playback.openInLocalApp()} title="小屋内播放失败时的备用办法：在平台 App（未安装时为官方网页）中打开这首歌。声音由该 App 播放，小屋不会显示进度。">{playback.localApp.label}</button><small>交给平台 App 播放 · 小屋不显示进度</small></p>}
     {!readOnly && playback?.notice && <p className="turntable-local-app-notice" role="status">{playback.notice}</p>}
-    {!readOnly && provider !== 'system' && !item && <p className="turntable-hint">双击封面，或把唱片拖到这里。</p>}
       </div>
     </div>
   </aside>;

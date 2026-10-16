@@ -13,8 +13,6 @@
 .room-turntable .turntable-controls button:hover:not(:disabled) { translate: 0 -1px; }
 .room-turntable .turntable-controls button:active:not(:disabled) { translate: 1px 1px; box-shadow: inset 2px 2px 0 #00000059; transition-duration: 0s; }
 .room-turntable .turntable-controls .turntable-toggle { background: var(--px-accent); color: var(--px-ink-on-accent); box-shadow: inset 2px 2px 0 var(--px-accent-hi), inset -2px -2px 0 var(--px-accent-lo), var(--px-shadow-1); }
-/* The empty console title already says 双击封面… (AES-14): the repeat line stays hidden. */
-.room-turntable .turntable-hint { display: none; }
 
 /* The selected album sits below the rack, with the same outer frame width.
    Alpha belongs to the background only; labels and controls stay opaque.
@@ -44,9 +42,6 @@
   .room-now-playing:has(.room-queue-add) .room-selection-actions span { display: none; }
   .cabin-room .room-now-playing:has(.room-queue-add) .room-selection-actions :is(button,a) { padding: 5px; }
 }
-/* Mid-size windows keep the taller two-row card: its footprint is the safe area the room
-   geometry and the companion placement are tuned for (browser-smoke layout checks). */
-@media (max-width: 1399px) and (min-width: 1001px), (max-height: 700px) and (min-height: 621px) { .cabin-room .room-now-playing { height: 144px; flex-wrap: wrap; align-content: center; } .cabin-room .room-now-playing .room-selection-copy { flex-basis: 210px; } .cabin-room .room-now-playing .room-selection-actions { flex: 0 1 auto; flex-wrap: wrap; } }
 /* Compact windows (AES-16): a slimmer strip so the floor and the companion stay in view. */
 @media (max-width: 1000px), (max-height: 620px) { .cabin-room .room-now-playing { height: 72px; } .cabin-room .room-now-playing .room-selection-copy > small { display: none; } }
 @container (max-width: 520px) {
@@ -73,6 +68,11 @@
    bottom edge (sticky inside the scrolling console). */
 .room-turntable .turntable-console { overflow: auto; overscroll-behavior: contain; }
 .room-turntable .turntable-audio-sliders { position: sticky; bottom: -12px; z-index: 2; margin: 8px -12px -12px; padding: 8px 12px 10px; background: linear-gradient(#2a1a10, #24160f); box-shadow: 0 -2px 0 #8a5a3266; }
-.room-turntable .turntable-closeup { display: grid; place-items: center; width: 24px; height: 24px; margin-left: auto; margin-right: 6px; padding: 0; color: var(--px-ink-dim); background: var(--px-surface-2); border: 2px solid var(--px-shadow); box-shadow: inset 1px 1px 0 #ffffff1c; cursor: pointer; }
-.room-turntable .turntable-closeup:hover { color: var(--px-ink-on-accent); background: var(--px-accent); }
+.room-turntable .turntable-source-chip { display: inline-flex; align-items: center; gap: 4px; min-width: 0; max-width: 50%; min-height: var(--px-hit); margin-left: auto; padding: 0 6px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--px-ink-dim); background: var(--px-surface-2); border: 2px solid var(--px-shadow); box-shadow: inset 1px 1px 0 #ffffff1c; font: inherit; font-size: 12px; cursor: pointer; }
+.room-turntable .turntable-source-chip:hover { color: var(--px-ink-on-accent); background: var(--px-accent); }
+small.turntable-source-chip { cursor: default; }
+/* 整理唱片架 › 专辑墙: the last row of the shelf panel. */
+.shelf-filter-wall { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 2px solid var(--px-border-subtle); font-size: 12px; color: var(--px-ink-dim); }
+.shelf-filter-wall button { display: inline-flex; align-items: center; gap: 6px; min-height: var(--px-hit); padding: 4px 10px; background: var(--px-surface-3); border: 2px solid var(--px-shadow); color: var(--px-ink); font: inherit; font-size: 12px; cursor: pointer; }
+.shelf-filter-wall button:hover { background: var(--px-accent); color: var(--px-ink-on-accent); }
 }
