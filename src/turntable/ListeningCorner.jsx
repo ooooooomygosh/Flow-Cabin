@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import Dialog from '../Dialog';
+import { Segmented } from '../ui/Roving';
 import PixelTurntable from './PixelTurntable';
 import { sideProgress, seekTarget } from './turntable-physics.mjs';
 import { flyRecord } from './record-flight.mjs';
@@ -8,6 +9,7 @@ import { displayTitle } from '../display-title.mjs';
 import { trackNames } from '../room-model.mjs';
 import { trackArtist } from '../track-meta.mjs';
 import { formatDuration } from '../playlist-model.mjs';
+import { formatSeconds } from '../lib/time-format.mjs';
 import { bindEnergyVar } from '../scene/playback-listener.mjs';
 import { usePlaybackDuration, usePlaybackPosition } from '../deck/usePlaybackClock';
 import { ChevronLeft, ChevronRight, Pause, Play, X, SpeakerWave, SpeakerOff, Disc3 } from '../icons';
@@ -15,8 +17,7 @@ import './listening-corner.css';
 
 // 唱机特写 · Listening Corner: the deck up close on a lamp-lit desk, its sleeve
 // leaning beside it, the side's tracks, and a crate of records to flip through.
-const clock = (seconds) => { const value = Math.max(0, Math.floor(Number(seconds) || 0)); return `${Math.floor(value / 60)}:${String(value % 60).padStart(2, '0')}`; };
-const LIGHTS = [['lamp', '台灯'], ['dusk', '黄昏'], ['night', '深夜']];
+const LIGHTS = [{ id: 'lamp', label: '台灯' }, { id: 'dusk', label: '黄昏' }, { id: 'night', label: '深夜' }];
 
 // The visual-only deck has no audio clock; time passes while it spins.
 function useVisualClock(running, key) {
@@ -39,34 +40,22 @@ export default function ListeningCorner({ item, items = [], vinyl, provider, spi
   const { progress, gaps } = useMemo(() => sideProgress(lengths.length ? lengths : [0], trackIndex, position), [lengths.join(), trackIndex, Math.floor(position)]);
   const [speed, setSpeed] = useState(33), [light, setLight] = useState(() => { try { return localStorage.getItem('album-circle-corner-light-v1') || 'lamp'; } catch { return 'lamp'; } });
   const [sounds, setSounds] = useState(deckSoundsEnabled), [energyStep, setEnergyStep] = useState(0), [query, setQuery] = useState(''), [notice, setNotice] = useState('');
-  const root = useRef(null), deckRef = useRef(null), list = useRef(null);
+  const deckRef = useRef(null), list = useRef(null), root = () => deckRef.current?.closest('.listening-corner');
   useEffect(() => { setSpeed(33); }, [item?.id]);
   useEffect(() => {
-    const previous = document.activeElement; root.current?.focus({ preventScroll: true });
-    const key = (event) => {
-      if (document.querySelector('dialog[open]')) return;
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        // Esc in a filled crate search clears it first; the next Esc leaves the corner.
-        if (event.target?.matches?.('input[type=search]') && event.target.value) { setQuery(''); return; }
-        close(); return;
-      }
-      if (event.key !== 'Tab') return;
-      const controls = [...root.current.querySelectorAll('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex]:not([tabindex="-1"])')].filter(element => element.getClientRects().length);
-      const first = controls[0], last = controls.at(-1), current = document.activeElement;
-      // This full-screen section is a modal dialog. Keep keyboard navigation
-      // inside it, including when focus starts on the section itself.
-      if (!first) { event.preventDefault(); root.current.focus(); }
-      else if (event.shiftKey && (current === first || current === root.current || !root.current.contains(current))) { event.preventDefault(); last.focus(); }
-      else if (!event.shiftKey && (current === last || !root.current.contains(current))) { event.preventDefault(); first.focus(); }
-    };
     // Energy lights only the lamp and the deck glow (not the whole modal subtree),
     // in eighths, through the rAF-coalesced playback listener.
-    const offEnergy = bindEnergyVar(() => [root.current?.querySelector('.corner-lamp'), deckRef.current], '--corner-energy', 8, (level) => setEnergyStep(Math.round(level * 4) / 4));
-    document.addEventListener('keydown', key);
+    const offEnergy = bindEnergyVar(() => [root()?.querySelector('.corner-lamp'), deckRef.current], '--corner-energy', 8, (level) => setEnergyStep(Math.round(level * 4) / 4));
     document.documentElement.classList.add('room-corner-open');
-    return () => { document.removeEventListener('keydown', key); offEnergy(); document.documentElement.classList.remove('room-corner-open'); previous?.focus?.({ preventScroll: true }); };
+    return () => { offEnergy(); document.documentElement.classList.remove('room-corner-open'); };
   }, []);
+  // The room's keys stand down while a dialog is open, so the corner answers T itself;
+  // Esc in a filled crate search clears it first, the next Esc leaves (Dialog).
+  const keys = (event) => {
+    if (event.altKey || event.ctrlKey || event.metaKey) return;
+    if (event.key === 'Escape' && event.target?.matches?.('input[type=search]') && event.target.value) { event.preventDefault(); setQuery(''); return; }
+    if ((event.key === 't' || event.key === 'T') && !event.shiftKey && !event.repeat && !event.target?.closest?.('input,textarea,select')) { event.preventDefault(); close(); }
+  };
   useEffect(() => { list.current?.querySelector('[aria-current="true"]')?.scrollIntoView({ block: 'nearest' }); }, [trackIndex, item?.id]);
   const toggle = () => audible ? playback.toggle() : toggleVisual?.();
   const seek = (value) => {
@@ -85,13 +74,13 @@ export default function ListeningCorner({ item, items = [], vinyl, provider, spi
   const needle = query.normalize('NFKC').toLowerCase().trim();
   const matches = items.filter(entry => !needle || `${entry.title} ${entry.artist}`.normalize('NFKC').toLowerCase().includes(needle));
   const crate = matches.slice(0, 120);
-  const queueRecord = (entry, event) => { if (!player?.enqueue(entry.id)) { setNotice(''); return; } flyRecord({ from: event.currentTarget.closest('li')?.querySelector('img, .corner-crate-blank'), to: root.current?.querySelector('.corner-crate-status'), cover: entry.cover, mode: 'queue' }); setNotice(`《${entry.title}》已加入待播`); };
-  return createPortal(<section ref={root} tabIndex={-1} className={`listening-corner is-${light}`} role="dialog" aria-modal="true" aria-label="唱机特写" data-playing={String(playing)}>
+  const queueRecord = (entry, event) => { if (!player?.enqueue(entry.id)) { setNotice(''); return; } flyRecord({ from: event.currentTarget.closest('li')?.querySelector('img, .corner-crate-blank'), to: root()?.querySelector('.corner-crate-status'), cover: entry.cover, mode: 'queue' }); setNotice(`《${entry.title}》已加入待播`); };
+  return <Dialog variant="full" title="唱机特写" close={close} onKeyDown={keys} deckKeys className={`listening-corner is-${light}`} container={document.querySelector('.cabin-room')}>
     <div className="corner-backdrop" aria-hidden="true"><span className="corner-lamp"/><span className="corner-window"/><span className="corner-dust"/></div>
     <header className="corner-bar">
       <span className="corner-title"><Disc3 size={16}/>唱机特写<small>拖动唱臂换位置 · 点唱片暂停 · 33 / 45 转</small></span>
       <span className="corner-bar-actions">
-        <span className="segmented corner-light" role="radiogroup" aria-label="灯光">{LIGHTS.map(([value, label]) => <button type="button" role="radio" key={value} aria-checked={light === value} onClick={() => { setLight(value); try { localStorage.setItem('album-circle-corner-light-v1', value); } catch {} }}>{label}</button>)}</span>
+        <Segmented className="segmented corner-light" label="灯光" items={LIGHTS} value={light} onChange={(value) => { setLight(value); try { localStorage.setItem('album-circle-corner-light-v1', value); } catch {} }}/>
         <button type="button" className="pixel-button is-quiet" aria-pressed={sounds} title="唱针落下、抬起与唱片出套的声音" onClick={() => { setDeckSounds(!sounds); setSounds(!sounds); }}>{sounds ? <SpeakerWave size={15}/> : <SpeakerOff size={15}/>}唱机声音</button>
         <button type="button" className="pixel-button" aria-keyshortcuts="Escape T" onClick={close}><X size={15}/>回到小屋 · Esc</button>
       </span>
@@ -115,7 +104,7 @@ export default function ListeningCorner({ item, items = [], vinyl, provider, spi
             <button type="button" aria-label="上一首" disabled={!player?.canPrevious} onClick={() => player?.previous()}><ChevronLeft size={18}/></button>
             <button type="button" className="corner-play" aria-label={playing ? '暂停' : '播放'} onClick={toggle}>{playing ? <Pause size={20}/> : <Play size={20}/>}</button>
             <button type="button" aria-label="下一首" disabled={!player?.canNext} onClick={() => player?.next()}><ChevronRight size={18}/></button>
-            <span className="corner-time">{audible && duration ? `${clock(position)} / ${clock(duration)}` : provider === 'visual' ? '仅动画 · 无音频' : ''}</span>
+            <span className="corner-time">{audible && duration ? `${formatSeconds(position)} / ${formatSeconds(duration)}` : provider === 'visual' ? '仅动画 · 无音频' : ''}</span>
           </div>
           {audible && playback.statusText && !playback.playing && <p className="corner-status" role="status">{playback.statusText}</p>}
           <ol ref={list} className="corner-tracks" aria-label="本面曲目">{names.map((name, index) => <li key={index}><button type="button" aria-current={index === trackIndex ? 'true' : undefined} onClick={() => setTrackIndex(index)}><b>{String(index + 1).padStart(2, '0')}</b><span>{displayTitle(name)}</span><small>{lengths[index] ? formatDuration(lengths[index]) : ''}</small></button></li>)}</ol>
@@ -132,5 +121,5 @@ export default function ListeningCorner({ item, items = [], vinyl, provider, spi
         <span className="corner-crate-copy">{entry.title}</span>
       </button>{entry.id !== item?.id && player && <button type="button" className="corner-crate-queue" aria-label={`加入待播 ${entry.title}`} disabled={player.queue.ids.includes(entry.id)} onClick={event => queueRecord(entry, event)}>{player.queue.ids.includes(entry.id) ? '已入队' : '+ 待播'}</button>}</li>)}</ul>
     </nav>}
-  </section>, document.querySelector('.cabin-room') || document.body);
+  </Dialog>;
 }

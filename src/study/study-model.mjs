@@ -88,6 +88,11 @@ export function updateCard(state, cardId, change) {
   return { ...state, cards: state.cards.map((card) => card.id === cardId ? { ...card, front: text(change.front ?? card.front, LIMITS.side) || card.front, back: text(change.back ?? card.back, LIMITS.side) } : card) };
 }
 export function removeCard(state, cardId) { return { ...state, cards: state.cards.filter((card) => card.id !== cardId) }; }
+// 撤销 after a delete: the card (memory included) returns while its deck still exists.
+export function restoreCard(state, card) {
+  if (!card || state.cards.length >= LIMITS.cards || state.cards.some((entry) => entry.id === card.id) || !state.decks.some((deck) => deck.id === card.deckId)) return state;
+  return { ...state, cards: [...state.cards, card].sort((a, b) => a.createdAt - b.createdAt) };
+}
 
 // Today's queue: due reviews first (most overdue first), then new cards up to the daily limit.
 export function studyQueue(state, deckId, now = Date.now()) {
@@ -127,6 +132,10 @@ export function addCountdown(state, title, date) {
   return { ...state, countdowns: [...state.countdowns, { id: uid('exam'), title: value, date }].sort((a, b) => a.date.localeCompare(b.date)) };
 }
 export function removeCountdown(state, id) { return { ...state, countdowns: state.countdowns.filter((entry) => entry.id !== id) }; }
+export function restoreCountdown(state, entry) {
+  if (!entry || state.countdowns.length >= LIMITS.countdowns || state.countdowns.some((item) => item.id === entry.id)) return state;
+  return { ...state, countdowns: [...state.countdowns, entry].sort((a, b) => a.date.localeCompare(b.date)) };
+}
 export function nextCountdown(state, now = Date.now()) { return state.countdowns.map((entry) => ({ ...entry, days: daysUntil(entry.date, now) })).filter((entry) => entry.days >= 0).sort((a, b) => a.days - b.days)[0] || null; }
 
 // Focus heatmap: the last N weeks as columns of 7 days (Sunday first), levels 0–4.

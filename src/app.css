@@ -76,6 +76,9 @@ a{color:var(--px-accent-hi)}
 .dialog-tabs{display:flex;gap:0;margin:-4px 0 14px;border-bottom:2px solid var(--px-border)}
 .dialog-tabs button{padding:8px 16px;font-size:13px;color:var(--px-ink-dim);background:none;border:0;border-bottom:3px solid transparent;margin-bottom:-2px}
 .dialog-tabs button[aria-selected=true]{color:var(--px-ink);border-bottom-color:var(--px-accent);font-weight:700}
+/* In-place confirm (ui/Confirm) and the 撤销 line after a single delete. */
+.confirm-inline{display:inline-flex;align-items:center;flex-wrap:wrap;gap:6px;font-size:12px;line-height:16px;color:var(--px-ink)}
+.undo-line{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:6px 0;font-size:12px;color:var(--px-ink-dim)}
 .segmented{display:inline-flex;border:2px solid var(--px-border);box-shadow:3px 3px 0 var(--px-shadow)}
 .segmented button{padding:5px 12px;font-size:12px;color:var(--px-ink-dim);background:var(--px-surface-2);border:0}
 .segmented button+button{border-left:1px solid var(--px-border)}

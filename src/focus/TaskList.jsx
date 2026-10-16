@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, Check, Pencil } from '../icons';
+import { Plus, Trash2, Check, Pencil, TomatoPixel } from '../icons';
+import { ConfirmButton, UndoLine, useUndo } from '../ui/Confirm';
 import { useFocus } from './useFocus';
 import { taskProgress } from './focus-model.mjs';
 
 export default function TaskList() {
   const focus = useFocus(), [draft, setDraft] = useState(''), [dragging, setDragging] = useState(''), [editing, setEditing] = useState('');
+  const [undo, offerUndo, clearUndo] = useUndo();
+  const remove = (task, index) => { if (focus.removeTask(task.id)) offerUndo(`已删除「${task.text}」`, () => focus.restoreTask(task, index)); };
   const { tasks, timer } = focus.state, progress = taskProgress(tasks, focus.now), open = progress.open;
   const finishEdit = (task, value) => { if (value.trim() && value.trim() !== task.text && !focus.renameTask(task.id, value)) return; setEditing(''); };
   const submit = (event) => { event.preventDefault(); if (!draft.trim() || tasks.length >= 200) return; if (focus.addTask(draft)) setDraft(''); };
@@ -32,13 +35,14 @@ export default function TaskList() {
           if (!event.altKey || !['ArrowUp', 'ArrowDown'].includes(event.key)) return;
           event.preventDefault(); focus.moveTask(task.id, index + (event.key === 'ArrowUp' ? -1 : 1));
         }} aria-pressed={timer.taskId === task.id} title={timer.taskId === task.id ? '取消作为当前专注任务' : '设为当前专注任务'} onClick={() => focus.selectTask(task.id, true)} onDoubleClick={() => setEditing(task.id)}>
-          <span>{task.text}</span>{task.pomodoros > 0 && <small aria-label={`已专注 ${task.pomodoros} 轮`}>{'🍅'.repeat(Math.min(task.pomodoros, 4))}{task.pomodoros > 4 ? `×${task.pomodoros}` : ''}</small>}
+          <span>{task.text}</span>{task.pomodoros > 0 && <small className="focus-task-rounds" aria-label={`已专注 ${task.pomodoros} 轮`}>{Array.from({ length: Math.min(task.pomodoros, 4) }, (_, round) => <TomatoPixel key={round} size={12}/>)}{task.pomodoros > 4 ? `×${task.pomodoros}` : ''}</small>}
         </button>}
-        <button type="button" className="focus-task-rename" aria-label={`编辑待办：${task.text}`} title="编辑（也可双击文字）" onClick={() => setEditing(task.id)}><Pencil size={14}/></button>
-        <button type="button" className="focus-task-remove" aria-label={`删除待办：${task.text}`} onClick={() => focus.removeTask(task.id)}><Trash2 size={15}/></button>
+        <button type="button" className="focus-task-rename" aria-label={`编辑待办：${task.text}`} title="编辑（也可双击文字）" onClick={() => setEditing(task.id)}><Pencil size={16}/></button>
+        <button type="button" className="focus-task-remove" aria-label={`删除待办：${task.text}`} onClick={() => remove(task, index)}><Trash2 size={16}/></button>
       </li>)}
     </ul>
+    <UndoLine offer={undo} clear={clearUndo}/>
     {tasks.length > 1 && <p className="focus-empty">拖动排序，或选中任务后按 Alt + ↑ / ↓ 调整顺序；双击文字可改名。</p>}
-    {tasks.length > 0 && <footer className="focus-task-footer"><span>{open} 项待完成</span>{tasks.length > open && <button type="button" onClick={focus.clearDone}>清除已完成</button>}</footer>}
+    {tasks.length > 0 && <footer className="focus-task-footer"><span>{open} 项待完成</span>{tasks.length > open && <ConfirmButton className="pixel-button is-quiet" question={`清除 ${tasks.length - open} 项已完成的待办？`} confirmLabel="确认清除" onConfirm={focus.clearDone}>清除已完成</ConfirmButton>}</footer>}
   </div>;
 }

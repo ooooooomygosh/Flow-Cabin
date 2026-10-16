@@ -1,10 +1,10 @@
-import React, { useEffect, useId, useRef } from 'react';
+import React, { useId, useLayoutEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from './icons';
 
 const FOCUSABLE = 'button:not(:disabled), [href], input:not(:disabled):not([type=hidden]), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])';
 const SIZES = new Set(['sm', 'md', 'lg', 'xl']);
-export const focusables = (root) => [...root.querySelectorAll(FOCUSABLE)].filter((node) => node.tabIndex >= 0 && !node.closest("[inert]") && node.getClientRects().length);
+export const focusables = (root) => [...root.querySelectorAll(FOCUSABLE)].filter((node) => node.tabIndex >= 0 && !node.closest('[inert]') && node.getClientRects().length);
 
 // THE modal of the app: a native <dialog> opened with showModal(), so the room
 // behind is inert and every room shortcut that checks `dialog[open]` stands down.
@@ -18,7 +18,7 @@ export const focusables = (root) => [...root.querySelectorAll(FOCUSABLE)].filter
 export default function Dialog({ title, icon, close, className = '', children, size, wide = false, label, footer, initialFocus, variant = 'panel', container, onKeyDown, deckKeys = false, closeLabel }) {
   const dialog = useRef(null), heading = useId(), pressedOutside = useRef(false), full = variant === 'full';
   const closeRef = useRef(close); closeRef.current = close;
-  useEffect(() => {
+  useLayoutEffect(() => {
     const node = dialog.current, previous = document.activeElement;
     node.showModal();
     const target = typeof initialFocus === 'string' ? node.querySelector(initialFocus) : initialFocus?.current;

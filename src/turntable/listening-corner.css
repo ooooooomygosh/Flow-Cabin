@@ -3,8 +3,9 @@
 @layer guards, reset, features, skin, overrides;
 @layer features {
 .listening-corner { --corner-energy: 0; --wall: #2a1a11; --wall-2: #352116; --desk: #5a3520; --desk-2: #6e4228; --lamp: #ffcf86; --window: #22304a;
-  position: absolute; inset: 0; z-index: 70; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; overflow: hidden; color: var(--px-ink);
+  position: fixed; inset: 0; grid-template-rows: auto minmax(0, 1fr) auto; overflow: hidden; color: var(--px-ink);
   background: var(--wall); animation: corner-in var(--px-dur-slow) var(--px-ease-smooth) both; }
+.listening-corner[open] { display: grid; }
 .listening-corner.is-dusk { --wall: #3a2117; --wall-2: #4a2a1c; --lamp: #ffb070; --window: #6b3f4a; }
 .listening-corner.is-night { --wall: #161420; --wall-2: #1f1c2c; --lamp: #e7c48a; --window: #121a30; --desk: #3f2717; --desk-2: #4f311d; }
 :root.room-corner-open .cabin-toolbar, :root.room-corner-open .room-now-playing, :root.room-corner-open .room-turntable .turntable-console { visibility: hidden; }
@@ -26,7 +27,8 @@
 /* Dust drifts as one composited layer, one tile per loop, in 32 stepped frames (no background-position repaint). */
 .corner-dust::before { content: ''; position: absolute; left: -180px; top: 0; right: 0; bottom: -140px; background-image: var(--dust); background-size: 90px 70px, 180px 140px; background-position: 0 0, 40px 30px; animation: corner-dust 16s steps(32, end) infinite; }
 
-.corner-bar { position: relative; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 12px 20px; background: linear-gradient(#0d0805cc, transparent); }
+.corner-bar { position: relative; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 12px 20px; background: linear-gradient(#0d0805cc, transparent); -webkit-app-region: drag; }
+.corner-bar :is(button, input, a) { -webkit-app-region: no-drag; }
 .corner-title { display: flex; align-items: center; gap: 8px; font-family: var(--px-font-cn); font-size: 24px; line-height: 28px; -webkit-font-smoothing: none; }
 .corner-title small { margin-left: 6px; font-family: var(--px-font-body); font-size: 12px; color: var(--px-ink-faint); }
 .corner-bar-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }

@@ -190,6 +190,12 @@ export function updateTask(state, taskId, change, now) {
 export function removeTask(state, taskId) {
   return { ...state, tasks: state.tasks.filter((task) => task.id !== taskId), timer: state.timer.taskId === taskId ? { ...state.timer, taskId: '' } : state.timer };
 }
+// 撤销 after a delete: the same task (id, rounds, done) back at its old place.
+export function restoreTask(state, task, index) {
+  const value = normalizeTask(task); if (!value || state.tasks.length >= 200 || state.tasks.some((entry) => entry.id === value.id)) return state;
+  const tasks = [...state.tasks]; tasks.splice(Math.max(0, Math.min(tasks.length, index)), 0, value);
+  return { ...state, tasks };
+}
 export function moveTask(state, taskId, toIndex) {
   const from = state.tasks.findIndex((task) => task.id === taskId); if (from < 0) return state;
   const tasks = [...state.tasks], [task] = tasks.splice(from, 1); tasks.splice(Math.max(0, Math.min(tasks.length, toIndex)), 0, task);

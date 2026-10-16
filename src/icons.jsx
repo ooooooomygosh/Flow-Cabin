@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   AcademicCapIcon, AdjustmentsHorizontalIcon, ArrowDownTrayIcon, ArrowLeftIcon, ArrowPathIcon, ArrowTopRightOnSquareIcon,
-  ArrowUpRightIcon, ArrowsPointingInIcon, ArrowsPointingOutIcon, ArrowsRightLeftIcon, BookOpenIcon, BuildingLibraryIcon,
+  ArrowUpRightIcon, ArrowUturnLeftIcon, ArrowsPointingInIcon, ArrowsPointingOutIcon, ArrowsRightLeftIcon, BookOpenIcon, BuildingLibraryIcon,
   ChartBarIcon, CheckIcon, ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon,
   ClockIcon, Cog6ToothIcon, ComputerDesktopIcon, DocumentArrowUpIcon, EyeIcon, EyeSlashIcon,
   FolderOpenIcon, ForwardIcon, HeartIcon, LinkIcon, ListBulletIcon, MagnifyingGlassIcon,
@@ -21,11 +21,12 @@ export const Plus = icon(PlusIcon), Search = icon(MagnifyingGlassIcon), Sparkles
 export const Wand2 = icon(AdjustmentsHorizontalIcon), Pause = icon(PauseIcon), Play = icon(PlayIcon), Shuffle = icon(ArrowsRightLeftIcon), X = icon(XMarkIcon);
 export const Expand = icon(ArrowsPointingOutIcon), Contract = icon(ArrowsPointingInIcon), Settings = icon(Cog6ToothIcon), Minus = icon(MinusIcon);
 export const External = icon(ArrowTopRightOnSquareIcon), Download = icon(ArrowDownTrayIcon), Check = icon(CheckIcon), Up = icon(ChevronUpIcon);
-export const Down = icon(ChevronDownIcon), Loading = icon(ArrowPathIcon), Clock = icon(ClockIcon), ChartBar = icon(ChartBarIcon), SpeakerWave = icon(SpeakerWaveIcon);
+// Loading spins (busy only); Refresh re-reads; Reset puts a timer back.
+export const Down = icon(ChevronDownIcon), Loading = icon(ArrowPathIcon), Refresh = icon(ArrowPathIcon), Reset = icon(ArrowUturnLeftIcon), Clock = icon(ClockIcon), ChartBar = icon(ChartBarIcon), SpeakerWave = icon(SpeakerWaveIcon);
 export const SpeakerOff = icon(SpeakerXMarkIcon), Forward = icon(ForwardIcon), EyeSlash = icon(EyeSlashIcon), Eye = icon(EyeIcon), Pencil = icon(PencilSquareIcon);
 export const ListBullet = icon(ListBulletIcon), Heart = icon(HeartIcon), FolderOpen = icon(FolderOpenIcon), Computer = icon(ComputerDesktopIcon);
 export const QueueList = icon(QueueListIcon), Link = icon(LinkIcon), DocumentArrow = icon(DocumentArrowUpIcon), ArrowLeft = icon(ArrowLeftIcon);
-export const Bookmark = icon(AcademicCapIcon);
+export const Study = icon(AcademicCapIcon);
 
 // Pixel glyphs for the deck's play modes, on pixelarticons' 24-unit grid
 // (2 units per pixel; MIT, see public/licenses/pixelarticons-LICENSE.txt).
@@ -73,6 +74,28 @@ export const NextPixel = pixelGlyph('next', pixels([
 export const EjectPixel = pixelGlyph('eject', pixels([
   '............', '.....XX.....', '....XXXX....', '...XXXXXX...', '..XXXXXXXX..', '.XXXXXXXXXX.',
   '.XXXXXXXXXX.', '............', '.XXXXXXXXXX.', '.XXXXXXXXXX.', '............', '............'
+]));
+
+// Small status glyphs that used to be emoji / Unicode (🍅 ⠿ 🐟 ♪): same 12 × 12 grid.
+export const TomatoPixel = pixelGlyph('tomato', pixels([
+  '............', '.....X.X....', '......X.....', '...XXXXXX...', '..XXXXXXXX..', '.XXXXXXXXXX.',
+  '.XXXXXXXXXX.', '.XXXXXXXXXX.', '.XXXXXXXXXX.', '..XXXXXXXX..', '...XXXXXX...', '............'
+]));
+export const GripPixel = pixelGlyph('grip', pixels([
+  '............', '...XX..XX...', '...XX..XX...', '............', '...XX..XX...', '...XX..XX...',
+  '............', '...XX..XX...', '...XX..XX...', '............', '............', '............'
+]));
+export const FishPixel = pixelGlyph('fish', pixels([
+  '............', '............', '.....XXX....', '...XXXXXX..X', '..XXXXXXXXXX', '.XX.XXXXXXX.',
+  '.XXXXXXXXXX.', '..XXXXXXXXXX', '...XXXXXX..X', '.....XXX....', '............', '............'
+]));
+export const NotePixel = pixelGlyph('note', pixels([
+  '............', '......XXXX..', '......XXXXX.', '......X...X.', '......X.....', '......X.....',
+  '......X.....', '...XXXX.....', '..XXXXX.....', '..XXXXX.....', '...XXX......', '............'
+]));
+export const ClockPixel = pixelGlyph('clock', pixels([
+  '............', '...XXXXXX...', '..X......X..', '.X...X....X.', '.X...X....X.', '.X...X....X.',
+  '.X...XXX..X.', '.X........X.', '.X........X.', '..X......X..', '...XXXXXX...', '............'
 ]));
 
 // The record glyph: a 12 × 12 pixel vinyl — outer rim, a half-tone groove and an accent label.

@@ -143,3 +143,16 @@ test('typed and imported cards share one duplicate rule (full-width, case, space
   assert.equal(addCards(state, deck, parseCards('ｗｉｎｄｏｗ - 全角\nWINDOW - 大写'), T0).added, 0);
   assert.equal(previewWordImport('ｗｉｎｄｏｗ\t全角', {}, state.cards).duplicates, 1);
 });
+
+test('study: a deleted card or countdown comes back unchanged with 撤销', async () => {
+  const { removeCard, restoreCard, removeCountdown, restoreCountdown } = await import('./study-model.mjs');
+  let state = addDeck(normalizeStudy({}), '英语', 1); const deckId = state.decks[0].id;
+  state = addCards(state, deckId, parseCards('a\tA\nb\tB')).state;
+  const card = state.cards[0], without = removeCard(state, card.id);
+  assert.deepEqual(restoreCard(without, card).cards, state.cards);
+  assert.equal(restoreCard(state, card), state, 'no duplicate when it is still there');
+  assert.equal(restoreCard(removeDeck(without, deckId), card).cards.length, 0, 'no orphan once its deck is gone');
+  state = addCountdown(addCountdown(state, '考试', '2030-06-01'), '面试', '2030-01-01');
+  const exam = state.countdowns[1];
+  assert.deepEqual(restoreCountdown(removeCountdown(state, exam.id), exam).countdowns, state.countdowns);
+});

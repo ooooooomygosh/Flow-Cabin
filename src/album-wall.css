@@ -2,7 +2,8 @@
    12/24px pixel type); the poster canvas itself stays smooth. Form wells come from pixel-ui. */
 @layer guards, reset, features, skin, overrides;
 @layer features {
-.album-wall-overlay{position:fixed;inset:0;z-index:200;display:flex;flex-direction:column;background:var(--px-bg);color:var(--px-ink);isolation:isolate;font:14px/1.5 var(--px-font-body)}
+.album-wall-overlay{position:fixed;inset:0;flex-direction:column;background:var(--px-bg);color:var(--px-ink);isolation:isolate;font:14px/1.5 var(--px-font-body)}
+.album-wall-overlay[open]{display:flex}
 .album-wall-overlay button,.album-wall-overlay input,.album-wall-overlay select{font:inherit;font-size:12px;color:inherit}
 .album-wall-overlay button,.wall-project-tools a,.wall-file{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:var(--px-hit);border:2px solid var(--px-shadow);background:var(--px-surface-2);color:var(--px-ink);font:400 12px/16px var(--px-font-cn);-webkit-font-smoothing:none;cursor:pointer;padding:6px 10px;text-decoration:none;box-shadow:inset 2px 2px 0 #ffffff1a,inset -2px -2px 0 #0000004d,var(--px-shadow-1);transition:background-color var(--px-dur-fast) steps(2,end),translate var(--px-dur-fast) steps(2,end)}
 .album-wall-overlay button:hover:not(:disabled),.wall-project-tools a:hover,.wall-file:hover{background:var(--px-surface-3);translate:0 -1px}
@@ -12,8 +13,6 @@
 .wall-header>div{display:flex;align-items:center;gap:14px}.wall-header svg{color:var(--px-accent)}
 .wall-header strong{font:400 24px/28px var(--px-font-cn);-webkit-font-smoothing:none}.wall-header span{color:var(--px-ink-dim);font-size:12px}
 .wall-header button{-webkit-app-region:no-drag}
-.album-wall-overlay .wall-header .wall-download{background:var(--px-accent);color:var(--px-ink-on-accent);border-color:var(--px-shadow);box-shadow:inset 2px 2px 0 var(--px-accent-hi),inset -2px -2px 0 var(--px-accent-lo),var(--px-shadow-1)}
-.album-wall-overlay .wall-header .wall-download:hover:not(:disabled){background:var(--px-accent)}
 .wall-workspace{min-height:0;flex:1;display:grid;grid-template-columns:300px minmax(0,1fr) 290px;overflow:hidden}
 .wall-library,.wall-options{min-width:0;overflow-y:auto;padding:20px;scrollbar-width:thin;scrollbar-color:var(--px-border) transparent;background:var(--px-surface)}
 .wall-library{border-right:2px solid var(--px-shadow)}.wall-options{border-left:2px solid var(--px-shadow)}
@@ -28,7 +27,7 @@
 .wall-colors label{flex:1;color:var(--px-ink-dim);font-size:12px;display:flex;align-items:center;justify-content:space-between;gap:8px}
 .wall-colors input{width:44px;height:32px;padding:2px;border:2px solid var(--px-border);background:var(--px-surface-inset);box-shadow:var(--px-shadow-inset);cursor:pointer}
 .wall-source-tabs{display:flex;gap:6px;margin-bottom:16px}.wall-source-tabs button{flex:1}
-.album-wall-overlay .wall-source-tabs button.active{background:var(--px-accent);color:var(--px-ink-on-accent);box-shadow:inset 2px 2px 0 var(--px-accent-hi),inset -2px -2px 0 var(--px-accent-lo)}
+.album-wall-overlay .wall-source-tabs button[aria-checked=true]{background:var(--px-accent);color:var(--px-ink-on-accent);box-shadow:inset 2px 2px 0 var(--px-accent-hi),inset -2px -2px 0 var(--px-accent-lo)}
 /* The search label is the well; the input inside it is bare (pixel-ui keeps it so). */
 .wall-search>label{display:flex;align-items:center;gap:4px;padding-left:8px;color:var(--px-accent);background:var(--px-surface-inset);border:2px solid var(--px-border);box-shadow:var(--px-shadow-inset)}
 .wall-search>label:focus-within{border-color:var(--px-accent-hi)}
@@ -68,7 +67,7 @@
 .album-wall-overlay .wall-selected-list button:hover:not(:disabled){background:var(--px-surface-3);color:var(--px-ink)}
 .wall-project-tools{padding-top:20px;border-top:2px solid var(--px-border-subtle);display:grid;gap:10px}
 .wall-project-tools small{font-size:12px;color:var(--px-ink-faint);line-height:1.6}
-.wall-file{position:relative}
+.wall-file{position:relative}.wall-file:focus-within{outline:2px dashed var(--px-focus);outline-offset:2px}
 .wall-file input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
 @media(min-width:2400px){.wall-workspace{grid-template-columns:360px minmax(0,1fr) 340px}.wall-library-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.wall-preview{padding:36px 70px}}
 @media(max-width:1100px){.wall-workspace{grid-template-columns:230px minmax(0,1fr) 235px}.wall-library,.wall-options{padding:14px}.wall-preview{padding:16px}.wall-canvas-wrap{padding:8px}.wall-header{padding:12px 14px}.wall-header>div>span:not(.wall-count){display:none}}

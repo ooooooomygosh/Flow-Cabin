@@ -65,7 +65,7 @@ export function usePlayerShortcuts({ playback, player, provider, toggleVisual, r
   const latest = useRef(); latest.current = { playback, player, provider, toggleVisual, record, spinning };
   useEffect(() => {
     const keydown = (event) => {
-      if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || typing(event.target) || document.querySelector('dialog[open]')) return;
+      if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || typing(event.target) || document.querySelector('dialog[open]:not([data-deck-keys])')) return;
       const { playback: pb, player: pl, provider: source, toggleVisual: spin, record: current } = latest.current;
       if (!current) return;
       const audible = source !== 'visual' && source !== 'system', key = event.key;

@@ -97,3 +97,12 @@ test('completed sessions split across local midnight without losing minutes', ()
   assert.equal(days.get('2026-10-13'), 1);
   assert.equal(days.get('2026-10-14'), 1);
 });
+
+test('focus: 撤销 puts a deleted task back in place with its rounds', () => {
+  let state = model.normalizeFocus({});
+  for (const text of ['一', '二', '三']) state = model.addTask(state, text, 1);
+  state = model.updateTask(state, state.tasks[1].id, { pomodoros: 3 }, 2);
+  const task = state.tasks[1], without = model.removeTask(state, task.id);
+  assert.deepEqual(model.restoreTask(without, task, 1).tasks, state.tasks);
+  assert.equal(model.restoreTask(state, task, 1), state, 'never duplicates a task that is still there');
+});

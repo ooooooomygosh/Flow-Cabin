@@ -43,7 +43,7 @@
 .focus-controls{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
 .focus-controls button{display:inline-flex;align-items:center;gap:6px;padding:8px 11px;color:#ffe2b4;background:#5b3a22;border:2px solid #a8784a;box-shadow:3px 3px 0 #120b06aa}
 .focus-controls button:active{translate:2px 2px;box-shadow:1px 1px 0 #120b06aa}
-.focus-controls .focus-primary{padding:9px 18px;color:#24170d;background:var(--px-accent);border-color:#ffe0a8;font-weight:700}
+.focus-controls .is-primary{padding:9px 18px}
 .focus-settings{display:grid;gap:7px;width:100%;text-align:left;padding:10px;background:#1f130b;border:1px dashed #8a5f3a}
 .focus-settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.focus-settings-grid label{display:grid;gap:3px;font-size:12px;color:#d3b58f}
 .focus-check{display:flex;align-items:center;gap:8px;font-size:12px}.focus-check input{accent-color:var(--px-accent)}
@@ -71,6 +71,9 @@
 .focus-week-bar{width:100%;background:repeating-linear-gradient(0deg,var(--px-accent-lo) 0 4px,transparent 4px 5px);align-self:end}.focus-week-bar.is-today{background:repeating-linear-gradient(0deg,var(--px-accent-hi) 0 4px,transparent 4px 5px)}
 .focus-week-value{color:var(--px-ink);font-variant-numeric:tabular-nums}.focus-week-day:has(.is-today) small{color:var(--px-accent-hi)}.focus-week figcaption{margin-top:8px;font-size:12px;color:var(--px-ink-faint);text-align:right}
 .focus-rewards{display:grid;gap:7px;margin-top:14px;padding-top:12px;border-top:2px dashed #5d3d24}
+.focus-task-rounds{display:inline-flex;align-items:center;gap:2px;color:var(--px-warn)}
+.focus-badge-paused{margin-left:4px;vertical-align:-1px}
+.focus-rewards header span{display:inline-flex;align-items:center;gap:4px}
 .focus-rewards header{display:flex;justify-content:space-between;align-items:center}.focus-rewards header strong{color:#ffe2a8}
 .focus-rewards small{color:var(--px-ink-dim);font-size:12px}
 .focus-xp{height:12px;background:var(--px-surface-inset);border:2px solid var(--px-border-subtle);box-shadow:var(--px-shadow-inset)}.focus-xp span{display:block;height:100%;background:repeating-linear-gradient(90deg,var(--px-good) 0 6px,transparent 6px 8px)}

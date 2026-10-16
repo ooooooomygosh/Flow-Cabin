@@ -24,7 +24,7 @@ export function Tabs({ items, value, onChange, label, idPrefix, orientation = 'h
 export const tabPanelProps = (idPrefix, value) => ({ role: 'tabpanel', id: `${idPrefix}-panel`, 'aria-labelledby': `${idPrefix}-${value}` });
 
 // One segmented control (a radiogroup): the same keys, `aria-checked` instead of tabs.
-export function Segmented({ items, value, onChange, label, className = '' }) {
+export function Segmented({ items, value, onChange, label, className = 'segmented' }) {
   const { refs, onKeyDown, tabIndex } = useRoving(items, value, onChange, 'both');
-  return <span role="radiogroup" aria-label={label} className={`segmented ${className}`}>{items.map((item) => <button type="button" role="radio" key={item.id} ref={(node) => { refs.current[item.id] = node; }} aria-checked={item.id === value} tabIndex={tabIndex(item.id)} disabled={item.disabled} title={item.title} onKeyDown={onKeyDown} onClick={() => onChange(item.id)}>{item.icon}{item.label}</button>)}</span>;
+  return <span role="radiogroup" aria-label={label} className={className}>{items.map((item) => <button type="button" role="radio" key={item.id} ref={(node) => { refs.current[item.id] = node; }} aria-checked={item.id === value} tabIndex={tabIndex(item.id)} disabled={item.disabled} title={item.title} onKeyDown={onKeyDown} onClick={() => onChange(item.id)}>{item.icon}{item.label}</button>)}</span>;
 }
