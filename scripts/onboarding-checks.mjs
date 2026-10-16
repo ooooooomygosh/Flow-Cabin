@@ -107,7 +107,8 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
     await page.evaluate(() => window.dispatchEvent(new Event('cabin-open-music-settings'))); await hubOf(page).waitFor();
     assert.equal(await page.getByRole('tab', { name: '音源' }).getAttribute('aria-selected'), 'true');
     const sources = hubOf(page).getByRole('radiogroup', { name: '唱机音源', exact: true });
-    assert.equal(await sources.getByRole('radio', { name: '仅动画展示', exact: true }).getAttribute('aria-checked'), 'true');
+    assert.equal(await sources.getByRole('radio', { name: '本地音乐', exact: true }).getAttribute('aria-checked'), 'true', 'the guide\'s choice is the deck\'s source');
+    assert.equal(await sources.getByRole('radio', { checked: true }).count(), 1);
     assert.equal(await sources.getByRole('radio', { name: 'QQ 音乐', exact: true }).isDisabled(), true, 'platform sources are desktop-only');
     assert.equal(await hubOf(page).getByRole('button', { name: '账户与文件夹' }).count(), 0, 'web has no accounts page');
     assert.equal(await hubOf(page).getByLabel('音质').count(), 0, 'web has no quality choice');

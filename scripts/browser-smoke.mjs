@@ -412,7 +412,7 @@ try {
   const startFocus = page.getByRole('button', { name: '开始专注', exact: true }); if (await startFocus.count()) await startFocus.click();
   await page.getByRole('button', { name: '收起专注工具', exact: true }).click(); await page.locator('.room-cat-bubble').waitFor();
   for (const scene of ROOM_SCENES) {
-    await page.setViewportSize({ width: 1440, height: 900 }); await openRoomSettings(page); await page.getByRole('button', { name: `选择场景 ${scene.label}`, exact: true }).click(); await page.getByRole('button', { name: '回到小屋', exact: true }).click();
+    await page.setViewportSize({ width: 1440, height: 900 }); await openRoomSettings(page); await page.getByRole('button', { name: `选择场景 ${scene.label}`, exact: true }).click(); await closeSettings(page);
     for (const [width, height] of [[1280, 720], [1280, 800], [1366, 768], [1440, 900], [1920, 1080]]) {
       await page.setViewportSize({ width, height }); await page.waitForTimeout(700);
       const issues = await layoutIssues('bubble');
