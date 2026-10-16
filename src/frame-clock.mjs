@@ -116,9 +116,10 @@ export function frameClock() {
   return shared;
 }
 
-// A full-screen opaque layer (唱机特写, html.room-corner-open) hides the cabin scene:
-// the room's own loops stop drawing while the close-up's turntable keeps the clock.
-export const OCCLUDING_CLASSES = Object.freeze(['room-corner-open']);
+// A full-screen layer (唱机特写, html.room-corner-open; 专注画面 filling the window,
+// html.room-focus-display) hides the cabin scene: the room's own loops stop drawing
+// while the layer on top keeps the clock.
+export const OCCLUDING_CLASSES = Object.freeze(['room-corner-open', 'room-focus-display']);
 export const occludedFrom = (classList) => OCCLUDING_CLASSES.some((name) => Boolean(classList?.contains?.(name)));
 const occlusionWatchers = new Set();
 let occlusion = null;

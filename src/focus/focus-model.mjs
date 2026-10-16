@@ -257,5 +257,5 @@ export function equip(state, kind, value) {
 // Compact read-only form shared with the wallpaper and desktop pet windows.
 export function focusSnapshot(state, now) {
   const task = state.tasks.find((item) => item.id === state.timer.taskId);
-  return { hideSeconds: state.settings.hideSeconds, catSkin: state.settings.catSkin, phase: state.timer.phase, paused: state.timer.paused, remaining: remainingMs(state.timer, now), endsAt: state.timer.paused ? 0 : state.timer.endsAt, round: state.timer.round, task: task?.text || '', fish: state.rewards.fish, level: levelInfo(state.rewards.xp).level, accessory: state.rewards.equipped.accessory, weather: state.rewards.equipped.weather };
+  return { hideSeconds: state.settings.hideSeconds, catSkin: state.settings.catSkin, phase: state.timer.phase, paused: state.timer.paused, remaining: remainingMs(state.timer, now), endsAt: state.timer.paused ? 0 : state.timer.endsAt, round: state.timer.round, duration: state.timer.phase === 'idle' ? 0 : state.timer.duration || phaseDuration(state.settings, state.timer.phase), longEvery: state.settings.longEvery, task: task?.text || '', fish: state.rewards.fish, level: levelInfo(state.rewards.xp).level, accessory: state.rewards.equipped.accessory, weather: state.rewards.equipped.weather };
 }

@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useFocusState } from './useFocus';
+import { FacePicker } from './FocusDisplay';
 
 // The timer preferences, once: the dock's ⚙ (计时设置) and Settings › 专注工具
 // render this same form. Turning on 系统通知 asks the system for permission
-// from either place.
+// from either place. Settings also holds the 专注画面 picker (`faces`); the
+// dock switches faces from its own header.
 const permissionNow = () => typeof Notification === 'undefined' ? 'unsupported' : Notification.permission;
 async function askNotifications() {
   if (typeof Notification === 'undefined') return 'unsupported';
@@ -26,7 +28,7 @@ function DurationSetting({ name, label, value, max, onSave }) {
   }}/></label>;
 }
 
-export default function FocusSettingsForm({ running = false, className = '' }) {
+export default function FocusSettingsForm({ running = false, className = '', faces = true }) {
   const focus = useFocusState(), [permission, setPermission] = useState(permissionNow);
   if (!focus) return <p className="onboarding-hint">专注工具未加载。</p>;
   const { settings } = focus.state;
@@ -38,5 +40,6 @@ export default function FocusSettingsForm({ running = false, className = '' }) {
     <div className="focus-settings-grid">{number('focusMin', '专注（分）', 180)}{number('shortMin', '短休（分）', 60)}{number('longMin', '长休（分）', 90)}{number('longEvery', '几轮长休', 8)}</div>
     {check('hideSeconds', '隐藏秒数（仅显示剩余分钟）')}{check('autoBreak', '专注结束自动开始休息')}{check('autoFocus', '休息结束自动开始专注')}{check('notify', '系统通知', notify)}{check('chime', '提示音')}{check('autoSound', '开始专注时打开声音')}
     {settings.notify && permission !== 'granted' && <small role="status">{permission === 'denied' ? '系统通知已被拒绝，可在系统设置里打开。' : permission === 'unsupported' ? '这个环境不支持系统通知，结束时只响提示音。' : '第一次结束时系统会询问是否允许通知。'}</small>}
+    {faces && <FacePicker/>}
   </div>;
 }

@@ -12,13 +12,19 @@ const petId = (value) => PETS.includes(value) ? value : 'cat';
 const PHASES = ['idle', 'focus', 'shortBreak', 'longBreak'], WEATHERS = ['snow', 'clear', 'rain', 'starry'], ACCESSORIES = ['', 'headphones', 'scarf', 'beanie'];
 // Mirrors of renderer catalogs (main never loads ../src); test/catalog-contract.test.cjs keeps them equal.
 const DECK_PROVIDERS = ['visual', 'auto', 'qq', 'netease', 'local', 'appleMusic', 'ma', 'system'];
+const FACES = ['flip', 'ring', 'record', 'minimal', 'window', 'growth'], SHOWS = ['auto', 'clock', 'timer'];
 const bounded = (value, max) => Number.isFinite(value) ? Math.max(0, Math.min(max, Math.round(value))) : 0;
 // Focus state shown by the wallpaper and the desktop pet: no task history.
 function cleanFocus(value) {
   if (!value || typeof value !== 'object') return null;
   return { phase: PHASES.includes(value.phase) ? value.phase : 'idle', paused: value.paused === true, remaining: bounded(value.remaining, 4 * 3600000), endsAt: bounded(value.endsAt, 9e15),
-    round: bounded(value.round, 1e6), task: string(value.task, 120), fish: bounded(value.fish, 1e9), level: bounded(value.level, 1e4),
+    round: bounded(value.round, 1e6), duration: bounded(value.duration, 3 * 3600000), longEvery: Math.max(2, Math.min(8, bounded(value.longEvery, 8) || 4)), task: string(value.task, 120), fish: bounded(value.fish, 1e9), level: bounded(value.level, 1e4),
     hideSeconds: value.hideSeconds === true, catSkin: value.catSkin === 'black' ? 'black' : 'orange', accessory: ACCESSORIES.includes(value.accessory) ? value.accessory : '', weather: WEATHERS.includes(value.weather) ? value.weather : 'snow' };
+}
+// The 专注画面 choice (album-circle-focus-display-v1): '' follows the scene's default face.
+function cleanFocusDisplay(value) {
+  const v = value && typeof value === 'object' ? value : {};
+  return { mode: FACES.includes(v.mode) ? v.mode : '', show: SHOWS.includes(v.show) ? v.show : 'auto', seconds: v.seconds === true };
 }
 function cleanCompanion(value) {
   if (!value || typeof value !== 'object') return null;
@@ -37,6 +43,6 @@ function cleanSnapshot(value) {
     recordStyle: { base: colour(style.base, '#16191d'), opacity: Number.isFinite(style.opacity) ? Math.max(0, Math.min(100, style.opacity)) : 100, splatter: style.splatter === true, splashes: (Array.isArray(style.splashes) && style.splashes.length ? style.splashes : ['#dba746']).slice(0, 3).map((v) => colour(v, '#dba746')) },
     spinning: Boolean(record && value.spinning === true), trackIndex: Math.max(0, Math.min(tracks - 1, Number.isSafeInteger(value.trackIndex) ? value.trackIndex : 0)), reduceMotion: value.reduceMotion === true,
     statusText: string(value.statusText, 200), actualTrack: string(value.actualTrack), provider: DECK_PROVIDERS.includes(value.provider) ? value.provider : 'visual',
-    weather: WEATHERS.includes(value.weather) ? value.weather : 'snow', accessory: ACCESSORIES.includes(value.accessory) ? value.accessory : '', grooving: value.grooving === true, track: string(value.track, 200), focus: cleanFocus(value.focus) };
+    weather: WEATHERS.includes(value.weather) ? value.weather : 'snow', accessory: ACCESSORIES.includes(value.accessory) ? value.accessory : '', grooving: value.grooving === true, track: string(value.track, 200), focus: cleanFocus(value.focus), focusDisplay: cleanFocusDisplay(value.focusDisplay) };
 }
-module.exports = { cleanSnapshot, cleanFocus, cleanCompanion, CATALOG_IDS: Object.freeze({ looks: LOOKS, pets: PETS, phases: PHASES, weathers: WEATHERS, accessories: ACCESSORIES, providers: DECK_PROVIDERS }) };
+module.exports = { cleanSnapshot, cleanFocus, cleanFocusDisplay, cleanCompanion, CATALOG_IDS: Object.freeze({ looks: LOOKS, faces: FACES, shows: SHOWS, pets: PETS, phases: PHASES, weathers: WEATHERS, accessories: ACCESSORIES, providers: DECK_PROVIDERS }) };

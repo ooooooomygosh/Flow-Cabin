@@ -40,6 +40,8 @@ nothing glossy or rounded. Owner of this document: art direction (beauty).
 | SunCalc (sun / moon position, moon phase) | github.com/mourner/suncalc @21449f3, vendored as `src/sky-suncalc.mjs` | BSD-2-Clause (`public/licenses/suncalc-LICENSE.txt`) |
 | Weather data (desktop, opt-in) | open-meteo.com forecast API, fetched in the Electron main process | data CC BY 4.0, attributed in 设置 › 房间与桌宠 |
 | Cloud puff layout idea | Skycons (darkskyapp/skycons) | CC0 — idea only, no code |
+| Focus faces (专注画面), pixel digits | drawn in code in this repo (`src/focus/faces/`, `src/focus/pixel-digits.mjs`) | project licence |
+| Flip-card maths (squash + darken) | ported from github.com/alexanderk23/gluqlo `render_digits()` (font not used) | ISC-style, notice in `public/licenses/gluqlo-LICENSE.txt` |
 
 ## Moonlit Study 月夜书桌 (night-study)
 
