@@ -16,10 +16,11 @@
 .cabin-toolbar .focus-badge.phase-shortBreak,.cabin-toolbar .focus-badge.phase-longBreak{color:var(--px-good)}
 .focus-dock{position:absolute;z-index:20;top:calc(var(--room-header-bottom,82px) + 58px);right:16px;width:min(360px,calc(100% - 32px));max-height:calc(100% - var(--room-header-bottom,82px) - 90px);display:flex;flex-direction:column;color:var(--px-ink);background:#27180ef2;border:2px solid var(--px-brass);box-shadow:6px 6px 0 #120b06b3;image-rendering:pixelated;font-size:13px}
 .room-zen:not(.room-zen-tools) .focus-dock{top:70px;max-height:calc(100% - 100px)}
-.focus-dock-header{display:flex;align-items:flex-end;padding-top:4px;border-bottom:2px solid var(--px-border);background:var(--px-surface-inset)}
-.focus-dock-header nav{display:flex;flex:1;min-width:0}
-.focus-dock-header nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 4px 7px;color:var(--px-ink-dim);background:var(--px-surface-2);border:2px solid var(--px-border-subtle);border-bottom:0;margin:0 0 0 2px;font-size:12px;transition:color 80ms steps(2,end),background 80ms steps(2,end)}.focus-dock-header nav button:hover{color:var(--px-ink)}
-.focus-dock-header nav button[aria-selected=true]{color:var(--px-accent-hi);background:#27180e;border-color:var(--px-border);border-top:2px solid var(--px-accent);margin-bottom:-2px;padding-bottom:9px}
+.focus-dock-header{display:flex;flex-direction:column;padding-top:4px;border-bottom:2px solid var(--px-border);background:var(--px-surface-inset)}
+.focus-dock-tabs{display:flex;align-items:flex-end}
+.focus-dock-tabs nav{display:flex;flex:1;min-width:0}
+.focus-dock-tabs nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 4px 7px;color:var(--px-ink-dim);background:var(--px-surface-2);border:2px solid var(--px-border-subtle);border-bottom:0;margin:0 0 0 2px;font-size:12px;transition:color 80ms steps(2,end),background 80ms steps(2,end)}.focus-dock-tabs nav button:hover{color:var(--px-ink)}
+.focus-dock-tabs nav button[aria-selected=true]{color:var(--px-accent-hi);background:#27180e;border-color:var(--px-border);border-top:2px solid var(--px-accent);margin-bottom:-2px;padding-bottom:9px}
 .focus-dock-close{padding:0 12px;color:#e7c79b;background:none;border:0}
 .focus-save-error{flex-shrink:0;padding:10px 14px;border-bottom:2px solid var(--px-border);color:#ffc2a6;line-height:1.5;background:#472519}
 .focus-save-error .pixel-button{margin-left:4px;padding:4px 8px;min-height:28px;font-size:12px}

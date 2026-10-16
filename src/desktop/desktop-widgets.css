@@ -6,6 +6,8 @@
    position (only !important beats an inline style) and sits bottom-right, clear of
    the console that steps back in on the left. */
 :root.room-desktop :is(.app-titlebar, .cabin-toolbar, .room-now-playing, .room-shelf-navigation, .focus-dock) { display: none !important; }
+/* The clock is a face, not a card: no panel behind it, even in 流畅模式 (perf-low). */
+.desktop-widget.is-clock { background: transparent !important; }
 .desktop-widgets.is-zen .desktop-widget.is-clock { left: auto !important; right: 2.5%; top: auto !important; bottom: 4% !important; text-align: right; }
 }
 @layer features {

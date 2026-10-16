@@ -94,7 +94,7 @@ export default function FocusDisplayStage() {
   const toggleFullscreen = () => { const exit = readCabinFullscreen(); ownFullscreen.current = !exit; requestCabinFullscreen({ exit }).catch(() => {}); };
   return <div ref={stage} className={`focus-display${idle ? ' is-idle' : ''}`} data-face={id} role="dialog" aria-label="专注画面" tabIndex={-1} onClick={(event) => { if (!event.target.closest('.focus-display-bar')) close(); }}>
     <div className="focus-display-stage">
-      <FocusFace face={id} look={look} focus={faceFocus(state)} show={display.show} seconds={display.seconds} variant="full" caption/>
+      <FocusFace face={id} look={look} focus={faceFocus(state)} show={display.show} seconds={display.seconds} variant="full" maxScale={8} caption/>
       {note && <p className="focus-display-note">{note}</p>}
     </div>
     {flash && <p className="focus-display-flash" role="status">{flash}</p>}

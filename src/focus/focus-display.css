@@ -29,8 +29,7 @@
 .face-show button[aria-checked=true] { color: var(--px-ink-on-accent); background: var(--px-accent); box-shadow: inset 2px 2px 0 var(--px-accent-hi), inset -2px -2px 0 var(--px-accent-lo); }
 
 /* The dock header's quick switch */
-.focus-dock-header { flex-wrap: wrap; }
-.face-switch { flex: 1 0 100%; display: flex; align-items: center; gap: 2px; padding: 0 6px 4px 10px; font-size: 12px; color: var(--px-ink-dim); }
+.face-switch { display: flex; align-items: center; gap: 2px; padding: 0 6px 4px 10px; font-size: 12px; color: var(--px-ink-dim); }
 .face-switch-title { margin-right: 6px; }
 .face-switch strong { min-width: 6em; text-align: center; font-weight: 400; color: var(--px-ink); white-space: nowrap; }
 .face-switch button { display: inline-flex; align-items: center; gap: 4px; min-width: var(--px-hit); min-height: var(--px-hit); padding: 0 4px; font: inherit; color: var(--px-ink-dim); background: none; border: 0; cursor: pointer; }
@@ -41,12 +40,12 @@
 .focus-display { position: fixed; inset: 0; z-index: 85; display: grid; place-items: center; outline: none; cursor: default;
   background:
     radial-gradient(ellipse 38% 34% at 50% 44%, color-mix(in srgb, var(--scene-accent) 14%, transparent) 0 62%, color-mix(in srgb, var(--scene-accent) 7%, transparent) 62% 100%, transparent 100%),
-    radial-gradient(ellipse 72% 66% at 50% 44%, rgb(13 8 5 / .5) 0 44%, rgb(13 8 5 / .64) 44% 62%, rgb(13 8 5 / .78) 62% 80%, rgb(13 8 5 / .9) 80%);
+    radial-gradient(ellipse 72% 66% at 50% 44%, rgb(13 8 5 / .68) 0 44%, rgb(13 8 5 / .77) 44% 62%, rgb(13 8 5 / .86) 62% 80%, rgb(13 8 5 / .93) 80%);
   animation: face-display-in var(--px-dur-med) steps(3, end) both; }
-.focus-display[data-face=minimal] { background: radial-gradient(ellipse 72% 66% at 50% 44%, rgb(13 8 5 / .74) 0 50%, rgb(13 8 5 / .84) 50% 74%, rgb(13 8 5 / .93) 74%); }
+.focus-display[data-face=minimal] { background: radial-gradient(ellipse 72% 66% at 50% 44%, rgb(13 8 5 / .8) 0 50%, rgb(13 8 5 / .87) 50% 74%, rgb(13 8 5 / .94) 74%); }
 .focus-display.is-idle { cursor: none; }
 .focus-display-stage { display: grid; justify-items: center; gap: 18px; translate: 0 -3vh; }
-.focus-face.is-full .focus-face-fit { width: min(90vw, 1500px); height: 60vh; }
+.focus-face.is-full .focus-face-fit { width: min(86vw, 1500px); height: 60vh; }
 .focus-face.is-full .focus-face-caption { font-size: 24px; color: var(--px-ink); text-shadow: 2px 2px 0 var(--px-shadow); letter-spacing: .04em; }
 .focus-display-note { margin: 0; max-width: 80vw; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font: 400 16px/1.4 var(--px-font-body); color: var(--px-ink-dim); text-shadow: 2px 2px 0 var(--px-shadow); }
 .focus-display-flash { position: absolute; top: 9vh; left: 50%; translate: -50% 0; margin: 0; padding: 6px 16px; font: 400 24px/1.3 var(--px-font-cn); color: var(--px-ink); background: var(--px-surface-hud); border: 2px solid var(--px-border); box-shadow: var(--px-shadow-2); pointer-events: none; animation: face-flash 1.5s steps(6, end) both; }

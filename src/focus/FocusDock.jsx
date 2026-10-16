@@ -97,8 +97,8 @@ export default function FocusDock({ open, close, tab, setTab }) {
   return <><FocusDisplayStage/>{open && <aside className="focus-dock" aria-label="专注工具">
     <header className="focus-dock-header">
       <FaceSwitch/>
-      <Tabs label="专注工具" idPrefix={tabId} value={tab} onChange={setTab} items={TAB_ITEMS}/>
-      <button type="button" className="focus-dock-close" aria-label="收起专注工具" onClick={close}><X size={18}/></button>
+      <div className="focus-dock-tabs"><Tabs label="专注工具" idPrefix={tabId} value={tab} onChange={setTab} items={TAB_ITEMS}/>
+        <button type="button" className="focus-dock-close" aria-label="收起专注工具" onClick={close}><X size={18}/></button></div>
     </header>
     {focus.error && <div className="focus-save-error" role="alert">{focus.error}{focus.hasUnsavedChanges ? <>{tab === 'notes' && ' 请先复制内容，避免丢失。'} <button type="button" className="pixel-button" onClick={focus.retrySave}>重试保存</button></> : ' 请在原控件重试刚才的操作。'}</div>}
     {tab === 'study' && study?.error && <div className="focus-save-error" role="alert">{study.error} 本次操作未保存，请在原控件重试。</div>}

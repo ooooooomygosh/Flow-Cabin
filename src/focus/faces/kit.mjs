@@ -11,9 +11,9 @@ export function panel(r, x, y, w, h, pal, { ramp = pal.wood, seed = 1, grain = t
   fill(r, x, y, w, h, pal.outline);
   fill(r, x + 1, y + 1, w - 2, h - 2, ramp[1]);
   if (grain) for (let j = y + 3; j < y + h - 3; j++) {
-    if (hash(0, j, seed) < .55) continue;
-    let i = x + 2;
-    while (i < x + w - 2) { const run = 3 + Math.floor(hash(i, j, seed) * 9); if (hash(i, j, seed + 7) < .6) fill(r, i, j, Math.min(run, x + w - 2 - i), 1, hash(i, j, seed + 3) < .7 ? ramp[0] : ramp[2]); i += run + 2 + Math.floor(hash(j, i, seed) * 6); }
+    if (hash(0, j, seed) < .62) continue;
+    let i = x + 2 + Math.floor(hash(j, 0, seed) * 6);
+    while (i < x + w - 2) { const run = 5 + Math.floor(hash(i, j, seed) * 14); if (hash(i, j, seed + 7) < .55) fill(r, i, j, Math.min(run, x + w - 2 - i), 1, hash(i, j, seed + 3) < .75 ? ramp[0] : ramp[2]); i += run + 4 + Math.floor(hash(j, i, seed) * 9); }
   }
   fill(r, x + 1, y + 1, w - 2, 1, ramp[3]); fill(r, x + 1, y + 2, 1, h - 3, ramp[2]);
   fill(r, x + 1, y + h - 2, w - 2, 1, ramp[0]); fill(r, x + w - 2, y + 2, 1, h - 4, ramp[0]);
