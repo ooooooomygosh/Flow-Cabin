@@ -49,7 +49,7 @@ try {
   await dock.screenshot({ path: path.join(output, 'focus-timer.png'), animations: 'disabled' });
   await page.getByRole('tab', { name: '待办' }).click(); await page.locator('.focus-task-meter').waitFor();
   await dock.screenshot({ path: path.join(output, 'focus-tasks.png'), animations: 'disabled' });
-  await page.getByRole('tab', { name: '统计' }).click(); await page.locator('.focus-week').waitFor();
+  await page.getByRole('tab', { name: '统计' }).click(); await page.locator('.fs-board').waitFor();
   await dock.screenshot({ path: path.join(output, 'focus-stats.png'), animations: 'disabled' });
   console.log('README focus screenshots written to ' + output);
 } finally { await browser?.close(); server?.kill(); }

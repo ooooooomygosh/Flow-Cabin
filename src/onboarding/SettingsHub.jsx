@@ -6,6 +6,7 @@ import RoomPickers from '../RoomPickers';
 import SkySettings from '../SkySettings';
 import MusicAccounts from '../MusicSettings';
 import FocusSettingsForm from '../focus/FocusSettingsForm';
+import DailyGoalField from '../focus/stats/DailyGoalField.jsx';
 import { desktopCommand } from '../desktop-client';
 import { getAutostart, setAutostart, onAutostartChange } from '../desktop/autostart-client.mjs';
 import { ChevronLeft, ChevronRight, Check } from '../icons';
@@ -46,7 +47,7 @@ export default function SettingsHub({ section = 'music', setSection, close, env,
           <MusicAccounts/>
         </div>}
         {tab === 'room' && <><p className="personalization-intro">选一个今天想待着的地方，再找一位安静的伙伴。换装不会打断音乐和专注。</p><RoomPickers look={look} petId={petId} onChange={onRoomChange} reduceMotion={reduceMotion}/><SkySettings/>{error && <p role="alert" className="record-error">{error}</p>}</>}
-        {tab === 'focus' && <><p className="personalization-intro">番茄钟的时长和提醒。计时、待办、学习和声音在右上角「专注」里。</p><FocusSettingsForm className="hub-focus-settings"/></>}
+        {tab === 'focus' && <><p className="personalization-intro">番茄钟的时长和提醒。计时、待办、学习和声音在右上角「专注」里。</p><FocusSettingsForm className="hub-focus-settings"/><DailyGoalField/></>}
         {tab === 'desktop' && <DisplaySection env={env} desktop={desktop}/>}
         {tab === 'data' && <div className="hub-rows">
           <Row title="收藏与备份" hint="导出 / 导入唱片、歌单、专注记录。备份文件只保存在你选的位置。"><button type="button" className="pixel-button" onClick={openBackup}>收藏与备份</button></Row>
