@@ -5,6 +5,7 @@ import Dialog from '../Dialog';
 import { useFocus } from './useFocus';
 import { levelInfo, UNLOCKS, unlockedIds } from './focus-model.mjs';
 import { FishPixel } from '../icons';
+import { readSkySettings, writeSkySettings } from '../sky-clock.mjs';
 import { useRecordLibrary } from '../RecordLibrary';
 import { normalizePetId, getPet } from '../pet/pet-catalog.mjs';
 
@@ -22,14 +23,22 @@ function CatPanelBody({ close }) {
         {cat && <fieldset><legend>小猫毛色 · 夜景柔光</legend>{[['orange', '橘猫'], ['black', '黑猫']].map(([skin, name]) => <button type="button" key={skin} aria-pressed={focus.state.settings.catSkin === skin} onClick={() => focus.settings({ catSkin: skin })}>{name}</button>)}</fieldset>}
         {['accessory', 'weather'].map((kind) => <fieldset key={kind}><legend>{kind === 'accessory' ? (cat ? '小猫配饰' : '伙伴配饰') : '窗外天气'}</legend>
           {kind === 'accessory' && <button type="button" aria-pressed={!rewards.equipped.accessory} onClick={() => focus.equip('accessory', '')}>不戴</button>}
-          {UNLOCKS.filter((item) => item.kind === kind).map((item) => <button type="button" key={item.id} disabled={!unlocked.has(item.id)} aria-pressed={rewards.equipped[kind] === item.id} title={unlocked.has(item.id) ? item.name : `Lv.${item.level} 解锁`} onClick={() => focus.equip(kind, item.id)}>{!unlocked.has(item.id) && <span className="focus-lock" aria-hidden="true"/>}{item.name}{!unlocked.has(item.id) && <small> · Lv.{item.level}</small>}</button>)}
+          {UNLOCKS.filter((item) => item.kind === kind).map((item) => <button type="button" key={item.id} disabled={!unlocked.has(item.id)} aria-pressed={rewards.equipped[kind] === item.id} title={unlocked.has(item.id) ? item.name : `Lv.${item.level} 解锁`} onClick={() => { focus.equip(kind, item.id); if (kind === 'weather' && readSkySettings().realWeather) writeSkySettings({ realWeather: false }); }}>{!unlocked.has(item.id) && <span className="focus-lock" aria-hidden="true"/>}{item.name}{!unlocked.has(item.id) && <small> · Lv.{item.level}</small>}</button>)}
         </fieldset>)}
       </div>
     </section>
   </Dialog>;
 }
+// Card sits beside the cat (right of it, or left when there is no room), clamped to the window.
+function placeNearCat() {
+  const root = document.documentElement, rect = document.querySelector('.room-cat')?.getBoundingClientRect();
+  if (!rect || !rect.width) { root.style.removeProperty('--cat-panel-x'); root.style.removeProperty('--cat-panel-y'); return; }
+  const width = Math.min(360, innerWidth - 24), right = rect.right + 12 + width <= innerWidth - 12;
+  root.style.setProperty('--cat-panel-x', `${Math.max(12, right ? rect.right + 12 : rect.left - 12 - width)}px`);
+  root.style.setProperty('--cat-panel-y', `${Math.max(12, Math.min(rect.top - 40, innerHeight - 480))}px`);
+}
 export default function CatPanel() {
   const [open, setOpen] = useState(false);
-  useEffect(() => { const show = () => setOpen(true); window.addEventListener(CAT_PANEL_EVENT, show); return () => window.removeEventListener(CAT_PANEL_EVENT, show); }, []);
+  useEffect(() => { const show = () => { placeNearCat(); setOpen(true); }; window.addEventListener(CAT_PANEL_EVENT, show); return () => window.removeEventListener(CAT_PANEL_EVENT, show); }, []);
   return open ? <CatPanelBody close={() => setOpen(false)}/> : null;
 }

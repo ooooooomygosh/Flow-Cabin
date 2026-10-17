@@ -31,11 +31,20 @@ export const realWeatherReport = (win = globalThis) => win.cabinWeather && typeo
 // Next minute boundary (+50 ms so Date has ticked over).
 export const msToNextMinute = (now) => 60000 - (now % 60000) + 50;
 
-let current = null, timer = null, snapshot = null;
+let current = null, timer = null, snapshot = null, steadyReal = null;
+// Real weather is held steady: a missing report keeps the last good one, and the kind may only
+// change once every REAL_SWITCH_MS, so flaky or racing reports cannot make the window flicker.
+export const REAL_SWITCH_MS = 10 * 60e3;
+export function steadyWeather(previous, report, now = Date.now()) {
+  if (!report || !report.kind) return previous;
+  if (!previous || previous.kind === report.kind || now - (previous.since || 0) >= REAL_SWITCH_MS) return { ...report, since: previous && previous.kind === report.kind ? previous.since : now };
+  return previous;
+}
 const listeners = new Set();
 function compute() {
   const settings = current || (current = readSkySettings()), city = resolveSkyCity(settings.place);
-  const real = settings.realWeather && desktopShell() ? realWeatherReport() : null;
+  steadyReal = settings.realWeather && desktopShell() ? steadyWeather(steadyReal, realWeatherReport()) : null;
+  const real = steadyReal;
   snapshot = { settings, city, state: skyState(new Date(), city), real, at: Date.now() };
   return snapshot;
 }
