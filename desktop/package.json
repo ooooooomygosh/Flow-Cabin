@@ -50,6 +50,12 @@
     },
     "files": [
       "main.cjs",
+      "main/site-commands.cjs",
+      "main/site-session.cjs",
+      "main/updates.cjs",
+      "main/menus.cjs",
+      "main/autostart.cjs",
+      "weather.cjs",
       "policy.cjs",
       "settings.cjs",
       "qq-music.cjs",

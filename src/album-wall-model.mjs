@@ -1,6 +1,7 @@
 export const WALL_STORAGE_KEY = 'album-circle-wall-v1';
 export const WALL_DEFAULTS = Object.freeze({ layout: 'grid', columns: 5, gap: 12, margin: 40, border: 0, background: '#12191b', textColor: '#edf4ef', title: '我的专辑墙', author: '', showNames: true, showArtists: true, font: 'bundled', sort: 'selection', scale: 2 });
-export function albumKey(item) { return item.externalIds?.qqAlbumMid ? `qq:${item.externalIds.qqAlbumMid}` : item.externalIds?.itunesCollectionId ? `itunes:${item.externalIds.itunesCollectionId}` : `${item.artist}\n${item.title}`; }
+// The wall's in-memory identity (dedupe, React keys); not persisted. Vinyl styles use record-library albumKey.
+export function wallKey(item) { return item.externalIds?.qqAlbumMid ? `qq:${item.externalIds.qqAlbumMid}` : item.externalIds?.itunesCollectionId ? `itunes:${item.externalIds.itunesCollectionId}` : `${item.artist}\n${item.title}`; }
 const number = (value, fallback, min, max) => Number.isFinite(Number(value)) ? Math.max(min, Math.min(max, Math.round(Number(value)))) : fallback;
 export function normalizeWall(value = {}) {
   return { ...WALL_DEFAULTS,
@@ -36,7 +37,7 @@ export function readWall(storage) {
     const data = JSON.parse(raw), keys = new Set();
     const selected = (Array.isArray(data.selected) ? data.selected : []).filter((item) => {
       if (!item || item.type !== 'album' || typeof item.title !== 'string' || typeof item.artist !== 'string' || typeof item.cover !== 'string') return false;
-      const key = albumKey(item); if (keys.has(key)) return false; keys.add(key); return true;
+      const key = wallKey(item); if (keys.has(key)) return false; keys.add(key); return true;
     }).slice(0, 100).map((item) => ({ ...item, title: item.title.slice(0, 300), artist: item.artist.slice(0, 300), cover: item.cover.slice(0, 3000) }));
     return { options: normalizeWall(data.options), selected };
   } catch { return { options: { ...WALL_DEFAULTS }, selected: [] }; }

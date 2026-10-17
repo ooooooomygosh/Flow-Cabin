@@ -1,0 +1,19 @@
+/* <RecordSleeve>: the generated 32×32 sleeve for records without a cover. The print
+   fills the box in whole art pixels; a 2px band in the brass ink sits inside the
+   print's dark edge like a printed border; the title sits on a strip at the foot. */
+@layer guards, reset, features, skin, overrides;
+@layer features {
+.record-sleeve { container-type: size; position: relative; display: block; width: 100%; height: 100%; overflow: hidden; background: var(--px-bg); }
+.record-sleeve canvas { display: block; position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
+.record-sleeve::after { content: ''; position: absolute; inset: calc(100% / 32); pointer-events: none; box-shadow: inset 0 0 0 2px var(--px-accent-lo); }
+.record-sleeve strong { position: absolute; z-index: 1; left: 0; right: 0; bottom: 0; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+  padding: 4px 6px 2px; border-bottom: 4px solid var(--px-shadow); font: 400 12px/14px var(--px-font-cn); color: var(--px-ink); text-align: left; text-overflow: clip; white-space: normal; overflow-wrap: anywhere;
+  background: var(--px-shadow); box-shadow: 0 -2px 0 var(--px-accent-lo); }
+/* Small sleeves: one title line; tiny ones (lists, the mini player) are print only. */
+@container (max-width: 100px) { .record-sleeve strong { -webkit-line-clamp: 1; padding-inline: 4px; } }
+@container (max-width: 63px) { .record-sleeve strong { display: none; } .record-sleeve::after { box-shadow: inset 0 0 0 1px var(--px-accent-lo); } }
+/* Still loading a real cover: the print without its title, so nothing flashes when the cover lands. */
+.record-sleeve.is-loading strong { display: none; }
+/* On the shelf, the playlist corner tab (cabin-room.css) sits on the strip's right end. */
+.room-record-sleeve:has(> .room-record-tag) .record-sleeve strong { padding-right: 40px; }
+}

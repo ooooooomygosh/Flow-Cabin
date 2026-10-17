@@ -8,7 +8,7 @@ const report = { platform: process.platform, nativeWallpaperVerified: false, che
 const check = (name, data = {}) => { report.checks.push({ name, ...data }); console.log('PASS ' + name); };
 let app, site;
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-const sample = (page) => page.evaluate(() => ({ snow: document.querySelector('.cabin-window-snow').toDataURL(), fire: document.querySelector('.cabin-hearth-fire').toDataURL(), lights: [...document.querySelectorAll('[data-surface]')].map((node) => [node.dataset.surface, node.style.opacity]) }));
+const sample = (page) => page.evaluate(() => ({ snow: document.querySelector('.cabin-weather-canvas').toDataURL(), fire: document.querySelector('.cabin-hearth-fire').toDataURL(), lights: [...document.querySelectorAll('[data-surface]')].map((node) => [node.dataset.surface, node.style.opacity]) }));
 (async () => {
   app = await _electron.launch({ executablePath, args: process.env.ALBUM_QA_EXE ? [] : [desktop], env }); app.context().setDefaultTimeout(18000); await app.firstWindow();
   for (let i = 0; i < 100; i++) { site = app.context().pages().find((p) => p.url().startsWith('https://album-circle.vercel.app')); if (site) break; await pause(100); }
@@ -29,7 +29,7 @@ const sample = (page) => page.evaluate(() => ({ snow: document.querySelector('.c
     }); assert.deepEqual(geometry.art, geometry.effects); assert.ok(geometry.canvasPixels <= 330000);
     assert.equal(geometry.src, `/room-scenes/${look}-cabin.png`);
     const masks = await site.evaluate((look) => {
-      const snow = document.querySelector('.cabin-window-snow'), fire = document.querySelector('.cabin-hearth-fire');
+      const snow = document.querySelector('.cabin-weather-canvas'), fire = document.querySelector('.cabin-hearth-fire');
       const alpha = (c, x, y, w, h) => c.getContext('2d').getImageData(Math.floor(x / w * c.width), Math.floor(y / h * c.height), 1, 1).data[3];
       return { crossbar: alpha(snow, 107, 60, 218, 286), horizontal: alpha(snow, 50, 117, 218, 286), rim: alpha(fire, 1, 60, 94, look === 'warm' ? 180 : 192), interior: alpha(fire, 45, 120, 94, look === 'warm' ? 180 : 192) };
     }, look);

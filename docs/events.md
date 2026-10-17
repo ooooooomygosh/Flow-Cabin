@@ -81,6 +81,6 @@ Other Electron windows (the desktop-mode mini turntable) do not dispatch this th
 | event | direction | detail |
 | --- | --- | --- |
 | `cabin-play` | → player | `{ id, track }` put an album on the deck, optionally starting at a track (used by the album card). |
-| `cabin-open-music-settings` | → cabin | no detail. Opens 音源与账户 (used by the player's error card). |
-| `album-quick-search` | → app | `{ query }` opens 添加专辑 with a catalog search. |
+| `cabin-open-music-settings` | → cabin | no detail. Opens 设置 › 音源 (used by the player's error card and the turntable's source chip). |
+| `album-quick-search` | → app | `{ query }` opens 添加到唱片架 › 曲库搜索 with that query. |
 | `album-music-account` / `album-music-settings` | desktop → page | Sign-in or source settings changed. The player re-resolves the current track. |

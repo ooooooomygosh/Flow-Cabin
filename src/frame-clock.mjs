@@ -4,14 +4,29 @@ import { frameBudget, performanceLevel, onPerformanceChange } from './perf-profi
 // 60 fps. High-refresh displays (120/144 Hz) fire rAF faster than we ever need to
 // draw; each subscriber is paced against an accumulator so a jittery 60 Hz display
 // does not drop to 30 fps, and nothing is scheduled while paused or unsubscribed.
+// When every subscriber is slow (the 8–12 fps cabin atmosphere), the chain sleeps on
+// a timer until one frame before the next due time instead of waking rAF 60×/s: each
+// rAF wake costs a full style/paint pass even when nothing is drawn.
 export const MAX_FPS = 60;
 const clampFps = (value, fallback) => Math.max(1, Math.min(MAX_FPS, Number(value) || fallback));
 
-export function createFrameClock({ request, cancel, now, maxFps = MAX_FPS }) {
+export function createFrameClock({ request, cancel, now, maxFps = MAX_FPS, setTimer = null, clearTimer = null }) {
   const subs = new Set();
-  let handle = null, paused = false, ticking = false, cap = clampFps(maxFps, MAX_FPS);
+  let handle = null, timer = null, paused = false, ticking = false, cap = clampFps(maxFps, MAX_FPS);
   const rate = (sub) => Math.min(sub.fps, cap);
-  const ensure = () => { if (handle === null && !ticking && !paused && subs.size) handle = request(tick); };
+  const stopTimer = () => { if (timer !== null) { clearTimer(timer); timer = null; } };
+  const ensure = () => { if (handle === null && timer === null && !ticking && !paused && subs.size) handle = request(tick); };
+  // After a tick: the earliest moment any subscriber may draw (already a quarter
+  // interval early). More than ~1.5 frames away → sleep on a timer until then.
+  const plan = (t) => {
+    if (handle !== null || timer !== null || paused || !subs.size) return;
+    const frame = 1000 / cap;
+    let next = Infinity;
+    for (const sub of subs) next = Math.min(next, sub.last === null ? -Infinity : sub.due - 1000 / rate(sub) * .25);
+    const wait = next - t;
+    if (setTimer && wait > frame * 1.5) timer = setTimer(() => { timer = null; if (!paused && subs.size && handle === null) handle = request(tick); }, wait);
+    else handle = request(tick);
+  };
   function tick(t) {
     handle = null; ticking = true;
     try {
@@ -33,23 +48,25 @@ export function createFrameClock({ request, cancel, now, maxFps = MAX_FPS }) {
         try { sub.callback(t, dt); }
         catch (error) { if (!sub.failed) { sub.failed = true; console.error(error); } }
       }
-    } finally { ticking = false; ensure(); }
+    } finally { ticking = false; plan(t); }
   }
   return {
     subscribe(callback, { fps = MAX_FPS } = {}) {
       const sub = { callback, fps: clampFps(fps, MAX_FPS), due: 0, last: null, failed: false };
-      subs.add(sub); ensure();
-      return () => { subs.delete(sub); if (!subs.size && handle !== null) { cancel(handle); handle = null; } };
+      // A new subscriber starts on the next frame, not after a sleeping timer.
+      subs.add(sub); if (!ticking) stopTimer(); ensure();
+      return () => { subs.delete(sub); if (!subs.size) { stopTimer(); if (handle !== null) { cancel(handle); handle = null; } } };
     },
     setMaxFps(value) { cap = clampFps(value, MAX_FPS); },
     setPaused(value) {
       value = Boolean(value); if (value === paused) return;
       paused = value;
-      if (paused) { if (handle !== null) { cancel(handle); handle = null; } }
+      if (paused) { stopTimer(); if (handle !== null) { cancel(handle); handle = null; } }
       else { for (const sub of subs) sub.last = null; ensure(); }
     },
     get size() { return subs.size; },
-    get paused() { return paused; }
+    get paused() { return paused; },
+    get sleeping() { return timer !== null; }
   };
 }
 
@@ -75,7 +92,7 @@ let shared = null;
 export function frameClock() {
   if (shared) return shared;
   const win = globalThis.window, doc = globalThis.document;
-  shared = createFrameClock({ request: (cb) => win.requestAnimationFrame(cb), cancel: (id) => win.cancelAnimationFrame(id), now: () => win.performance.now() });
+  shared = createFrameClock({ request: (cb) => win.requestAnimationFrame(cb), cancel: (id) => win.cancelAnimationFrame(id), now: () => win.performance.now(), setTimer: (cb, ms) => win.setTimeout(cb, ms), clearTimer: (id) => win.clearTimeout(id) });
   const root = doc?.documentElement;
   const applyCap = () => {
     const injected = Number(root?.dataset.frameCap);
@@ -97,4 +114,28 @@ export function frameClock() {
   win.addEventListener('blur', update); win.addEventListener('focus', update); doc.addEventListener('visibilitychange', update);
   update();
   return shared;
+}
+
+// A full-screen layer (唱机特写, html.room-corner-open; 专注画面 filling the window,
+// html.room-focus-display) hides the cabin scene: the room's own loops stop drawing
+// while the layer on top keeps the clock.
+export const OCCLUDING_CLASSES = Object.freeze(['room-corner-open', 'room-focus-display']);
+export const occludedFrom = (classList) => OCCLUDING_CLASSES.some((name) => Boolean(classList?.contains?.(name)));
+const occlusionWatchers = new Set();
+let occlusion = null;
+// Calls cb(occluded) now and whenever the cabin becomes covered or uncovered.
+export function onOcclusionChange(cb) {
+  const root = globalThis.document?.documentElement;
+  if (!root) { cb(false); return () => {}; }
+  if (!occlusion) {
+    let value = occludedFrom(root.classList);
+    const observer = typeof MutationObserver === 'undefined' ? null : new MutationObserver(() => {
+      const next = occludedFrom(root.classList); if (next === value) return; value = next;
+      for (const fn of [...occlusionWatchers]) fn(value);
+    });
+    observer?.observe(root, { attributes: true, attributeFilter: ['class'] });
+    occlusion = { get value() { return value; }, stop: () => observer?.disconnect() };
+  }
+  occlusionWatchers.add(cb); cb(occlusion.value);
+  return () => { occlusionWatchers.delete(cb); if (!occlusionWatchers.size && occlusion) { occlusion.stop(); occlusion = null; } };
 }

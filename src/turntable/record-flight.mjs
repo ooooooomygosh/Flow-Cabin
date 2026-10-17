@@ -3,8 +3,7 @@
 // sleeve to the queue button. Web Animations on a throwaway element, so the
 // room's layout is never touched. Respects reduced motion.
 import { playDeckSound } from './deck-sfx.mjs';
-
-const reduced = () => document.documentElement.dataset.desktopReduceMotion === 'true' || globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+import { reducedMotion as reduced } from '../motion-preference.mjs';
 const rectOf = (value) => value?.getBoundingClientRect ? value.getBoundingClientRect() : value;
 const safeImage = (src) => /^(https:|data:image\/|blob:|\/)/.test(String(src || '')) ? String(src).replace(/"/g, '%22') : '';
 

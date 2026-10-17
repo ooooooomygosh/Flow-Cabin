@@ -15,8 +15,8 @@ export default function UpdatePanel({ version, desktop }) {
   }, [desktop]);
   const view = updateView(state, { desktop });
   const native = state?.mode === 'install';
-  return <div className="hub-row update-panel" aria-live="polite">
-    <span><strong>心流小屋 v{version}</strong><small className="update-status" data-status={state?.status || 'idle'}>{view.label}{view.detail ? ` · ${view.detail}` : ''}</small>
+  return <div className="hub-row update-panel">
+    <span><strong>心流小屋 v{version}</strong><small className="update-status" role="status" data-status={state?.status || 'idle'}>{view.label}{view.detail ? ` · ${view.detail}` : ''}</small>
       {view.progress !== undefined && <span className="update-progress" role="progressbar" aria-label="更新下载进度" aria-valuemin={0} aria-valuemax={100} aria-valuenow={view.progress}><i style={{ width: `${view.progress}%` }}/></span>}
       {view.notes && <details className="update-notes"><summary>更新说明</summary><pre>{view.notes}</pre></details>}
       {desktop && native && <label className="update-auto"><input type="checkbox" checked={state?.autoDownload !== false} onChange={(event) => desktopCommand('update-auto', { enabled: event.target.checked })}/>有新版本时自动下载（不会自动重启）</label>}

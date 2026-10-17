@@ -2,7 +2,7 @@
 // The cabin shelf: twelve records per view, both looks, filters, the record
 // card (notes, play from a track, remove) and adding an album from the catalog.
 const { _electron } = require('playwright'), fs = require('node:fs'), path = require('node:path'), assert = require('node:assert/strict');
-const { mountFixture, albums, chooseRoomScene } = require('./ui-fixture.cjs');
+const { mountFixture, albums, chooseRoomScene, openAddToShelf } = require('./ui-fixture.cjs');
 const desktop = path.resolve(__dirname, '..'), output = path.join(desktop, 'test-results'); fs.mkdirSync(output, { recursive: true });
 const env = { ...process.env, ALBUM_DESKTOP_TEST_PROFILE: path.join(output, `shelf-ui-profile-${Date.now()}`) }; delete env.ELECTRON_RUN_AS_NODE;
 const executablePath = process.env.ALBUM_QA_EXE || path.join(desktop, 'node_modules/electron/dist/electron.exe');
@@ -23,11 +23,11 @@ let app, site;
   await site.getByRole('button', { name: '下一排唱片' }).click(); assert.equal(await site.locator('.room-record').count(), 10);
   await site.getByRole('button', { name: '上一排唱片' }).click(); assert.equal(await site.locator('.room-record').count(), 12); check('shelf-rows-keep-every-album-reachable');
 
-  await site.getByRole('button', { name: /筛选与唱片盒/ }).click(); await site.getByLabel('排序方式').selectOption('title');
+  await site.getByRole('button', { name: '整理唱片架', exact: true }).click(); await site.getByLabel('排序方式').selectOption('title');
   assert.equal(await site.locator('.room-record').first().getAttribute('aria-label'), `选择 ${[...items].sort((a, b) => a.title.localeCompare(b.title, 'zh'))[0].artist} 的 ${[...items].sort((a, b) => a.title.localeCompare(b.title, 'zh'))[0].title}`);
   await site.getByLabel('筛选类型').selectOption('song'); await site.locator('.room-empty', { hasText: '没有符合筛选的唱片' }).waitFor();
   await site.getByRole('button', { name: '清除筛选' }).click(); assert.equal(await site.locator('.room-record').count(), 12);
-  await site.getByLabel('排序方式').selectOption('recent'); await site.getByRole('button', { name: /筛选与唱片盒/ }).click(); check('sort-and-filter-the-shelf');
+  await site.getByLabel('排序方式').selectOption('recent'); await site.getByRole('button', { name: '整理唱片架', exact: true }).click(); check('sort-and-filter-the-shelf');
 
   await site.locator('.room-record').nth(1).click(); assert.ok((await site.locator('.room-selection-copy h2').innerText()).includes(items[1].title));
   await site.getByRole('button', { name: /唱片卡片/ }).click();
@@ -43,13 +43,13 @@ let app, site;
   await site.locator('.app-toast', { hasText: '已从唱片架移除' }).waitFor(); assert.match(await site.locator('.app-brand small').innerText(), /13 张唱片/);
   assert.equal(await site.locator('.room-turntable').getAttribute('data-loaded-id'), ''); check('remove-from-the-shelf-also-clears-the-deck');
 
-  await site.getByRole('button', { name: '添加专辑' }).click(); const add = site.getByRole('dialog', { name: '添加专辑' });
+  const add = await openAddToShelf(site);
   await add.getByRole('searchbox').fill('周杰伦'); await add.getByRole('button', { name: '搜索' }).click();
   await add.locator('.add-results li').first().waitFor(); await add.getByRole('button', { name: /放上唱片架/ }).first().click();
   await add.locator('.add-notice', { hasText: '已放上唱片架' }).waitFor(); assert.match(await site.locator('.app-brand small').innerText(), /14 张唱片/);
   await add.getByRole('tab', { name: '手动填写' }).click(); await add.getByLabel('专辑名').fill('自己的磁带'); await add.getByLabel('歌手').fill('我'); await add.getByRole('button', { name: /放上唱片架/ }).click();
   await add.locator('.add-notice', { hasText: '自己的磁带' }).waitFor(); await site.screenshot({ path: path.join(output, 'add-album.png') });
-  await add.getByRole('button', { name: '关闭添加专辑' }).click(); assert.match(await site.locator('.room-record').first().getAttribute('aria-label'), /自己的磁带/); check('add-from-catalog-and-by-hand');
+  await add.getByRole('button', { name: '关闭添加到唱片架' }).click(); assert.match(await site.locator('.room-record').first().getAttribute('aria-label'), /自己的磁带/); check('add-from-catalog-and-by-hand');
 
   const cdp = await site.context().newCDPSession(site);
   for (const width of [1024, 1920, 3840]) {

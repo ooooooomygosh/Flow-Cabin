@@ -4,11 +4,13 @@ import { pixelCover } from './player/pixel-cover.mjs';
 import './player/player.css';
 import Dialog from './Dialog';
 import DiscogsLink from './DiscogsLink';
-import { RecordTools, VinylDisc, useRecordLibrary } from './RecordLibrary';
+import { PixelVinyl, RecordTools, useRecordLibrary, useRecordStyle } from './RecordLibrary';
+import './record-card.css';
 import { ShowroomArtwork } from './RoomArtwork';
-import { genresFor } from './record-library.mjs';
+import { albumKey, genresFor } from './record-library.mjs';
 import { trackNames } from './room-model.mjs';
 import { updateItem } from './collection-api.mjs';
+import { formatDuration } from './lib/time-format.mjs';
 
 // Turns the album's cover into a cabin-palette pixel cover (or generates one
 // from the title). Preview first; the original is kept so it can come back.
@@ -31,7 +33,23 @@ function PixelCoverTool({ item, onChanged }) {
   </>;
 }
 
-const duration = (ms) => ms > 0 ? `${Math.floor(ms / 60000)}:${String(Math.round(ms / 1000) % 60).padStart(2, '0')}` : '';
+const duration = (ms) => ms > 0 ? formatDuration(ms) : '';
+// 压片档案: a small inventory slip under the tools: this pressing's vinyl, running time
+// and the boxes it lives in, with the record itself at 1x as the swatch.
+function PressingSlip({ item, names, library }) {
+  const style = useRecordStyle(item), key = albumKey(item);
+  const total = (item.trackDetails || []).reduce((sum, track) => sum + (track?.lengthMillis > 0 ? track.lengthMillis : 0), 0);
+  const boxes = library ? library.boxes.filter((box) => box.keys.includes(key)).map((box) => box.name) : [];
+  const vinyl = [style.splatter && style.splashes.length ? `${style.splashes.length} 色放射泼溅` : '素色黑胶', style.opacity < 100 ? `透明度 ${style.opacity}%` : ''].filter(Boolean).join(' · ');
+  return <section className="record-card-slip" aria-label="压片档案">
+    <PixelVinyl item={item} className="record-card-slip-disc"/>
+    <dl>
+      <div><dt>黑胶</dt><dd>{vinyl}</dd></div>
+      <div><dt>曲目</dt><dd>{names.length ? `${names.length} 首${total ? ` · ${formatDuration(total)}` : ''}` : '待补充'}</dd></div>
+      {library && item.type === 'album' && <div><dt>唱片盒</dt><dd>{boxes.length ? boxes.join('、') : '未分组'}</dd></div>}
+    </dl>
+  </section>;
+}
 // One album: cover and vinyl, track list that plays on the deck, personal notes.
 export default function RecordCard({ item, close, onChanged, onRemove }) {
   const library = useRecordLibrary(), names = trackNames(item), genres = library ? genresFor(item, library.data) : [];
@@ -47,14 +65,18 @@ export default function RecordCard({ item, close, onChanged, onRemove }) {
   useEffect(() => () => { clearTimeout(timer.current); if (!removing.current && latest.current !== persisted.current) updateItem(item.id, { notes: latest.current }).then((result) => onChanged(result.item)).catch(() => {}); }, [item.id]);
   const play = (track = 0) => { window.dispatchEvent(new CustomEvent('cabin-play', { detail: { id: item.id, track } })); close(); };
   const links = [item.collectionViewUrl && ['Apple Music', item.collectionViewUrl], item.externalIds?.qqAlbumMid && ['QQ 音乐', `https://y.qq.com/n/ryqq/albumDetail/${encodeURIComponent(item.externalIds.qqAlbumMid)}`]].filter(Boolean);
-  return <Dialog title="唱片卡片" icon={<Disc3 size={20}/>} close={close} wide className="record-card-dialog" label={`唱片卡片：${item.title}`}>
+  return <Dialog title="唱片卡片" icon={<Disc3 size={20}/>} close={close} size="lg" className="record-card-dialog" label={`唱片卡片：${item.title}`}>
     <div className="record-card">
       <div className="record-card-art">
-        <div className="record-card-sleeve"><VinylDisc item={item} className="record-card-vinyl"/><ShowroomArtwork item={item} className="record-card-cover"/></div>
+        {/* The record pulled half out of its sleeve, both drawn in whole art pixels. */}
+        <div className="record-card-sleeve"><PixelVinyl item={item} className="record-card-vinyl"/><ShowroomArtwork item={item} pixel className="record-card-cover"/></div>
         <div className="record-card-tools"><button type="button" className="pixel-button is-primary" onClick={() => play(0)}><Play size={16}/>放上唱机</button><RecordTools item={item}/><DiscogsLink item={item}/><PixelCoverTool item={item} onChanged={onChanged}/></div>
+        <PressingSlip item={item} names={names} library={library}/>
       </div>
       <div className="record-card-copy">
-        <small className="record-card-kicker">{item.type === 'song' ? 'SINGLE · 单曲' : 'ALBUM · 专辑'}{item.source === 'local-music' ? ' · 本地文件' : ''}</small>
+        {/* Liner notes: the album's facts and side A on a paper insert. */}
+        <section className="record-card-liner" aria-label="唱片资料">
+        <small className="record-card-kicker">{item.type === 'song' ? '单曲' : item.type === 'playlist' ? '歌单' : '专辑'}{item.source === 'local-music' ? ' · 本地文件' : ''}</small>
         <h3>{item.title}</h3>
         <p className="record-card-artist">{item.artist}</p>
         <dl className="record-card-facts">
@@ -64,8 +86,9 @@ export default function RecordCard({ item, close, onChanged, onRemove }) {
           <div><dt>放上唱片架</dt><dd>{item.addedAt ? new Date(item.addedAt).toLocaleDateString('zh-CN') : '—'}</dd></div>
         </dl>
         {names.length > 0 ? <ol className="record-card-tracks" aria-label="曲目">{names.map((name, index) => <li key={index}><button type="button" onClick={() => play(index)} title="从这一首开始播放"><span>{String(index + 1).padStart(2, '0')}</span><strong>{name}</strong><small>{duration(item.trackDetails?.[index]?.lengthMillis)}</small></button></li>)}</ol> : <p className="record-card-empty">还没有曲目资料。</p>}
+        </section>
         <label className="record-card-notes">我的笔记<textarea value={notes} maxLength={4000} rows={4} placeholder="第一次听的场景、最喜欢的一首、想记住的一句歌词…" onChange={(event) => { removing.current = false; setNotes(event.target.value); setSaved('dirty'); clearTimeout(timer.current); timer.current = setTimeout(saveNotes, 900); }} onBlur={saveNotes}/></label>
-        <small className="record-card-saved" role="status">{{ saving: '正在保存…', error: '保存失败，请稍后再试。', dirty: '', saved: notes ? <><Check size={13}/>已保存在这台电脑</> : '' }[saved]}</small>
+        <small className="record-card-saved" role="status">{{ saving: '正在保存…', error: <>保存失败。<button type="button" className="pixel-button is-quiet" onClick={saveNotes}>重试</button></>, dirty: '', saved: notes ? <><Check size={13}/>已保存在这台电脑</> : '' }[saved]}</small>
         <footer className="record-card-footer">
           {links.map(([label, url]) => <a key={label} href={url} target="_blank" rel="noreferrer"><External size={15}/>{label}</a>)}
           <span className="record-card-spacer"/>

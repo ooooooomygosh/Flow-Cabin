@@ -7,7 +7,8 @@ import { registerSessionAlbum } from './session-files.mjs';
 import './player.css';
 
 const MAX_FILES = 2000;
-const albumKey = (album) => 'f' + hashString(`${album.title}\u0000${album.artist}`.toLowerCase()).toString(16);
+// The file-import identity (externalIds.fileAlbum); not the album wall's key.
+const fileAlbumKey = (album) => 'f' + hashString(`${album.title}\u0000${album.artist}`.toLowerCase()).toString(16);
 async function readFileTags(file) {
   try {
     const head = new Uint8Array(await file.slice(0, 10).arrayBuffer());
@@ -37,26 +38,29 @@ async function compactCover(src) {
 // place and play for this session only. Nothing is uploaded or copied.
 export default function FileImport({ items = [], onAdded, desktop = false }) {
   const [albums, setAlbums] = useState([]), [status, setStatus] = useState(''), [busy, setBusy] = useState(''), [pixel, setPixel] = useState(true);
-  const filesInput = useRef(null), folderInput = useRef(null), urls = useRef([]);
-  useEffect(() => () => urls.current.forEach((url) => URL.revokeObjectURL(url)), []);
+  const filesInput = useRef(null), folderInput = useRef(null), urls = useRef([]), generation = useRef(0);
+  // A new pick (or unmount) frees the previous pick's cover URLs and stops its tag / preview loop.
+  const reset = () => { generation.current++; urls.current.forEach((url) => URL.revokeObjectURL(url)); urls.current = []; return generation.current; };
+  useEffect(() => reset, []);
   useEffect(() => { folderInput.current?.setAttribute('webkitdirectory', ''); }, []);
   const existing = new Set(items.map((item) => item.externalIds?.fileAlbum).filter(Boolean));
   const pick = async (list) => {
     const files = [...(list || [])].filter((file) => AUDIO_EXTENSIONS.test(file.name) || file.type.startsWith('audio/')).slice(0, MAX_FILES);
-    if (!files.length) { setStatus('没有找到音乐文件。支持 MP3、FLAC、M4A、OGG、WAV 等格式。'); return; }
+    if (!files.length) { reset(); setAlbums([]); setStatus('没有找到音乐文件。支持 MP3、FLAC、M4A、OGG、WAV 等格式。'); return; }
+    const run = reset(), stale = () => run !== generation.current;
     setStatus(`正在读取 ${files.length} 首歌曲的标签…`); setAlbums([]);
     const tagged = [];
     for (const [index, file] of files.entries()) {
-      const tags = await readFileTags(file);
+      const tags = await readFileTags(file); if (stale()) return;
       tagged.push({ file, name: file.name, path: file.webkitRelativePath || file.name, tags });
       if (index % 25 === 24) setStatus(`正在读取标签… ${index + 1} / ${files.length}`);
     }
-    const grouped = groupAlbums(tagged).map((album) => { const art = pictureUrl(album.picture); if (art) urls.current.push(art); return { ...album, key: albumKey(album), art, preview: '' }; });
+    const grouped = groupAlbums(tagged).map((album) => { const art = pictureUrl(album.picture); if (art) urls.current.push(art); return { ...album, key: fileAlbumKey(album), art, preview: '' }; });
     setAlbums(grouped);
     setStatus(`找到 ${grouped.length} 张专辑、${files.length} 首歌曲。${files.length >= MAX_FILES ? `一次最多读取 ${MAX_FILES} 首。` : ''}`);
     // Previews: pixel covers in the cabin palette, generated in the background.
     for (const album of grouped) {
-      const result = await pixelCover(album, { source: album.art }).catch(() => ({ cover: generatedCover(album) }));
+      const result = await pixelCover(album, { source: album.art }).catch(() => ({ cover: generatedCover(album) })); if (stale()) return;
       setAlbums((list) => list.map((entry) => entry.key === album.key ? { ...entry, preview: result.cover, method: result.method } : entry));
     }
   };

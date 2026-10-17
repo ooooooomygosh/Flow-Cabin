@@ -4,17 +4,16 @@
  * BROWSER_EXECUTABLE may point to an already installed Chromium.
  */
 import assert from 'node:assert/strict';
+import { launchChromium } from './launch-browser.mjs';
 import { showcaseAlbums } from './showcase-albums.mjs';
 import { verifyOnboarding } from './onboarding-checks.mjs';
-import { createRequire } from 'node:module';
+import { openRoomSettings, closeSettings } from './settings-actions.mjs';
 import { spawn, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const require = createRequire(path.join(root, 'desktop/package.json'));
-const { chromium } = require('playwright');
 const output = path.resolve(process.env.SHOWCASE_OUTPUT || path.join(root, 'docs/images/showcase'));
 const evidence = path.join(root, 'desktop/test-results/product-presentation');
 const port = Number(process.env.SHOWCASE_PORT || 4183), origin = `http://127.0.0.1:${port}`;
@@ -35,7 +34,7 @@ try {
   server = spawn(process.execPath, [path.join(root, 'node_modules/vite/bin/vite.js'), '--host', '127.0.0.1', '--port', String(port), '--strictPort'], { cwd: root, stdio: ['ignore', 'pipe', 'pipe'] });
   let log = ''; server.stdout.on('data', b => log += b); server.stderr.on('data', b => log += b);
   for (let i = 0; i < 100; i++) { try { if ((await fetch(origin)).ok) break; } catch {} if (server.exitCode !== null || i === 99) throw new Error(log || 'Server timeout'); await new Promise(r => setTimeout(r, 100)); }
-  browser = await chromium.launch({ executablePath: process.env.BROWSER_EXECUTABLE || chromium.executablePath(), headless: true });
+  browser = await launchChromium();
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1, locale: 'zh-CN', reducedMotion: 'reduce' });
   await context.addInitScript(() => {
     window.albumDesktopAppearance = { client: true, reduceMotion: true };
@@ -48,6 +47,8 @@ try {
     if (url.pathname === '/api/items') return route.fulfill({ json: { items } });
     if (url.pathname === '/desktop-music/config') return route.fulfill({ json: { qqLoggedIn: false, neteaseLoggedIn: false } });
     if (url.pathname === '/desktop-music/local/summary') return route.fulfill({ json: { folders: [], albumCount: 0, trackCount: 0 } });
+    if (url.pathname === '/desktop-music/now-playing') return route.fulfill({ json: { available: true, active: false } }); // Settings › 音源 lights each source's lamp, 系统正在播放 included
+    if (url.pathname === '/desktop-music/local/albums') return route.fulfill({ json: { albums: [] } }); // empty library: 播放测试 plays the chime
     if (/^\/(api|desktop-music)\//.test(url.pathname)) { report.unexpectedRequests.push(url.pathname); return route.abort(); }
     return route.continue();
   };
@@ -63,28 +64,31 @@ try {
     await page.getByRole('button', { name: '先专注一会儿' }).click(); await page.getByRole('button', { name: '开始专注', exact: true }).waitFor();
     assert.equal(await page.getByRole('tab', { name: '番茄钟' }).getAttribute('aria-selected'), 'true'); assert.equal(await page.locator('.focus-badge').getAttribute('aria-expanded'), 'true');
     await fits(page.getByRole('button', { name: '开始专注', exact: true })); await page.getByRole('button', { name: '收起专注工具' }).click();
-    await page.getByRole('button', { name: '添加第一张专辑' }).click(); await page.getByRole('dialog', { name: '添加专辑' }).waitFor(); await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: '添加第一张专辑' }).click(); await page.getByRole('dialog', { name: '添加到唱片架' }).waitFor(); await page.keyboard.press('Escape');
     check(`welcome-two-paths-and-visible-controls-${viewport.width}x${viewport.height}`);
   }
   items = albums; await page.setViewportSize({ width: 1440, height: 900 }); await page.reload(); await page.locator('.room-record').first().waitFor();
   await page.waitForFunction(() => document.querySelectorAll('.pixel-artwork canvas.is-painted').length >= 12);
   await page.locator('.room-record').nth(5).dblclick(); await page.locator('.room-turntable[data-loaded-id="showcase-5"]').waitFor();
-  await page.locator('.player-quick-source').waitFor(); await page.waitForTimeout(400); await shot('cabin', true);
+  await page.locator('.turntable-status', { hasText: '无音频' }).waitFor(); // the quick-source row is gone; visual mode says so in the status await page.waitForTimeout(400); await shot('cabin', true);
   assert.equal(await page.locator('.room-shelf-navigation').count(), 0); check('twelve-albums-no-redundant-paging-and-visual-audio-hint');
+  // Poke before focus: while the partner speaks (and a paused timer keeps 专注暂停中 up) it lets clicks
+  // through to the scene (companion-room.css), so the poke is checked while it is quiet.
+  await page.locator('.room-cat').click(); await page.locator('.room-cat-bubble').waitFor(); check('partner-poke-shows-response');
+  await page.locator('.room-cat-bubble').waitFor({ state: 'detached', timeout: 20000 });
   await page.locator('.focus-badge').click(); await page.getByRole('button', { name: '开始专注', exact: true }).click(); await page.locator('.focus-badge.is-running').waitFor(); await page.locator('.room-cat-bubble', { hasText: '还剩 25 分钟' }).waitFor(); await shot('focus', true);
   await page.getByRole('button', { name: '暂停', exact: true }).click(); check('focus-start-and-pause-from-visible-tool'); await page.getByRole('button', { name: '收起专注工具' }).click();
-  await page.getByRole('button', { name: '布置小屋', exact: true }).click();
+  await openRoomSettings(page);
   await page.locator('.scene-choice img').evaluateAll(images => Promise.all(images.map(image => image.decode())));
   for (const name of ['奶糖', '蛋挞', '棉花', '可可', '枫糖']) await fits(page.locator('.pet-choice strong', { hasText: name }));
-  await fits(page.getByRole('button', { name: '回到小屋', exact: true })); check('six-scene-thumbnails-and-all-partner-names-visible');
-  await shot('personalization', true); await page.getByRole('button', { name: '回到小屋' }).click();
-  await page.locator('.room-cat').click(); await page.locator('.room-cat-bubble').waitFor(); check('partner-poke-shows-response');
+  await fits(page.getByRole('button', { name: '关闭设置', exact: true })); check('six-scene-thumbnails-and-all-partner-names-visible');
+  await shot('personalization', true); await closeSettings(page);
   await page.keyboard.press('z'); assert(await page.evaluate(() => document.documentElement.classList.contains('room-zen'))); await shot('immersive'); await page.keyboard.press('Escape'); check('immersive-enter-and-exit');
   await page.setViewportSize({ width: 960, height: 600 }); await shot('cabin-960x600');
   const { ROOM_SCENES } = await import('../src/scene-catalog.mjs');
   for (const scene of ROOM_SCENES) {
-    await page.getByRole('button', { name: '布置小屋', exact: true }).click(); await page.getByRole('button', { name: `选择场景 ${scene.label}`, exact: true }).click(); await page.getByRole('button', { name: '回到小屋' }).click(); await shot(`scene-${scene.id}-960x600`);
-    for (const name of ['布置小屋', '音源设置', '添加专辑']) await fits(page.getByRole('button', { name, exact: true }));
+    await openRoomSettings(page); await page.getByRole('button', { name: `选择场景 ${scene.label}`, exact: true }).click(); await closeSettings(page); await shot(`scene-${scene.id}-960x600`);
+    for (const name of ['设置', '添加到唱片架']) await fits(page.getByRole('button', { name, exact: true }));
   }
   check('all-six-scenes-compact-controls-fit');
   if (process.env.SHOWCASE_TOUR === '1') {
@@ -108,10 +112,10 @@ try {
     await demo.locator('.focus-badge').click(); await demo.waitForTimeout(1500);
     await demo.getByRole('button', { name: '开始专注', exact: true }).click(); await demo.waitForTimeout(1700);
     await demo.getByRole('button', { name: '收起专注工具', exact: true }).click();
-    await demo.getByRole('button', { name: '布置小屋', exact: true }).click(); await demo.waitForTimeout(1300);
+    await openRoomSettings(demo); await demo.waitForTimeout(1300);
     await demo.getByRole('button', { name: '选择场景 林间书屋', exact: true }).click();
     await demo.getByRole('button', { name: '选择桌宠 枫糖', exact: true }).click(); await demo.waitForTimeout(1200);
-    await demo.getByRole('button', { name: '回到小屋', exact: true }).click(); await demo.waitForTimeout(1700);
+    await closeSettings(demo); await demo.waitForTimeout(1700);
     await demo.keyboard.press('z'); await demo.waitForTimeout(2000);
     const video = demo.video(); await tour.close();
     await promisify(execFile)('ffmpeg', ['-y', '-i', await video.path(), '-an', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '25', '-movflags', '+faststart', path.join(output, 'cabin-tour.mp4')], { timeout: 60000 });

@@ -1,90 +1,48 @@
-.cabin-room{position:absolute;inset:0;overflow:hidden}
+/* Room stage, console geometry, wallpaper, 账户与文件夹 and drag ghosts.
+   The painted 3D deck is gone (the deck is a sprite on the shelf, scene-deck.css);
+   the console body itself is styled in player/pocket-player.css. */
+@layer guards, reset, features, skin, overrides;
+@layer features {
+.cabin-room{position:absolute;inset:0}
 .cabin-room .cabin-stage-wrap{position:absolute;inset:0;background:#38200f}
-.cabin-scene.room-scene{position:absolute;inset:0;width:100%;height:100%;max-width:none;aspect-ratio:auto;margin:0;overflow:hidden}
+.cabin-scene.room-scene{position:absolute;inset:0;width:100%;height:100%;max-width:none;aspect-ratio:auto;margin:0}
 .cabin-scene-canvas{position:absolute;pointer-events:none}.cabin-scene-canvas .cabin-rack{pointer-events:none}.cabin-scene-canvas .room-record{pointer-events:auto}
 .cabin-scene-art{width:100%;height:100%;object-fit:fill}
-.cabin-rack .room-record-slot{overflow:hidden}.cabin-rack .room-record{animation:shelf-arrive .23s ease-out}
+.cabin-rack .room-record{animation:shelf-arrive .23s steps(3,end)}
 @keyframes shelf-arrive{from{opacity:.35;translate:0 20%}to{opacity:1;translate:0 0}}
-.cabin-room .cabin-toolbar{position:absolute;top:82px;left:16px;right:16px;z-index:12;padding:8px 13px;border-radius:12px;background:#27180dcc;box-shadow:0 4px 18px #0002;gap:10px;flex-wrap:nowrap;backdrop-filter:blur(8px)}
-.cabin-toolbar-actions{display:flex;gap:8px;align-items:center}.cabin-room .cabin-toolbar button{padding:7px 10px;font-size:12px;background:#4f321fbd;border-color:#e6bc7955;white-space:nowrap}.cabin-room .cabin-toolbar>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
-.cabin-room .room-now-playing{position:absolute;bottom:14px;left:24%;right:16px;z-index:12;padding:13px 18px;background:#26180ef0;border:1px solid #e5bd6e44;border-radius:12px;gap:20px}
-.cabin-room .room-selection-copy h2{font-size:clamp(17px,1.25vw,25px);margin:3px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.cabin-room .room-selection-copy>small{font-size:9px}.cabin-room .room-selection-copy p{font-size:12px}.cabin-room .room-selection-actions{gap:6px;flex-wrap:nowrap}.cabin-room .room-selection-actions button,.cabin-room .room-selection-actions a{padding:8px 10px;white-space:nowrap;font-size:12px;margin:0}
-.room-shelf-navigation{position:absolute;right:18px;top:45%;z-index:12;display:grid;justify-items:center;gap:9px;background:#27170bd6;border:1px solid #dab07866;border-radius:12px;padding:10px;color:#f7dbb0;font-size:12px}
-.room-shelf-navigation button{display:grid;place-items:center;padding:7px;color:#ffe1af;background:#7c542d;border:1px solid #deb57055;border-radius:8px}.room-shelf-navigation button:disabled{opacity:.3}.room-shelf-navigation small{font-size:10px;writing-mode:vertical-rl;letter-spacing:.1em}
-.wallpaper-error{position:absolute;z-index:26;left:25%;right:20px;top:132px;background:#471f14ed;color:#ffe0bd;padding:10px 16px;border:1px solid #e6ae67;border-radius:10px;font-size:13px}
-.room-turntable{position:absolute;left:2.5%;bottom:17%;width:clamp(200px,20vw,340px);z-index:10;color:#ffe9c6;background:linear-gradient(120deg,#382514ed,#24170eea);border:1px solid #cba66b99;border-radius:14px;padding:15px;box-shadow:0 20px 45px #0008,inset 0 1px #ffdfab22;transition:box-shadow .2s,border-color .2s}
-.room-turntable.is-drop-target{border-color:#ffe6a9;box-shadow:0 0 0 4px #ffe1a070,0 20px 45px #0008}
-.turntable-heading{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#d9b981}.turntable-heading>span{display:flex;align-items:center;gap:7px}.turntable-heading>small{font-size:8px;letter-spacing:.12em;color:#a88351}
-.turntable-deck{position:relative;margin:13px 0;aspect-ratio:1.4;background:repeating-linear-gradient(2deg,#9a673633 0 1px,transparent 1px 6px),linear-gradient(130deg,#a57747,#6b4224);border:3px solid #24150d;border-radius:10px;box-shadow:inset 0 1px 0 #ffe0a46b,0 9px 13px #0006;overflow:hidden}
-.turntable-platter{position:absolute;left:8%;top:8%;width:59%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,#615f55 0 3%,#0d0d0a 4% 36%,#282923 37% 39%,#0e100e 40%);box-shadow:0 0 0 3px #302d26,0 5px 7px #0006}
-.platter-rings{position:absolute;inset:0;border-radius:50%;background:repeating-radial-gradient(circle,transparent 0 4px,#a9ae8b30 4px 5px)}
-.turntable-record{position:absolute;inset:0;animation:record-seat .4s ease-out}
-@keyframes record-seat{from{transform:translateY(-18px) scale(1.1);opacity:.25}to{transform:translateY(0) scale(1);opacity:1}}
-.turntable-disc-rotation{position:absolute;inset:0;will-change:transform;animation:room-record-spin 2.4s linear infinite;animation-play-state:paused;border-radius:50%;overflow:hidden}
-.is-spinning .turntable-disc-rotation{animation-play-state:running}
-@keyframes room-record-spin{to{transform:rotate(360deg)}}
-.turntable-disc-rotation>.custom-vinyl{position:absolute;inset:0;width:100%;height:100%;animation:none!important}
-.turntable-label.showroom-artwork{position:absolute;left:35%;top:35%;width:30%;height:30%;border-radius:50%;z-index:2;box-shadow:0 0 0 2px #161712}
-.turntable-label:after{content:'';position:absolute;left:45%;top:45%;width:10%;height:10%;border-radius:50%;background:#a99e80;box-shadow:0 0 0 1px #0007}
-.turntable-tonearm{position:absolute;right:14%;top:12%;width:6%;height:61%;transform:rotate(-4deg);transform-origin:50% 9%;transition:transform .5s}.is-spinning .turntable-tonearm{transform:rotate(24deg)}
-.turntable-tonearm:before{content:'';position:absolute;top:0;width:100%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,#f0d496,#3c3529);box-shadow:0 0 0 3px #2b231c}
-.turntable-tonearm i{position:absolute;top:5%;left:29%;width:42%;height:87%;border-radius:4px;background:linear-gradient(90deg,#5a5b54,#e1d3a5,#777267);box-shadow:2px 3px 3px #0008}.turntable-tonearm span{position:absolute;bottom:0;width:100%;height:19%;background:#191a17;border:1px solid #93927f;border-radius:3px}
-.turntable-indicator{position:absolute;right:12%;bottom:12%;width:6px;height:6px;border-radius:50%;background:#57352a;box-shadow:0 0 0 2px #37221a}.is-spinning .turntable-indicator{background:#ffbb69;box-shadow:0 0 7px #ffb759}
-.turntable-copy{min-width:0}.turntable-copy>strong,.turntable-artist,.turntable-track{display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.turntable-copy>strong{font-size:15px;color:#ffeac4}.turntable-artist{font-size:12px;color:#cba87e;margin-top:4px}.turntable-track{font-size:12px;margin:12px 0 5px;color:#f0d7ae}.turntable-status{font-size:10px;color:#d5b787}
-.turntable-controls{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:12px}.turntable-controls button{display:grid;place-items:center;border:1px solid #cfaa6660;border-radius:8px;padding:7px;color:#ffe4b7;background:#644225}.turntable-controls button:disabled{opacity:.3}.turntable-controls .turntable-toggle{background:#dcbb7d;color:#291b0b;padding:9px}.turntable-controls select{flex-basis:100%;width:100%;min-width:0;color:#ffe4b7;background-color:#332311;border:1px solid #caa26966;border-radius:7px;padding:7px;font-size:12px}.turntable-hint{font-size:11px;color:#c5a572;margin:10px 0 0}
-.cabin-pixel .room-turntable{border-radius:0;image-rendering:pixelated;box-shadow:6px 6px 0 #120e09c9}.cabin-pixel .turntable-deck{border-radius:0}.cabin-pixel .turntable-tonearm i{border-radius:0}
-/* The furniture stays in scene space; only the deck surface tilts in 3D. */
-.room-turntable{background:none;border:0;border-radius:0;padding:0!important;backdrop-filter:none;box-shadow:none;isolation:isolate}
-/* The soft shadow lives on a static pseudo layer: a filter on this element would be re-rendered every frame while the record spins inside it. */
-.room-turntable::before{content:'';position:absolute;left:3%;right:-2%;top:22%;bottom:-4%;z-index:-1;pointer-events:none;border-radius:30%;background:#150b09aa;filter:blur(14px);transform:translate3d(10px,17px,0)}
-.room-turntable.is-drop-target{border:0;box-shadow:none;filter:drop-shadow(0 0 12px #ffe1a0cc)}
-.room-turntable.is-drop-target::before{display:none}
-.turntable-stage{position:relative;height:auto;aspect-ratio:1.55;perspective:850px;perspective-origin:50% -30%;z-index:2;pointer-events:none}
-.turntable-deck{position:absolute;left:3%;top:-4%;width:90%;height:100%;aspect-ratio:auto;margin:0!important;overflow:visible;transform:rotateX(48deg) rotateZ(-5deg);transform-style:preserve-3d;border:1px solid #d7ac72;border-radius:7px;background:repeating-linear-gradient(3deg,#4f29162b 0 1px,transparent 1px 5px),linear-gradient(125deg,#c6955b,#9a6639 60%,#6f4429);box-shadow:inset 0 0 0 4px #2e231c,inset 0 0 0 5px #d2a76b,inset 0 0 24px #25150c33}
-.turntable-body-front{position:absolute;left:-1px;top:100%;width:calc(100% + 2px);height:25px;transform-origin:50% 0;transform:rotateX(-90deg);border:1px solid #351d0d;border-radius:0 0 4px 4px;background:repeating-linear-gradient(0deg,#2e190b66 0 1px,transparent 1px 4px),linear-gradient(#81522e,#4c2d19);box-shadow:inset 0 3px #da9a4533}
-.turntable-body-right{position:absolute;left:100%;top:-1px;width:25px;height:calc(100% + 2px);transform-origin:0 50%;transform:rotateY(90deg);background:linear-gradient(90deg,#4b2e1b,#28180f);border:1px solid #321e10}
-.turntable-foot{position:absolute;bottom:-25px;width:11%;height:9px;border-radius:3px;background:linear-gradient(#22211d,#0d0905);transform:rotateX(-90deg);transform-origin:50% 0;box-shadow:0 1px 1px #0008}.turntable-foot-left{left:10%}.turntable-foot-right{right:10%}
-.turntable-platter{left:8%;top:6%;width:59%;transform:translateZ(7px);box-shadow:0 0 0 2px #b0aea0,0 0 0 4px #262722,2px 7px 0 #181a17,3px 11px 8px #0007}
-.turntable-tonearm{right:15%;top:10%;height:63%;transform:translateZ(15px) rotate(-4deg);filter:drop-shadow(5px 6px 2px #0007)}.is-spinning .turntable-tonearm{transform:translateZ(15px) rotate(24deg)}
-.turntable-tonearm:before{background:radial-gradient(circle at 35% 30%,#f4e8c8 0,#96917c 42%,#2f312c 48%,#bcb494 56%,#5b594e 80%);box-shadow:0 0 0 3px #302c22,0 3px 0 #1b130b}
-.turntable-tonearm i{background:linear-gradient(90deg,#5c625d,#f3e9c8 38%,#929c8d 72%,#383f39)}
-.turntable-speed-knob{position:absolute;right:15%;bottom:10%;width:9%;aspect-ratio:1;border-radius:50%;background:conic-gradient(#3d443e,#e1d9b9,#5f695f,#ddd5b6,#3d443e);border:2px solid #393e36;transform:translateZ(5px);box-shadow:1px 3px 0 #322314,2px 5px 3px #0008}
-.turntable-speed-knob:after{content:'';position:absolute;left:45%;top:13%;width:9%;height:25%;background:#251a0f}.turntable-indicator{right:31%;bottom:14%;transform:translateZ(3px)}
-.turntable-brand{position:absolute;left:9%;bottom:6%;font-size:7px;letter-spacing:.1em;color:#ffe5b0;text-shadow:0 1px #44271b;transform:translateZ(1px)}
-.turntable-side-cabinet{position:relative;margin-top:-5%;padding:16px 12px 20px;background:repeating-linear-gradient(91deg,#24140933 0 1px,transparent 1px 7px),linear-gradient(110deg,#9b6235,#794722 80%);border:2px solid #c58a4e;border-bottom:9px solid #3d2414;box-shadow:inset 5px 0 #49291488,inset -4px 0 #371c0e77,inset 0 4px #e2a86255;z-index:1}
-.turntable-side-cabinet:before{content:'';position:absolute;left:-4%;right:-5%;top:-15px;height:15px;clip-path:polygon(5% 0,96% 0,100% 75%,0 100%);background:repeating-linear-gradient(3deg,#65391b55 0 1px,transparent 1px 4px),linear-gradient(150deg,#e0ab69,#a46d39);border-bottom:3px solid #503219;box-shadow:0 5px 8px #0006}
-.cabinet-side-face{position:absolute;left:100%;top:-14px;width:7%;height:calc(100% + 9px);clip-path:polygon(0 14px,100% 0,100% calc(100% - 14px),0 100%);background:repeating-linear-gradient(91deg,#130c082b 0 1px,transparent 1px 6px),linear-gradient(90deg,#563217,#2d1b0d);pointer-events:none}
-.cabinet-leg{position:absolute;bottom:-31px;width:9%;height:26px;background:linear-gradient(90deg,#8e5a31,#352010);clip-path:polygon(0 0,100% 0,80% 100%,15% 100%);box-shadow:0 9px 7px #0007;pointer-events:none}.cabinet-leg-left{left:9%}.cabinet-leg-right{right:9%}
-.turntable-console{position:relative;padding:12px;border:1px solid #d4a46b55;border-radius:6px;background:linear-gradient(130deg,#302418f5,#21180ff2);box-shadow:0 2px 0 #2f1b0e,inset 0 1px #ffe5b71f}
-.room-turntable.is-drop-target .turntable-stage:after{content:'';position:absolute;inset:0;border:2px dashed #ffe6a9;border-radius:12px;background:#ffe1a014;pointer-events:none}
-.cabin-pixel .room-turntable{box-shadow:none}.cabin-pixel .room-turntable::before{top:45%;left:3%;right:-1%;bottom:-3%;border-radius:0;filter:none;background:#140c09b0;transform:translate3d(7px,10px,0)}.cabin-pixel .turntable-deck,.cabin-pixel .turntable-console,.cabin-pixel .turntable-body-front,.cabin-pixel .turntable-foot{border-radius:0}.cabin-pixel .turntable-deck{background:repeating-linear-gradient(0deg,#795031 0 7px,#9b693a 7px 14px,#aa7843 14px 21px);box-shadow:inset 0 0 0 4px #211b17,inset 0 0 0 7px #c78c50}.cabin-pixel .turntable-side-cabinet{background:repeating-linear-gradient(90deg,#7d4b28 0 13px,#91582d 13px 19px,#6b4024 19px 23px)}.cabin-pixel .turntable-tonearm{filter:drop-shadow(4px 5px 0 #0007)}.cabin-pixel .turntable-speed-knob{box-shadow:2px 4px 0 #302214}.cabin-pixel .turntable-console{border-width:2px;background:#302217}
-[data-desktop-reduce-motion=true] .cabin-room *,[data-desktop-reduce-motion=true] .cabin-room *::before,[data-desktop-reduce-motion=true] .cabin-room *::after,[data-desktop-reduce-motion=true] .wallpaper-room *,[data-desktop-reduce-motion=true] .wallpaper-room *::before,[data-desktop-reduce-motion=true] .wallpaper-room *::after{animation:none!important;transition:none!important}
-.wallpaper-room{position:fixed;inset:0;background:#38200f;color:#ffe9c6;overflow:hidden}.wallpaper-room .room-turntable{bottom:17%}.wallpaper-caption{position:absolute;bottom:24px;left:25%;right:24px;color:#f5d8a6;text-shadow:0 2px 8px #000;font-size:14px;letter-spacing:.05em}
+.cabin-room .cabin-toolbar>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.cabin-room .room-selection-copy h2{margin:3px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cabin-room .room-selection-copy p{font-size:12px}.cabin-room .room-selection-actions button,.cabin-room .room-selection-actions a{white-space:nowrap;margin:0}
+.room-shelf-navigation{position:absolute;right:18px;top:45%;z-index:12;display:grid;justify-items:center;gap:9px;padding:10px;color:#f7dbb0;font-size:12px}
+.room-shelf-navigation button{display:grid;place-items:center;padding:7px;color:#ffe1af}.room-shelf-navigation button:disabled{opacity:.3}.room-shelf-navigation small{font-size:12px;writing-mode:vertical-rl;text-orientation:upright;letter-spacing:.1em}
+.wallpaper-error{position:absolute;z-index:26;left:25%;right:20px;top:132px;display:flex;align-items:center;gap:12px;overflow-wrap:anywhere;background:#471f14ed;color:#ffe0bd;padding:10px 16px;border:2px solid #e6ae67;font-size:13px}
+.wallpaper-error button{margin-left:auto;flex:none;min-width:24px;min-height:24px;border:0;background:none;color:inherit;font-size:20px;cursor:pointer}
 
-.turntable-source{display:flex;align-items:center;gap:7px;font-size:10px;color:#caa774;margin-top:10px}.turntable-source select{width:100%;min-width:0;flex:1;color:#ffe4b7;background-color:#332311;border:1px solid #caa26966;border-radius:7px;padding:5px;font:inherit;font-size:10px}.turntable-status{display:block;line-height:1.5;max-height:48px;overflow:auto}.turntable-controls select{overflow:hidden;text-overflow:ellipsis}.turntable-audio-sliders{display:grid;gap:5px;margin-top:10px;font-size:10px;color:#cfae7d}.turntable-audio-sliders label{display:flex;align-items:center;gap:7px;flex-wrap:wrap}.turntable-audio-sliders input{min-width:0;flex:1;width:60%;height:12px;accent-color:#d5b575}.turntable-audio-sliders small{flex-basis:100%;text-align:right;font-size:9px}.turntable-matches{display:grid;gap:4px;max-height:180px;overflow:auto;margin-top:10px}.turntable-matches button{padding:7px 8px;text-align:left;border:1px solid #cfaa6650;border-radius:6px;background:#513720;color:#ffe2b4}.turntable-matches button strong{display:block;font-size:11px;font-weight:500}.turntable-matches button span{display:block;font-size:10px;color:#c2a17a}.turntable-controls button:focus-visible,.turntable-source select:focus-visible{outline:2px solid #ffe5a4;outline-offset:2px}.music-settings h2{display:flex;gap:9px;align-items:center}.music-settings{width:680px!important}.music-account{display:flex;align-items:center;gap:9px;padding:14px 0;border-bottom:1px solid #dca46c33}.music-account>span{flex:1;display:grid;gap:5px}.music-account strong{font-size:14px}.music-account small{font-size:11px}.music-settings form>p,.music-platform-note{font-size:12px;line-height:1.7;color:#e1b181}.music-settings select{padding:9px;background-color:#3f2c1a;border:1px solid #c57a2e66;border-radius:8px;color:#f6e8da}.music-settings>p[role=status]{font-size:13px;color:#d7e6b7}
-@media(max-width:1050px){.cabin-toolbar-actions{gap:4px}.cabin-room .cabin-toolbar button{padding:6px;font-size:10px;gap:4px}.cabin-toolbar>span{max-width:130px;font-size:11px}.cabin-room .room-now-playing{left:25%;right:8px}.room-turntable{min-width:175px}.turntable-source select{font-size:9px}}
-@media(max-height:700px){.turntable-audio-sliders{gap:2px;margin-top:5px}.turntable-source{margin-top:5px}.turntable-status{max-height:28px;font-size:9px}.room-turntable{bottom:14%;max-height:calc(100% - var(--room-header-bottom,85px) - 120px);overflow:auto}}
-@media(max-width:1300px){.cabin-room .room-now-playing{left:25%;padding:11px}.cabin-room .room-selection-actions{flex-wrap:wrap;max-width:260px}.cabin-room .room-selection-actions a,.cabin-room .room-selection-actions button{font-size:11px;padding:6px 8px}.room-turntable{left:1.5%;width:22%;min-width:185px;padding:10px}.turntable-heading>small{display:none}.room-shelf-navigation{right:8px}.cabin-toolbar>span{max-width:180px}}
-@media(max-height:750px){.room-turntable{bottom:19%;width:18%;min-width:165px;padding:9px}.turntable-deck{margin:8px 0}.turntable-copy>strong{font-size:12px}.turntable-artist{font-size:10px}.turntable-track{margin:7px 0 3px;font-size:10px}.turntable-controls{margin-top:7px;gap:4px}.turntable-controls button{padding:5px}.turntable-controls select{font-size:10px;padding:5px}.cabin-room .room-now-playing{padding:9px 14px;bottom:8px}.room-shelf-navigation small{display:none}.cabin-room .cabin-toolbar{top:78px}}
-@media(max-height:750px){.room-turntable{max-height:none;overflow:visible}.turntable-stage{aspect-ratio:1.7}.turntable-side-cabinet{padding:8px 6px 12px}.turntable-console{padding:8px;max-height:clamp(92px,calc(81vh - var(--room-header-bottom,85px) - 190px),320px);overflow:auto;scrollbar-width:thin;scrollbar-color:#b48753 #352518}.turntable-console>*{max-width:100%}.turntable-status{overflow-wrap:anywhere}.wallpaper-room .turntable-console{max-height:240px}}
+/* Console geometry (scripts/cabin-layout-checks.mjs measures this box). */
+.room-turntable{position:absolute;left:2.5%;bottom:17%;width:clamp(200px,20vw,340px);z-index:10;color:#ffe9c6;isolation:isolate}
+.cabin-pixel .room-turntable{image-rendering:pixelated}
+.turntable-side-cabinet{position:relative;z-index:1}
+.turntable-console{position:relative}
+.turntable-heading{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#d9b981}.turntable-heading>span{display:flex;align-items:center;gap:7px}
+.turntable-copy{min-width:0}.turntable-copy>strong,.turntable-artist,.turntable-track{display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.turntable-artist{margin-top:4px}
+.turntable-status{max-height:48px;overflow:auto}
+.turntable-controls{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:12px}.turntable-controls button{display:grid;place-items:center;border:1px solid #cfaa6660;padding:7px;color:#ffe4b7;background:#644225}.turntable-controls button:disabled{opacity:.3}.turntable-controls .turntable-toggle{background:#dcbb7d;color:#291b0b;padding:9px}.turntable-controls select{flex-basis:100%;width:100%;min-width:0;overflow:hidden;text-overflow:ellipsis;color:#ffe4b7;background-color:#332311;border:1px solid #caa26966;padding:7px;font-size:12px}
+.turntable-audio-sliders{display:grid;gap:5px;margin-top:10px;font-size:12px;color:#cfae7d}.turntable-audio-sliders label{display:flex;align-items:center;gap:7px;flex-wrap:wrap}.turntable-audio-sliders input{min-width:0;flex:1;width:60%;height:12px;accent-color:#d5b575}.turntable-audio-sliders small{flex-basis:100%;text-align:right;font-size:12px}
+.turntable-matches{display:grid;gap:4px;max-height:180px;overflow:auto;margin-top:10px}.turntable-matches button{padding:7px 8px;text-align:left;border:1px solid #cfaa6650;background:#513720;color:#ffe2b4}.turntable-matches button strong{display:block;font-size:12px;font-weight:500}.turntable-matches button span{display:block;font-size:12px;color:#c2a17a}
+@media(max-width:1300px){.room-turntable{left:1.5%;width:22%;min-width:185px}.room-shelf-navigation{right:8px}}
+@media(max-width:700px){.room-shelf-navigation small{display:none}}
+@media(max-height:750px){.room-turntable{bottom:19%;width:18%;min-width:165px}.turntable-controls button{padding:5px}.turntable-controls select{padding:5px}.room-shelf-navigation small{display:none}.turntable-console{scrollbar-width:thin;scrollbar-color:#b48753 #352518}.turntable-console>*{max-width:100%}.turntable-status{overflow-wrap:anywhere}}
+@media(max-height:700px){.turntable-audio-sliders{gap:2px}.turntable-status{max-height:28px}}
 /* Only the heading moves the furniture; playback, selects and album drops keep their own gestures. */
 .turntable-drag-handle{display:flex;align-items:center;gap:5px;border:0;padding:3px 0;background:none;color:inherit;font:inherit;cursor:grab;touch-action:none;user-select:none}
 .room-turntable[data-moving=true] .turntable-drag-handle{cursor:grabbing}
-.turntable-drag-handle:focus-visible{outline:2px solid #ffe5a4;outline-offset:3px}
-.wallpaper-error{display:flex;align-items:center;gap:12px;overflow-wrap:anywhere}
-.wallpaper-error button{margin-left:auto;flex:none;border:0;background:none;color:inherit;font-size:20px;cursor:pointer}
+
+.wallpaper-room{position:fixed;inset:0;background:#38200f;color:#ffe9c6}.wallpaper-room .room-turntable{bottom:17%}.wallpaper-caption{position:absolute;bottom:24px;left:25%;right:24px;color:#f5d8a6;text-shadow:2px 2px 0 var(--px-shadow);font-size:14px;letter-spacing:.05em}
+.music-accounts{display:grid;align-content:start}.music-accounts-intro,.music-accounts-saved{margin:0 0 4px;font-size:12px;line-height:1.7;color:var(--px-ink-dim)}
+.music-account{display:flex;align-items:center;gap:8px;padding:12px 0;border-bottom:2px solid var(--px-border-subtle)}.music-account>span{flex:1;display:grid;gap:4px;min-width:0}.music-account strong{font:400 12px/16px var(--px-font-cn);-webkit-font-smoothing:none}.music-account small{font-size:12px;color:var(--px-ink-dim)}
+.music-accounts form>p,.music-platform-note,.music-accounts details>p{font-size:12px;line-height:1.7;color:var(--px-ink-dim)}.music-accounts select{padding:8px;background-color:var(--px-surface-2);border:2px solid var(--px-border);color:var(--px-ink)}.music-accounts>p[role=status]{font-size:12px;color:var(--px-good)}
 .room-drag-record{position:fixed;left:-1000px;top:0;width:96px;height:96px;pointer-events:none}
 .room-drag-record>.custom-vinyl{position:absolute;inset:0;width:100%;height:100%}
 .room-drag-record>.room-drag-label{position:absolute;inset:35%;border-radius:50%;overflow:hidden}
 
-/* Snow fallback for original illustrated scenes without a hearth. */
-.cabin-snow{position:absolute;left:13.15%;top:15.9%;width:14.7%;height:25%;pointer-events:none;opacity:.45;clip-path:polygon(0 0,46% 0,46% 45%,0 45%,0 0,0 55%,46% 55%,46% 100%,0 100%,0 55%,54% 55%,100% 55%,100% 100%,54% 100%,54% 55%,54% 45%,100% 45%,100% 0,54% 0,54% 45%)}
-/* Flakes fall on the compositor: oversized pseudo layers translate by one tile instead of animating background-position. */
-.cabin-snow::before,.cabin-snow::after{content:'';position:absolute;bottom:0;will-change:transform}
-.cabin-snow::before{top:-61px;left:-5px;right:0;background:radial-gradient(circle,#fff9 1px,transparent 2px) 5px 0/37px 61px;animation:cabin-snowfall-a 6s linear infinite}
-.cabin-snow::after{top:-49px;left:0;right:-8px;background:radial-gradient(circle,#fff8 1px,transparent 1.8px) 0 0/73px 49px;animation:cabin-snowfall-b 6s linear infinite}
-@keyframes cabin-snowfall-a{to{transform:translate3d(5px,61px,0)}}
-@keyframes cabin-snowfall-b{to{transform:translate3d(-8px,49px,0)}}
-[data-desktop-reduce-motion=true] .cabin-snow::before,[data-desktop-reduce-motion=true] .cabin-snow::after,[data-desktop-reduce-motion=true] .room-turntable::before{animation:none!important}
-@media(prefers-reduced-motion:reduce){.cabin-snow::before,.cabin-snow::after{animation:none!important}}
+}

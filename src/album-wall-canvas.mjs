@@ -1,5 +1,6 @@
 import { wallGeometry, normalizeWall } from './album-wall-model.mjs';
-const cache = new Map();
+import { createCoverCache } from './lib/cover-cache.mjs';
+import { GRID, gridToRgba, proceduralGrid, readPalette } from './player/pixel-cover.mjs';
 async function fetchCoverBlob(value) {
   // Local and inline artwork is read directly; catalog artwork uses the existing desktop proxy.
   const url = new URL(value, window.location.href);
@@ -9,18 +10,11 @@ async function fetchCoverBlob(value) {
   const blob = await response.blob();
   return blob.type.startsWith('image/') && blob.size <= 8 * 1024 * 1024 ? blob : null;
 }
-export async function loadWallCover(value) {
-  if (!value) return null;
-  if (!cache.has(value)) cache.set(value, (async () => {
-    try {
-      const blob = await fetchCoverBlob(value);
-      return blob ? await createImageBitmap(blob) : null;
-    } catch { return null; }
-  })());
-  // Full-resolution artwork belongs to wall export/preview only.
-  if (cache.size > 150) { const first = cache.keys().next().value; cache.delete(first); }
-  return cache.get(value);
-}
+// Full-resolution artwork belongs to wall export/preview only. Evicted bitmaps are closed and the
+// whole cache is released once the wall has been idle for a while (see lib/cover-cache.mjs).
+const covers = createCoverCache({ load: async (value) => { const blob = await fetchCoverBlob(value); return blob ? await createImageBitmap(blob) : null; } });
+export const loadWallCover = (value) => covers.get(value);
+export const releaseWallCovers = () => covers.release();
 // Shelf colour sampling never populates the full-resolution wall cache.
 // The temporary resized bitmap is always released, even if canvas readback fails.
 export async function readCoverPixels(value) {
@@ -43,6 +37,19 @@ function wrap(context, text, width) {
   if (line) lines.push(line.trim());
   return lines;
 }
+// A record without a readable cover gets its generated sleeve (the one the shelf
+// shows), enlarged in whole art pixels, with the title on a dark strip.
+function paintSleeve(ctx, album, x, y, size, family) {
+  let palette; try { palette = readPalette(getComputedStyle(document.documentElement)); } catch { palette = readPalette(null); }
+  const art = document.createElement('canvas'); art.width = art.height = GRID;
+  art.getContext('2d').putImageData(new ImageData(gridToRgba(proceduralGrid(album).grid, GRID, palette), GRID, GRID), 0, 0);
+  ctx.save(); ctx.imageSmoothingEnabled = false; ctx.drawImage(art, x, y, size, size); ctx.restore();
+  ctx.font = `400 18px ${JSON.stringify(family)}, sans-serif`;
+  const lines = wrap(ctx, album.title, size - 24).slice(0, 2), strip = 16 + lines.length * 24;
+  ctx.fillStyle = '#0d0805'; ctx.fillRect(x, y + size - strip, size, strip); ctx.fillStyle = '#a8743c'; ctx.fillRect(x, y + size - strip - 3, size, 3);
+  ctx.fillStyle = '#ffe9cb';
+  lines.forEach((line, index) => ctx.fillText(line, x + 12, y + size - strip + 8 + index * 24));
+}
 export async function paintWall(canvas, albums, value, images, requestedScale = 1) {
   const o = normalizeWall(value), geometry = wallGeometry(albums.length, o);
   const family = o.font === 'bundled' ? 'HarmonyOS Sans SC Bundled' : o.font;
@@ -62,7 +69,7 @@ export async function paintWall(canvas, albums, value, images, requestedScale = 
     ctx.fillStyle = o.textColor; ctx.fillRect(cell.x, cell.y, cell.size, cell.size);
     const inset = o.border, size = cell.size - inset * 2;
     if (image) { const side = Math.min(image.width, image.height); ctx.drawImage(image, (image.width - side) / 2, (image.height - side) / 2, side, side, cell.x + inset, cell.y + inset, size, size); }
-    else { ctx.fillStyle = '#344144'; ctx.fillRect(cell.x + inset, cell.y + inset, size, size); ctx.fillStyle = '#f0f5f1'; ctx.font = `400 18px ${JSON.stringify(family)}, sans-serif`; wrap(ctx, album.title, size - 28).slice(0, 5).forEach((line, index) => ctx.fillText(line, cell.x + 14, cell.y + 22 + 26 * index)); }
+    else paintSleeve(ctx, album, cell.x + inset, cell.y + inset, size, family);
   }
   if (o.showNames || o.showArtists) {
     let y = geometry.listTop;
@@ -76,4 +83,3 @@ export async function paintWall(canvas, albums, value, images, requestedScale = 
   }
   return { width: canvas.width, height: canvas.height, missing: images.filter((image) => !image).length };
 }
-export function downloadBlob(blob, filename) { const url = URL.createObjectURL(blob), anchor = document.createElement('a'); anchor.href = url; anchor.download = filename; anchor.click(); setTimeout(() => URL.revokeObjectURL(url), 60000); }

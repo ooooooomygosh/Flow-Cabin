@@ -1,10 +1,11 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { useRecordLibrary } from './RecordLibrary';
+import { nudgeDelta } from './drag-gesture.mjs';
 
 // Position stays in the existing per-room preferences, as fractions of the
 // available screen area so a smaller window never strands the drag handle.
 export default function useTurntablePosition(readOnly) {
-  const library = useRecordLibrary(), element = useRef(null), gesture = useRef(null);
+  const library = useRecordLibrary(), element = useRef(null), gesture = useRef(null), frame = useRef(0);
   const saved = readOnly ? null : library?.data.rooms[library.roomId]?.turntable;
   const [position, setPosition] = useState(null), [moving, setMoving] = useState(false);
   const bounds = () => {
@@ -23,12 +24,12 @@ export default function useTurntablePosition(readOnly) {
   };
   useLayoutEffect(() => {
     if (readOnly) return;
-    const resize = () => { gesture.current = null; setMoving(false); restore(); };
+    const resize = () => { gesture.current = null; stopFrame(); setMoving(false); restore(); };
     const observer = new ResizeObserver(resize);
     observer.observe(element.current);
     const toolbar = document.querySelector('.cabin-toolbar'); if (toolbar) observer.observe(toolbar);
     window.addEventListener('resize', resize); restore();
-    return () => { observer.disconnect(); window.removeEventListener('resize', resize); };
+    return () => { observer.disconnect(); window.removeEventListener('resize', resize); stopFrame(); };
   }, [saved?.x, saved?.y, readOnly]);
   const save = (point) => {
     const area = bounds();
@@ -37,10 +38,12 @@ export default function useTurntablePosition(readOnly) {
     if (stored === false) restore();
     return stored;
   };
+  // Pointer moves land in the next frame only (high-rate mice send several per frame).
+  const stopFrame = () => { if (frame.current) { cancelAnimationFrame(frame.current); frame.current = 0; } };
   const finish = (event, cancel = false) => {
     const drag = gesture.current; if (!drag || drag.id !== event.pointerId) return;
-    gesture.current = null; setMoving(false);
-    if (cancel) restore(); else if (drag.point) save(drag.point);
+    gesture.current = null; stopFrame(); setMoving(false);
+    if (cancel) restore(); else if (drag.point) { drag.point = clamp(drag.point); setPosition(drag.point); save(drag.point); }
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
   };
   return {
@@ -57,15 +60,16 @@ export default function useTurntablePosition(readOnly) {
         const drag = gesture.current; if (!drag || drag.id !== event.pointerId) return;
         const dx = event.clientX - drag.x, dy = event.clientY - drag.y;
         if (!drag.point && Math.hypot(dx, dy) < 5) return;
-        drag.point = clamp({ x: drag.left + dx, y: drag.top + dy });
-        setMoving(true); setPosition(drag.point);
+        if (!drag.point) setMoving(true);
+        drag.point = { x: drag.left + dx, y: drag.top + dy };
+        if (!frame.current) frame.current = requestAnimationFrame(() => { frame.current = 0; const live = gesture.current; if (live?.point) { live.point = clamp(live.point); setPosition(live.point); } });
       },
       onPointerUp: (event) => finish(event), onPointerCancel: (event) => finish(event, true), onLostPointerCapture: (event) => finish(event, true),
       onDoubleClick() { gesture.current = null; setMoving(false); setPosition(null); save(null); },
       onKeyDown(event) {
-        if (event.key === 'Escape' && gesture.current) { gesture.current = null; setMoving(false); restore(); return; }
+        if (event.key === 'Escape' && gesture.current) { gesture.current = null; stopFrame(); setMoving(false); restore(); return; }
         if (event.key === 'Home') { event.preventDefault(); setPosition(null); save(null); return; }
-        const delta = { ArrowLeft: [-16, 0], ArrowRight: [16, 0], ArrowUp: [0, -16], ArrowDown: [0, 16] }[event.key];
+        const delta = nudgeDelta(event.key, event.shiftKey);
         if (!delta) return;
         event.preventDefault(); event.stopPropagation();
         const rect = element.current.getBoundingClientRect(), next = clamp({ x: rect.left + delta[0], y: rect.top + delta[1] });

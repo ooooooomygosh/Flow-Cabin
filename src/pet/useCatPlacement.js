@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
-import { BUBBLE_OBSTACLES, chooseBubbleOffset, chooseCatSpot } from './bubble-placement.mjs';
+import { BUBBLE_OBSTACLES, catFloorOffset, chooseBubbleOffset, chooseCatSpot } from './bubble-placement.mjs';
 
 const visibleRect = (el) => el && el.getClientRects().length && getComputedStyle(el).visibility !== 'hidden' ? el.getBoundingClientRect() : null;
 const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches || document.documentElement.dataset.desktopReduceMotion === 'true';
@@ -49,17 +49,22 @@ export function animateCatMove(catEl, before, after, kind, { grounded = true } =
 }
 
 /** Keeps the room cat and its speech bubble off record cells and panels, always on a
- * supporting surface (floor baseline or the console top). Runs after every RoomCat render
- * (2 Hz clock), synchronously when the console resizes (ResizeObserver runs before paint,
- * so a perch that grows never leaves the cat hovering), and when immersive mode starts
- * hiding the console (the cat leaves while it fades, not after). */
-export function useCatPlacement(catRef, bubbleRef, enabled = true) {
+ * supporting surface (the scene's painted floor or the console top). Runs when what it
+ * places changes (`deps`: pose, bubble text, stroll offset — not on every 2 Hz clock
+ * render), synchronously when the console resizes (ResizeObserver runs before paint,
+ * so a perch that grows never leaves the cat hovering), when the stage re-fits or the
+ * scene changes, and when immersive mode starts hiding the console (the cat leaves
+ * while it fades, not after). */
+export function useCatPlacement(catRef, bubbleRef, enabled = true, deps = []) {
   const placeRef = useRef(null), moveRef = useRef(null), consoleShownAt = useRef(0);
   useLayoutEffect(() => {
     const place = ({ preferPerch = false } = {}) => {
       const catEl = catRef.current; if (!catEl || !enabled) return;
       const stage = catEl.closest('.room-scene') || catEl.offsetParent; if (!stage) return;
       const view = stage.getBoundingClientRect(), w = catEl.offsetWidth, h = catEl.offsetHeight;
+      // Painted floor → --cat-floor-scene (px); CSS turns it into --cat-floor / bottom.
+      const stageStyle = getComputedStyle(stage), floorPx = catFloorOffset({ height: view.height, sceneY: parseFloat(stageStyle.getPropertyValue('--scene-y')) || 0, k: parseFloat(stageStyle.getPropertyValue('--scene-k')) || 1, floor: parseFloat(stageStyle.getPropertyValue('--scene-floor')) });
+      if (floorPx !== null && catEl.style.getPropertyValue('--cat-floor-scene') !== `${floorPx}px`) catEl.style.setProperty('--cat-floor-scene', `${floorPx}px`);
       const perched = catEl.dataset.perch === 'console';
       const left = view.left + catEl.offsetLeft, top = view.top + catEl.offsetTop;
       const floorBottom = parseFloat(getComputedStyle(catEl).getPropertyValue('--cat-floor')) || 118;
@@ -95,7 +100,7 @@ export function useCatPlacement(catRef, bubbleRef, enabled = true) {
       if (bubbleEl && spot.bubble) { bubbleEl.style.setProperty('--bubble-dx', `${spot.bubble.dx}px`); bubbleEl.style.setProperty('--bubble-dy', `${spot.bubble.dy}px`); bubbleEl.dataset.side = spot.bubble.side; }
     };
     placeRef.current = place; place();
-  });
+  }, [enabled, ...deps]);
   useEffect(() => {
     let timer = 0, holdTimer = 0, consoleShown = null, wasPerched = false;
     const later = (ms) => { clearTimeout(timer); timer = setTimeout(() => placeRef.current?.(), ms); };
@@ -108,6 +113,9 @@ export function useCatPlacement(catRef, bubbleRef, enabled = true) {
     });
     const mounts = new MutationObserver(() => { soon(); watch(); });
     const watch = () => room.querySelectorAll('.room-turntable, .room-now-playing, .focus-dock, .room-scene').forEach((element) => sizes.observe(element));
+    // Stage re-fit (--scene-x/y/k in its style) or another scene: the floor line moved.
+    const stage = new MutationObserver(soon), stageEl = catRef.current?.closest('.room-scene');
+    if (stageEl) stage.observe(stageEl, { attributes: true, attributeFilter: ['style', 'data-room-look'] });
     const modes = new MutationObserver(() => {
       const root = document.documentElement, shown = !root.classList.contains('room-zen') || root.dataset.consoleNear === 'true';
       if (shown === consoleShown) return;
@@ -125,7 +133,7 @@ export function useCatPlacement(catRef, bubbleRef, enabled = true) {
     });
     watch(); mounts.observe(room, { childList: true }); window.addEventListener('resize', soon);
     modes.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-console-near'] });
-    return () => { clearTimeout(timer); clearTimeout(holdTimer); sizes.disconnect(); mounts.disconnect(); modes.disconnect(); window.removeEventListener('resize', soon); };
+    return () => { clearTimeout(timer); clearTimeout(holdTimer); sizes.disconnect(); mounts.disconnect(); modes.disconnect(); stage.disconnect(); window.removeEventListener('resize', soon); };
   }, []);
 }
 export { chooseBubbleOffset };

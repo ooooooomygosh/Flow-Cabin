@@ -112,7 +112,6 @@ export function formatClock(ms, hideSeconds = false) {
   const total = Math.max(0, Math.ceil(ms / 1000));
   return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
 }
-export function nextBreak(state) { return (state.timer.round + 1) % state.settings.longEvery === 0 ? 'longBreak' : 'shortBreak'; }
 
 export function startPhase(state, phase, now, taskId = state.timer.taskId) {
   const duration = phaseDuration(state.settings, phase);
@@ -190,6 +189,12 @@ export function updateTask(state, taskId, change, now) {
 export function removeTask(state, taskId) {
   return { ...state, tasks: state.tasks.filter((task) => task.id !== taskId), timer: state.timer.taskId === taskId ? { ...state.timer, taskId: '' } : state.timer };
 }
+// 撤销 after a delete: the same task (id, rounds, done) back at its old place.
+export function restoreTask(state, task, index) {
+  const value = normalizeTask(task); if (!value || state.tasks.length >= 200 || state.tasks.some((entry) => entry.id === value.id)) return state;
+  const tasks = [...state.tasks]; tasks.splice(Math.max(0, Math.min(tasks.length, index)), 0, value);
+  return { ...state, tasks };
+}
 export function moveTask(state, taskId, toIndex) {
   const from = state.tasks.findIndex((task) => task.id === taskId); if (from < 0) return state;
   const tasks = [...state.tasks], [task] = tasks.splice(from, 1); tasks.splice(Math.max(0, Math.min(tasks.length, toIndex)), 0, task);
@@ -252,5 +257,5 @@ export function equip(state, kind, value) {
 // Compact read-only form shared with the wallpaper and desktop pet windows.
 export function focusSnapshot(state, now) {
   const task = state.tasks.find((item) => item.id === state.timer.taskId);
-  return { hideSeconds: state.settings.hideSeconds, catSkin: state.settings.catSkin, phase: state.timer.phase, paused: state.timer.paused, remaining: remainingMs(state.timer, now), endsAt: state.timer.paused ? 0 : state.timer.endsAt, round: state.timer.round, task: task?.text || '', fish: state.rewards.fish, level: levelInfo(state.rewards.xp).level, accessory: state.rewards.equipped.accessory, weather: state.rewards.equipped.weather };
+  return { hideSeconds: state.settings.hideSeconds, catSkin: state.settings.catSkin, phase: state.timer.phase, paused: state.timer.paused, remaining: remainingMs(state.timer, now), endsAt: state.timer.paused ? 0 : state.timer.endsAt, round: state.timer.round, duration: state.timer.phase === 'idle' ? 0 : state.timer.duration || phaseDuration(state.settings, state.timer.phase), longEvery: state.settings.longEvery, task: task?.text || '', fish: state.rewards.fish, level: levelInfo(state.rewards.xp).level, accessory: state.rewards.equipped.accessory, weather: state.rewards.equipped.weather };
 }

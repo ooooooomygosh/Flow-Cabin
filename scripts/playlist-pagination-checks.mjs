@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 export async function verifyPlaylistPagination({ browser, origin, check }) {
   const context = await browser.newContext({ viewport: { width: 960, height: 600 }, reducedMotion: 'reduce', locale: 'zh-CN' });
-  let mode = 'fail', revision = 3, pending, listPending, delayList = true, items = [{ id: 'fixture-page-record', type: 'album', title: 'Fixture', artist: 'Test', tracks: [] }];
+  let mode = 'fail', revision = 3, pending, listPending, detailPending, delayDetail = false, delayList = true, items = [{ id: 'fixture-page-record', type: 'album', title: 'Fixture', artist: 'Test', tracks: [] }];
   const errors = [], tracks = Array.from({ length: 620 }, (_, i) => ({ title: 'Page Song ' + (i + 1), artist: 'Fixture Artist', album: 'Fixture Album', source: 'netease', providerId: String(i + 1), playlistIndex: i }));
   const playlist = { id: '88001', name: '620 首离线歌单', trackCount: 620, kind: 'created' };
   const detail = offset => ({ provider: 'netease', revision, playlist, tracks: offset ? mode === 'duplicate' ? tracks.slice(0, 500) : tracks.slice(499, mode === 'short' ? 619 : 620) : tracks.slice(0, 500), truncated: true, page: { offset, nextOffset: offset ? null : 500, snapshot: 'fixture-stable', missingPages: offset && mode === 'short' ? [{ offset, ids: ['620'] }] : [] } });
@@ -29,7 +29,7 @@ export async function verifyPlaylistPagination({ browser, origin, check }) {
         assert.equal(url.searchParams.get('revision'), String(revision));
         if (mode === 'fail') return route.fulfill({ status: 502, json: { error: '离线模拟：本批读取失败，请重试。' } });
         if (mode === 'delay') await new Promise(resolve => { pending = resolve; });
-      }
+      } else if (delayDetail) { delayDetail = false; await new Promise(resolve => { detailPending = resolve; }); }
       return json(payload).catch(() => {}); // A deliberately cancelled fetch need not accept its late response.
     }
     if (p === '/desktop-music/now-playing') return json({ available: false });
@@ -44,7 +44,7 @@ export async function verifyPlaylistPagination({ browser, origin, check }) {
   const waitPending = async () => { for (let i = 0; i < 100 && !pending; i++) await new Promise(resolve => setTimeout(resolve, 20)); assert(pending, 'next page request started'); };
   try {
     await page.goto(origin); await page.locator('.room-record').first().waitFor();
-    await page.getByRole('button', { name: '我的歌单', exact: true }).click();
+    await page.getByRole('button', { name: '添加到唱片架', exact: true }).click(); await page.getByRole('tab', { name: '我的歌单', exact: true }).click();
     await page.getByLabel('正在读取歌单').waitFor();
     for (let i = 0; i < 100 && !listPending; i++) await new Promise(resolve => setTimeout(resolve, 20)); assert(listPending);
     await page.getByRole('tab', { name: /网易云音乐/ }).click(); listPending(); listPending = null;
@@ -73,13 +73,20 @@ export async function verifyPlaylistPagination({ browser, origin, check }) {
     await page.evaluate(() => window.dispatchEvent(new CustomEvent('album-music-account', { detail: { provider: 'netease' } })));
     await page.locator('.playlist-card', { hasText: playlist.name }).waitFor(); pending(); pending = null;
     mode = 'ok'; await open(); await count(500); await more().click(); await count(620);
-    assert.equal(await page.locator('.playlist-dialog').evaluate(el => el.scrollWidth <= el.clientWidth), true);
+    assert.equal(await page.locator('.add-album-dialog').evaluate(el => el.scrollWidth <= el.clientWidth), true);
     check('large-playlist-account-switch-discards-late-page-and-can-reopen');
     await page.getByRole('button', { name: '全部歌单' }).click(); await open(); mode = 'short'; await more().click(); await count(619);
     const retryMissing = page.getByRole('button', { name: '重试未返回曲目' }); await retryMissing.waitFor(); assert.equal(await more().count(), 0);
     await retryMissing.click(); await page.locator('.playlist-notice', { hasText: '本次仍未返回' }).waitFor(); await count(619);
     mode = 'ok'; await retryMissing.click(); await count(620); assert.equal(await retryMissing.count(), 0);
     check('short-successful-last-page-keeps-missing-id-retry-until-recovered');
+    await page.getByRole('button', { name: '全部歌单' }).click(); delayDetail = true;
+    await page.locator('.playlist-card', { hasText: playlist.name }).click();
+    for (let i = 0; i < 100 && !detailPending; i++) await new Promise(resolve => setTimeout(resolve, 20)); assert(detailPending, 'playlist detail request started');
+    await page.getByRole('button', { name: '刷新', exact: true }).click(); detailPending(); detailPending = null;
+    await page.locator('.playlist-hero h3', { hasText: playlist.name }).waitFor();
+    await page.getByRole('button', { name: '全部歌单' }).click(); await open(); assert.equal(await page.locator('.playlist-card[aria-busy="true"]').count(), 0);
+    check('refreshing-the-list-does-not-orphan-an-opening-playlist');
     assert.deepEqual(errors, []);
-  } finally { listPending?.(); pending?.(); await context.close(); }
+  } finally { listPending?.(); pending?.(); detailPending?.(); await context.close(); }
 }

@@ -1,8 +1,8 @@
 # 月夜书桌素材
 
-`night-study.png` 是用户提供的 1448×1086 原图，用于软件小屋和动态桌面。九格架的交互位置在 `src/scene-catalog.mjs` 中标定。
+`night-study.png` 是用户提供的 1448×1086 原图。它与下面两份衍生素材只作为 `scripts/art/pixelate-night-study.py` 的输入保存在此（不随应用发布）；软件运行时只用 `public/room-scenes/night-study*-pixel.png`。九格架的交互位置在 `src/scene-catalog.mjs` 中标定。
 
-以下两份衍生素材使用 Codex 内置 ImageGen 工具生成，并保留在此目录，运行时无需图像生成服务：
+以下两份衍生素材使用 Codex 内置 ImageGen 工具生成，同样保留在此目录：
 
 - `night-study-clean.png`（1448×1086）：移除书写的右手和铅笔，补全桌面和笔记本。软件仅显示原图中右手所在的小块区域，其余场景继续显示用户原图。
 - `night-study-hands.png`（1254×1254，RGBA）：透明 4×4 姿态图集，保留手、绿色袖口和铅笔。软件逐帧更换姿态，不拉伸背景矩形。

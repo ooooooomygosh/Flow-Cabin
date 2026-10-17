@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { QUEUE_KEY, normalizeQueue, queueAddition, dequeue, pruneQueue, cycleRepeat, nextStep, nextPlayableStep, previousStep } from './player-queue.mjs';
+import { QUEUE_KEY, normalizeQueue, queueAddition, dequeue, pruneQueue, cycleRepeat, nextStep, nextPlayableStep, previousStep, playedBag } from './player-queue.mjs';
 import { createPlaybackBroadcaster, rmsEnergy, smoothEnergy, estimatedEnergy, ENERGY_INTERVAL_MS } from './playback-signal.mjs';
 import { analyserFor } from './audio-graph.mjs';
 import { createBeatTracker } from './beat-tracker.mjs';
 import { trackNames } from '../room-model.mjs';
+import { onBackgroundChange } from '../frame-clock.mjs';
 
 const readQueue = () => { try { return normalizeQueue(JSON.parse(localStorage.getItem(QUEUE_KEY))); } catch { return normalizeQueue(null); } };
 
@@ -20,10 +21,16 @@ export function usePlayerQueue({ items, record, trackIndex, setTrackIndex, loadA
   const itemsSignature = items.map((item) => item.id).join('|');
   useEffect(() => { if (items.length) setQueue((old) => pruneQueue(old, items.map((item) => item.id))); }, [itemsSignature]);
   const trackCount = trackNames(record).length, audible = provider !== 'visual' && provider !== 'system';
+  // 歌单「随机播放」 shuffles that one record without switching the saved shuffle key on;
+  // it ends when another record starts.
+  const [oneShot, setOneShot] = useState(null), lastRecord = useRef(record?.id);
+  useEffect(() => { if (oneShot && lastRecord.current === oneShot && record?.id !== oneShot) setOneShot(null); lastRecord.current = record?.id; }, [record?.id]);
+  const effective = oneShot && oneShot === record?.id && !queue.shuffle ? { ...queue, shuffle: true } : queue;
+  const bag = useRef(null); bag.current = playedBag(bag.current, record?.id, trackIndex, trackCount); const played = bag.current.played;
   // What plays after this track is decided once (shuffle included), so the deck
   // can match that exact track early and the transition is instant.
   // Tracks whose early match failed are stepped over (see useRoomPlayback).
-  const upcoming = useMemo(() => nextPlayableStep({ trackIndex, trackCount, queue, blocked: (index) => Boolean(playback?.isBlocked?.(record, index)) }), [record?.id, trackIndex, trackCount, queue.ids.join('|'), queue.repeat, queue.shuffle, provider, playback?.blockedVersion]);
+  const upcoming = useMemo(() => nextPlayableStep({ trackIndex, trackCount, queue: effective, played, blocked: (index) => Boolean(playback?.isBlocked?.(record, index)) }), [record?.id, trackIndex, trackCount, queue.ids.join('|'), queue.repeat, effective.shuffle, played.join('|'), provider, playback?.blockedVersion]);
   const go = (step) => {
     if (step.type === 'track') setTrackIndex(step.index);
     else if (step.type === 'restart') { if (audible) playback?.restart(); }
@@ -31,18 +38,18 @@ export function usePlayerQueue({ items, record, trackIndex, setTrackIndex, loadA
     return step.type !== 'stop';
   };
   const api = {
-    queue, queueError,
-    canNext: Boolean(record) && nextStep({ trackIndex, trackCount, queue, manual: true, random: () => 0 }).type !== 'stop',
+    queue: effective, queueError,
+    canNext: Boolean(record) && nextStep({ trackIndex, trackCount, queue: effective, played, manual: true, random: () => 0 }).type !== 'stop',
     canPrevious: Boolean(record) && (trackIndex > 0 || (audible && (playback?.position || 0) > 0)),
-    next: (manual = true) => record && go(manual && upcoming.type === 'restart' ? nextStep({ trackIndex, trackCount, queue, manual }) : upcoming),
-    canAdvance: Boolean(record) && upcoming.type !== 'stop',
+    next: (manual = true) => record && go(manual && upcoming.type === 'restart' ? nextStep({ trackIndex, trackCount, queue: effective, played, manual }) : upcoming),
     peekNext: () => upcoming.type === 'track' ? { item: record, index: upcoming.index } : upcoming.type === 'album' ? { item: items.find((entry) => entry.id === upcoming.id), index: 0 } : null,
     previous: () => record && go(previousStep({ trackIndex, position: audible ? playback?.position || 0 : 0 })),
     enqueue: (id) => add(id),
     playNext: (id) => add(id, true),
     remove: (id) => setQueue((old) => dequeue(old, id)),
     cycleRepeat: () => setQueue((old) => cycleRepeat(old)),
-    toggleShuffle: () => setQueue((old) => ({ ...old, shuffle: !old.shuffle }))
+    toggleShuffle: () => { const once = effective.shuffle && !currentQueue.current.shuffle; setOneShot(null); return once || setQueue((old) => ({ ...old, shuffle: !old.shuffle })); },
+    shuffleOnce: (id) => { bag.current = null; setOneShot(id); }
   };
   const ref = useRef(api); ref.current = api;
   return [api, ref];
@@ -58,11 +65,14 @@ export function usePlayerShortcuts({ playback, player, provider, toggleVisual, r
   const latest = useRef(); latest.current = { playback, player, provider, toggleVisual, record, spinning };
   useEffect(() => {
     const keydown = (event) => {
-      if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || typing(event.target) || document.querySelector('dialog[open]')) return;
+      if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || typing(event.target) || document.querySelector('dialog[open]:not([data-deck-keys])')) return;
       const { playback: pb, player: pl, provider: source, toggleVisual: spin, record: current } = latest.current;
       if (!current) return;
       const audible = source !== 'visual' && source !== 'system', key = event.key;
       const act = (fn) => { event.preventDefault(); fn(); };
+      // Held keys repeat seek and volume, never the toggles (play, mute, repeat, shuffle, track skips).
+      if (event.repeat && !['ArrowLeft', 'ArrowRight', '-', '_', '=', '+'].includes(key)) { if (key === ' ' || key === 'Spacebar') event.preventDefault(); return; }
+      if (event.repeat && event.shiftKey) return;
       if (key.startsWith('Arrow') && event.target?.closest?.('.room-turntable,[role=tablist],[role=listbox],[role=menu],[role=radiogroup],.focus-dock')) return; // arrows nudge the deck while its handle is focused
       if (key === ' ' || key === 'Spacebar') { if (event.target?.closest?.('button,a,[role=button],[role=slider]')) return; act(() => audible ? pb.toggle() : source === 'visual' && spin()); }
       else if (event.shiftKey && key === 'ArrowRight') act(() => pl.next());
@@ -137,10 +147,18 @@ export function usePlaybackBroadcast({ playing, provider, spinning, record, trac
   useEffect(() => { energy.current = 0; tracker.current.reset(); sample(); }, [playing, provider, spinning, track?.id, track?.index, track?.title]);
   useEffect(() => {
     if (!playing) return;
-    const timer = setInterval(sample, ENERGY_INTERVAL_MS);
-    // The bass band is read ~60 times a second for beat tracking (cheap: 2048-point FFT).
-    const listen = setInterval(() => { const graph = analyserFor(audio?.current); if (graph?.bass && audio.current && !audio.current.paused) tracker.current.push(performance.now(), graph.bass()); }, Math.round(1000 / 60));
-    return () => { clearInterval(timer); clearInterval(listen); };
+    let timer = 0, listen = 0;
+    const start = (background) => {
+      clearInterval(timer); clearInterval(listen); listen = 0;
+      // Hidden / minimised with no desktop pet or wallpaper watching: no beat
+      // tracking, and the energy broadcast slows to 2 Hz (play state still flows).
+      const idle = background && !window.albumPetState?.active && !document.documentElement.classList.contains('room-desktop');
+      timer = setInterval(sample, idle ? 500 : ENERGY_INTERVAL_MS);
+      // The bass band is read ~60 times a second for beat tracking (cheap: 2048-point FFT).
+      if (!idle) listen = setInterval(() => { const graph = analyserFor(audio?.current); if (graph?.bass && audio.current && !audio.current.paused) tracker.current.push(performance.now(), graph.bass()); }, Math.round(1000 / 60));
+    };
+    const off = onBackgroundChange(start);
+    return () => { off(); clearInterval(timer); clearInterval(listen); };
   }, [playing]);
   useEffect(() => () => cast.current?.update({ playing: false, provider: '', track: null }), []);
 }

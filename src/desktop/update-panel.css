@@ -1,9 +1,11 @@
+@layer guards, reset, features, skin, overrides;
+@layer features {
 .update-panel{align-items:flex-start}
-.update-status[data-status=available],.update-status[data-status=downloaded]{color:var(--ob-good,var(--px-good,#9ccf8c))}
-.update-status[data-status=error]{color:var(--ob-warn,var(--px-warn,#e06a4e))}
-.update-progress{display:block;height:calc(var(--ob-u,4px) * 2);margin-top:4px;background:var(--ob-bg,var(--px-surface,#2a1d14));border:2px solid var(--ob-edge,var(--px-border,#6b4528))}
-.update-progress i{display:block;height:100%;background:var(--ob-accent,var(--px-accent,#e0ad69));transition:width var(--px-dur-fast,.12s) steps(4,end)}
-.update-notes summary{cursor:pointer;font-size:11px;color:var(--ob-dim,var(--px-ink-dim,#c9a47a))}
-.update-notes pre{max-height:160px;overflow:auto;white-space:pre-wrap;font:11px/1.5 var(--px-font-cn,inherit);margin:6px 0 0;padding:8px;background:var(--ob-bg,var(--px-surface,#2a1d14));border:2px solid var(--ob-edge,var(--px-border,#6b4528))}
-.update-auto{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ob-dim,var(--px-ink-dim,#c9a47a));margin-top:4px}
-@media (prefers-reduced-motion:reduce){.update-progress i{transition:none}}
+.update-status[data-status=available],.update-status[data-status=downloaded]{color:var(--ob-good,var(--px-good))}
+.update-status[data-status=error]{color:var(--ob-warn,var(--px-warn))}
+.update-progress{display:block;height:calc(var(--ob-u,4px) * 2);margin-top:4px;background:var(--ob-bg,var(--px-surface));border:2px solid var(--ob-edge,var(--px-border))}
+.update-progress i{display:block;height:100%;background:var(--ob-accent,var(--px-accent));transition:width var(--px-dur-fast) steps(4,end)}
+.update-notes summary{cursor:pointer;font-size:12px;color:var(--ob-dim,var(--px-ink-dim))}
+.update-notes pre{max-height:160px;overflow:auto;white-space:pre-wrap;font:12px/1.5 var(--px-font-cn);margin:6px 0 0;padding:8px;background:var(--ob-bg,var(--px-surface));border:2px solid var(--ob-edge,var(--px-border))}
+.update-auto{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ob-dim,var(--px-ink-dim));margin-top:4px}
+}

@@ -1,30 +1,44 @@
 /* Window weather and daylight over the cabin artwork, plus the room cat. */
-.cabin-weather{position:absolute;left:13.15%;top:15.9%;width:14.7%;height:25%;pointer-events:none;opacity:0;transition:opacity 1.2s;clip-path:polygon(0 0,46% 0,46% 45%,0 45%,0 0,0 55%,46% 55%,46% 100%,0 100%,0 55%,54% 55%,100% 55%,100% 100%,54% 100%,54% 55%,54% 45%,100% 45%,100% 0,54% 0,54% 45%)}
-.cabin-scene[data-weather=rain] .cabin-weather{opacity:.85}
-/* Rain streaks scroll on the compositor: oversized pseudo layers translate instead of animating background-position. */
-.cabin-scene[data-weather=rain] .cabin-weather{background-image:linear-gradient(#22324c88,#22324c88);background-size:100% 100%}
-.cabin-scene[data-weather=rain] .cabin-weather::before,.cabin-scene[data-weather=rain] .cabin-weather::after{content:'';position:absolute;left:0;will-change:transform}
-.cabin-scene[data-weather=rain] .cabin-weather::before{top:-70px;right:-18px;bottom:0;background:repeating-linear-gradient(105deg,transparent 0 9px,#cfe3ff55 9px 10px,transparent 10px 23px) 0 0/90px 70px;animation:cabin-rain-a .55s linear infinite}
-.cabin-scene[data-weather=rain] .cabin-weather::after{top:-95px;right:-16px;bottom:0;background:repeating-linear-gradient(100deg,transparent 0 15px,#dcecff3d 15px 16px,transparent 16px 31px) 0 0/120px 95px;animation:cabin-rain-b .55s linear infinite}
-@keyframes cabin-rain-a{to{transform:translate3d(-18px,70px,0)}}
-@keyframes cabin-rain-b{to{transform:translate3d(-16px,95px,0)}}
-@media(prefers-reduced-motion:reduce){.cabin-weather::before,.cabin-weather::after{animation:none!important}}
-.cabin-scene[data-weather=starry] .cabin-weather{opacity:1;background-image:linear-gradient(#0b1230aa,#1a235066)}
-/* Stars twinkle by fading their own layer (compositor opacity) instead of a brightness filter on the whole element. */
-.cabin-scene[data-weather=starry] .cabin-weather::before{content:'';position:absolute;inset:0;background:radial-gradient(circle,#fff6 1px,transparent 1.6px) 3px 4px/23px 29px,radial-gradient(circle,#ffe7a8aa 1.2px,transparent 2px) 11px 19px/61px 47px;animation:cabin-twinkle 3.2s ease-in-out infinite alternate}
-@keyframes cabin-twinkle{from{opacity:.55}to{opacity:1}}
-.cabin-scene[data-weather=clear] .cabin-weather{opacity:.5;background:linear-gradient(170deg,#c6dcff22,transparent 60%)}
-.cabin-daylight{position:absolute;inset:0;pointer-events:none;mix-blend-mode:soft-light;transition:background 2s,opacity 2s;opacity:0}
-.cabin-scene[data-time-of-day=morning] .cabin-daylight{opacity:.55;background:linear-gradient(115deg,#d9ecff 0%,#fff3d6 45%,transparent 75%)}
-.cabin-scene[data-time-of-day=day] .cabin-daylight{opacity:.4;background:linear-gradient(115deg,#fffbe8,#ffe9c0 60%,transparent)}
-.cabin-scene[data-time-of-day=dusk] .cabin-daylight{opacity:.5;background:linear-gradient(115deg,#ff9b5a,#b34a6d 70%,transparent)}
-.cabin-scene[data-time-of-day=night] .cabin-daylight{opacity:.45;mix-blend-mode:multiply;background:radial-gradient(ellipse at 88% 70%,transparent 18%,#3a3f6e 85%)}
-[data-desktop-reduce-motion=true] .cabin-weather,[data-desktop-reduce-motion=true] .cabin-weather::before,[data-desktop-reduce-motion=true] .cabin-weather::after{animation:none!important}
+@layer guards, reset, features, skin, overrides;
+@layer features {
+/* Window sky, under the room art (its sky pixels are transparent): RoomScene writes the
+   sun-altitude colours once a minute (src/sky-model.mjs) and the registered properties at
+   the end of this file let CSS ease each change in six stepped frames, not a 60 fps tween.
+   Pixel-art banding: six hard-stop steps from zenith to the horizon line (--sky-h). */
+.cabin-scene.room-scene[data-sky=live]{transition:--sky-top 3s steps(6,end),--sky-horizon 3s steps(6,end),--sky-glow 3s steps(6,end),--sky-ambient 3s steps(6,end),--sky-shade 3s steps(6,end),--sky-light 3s steps(6,end)}
+.cabin-sky-window{position:absolute;pointer-events:none;background:var(--sky-horizon) linear-gradient(180deg,var(--sky-top) 0 17%,color-mix(in oklab,var(--sky-top) 80%,var(--sky-horizon)) 17% 34%,color-mix(in oklab,var(--sky-top) 60%,var(--sky-horizon)) 34% 50%,color-mix(in oklab,var(--sky-top) 40%,var(--sky-horizon)) 50% 66%,color-mix(in oklab,var(--sky-top) 20%,var(--sky-horizon)) 66% 83%,var(--sky-horizon) 83%) 0 0/100% calc(var(--sky-h,.7) * 100%) no-repeat}
+/* 星空窗景 keeps a night window whatever the hour (the room's own light still follows the sun). */
+.cabin-scene[data-weather=starry] .cabin-sky-window{--sky-top:#0b1030;--sky-horizon:#1a2244}
+.cabin-sky-canvas{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated}
+/* Weather in the glass, over the art: canvases at 1 px = 4 art px, clipped to the panes in JS. */
+.cabin-window-weather{position:absolute;inset:0;pointer-events:none}
+.cabin-weather-canvas,.cabin-land-canvas{position:absolute;display:block;image-rendering:pixelated}
+/* The painted land / sea in each window takes the sky's light: soft-light, glass only. */
+.cabin-land-canvas{mix-blend-mode:soft-light}
+/* Daylight on the room: soft-light glow from the window side, and a multiply shade at night
+   that leaves a hole around the room's own lamp (--lamp-x/y per scene). */
+.cabin-daylight,.cabin-nightshade{position:absolute;inset:0;pointer-events:none}
+.cabin-daylight{mix-blend-mode:soft-light;background:linear-gradient(115deg,var(--sky-glow) 0%,var(--sky-ambient) 45%,transparent 75%)}
+.cabin-nightshade{mix-blend-mode:multiply;background:radial-gradient(ellipse 42% 58% at var(--lamp-x,88%) var(--lamp-y,70%),transparent 22%,var(--sky-shade) 100%)}
+.cabin-scene[data-room-look=forest]{--lamp-x:80%;--lamp-y:52%}
+.cabin-scene[data-room-look=starlight]{--lamp-x:81%;--lamp-y:52%}
+.cabin-scene[data-room-look=seaside]{--lamp-x:10%;--lamp-y:12%}
 
 /* The cat sits on the visible floor, clear of the deck, footer and focus dock. */
 .room-cat{position:absolute;left:25%;bottom:118px;width:clamp(96px,8.5vw,168px);aspect-ratio:1;z-index:9;pointer-events:auto;cursor:pointer;background:none;border:0;padding:0;filter:drop-shadow(0 3px 0 #1a0f0866)}
+/* In a scene the 32-cell sprite takes the room's own pixel: 4 art px × --scene-k per
+   cell, snapped to a whole multiple of 32 CSS px (2×, 3×, 4×…) so every cell is even. */
+.cabin-scene.room-scene .room-cat{width:max(64px,round(nearest,128px * var(--scene-k,1),32px))}
+/* Feet on the scene's painted floor (scene-catalog `floor`, art px). useCatPlacement maps
+   it to --cat-floor-scene px (≥28px from the edge); before that, the old baselines. */
+.cabin-scene[data-room-look=pixel],.cabin-scene[data-room-look=warm]{--scene-floor:880}
+.cabin-scene[data-room-look=night-study]{--scene-floor:1000}
+.cabin-scene:is([data-room-look=forest],[data-room-look=seaside],[data-room-look=starlight]){--scene-floor:900}
 /* bubble showing: lift the cat above the console (.room-turntable z10) — both live in .room-scene's isolated stacking context, so this stays under the focus dock/dialogs */
 .room-scene .room-cat:has(> .room-cat-bubble){z-index:var(--z-room-pet,22);pointer-events:none}
+/* …but the pet itself stays pokeable (专注暂停中 too): only a body-sized zone catches the pointer, so the lifted
+   box and the bubble never swallow clicks on the console beneath. A pseudo-element hit lands on the button. */
+.room-scene button.room-cat:has(> .room-cat-bubble)::after{content:'';position:absolute;left:18%;right:18%;top:30%;bottom:4%;pointer-events:auto}
 .room-cat .pixel-cat{display:block;width:100%;height:100%;image-rendering:pixelated}
 .room-cat:focus-visible{outline:2px solid #ffe2a8;outline-offset:3px}
 .room-cat-bubble{position:absolute;left:50%;bottom:100%;translate:-50% -4px;white-space:nowrap;padding:5px 9px;font-size:clamp(10px,.8vw,14px);line-height:1.2;color:#3b2a20;background:#fff7e6;border:2px solid #3b2a20;box-shadow:3px 3px 0 #3b2a2066;pointer-events:none;animation:bubble-pop .18s ease-out}
@@ -34,42 +48,47 @@
 /* Zen mode keeps only the room, the cat, the timer badge and an exit. */
 .room-zen:not(.room-zen-tools) .app-titlebar,.room-zen:not(.room-zen-tools) .cabin-room .room-now-playing,.room-zen:not(.room-zen-tools) .room-shelf-navigation,.room-zen:not(.room-zen-tools) .cabin-room .cabin-toolbar>:not(.zen-keep),.room-zen:not(.room-zen-tools) .shelf-filters{display:none!important}
 .room-zen:not(.room-zen-tools) .cabin-room .cabin-toolbar{top:14px;left:auto;right:16px;background:#27180d99}
-.room-zen:not(.room-zen-tools) .room-cat,.wallpaper-room .room-cat{bottom:28px}
 .room-zen:not(.room-zen-tools) .room-turntable{opacity:.08;transition:opacity .3s}.room-zen:not(.room-zen-tools) .room-turntable:hover,.room-zen:not(.room-zen-tools) .room-turntable:focus-within{opacity:1}
 /* The focus dock covers the shelf buttons; the wheel and arrow keys still page. */
 .room-focus-open .room-shelf-navigation{display:none}
 .cabin-toolbar-group{display:flex;gap:8px;align-items:center}
 .music-local{display:grid;gap:8px;margin-top:14px}.music-local h3{margin:0}.music-local p{margin:0}
-.music-local-folders{list-style:none;margin:0;padding:0;display:grid;gap:5px}.music-local-folders li{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid #ad80534d;border-radius:8px}.music-local-folders span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.music-local-folders{list-style:none;margin:0;padding:0;display:grid;gap:5px}.music-local-folders li{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid #ad80534d;border-radius:0}.music-local-folders span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .music-local-actions{display:flex;gap:8px;flex-wrap:wrap}.music-local-actions button{display:inline-flex;align-items:center;gap:6px}
 .music-local-status{font-size:12px;opacity:.8}
 .local-music-import{display:grid;gap:8px}.local-music-import h3{display:flex;align-items:center;gap:8px}
 .local-album-list{list-style:none;margin:0;padding:0;display:grid;gap:6px;max-height:260px;overflow:auto}
-.local-album-list li{display:flex;align-items:center;gap:10px;padding:6px;border:1px solid #ad80534d;border-radius:8px}
-.local-album-list img,.local-album-placeholder{width:40px;height:40px;flex:none;object-fit:cover;border-radius:4px;display:grid;place-items:center;background:#0002}
+.local-album-list li{display:flex;align-items:center;gap:10px;padding:6px;border:1px solid #ad80534d;border-radius:0}
+.local-album-list img,.local-album-placeholder{width:40px;height:40px;flex:none;object-fit:cover;border-radius:0;display:grid;place-items:center;background:#0002}
 .local-album-list li>span:not(.local-album-placeholder){flex:1;min-width:0;display:grid}.local-album-list strong,.local-album-list small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .link-button{background:none;border:0;padding:0;color:inherit;text-decoration:underline;cursor:pointer}
 .turntable-collect{display:inline-flex!important;gap:5px;align-items:center;font-size:12px}
-
-/* The new illustrated rooms have reading lamps, not a fireplace. Weather stays
-   inside each new window rather than floating over the wall or the album rack. */
-.cabin-scene:is([data-room-look=forest],[data-room-look=seaside],[data-room-look=starlight]) .cabin-fire-glow{display:none}
-.cabin-scene[data-room-look=forest] :is(.cabin-weather,.cabin-snow){left:5.66%;top:11.25%;width:19.34%;height:43.7%;clip-path:inset(0 round 50% 50% 0 0)}
-.cabin-scene[data-room-look=seaside] :is(.cabin-weather,.cabin-snow){left:6.0%;top:16.2%;width:19.2%;height:25.6%;clip-path:circle(48%)}
-.cabin-scene[data-room-look=starlight] :is(.cabin-weather,.cabin-snow){left:5.94%;top:20.44%;width:19.75%;height:26.34%;clip-path:circle(48%)}
-
-.cabin-scene:not([data-weather=snow]) .cabin-snow{opacity:0}
-.cabin-scene:not([data-weather=snow]) .cabin-snow::before,.cabin-scene:not([data-weather=snow]) .cabin-snow::after{animation:none}
 
 /* The console shares the collection's original vinyl material and album art. */
 .turntable-record-art { position:relative; display:block; width:100%; height:104px; margin:8px 0 10px; padding:0; background:#1c160f; border:1px solid #795737; overflow:hidden; cursor:pointer; }
 .turntable-sleeve { position:absolute; left:calc(50% - 74px); top:12px; width:78px; height:78px; display:grid; place-items:center; background:#a3794e; border:2px solid #2a1b13; box-shadow:3px 3px 0 #0007; z-index:2; }
 .turntable-sleeve img { width:100%;height:100%;object-fit:cover; }
 .turntable-record-art .custom-vinyl { position:absolute; width:86px; height:86px; left:calc(50% - 12px); top:8px; border-radius:50%; }
-.turntable-record-art .custom-vinyl.is-spinning { animation:room-spin 5s linear infinite; will-change:transform; }
+.turntable-record-art .custom-vinyl.is-spinning { animation:px-spin 5s steps(8, end) infinite; will-change:transform; }
 .turntable-needle { position:absolute; right:9px; top:14px; width:5px; height:49px; border:1px solid #38251b; background:#d5bd91; transform:rotate(24deg); transform-origin:top; box-shadow:2px 2px #0008; }
 .turntable-needle:after { content:''; position:absolute; width:10px; height:6px; bottom:-2px; left:-3px; background:#ddd0ac; border:1px solid #38251b; }
-.player-visual-note { margin:8px 0 0; font-size:10px; line-height:1.6; opacity:.7; }
+.player-visual-note { margin:8px 0 0; font-size:12px; line-height:16px; opacity:.7; overflow-wrap:anywhere; }
 :root[data-desktop-reduce-motion=true] .turntable-record-art .custom-vinyl { animation:none; }
 @media(prefers-reduced-motion:reduce) { .turntable-record-art .custom-vinyl { animation:none; } }
 @media(max-height:700px) { .turntable-record-art { height:76px; } .turntable-sleeve { width:56px;height:56px;top:8px;left:calc(50% - 53px); } .turntable-record-art .custom-vinyl { width:62px;height:62px;top:5px; } .turntable-needle { height:35px; } }
+}
+@layer skin {
+/* ── room-cat placement (moved from pixel-ui; skin layer keeps its old precedence) ─── */
+/* Moves are WAAPI hops/walks/fades (useCatPlacement.animateCatMove), not transitions.
+   --cat-floor is the floor baseline the placement reads (zen/wallpaper sit lower). */
+.room-scene .room-cat { --cat-floor: var(--cat-floor-scene, 118px); left: var(--cat-x, 25%); bottom: var(--cat-floor); transform-origin: 50% 100%; }
+.room-zen:not(.room-zen-tools) .room-scene .room-cat, .wallpaper-room .room-scene .room-cat { --cat-floor: var(--cat-floor-scene, 28px); }
+.room-scene .room-cat[data-perch='console'] { bottom: var(--cat-bottom); z-index: 21; }
+}
+/* Sky colours are registered so transitions interpolate them (initial: night). */
+@property --sky-top{syntax:'<color>';inherits:true;initial-value:#0b1030}
+@property --sky-horizon{syntax:'<color>';inherits:true;initial-value:#1a2244}
+@property --sky-glow{syntax:'<color>';inherits:true;initial-value:transparent}
+@property --sky-ambient{syntax:'<color>';inherits:true;initial-value:transparent}
+@property --sky-shade{syntax:'<color>';inherits:true;initial-value:transparent}
+@property --sky-light{syntax:'<number>';inherits:true;initial-value:0}

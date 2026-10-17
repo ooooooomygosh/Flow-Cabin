@@ -4,6 +4,12 @@ import { RATINGS, LIMITS, studyQueue, previews, daysUntil, cardStage, parseCards
 import { Plus, Trash2, ArrowLeft, Check, BookOpen, Clock } from '../icons';
 import './study.css';
 import { WORD_BOOKS, previewWordImport } from './word-books.mjs';
+import { downloadBlob } from '../lib/download.mjs';
+import { ConfirmButton, UndoLine, useUndo } from '../ui/Confirm';
+import { NumberField } from '../lib/NumberField.jsx';
+
+// 每天新词: one number field; an empty field while typing does not save 0.
+const NewPerDay = ({ study }) => <label className="study-limit">每天新词（个）<NumberField live min={0} max={200} list="study-new-per-day" aria-label="词书每日新词" value={study.state.newPerDay} onCommit={study.setNewPerDay}/><datalist id="study-new-per-day"><option value="5"/><option value="10"/><option value="20"/></datalist></label>;
 
 // 学习: today's review in a deck (Space flips, 1–4 rates), a quick way to add
 // or paste many cards, and the countdowns that keep the goal in view.
@@ -38,7 +44,7 @@ function Review({ deck, close }) {
 }
 
 function DeckEditor({ deck, close }) {
-  const study = useStudy(), [input, setInput] = useState(''), [message, setMessage] = useState(''), [confirming, setConfirming] = useState(false), [query, setQuery] = useState(''), [editing, setEditing] = useState(null);
+  const study = useStudy(), [input, setInput] = useState(''), [message, setMessage] = useState(''), [query, setQuery] = useState(''), [editing, setEditing] = useState(null), [undo, offerUndo, clearUndo] = useUndo();
   const cards = study.state.cards.filter((card) => card.deckId === deck.id), preview = parseCards(input);
   const needle = query.normalize('NFKC').toLowerCase().trim();
   const visible = cards.filter(card => !needle || [card.front, card.back].some(side => side.normalize('NFKC').toLowerCase().includes(needle)));
@@ -58,11 +64,11 @@ function DeckEditor({ deck, close }) {
       <label>背面<textarea aria-label="编辑卡片背面" maxLength={600} value={editing.back} onChange={event => setEditing({ ...editing, back: event.target.value })}/></label>
       <div><button type="submit" className="pixel-button is-primary" disabled={!editing.front.trim()}>保存卡片</button><button type="button" className="pixel-button is-quiet" onClick={() => setEditing(null)}>取消编辑</button></div>
     </form>}
-    <ul className="study-card-list" aria-label="这组卡片">{visible.slice(-60).reverse().map((card) => <li key={card.id}><span title={card.front}>{card.front}</span><small title={card.back}>{card.back}</small><button type="button" aria-label={`编辑卡片 ${card.front}`} onClick={() => { setEditing({ id: card.id, front: card.front, back: card.back }); setMessage(''); }}>编辑</button><button type="button" aria-label={`删除卡片 ${card.front}`} onClick={() => { if (study.removeCard(card.id) && editing?.id === card.id) setEditing(null); }}><Trash2 size={13}/></button></li>)}</ul>
+    <ul className="study-card-list" aria-label="这组卡片">{visible.slice(-60).reverse().map((card) => <li key={card.id}><span title={card.front}>{card.front}</span><small title={card.back}>{card.back}</small><button type="button" aria-label={`编辑卡片 ${card.front}`} onClick={() => { setEditing({ id: card.id, front: card.front, back: card.back }); setMessage(''); }}>编辑</button><button type="button" aria-label={`删除卡片 ${card.front}`} onClick={() => { if (!study.removeCard(card.id)) return; offerUndo(`已删除卡片「${card.front}」`, () => study.restoreCard(card)); if (editing?.id === card.id) setEditing(null); }}><Trash2 size={16}/></button></li>)}</ul>
+    <UndoLine offer={undo} clear={clearUndo}/>
     {visible.length > 60 && <small className="study-more">显示最近 60 张匹配卡片，搜索可查找这组全部 {cards.length} 张。</small>}
     {query && !visible.length && <p role="status">没有找到匹配卡片，试试正面或背面的关键词。</p>}
-    {confirming ? <p className="study-danger">删除「{deck.name}」和其中 {cards.length} 张卡片？<button type="button" className="pixel-button is-danger" onClick={() => { if (study.removeDeck(deck.id)) close(); }}>确认删除</button><button type="button" className="pixel-button is-quiet" onClick={() => setConfirming(false)}>取消</button></p>
-      : <button type="button" className="pixel-button is-quiet study-delete-deck" onClick={() => setConfirming(true)}><Trash2 size={13}/>删除卡组</button>}
+    <p className="study-danger"><ConfirmButton className="pixel-button is-quiet study-delete-deck" icon={<Trash2 size={16}/>} question={`删除「${deck.name}」和其中 ${cards.length} 张卡片？`} confirmLabel="确认删除" onConfirm={() => { if (!study.removeDeck(deck.id)) return false; close(); }}>删除卡组</ConfirmButton></p>
   </div>;
 }
 
@@ -78,11 +84,7 @@ function WordImport({ deck, cards }) {
   return <details className="study-import"><summary>导入本地词书</summary>
     <p>支持 UTF-8 的 TSV / Anki 两列纯文本，或 front、back 字段的 JSON 数组。追加词条，不覆盖已有复习进度。</p>
     <label>选择词书文件<input aria-label="选择词书文件" type="file" accept=".tsv,.txt,.json" onChange={read}/></label>
-    <button type="button" className="pixel-button is-quiet" onClick={() => {
-      const url = URL.createObjectURL(new Blob(['word\tmeaning\nwindow\t窗户\n'], { type:'text/tab-separated-values' }));
-      const link = document.createElement('a'); link.href = url; link.download = '小屋词书模板.tsv'; link.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-    }}>下载两列模板</button>
+    <button type="button" className="pixel-button is-quiet" onClick={() => downloadBlob(new Blob(['word\tmeaning\nwindow\t窗户\n'], { type: 'text/tab-separated-values' }), '小屋词书模板.tsv')}>下载两列模板</button>
     {text && <><label>格式<select aria-label="词书导入格式" value={format} onChange={event => setFormat(event.target.value)}><option value="tsv">Tab 分隔文本</option><option value="json">JSON 数组</option></select></label>
       {format === 'tsv' && <div className="study-import-columns">{[['正面列', frontColumn, setFrontColumn], ['背面列', backColumn, setBackColumn]].map(([label, value, update]) => <label key={label}>{label}<select aria-label={label} value={value} onChange={event => update(Number(event.target.value))}>{[0,1,2,3].map(index => <option key={index} value={index}>第 {index+1} 列</option>)}</select></label>)}<label><input type="checkbox" checked={header} onChange={event => setHeader(event.target.checked)}/>首行为标题</label></div>}
       <p role="status">有效 {preview.cards.length} · 重复 {preview.duplicates} · 错误 {preview.errors}{preview.message && ` · ${preview.message}`}</p>
@@ -93,14 +95,15 @@ function WordImport({ deck, cards }) {
 }
 
 function Countdowns() {
-  const study = useStudy(), [title, setTitle] = useState(''), [date, setDate] = useState('');
+  const study = useStudy(), [title, setTitle] = useState(''), [date, setDate] = useState(''), [undo, offerUndo, clearUndo] = useUndo();
   const list = study.state.countdowns.map((entry) => ({ ...entry, days: daysUntil(entry.date) }));
   return <section className="study-countdowns" aria-label="考试倒计时">
     <h4><Clock size={14}/>倒计时</h4>
-    {list.length > 0 && <ul>{list.map((entry) => <li key={entry.id} className={entry.days < 0 ? 'is-past' : entry.days <= 7 ? 'is-soon' : ''}><span>{entry.title}</span><b>{entry.days < 0 ? '已结束' : entry.days === 0 ? '就是今天' : `${entry.days} 天`}</b><button type="button" aria-label={`删除倒计时 ${entry.title}`} onClick={() => study.removeCountdown(entry.id)}><Trash2 size={12}/></button></li>)}</ul>}
+    {list.length > 0 && <ul>{list.map((entry) => <li key={entry.id} className={entry.days < 0 ? 'is-past' : entry.days <= 7 ? 'is-soon' : ''}><span>{entry.title}</span><b>{entry.days < 0 ? '已结束' : entry.days === 0 ? '就是今天' : `${entry.days} 天`}</b><button type="button" aria-label={`删除倒计时 ${entry.title}`} onClick={() => { const { days, ...saved } = entry; if (study.removeCountdown(entry.id)) offerUndo(`已删除倒计时「${entry.title}」`, () => study.restoreCountdown(saved)); }}><Trash2 size={16}/></button></li>)}</ul>}
+    <UndoLine offer={undo} clear={clearUndo}/>
     <form className="study-countdown-add" onSubmit={(event) => { event.preventDefault(); if (study.addCountdown(title, date)) { setTitle(''); setDate(''); } }}>
       <input aria-label="倒计时名称" placeholder="考研、四级、期末…" value={title} maxLength={40} onChange={(event) => setTitle(event.target.value)}/>
-      <input type="date" aria-label="倒计时日期" value={date} onChange={(event) => setDate(event.target.value)}/>
+      <input type="date" lang="zh-CN" aria-label="倒计时日期" value={date} onChange={(event) => setDate(event.target.value)}/>
       <button type="submit" className="pixel-button" disabled={!title.trim() || !date} aria-label="添加倒计时"><Plus size={14}/></button>
     </form>
   </section>;
@@ -115,14 +118,14 @@ export default function StudyPanel() {
   const selectedBook = WORD_BOOKS.find(book => book.id === bookId);
   const totals = studyQueue(study.state, '', Date.now());
   return <div className="study-panel">
-    <p className="study-summary"><BookOpen size={15}/>{totals.total ? <>今天要复习 <b>{totals.due}</b> 张 · 新卡 <b>{totals.fresh}</b> 张</> : '用闪卡记单词、公式和概念：按遗忘曲线安排复习（FSRS 算法）。'}</p>
+    <p className="study-summary"><BookOpen size={15}/>{totals.total ? <>今天要复习 <b>{totals.due}</b> 张 · 新卡 <b>{totals.fresh}</b> 张</> : '用闪卡记单词、公式和概念：按遗忘曲线安排复习。'}</p>
     <section className="study-books" aria-label="小屋词书架">
       <label>选一本词书<select aria-label="入门词书" value={bookId} onChange={event => setBookId(event.target.value)}>{WORD_BOOKS.map(book => <option key={book.id} value={book.id}>{book.name} · {book.words.length} 词</option>)}</select></label>
       <p>{selectedBook.description}<small>{selectedBook.source}</small></p>
       <details><summary>预览 {selectedBook.words.length} 个词</summary><ul>{selectedBook.words.map(word => <li key={word.front}><b>{word.front}</b><span>{word.back}</span></li>)}</ul></details>
-      <div className="study-book-start"><label>每天新词<select aria-label="词书每日新词" value={[5,10,20].includes(study.state.newPerDay) ? study.state.newPerDay : 'custom'} onChange={event => study.setNewPerDay(Number(event.target.value))}><option value="5">5 个</option><option value="10">10 个</option><option value="20">20 个</option>{![5,10,20].includes(study.state.newPerDay) && <option value="custom">当前 {study.state.newPerDay} 个</option>}</select></label><button type="button" className="pixel-button is-primary" onClick={() => { if (study.openBook(bookId)) setView({ mode: 'review', deckId: bookId }); }}>开始学习 / 复习</button></div>
+      <div className="study-book-start"><NewPerDay study={study}/><button type="button" className="pixel-button is-primary" onClick={() => { if (study.openBook(bookId)) setView({ mode: 'review', deckId: bookId }); }}>开始学习 / 复习</button></div>
     </section>
-    <details className="study-guide"><summary>怎么使用词书与复习？</summary><ol><li>选书并预览，设置每天新词数，再开始学习。已有卡组也可以直接打开。</li><li>先回忆，再按空格揭示答案。到期的旧词优先，新词遵守每日总额度。</li><li>忘记选「忘了」；费力想起选「模糊」；正常想起选「记得」；非常熟悉选「简单」。按钮下方显示下一次复习时间。</li><li>按 1–4 评分，Esc 返回词书架。切换词书保留已学进度。每天回来复习到期词。</li><li>新建卡组后可导入自己有权使用的 TSV、JSON 或 Anki 两列纯文本；不支持 .apkg 或导入第三方调度历史。</li></ol><p>当前采用开源 ts-fsrs（MIT）安排复习；内置 3 本小屋原创主题书，每本 6 词。更多内容可自行导入。</p></details>
+    <details className="study-guide"><summary>怎么使用词书与复习？</summary><ol><li>选书并预览，设置每天新词数，再开始学习。已有卡组也可以直接打开。</li><li>先回忆，再按空格揭示答案。到期的旧词优先，新词遵守每日总额度。</li><li>忘记选「忘了」；费力想起选「模糊」；正常想起选「记得」；非常熟悉选「简单」。按钮下方显示下一次复习时间。</li><li>按 1–4 评分，Esc 返回词书架。切换词书保留已学进度。每天回来复习到期词。</li><li>新建卡组后可导入自己有权使用的 TSV、JSON 或 Anki 两列纯文本；不支持 .apkg 或导入第三方调度历史。</li></ol><p>内置 3 本小屋原创主题书，每本 6 词。更多内容可自行导入。</p></details>
     {study.state.decks.length > 0 && <ul className="study-decks">{study.state.decks.map((entry) => {
       const queue = studyQueue(study.state, entry.id, Date.now());
       return <li key={entry.id}>
@@ -132,7 +135,6 @@ export default function StudyPanel() {
       </li>;
     })}</ul>}
     <form className="study-new-deck" onSubmit={(event) => { event.preventDefault(); if (name.trim() && study.addDeck(name)) setName(''); }}><input aria-label="新卡组名称" placeholder="新卡组：英语单词、高数公式…" value={name} maxLength={40} onChange={(event) => setName(event.target.value)}/><button type="submit" className="pixel-button" disabled={!name.trim()}><Plus size={14}/>新建</button></form>
-    <label className="study-limit">每天新卡<input type="number" min="0" max="200" value={study.state.newPerDay} onChange={(event) => study.setNewPerDay(Math.max(0, Math.min(200, Number(event.target.value) || 0)))}/>张</label>
     <Countdowns/>
   </div>;
 }

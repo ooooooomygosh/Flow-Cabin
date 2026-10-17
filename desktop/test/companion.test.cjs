@@ -92,7 +92,7 @@ test('companion snapshots carry display data only', () => {
   const room = cleanSnapshot({ look: 'pixel', weather: 'evil', accessory: 'scarf', provider: 'system', grooving: true, focus: { phase: 'nap' } });
   assert.equal(room.weather, 'snow'); assert.equal(room.accessory, 'scarf'); assert.equal(room.provider, 'system'); assert.equal(room.focus.phase, 'idle');
   const sent = []; const site = { isDestroyed: () => false, executeJavaScript: async (code) => { sent.push(code); } };
-  assert.equal(sendCompanionCommand(site, 'focus-start'), true); assert.equal(sendCompanionCommand(site, 'shell-exec'), false); assert.equal(sent.length, 1);
+  assert.equal(sendCompanionCommand(site, 'focus-start'), true); assert.equal(sendCompanionCommand(site, 'shell-exec'), false); assert.equal(sendCompanionCommand(site, 'play-toggle'), false, 'play/pause goes through cabin:player-command'); assert.equal(sent.length, 1);
 });
 test('desktop pet stays reachable on screen', () => {
   // clampToWorkArea uses Electron's screen; stub it through the require cache.

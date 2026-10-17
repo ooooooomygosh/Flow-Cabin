@@ -1,6 +1,6 @@
 'use strict';
 const { _electron } = require('playwright'), fs = require('node:fs'), path = require('node:path'), assert = require('node:assert/strict');
-const { mountFixture, albums } = require('./ui-fixture.cjs');
+const { mountFixture, albums, openMusicSettings, closeSettings, chooseSource } = require('./ui-fixture.cjs');
 const desktop = path.resolve(__dirname, '..'), output = path.join(desktop, 'test-results');
 const env = { ...process.env, ALBUM_DESKTOP_TEST_PROFILE: path.join(output, `music-ui-profile-${Date.now()}`) }; delete env.ELECTRON_RUN_AS_NODE;
 const executablePath = process.env.ALBUM_QA_EXE || path.join(desktop, 'node_modules/electron/dist/electron.exe');
@@ -11,7 +11,7 @@ const check = (name) => { report.checks.push({ name, passed: true }); console.lo
   for (let i = 0; i < 100; i++) { site = app.context().pages().find((p) => p.url().startsWith('https://album-circle.vercel.app')); host = app.context().pages().find((p) => p.url() === 'album-desktop://shell/index.html'); if (site && host) break; await new Promise((r) => setTimeout(r, 100)); }
   site.on('pageerror', (error) => report.pageErrors.push(error.message)); await mountFixture(app, site, { music: true });
   await site.locator('.room-record').first().waitFor();
-  await site.locator('.room-record').first().dblclick(); await site.getByLabel('唱机音源', { exact: true }).selectOption('qq');
+  await site.locator('.room-record').first().dblclick(); await chooseSource(site, 'qq');
   await site.waitForFunction(() => document.querySelector('audio').currentTime > .2 && !document.querySelector('audio').paused);
   assert.equal(await site.locator('.room-turntable').getAttribute('data-spinning'), 'true'); assert.ok((await site.locator('.turntable-status').innerText()).includes('正在播放')); assert.equal((await app.evaluate(() => globalThis.__qaMusicResolves))[0], albums[0].trackDetails[0].providerId); check('original-qq-id-resolves-and-html-audio-confirms-playback');
   await site.getByRole('button', { name: '暂停音乐播放', exact: true }).click(); await site.waitForFunction(() => document.querySelector('audio').paused); await site.locator('.room-turntable[data-spinning="false"]').waitFor();
@@ -20,19 +20,19 @@ const check = (name) => { report.checks.push({ name, passed: true }); console.lo
   await site.getByRole('button', { name: '下一首展示曲目' }).click(); await site.waitForFunction(() => document.querySelector('audio').currentTime > .2 && document.querySelector('.turntable-track').textContent.includes('懦夫'));
   const ids = await app.evaluate(() => globalThis.__qaMusicResolves); assert.equal(ids.at(-1), albums[0].trackDetails[1].providerId); check('next-original-track-stops-old-source-and-plays-new-source');
   await site.getByLabel('唱机展示曲目', { exact: true }).selectOption('2'); await site.waitForFunction(() => document.querySelector('.turntable-status').textContent.includes('会员权限')); assert.equal(await site.locator('.room-turntable').getAttribute('data-spinning'), 'false'); assert.equal(await site.locator('audio').getAttribute('src'), null); check('restricted-source-never-claims-playing');
-  await site.getByLabel('唱机音源', { exact: true }).selectOption('visual'); assert.ok((await site.locator('.turntable-status').innerText()).includes('无音频')); assert.equal(await site.locator('audio').getAttribute('src'), null); check('visual-mode-does-not-play-audio');
-  await site.getByLabel('唱机展示曲目', { exact: true }).selectOption('0'); await site.getByLabel('唱机音源', { exact: true }).selectOption('netease');
+  await chooseSource(site, 'visual'); assert.ok((await site.locator('.turntable-status').innerText()).includes('无音频')); assert.equal(await site.locator('audio').getAttribute('src'), null); check('visual-mode-does-not-play-audio');
+  await site.getByLabel('唱机展示曲目', { exact: true }).selectOption('0'); await chooseSource(site, 'netease');
   await site.waitForFunction(() => document.querySelector('audio').currentTime > .2 && !document.querySelector('audio').paused);
   assert.equal((await app.evaluate(() => globalThis.__qaMusicResolves)).at(-1), '12345'); check('netease-matches-the-recording-and-plays-automatically');
-  await site.getByLabel('唱机音源', { exact: true }).selectOption('ma'); await site.waitForFunction(() => document.querySelector('.turntable-status').textContent.includes('配置 Music Assistant'));
-  await site.getByRole('button', { name: '音源设置', exact: true }).click(); const settings = site.getByRole('dialog', { name: '音源与账户' }); await settings.locator('.music-advanced summary').click(); await settings.getByLabel('Music Assistant 服务器地址').fill('http://127.0.0.1:8095'); await settings.getByLabel('Music Assistant 访问令牌').fill('QA_MA_TOKEN');
+  await chooseSource(site, 'ma'); await site.waitForFunction(() => document.querySelector('.turntable-status').textContent.includes('配置 Music Assistant'));
+  const settings = await openMusicSettings(site); await settings.locator('.music-advanced summary').click(); await settings.getByLabel('Music Assistant 服务器地址').fill('http://127.0.0.1:8095'); await settings.getByLabel('Music Assistant 访问令牌').fill('QA_MA_TOKEN');
   await settings.getByRole('button', { name: '连接并读取播放器', exact: true }).click(); await settings.getByLabel('Music Assistant 播放器').selectOption('qa-speaker'); await settings.getByRole('button', { name: '保存播放器', exact: true }).click();
   await settings.screenshot({ path: path.join(output, 'music-settings.png') }); const config = await site.evaluate(async () => (await fetch('/desktop-music/config')).json()); assert.equal(config.maTokenSet, true); assert.equal(JSON.stringify(config).includes('QA_MA_TOKEN'), false); check('music-assistant-settings-read-players-and-hide-saved-token');
-  await settings.getByRole('button', { name: '完成音源设置' }).click();
+  await closeSettings(site);
   await site.waitForFunction(() => document.querySelector('.turntable-status').textContent.includes('服务器播放器正在播放')); assert.equal(await site.locator('audio').getAttribute('src'), null);
   assert.ok((await app.evaluate(() => globalThis.__qaMACommands)).some((c) => c.command === 'player_queues/play_media' && c.args.queue_id === 'qa-speaker' && c.args.media === 'library://track/ma-track-1')); check('music-assistant-uses-original-uri-and-confirmed-remote-player-state');
   await site.getByRole('button', { name: '暂停音乐播放', exact: true }).click(); await site.waitForFunction(() => document.querySelector('.turntable-status').textContent.includes('播放已暂停')); assert.equal(await site.locator('.room-turntable').getAttribute('data-spinning'), 'false'); check('music-assistant-pause-controls-selected-server-player');
-  await site.getByLabel('唱机音源', { exact: true }).selectOption('qq'); await site.waitForFunction(() => document.querySelector('audio').currentTime > .2); const media = await site.locator('audio').elementHandle();
+  await chooseSource(site, 'qq'); await site.waitForFunction(() => document.querySelector('audio').currentTime > .2); const media = await site.locator('audio').elementHandle();
   await site.getByRole('button', { name: '取下唱片', exact: true }).click(); await site.waitForFunction(() => !document.querySelector('audio')?.getAttribute('src')); assert.equal(await media.evaluate((a) => a.paused), true); check('ejecting-the-record-stops-and-releases-audio');
   assert.equal(report.pageErrors.length, 0, JSON.stringify(report.pageErrors)); assert.equal(await app.evaluate(() => globalThis.__qaBlockedWrites), 0); report.passed = true;
 })().catch((error) => { report.error = error.stack; report.passed = false; process.exitCode = 1; }).finally(async () => {

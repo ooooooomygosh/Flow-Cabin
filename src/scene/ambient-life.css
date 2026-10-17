@@ -1,4 +1,6 @@
 /* Ambient room life (owner: beauty). */
+@layer guards, reset, features, skin, overrides;
+@layer features {
 .ambient-life { position: absolute; inset: 0; pointer-events: none; z-index: 1; overflow: hidden; }
 .ambient-mote { position: absolute; width: calc(4 / 1448 * 100%); aspect-ratio: 1; background: #ffe6b0; opacity: 0; animation: ambient-drift 14s steps(28, end) infinite; }
 .ambient-mote.size-2 { width: calc(6 / 1448 * 100%); }
@@ -16,10 +18,11 @@
 .ambient-shaft { position: absolute; left: 12%; top: 15%; width: 34%; height: 70%; opacity: 0; transform-origin: 0 0;
   background: linear-gradient(180deg, #fff4d4 0 30%, #fff4d4aa 30% 55%, #fff4d455 55% 80%, transparent 80%); /* hard stops = stepped pixel falloff */
   clip-path: polygon(0 0, 46% 0, 100% 100%, 42% 100%); mix-blend-mode: soft-light; animation: ambient-shaft 9s steps(6, end) infinite alternate; }
-:is([data-room-look='pixel'], [data-room-look='warm'])[data-time-of-day='morning'] .ambient-shaft { --shaft: .26; }
-:is([data-room-look='pixel'], [data-room-look='warm'])[data-time-of-day='day'] .ambient-shaft { --shaft: .18; }
-:is([data-room-look='pixel'], [data-room-look='warm'])[data-time-of-day='dusk'] .ambient-shaft { --shaft: .2; background: linear-gradient(180deg, #ffb06a 0 30%, #ffb06aaa 30% 55%, #ffb06a55 55% 80%, transparent 80%); }
+:is([data-room-look='pixel'], [data-room-look='warm']):is([data-time-of-day='morning'], [data-time-of-day='day'], [data-time-of-day='dusk']) .ambient-shaft { --shaft: calc(.06 + var(--sky-light, 1) * .16); } /* follows the sun (RoomScene sky variables) */
+:is([data-room-look='pixel'], [data-room-look='warm'])[data-time-of-day='dusk'] .ambient-shaft { background: linear-gradient(180deg, #ffb06a 0 30%, #ffb06aaa 30% 55%, #ffb06a55 55% 80%, transparent 80%); }
 @keyframes ambient-shaft { from { opacity: calc(var(--shaft, 0) * .7); } to { opacity: var(--shaft, 0); } }
 
-@media (prefers-reduced-motion: reduce) { .ambient-mote, .ambient-shaft { animation: none !important; } .ambient-mote { opacity: .3; } .ambient-shaft { opacity: var(--shaft, 0); } }
-html[data-desktop-reduce-motion='true'] .ambient-mote, html[data-desktop-reduce-motion='true'] .ambient-shaft { animation: none !important; }
+/* Reduced motion freezes the motes (guards layer); they rest faint and the shaft holds its level. */
+@media (prefers-reduced-motion: reduce) { .ambient-mote { opacity: .3; } .ambient-shaft { opacity: var(--shaft, 0); } }
+html[data-desktop-reduce-motion='true'] .ambient-mote { opacity: .3; } html[data-desktop-reduce-motion='true'] .ambient-shaft { opacity: var(--shaft, 0); }
+}

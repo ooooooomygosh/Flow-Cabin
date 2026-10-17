@@ -16,12 +16,13 @@ let app, site, host;
   await mountFixture(app, site, { showroom: 'room' }); await site.locator('.room-cat').waitFor();
 
   const opened = app.waitForEvent('window', (page) => page.url() === 'album-desktop://pet/pet.html');
-  await site.getByRole('button', { name: '小猫出门' }).click();
+  assert.equal(await site.getByRole('button', { name: '伙伴出门', exact: true }).getAttribute('title'), '奶糖出门：到桌面上散步');
+  await site.getByRole('button', { name: '伙伴出门', exact: true }).click();
   const pet = await opened; pet.on('pageerror', (error) => report.pageErrors.push('pet: ' + error.message));
   await pet.locator('.pixel-cat').waitFor();
   const info = await app.evaluate(({ BrowserWindow }) => { const win = BrowserWindow.getAllWindows().find((w) => w.webContents.getURL() === 'album-desktop://pet/pet.html'); return { top: win.isAlwaysOnTop(), taskbar: win.isFocusable(), bounds: win.getBounds(), bg: win.getBackgroundColor() }; });
   assert.equal(info.top, true); assert.ok(info.bounds.width >= 240 && info.bounds.height >= 192); assert.match(info.bg, /^#00/i);
-  await site.getByRole('button', { name: '让小猫回家' }).waitFor(); assert.equal(await site.locator('.room-cat').count(), 0);
+  await site.getByRole('button', { name: '让伙伴回家', exact: true }).waitFor(); assert.equal(await site.getByRole('button', { name: '让伙伴回家', exact: true }).getAttribute('title'), '让奶糖回家'); assert.equal(await site.locator('.room-cat').count(), 0);
   check('pet-window-opens-on-top-and-room-cat-leaves', info);
   assert.equal(await pet.evaluate(() => typeof window.require), 'undefined');
   assert.deepEqual(Object.keys(await pet.evaluate(() => window.albumPet)).sort(), ['command', 'dragEnd', 'getSnapshot', 'menu', 'moveBy', 'onSnapshot', 'open', 'setHit']);
@@ -40,7 +41,7 @@ let app, site, host;
   const saved = JSON.parse(fs.readFileSync(path.join(env.ALBUM_DESKTOP_TEST_PROFILE, 'pet.json'), 'utf8')); assert.equal(saved.x, after.x); check('pet-drags-and-remembers-position');
   await pet.screenshot({ path: path.join(output, 'pet-window.png') });
 
-  await site.getByRole('button', { name: '让小猫回家' }).click(); await site.locator('.room-cat').waitFor();
+  await site.getByRole('button', { name: '让伙伴回家', exact: true }).click(); await site.locator('.room-cat').waitFor();
   assert.equal(await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().some((w) => w.webContents.getURL().includes('pet.html'))), false); check('pet-returns-home');
   assert.deepEqual(report.pageErrors, []);
   report.passed = true;

@@ -2,6 +2,8 @@
 // Nothing here touches audio, login windows or native permissions; the
 // wizard calls the adapters in onboarding-adapter.mjs for that.
 
+import { providerLabel } from '../player/providers.mjs';
+
 export const ONBOARDING_KEY = 'flow-cabin-onboarding-v1';
 // v1.9 "入门指南" marker. A cabin that already saw it is not interrupted again.
 export const LEGACY_WELCOME_KEY = 'flow-cabin-welcome-v1';
@@ -17,20 +19,20 @@ export function detectEnv(win = globalThis) {
   return { desktop: root.desktopClient === 'true', mac: /mac/i.test(platform), notifications: 'Notification' in win };
 }
 
-// Sources the first-run step offers. `provider` is the turntable provider the
-// choice maps to on main; with PR #15 loaded, listSources() maps Apple Music
-// to its own 'appleMusic' deck provider.
+// Sources the first-run step offers, in this order; names come from the one provider table.
+// `provider` is the deck provider the choice switches to.
 const SOURCE_TABLE = [
-  { id: 'local', label: '本地音乐', hint: '选一个音乐文件夹，歌曲留在原位置播放。', provider: 'local' },
-  { id: 'qq', label: 'QQ 音乐', hint: '在官方登录页登录，凭据加密保存在本机。', provider: 'qq', desktopOnly: true },
-  { id: 'netease', label: '网易云音乐', hint: '在官方登录页登录，凭据加密保存在本机。', provider: 'netease', desktopOnly: true },
-  { id: 'appleMusic', label: 'Apple Music', hint: '控制 Mac 上的「音乐」App，需要自动化权限。', provider: 'system', desktopOnly: true, macOnly: true },
-  { id: 'system', label: '系统正在播放', hint: '显示并控制正在放歌的其他播放器。', provider: 'system', desktopOnly: true }
-];
+  { id: 'local', hint: '选一个音乐文件夹，歌曲留在原位置播放。', provider: 'local' },
+  { id: 'qq', hint: '在官方登录页登录，凭据加密保存在本机。', provider: 'qq', desktopOnly: true },
+  { id: 'netease', hint: '在官方登录页登录，凭据加密保存在本机。', provider: 'netease', desktopOnly: true },
+  { id: 'appleMusic', hint: '控制 Mac 上的「音乐」App，需要自动化权限。', provider: 'appleMusic', desktopOnly: true, macOnly: true },
+  { id: 'system', hint: '显示并控制正在放歌的其他播放器。', provider: 'system', desktopOnly: true }
+].map((source) => ({ ...source, label: providerLabel(source.id) }));
 
 export function sourceOptions(env = {}) {
   return SOURCE_TABLE.filter((source) => !source.macOnly || env.mac).map((source) => ({
     ...source,
+    ...(source.id === 'local' && !env.desktop ? { hint: '在「添加到唱片架 › 本地音乐」里选择音乐文件，本次打开期间可播。' } : {}),
     available: !source.desktopOnly || Boolean(env.desktop),
     reason: source.desktopOnly && !env.desktop ? '需要心流小屋桌面版' : ''
   }));

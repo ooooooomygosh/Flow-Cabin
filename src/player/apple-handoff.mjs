@@ -1,6 +1,6 @@
 import { toSimplified } from './hanzi.mjs';
 const norm = value => toSimplified(String(value || '').normalize('NFKC')).toLowerCase().replace(/[\s\p{P}\p{S}]/gu, '');
-export const APPLE_HANDOFF_STATUS = '请在“音乐”App 播放所选歌曲';
+export const APPLE_HANDOFF_STATUS = '请在「音乐」App 播放所选歌曲';
 
 // A catalogue URL opens a page, not a recording. Do not claim or control the
 // unrelated currentTrack until the observed recording matches the selection.

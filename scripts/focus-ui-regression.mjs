@@ -1,5 +1,6 @@
 /** Silent, offline state/data regression pass. Native fullscreen is a mock. */
 import assert from 'node:assert/strict';
+import { launchChromium } from './launch-browser.mjs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -7,7 +8,6 @@ import { createRequire } from 'node:module';
 import { spawn } from 'node:child_process';
 import { hasViteLocalOrigin } from './vite-readiness.mjs';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const { chromium } = createRequire(path.join(root, 'desktop/package.json'))('playwright');
 const output = process.env.FOCUS_OUTPUT || path.join(root, 'desktop/test-results/focus-ui');
 const port = Number(process.env.FOCUS_PORT || 4188), origin = `http://127.0.0.1:${port}`;
 const KEY = 'album-circle-focus-v1:local-owner';
@@ -16,6 +16,8 @@ const report = { fixtureData: true, muted: true, nativeFullscreen: 'mocked', che
 await fs.mkdir(output, { recursive: true });
 let browser, server;
 const focusState = page => page.evaluate(key => JSON.parse(localStorage.getItem(key) || '{}'), KEY);
+// 专辑墙 opens from 整理唱片架 (the console's shelf panel).
+const openAlbumWall = async page => { const tools = page.getByRole('button',{name:'整理唱片架',exact:true}); if (await tools.getAttribute('aria-expanded') !== 'true') await tools.click(); await page.getByRole('region',{name:'整理唱片架',exact:true}).getByRole('button',{name:'专辑墙',exact:true}).click(); };
 const openFocus = async (page, tab = '番茄钟') => { const badge = page.locator('.focus-badge'); await badge.waitFor({timeout:30000}); if (await badge.getAttribute('aria-expanded') === 'false') await badge.click(); await page.locator('.focus-dock').waitFor(); await page.locator('.focus-dock').getByRole('tab', { name: tab, exact: true }).click(); };
 const screenshot = async (page, name) => { for (const [width, height] of [[1440,900],[960,600]]) { await page.setViewportSize({width,height}); await page.screenshot({ path: path.join(output, `${name}-${width}x${height}.png`), animations:'disabled', timeout:15000 }); } };
 const failStorage = (page, fail) => page.evaluate(fail => { window.__failFocusStorage = fail; if (window.__focusStorageOriginal) return; window.__focusStorageOriginal = Storage.prototype.setItem; Storage.prototype.setItem = function(key, value) { if (window.__failFocusStorage && key === 'album-circle-focus-v1:local-owner') throw new DOMException('Synthetic quota failure', 'QuotaExceededError'); return window.__focusStorageOriginal.call(this,key,value); }; }, fail);
@@ -23,7 +25,7 @@ try {
   server = spawn(process.execPath, [path.join(root,'node_modules/vite/bin/vite.js'),'--host','127.0.0.1','--port',String(port),'--strictPort'], {cwd:root,env:{...process.env,FLOW_CABIN_VITE_CACHE_DIR:path.join(output,'vite-cache')},stdio:['ignore','pipe','pipe']});
   let log=''; server.stdout.on('data',b=>log+=b); server.stderr.on('data',b=>log+=b);
   for (let i=0;;i++) { if (server.exitCode!==null || i>150) throw new Error(log); if (hasViteLocalOrigin(log,origin) && await fetch(origin).then(r=>r.ok,()=>false)) break; await new Promise(r=>setTimeout(r,100)); }
-  browser = await chromium.launch({executablePath:process.env.BROWSER_EXECUTABLE || (process.env.CI?chromium.executablePath():'/usr/bin/chromium'),headless:true,args:['--no-sandbox','--mute-audio']});
+  browser = await launchChromium();
   const run = async (name,test,{firstVisit=false,collection}={}) => {
     if (process.env.FOCUS_FILTER && !process.env.FOCUS_FILTER.split(',').some(filter=>name.includes(filter))) return;
     const context = await browser.newContext({viewport:{width:1440,height:900},locale:'zh-CN',reducedMotion:'reduce'});
@@ -76,7 +78,7 @@ try {
     await page.getByRole('button',{name:'重试保存',exact:true}).click();assert.match(await page.locator('.focus-dock [role=alert]').innerText(),/另一窗口.*本窗口.*仍失败/,'failed explicit retry retains the conflict explanation');
     await failStorage(page,false);await page.evaluate(end=>{Date.now=()=>end+1;window.dispatchEvent(new Event('focus'));},deadline);await page.waitForFunction(()=>window.albumCompanionSnapshot?.().focus.fish===1);
     await page.getByLabel('随手记内容').fill('当前窗口继续写的草稿');assert.equal((await focusState(page)).notes,'另一窗口保存的笔记','automatic timer and note writes must remain paused during conflict');await screenshot(page,'notes-storage-conflict');
-    await openFocus(page,'统计');await page.getByLabel('每日专注目标分钟').fill('120');assert.equal((await focusState(page)).settings.dailyGoal,100,'settings cannot bypass unresolved conflict');
+    await openFocus(page,'统计');await page.getByLabel('每日专注目标分钟').fill('120');await page.getByLabel('每日专注目标分钟').press('Enter');assert.equal((await focusState(page)).settings.dailyGoal,100,'settings cannot bypass unresolved conflict');
     await openFocus(page,'待办');await page.getByLabel('新的待办').fill('冲突期间的任务草稿');await page.getByRole('button',{name:'添加待办',exact:true}).click();assert.equal(await page.getByLabel('新的待办').inputValue(),'冲突期间的任务草稿');assert.equal((await focusState(page)).tasks[0].id,'other-task','tasks cannot bypass unresolved conflict');
     await page.getByRole('button',{name:'重试保存',exact:true}).click();const resolved=await focusState(page);assert.equal(resolved.notes,'当前窗口继续写的草稿');assert.equal(resolved.rewards.fish,1);assert.equal(resolved.sessions.length,1);
     await page.getByRole('button',{name:'添加待办',exact:true}).click();assert.equal((await focusState(page)).tasks.length,1);assert.equal((await focusState(page)).tasks[0].text,'冲突期间的任务草稿');
@@ -95,9 +97,9 @@ try {
   });
   await run('backup-focus-failure-is-transactional-and-visible',async page=>{
     await failStorage(page,true);await page.getByRole('button',{name:'设置',exact:true}).click();await page.getByRole('tab',{name:'数据与备份',exact:true}).click();await page.getByRole('button',{name:'收藏与备份',exact:true}).click();
-    page.on('dialog',dialog=>dialog.accept());
     await page.getByLabel('导入备份文件').setInputFiles({name:'synthetic-backup.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify({kind:'FlowCabinBackup',items:[],focus:{notes:'导入的新内容',tasks:[],settings:{notify:false,chime:false}}}))});
-    await page.getByRole('status').filter({hasText:'导入完成'}).waitFor();
+    await page.getByRole('status').filter({hasText:'导入完成'}).waitFor();assert.equal((await focusState(page)).notes,'原有随手记','nothing is replaced before the inline confirm');
+    await page.getByRole('group',{name:'替换本机记录'}).getByRole('button',{name:'替换这些内容',exact:true}).click();await page.getByRole('alert').filter({hasText:'未能保存'}).waitFor();
     assert.match(await page.locator('.backup-dialog').innerText(),/专注.*未能保存|专注.*保存失败/,'backup must not report a successful focus restore');
     await screenshot(page,'backup-storage-error');await page.keyboard.press('Escape');await openFocus(page,'随手记');assert.equal(await page.getByLabel('随手记内容').inputValue(),'原有随手记');
     assert.equal((await focusState(page)).notes,'原有随手记');
@@ -123,10 +125,10 @@ try {
     await openFocus(page,'随手记');
     await page.evaluate(()=>{document.documentElement.dataset.desktopFullscreen='true';window.dispatchEvent(new CustomEvent('album-desktop-fullscreen',{detail:true}));});
     await page.getByRole('button',{name:'沉浸模式',exact:true}).click();await page.getByRole('button',{name:'显示工具',exact:true}).click();
-    await page.getByRole('button',{name:'专辑墙',exact:true}).click();await page.getByRole('dialog',{name:'专辑墙编辑器',exact:true}).waitFor();await screenshot(page,'album-wall-over-focus');await page.keyboard.press('Escape');
+    await openAlbumWall(page);await page.getByRole('dialog',{name:'专辑墙编辑器',exact:true}).waitFor();await screenshot(page,'album-wall-over-focus');await page.keyboard.press('Escape');
     assert.equal(await page.locator('.album-wall-overlay').count(),0);assert.equal(await page.locator('.focus-dock').count(),1,'only the top album-wall modal should close');
     assert.equal(await page.evaluate(()=>document.documentElement.classList.contains('room-zen')),true);assert.equal(await page.evaluate(()=>window.__nativeCommands.some(x=>x.endsWith('/fullscreen-exit'))),false);
-    await page.getByRole('button',{name:'专辑墙',exact:true}).click();await page.getByRole('dialog',{name:'专辑墙编辑器',exact:true}).waitFor();
+    await openAlbumWall(page);await page.getByRole('dialog',{name:'专辑墙编辑器',exact:true}).waitFor();
     await page.getByRole('button',{name:'关闭专辑墙编辑器',exact:true}).dispatchEvent('keydown',{key:'Escape',repeat:true});assert.equal(await page.locator('.album-wall-overlay').count(),1,'held Escape must not unwind layers');
     await page.keyboard.press('Escape');await screenshot(page,'album-wall-escape-restored');
   });
@@ -206,12 +208,15 @@ try {
     assert.equal(await nav.getByRole('tab',{name:'房间与桌宠',exact:true}).getAttribute('aria-selected'),'true');assert.equal(await page.evaluate(()=>document.activeElement?.id),'hub-tab-room');assert.equal(await nav.locator('[tabindex="0"]').count(),1);await screenshot(page,'settings-keyboard-room');
     await page.keyboard.press('End');assert.equal(await page.evaluate(()=>document.activeElement?.id),'hub-tab-about');await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>document.activeElement?.id),'hub-tab-music');await page.keyboard.press('ArrowLeft');assert.equal(await page.evaluate(()=>document.activeElement?.id),'hub-tab-about');await page.keyboard.press('Home');assert.equal(await page.evaluate(()=>document.activeElement?.id),'hub-tab-music');
     await page.setViewportSize({width:640,height:600});await page.waitForFunction(()=>document.querySelector('[aria-label="设置分区"]')?.getAttribute('aria-orientation')==='horizontal');await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>document.activeElement?.id),'hub-tab-room');await page.screenshot({path:path.join(output,'settings-keyboard-640x600.png'),animations:'disabled'});await page.keyboard.press('Home');
-    await page.keyboard.press('Tab');assert.equal(await page.locator('#hub-panel').evaluate(e=>e.contains(document.activeElement)),true);await page.keyboard.press('Escape');assert.equal(await page.getByRole('dialog',{name:'设置',exact:true}).count(),0);assert.equal(await page.getByRole('button',{name:'设置',exact:true}).evaluate(e=>e===document.activeElement),true);
+    await page.keyboard.press('Tab');assert.equal(await page.locator('#hub-tab-panel').evaluate(e=>e.contains(document.activeElement)),true);await page.keyboard.press('Escape');assert.equal(await page.getByRole('dialog',{name:'设置',exact:true}).count(),0);assert.equal(await page.getByRole('button',{name:'设置',exact:true}).evaluate(e=>e===document.activeElement),true);
   });
   await run('productivity-settings-sections-and-shortcut-return',async page=>{
     await openFocus(page,'随手记');await page.getByLabel('随手记内容').fill('设置面板往返保留');await page.getByRole('button',{name:'设置',exact:true}).click();
-    for(const [index,name] of ['音源','房间与桌宠','专注工具','桌面','数据与备份','关于'].entries()) { await page.getByRole('tablist',{name:'设置分区',exact:true}).getByRole('tab',{name,exact:true}).click();await screenshot(page,`settings-section-${index}`);if(name==='桌面')assert.equal(await page.locator('.hub-row-actions .segmented button').evaluateAll(buttons=>buttons.every(button=>{const range=document.createRange();range.selectNodeContents(button);return range.getClientRects().length===1;})),true,'performance option labels stay on one line'); }
-    await page.getByRole('tablist',{name:'设置分区',exact:true}).getByRole('tab',{name:'专注工具',exact:true}).click();await page.getByRole('button',{name:'打开学习',exact:true}).click();assert.equal(await page.getByRole('dialog',{name:'设置',exact:true}).count(),0);assert.equal(await page.locator('.study-panel').count(),1);await openFocus(page,'随手记');assert.equal(await page.getByLabel('随手记内容').inputValue(),'设置面板往返保留');await screenshot(page,'settings-shortcut-restored');
+    for(const [index,name] of ['音源','房间与桌宠','专注工具','显示与桌面','数据与备份','关于'].entries()) { await page.getByRole('tablist',{name:'设置分区',exact:true}).getByRole('tab',{name,exact:true}).click();await screenshot(page,`settings-section-${index}`);if(name==='显示与桌面')assert.equal(await page.locator('.hub-row-actions .segmented button').evaluateAll(buttons=>buttons.every(button=>{const range=document.createRange();range.selectNodeContents(button);return range.getClientRects().length===1;})),true,'performance option labels stay on one line'); }
+    // 专注工具 holds the timer preferences (the dock's own form), not shortcuts into the dock.
+    const hub=page.getByRole('dialog',{name:'设置',exact:true});await page.getByRole('tablist',{name:'设置分区',exact:true}).getByRole('tab',{name:'专注工具',exact:true}).click();assert.equal(await hub.getByRole('button',{name:/打开学习|打开番茄钟|查看统计|随手记/}).count(),0,'no action rows');
+    await hub.getByLabel('专注（分）').fill('31');await hub.getByLabel('专注（分）').press('Enter');await page.keyboard.press('Escape');assert.equal(await hub.count(),0);
+    assert.equal(await page.locator('.focus-badge').innerText().then(text=>text.includes('31')),true,'a 设置 change reaches the timer');await openFocus(page,'随手记');assert.equal(await page.getByLabel('随手记内容').inputValue(),'设置面板往返保留');await screenshot(page,'settings-shortcut-restored');
   });
   await run('companion-compact-header-keeps-brand-and-controls',async page=>{
     await page.evaluate(()=>document.fonts.ready);
@@ -220,12 +225,12 @@ try {
       const bounds=await page.locator('.app-titlebar').evaluate(header=>{const r=header.getBoundingClientRect(), brand=header.querySelector('.app-brand strong'), count=header.querySelector('.app-brand small'), range=document.createRange();range.selectNodeContents(brand);return {lines:range.getClientRects().length,brandBottom:brand.getBoundingClientRect().bottom,countBottom:count.getBoundingClientRect().bottom,headerBottom:r.bottom,buttons:[...header.querySelectorAll('button')].map(button=>{const b=button.getBoundingClientRect();return {name:button.getAttribute('aria-label'),left:b.left,right:b.right,top:b.top,bottom:b.bottom,reachable:document.elementFromPoint(b.left+b.width/2,b.top+b.height/2)?.closest('button')===button};})};});
       await page.screenshot({path:path.join(output,`compact-header-${width}x600.png`),animations:'disabled'});assert.equal(bounds.lines,1,JSON.stringify(bounds));assert.ok(bounds.countBottom<=bounds.headerBottom);assert.ok(bounds.buttons.every(b=>b.left>=0&&b.right<=width&&b.top>=0&&b.bottom<=bounds.headerBottom&&b.reachable),JSON.stringify(bounds.buttons));
     }
-    await page.getByRole('button',{name:'添加专辑',exact:true}).click();await page.getByRole('dialog',{name:'添加专辑',exact:true}).waitFor();await page.keyboard.press('Escape');assert.equal(await page.getByRole('button',{name:'添加专辑',exact:true}).evaluate(e=>e===document.activeElement),true);
+    await page.getByRole('button',{name:'添加到唱片架',exact:true}).click();await page.getByRole('dialog',{name:'添加到唱片架',exact:true}).waitFor();await page.keyboard.press('Escape');assert.equal(await page.getByRole('button',{name:'添加到唱片架',exact:true}).evaluate(e=>e===document.activeElement),true);
     await page.getByRole('button',{name:'设置',exact:true}).click();await page.getByRole('dialog',{name:'设置',exact:true}).waitFor();await page.keyboard.press('Escape');assert.equal(await page.getByRole('button',{name:'设置',exact:true}).evaluate(e=>e===document.activeElement),true);
   });
   await run('companion-generated-lofi-tempo-reaches-pet',async page=>{
     const { cleanCompanion } = createRequire(path.join(root,'desktop/package.json'))('./wallpaper-model.cjs');
-    await openFocus(page,'声音');await page.getByRole('checkbox',{name:'Lofi 电台 · 实时生成',exact:true}).check(); // enabling lo-fi starts sound itself
+    await openFocus(page,'声音');await page.getByRole('checkbox',{name:'Lo-fi 电台 · 实时生成',exact:true}).check(); // enabling lo-fi starts sound itself
     await page.waitForFunction(()=>window.albumCompanionSnapshot?.().sound?.lofi===true,null,{timeout:30000});
     const source=await page.evaluate(()=>window.albumCompanionSnapshot());const tempo=Number((await page.locator('.sound-section').innerText()).match(/(\d+) BPM/)[1]);
     await screenshot(page,'lofi-source-playing');assert.equal(source.lofiBpm,tempo,'generated lo-fi snapshot carries its actual section tempo');assert.equal(source.musicPlaying,false);assert.equal(source.bpm,0);assert.equal(source.energy,0);

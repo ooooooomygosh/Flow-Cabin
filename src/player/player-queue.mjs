@@ -23,14 +23,26 @@ export const dequeue = (queue, id) => normalizeQueue({ ...queue, ids: queue.ids.
 export const pruneQueue = (queue, existingIds) => { const set = new Set(existingIds); return normalizeQueue({ ...queue, ids: queue.ids.filter((id) => set.has(id)) }); };
 export const cycleRepeat = (queue) => normalizeQueue({ ...queue, repeat: REPEAT_MODES[(REPEAT_MODES.indexOf(queue.repeat) + 1) % REPEAT_MODES.length] });
 
+// Shuffle is a bag per record: `played` lists the tracks heard since the record
+// started (or since the bag last emptied); `playedBag` keeps it.
+export function playedBag(bag, recordId, trackIndex, trackCount) {
+  if (!bag || bag.id !== recordId || (bag.played.includes(trackIndex) && bag.played.length >= trackCount)) return { id: recordId, played: [trackIndex] };
+  return bag.played.includes(trackIndex) ? bag : { id: recordId, played: [...bag.played, trackIndex] };
+}
+const range = (count) => Array.from({ length: count }, (_, index) => index);
+const pickFrom = (list, random) => ({ type: 'track', index: list[Math.min(list.length - 1, Math.floor(random() * list.length))] });
+
 // What happens after the current track. `manual` = the user pressed next, so
-// "repeat one" does not trap them on the same song.
-export function nextStep({ trackIndex = 0, trackCount = 0, queue, manual = false, random = Math.random }) {
+// "repeat one" does not trap them on the same song. Shuffle draws unplayed
+// tracks; when the bag is empty it falls through to 待播 → repeat-all → stop.
+export function nextStep({ trackIndex = 0, trackCount = 0, queue, manual = false, random = Math.random, played = [trackIndex] }) {
   const { ids, repeat, shuffle } = normalizeQueue(queue);
   if (!manual && repeat === 'one' && trackCount > 0) return { type: 'restart' };
   if (shuffle && trackCount > 1) {
-    const pick = Math.floor(random() * (trackCount - 1));
-    return { type: 'track', index: pick >= trackIndex ? pick + 1 : pick };
+    const seen = new Set(played), fresh = range(trackCount).filter((index) => index !== trackIndex && !seen.has(index));
+    if (fresh.length) return pickFrom(fresh, random);
+    if (ids.length) return { type: 'album', id: ids[0] };
+    return repeat === 'all' ? pickFrom(range(trackCount).filter((index) => index !== trackIndex), random) : { type: 'stop' };
   }
   if (trackIndex < trackCount - 1) return { type: 'track', index: trackIndex + 1 };
   if (ids.length) return { type: 'album', id: ids[0] };
@@ -42,13 +54,17 @@ export function nextStep({ trackIndex = 0, trackCount = 0, queue, manual = false
 // is true when matching that track just failed), so the deck keeps playing
 // instead of stopping on a dead track. When every other track is blocked the
 // plain step is returned and the normal error / auto-skip path takes over.
-export function nextPlayableStep({ trackIndex = 0, trackCount = 0, queue, manual = false, random = Math.random, blocked = () => false }) {
-  const first = nextStep({ trackIndex, trackCount, queue, manual, random });
+export function nextPlayableStep({ trackIndex = 0, trackCount = 0, queue, manual = false, random = Math.random, played = [trackIndex], blocked = () => false }) {
+  const first = nextStep({ trackIndex, trackCount, queue, manual, random, played });
   if (first.type !== 'track' || !blocked(first.index)) return first;
   const { shuffle } = normalizeQueue(queue);
   if (shuffle) {
-    const open = Array.from({ length: trackCount }, (_, index) => index).filter((index) => index !== trackIndex && !blocked(index));
-    return open.length ? { type: 'track', index: open[Math.floor(random() * open.length) % open.length] } : first;
+    const seen = new Set(played), open = range(trackCount).filter((index) => index !== trackIndex && !blocked(index) && !seen.has(index));
+    if (open.length) return pickFrom(open, random);
+    const after = nextStep({ trackIndex, trackCount, queue, manual, random, played: range(trackCount) });
+    if (after.type !== 'track') return after.type === 'stop' ? first : after;
+    const rest = range(trackCount).filter((index) => index !== trackIndex && !blocked(index));
+    return rest.length ? pickFrom(rest, random) : first;
   }
   let step = first;
   for (let hops = 0; hops < trackCount && step.type === 'track' && blocked(step.index); hops++) {

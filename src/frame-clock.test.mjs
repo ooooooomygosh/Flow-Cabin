@@ -89,3 +89,41 @@ test('unsubscribe before its turn skips the subscriber and leaves no scheduled w
   r.frame(0); assert.equal(second, 0); assert.equal(r.clock.size, 0); assert.equal(r.pending, null);
   stopFirst(); stopSecond(); r.frame(60000); assert.equal(second, 0);
 });
+
+// Display + timers: rAF fires on vsync only when requested; timers fire at their time.
+function timedRig(hz, maxFps) {
+  let id = 0, pending = null, requests = 0, time = 0; const timers = new Map();
+  const clock = createFrameClock({ request: (cb) => { requests++; pending = { id: ++id, cb }; return id; }, cancel: (key) => { if (pending?.id === key) pending = null; }, now: () => time, maxFps,
+    setTimer: (cb, ms) => { timers.set(++id, { at: time + ms, cb }); return id; }, clearTimer: (key) => timers.delete(key) });
+  const step = 1000 / hz;
+  const advance = (until) => {
+    for (let t = Math.ceil(time / step) * step || step; t <= until; t += step) {
+      for (const [key, timer] of [...timers]) if (timer.at <= t) { timers.delete(key); time = timer.at; timer.cb(); }
+      time = t; const p = pending; pending = null; p?.cb(t);
+    }
+  };
+  return { clock, advance, timers, get requests() { return requests; }, get pending() { return pending; } };
+}
+test('a 12 fps subscriber sleeps between frames instead of polling rAF', () => {
+  for (const hz of [60, 144]) {
+    const r = timedRig(hz); let calls = 0; r.clock.subscribe(() => calls++, { fps: 12 });
+    r.advance(1000); const before = r.requests, drawn = calls; r.advance(2000);
+    console.log(`${hz} Hz: ${r.requests - before} rAF requests for ${calls - drawn} draws`);
+    assert.ok(calls - drawn >= 11 && calls - drawn <= 13, calls - drawn);
+    assert.ok(r.requests - before <= 13, r.requests - before);
+  }
+});
+test('a 60 fps subscriber keeps the rAF chain; a new subscriber cuts a sleep short', () => {
+  const r = timedRig(60); let slow = 0, fast = 0; r.clock.subscribe(() => slow++, { fps: 8 });
+  r.advance(500); assert.ok(r.clock.sleeping); assert.equal(r.pending, null);
+  const off = r.clock.subscribe(() => fast++, { fps: 60 });
+  assert.equal(r.clock.sleeping, false); assert.ok(r.pending);
+  r.advance(1500); assert.ok(fast >= 58 && fast <= 61, fast); assert.ok(slow >= 11 && slow <= 13, slow);
+  off(); r.advance(1600); assert.ok(r.clock.sleeping);
+});
+test('pause and the last unsubscribe clear a sleeping timer', () => {
+  const r = timedRig(60); const off = r.clock.subscribe(() => {}, { fps: 8 });
+  r.advance(100); assert.ok(r.clock.sleeping); r.clock.setPaused(true); assert.equal(r.timers.size, 0); assert.equal(r.pending, null);
+  r.clock.setPaused(false); assert.ok(r.pending); r.advance(300); assert.ok(r.clock.sleeping);
+  off(); assert.equal(r.timers.size, 0); assert.equal(r.pending, null);
+});

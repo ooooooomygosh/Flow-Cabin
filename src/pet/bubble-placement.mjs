@@ -27,10 +27,19 @@ export function chooseBubbleOffset(base, cat, obstacles, view, gap = 6, consoleR
   return best;
 }
 
+/** The room cat stands on the scene's painted floor (`floor`, art px from scene-catalog,
+ * exposed as --scene-floor): its CSS `bottom` in px for a stage `height` px tall whose
+ * art is drawn at `sceneY` with scale `k`. Never closer than CAT_FLOOR_MIN to the
+ * window edge (the art floor can be cropped away). null without a scene floor. */
+export const CAT_FLOOR_MIN = 28;
+export function catFloorOffset({ height, sceneY = 0, k = 1, floor }) {
+  if (!Number.isFinite(floor) || !Number.isFinite(height)) return null;
+  return Math.max(CAT_FLOOR_MIN, Math.round(height - sceneY - floor * k));
+}
+
 /** Choose where the room cat sits (and where its bubble goes) so neither covers
  * a record cell or a panel: floor spots along its baseline, or perched on top of
  * the turntable console. Keeps the current spot while it is still clear. */
-export const CAT_OBSTACLES = BUBBLE_OBSTACLES;
 const inset = (r, k) => { const dx = (r.right - r.left) * k, dy = (r.bottom - r.top) * k; return { left: r.left + dx, right: r.right - dx, top: r.top + dy, bottom: r.bottom }; };
 /** preferPerch: the cat wants to be back on the console top (immersive hover held);
  * any clear perch spot wins over staying on the floor. */

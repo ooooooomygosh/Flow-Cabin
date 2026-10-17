@@ -1,22 +1,15 @@
 // Audio sources: one stable module for the deck, 音源设置 and onboarding.
 // Documented in docs/player.md › 「音源接口（给新手引导用）」. Keep signatures stable.
-import { musicRequest, trackArtist, findPlayableSource } from '../room-playback.mjs';
-
-// Same channel as desktop-client.jsx desktopCommand (kept JSX-free for node tests).
-function desktopCommand(command, params = {}) { const url = new URL(`album-desktop://action/${command}`); for (const [key, value] of Object.entries(params)) url.searchParams.set(key, String(value)); window.open(url.href, '_blank'); }
+import { musicRequest, trackArtist, findPlayableSource, localAlbumItem, normalizeLocalLibrary } from '../room-playback.mjs';
+import { desktopCommand } from '../desktop/desktop-command.mjs';
+import { playChime } from '../lib/chime.mjs';
 
 // Providers whose sound comes out of another player; the deck polls them.
 export const REMOTE_PROVIDERS = new Set(['ma', 'appleMusic']);
 export const remoteControlPath = (provider) => provider === 'appleMusic' ? '/apple/control' : '/ma/control';
 
-export const SOURCES = Object.freeze([
-  { id: 'qq', label: 'QQ 音乐', kind: 'account', login: true },
-  { id: 'netease', label: '网易云音乐', kind: 'account', login: true },
-  { id: 'local', label: '本地音乐', kind: 'folder', login: false },
-  { id: 'appleMusic', label: '系统 Apple Music', kind: 'system-app', login: false, platform: 'darwin' },
-  { id: 'ma', label: 'Music Assistant', kind: 'server', login: false },
-  { id: 'system', label: '系统正在播放', kind: 'follow', login: false }
-]);
+import { SOURCES } from './providers.mjs';
+export { PROVIDERS, DECK_PROVIDERS, SOURCES, isDeckProvider, providerLabel } from './providers.mjs';
 
 const isMac = () => typeof navigator !== 'undefined' && /Mac/i.test(navigator.platform || navigator.userAgent || '');
 
@@ -70,10 +63,21 @@ export async function requestPermission(kind, { request = musicRequest } = {}) {
 // ~3 s at low volume and stops. { ok, provider, quality, error } — ok only if
 // the audio element actually reached "playing".
 export const TEST_TRACK = Object.freeze({ id: 'flow-cabin-playback-test', type: 'album', title: '晴天', artist: '周杰伦', tracks: ['晴天'], trackDetails: [{ title: '晴天', lengthMillis: 269000 }] });
-export async function testPlayback({ provider = 'auto', seconds = 3, request = musicRequest, createAudio = () => new Audio(), find } = {}) {
+// 本地音乐 tests with the first song of the user's own library (a fixed catalog song is
+// rarely in it); an empty library confirms the speakers with a chime instead.
+export async function localTestRecord({ request = musicRequest } = {}) {
+  const album = normalizeLocalLibrary(await request('/local/albums')).albums.find((entry) => entry.tracks.length);
+  return album ? { ...localAlbumItem(album), id: 'flow-cabin-playback-test' } : null;
+}
+export async function testPlayback({ provider = 'auto', seconds = 3, request = musicRequest, createAudio = () => new Audio(), find, chime = () => playChime('test') } = {}) {
+  let record = TEST_TRACK;
+  if (provider === 'local') {
+    try { record = await localTestRecord({ request }); } catch (error) { return { ok: false, provider, error: error.message || '读不到本地音乐。' }; }
+    if (!record) return { ...chime(), provider, title: '提示音（本地音乐里还没有歌曲）' };
+  }
   const audio = createAudio(); let started = null;
   try {
-    const result = await (find || findPlayableSource)({ record: TEST_TRACK, index: 0, provider, request, play: async (candidate, resolved) => {
+    const result = await (find || findPlayableSource)({ record, index: 0, provider, request, play: async (candidate, resolved) => {
       if (resolved.remote) throw new Error('试播只检查小屋内播放。');
       audio.volume = .15; audio.src = resolved.audioPath;
       await audio.play();

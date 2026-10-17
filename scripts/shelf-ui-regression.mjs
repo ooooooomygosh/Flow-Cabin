@@ -1,15 +1,14 @@
 /** Offline shelf/chrome regressions. Synthetic covers, muted Chromium, native window bridge mocked. */
 import assert from 'node:assert/strict';
+import { launchChromium } from './launch-browser.mjs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createRequire } from 'node:module';
 import { spawn } from 'node:child_process';
 import { hasViteLocalOrigin } from './vite-readiness.mjs';
 import { showcaseAlbums } from './showcase-albums.mjs';
 import { ROOM_SCENES } from '../src/scene-catalog.mjs';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const { chromium } = createRequire(path.join(root, 'desktop/package.json'))('playwright');
 const output = process.env.SHELF_OUTPUT || path.join(root, 'desktop/test-results/shelf-ui');
 const port = Number(process.env.SHELF_PORT || 4191), origin = `http://127.0.0.1:${port}`;
 const cover = (name, hue) => `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800"><defs><linearGradient id="sky" x2="0" y2="1"><stop stop-color="hsl(${hue} 40% 66%)"/><stop offset="1" stop-color="hsl(${hue} 30% 22%)"/></linearGradient><pattern id="grain" width="8" height="8" patternUnits="userSpaceOnUse"><path d="M0 0h4v1H0z" fill="#fff" opacity=".15"/></pattern></defs><rect width="800" height="800" fill="url(#sky)"/><circle cx="560" cy="290" r="105" fill="#f7dfb1"/><path d="M0 600 190 290 440 620 625 440 800 590v210H0Z" fill="#213936"/><path d="m140 370 50-80 74 98-75-33Z" fill="#f8efda"/><path d="M0 655q200-110 400 0t400 0v145H0Z" fill="#497b75"/><path d="M0 690h800M0 700h800M0 710h800M0 720h800" stroke="#cfdfc2" stroke-width="2"/><rect width="800" height="800" fill="url(#grain)"/><text x="52" y="105" font-family="serif" font-size="60" fill="#fff5dc">${name}</text><text x="55" y="152" font-family="sans-serif" font-size="22" letter-spacing="6" fill="#fff5dc">SYNTHETIC QA · VOL. 01</text><text x="50" y="758" font-family="sans-serif" font-size="18" letter-spacing="3" fill="#fff5dc">QUIET HOURS / SIDE A</text></svg>`)}`;
@@ -22,7 +21,7 @@ try {
   server=spawn(process.execPath,[path.join(root,'node_modules/vite/bin/vite.js'),'--host','127.0.0.1','--port',String(port),'--strictPort'],{cwd:root,env:{...process.env,FLOW_CABIN_VITE_CACHE_DIR:path.join(output,'vite-cache')},stdio:['ignore','pipe','pipe']});
   let log='';server.stdout.on('data',b=>log+=b);server.stderr.on('data',b=>log+=b);
   for(let i=0;;i++){if(server.exitCode!==null||i>300)throw new Error(`Vite startup: ${log}`);if(hasViteLocalOrigin(log,origin)&&await fetch(origin).then(r=>r.ok,()=>false))break;await new Promise(r=>setTimeout(r,100));}
-  browser=await chromium.launch({executablePath:process.env.BROWSER_EXECUTABLE||(process.env.CI?chromium.executablePath():'/usr/bin/chromium'),headless:true,args:['--no-sandbox','--mute-audio']});
+  browser = await launchChromium();
   const run=async(name,test,{native=true,dpr=1,collectionItems=items}={})=>{
     if(process.env.SHELF_FILTER&&!process.env.SHELF_FILTER.split(',').some(s=>name.includes(s)))return;
     const context=await browser.newContext({viewport:{width:1440,height:900},deviceScaleFactor:dpr,locale:'zh-CN',reducedMotion:'reduce'});
@@ -50,7 +49,7 @@ try {
       if(process.env.SHELF_BASELINE)continue;
       for(const m of metrics){assert(Math.abs(m.sleeve.w-m.sleeve.h)<=1,'sleeves remain square');assert(m.sleeve.w<m.slot.w*.94&&m.sleeve.w>m.slot.w*.8,'recess is visible beside sleeve');assert(m.sleeve.y>=m.slot.y+1,'sleeve fits inside cell');assert(m.sleeve.bottom<=m.slot.bottom&&m.sleeve.bottom>=m.slot.bottom-m.slot.h*.055,'sleeve rests on cell floor');if(m.canvas)assert(m.canvas>=96&&m.sleeve.w/m.canvas<=2.6,'fine, bounded pixel grain');}
     }
-    await page.setViewportSize({width:1440,height:900});await page.locator('.room-record').first().click({position:{x:2,y:4}});assert.equal(await page.locator('.room-record').first().getAttribute('aria-pressed'),'true','whole recess remains a hit target');const second=page.locator('.room-record').nth(1);await second.click();assert.equal(await second.getAttribute('aria-pressed'),'true');await second.focus();await page.keyboard.press('Tab');await page.keyboard.press('Shift+Tab');assert.equal(await second.evaluate(e=>e.matches(':focus-visible')),true);if(!process.env.SHELF_BASELINE)assert.equal(await second.locator('.room-record-sleeve').evaluate(e=>getComputedStyle(e).outlineStyle),'dashed');await shot(page,`${scene.id}-keyboard-focus`);await page.keyboard.press('Enter');assert.equal(await second.getAttribute('aria-pressed'),'true');
+    await page.setViewportSize({width:1440,height:900});await page.locator('.room-record').first().click({position:{x:2,y:4}});assert.equal(await page.locator('.room-record').first().getAttribute('aria-current'),'true','whole recess remains a hit target');const second=page.locator('.room-record').nth(1);await second.click();assert.equal(await second.getAttribute('aria-current'),'true');await second.focus();await page.keyboard.press('Tab');await page.keyboard.press('Shift+Tab');assert.equal(await second.evaluate(e=>e.matches(':focus-visible')),true);if(!process.env.SHELF_BASELINE)assert.equal(await second.locator('.room-record-sleeve').evaluate(e=>getComputedStyle(e).outlineStyle),'dashed');await shot(page,`${scene.id}-keyboard-focus`);await page.keyboard.press('Enter');assert.equal(await second.getAttribute('aria-current'),'true');
     await second.dblclick();await page.waitForFunction(()=>document.querySelector('.room-turntable')?.dataset.loadedId==='shelf-1');
     const third=page.locator('.room-record').nth(2);await third.dragTo(await page.locator('.scene-deck').isVisible()?page.locator('.scene-deck'):page.locator('.room-turntable'));
     await page.waitForFunction(()=>document.querySelector('.room-turntable')?.dataset.loadedId==='shelf-2');
@@ -70,15 +69,15 @@ try {
       const holder=document.createElement('div');holder.id='artwork-probe';Object.assign(holder.style,{position:'fixed',top:'150px',left:'350px',width:'320px',height:'320px',zIndex:'999'});document.body.append(holder);const root=createRoot(holder);window.__unmountProbe=()=>{root.unmount();holder.remove();};window.__probe=(cover)=>root.render((React.createElement||React.default.createElement)(ShowroomArtwork,{item:{title:'恢复检查',cover},pixel:true}));window.__probe(data);
     },data);
     const painted=page.locator('#artwork-probe canvas.is-painted');await painted.waitFor();assert.equal(await painted.getAttribute('width'),'256');
-    await page.evaluate(()=>{document.getElementById('artwork-probe').style.width='100px';document.getElementById('artwork-probe').style.height='100px';});await page.waitForFunction(()=>document.querySelector('#artwork-probe canvas').width===112);
-    await page.evaluate(()=>window.__probe('data:image/png;base64,not-a-png'));await page.locator('#artwork-probe .showroom-art-placeholder').waitFor();await page.evaluate(data=>window.__probe(data),data);await painted.waitFor();assert.equal(await painted.getAttribute('width'),'112');await shot(page,'artwork-recovered-dpr2');
+    await page.evaluate(()=>{document.getElementById('artwork-probe').style.width='100px';document.getElementById('artwork-probe').style.height='100px';});await page.waitForFunction(()=>document.querySelector('#artwork-probe canvas').width===100);
+    await page.evaluate(()=>window.__probe('data:image/png;base64,not-a-png'));await page.locator('#artwork-probe .showroom-art-placeholder').waitFor();await page.evaluate(data=>window.__probe(data),data);await painted.waitFor();assert.equal(await painted.getAttribute('width'),'100');await shot(page,'artwork-recovered-dpr2');
     await page.evaluate(()=>{const c=document.createElement('canvas');c.width=c.height=32;c.getContext('2d').fillRect(0,0,32,32);window.__probe(c.toDataURL());});await page.waitForFunction(()=>document.querySelector('#artwork-probe canvas')?.width===32);await page.evaluate(()=>{window.__unmountProbe();window.dispatchEvent(new Event('resize'));});assert.equal(await page.locator('#artwork-probe').count(),0);
   },{dpr:2});
   await run('chrome-single-settings-and-native-fullscreen',async page=>{
     await shot(page,'header-before-interaction');
-    assert.equal(await page.locator('.app-titlebar').getByRole('button',{name:/^(设置|软件设置)$/}).count(),1,'one settings gear');
+    assert.equal(await page.locator('.app-titlebar').getByRole('button',{name:/^(设置|软件设置|显示与字体)$/}).count(),1,'one settings gear');
     assert.equal(await page.getByRole('button',{name:'最大化或还原窗口',exact:true}).count(),0,'no second square');
-    const settings=page.getByRole('button',{name:'设置',exact:true});assert.equal((await settings.innerText()).trim(),'','settings is icon-only');await settings.focus();await page.keyboard.press('Enter');await page.getByRole('tab',{name:'桌面',exact:true}).click();await page.getByRole('button',{name:'软件设置',exact:true}).click();assert.match(await page.evaluate(()=>window.__nativeCommands.at(-1)),/\/settings$/);await page.keyboard.press('Escape');await settings.waitFor();assert.equal(await settings.evaluate(e=>e===document.activeElement),true);
+    const settings=page.getByRole('button',{name:'设置',exact:true});assert.equal((await settings.innerText()).trim(),'','settings is icon-only');await settings.focus();await page.keyboard.press('Enter');await page.getByRole('tab',{name:'显示与桌面',exact:true}).click();await page.getByRole('button',{name:'打开显示与字体',exact:true}).click();assert.match(await page.evaluate(()=>window.__nativeCommands.at(-1)),/\/settings$/);await page.keyboard.press('Escape');await settings.waitFor();assert.equal(await settings.evaluate(e=>e===document.activeElement),true);
     const enter=page.getByRole('button',{name:'进入全屏模式',exact:true});await enter.click();assert.match(await page.evaluate(()=>window.__nativeCommands.at(-1)),/\/fullscreen$/);assert.equal(await enter.getAttribute('aria-pressed'),'false','wait for native confirmation');
     await page.evaluate(()=>{document.documentElement.dataset.desktopFullscreen='true';window.dispatchEvent(new CustomEvent('album-desktop-fullscreen',{detail:true}));});
     assert.equal(await page.getByRole('button',{name:'退出全屏模式',exact:true}).getAttribute('aria-pressed'),'true');assert.equal(await page.getByRole('button',{name:/^退出全屏(模式)?$/}).count(),1);await page.getByRole('button',{name:'沉浸模式',exact:true}).click();assert.equal(await page.getByRole('button',{name:/^退出全屏(模式)?$/}).count(),1);await page.getByRole('button',{name:'显示工具',exact:true}).click();assert.equal(await page.getByRole('button',{name:/^退出全屏(模式)?$/}).count(),1);await page.getByRole('button',{name:'收起工具',exact:true}).click();await page.getByRole('button',{name:'退出全屏',exact:true}).click();assert.match(await page.evaluate(()=>window.__nativeCommands.at(-1)),/\/fullscreen-exit$/);await shot(page,'immersive-fullscreen-recovery');
@@ -95,7 +94,7 @@ try {
   },{native:false});
   await run('chrome-browser-fullscreen-denial-and-retry',async page=>{
     await page.evaluate(()=>{window.__requestFullscreen=document.documentElement.requestFullscreen;document.documentElement.requestFullscreen=()=>Promise.reject(new DOMException('Synthetic denial','NotAllowedError'));});
-    await page.getByRole('button',{name:'进入全屏模式',exact:true}).click();await page.getByRole('status').filter({hasText:'无法切换全屏'}).waitFor();assert.equal(await page.evaluate(()=>Boolean(document.fullscreenElement)),false);await shot(page,'browser-fullscreen-denied');
+    await page.getByRole('button',{name:'进入全屏模式',exact:true}).click();await page.getByRole('alert').filter({hasText:'无法切换全屏'}).waitFor();assert.equal(await page.evaluate(()=>Boolean(document.fullscreenElement)),false);await shot(page,'browser-fullscreen-denied');
     await page.evaluate(()=>{document.documentElement.requestFullscreen=window.__requestFullscreen;});await page.getByRole('button',{name:'进入全屏模式',exact:true}).click();await page.waitForFunction(()=>Boolean(document.fullscreenElement));await page.getByRole('button',{name:'退出全屏模式',exact:true}).click();await page.waitForFunction(()=>!document.fullscreenElement);
   },{native:false});
 } finally {

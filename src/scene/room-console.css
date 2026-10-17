@@ -1,86 +1,78 @@
-/* Turntable console (owner of look: beauty; controls: RoomTurntable / player).
-   The physical deck is now drawn on the shelf (scene-deck.css), so the old
-   isometric deck + cabinet become a compact pixel "radio" panel docked
-   bottom-left, clear of the window and the shelf. Player markup is untouched. */
+/* Turntable console chrome and the selection card (now-playing strip).
+   The physical deck is drawn on the shelf (scene-deck.css); the console body is
+   the pocket player (player/pocket-player.css); its geometry is in room-immersive.css. */
+@layer guards, reset, features, skin, overrides;
+@layer features {
 .cabin-scene-art { image-rendering: pixelated; }
 
-.room-turntable { left: 16px; bottom: 16px; top: auto; width: 272px; filter: none !important; }
-.wallpaper-room .room-turntable { bottom: 16px; }
-.room-turntable .turntable-side-cabinet { margin: 0; padding: 0; background: none !important; border: 0; box-shadow: none; }
-.room-turntable .turntable-side-cabinet::before, .room-turntable .cabinet-side-face, .room-turntable .cabinet-leg { display: none; }
-.room-turntable .turntable-console {
-  padding: 10px 12px 12px; max-height: min(52vh, 360px); overflow: auto;
-  border: 6px solid transparent !important; border-image: var(--px-frame-img) 2 / 6px stretch !important; border-radius: 0 !important;
-  background: linear-gradient(#2e1d12f2, #24160ff2) padding-box !important; box-shadow: var(--px-shadow-3) !important;
-}
-.room-turntable.is-drop-target .turntable-console { border-image: var(--px-frame-img-accent) 2 / 6px stretch !important; }
 .room-turntable[data-spinning='true'] .turntable-heading > span::after, .room-turntable[data-spinning='true'] .turntable-drag-handle::after {
   content: ''; width: 6px; height: 6px; margin-left: 2px; background: var(--px-good); box-shadow: 0 0 0 2px var(--px-shadow); animation: console-live 1s steps(2, end) infinite;
 }
 @keyframes console-live { 50% { opacity: .35; } }
-.room-turntable .turntable-heading { padding-bottom: 6px; border-bottom: 2px solid #8a5a3266; margin-bottom: 8px; }
-.room-turntable .turntable-heading > small { color: var(--px-ink-faint); }
-.room-turntable .turntable-copy > strong { color: var(--px-accent-hi); }
-.room-turntable .turntable-controls button { border-radius: 0 !important; box-shadow: inset 2px 2px 0 #ffffff1a, inset -2px -2px 0 #00000059, var(--px-shadow-1); transition: translate var(--px-dur-fast) steps(2, end); }
+.room-turntable .turntable-controls button { box-shadow: inset 2px 2px 0 #ffffff1a, inset -2px -2px 0 #00000059, var(--px-shadow-1); transition: translate var(--px-dur-fast) steps(2, end); }
 .room-turntable .turntable-controls button:hover:not(:disabled) { translate: 0 -1px; }
 .room-turntable .turntable-controls button:active:not(:disabled) { translate: 1px 1px; box-shadow: inset 2px 2px 0 #00000059; transition-duration: 0s; }
-.room-turntable .turntable-toggle { background: var(--px-accent) !important; color: #24170d !important; box-shadow: inset 2px 2px 0 var(--px-accent-hi), inset -2px -2px 0 var(--px-accent-lo), var(--px-shadow-1) !important; }
-.room-turntable .turntable-hint { margin: 8px 0 0; font-size: 12px; color: var(--px-ink-faint); }
+.room-turntable .turntable-controls .turntable-toggle { background: var(--px-accent); color: var(--px-ink-on-accent); box-shadow: inset 2px 2px 0 var(--px-accent-hi), inset -2px -2px 0 var(--px-accent-lo), var(--px-shadow-1); }
 
-@media (max-width: 1300px) { .room-turntable { width: 236px; } }
-@media (max-height: 760px) { .room-turntable .turntable-console { max-height: 44vh; } }
 /* The selected album sits below the rack, with the same outer frame width.
-   Alpha belongs to the background only; labels and controls stay opaque. */
-.cabin-room.cabin-room .room-now-playing {
-  container-type: inline-size;
+   Alpha belongs to the background only; labels and controls stay opaque.
+   A fixed height (one row, never wrapping) breaks the card-width → wrapping →
+   art-size feedback loop. Tight cards drop labels to accessible icon actions. */
+.room-now-playing { display: flex; justify-content: space-between; align-items: center; }
+.room-selection-copy { min-width: 0; flex: 1; }
+.room-selection-copy > small { letter-spacing: .14em; color: #c49662; }
+.room-selection-copy h2 { overflow-wrap: anywhere; color: var(--px-ink); }
+.room-selection-copy p { font-size: 13px; color: #d3b58f; margin: 0; }
+.room-selection-actions { display: flex; gap: 10px; align-items: center; justify-content: flex-end; }
+.room-selection-actions button, .room-selection-actions a { display: inline-flex; gap: 8px; align-items: center; padding: 9px 13px; background: #573722; color: #ffe0b6; text-decoration: none; }
+.cabin-room .room-now-playing {
+  container-type: inline-size; position: absolute; z-index: 12;
   left: var(--room-shelf-left, 30%); right: auto; width: var(--room-shelf-width, 48%);
-  max-width: calc(100% - 24px); height: 104px; bottom: 14px; padding: 10px 12px;
-  background: rgb(36 22 15 / 70%); backdrop-filter: none;
-  display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 8px 12px;
+  max-width: calc(100% - 24px); height: 88px; bottom: 14px; padding: 6px 12px;
+  background: rgb(36 22 15 / 70%); box-shadow: 5px 5px 0 #0d0805aa;
+  flex-direction: row; flex-wrap: nowrap; gap: 12px;
 }
-.cabin-room .room-now-playing .room-selection-copy { flex: 1 1 210px; }
-.cabin-room .room-now-playing .room-selection-copy p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.cabin-room .room-now-playing .room-selection-actions { flex: 0 1 auto; max-width: 100%; flex-wrap: wrap; gap: 6px; }
-.cabin-room .room-now-playing .room-selection-actions :is(button,a) { font-size: 12px; padding: 6px 8px; }
-/* A stable viewport-based height breaks the card-width → wrapping → art-size
-   feedback loop. Tight cards use labelled/accessible icon actions below. */
-@media (max-width: 1399px), (max-height: 700px) {
-  .cabin-room.cabin-room .room-now-playing { height: 144px; }
-}
-@media (max-width: 800px), (max-height: 550px) {
-  .cabin-room.cabin-room .room-now-playing { height: 160px; }
-}
-@container (max-width: 520px) {
-  .room-now-playing .room-selection-actions span { display: none; }
-  .cabin-room .room-now-playing .room-selection-actions { justify-content: flex-start; }
-  .cabin-room .room-now-playing .room-selection-actions :is(button,a) { padding: 5px; }
-}
+/* One row at every size: the copy column gives way (ellipsis), the actions never wrap. */
+.cabin-room .room-now-playing .room-selection-copy { flex: 1 1 0; min-width: 0; }
+.cabin-room .room-now-playing .room-selection-copy h2 { margin: 0; }
+.cabin-room .room-now-playing .room-selection-copy p { line-height: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cabin-room .room-now-playing .room-selection-actions { flex: none; flex-wrap: nowrap; gap: 6px; }
+.cabin-room .room-now-playing .room-selection-actions :is(button,a) { font-size: 12px; min-height: var(--px-hit); padding: 6px 8px; }
 @container (max-width: 700px) {
   .room-now-playing:has(.room-queue-add) .room-selection-actions span { display: none; }
   .cabin-room .room-now-playing:has(.room-queue-add) .room-selection-actions :is(button,a) { padding: 5px; }
 }
-@container (max-width: 340px) { .room-now-playing .room-selection-copy > small { display: none; } }
+/* Compact windows (AES-16): a slimmer strip so the floor and the companion stay in view. */
+@media (max-width: 1000px), (max-height: 620px) { .cabin-room .room-now-playing { height: 72px; } .cabin-room .room-now-playing .room-selection-copy > small { display: none; } }
+@container (max-width: 520px) {
+  .room-now-playing .room-selection-actions span, .room-now-playing .room-selection-copy > small { display: none; }
+  .cabin-room .room-now-playing .room-selection-actions :is(button,a) { padding: 5px; }
+}
 
 /* These are ordinary buttons below the heading, outside its drag handle. */
 .turntable-room-tools { display: grid; gap: 3px; margin: 0 0 9px; }
 .turntable-room-tools button {
   display: flex; align-items: center; gap: 8px; min-height: 30px; width: 100%;
-  padding: 5px 7px; border: 1px solid #8a5a3266; background: #24160f;
-  color: var(--px-ink, #ffe9cb); font: inherit; font-size: 12px; text-align: left;
+  padding: 5px 7px; border: 1px solid #8a5a3266; background: var(--px-surface-card);
+  color: var(--px-ink); font: inherit; font-size: 12px; text-align: left;
 }
-.turntable-room-tools button:hover { background: #4d311c; }
-.turntable-room-tools button[aria-expanded=true], .turntable-room-tools button.is-active { background: var(--px-accent, #e0ad69); color: #24170d; }
-.turntable-room-tools button:focus-visible { outline: 2px solid #ffe0a8; outline-offset: 2px; }
+.turntable-room-tools button:hover { background: var(--px-surface-3); }
+.turntable-room-tools button[aria-expanded=true], .turntable-room-tools button.is-active { background: var(--px-accent); color: var(--px-ink-on-accent); }
 .turntable-room-tools svg { flex: none; }
 .cabin-room .shelf-filters { left: min(calc(var(--room-tools-right, 304px) + 12px), calc(100% - min(700px, calc(100% - 28px)) - 14px)); }
 .shelf-filters-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; font-size: 13px; }
-.shelf-filters-header button { padding: 5px 10px; background: #4d311c; border: 1px solid #d4a46b; color: #ffe9cb; }
+.shelf-filters-header button { padding: 5px 10px; background: var(--px-surface-3); border: 1px solid var(--px-brass); color: var(--px-ink); }
 
 /* Queue open (待播) or long match lists must never push the volume/progress
    row out of reach: the console scrolls, the sliders stay pinned to its
    bottom edge (sticky inside the scrolling console). */
-.room-turntable .turntable-console { max-height: min(62vh, 460px); overscroll-behavior: contain; }
+.room-turntable .turntable-console { overflow: auto; overscroll-behavior: contain; }
 .room-turntable .turntable-audio-sliders { position: sticky; bottom: -12px; z-index: 2; margin: 8px -12px -12px; padding: 8px 12px 10px; background: linear-gradient(#2a1a10, #24160f); box-shadow: 0 -2px 0 #8a5a3266; }
-@media (max-height: 760px) { .room-turntable .turntable-console { max-height: calc(100vh - 260px); } }
-.room-turntable .turntable-closeup { display: grid; place-items: center; width: 22px; height: 22px; margin-left: auto; margin-right: 6px; padding: 0; color: var(--px-ink-dim); background: var(--px-surface-2); border: 2px solid var(--px-shadow); box-shadow: inset 1px 1px 0 #ffffff1c; cursor: pointer; }
-.room-turntable .turntable-closeup:hover { color: #24170d; background: var(--px-accent); }
+.room-turntable .turntable-source-chip { display: inline-flex; align-items: center; gap: 4px; min-width: 0; max-width: 50%; min-height: var(--px-hit); margin-left: auto; padding: 0 6px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--px-ink-dim); background: var(--px-surface-2); border: 2px solid var(--px-shadow); box-shadow: inset 1px 1px 0 #ffffff1c; font: inherit; font-size: 12px; cursor: pointer; }
+.room-turntable .turntable-source-chip:hover { color: var(--px-ink-on-accent); background: var(--px-accent); }
+small.turntable-source-chip { cursor: default; }
+/* 整理唱片架 › 专辑墙: the last row of the shelf panel. */
+.shelf-filter-wall { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 2px solid var(--px-border-subtle); font-size: 12px; color: var(--px-ink-dim); }
+.shelf-filter-wall button { display: inline-flex; align-items: center; gap: 6px; min-height: var(--px-hit); padding: 4px 10px; background: var(--px-surface-3); border: 2px solid var(--px-shadow); color: var(--px-ink); font: inherit; font-size: 12px; cursor: pointer; }
+.shelf-filter-wall button:hover { background: var(--px-accent); color: var(--px-ink-on-accent); }
+}

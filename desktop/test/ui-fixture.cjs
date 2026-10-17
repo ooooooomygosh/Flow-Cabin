@@ -76,12 +76,58 @@ async function chooseRoomScene(site, sceneId) {
   const { getRoomScene } = await import('../../src/scene-catalog.mjs');
   const scene = getRoomScene(sceneId);
   if (scene.id !== sceneId) throw new Error(`Unknown scene in test: ${sceneId}`);
-  await site.getByRole('button', { name: '设置', exact: true }).click();
-  await site.getByRole('tab', { name: '房间与桌宠', exact: true }).click();
+  await openRoomSettings(site);
   const picker = site.getByRole('dialog', { name: '设置', exact: true }); // 布置小屋 opens 设置 › 房间与桌宠 (PR #16)
   await picker.getByRole('button', { name: `选择场景 ${scene.label}`, exact: true }).click();
-  await picker.getByRole('button', { name: '回到小屋', exact: true }).click();
+  await picker.getByRole('button', { name: '关闭设置', exact: true }).click(); await picker.waitFor({ state: 'hidden' });
   await site.locator(`.cabin-scene[data-room-look="${sceneId}"]`).waitFor();
 }
 async function useWarmCabin(site) { await chooseRoomScene(site, 'warm'); }
-module.exports = { mountFixture, albums, chooseRoomScene, useWarmCabin };
+// The old 布置小屋 / 音源设置 buttons are gone; both live in the settings hub.
+async function openRoomSettings(site) {
+  await site.getByRole('button', { name: '设置', exact: true }).click();
+  await site.getByRole('tab', { name: '房间与桌宠', exact: true }).click();
+}
+// 设置 › 音源 › 账户与文件夹: logins, local folders and Music Assistant, a page inside 设置.
+const settingsDialog = (site) => site.getByRole('dialog', { name: '设置', exact: true });
+const accountsRegion = (site) => settingsDialog(site).getByRole('region', { name: '账户与文件夹', exact: true });
+async function openSourceSettings(site) {
+  if (!await settingsDialog(site).isVisible()) await site.getByRole('button', { name: '设置', exact: true }).click();
+  await settingsDialog(site).getByRole('tab', { name: '音源', exact: true }).click();
+}
+async function openMusicSettings(site) {
+  await openSourceSettings(site);
+  await settingsDialog(site).getByRole('button', { name: '账户与文件夹', exact: true }).click(); await accountsRegion(site).waitFor();
+  return accountsRegion(site);
+}
+async function closeSettings(site) {
+  await site.getByRole('button', { name: '关闭设置', exact: true }).click(); await settingsDialog(site).waitFor({ state: 'hidden' });
+}
+// The one 唱机音源 picker: a radio per provider in 设置 › 音源, named by the provider table.
+async function chooseSource(site, id) {
+  const { providerLabel } = await import('../../src/player/providers.mjs');
+  await openSourceSettings(site);
+  const radio = settingsDialog(site).getByRole('radiogroup', { name: '唱机音源', exact: true }).getByRole('radio', { name: providerLabel(id), exact: true });
+  await radio.click(); await site.waitForFunction((value) => document.querySelector('.room-turntable')?.dataset.provider === value, id);
+  if (await radio.getAttribute('aria-checked') !== 'true') throw new Error(`唱机音源 ${id} was not selected`);
+  await closeSettings(site);
+}
+// 添加到唱片架 (titlebar ＋) holds every way onto the shelf: 曲库搜索, 我的歌单, 本地音乐, 手动填写.
+const addDialog = (site) => site.getByRole('dialog', { name: '添加到唱片架', exact: true });
+async function openAddToShelf(site, tab = '曲库搜索') {
+  await site.getByRole('button', { name: '添加到唱片架', exact: true }).click(); await addDialog(site).waitFor();
+  if (tab !== '曲库搜索') await addDialog(site).getByRole('tab', { name: tab, exact: true }).click();
+  return addDialog(site);
+}
+// Per-record tools (自定义唱片) live on the 唱片卡片 of the selected record.
+async function openRecordTools(site) {
+  await site.locator('.room-now-playing').getByRole('button', { name: '唱片卡片', exact: true }).click();
+  const card = site.getByRole('dialog', { name: /^唱片卡片/ }); await card.waitFor();
+  await card.getByRole('button', { name: '自定义唱片', exact: true }).click();
+  return site.getByRole('dialog', { name: '自定义唱片' });
+}
+async function closeRecordCard(site) {
+  const card = site.getByRole('dialog', { name: /^唱片卡片/ });
+  if (await card.isVisible()) { await card.getByRole('button', { name: '关闭唱片卡片', exact: true }).click(); await card.waitFor({ state: 'hidden' }); }
+}
+module.exports = { mountFixture, albums, chooseRoomScene, useWarmCabin, openRoomSettings, openMusicSettings, openSourceSettings, closeSettings, chooseSource, openAddToShelf, openRecordTools, closeRecordCard, settingsDialog, accountsRegion };

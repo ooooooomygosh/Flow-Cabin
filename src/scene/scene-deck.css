@@ -1,12 +1,21 @@
 /* Scene-integrated turntable (owner: beauty). Positions are in art pixels of
    the 1448×1086 scene: left = x/1448, top = (shelfTop − 80)/1086. */
+@layer guards, reset, features, skin, overrides;
+@layer features {
 .scene-deck { position: absolute; z-index: 3; left: calc(636 / 1448 * 100%); top: calc(106 / 1086 * 100%); width: calc(224 / 1448 * 100%); height: calc(88 / 1086 * 100%); --deck-energy: 0; pointer-events: auto; }
 [data-room-look='warm'] .scene-deck { left: calc(638 / 1448 * 100%); top: calc(102 / 1086 * 100%); }
 [data-room-look='forest'] .scene-deck { left: calc(590 / 1448 * 100%); top: calc(103 / 1086 * 100%); }
 [data-room-look='seaside'] .scene-deck { left: calc(556 / 1448 * 100%); top: calc(103 / 1086 * 100%); }
 [data-room-look='starlight'] .scene-deck { left: calc(528 / 1448 * 100%); top: calc(103 / 1086 * 100%); }
+/* Per-scene wood and second light (deck-sprite.mjs DECK_PALETTES): the walnut deck and
+   fire-side rim belong to the warm cabins; cool rooms get a deck graded from their own
+   shelf and a rim in their own sky. --deck-16 is that rim, --deck-17 the plinth grain. */
+[data-room-look='night-study'] .scene-deck { --deck-16: #9fb4d8; }
+[data-room-look='forest'] .scene-deck { --deck-2: #5a4a32; --deck-3: #6e5c3f; --deck-4: #3b3020; --deck-5: #7d6a48; --deck-6: #94805a; --deck-12: #2e261a; --deck-16: #d8e6a0; --deck-17: #6c5a3c; }
+[data-room-look='seaside'] .scene-deck { --deck-2: #9c8462; --deck-3: #b09774; --deck-4: #735f45; --deck-5: #bca684; --deck-6: #cfbc98; --deck-12: #5a4a36; --deck-16: #cfe2e8; --deck-17: #a8916f; --deck-arm: #85878a; }
+[data-room-look='starlight'] .scene-deck { --deck-2: #3d4660; --deck-3: #55607e; --deck-4: #262c3d; --deck-5: #6b7596; --deck-6: #8a93b0; --deck-12: #1e2333; --deck-16: #c2cbe8; --deck-17: #5c6585; }
 .scene-deck-sprite { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; image-rendering: pixelated; }
-.scene-deck-shadow { opacity: .35; }
+.scene-deck-shadow { opacity: .5; } /* the checker cast; the gap under the plinth is solid in the body */
 
 /* Record drops onto the platter in four frames, then the lamp sheen orbits. */
 .scene-deck-record { animation: deck-record-seat 320ms steps(4, end) both; }
@@ -23,9 +32,10 @@
 .scene-deck.is-playing .scene-deck-led { opacity: 1; animation: deck-led 1.2s steps(2, end) infinite; }
 @keyframes deck-led { 50% { opacity: .62; } }
 
-/* Lamp-warm halo behind the deck: brighter with the music's energy. */
+/* Lamp-warm halo behind the deck, in three hard bands (a pixel light pool, not a soft
+   glow): brighter with the music's energy. */
 .scene-deck-glow { position: absolute; left: -18%; right: -18%; top: -55%; bottom: 5%; pointer-events: none; opacity: 0;
-  background: radial-gradient(closest-side, #ffbe6a66, #ffbe6a22 55%, transparent); transition: opacity var(--px-dur-slow, 480ms) steps(4, end); }
+  background: radial-gradient(closest-side, #ffbe6a38 0 46%, #ffbe6a24 46% 72%, #ffbe6a12 72% 100%, transparent 100%); transition: opacity var(--px-dur-slow, 480ms) steps(4, end); }
 .scene-deck.is-playing .scene-deck-glow { opacity: calc(.35 + var(--deck-energy) * .65); }
 
 /* Pixel notes drift up from the record while it plays. */
@@ -48,6 +58,5 @@
 .scene-deck.is-drop-target::after, .scene-deck-hit:focus-visible { outline: 2px dashed var(--px-focus, #ffd99c); outline-offset: 3px; }
 .scene-deck.is-drop-target::after { content: ''; position: absolute; inset: 0 -4%; background: #ffe1a01f; pointer-events: none; }
 
-@media (prefers-reduced-motion: reduce) { .scene-deck-record, .scene-deck.is-playing .scene-deck-sheen-strip, .scene-deck.is-playing .scene-deck-notes i, .scene-deck.is-playing .scene-deck-led { animation: none !important; }  }
-html[data-desktop-reduce-motion='true'] .scene-deck * { animation: none !important; }
-
+/* Reduced motion (OS or in-app) is the guards layer's kill switch in tokens.css. */
+}

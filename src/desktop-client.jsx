@@ -1,14 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Settings, Minus, Expand, Contract, X } from './icons';
 import { readCabinFullscreen, requestCabinFullscreen } from './desktop/fullscreen-client.mjs';
+import { desktopCommand } from './desktop/desktop-command.mjs';
 
-export function desktopCommand(command, params = {}) {
-  const url = new URL(`album-desktop://action/${command}`);
-  for (const [key, value] of Object.entries(params)) url.searchParams.set(key, String(value));
-  // A denied new-window request carries a fixed command without navigating
-  // or reloading the business page. No native IPC is exposed to that page.
-  window.open(url.href, '_blank');
-}
+export { desktopCommand };
 export function useDesktopAppearance() {
   const read = () => ({ ...(window.albumDesktopAppearance || {}), reduceMotion: document.documentElement.dataset.desktopReduceMotion === 'true', client: document.documentElement.dataset.desktopClient === 'true' });
   const [appearance, setAppearance] = useState(read);
@@ -35,10 +30,10 @@ export function useDesktopFullscreen() {
   }, []);
   return fullscreen;
 }
-export function DesktopControls({ fallback = false, onSettings, onError }) {
+export function DesktopControls({ onSettings, onError }) {
   const appearance = useDesktopAppearance(), fullscreen = useDesktopFullscreen();
   const toggle = () => requestCabinFullscreen().catch(() => onError?.('无法切换全屏，请检查浏览器是否允许全屏后重试。'));
-  return <div className={`desktop-controls ${fallback ? 'desktop-fallback' : ''}`} aria-label="软件与窗口控制">
+  return <div className="desktop-controls" aria-label="软件与窗口控制">
     <button type="button" aria-label="设置" title="设置：音源、房间、专注、显示与字体、备份" onClick={onSettings}><Settings size={20}/></button>
     <span className="window-control-divider"/>
     <button type="button" aria-label={fullscreen ? "退出全屏模式" : "进入全屏模式"} aria-pressed={fullscreen} title={appearance.client ? '交互全屏 · F11' : fullscreen ? '退出全屏' : '进入全屏'} onClick={toggle}>{fullscreen ? <Contract size={18}/> : <Expand size={18}/>}</button>

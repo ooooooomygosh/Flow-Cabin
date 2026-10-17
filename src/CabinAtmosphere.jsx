@@ -1,8 +1,9 @@
-import React, { useEffect, useId, useRef } from 'react';
+import React, { memo, useEffect, useId, useRef } from 'react';
 import { ATMOSPHERE, atmosphereFrame, createAtmosphereLoop } from './cabin-atmosphere.mjs';
 import './cabin-atmosphere.css';
 import { createFirePainter } from './cabin-fire.mjs';
-import { frameClock, onBackgroundChange } from './frame-clock.mjs';
+import { frameClock, onBackgroundChange, onOcclusionChange } from './frame-clock.mjs';
+import { onReducedMotionChange } from './motion-preference.mjs';
 import { performanceLevel, onPerformanceChange } from './perf-profile.mjs';
 
 const placement = ({ x, y, width, height }) => ({ left: `${x / 1448 * 100}%`, top: `${y / 1086 * 100}%`, width: `${width / 1448 * 100}%`, height: `${height / 1086 * 100}%` });
@@ -12,23 +13,12 @@ function prepare(canvas, box, pixel) {
   const ctx = canvas.getContext('2d'); if (!ctx) return null; ctx.imageSmoothingEnabled = !pixel; ctx.scale(canvas.width / box.width, canvas.height / box.height);
   return ctx;
 }
-// The clean background behind snow / fire is cut out of the 1448×1086 artwork
+// The clean background behind the fire is cut out of the 1448×1086 artwork
 // once, at canvas resolution, instead of being resampled from it every frame.
 function crop(clean, box, ctx) {
   const canvas = document.createElement('canvas'); canvas.width = ctx.canvas.width; canvas.height = ctx.canvas.height;
   const c = canvas.getContext('2d'); c.imageSmoothingEnabled = ctx.imageSmoothingEnabled; c.drawImage(clean, box.x, box.y, box.width, box.height, 0, 0, canvas.width, canvas.height);
   return canvas;
-}
-function paintSnow(ctx, geometry, flakes, pixel, backdrop) {
-  const { width, height } = geometry.window; ctx.clearRect(0, 0, width, height); ctx.save(); ctx.beginPath();
-  for (const pane of geometry.panes) ctx.rect(...pane); ctx.clip();
-  ctx.drawImage(backdrop, 0, 0, width, height);
-  for (const flake of flakes) {
-    ctx.fillStyle = `rgba(226,239,255,${flake.alpha})`;
-    if (pixel) ctx.fillRect(Math.round(flake.x / 4) * 4, Math.round(flake.y / 4) * 4, 4, 4);
-    else { ctx.beginPath(); ctx.arc(flake.x, flake.y, flake.radius, 0, Math.PI * 2); ctx.fill(); }
-  }
-  ctx.restore();
 }
 function paintFire(ctx, geometry, seconds, backdrop, renderFire) {
   const { width, height } = geometry.fire; ctx.clearRect(0, 0, width, height); ctx.save(); ctx.beginPath();
@@ -37,23 +27,24 @@ function paintFire(ctx, geometry, seconds, backdrop, renderFire) {
   renderFire(ctx, width, height, seconds);
   ctx.restore();
 }
-export default function CabinAtmosphere({ look, weather }) {
+// Window weather and sky live in CabinAtmosphereSky (every scene); this layer is the hearth.
+function CabinAtmosphere({ look }) {
   const gradient = useId().replace(/:/g, '');
-  const root = useRef(null), snow = useRef(null), fire = useRef(null), light = useRef(null);
+  const root = useRef(null), fire = useRef(null), light = useRef(null);
   const geometry = ATMOSPHERE[look] || ATMOSPHERE.warm;
   useEffect(() => {
     const element = root.current, pixel = look === 'pixel' || look === 'warm'; // every room is pixel art now
-    const snowContext = prepare(snow.current, geometry.window, pixel), fireContext = prepare(fire.current, geometry.fire, pixel);
-    if (!snowContext || !fireContext) { element.dataset.motion = 'unavailable'; return; }
+    const fireContext = prepare(fire.current, geometry.fire, pixel);
+    if (!fireContext) { element.dataset.motion = 'unavailable'; return; }
     const renderFire = createFirePainter(pixel);
     if (!renderFire) { element.dataset.motion = 'unavailable'; return; }
     const surfaces = [...light.current.querySelectorAll('[data-surface]')];
-    const clean = new Image(); let ready = false, disposed = false, windowBackdrop = null, fireBackdrop = null, lastLight = 0;
-    const shown = new Map(), buffer = { snow: null, surfaces: {} };
+    const clean = new Image(); let ready = false, disposed = false, fireBackdrop = null, lastLight = 0;
+    const shown = new Map(), buffer = { surfaces: {} };
     const draw = (seconds) => {
       if (!ready || disposed) return;
-      const frame = atmosphereFrame(seconds, look, weather, buffer);
-      paintSnow(snowContext, geometry, frame.snow, pixel, windowBackdrop); paintFire(fireContext, geometry, seconds, fireBackdrop, renderFire);
+      const frame = atmosphereFrame(seconds, look, buffer);
+      paintFire(fireContext, geometry, seconds, fireBackdrop, renderFire);
       // Firelight on the floor and hearth changes slowly; restyling these large
       // SVG shapes repaints half the room, so only visible changes are applied.
       if (seconds - lastLight < .16 && seconds > 0) return;
@@ -67,24 +58,24 @@ export default function CabinAtmosphere({ look, weather }) {
     const rate = () => pixel ? (performanceLevel() === 'low' ? 8 : 12) : (performanceLevel() === 'low' ? 12 : 24);
     const loop = createAtmosphereLoop({ draw, request: requestAnimationFrame, cancel: cancelAnimationFrame, now: () => performance.now(), fps: rate(), clock: frameClock() });
     const offPerformance = onPerformanceChange(() => loop.setFps(rate()));
-    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
-    let background = frameClock().paused;
+    // One policy for every room loop: hidden/minimized (frame clock), covered by
+    // 唱机特写 (occlusion) and the combined OS + desktop reduced-motion switch.
+    let background = frameClock().paused, occluded = false, reduced = false;
     const update = () => {
-      const reduced = media.matches || document.documentElement.dataset.desktopReduceMotion === 'true';
       if (!ready) return;
-      const mode = background ? 'hidden' : reduced ? 'reduced' : 'running';
+      const mode = background || occluded ? 'hidden' : reduced ? 'reduced' : 'running';
       element.dataset.motion = mode; loop.setMode(mode);
     };
-    const observer = new MutationObserver(update); observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-desktop-reduce-motion'] });
-    media.addEventListener('change', update);
+    const offReduced = onReducedMotionChange((value) => { reduced = value; update(); });
+    const offOcclusion = onOcclusionChange((value) => { occluded = value; update(); });
     // Share the clock's hidden/minimized policy; ordinary blur keeps the room alive.
     const offBackground = onBackgroundChange((value) => { background = value; update(); });
     element.dataset.motion = 'loading';
-    clean.onload = () => { if (disposed) return; windowBackdrop = crop(clean, geometry.window, snowContext); fireBackdrop = crop(clean, geometry.fire, fireContext); ready = true; draw(0); update(); };
+    clean.onload = () => { if (disposed) return; fireBackdrop = crop(clean, geometry.fire, fireContext); ready = true; draw(0); update(); };
     clean.onerror = () => { if (!disposed) element.dataset.motion = 'unavailable'; };
     clean.src = `/room-scenes/${look}-cabin-clean.png`;
-    return () => { disposed = true; clean.onload = clean.onerror = null; loop.dispose(); offPerformance(); observer.disconnect(); media.removeEventListener('change', update); offBackground(); };
-  }, [look, weather, geometry]);
+    return () => { disposed = true; clean.onload = clean.onerror = null; loop.dispose(); offPerformance(); offReduced(); offOcclusion(); offBackground(); };
+  }, [look, geometry]);
   return <div ref={root} className={`cabin-atmosphere atmosphere-${look}`} aria-hidden="true">
     {/* Edited illumination is sampled only on bare floor; all other original
         pixels (including furniture, rug, window and fire) remain untouched. */}
@@ -97,7 +88,6 @@ export default function CabinAtmosphere({ look, weather }) {
       </defs>
       <image href={`/room-scenes/${look}-cabin-floor.png`} width="1448" height="1086" clipPath={`url(#${gradient}-floor-base)`} mask={`url(#${gradient}-floor-mask)`}/>
     </svg>
-    <canvas ref={snow} className="cabin-window-snow" style={placement(geometry.window)}/>
     <canvas ref={fire} className="cabin-hearth-fire" style={placement(geometry.fire)}/>
     <svg ref={light} className="cabin-hearth-light" viewBox="0 0 1448 1086" preserveAspectRatio="none">
       <defs>
@@ -118,3 +108,4 @@ export default function CabinAtmosphere({ look, weather }) {
     </svg>
   </div>;
 }
+export default memo(CabinAtmosphere);

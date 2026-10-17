@@ -1,5 +1,7 @@
 // Procedural lo-fi generator. The idea of an endless, seeded Tone.js lo-fi
 // stream follows meel-hd/lofi-engine (MIT); this implementation is original.
+// Named imports: only these Tone members reach the vendor-tone chunk (this module is itself loaded lazily).
+import { start as startTone, getContext, FMSynth, Filter, Gain, Loop, MembraneSynth, MonoSynth, Noise, NoiseSynth, PolySynth, Reverb, Synth, getDraw, getTransport } from 'tone';
 import { mulberry32 } from './ambience.mjs';
 
 const NOTE_NAMES = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
@@ -43,26 +45,25 @@ export function composeSection(seed) {
 // late, cancelled factory cannot stop its active replacement.
 const activePlayers = new Set();
 
-// Lazily loads Tone.js so the main bundle stays small until music is wanted.
+// useSoundscape imports this module lazily, so Tone stays out of the main bundle until music is wanted.
 export async function createLofiPlayer({ onSection } = {}) {
-  const Tone = await import('tone');
-  await Tone.start();
-  const out = new Tone.Gain(0).toDestination();
-  const tape = new Tone.Filter(1800, 'lowpass').connect(out);
-  const space = new Tone.Reverb({ decay: 3.2, wet: .28 }).connect(tape);
-  const keys = new Tone.PolySynth(Tone.FMSynth, { harmonicity: 2, modulationIndex: 1.2, oscillator: { type: 'sine' }, modulation: { type: 'triangle' }, envelope: { attack: .02, decay: 1.2, sustain: .35, release: 1.8 }, volume: -15 }).connect(space);
-  const lead = new Tone.Synth({ oscillator: { type: 'triangle' }, envelope: { attack: .01, decay: .4, sustain: .2, release: .8 }, volume: -20 }).connect(space);
-  const bass = new Tone.MonoSynth({ oscillator: { type: 'sine' }, filter: { Q: 1, type: 'lowpass' }, envelope: { attack: .02, decay: .3, sustain: .6, release: .6 }, filterEnvelope: { baseFrequency: 120, octaves: 1.5 }, volume: -10 }).connect(tape);
-  const kick = new Tone.MembraneSynth({ pitchDecay: .04, octaves: 5, envelope: { attack: .001, decay: .35, sustain: 0 }, volume: -8 }).connect(tape);
-  const snareBand = new Tone.Filter(1800, 'bandpass').connect(space), hatHigh = new Tone.Filter(7000, 'highpass').connect(tape);
-  const crackleLevel = new Tone.Gain(.012).connect(out), crackleHigh = new Tone.Filter(2500, 'highpass').connect(crackleLevel);
-  const snare = new Tone.NoiseSynth({ noise: { type: 'pink' }, envelope: { attack: .001, decay: .16, sustain: 0 }, volume: -20 }).connect(snareBand);
-  const hat = new Tone.NoiseSynth({ noise: { type: 'white' }, envelope: { attack: .001, decay: .04, sustain: 0 }, volume: -30 }).connect(hatHigh);
-  const crackle = new Tone.Noise('pink').connect(crackleHigh);
-  const transport = Tone.getTransport();
+  await startTone();
+  const out = new Gain(0).toDestination();
+  const tape = new Filter(1800, 'lowpass').connect(out);
+  const space = new Reverb({ decay: 3.2, wet: .28 }).connect(tape);
+  const keys = new PolySynth(FMSynth, { harmonicity: 2, modulationIndex: 1.2, oscillator: { type: 'sine' }, modulation: { type: 'triangle' }, envelope: { attack: .02, decay: 1.2, sustain: .35, release: 1.8 }, volume: -15 }).connect(space);
+  const lead = new Synth({ oscillator: { type: 'triangle' }, envelope: { attack: .01, decay: .4, sustain: .2, release: .8 }, volume: -20 }).connect(space);
+  const bass = new MonoSynth({ oscillator: { type: 'sine' }, filter: { Q: 1, type: 'lowpass' }, envelope: { attack: .02, decay: .3, sustain: .6, release: .6 }, filterEnvelope: { baseFrequency: 120, octaves: 1.5 }, volume: -10 }).connect(tape);
+  const kick = new MembraneSynth({ pitchDecay: .04, octaves: 5, envelope: { attack: .001, decay: .35, sustain: 0 }, volume: -8 }).connect(tape);
+  const snareBand = new Filter(1800, 'bandpass').connect(space), hatHigh = new Filter(7000, 'highpass').connect(tape);
+  const crackleLevel = new Gain(.012).connect(out), crackleHigh = new Filter(2500, 'highpass').connect(crackleLevel);
+  const snare = new NoiseSynth({ noise: { type: 'pink' }, envelope: { attack: .001, decay: .16, sustain: 0 }, volume: -20 }).connect(snareBand);
+  const hat = new NoiseSynth({ noise: { type: 'white' }, envelope: { attack: .001, decay: .04, sustain: 0 }, volume: -30 }).connect(hatHigh);
+  const crackle = new Noise('pink').connect(crackleHigh);
+  const transport = getTransport();
   let section = composeSection((Math.random() * 2 ** 31) | 0), step = 0;
   onSection?.(section);
-  const loop = new Tone.Loop((time) => {
+  const loop = new Loop((time) => {
     const bar = Math.floor(step / 16), inBar = step % 16, chord = section.chords[bar % 4];
     if (inBar === 0) { keys.triggerAttackRelease(chord.notes.map(midiName), '1m', time + Math.random() * .02, .55 + Math.random() * .2); bass.triggerAttackRelease(midiName(chord.bass), '2n', time); }
     if (inBar === 10 && Math.random() < .5) bass.triggerAttackRelease(midiName(chord.bass + 7), '8n', time);
@@ -73,7 +74,7 @@ export async function createLofiPlayer({ onSection } = {}) {
     step++;
     if (step >= section.bars * 16) { // A new seeded section every 16 bars.
       step = 0; section = composeSection((Math.random() * 2 ** 31) | 0);
-      transport.bpm.rampTo(section.bpm, 2); Tone.getDraw().schedule(() => onSection?.(section), time);
+      transport.bpm.rampTo(section.bpm, 2); getDraw().schedule(() => onSection?.(section), time);
     }
   }, '16n');
   let volume = .55, duck = 1, disposed = false, started = false;
@@ -94,6 +95,8 @@ export async function createLofiPlayer({ onSection } = {}) {
         if (activePlayers.size === 0) transport.stop();
       }
       [keys, lead, bass, kick, snare, hat, crackle, snareBand, hatHigh, crackleHigh, crackleLevel, space, tape, out].forEach((node) => node.dispose());
+      // With no player left, Tone's own context sleeps; startTone() wakes it for the next one.
+      if (activePlayers.size === 0) { const raw = getContext().rawContext; setTimeout(() => { if (activePlayers.size === 0 && raw.state === 'running') raw.suspend?.().catch?.(() => {}); }, 1500); }
     }
   };
 }

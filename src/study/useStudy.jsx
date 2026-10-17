@@ -39,10 +39,12 @@ export function StudyProvider({ userId, children }) {
     },
     updateCard: (id, change) => commit(model.updateCard(current.current, id, change)),
     removeCard: (id) => commit(model.removeCard(current.current, id)),
+    restoreCard: (card) => commit(model.restoreCard(current.current, card)),
     review: (id, rating) => commit(model.review(current.current, id, rating, Date.now())),
     setNewPerDay: (count) => apply((s) => ({ ...s, newPerDay: count })),
     addCountdown: (title, date) => Boolean(apply((s) => model.addCountdown(s, title, date), current.current.countdowns.length >= model.LIMITS.countdowns ? `倒计时已达 ${model.LIMITS.countdowns} 个上限，请先整理已结束的倒计时。` : '请填写倒计时名称和有效日期。')),
     removeCountdown: (id) => apply((s) => model.removeCountdown(s, id)),
+    restoreCountdown: (entry) => apply((s) => model.restoreCountdown(s, entry)),
     replace: (next) => commit(next)
   };
   return <StudyContext.Provider value={value}>{children}</StudyContext.Provider>;

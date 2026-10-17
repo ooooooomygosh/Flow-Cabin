@@ -1,14 +1,19 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Search, Plus, Check, FolderOpen, Disc3, Loading } from './icons';
 import Dialog from './Dialog';
+import { Tabs, Segmented, tabPanelProps } from './ui/Roving';
 import { buildSearchInput } from './music-search.mjs';
 import { addItem } from './collection-api.mjs';
 import { localAlbumItem, musicRequest, normalizeLocalLibrary } from './room-playback.mjs';
 import { desktopCommand, useDesktopAppearance } from './desktop-client';
 import FileImport from './player/FileImport';
+import PlaylistImport from './PlaylistLibrary';
 import { generatedCover } from './player/pixel-cover.mjs';
 
-const TABS = [['catalog', '曲库搜索'], ['local', '本地音乐'], ['manual', '手动填写']];
+// Every way onto the shelf, in one dialog: catalog search, account playlists / links /
+// files, scanned local folders and picked files, or typed by hand.
+const ADD_TABS = [{ id: 'catalog', label: '曲库搜索' }, { id: 'playlists', label: '我的歌单' }, { id: 'local', label: '本地音乐' }, { id: 'manual', label: '手动填写' }];
+const CATALOGS = [{ id: 'itunes', label: 'Apple 曲库' }, { id: 'qq', label: 'QQ 音乐' }], RESULT_TYPES = [{ id: 'album', label: '专辑' }, { id: 'song', label: '单曲' }, { id: 'all', label: '全部' }];
 const looseTitle = (value) => String(value || '').toLowerCase().replace(/[\s\-_:：·()（）[\]【】.,'"!?]/g, '');
 const readProvider = () => { try { return localStorage.getItem('album-circle-search-provider-v2') === 'qq' ? 'qq' : 'itunes'; } catch { return 'itunes'; } };
 
@@ -44,14 +49,15 @@ function CatalogSearch({ initialQuery, onAdded, added }) {
   return <div className="add-panel">
     <form className="add-search" onSubmit={search} role="search">
       <Search size={18}/><input ref={input} type="search" name="cabin-album-search" aria-label="搜索专辑、歌手或粘贴 QQ 音乐专辑链接" placeholder="歌手 · 专辑 · 歌曲，或粘贴 QQ 音乐专辑链接" value={query} onChange={(event) => setQuery(event.target.value)}/>
-      <button type="submit" className="pixel-button is-primary" disabled={status === 'searching'}>{status === 'searching' ? <Loading size={16}/> : '搜索'}</button>
+      <button type="submit" className="pixel-button is-primary" disabled={status === 'searching'}>{status === 'searching' ? <Loading size={16} className="player-spin"/> : '搜索'}</button>
     </form>
     <div className="add-options">
-      <div className="segmented" role="radiogroup" aria-label="曲库">{[['itunes', 'Apple 曲库'], ['qq', 'QQ 音乐']].map(([value, label]) => <button type="button" role="radio" key={value} aria-checked={provider === value} onClick={() => { if (provider !== value) { request.current?.abort(); setResults([]); setStatus(''); setProvider(value); } try { localStorage.setItem('album-circle-search-provider-v2', value); } catch {} }}>{label}</button>)}</div>
-      <div className="segmented" role="radiogroup" aria-label="类型">{[['album', '专辑'], ['song', '单曲'], ['all', '全部']].map(([value, label]) => <button type="button" role="radio" key={value} aria-checked={type === value} onClick={() => { if (type !== value) { request.current?.abort(); setResults([]); setStatus(''); setType(value); } }}>{label}</button>)}</div>
+      <Segmented label="曲库" items={CATALOGS} value={provider} onChange={(value) => { if (provider !== value) { request.current?.abort(); setResults([]); setStatus(''); setProvider(value); } try { localStorage.setItem('album-circle-search-provider-v2', value); } catch {} }}/>
+      <Segmented label="类型" items={RESULT_TYPES} value={type} onChange={(value) => { if (type !== value) { request.current?.abort(); setResults([]); setStatus(''); setType(value); } }}/>
     </div>
     {status && status !== 'searching' && <p className="add-status" role="status">{status}</p>}
     {status === 'searching' && <p className="add-status" role="status">正在翻找唱片…</p>}
+    {!status && !results.length && <p className="add-hint"><Disc3 size={16}/>输入歌手或专辑名，找到后点「放上唱片架」，封面和曲目一起带回小屋。</p>}
     <ul className="add-results" aria-label="搜索结果">{results.map((candidate) => {
       const done = added.has(candidate.id);
       return <li key={candidate.id}><Cover src={candidate.cover} title={candidate.title}/>
@@ -88,8 +94,8 @@ function LocalImport({ items, onAdded }) {
     finally { setBusy(''); }
   };
   return <div className="add-panel">
-    <p className="add-intro">选择电脑里的音乐文件夹，按标签整理成专辑；音乐留在原位置播放，唱机音源选「本地音乐」。</p>
-    <div className="add-local-actions"><button type="button" className="pixel-button is-primary" disabled={!desktop} title={desktop ? '' : '需要在心流小屋桌面版中使用'} onClick={() => { setMessage('请在弹出的窗口中选择文件夹…'); desktopCommand('local-music-folder'); }}><FolderOpen size={16}/>添加音乐文件夹</button>{state?.albumCount > 0 && <span>{state.albumCount} 张专辑 · {state.trackCount} 首歌曲</span>}</div>
+    <p className="add-intro">扫描过的音乐文件夹按标签整理成专辑；音乐留在原位置播放，唱机音源选「本地音乐」。文件夹在「设置 › 音源 › 账户与文件夹」里管理。</p>
+    <div className="add-local-actions"><button type="button" className="pixel-button is-primary" disabled={!desktop} title={desktop ? '' : '需要在心流小屋桌面版中使用'} onClick={() => { setMessage('请在弹出的窗口中选择文件夹…'); desktopCommand('local-music-folder'); }}><FolderOpen size={16}/>添加音乐文件夹</button>{desktop && <button type="button" className="pixel-button is-quiet" onClick={() => window.dispatchEvent(new CustomEvent('cabin-open-settings', { detail: { section: 'music/accounts' } }))}>管理文件夹</button>}{state?.albumCount > 0 && <span>{state.albumCount} 张专辑 · {state.trackCount} 首歌曲</span>}</div>
     {message && <p className="add-status" role="status">{message}</p>}
     {state?.error && <p className="add-status">{state.error}</p>}
     <ul className="add-results" aria-label="本地专辑">{(state?.albums || []).slice(0, 300).map((album) => {
@@ -125,18 +131,21 @@ function ManualAdd({ onAdded }) {
   </form>;
 }
 
-export default function AddAlbum({ items, close, initialQuery = '', onAdded }) {
-  const [tab, setTab] = useState('catalog'), [added, setAdded] = useState(() => new Set()), [notice, setNotice] = useState('');
+export default function AddAlbum({ items, close, initialQuery = '', initialTab = 'catalog', onAdded }) {
+  const [tab, setTab] = useState(() => ADD_TABS.some(({ id }) => id === initialTab) ? initialTab : 'catalog'), [added, setAdded] = useState(() => new Set()), [notice, setNotice] = useState('');
   const handleAdded = (item, duplicate, candidateId) => {
     setAdded((old) => new Set([...old, candidateId || item.id]));
     setNotice(duplicate ? `《${item.title}》已经在唱片架上了。` : `《${item.title}》已放上唱片架。`);
     onAdded(item);
   };
-  return <Dialog title="添加专辑" icon={<Plus size={20}/>} close={close} wide className="add-album-dialog">
-    <nav className="dialog-tabs" role="tablist" aria-label="添加方式">{TABS.map(([id, label]) => <button type="button" role="tab" key={id} aria-selected={tab === id} onClick={() => setTab(id)}>{label}</button>)}</nav>
-    {notice && <p className="add-notice" role="status"><Check size={16}/>{notice}</p>}
-    {tab === 'catalog' && <CatalogSearch initialQuery={initialQuery} added={added} onAdded={handleAdded}/>}
-    {tab === 'local' && <LocalImport items={items} onAdded={handleAdded}/>}
-    {tab === 'manual' && <ManualAdd onAdded={handleAdded}/>}
+  return <Dialog title="添加到唱片架" icon={<Plus size={20}/>} close={close} size="lg" className={`add-album-dialog is-${tab}`}>
+    <Tabs className="dialog-tabs" label="添加方式" idPrefix="add-tab" items={ADD_TABS} value={tab} onChange={(id) => { setTab(id); setNotice(''); }}/>
+    <div {...tabPanelProps('add-tab', tab)} className="add-album-panel">
+      {notice && tab !== 'playlists' && <p className="add-notice" role="status"><Check size={16}/>{notice}</p>}
+      {tab === 'catalog' && <CatalogSearch initialQuery={initialQuery} added={added} onAdded={handleAdded}/>}
+      {tab === 'playlists' && <PlaylistImport items={items} close={close} onAdded={onAdded}/>}
+      {tab === 'local' && <LocalImport items={items} onAdded={handleAdded}/>}
+      {tab === 'manual' && <ManualAdd onAdded={handleAdded}/>}
+    </div>
   </Dialog>;
 }
