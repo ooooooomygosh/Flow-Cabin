@@ -83,7 +83,7 @@ export function normalizeFocus(value = {}) {
   const v = value && typeof value === 'object' ? value : {};
   const rewards = v.rewards && typeof v.rewards === 'object' ? v.rewards : {};
   const equipped = rewards.equipped && typeof rewards.equipped === 'object' ? rewards.equipped : {};
-  const xp = clamp(rewards.xp, 0, 1e9, 0), unlocked = unlockedIds(xp);
+  const xp = clamp(rewards.xp, 0, 1e9, 0), bought = [...new Set((Array.isArray(rewards.bought) ? rewards.bought : []).filter((id) => UNLOCKS.some((item) => item.id === id)))], unlocked = unlockedIds(xp, bought);
   const pick = (value, kind, fallback) => unlocked.has(value) && UNLOCKS.find((item) => item.id === value)?.kind === kind ? value : fallback;
   return {
     version: 1,
@@ -92,7 +92,7 @@ export function normalizeFocus(value = {}) {
     timer: normalizeTimer(v.timer, normalizeSettings(v.settings)),
     tasks: (Array.isArray(v.tasks) ? v.tasks : []).map(normalizeTask).filter(Boolean).slice(0, 200),
     sessions: (Array.isArray(v.sessions) ? v.sessions : []).map(normalizeSession).filter(Boolean).slice(-2000),
-    rewards: { fish: clamp(rewards.fish, 0, 1e9, 0), xp, equipped: { accessory: pick(equipped.accessory, 'accessory', ''), weather: pick(equipped.weather, 'weather', 'snow') } }
+    rewards: { fish: clamp(rewards.fish, 0, 1e9, 0), xp, bought, equipped: { accessory: pick(equipped.accessory, 'accessory', ''), weather: pick(equipped.weather, 'weather', 'snow') } }
   };
 }
 export function readFocus(storage, userId) {
@@ -247,9 +247,20 @@ export function levelInfo(xp) {
   while (rest >= need) { rest -= need; level++; need = 50 + 25 * (level - 1); }
   return { level, into: rest, need };
 }
-export function unlockedIds(xp) { const { level } = levelInfo(xp); return new Set(UNLOCKS.filter((item) => item.level <= level).map((item) => item.id)); }
+export function unlockedIds(xp, bought = []) { const { level } = levelInfo(xp); return new Set([...UNLOCKS.filter((item) => item.level <= level).map((item) => item.id), ...bought]); }
+// 小鱼干 are worth something: any extra can be bought early for 3 fish per level (src/cat/cat-care.mjs).
+export const unlockPrice = (item) => Math.max(1, (item?.level || 1) * 3);
+export function spendFish(state, count = 1) {
+  const n = Math.max(1, Math.round(count)); if (state.rewards.fish < n) return state;
+  return { ...state, rewards: { ...state.rewards, fish: state.rewards.fish - n } };
+}
+export function buyUnlock(state, id) {
+  const item = UNLOCKS.find((entry) => entry.id === id), owned = unlockedIds(state.rewards.xp, state.rewards.bought);
+  if (!item || owned.has(id) || state.rewards.fish < unlockPrice(item)) return state;
+  return { ...state, rewards: { ...state.rewards, fish: state.rewards.fish - unlockPrice(item), bought: [...(state.rewards.bought || []), id] } };
+}
 export function equip(state, kind, value) {
-  const unlocked = unlockedIds(state.rewards.xp);
+  const unlocked = unlockedIds(state.rewards.xp, state.rewards.bought);
   if (value && (!unlocked.has(value) || UNLOCKS.find((item) => item.id === value)?.kind !== kind)) return state;
   return { ...state, rewards: { ...state.rewards, equipped: { ...state.rewards.equipped, [kind]: value || (kind === 'weather' ? 'snow' : '') } } };
 }

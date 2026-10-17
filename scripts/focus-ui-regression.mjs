@@ -56,6 +56,25 @@ try {
     catch(error){report.checks.push({name,passed:false,phase,error:error.stack});console.error(`FAIL ${name}: ${error.message}`);await screenshot(page,`${name}-failure`).catch(()=>{});}
     finally{await context.close();}
   };
+  await run('cat-feeding-spends-fish-cheers-the-cat-and-caps-friendly',async page=>{
+    await page.evaluate(key=>{const v=JSON.parse(localStorage.getItem(key)||'{}');v.rewards={...(v.rewards||{}),fish:3};localStorage.setItem(key,JSON.stringify(v));localStorage.setItem('flow-cabin-cat-mood-v1',JSON.stringify({mood:40,at:Date.now(),feeds:[],totalFeeds:2}));},KEY);await page.reload();
+    await page.locator('.room-cat').waitFor();assert.equal(await page.locator('.room-cat').getAttribute('data-mood'),'sleepy');
+    await page.evaluate(()=>{window.__fed=[];window.addEventListener('cabin:cat-fed',e=>window.__fed.push(e.detail));window.dispatchEvent(new Event('cabin-open-cat'));});
+    const panel=page.getByRole('dialog',{name:'小猫'});await panel.waitFor();
+    await panel.getByRole('button',{name:'喂一条'}).click();
+    await page.waitForFunction(()=>window.__fed.length===1);const fed=await page.evaluate(()=>window.__fed[0]);
+    assert.equal(fed.fishLeft,2);assert.equal(fed.mood,52);assert.equal(fed.unlocked,'stretch');assert.equal((await focusState(page)).rewards.fish,2);
+    assert.match(await panel.locator('.cat-care-note').innerText(),/伸懒腰/);assert.match(await page.locator('.room-cat').getAttribute('class'),/cat--eating/);await screenshot(page,'cat-fed');
+    // A 小鱼干 dropped on the cat feeds it too.
+    await page.evaluate(()=>{const dt=new DataTransfer();dt.setData('application/x-cabin-fish','1');const cat=document.querySelector('.room-cat');for(const type of ['dragover','drop'])cat.dispatchEvent(new DragEvent(type,{dataTransfer:dt,bubbles:true,cancelable:true}));});
+    await page.waitForFunction(()=>window.__fed.length===2);assert.equal((await focusState(page)).rewards.fish,1);
+    const store=await page.evaluate(()=>JSON.parse(localStorage.getItem('flow-cabin-cat-mood-v1')));assert.equal(store.totalFeeds,4);assert.equal(store.feeds.length,2);
+    // Daily cap: friendly, no fish spent.
+    await page.evaluate(()=>{const s=JSON.parse(localStorage.getItem('flow-cabin-cat-mood-v1'));s.feeds=Array(5).fill(Date.now());localStorage.setItem('flow-cabin-cat-mood-v1',JSON.stringify(s));window.dispatchEvent(new StorageEvent('storage',{key:'flow-cabin-cat-mood-v1'}));});
+    assert.equal(await panel.getByRole('button',{name:'喂一条'}).isDisabled(),true);assert.match(await panel.locator('.cat-care-note').innerText(),/吃饱/);
+    await page.evaluate(()=>window.dispatchEvent(new CustomEvent('cabin:cat-feed-request')));await page.waitForTimeout(200);assert.equal((await focusState(page)).rewards.fish,1,'a full cat costs nothing');
+    await screenshot(page,'cat-full');
+  });
   await run('todo-storage-warning-and-recovery',async page=>{
     await openFocus(page,'待办');await failStorage(page,true);await page.getByLabel('新的待办').fill('未保存的测试任务');await page.getByRole('button',{name:'添加待办',exact:true}).click();
     assert.equal((await focusState(page)).tasks?.length||0,0,'failed write must not pretend to persist');

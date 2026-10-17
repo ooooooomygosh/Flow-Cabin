@@ -5,6 +5,10 @@ import CatBubble from './CatBubble';
 import { useCatPlacement } from './useCatPlacement';
 import { useCatMotion } from './useCatMotion';
 import { getPet } from './pet-catalog.mjs';
+import { useCatCare, requestFeed } from '../cat/useCatCare';
+import { FED_EVENT, FISH_DRAG_TYPE } from '../cat/cat-care.mjs';
+import { catArtLayer, catArtPose } from '../cat/cat-art.mjs';
+import './cat-care.css';
 import { bubbleText, celebrateUntil, petPose, pokeLine, catStroll } from './pet-model.mjs';
 
 export function useClock(interval = 1000, enabled = true) {
@@ -30,9 +34,11 @@ export function useCatBehaviour({ focus = {}, playing = false, track = '', lastA
   const stroll = catStroll(now - strollStart, rest.current, eligible);
   const pose = stroll.walking ? 'walk' : basePose === 'walk' ? 'idle' : basePose;
   const bubble = bubbleText({ phase: focus.phase, paused: focus.paused, remaining, track, trackChangedAt: song.current.at, poke: poke.text, pokedAt: poke.at, now, hour });
-  return { pose, bubble, now, x: stroll.x, reduced: motion.reduced, pokedAt: poke.at, poke: () => setPoke({ text: pokeLine(Math.random, petId), at: Date.now() }) };
+  return { pose, bubble, now, x: stroll.x, reduced: motion.reduced, pokedAt: poke.at, poke: () => { setPoke({ text: pokeLine(Math.random, petId), at: Date.now() }); window.dispatchEvent(new Event('cabin:cat-petted')); } };
 }
 
+// Placeholder eating time; beauty's frames replace the CSS bob (docs/cat-care.md).
+export const EAT_MS = 2400;
 export default function RoomCat({ focus, playing, track, reduceMotion, petId = 'cat', interactive = true, hidden = false }) {
   const [activity, setActivity] = useState(() => Date.now());
   useEffect(() => {
@@ -42,12 +48,18 @@ export default function RoomCat({ focus, playing, track, reduceMotion, petId = '
     return () => ['pointermove', 'keydown', 'wheel'].forEach((name) => window.removeEventListener(name, mark));
   }, [interactive, hidden]);
   const pet = getPet(petId), catRef = useRef(null), bubbleRef = useRef(null), pokeTimer = useRef(0);
+  // Care (src/cat): eating after a feed, mood tier on data-mood, a 小鱼干 can be dropped on the cat.
+  const mood = useCatCare(), [eating, setEating] = useState(false), [dropping, setDropping] = useState(false);
+  useEffect(() => { let timer = 0; const on = () => { setEating(true); clearTimeout(timer); timer = setTimeout(() => setEating(false), EAT_MS); }; window.addEventListener(FED_EVENT, on); return () => { clearTimeout(timer); window.removeEventListener(FED_EVENT, on); }; }, []);
+  const fishDrag = (event) => [...(event.dataTransfer?.types || [])].includes(FISH_DRAG_TYPE);
+  const dropProps = interactive ? { onDragOver: (event) => { if (fishDrag(event)) { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; setDropping(true); } }, onDragLeave: () => setDropping(false), onDrop: (event) => { if (!fishDrag(event)) return; event.preventDefault(); setDropping(false); requestFeed(); } } : {};
   useEffect(() => () => clearTimeout(pokeTimer.current), []);
   const cat = useCatBehaviour({ focus, playing, track, petId: pet.id, lastActivity: interactive ? activity : 0, reduceMotion, hidden });
+  const artState = { tier: mood.tier, pose: cat.pose, phase: focus?.phase, eating, pettedRecently: Date.now() - cat.pokedAt < 4000 }, art = catArtLayer(artState);
   useCatPlacement(catRef, bubbleRef, !hidden, [cat.pose, cat.bubble, cat.x]);
   if (hidden) return null;
-  const body = <><PetLife pose={cat.pose} pokedAt={cat.pokedAt} reduced={cat.reduced}><PixelCat petId={pet.id} pose={cat.pose} accessory={focus?.accessory || ''} skin={focus?.catSkin} reduceMotion={cat.reduced} style={{ transform: `translateX(${cat.x}px)` }} label={`像素${pet.species} · ${pet.name} · ${{ idle: '发呆', groove: '跟着音乐摇摆', celebrate: '庆祝', walk: '散步', sleep: '睡觉', focus: '陪你专注' }[cat.pose]}`}/></PetLife>{cat.bubble && <CatBubble ref={bubbleRef} text={cat.bubble}/>}</>;
+  const body = <><PetLife pose={cat.pose} pokedAt={cat.pokedAt} reduced={cat.reduced}><PixelCat petId={pet.id} pose={cat.pose} accessory={focus?.accessory || ''} skin={focus?.catSkin} reduceMotion={cat.reduced} style={{ transform: `translateX(${cat.x}px)` }} label={`像素${pet.species} · ${pet.name} · ${{ idle: '发呆', groove: '跟着音乐摇摆', celebrate: '庆祝', walk: '散步', sleep: '睡觉', focus: '陪你专注' }[cat.pose]}`}/></PetLife>{art ? <span className={`cat-art is-${art.kind}`} aria-hidden="true" style={{ backgroundImage: `url(${art.url})`, '--cat-art-frames': art.frames || 1, '--cat-art-ms': `${(art.frameMs || 0) * (art.frames || 1)}ms` }}/> : eating && <span className="cat-eat-fish" aria-hidden="true"/>}{(eating ? '好吃！' : cat.bubble) && <CatBubble ref={bubbleRef} text={eating ? '好吃！' : cat.bubble}/>}</>;
   return interactive
-    ? <button ref={catRef} type="button" className="room-cat" aria-haspopup="dialog" aria-expanded="false" title={`点一下摸摸${pet.name} · 双击看看等级和打扮`} aria-label={`摸摸${pet.species}${pet.name}；双击打开等级和打扮`} data-pet-id={pet.id} onClick={(event) => { clearTimeout(pokeTimer.current); if (event.detail > 1) return; pokeTimer.current = setTimeout(cat.poke, event.detail === 0 ? 0 : 260); }} onDoubleClick={() => { clearTimeout(pokeTimer.current); window.dispatchEvent(new Event('cabin-open-cat')); }} onContextMenu={(event) => { event.preventDefault(); window.dispatchEvent(new Event('cabin-open-cat')); }}>{body}</button>
-    : <div ref={catRef} className="room-cat" data-pet-id={pet.id}>{body}</div>;
+    ? <button ref={catRef} type="button" className={`room-cat${`${eating ? ' cat--eating' : ''}${dropping ? ' cat--drop-target' : ''}${mood.tier === 'happy' && focus?.phase === 'focus' ? ' cat--by-desk' : ''}`}`} data-mood={mood.tier} data-art={catArtPose(artState)} {...dropProps} aria-haspopup="dialog" aria-expanded="false" title={`点一下摸摸${pet.name} · 双击看看等级和打扮`} aria-label={`摸摸${pet.species}${pet.name}；双击打开等级和打扮`} data-pet-id={pet.id} onClick={(event) => { clearTimeout(pokeTimer.current); if (event.detail > 1) return; pokeTimer.current = setTimeout(cat.poke, event.detail === 0 ? 0 : 260); }} onDoubleClick={() => { clearTimeout(pokeTimer.current); window.dispatchEvent(new Event('cabin-open-cat')); }} onContextMenu={(event) => { event.preventDefault(); window.dispatchEvent(new Event('cabin-open-cat')); }}>{body}</button>
+    : <div ref={catRef} className={`room-cat${eating ? ' cat--eating' : ''}`} data-mood={mood.tier} data-pet-id={pet.id}>{body}</div>;
 }

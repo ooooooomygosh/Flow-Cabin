@@ -115,6 +115,8 @@ export function FocusProvider({ userId, children }) {
     saveNotes: (notes) => apply((s) => ({ ...s, notes: model.normalizeNotes(notes) }), { volatile: true }),
     selectTask: (id, toggle = false) => apply((s) => model.selectTask(s, id, toggle)),
     equip: (kind, value) => apply((s) => model.equip(s, kind, value)),
+    spendFish: (count = 1) => apply((s) => model.spendFish(s, count)),
+    buyUnlock: (id) => apply((s) => model.buyUnlock(s, id)),
     retrySave: () => commit(current.current, { volatile: true, overwriteConflict: true }).persisted,
     replace: (value) => commit({ ...model.normalizeFocus(value), timer: current.current.timer }).persisted
   }), [key]);

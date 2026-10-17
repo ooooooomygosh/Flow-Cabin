@@ -84,3 +84,11 @@ Other Electron windows (the desktop-mode mini turntable) do not dispatch this th
 | `cabin-open-music-settings` | → cabin | no detail. Opens 设置 › 音源 (used by the player's error card and the turntable's source chip). |
 | `album-quick-search` | → app | `{ query }` opens 添加到唱片架 › 曲库搜索 with that query. |
 | `album-music-account` / `album-music-settings` | desktop → page | Sign-in or source settings changed. The player re-resolves the current track. |
+
+## `cabin:cat-fed` / `cabin:cat-mood` / `cabin:cat-feed-request`
+
+- `cabin:cat-fed`：每喂一次就在 `window` 上触发，`detail` 为 `{ fishLeft, mood, tier, feedsToday, totalFeeds, unlocked, at }`；`unlocked` 是这次新解锁的小动作 id，没有时为 `''`。
+- `cabin:cat-mood`：心情数值或档位变化时触发，`detail` 为 `{ mood, tier }`，`tier` 取值 `happy | ok | sleepy`。当前档位同时写在 `document.documentElement.dataset.catMood` 和 `.room-cat[data-mood]` 上。
+- `cabin:cat-feed-request`（输入）：请求喂一条，喂食按钮和把小鱼干拖到小猫身上都发这个事件。吃饱或没有小鱼干时不扣鱼，只显示提示。
+
+存储格式和规则见 `docs/cat-care.md`。
