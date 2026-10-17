@@ -87,8 +87,20 @@ Other Electron windows (the desktop-mode mini turntable) do not dispatch this th
 
 ## `cabin:cat-fed` / `cabin:cat-mood` / `cabin:cat-feed-request`
 
-- `cabin:cat-fed`：每喂一次就在 `window` 上触发，`detail` 为 `{ fishLeft, mood, tier, feedsToday, totalFeeds, unlocked, at }`；`unlocked` 是这次新解锁的小动作 id，没有时为 `''`。
-- `cabin:cat-mood`：心情数值或档位变化时触发，`detail` 为 `{ mood, tier }`，`tier` 取值 `happy | ok | sleepy`。当前档位同时写在 `document.documentElement.dataset.catMood` 和 `.room-cat[data-mood]` 上。
+格式已锁定，小屋日记（#57）按这个读取。
+
+- `cabin:cat-fed`：每喂一次，在 `window` 上触发一次，`detail` 为 `{ at, mood, tier, fishLeft, totalFeeds }`（`at` 是毫秒时间戳）。
+- `cabin:cat-mood`：心情数值或档位变化时触发，`detail` 为 `{ mood, tier }`。`tier` 取值 `happy | ok | droopy`（开心 / 还不错 / 无精打采）。当前档位同时写在 `document.documentElement.dataset.catMood` 和 `.room-cat[data-mood]` 上。
 - `cabin:cat-feed-request`（输入）：请求喂一条，喂食按钮和把小鱼干拖到小猫身上都发这个事件。吃饱或没有小鱼干时不扣鱼，只显示提示。
 
-存储格式和规则见 `docs/cat-care.md`。
+存储 `localStorage['flow-cabin-cat-mood-v1']`，只有以下字段：
+
+```js
+{ v: 1, mood: 62,                 // 0–100
+  tier: 'ok',                     // 'happy' | 'ok' | 'droopy'
+  updatedAt: 1760000000000,       // 上次结算心情的时间（毫秒）
+  feeds: [{ at: 1760000000000, fishLeft: 2 }],   // 最近 400 次喂食
+  totalFeeds: 3, unlockedActions: ['stretch'] }
+```
+
+每天摸摸的次数和已经加过心情的专注记录，另存在 `flow-cabin-cat-care-meta-v1`（只供内部使用）。规则见 `docs/cat-care.md`。

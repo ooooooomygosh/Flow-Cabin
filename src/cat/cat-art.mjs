@@ -21,7 +21,7 @@ export const STICKERS = Object.freeze(Object.fromEntries(['sticker-best-day', 's
 // Which pose a state maps to.
 export function catArtPose({ tier = 'ok', pose = 'idle', phase = 'idle', pettedRecently = false } = {}) {
   if (pose === 'sleep') return 'cat-sleep-books';
-  if (tier === 'sleepy') return 'cat-droopy';
+  if (tier === 'droopy') return 'cat-droopy';
   if (tier === 'happy') return phase === 'focus' ? 'cat-desk' : 'cat-rub';
   return pettedRecently ? 'cat-rub' : 'cat-wait';
 }

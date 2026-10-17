@@ -7,7 +7,7 @@
 | 项目 | 规则 |
 | --- | --- |
 | 心情 | 0–100，初始 60。每小时缓慢下降 1 点，降到 30（「无精打采」）就停住；不会生病，也不会离家。 |
-| 档位 | `happy` 开心（≥70）· `ok` 还不错（≥45）· `sleepy` 无精打采（<45） |
+| 档位 | `happy` 开心（≥70）· `ok` 还不错（≥45）· `droopy` 无精打采（<45） |
 | 喂一条 | 花 1 条小鱼干，心情 +12。每天最多 5 条，喂满后显示「小猫今天已经吃饱啦，明天再喂吧～」，不扣小鱼干。 |
 | 摸摸 | 点小猫 +2，每天最多计 10 次。 |
 | 专注 | 每完成一轮（`cabin:focus-session` 且 `completed`）+8，同一轮只算一次。 |
@@ -18,13 +18,7 @@
 
 ## 存储：`localStorage['flow-cabin-cat-mood-v1']`
 
-```js
-{ version: 1, mood: 62, at: 1760000000000,  // 上次结算时的心情和时间
-  feeds: [1760000000000, …],                // 每次喂食的时间（最近 500 次），周报用它统计本周喂食次数
-  totalFeeds: 3, pets: { day, count }, rewarded: ['s…'] }
-```
-
-周报可以用 `feedsBetween(readCare(), weekStart, weekEnd)` 读取，也可以直接统计 `cabin:cat-fed` 事件。
+格式已锁定（见 `docs/events.md`）：`{ v: 1, mood, tier, updatedAt, feeds: [{ at, fishLeft }], totalFeeds, unlockedActions }`，`feeds` 保留最近 400 次。周报可以用 `feedsBetween(readCare(), weekStart, weekEnd)` 读取，或直接统计 `cabin:cat-fed` 事件。每天摸摸的次数和已经加过心情的专注记录，另存在 `flow-cabin-cat-care-meta-v1`。
 
 ## 给美术的接口（先用占位，帧图到位后直接替换）
 
@@ -35,7 +29,7 @@
 | `.room-cat.cat--drop-target` | 虚线描边 | 小鱼干拖到小猫身上时显示。 |
 | `.room-cat.cat--by-desk` | 暂无 | 心情「开心」且正在专注时，场景 CSS 可以把小猫挪到书桌旁。 |
 | `.room-cat[data-mood=happy]` | 跟着 `--pet-energy`（`cabin:playback`）左右摇摆 | 可以换成甩尾巴的帧。 |
-| `.room-cat[data-mood=sleepy]` | 颜色稍暗 | 无精打采时的样子。 |
+| `.room-cat[data-mood=droopy]` | 颜色稍暗 | 无精打采时的样子。 |
 | 小动作 `stretch / roll / groom / loaf` | 暂时只有文字 | 解锁后可在待机时随机播放，帧图到位后接到 `pet-model.mjs` 的 pose。 |
 
 ## 帧图文件（`public/cat/`，透明 PNG，1x，最近邻缩放；美术在 PR #55）

@@ -2,7 +2,7 @@
    .cat--eating      a feed just happened (EAT_MS); .cat-eat-fish is the fish in front of the cat
    .cat--drop-target a 小鱼干 is being dragged over the cat
    .cat--by-desk     mood 开心 during a focus round (scene CSS may move the cat to the desk)
-   [data-mood]       happy | ok | sleepy (无精打采) */
+   [data-mood]       happy | ok | droopy (无精打采) */
 @layer guards, reset, features, skin, overrides;
 @layer features {
 .room-cat.cat--eating .pet-life { animation: cat-eat 400ms steps(2, end) 6; }
@@ -11,7 +11,7 @@
   clip-path: polygon(0 50%, 15% 0, 70% 0, 82% 50%, 100% 0, 100% 100%, 82% 50%, 70% 100%, 15% 100%); animation: cat-eat-fish var(--cat-eat-ms, 2400ms) steps(4, end) forwards; }
 .room-cat.cat--drop-target { outline: 2px dashed var(--px-accent-hi); outline-offset: 4px; }
 .room-cat[data-mood=happy]:not(.cat--eating) .pet-life > * { transform-origin: 50% 100%; animation: cat-happy-sway 1.6s steps(4, end) infinite alternate; }
-.room-cat[data-mood=sleepy] .pet-life { filter: saturate(.8) brightness(.94); }
+.room-cat[data-mood=droopy] .pet-life { filter: saturate(.8) brightness(.94); }
 @keyframes cat-eat { 50% { translate: 0 3%; } }
 @keyframes cat-eat-fish { to { clip-path: polygon(0 50%, 15% 0, 15% 0, 15% 50%, 15% 0, 15% 100%, 15% 50%, 15% 100%, 15% 100%); } }
 @keyframes cat-happy-sway { from { rotate: calc(var(--pet-energy) * -3deg); } to { rotate: calc(var(--pet-energy) * 3deg); } }
@@ -27,7 +27,7 @@
 .cat-mood-bar { height: 12px; background: var(--px-surface-2); border: 2px solid var(--px-border-subtle); }
 .cat-mood-bar span { display: block; height: 100%; background: repeating-linear-gradient(90deg, var(--px-accent) 0 6px, transparent 6px 8px); }
 .cat-mood-bar.is-happy span { background: repeating-linear-gradient(90deg, var(--px-good) 0 6px, transparent 6px 8px); }
-.cat-mood-bar.is-sleepy span { background: repeating-linear-gradient(90deg, var(--px-ink-faint) 0 6px, transparent 6px 8px); }
+.cat-mood-bar.is-droopy span { background: repeating-linear-gradient(90deg, var(--px-ink-faint) 0 6px, transparent 6px 8px); }
 .cat-care-actions { display: flex; align-items: center; gap: 8px; }
 .cat-care-actions .pixel-button { display: inline-flex; align-items: center; gap: 5px; }
 .cat-fish-chip { display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px; font-size: 12px; color: var(--px-ink-dim); border: 2px dashed var(--px-border-subtle); cursor: grab; }

@@ -35,9 +35,10 @@ export function useCatCareHost() {
       if (!result.ok) { publish(c, result.message, { announceMood: false }); return; }
       focus.spendFish(1);
       care.writeCare(result.care); publish(result.care, result.message);
-      window.dispatchEvent(new CustomEvent(care.FED_EVENT, { detail: { fishLeft: fish - 1, mood: snapshot.mood, tier: snapshot.tier, feedsToday: snapshot.feedsToday, totalFeeds: snapshot.totalFeeds, unlocked: result.unlocked?.id || '', at: Date.now() } }));
+      const last = result.care.feeds.at(-1);
+      window.dispatchEvent(new CustomEvent(care.FED_EVENT, { detail: { at: last.at, mood: snapshot.mood, tier: snapshot.tier, fishLeft: last.fishLeft, totalFeeds: result.care.totalFeeds } }));
     };
-    const onStorage = (event) => { if (event.key === care.MOOD_KEY) publish(care.readCare(), ''); };
+    const onStorage = (event) => { if (event.key === care.MOOD_KEY || event.key === care.META_KEY) publish(care.readCare(), ''); };
     const clock = setInterval(() => publish(care.readCare(), snapshot?.message || ''), 5 * 60000);
     window.addEventListener('cabin:focus-session', onSession); window.addEventListener('cabin:cat-petted', onPet);
     window.addEventListener(care.FEED_REQUEST_EVENT, onFeed); window.addEventListener('storage', onStorage);
