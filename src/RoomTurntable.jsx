@@ -28,7 +28,7 @@ export default function RoomTurntable({ item, spinning, trackIndex = 0, style, i
     {/* The physical deck lives in the scene (shelf top) — see src/scene/SceneDeck.jsx. */}
     <span ref={deckAnchor} hidden/>
     <SceneDeck anchor={deckAnchor} item={item} spinning={spinning} vinyl={style} readOnly={readOnly} dragType={ROOM_DRAG_TYPE}
-      onActivate={() => deckAnchor.current?.closest('.room-turntable')?.querySelector('.turntable-toggle')?.click()}
+      onActivate={() => window.dispatchEvent(new Event('cabin-open-corner'))}
       onDropRecord={(id) => { const found = items.find((candidate) => candidate.id === id); if (found && !readOnly) load?.(found); }}/>
     <div className="turntable-side-cabinet">
       <div className="turntable-console">

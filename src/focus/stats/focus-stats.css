@@ -26,7 +26,8 @@
   .fs-bar-fill { display: block; background: repeating-linear-gradient(to bottom, var(--px-accent) 0 6px, var(--px-accent-lo) 6px 8px); box-shadow: inset 0 2px 0 var(--px-accent-hi); transition: height .24s steps(6); }
   .fs-bar-fill.is-today { background: var(--px-accent-hi); }
   .fs-bars figcaption { font-size: 12px; color: var(--px-ink-faint); text-align: right; }
-  .fs-year { margin: 0; display: grid; gap: 6px; overflow-x: auto; }
+  .fs-year { margin: 0; display: grid; gap: 6px; min-width: 0; }
+  .fs-year .focus-heatmap-legend { flex-wrap: wrap; white-space: normal; }
   .fs-year-grid { display: grid; grid-auto-flow: column; gap: 2px; }
   .fs-year-grid span { background: var(--px-heat-0); }
   .fs-year-grid span.is-future { visibility: hidden; }
@@ -46,6 +47,19 @@
   .fs-album { display: flex; align-items: center; gap: 8px; }
   .fs-card-cover { width: 32px; height: 32px; flex: none; image-rendering: pixelated; box-shadow: 0 0 0 2px var(--px-border); }
   .fs-card-summary { margin: 0; padding: 8px; background: var(--px-surface-inset); color: var(--px-accent-hi); font-size: var(--px-text-body-sm); }
+  .fs-card.has-stamp header { padding-right: calc(var(--journal-card-stamp-w, 64px) + 12px); min-height: calc(var(--journal-card-stamp-h, 64px) - 8px); align-items: flex-start; flex-direction: column; gap: 2px; }
+  .fs-card-foot { display: flex; gap: 8px; align-items: center; } .fs-card-foot .fs-card-summary { flex: 1; }
+  .fs-week-left { align-content: center; } .fs-week-left .fs-card { padding: 20px 16px 16px; gap: 12px; }
+  .fs-week-right { gap: 12px; }
+  .fs-week-line { margin: 0; padding: 8px 0; font-size: var(--px-text-body); font-weight: 700; border-bottom: 2px dashed currentColor; }
+  .fs-week-right .fs-facts { gap: 8px; } .fs-week-right .fs-facts div { grid-template-columns: 96px 1fr; }
+  .fs-weeks { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px; margin: 0; padding: 0; list-style: none; }
+  .fs-weeks button { width: 100%; display: grid; justify-items: center; gap: 2px; padding: 4px 2px; min-height: var(--px-hit); font: inherit; color: inherit; background: transparent; border: 2px solid transparent; cursor: pointer; }
+  .fs-weeks button[aria-pressed='true'] { border-color: currentColor; }
+  .fs-weeks button:focus-visible { outline: 2px solid var(--px-focus); outline-offset: 1px; }
+  .fs-weeks-bars { display: flex; align-items: flex-end; gap: 1px; height: 24px; }
+  .fs-weeks-bars i { width: 4px; background: var(--journal-ink, var(--px-accent)); }
+  .fs-weeks small { font-size: 12px; white-space: nowrap; }
   .fs-actions [role='status'] { font-size: 12px; color: var(--px-good); }
   .fs-compact { display: grid; gap: 8px; }
   .fs-bars.is-mini .fs-bars-row { height: 64px; }
@@ -69,7 +83,8 @@
   .fs-page { display: grid; align-content: start; gap: 10px; padding: 16px 24px; min-height: 0; overflow: auto; }
   .fs-page.is-turning { animation: fs-page-turn var(--journal-turn, 240ms) steps(4) both; transform-origin: left center; }
   @keyframes fs-page-turn { from { transform: scaleX(.6); opacity: .4; } to { transform: none; opacity: 1; } }
-  .fs-year-grid { grid-template-rows: repeat(7, 8px); grid-auto-columns: 8px; }
+  .fs-year-grid { grid-template-rows: repeat(7, auto); grid-template-columns: repeat(53, minmax(0, 1fr)); width: 100%; max-width: 530px; gap: 1px; }
+  .fs-year-grid span { aspect-ratio: 1; min-width: 0; }
   .fs-book.is-reduced .fs-page.is-turning, html[data-desktop-reduce-motion=true] .fs-page.is-turning { animation: none; }
   @media (prefers-reduced-motion: reduce) { .fs-page.is-turning { animation: none; } }
   @media (prefers-reduced-motion: reduce) { .fs-bar-fill, .fs-meter i { transition: none; } }

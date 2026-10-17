@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { normalizeSessionRecord, readSessionLog, fromLegacySessions, mergeSessions, loadSessions, subscribeSessions, SESSION_LOG_KEY, FOCUS_SESSION_EVENT } from './session-source.mjs';
 import { graceStreak, minutesByDay, recentSummary, dailySeries, yearHeatmap, byTask, timeOfDay, weeklyReport, reportMarkdown, startOfWeek, isMonday, FREE_FOCUS } from './stats-model.mjs';
-import { drawWeekCard, CARD_W, CARD_H } from './week-card.mjs';
+import { drawWeekCard, intScale, CARD_W, CARD_H } from './week-card.mjs';
 
 const M = 60000, at = (y, mo, d, h = 9, mi = 0) => new Date(y, mo - 1, d, h, mi).getTime();
 const s = (start, min, extra = {}) => normalizeSessionRecord({ start, end: start + min * M, completed: true, ...extra });
@@ -118,7 +118,7 @@ test('journal art slots map to CSS variables, and empty slots keep the token bas
   const { JOURNAL_ART, journalArtStyle, hasArt } = await import('./journal-art.mjs');
   const none = Object.fromEntries(Object.keys(JOURNAL_ART).map((slot) => [slot, null]));
   assert.deepEqual(journalArtStyle(none), {}); assert.equal(hasArt('spine', none), false); assert.equal(hasArt('spine'), true);
-  for (const url of Object.values(JOURNAL_ART)) assert.ok(existsSync(new URL(`../../../public${url}`, import.meta.url)), url);
+  for (const url of Object.values(JOURNAL_ART).filter(Boolean)) assert.ok(existsSync(new URL(`../../../public${url}`, import.meta.url)), url);
   assert.deepEqual(journalArtStyle({ ...none, spine: '/journal/spine.png' }), { '--journal-spine-img': 'url("/journal/spine.png")' });
 });
 
@@ -140,4 +140,26 @@ test('optional cover: sanitised, carried to the weekly album, CORS-safe export',
   const calls = []; const ctx = new Proxy({ measureText: (t) => ({ width: String(t).length * 14 }) }, { get: (o, k) => k in o ? o[k] : (...a) => calls.push([k, ...a]), set: () => true });
   drawWeekCard(ctx, { ...week, album: { ...week.album, cover: 'https://y.qq.com/c.png' } }); assert(!calls.some((c) => c[0] === 'drawImage'), 'cross-origin → placeholder');
   calls.length = 0; drawWeekCard(ctx, week, undefined, { cover: {} }); assert(calls.some((c) => c[0] === 'drawImage'));
+});
+
+test('week card export draws journal-art slots with integer nearest scaling', async () => {
+  const { JOURNAL_ART, journalArtStyle, CARD_EXPORT_SLOTS, cardArt } = await import('./journal-art.mjs');
+  assert.deepEqual(CARD_EXPORT_SLOTS, ['paper', 'cardPaper', 'card', 'cardTape', 'doodle']);
+  assert.deepEqual(journalArtStyle({ ...Object.fromEntries(Object.keys(JOURNAL_ART).map((slot) => [slot, null])), card: '/s.png', cardPaper: '/p.png' }), { '--journal-card-img': 'url("/s.png")', '--journal-card-paper-img': 'url("/p.png")' });
+  assert.deepEqual(cardArt({ paper: 'P', card: 'S' }), { cardPaper: 'P', cardStamp: 'S', cardTape: null, doodle: null }, 'card.png = stamp, page paper tiles the card');
+  assert.equal(cardArt({ paper: 'P', cardPaper: 'C' }).cardPaper, 'C');
+  assert.equal(intScale({ width: 24, height: 20 }, 96, 96), 4); assert.equal(intScale({ width: 200, height: 50 }, 96, 96), 1); assert.equal(intScale(null, 9, 9), 0);
+  const img = (name, width, height) => ({ name, width, height });
+  const art = { cardPaper: img('paper', 128, 128), cardStamp: img('stamp', 24, 24), cardTape: img('tape', 32, 8), doodle: img('doodle', 16, 16) };
+  const calls = [], smoothing = []; const ctx = new Proxy({ measureText: (t) => ({ width: String(t).length * 14 }) }, { get: (o, k) => k in o ? o[k] : (...a) => calls.push([k, ...a]), set: (o, k, v) => { if (k === 'imageSmoothingEnabled') smoothing.push(v); return true; } });
+  const r = weeklyReport([s(at(2026, 10, 13, 9), 50, { album: { title: '夜航' } })], [], at(2026, 10, 19, 10));
+  drawWeekCard(ctx, r, undefined, { art });
+  assert(smoothing.length && smoothing.every((v) => v === false), 'nearest-neighbour only');
+  const draws = calls.filter((c) => c[0] === 'drawImage'), by = (n) => draws.filter((c) => c[1].name === n);
+  assert.equal(by('stamp').length, 1, 'stamp drawn once'); const [, , sx, sy, sw, sh] = by('stamp')[0];
+  assert.equal(sw, 96); assert.equal(sh, 96); assert(sx + sw <= CARD_W - 16 && sy < 40, 'stamp sits top-right');
+  assert(by('paper').length >= 12, 'paper tiled'); for (const c of by('paper')) assert.equal(c[4], c[8], 'tiles 1:1');
+  assert.equal(by('tape').length, 1); assert.equal(by('tape')[0][4], 128); assert.equal(by('doodle')[0][4], 64);
+  for (const c of draws) { const [x, y, w, h] = c.length > 6 ? c.slice(6) : c.slice(2); assert(Number.isInteger(x) && Number.isInteger(y) && Number.isInteger(w) && Number.isInteger(h) && x >= 0 && y >= 0 && x + w <= CARD_W && y + h <= CARD_H, `${c[1].name} off-grid or out of bounds`); }
+  calls.length = 0; drawWeekCard(ctx, r); assert(!calls.some((c) => c[0] === 'drawImage'), 'empty slots keep the baseline');
 });

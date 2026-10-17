@@ -26,19 +26,19 @@ try {
   let log=''; server.stdout.on('data',b=>log+=b); server.stderr.on('data',b=>log+=b);
   for (let i=0;;i++) { if (server.exitCode!==null || i>150) throw new Error(log); if (hasViteLocalOrigin(log,origin) && await fetch(origin).then(r=>r.ok,()=>false)) break; await new Promise(r=>setTimeout(r,100)); }
   browser = await launchChromium();
-  const run = async (name,test,{firstVisit=false,collection}={}) => {
+  const run = async (name,test,{firstVisit=false,collection,motion=false}={}) => {
     if (process.env.FOCUS_FILTER && !process.env.FOCUS_FILTER.split(',').some(filter=>name.includes(filter))) return;
-    const context = await browser.newContext({viewport:{width:1440,height:900},locale:'zh-CN',reducedMotion:'reduce'});
-    await context.addInitScript(({key,firstVisit}) => {
+    const context = await browser.newContext({viewport:{width:1440,height:900},locale:'zh-CN',reducedMotion:motion?'no-preference':'reduce'});
+    await context.addInitScript(({key,firstVisit,motion}) => {
       if (location.origin==='null') return;
       if (!firstVisit) localStorage.setItem('flow-cabin-onboarding-v1',JSON.stringify({version:1,status:'done',step:'done'}));
       if (!firstVisit && !localStorage.getItem(key)) localStorage.setItem(key,JSON.stringify({notes:'原有随手记',settings:{focusMin:1,shortMin:1,notify:false,chime:false}}));
       window.__nativeCommands=[];
-      window.albumDesktopAppearance={client:true,reduceMotion:true};
+      window.albumDesktopAppearance={client:true,reduceMotion:!motion};
       window.open=url=>{ window.__nativeCommands.push(String(url)); return null; };
-      const init=()=>{document.documentElement.dataset.desktopClient='true';document.documentElement.dataset.desktopReduceMotion='true';};
+      const init=()=>{document.documentElement.dataset.desktopClient='true';document.documentElement.dataset.desktopReduceMotion=String(!motion);};
       if(document.documentElement) init(); else new MutationObserver((_,o)=>{if(document.documentElement){init();o.disconnect();}}).observe(document,{childList:true});
-    },{key:KEY,firstVisit});
+    },{key:KEY,firstVisit,motion});
     await context.route('**/*',async route=>{
       const u=new URL(route.request().url()), p=u.pathname;
       if(u.origin!==origin){report.unexpectedRequests.push(u.href);return route.abort();}
@@ -126,11 +126,32 @@ try {
     await page.context().grantPermissions(['clipboard-read','clipboard-write'],{origin});await journal.getByRole('button',{name:'复制文字'}).click();
     assert.match(await page.evaluate(()=>navigator.clipboard.readText()),/^## 心流小屋周报 · /);
     const [download]=await Promise.all([page.waitForEvent('download'),journal.getByRole('button',{name:'导出图片'}).click()]);assert.match(download.suggestedFilename(),/^心流小屋周报-.*\.png$/);await download.saveAs(path.join(output,'weekly-card-export.png'));
-    for(const [w,h] of [[1280,800],[1440,900]]){await page.setViewportSize({width:w,height:h});await page.screenshot({path:path.join(output,`journal-weekly-${w}x${h}.png`),animations:'disabled'});}
+    for(const [w,h] of [[1280,800],[1440,900],[1920,1080]]){await page.setViewportSize({width:w,height:h});
+      // Right page is balanced: summary, facts, week strip and actions fill most of it, nothing overflows.
+      const fill=await journal.locator('.fs-week-right').evaluate(el=>{const kids=[...el.children].filter(c=>c.offsetHeight);const r=el.getBoundingClientRect(),last=kids.at(-1).getBoundingClientRect();return {used:(last.bottom-r.top)/r.height,overflow:el.scrollHeight>el.clientHeight+1};});
+      assert(fill.used>0.5,`weekly right page only ${Math.round(fill.used*100)}% used at ${w}x${h}`);assert(!fill.overflow,`weekly right page scrolls at ${w}x${h}`);
+      assert(!(await journal.locator('.fs-week-left').evaluate(el=>el.scrollHeight>el.clientHeight+1)),`weekly card scrolls at ${w}x${h}`);
+      await page.screenshot({path:path.join(output,`journal-weekly-${w}x${h}.png`),animations:'disabled'});}
+    assert.equal(await journal.locator('.fs-weeks button').count(),8);assert.equal(await journal.locator('.fs-weeks button[aria-pressed="true"]').count(),1);
+    await journal.locator('.fs-weeks button').last().click();assert.match(await journal.locator('.fs-weekpick strong').innerText(),/本周/);
+    await journal.locator('.fs-weeks button').nth(6).click();
     await journal.getByRole('button',{name:'上一周'}).click();assert.match(await journal.locator('.fs-weekpick strong').innerText(),/2 周前/);
     await page.keyboard.press('Escape');await page.evaluate(()=>window.dispatchEvent(new CustomEvent('cabin-open-settings',{detail:{section:'focus'}})));
     const hub=page.getByRole('dialog',{name:'设置',exact:true});await hub.getByLabel('每日专注目标分钟').fill('60');await hub.getByLabel('每日专注目标分钟').press('Enter');assert.equal((await focusState(page)).settings.dailyGoal,60);
   });
+  await run('cabin-journal-motion-on-reopens-and-fits-1024',async page=>{
+    await page.evaluate(({key})=>{const day=86400000,base=new Date().setHours(0,0,0,0),sessions=[];for(let d=1;d<300;d+=2)sessions.push({start:base-d*day+9*3600e3,end:base-d*day+9*3600e3+40*60e3,completed:true});const old=JSON.parse(localStorage.getItem(key)||'{}');localStorage.setItem(key,JSON.stringify({...old,sessions}));},{key:KEY});
+    await page.setViewportSize({width:1024,height:768});await page.reload();await openFocus(page,'统计');await page.locator('.fs-compact').waitFor();await page.locator('body').click({position:{x:5,y:5}});
+    const journal=page.getByRole('dialog',{name:'小屋日记'});
+    
+    assert.equal(await page.evaluate(()=>matchMedia('(prefers-reduced-motion: reduce)').matches),false,'motion is on');
+    for(let i=0;i<3;i++){await page.keyboard.press('l');await journal.waitFor();await page.keyboard.press('Escape');await page.keyboard.press('l');await journal.waitFor({timeout:2000});assert(await journal.isVisible(),`L right after Esc reopens (round ${i+1})`);await page.keyboard.press('Escape');await journal.waitFor({state:'hidden'});}
+    await page.keyboard.press('l');await journal.waitFor();await page.waitForTimeout(400);
+    const fit=await journal.locator('.fs-year').evaluate(fig=>{const page=fig.closest('.fs-page').getBoundingClientRect(),r=fig.getBoundingClientRect(),cap=fig.querySelector('figcaption');return {inside:r.right<=page.right+0.5&&fig.querySelector('.fs-year-grid').getBoundingClientRect().right<=page.right+0.5,capClip:cap.scrollWidth>cap.clientWidth+1};});
+    assert(fit.inside,'year heatmap stays inside the left page at 1024x768');assert(!fit.capClip,'heatmap caption is not clipped');
+    await page.screenshot({path:path.join(output,'journal-overview-1024x768.png'),animations:'disabled'});
+    await journal.getByRole('tab',{name:'周报'}).click();await page.waitForTimeout(400);await page.screenshot({path:path.join(output,'journal-weekly-1024x768.png'),animations:'disabled'});
+  },{motion:true});
   await run('timer-pause-reload-resume-keeps-remaining-work',async page=>{
     await openFocus(page);await page.getByRole('button',{name:'开始专注',exact:true}).click();await page.getByRole('button',{name:'暂停',exact:true}).click();const paused=await focusState(page);assert.equal(paused.timer.paused,true);
     await page.reload();await openFocus(page);assert.equal((await focusState(page)).timer.remaining,paused.timer.remaining);await page.getByRole('button',{name:'继续',exact:true}).click();const resumed=await focusState(page);assert.equal(resumed.timer.paused,false);assert.equal(resumed.timer.duration,paused.timer.duration);assert.equal(resumed.sessions.length,0);await screenshot(page,'timer-reloaded-resumed');

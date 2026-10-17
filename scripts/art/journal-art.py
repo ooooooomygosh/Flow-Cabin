@@ -81,4 +81,11 @@ doodle = img(12, 12, [
  '..koooooook.',
  '...kkkkkkk..'])
 save(doodle, 'doodle')
+# Tape: 32x8 translucent amber strip with torn ends (export draws it ≤ 128x32).
+tape = Image.new('RGBA', (32, 8), (0, 0, 0, 0))
+for x in range(32):
+    for y in range(8):
+        if (x == 0 and y % 2) or (x == 31 and not y % 2): continue
+        tape.putpixel((x, y), (255, 217, 156, 150 if y not in (0, 7) else 110))
+save(tape, 'tape')
 print('ok')
