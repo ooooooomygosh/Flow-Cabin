@@ -113,3 +113,29 @@ window.dispatchEvent(new CustomEvent('cabin:open-journal', { detail: { tab: 'wee
 | `tab` | `'overview' \| 'tasks' \| 'weekly'`? | Page to open; unknown or missing → `overview`. |
 
 The overlay is a native `<dialog>` (top layer), so room keys pause while it is open; Esc or 「返回小屋」 closes it.
+
+## `cabin:cat-fed`, `cabin:cat-mood` and `flow-cabin-cat-mood-v1` *(owned by the pet mood/feeding logic)*
+
+The 小屋日记 only **reads** these (`src/focus/stats/cat-mood-source.mjs`). A missing key, bad JSON, `v !== 1`, or a store with no valid `tier` and no feeds in the week hides the cat line in 小屋来信, the mood doodle and the export line. Nothing is shown as a penalty.
+
+`localStorage['flow-cabin-cat-mood-v1']`:
+
+```js
+{ v: 1, mood: 0–100, tier: 'happy' | 'ok' | 'droopy', updatedAt, feeds: [{ at, fishLeft }], totalFeeds, unlockedActions: [] }
+```
+
+| field | journal use |
+| --- | --- |
+| `v` | must be `1`. |
+| `tier` | mood doodle (`happy` → cat-rub, `ok` → cat-wait, `droopy` → cat-droopy), the 周报 cat pose (`happy` → cat-rub when the week has focus; `droopy` → cat-droopy on a quiet week) and the label 心情很好 / 心情不错 / 有点无精打采. |
+| `feeds[].at` | ms timestamps (last 400 kept). The weekly count is the number of `at` inside the displayed week, so past weeks show their own count. |
+| `mood`, `updatedAt`, `fishLeft`, `totalFeeds`, `unlockedActions` | not used by the journal. |
+
+Events (on `window`), both trigger a re-read of the key, so the store must be written **before** dispatching:
+
+| event | detail |
+| --- | --- |
+| `cabin:cat-fed` | `{ at, mood, tier, fishLeft, totalFeeds }` |
+| `cabin:cat-mood` | `{ mood, tier }` |
+
+Cross-window `storage` events for the key also trigger a re-read.

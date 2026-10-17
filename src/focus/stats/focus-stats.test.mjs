@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { normalizeSessionRecord, readSessionLog, fromLegacySessions, mergeSessions, loadSessions, subscribeSessions, SESSION_LOG_KEY, FOCUS_SESSION_EVENT } from './session-source.mjs';
@@ -159,7 +159,55 @@ test('week card export draws journal-art slots with integer nearest scaling', as
   assert.equal(by('stamp').length, 1, 'stamp drawn once'); const [, , sx, sy, sw, sh] = by('stamp')[0];
   assert.equal(sw, 96); assert.equal(sh, 96); assert(sx + sw <= CARD_W - 16 && sy < 40, 'stamp sits top-right');
   assert(by('paper').length >= 12, 'paper tiled'); for (const c of by('paper')) assert.equal(c[4], c[8], 'tiles 1:1');
-  assert.equal(by('tape').length, 1); assert.equal(by('tape')[0][4], 128); assert.equal(by('doodle')[0][4], 64);
+  assert.equal(by('tape').length, 1); assert.equal(by('tape')[0][4], 128); assert.equal(by('doodle')[0][4], 128, 'doodle stands in for the cat pose at ≤128');
   for (const c of draws) { const [x, y, w, h] = c.length > 6 ? c.slice(6) : c.slice(2); assert(Number.isInteger(x) && Number.isInteger(y) && Number.isInteger(w) && Number.isInteger(h) && x >= 0 && y >= 0 && x + w <= CARD_W && y + h <= CARD_H, `${c[1].name} off-grid or out of bounds`); }
   calls.length = 0; drawWeekCard(ctx, r); assert(!calls.some((c) => c[0] === 'drawImage'), 'empty slots keep the baseline');
+});
+
+test('weekly stamp renders once: own element, never a (tiling) card background', () => {
+  const css = readFileSync(new URL('./journal-art.css', import.meta.url), 'utf8'), jsx = readFileSync(new URL('./CabinJournal.jsx', import.meta.url), 'utf8');
+  const uses = css.split('\n').filter((l) => /var\(--journal-card-img\)/.test(l));
+  assert.equal(uses.length, 1, 'card stamp slot is used by exactly one rule'); assert.match(uses[0], /^\s*\.fs-book \.fs-stamp \{/); assert.match(uses[0], /background-repeat: no-repeat/);
+  assert.doesNotMatch(css, /\.fs-card[^{]*\{[^}]*background:[^;}]*--journal-card-img/, 'card background never references the stamp');
+  assert.equal(jsx.match(/className="fs-stamp"/g)?.length, 1, 'one stamp element in the markup');
+});
+
+test('周报 defaults to the current week when it has data', async () => {
+  const { defaultWeekOffset, weekName } = await import('./journal-layout.mjs');
+  const now = at(2026, 10, 21, 20); // Wednesday
+  assert.equal(defaultWeekOffset([s(at(2026, 10, 20, 9), 25), s(at(2026, 10, 14, 9), 50)], [], now), 0);
+  assert.equal(defaultWeekOffset([s(at(2026, 10, 14, 9), 50)], [], now), -1, 'quiet week so far → last week');
+  assert.equal(defaultWeekOffset([], [], now), 0);
+  assert.equal(weekName(0), '本周'); assert.equal(weekName(-1), '上周'); assert.equal(weekName(-3), '3 周前');
+});
+
+test('journal layout: cat pose, stacked units, letter from real data', async () => {
+  const { catPose, barUnits, cabinLetter, CAT_POSES } = await import('./journal-layout.mjs');
+  assert.equal(catPose(0), 'cat-wait'); assert.equal(catPose(90), 'cat-desk'); assert.equal(catPose(400), 'cat-sleep-books');
+  assert.equal(catPose(30, { tier: 'happy' }), 'cat-rub'); assert.equal(catPose(0, { tier: 'droopy' }), 'cat-droopy');
+  for (const p of CAT_POSES) assert.ok(existsSync(new URL(`../../../public/cat/${p}.png`, import.meta.url)), p);
+  const { JOURNAL_SPRITES } = await import('./journal-art.mjs'); for (const u of Object.values(JOURNAL_SPRITES)) assert.ok(existsSync(new URL(`../../../public${u}`, import.meta.url)), u);
+  assert.equal(barUnits(0, 100), 0); assert.equal(barUnits(1, 100), 1); assert.equal(barUnits(100, 100), 10); assert.equal(barUnits(500, 100, 5), 5);
+  const r = weeklyReport([s(at(2026, 10, 13, 9), 50, { taskId: 't1', album: { title: '夜航' } })], [{ id: 't1', text: '写第三章', done: true, doneAt: at(2026, 10, 14) }], at(2026, 10, 19, 10));
+  const l = cabinLetter(r).join('');
+  assert.match(l, /50 分钟/); assert.match(l, /写第三章/); assert.match(l, /《夜航》/); assert.doesNotMatch(l, /小猫/, 'no feed line without mood data');
+  assert.match(cabinLetter(r, { feeds: 3, label: '心情很好' }).join(''), /喂了小猫 3 次/);
+  assert.match(cabinLetter(weeklyReport([], [], at(2026, 10, 19))).join(''), /安静/);
+});
+
+test('cat mood: v1 store, weekly feed count from feeds[].at, tier drives pose', async () => {
+  const { readCatMood, subscribeCatMood, CAT_MOOD_KEY, CAT_FED_EVENT, CAT_MOOD_EVENT } = await import('./cat-mood-source.mjs');
+  const { catPose } = await import('./journal-layout.mjs');
+  const st = (v) => ({ getItem: (k) => k === CAT_MOOD_KEY ? (typeof v === 'string' ? v : JSON.stringify(v)) : null }), from = at(2026, 10, 12), to = at(2026, 10, 19);
+  const store = { v: 1, mood: 82, tier: 'happy', updatedAt: at(2026, 10, 15), feeds: [{ at: at(2026, 10, 13), fishLeft: 4 }, { at: at(2026, 10, 14), fishLeft: 3 }, { at: at(2026, 10, 6), fishLeft: 5 }], totalFeeds: 3, unlockedActions: [] };
+  assert.deepEqual(readCatMood(st(store), from, to), { feeds: 2, tier: 'happy', mood: 82, label: '心情很好' });
+  assert.equal(readCatMood(st(store), at(2026, 10, 5), from).feeds, 1, 'past weeks count their own feeds');
+  assert.equal(readCatMood(st({ ...store, tier: 'droopy' }), from, to).label, '有点无精打采');
+  assert.equal(readCatMood(st(null), from, to), null); assert.equal(readCatMood(st('{bad'), from, to), null); assert.equal(readCatMood(undefined, from, to), null);
+  assert.equal(readCatMood(st({ ...store, v: 2 }), from, to), null, 'unknown version is ignored');
+  assert.equal(readCatMood(st({ v: 1, tier: 'sleepy', feeds: [] }), from, to), null, 'no tier and no feeds → hidden');
+  assert.equal(readCatMood(st({ v: 1, fedLog: [at(2026, 10, 13)], feeds: [{ time: at(2026, 10, 13) }] }), from, to), null, 'guessed aliases are not read');
+  assert.equal(catPose(30, { tier: 'happy' }), 'cat-rub'); assert.equal(catPose(0, { tier: 'droopy' }), 'cat-droopy'); assert.equal(catPose(0, { tier: 'ok' }), 'cat-wait');
+  const t = new EventTarget(); let n = 0; const off = subscribeCatMood(t, () => n++);
+  t.dispatchEvent(new Event(CAT_FED_EVENT)); t.dispatchEvent(new Event(CAT_MOOD_EVENT)); off(); t.dispatchEvent(new Event(CAT_FED_EVENT)); assert.equal(n, 2);
 });
