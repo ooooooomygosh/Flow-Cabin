@@ -26,11 +26,13 @@ try {
   let log=''; server.stdout.on('data',b=>log+=b); server.stderr.on('data',b=>log+=b);
   for (let i=0;;i++) { if (server.exitCode!==null || i>150) throw new Error(log); if (hasViteLocalOrigin(log,origin) && await fetch(origin).then(r=>r.ok,()=>false)) break; await new Promise(r=>setTimeout(r,100)); }
   browser = await launchChromium();
-  const run = async (name,test,{firstVisit=false,collection}={}) => {
+  const run = async (name,test,{firstVisit=false,collection,autoEnter=false}={}) => {
     if (process.env.FOCUS_FILTER && !process.env.FOCUS_FILTER.split(',').some(filter=>name.includes(filter))) return;
     const context = await browser.newContext({viewport:{width:1440,height:900},locale:'zh-CN',reducedMotion:'reduce'});
-    await context.addInitScript(({key,firstVisit}) => {
+    await context.addInitScript(({key,firstVisit,autoEnter}) => {
       if (location.origin==='null') return;
+      // Most suites work in the dock after starting a round; 沉浸 on start is covered by its own test.
+      if (!autoEnter && !localStorage.getItem('album-circle-focus-display-v1')) localStorage.setItem('album-circle-focus-display-v1',JSON.stringify({autoEnter:false}));
       if (!firstVisit) localStorage.setItem('flow-cabin-onboarding-v1',JSON.stringify({version:1,status:'done',step:'done'}));
       if (!firstVisit && !localStorage.getItem(key)) localStorage.setItem(key,JSON.stringify({notes:'原有随手记',settings:{focusMin:1,shortMin:1,notify:false,chime:false}}));
       window.__nativeCommands=[];
@@ -38,7 +40,7 @@ try {
       window.open=url=>{ window.__nativeCommands.push(String(url)); return null; };
       const init=()=>{document.documentElement.dataset.desktopClient='true';document.documentElement.dataset.desktopReduceMotion='true';};
       if(document.documentElement) init(); else new MutationObserver((_,o)=>{if(document.documentElement){init();o.disconnect();}}).observe(document,{childList:true});
-    },{key:KEY,firstVisit});
+    },{key:KEY,firstVisit,autoEnter});
     await context.route('**/*',async route=>{
       const u=new URL(route.request().url()), p=u.pathname;
       if(u.origin!==origin){report.unexpectedRequests.push(u.href);return route.abort();}
@@ -118,13 +120,32 @@ try {
     for(let i=0;i<4;i++)await page.evaluate(()=>{window.dispatchEvent(new Event('focus'));document.dispatchEvent(new Event('visibilitychange'));});
     const after=await focusState(page);assert.equal(after.sessions.length,1);assert.equal(after.rewards.fish,1);await screenshot(page,'timer-after-long-sleep');
   });
+  await run('pomodoro-start-and-zen-enter-focus-display-tools-hide-separately',async page=>{
+    const shown=()=>page.locator('.focus-display').count();
+    await openFocus(page);await page.getByRole('button',{name:'开始专注',exact:true}).click();await page.locator('.focus-display').waitFor();await screenshot(page,'focus-display-auto-enter');
+    const bar=page.getByRole('navigation',{name:'专注画面工具'});await bar.getByRole('button',{name:'暂停专注'}).click();await page.getByRole('group',{name:'专注已暂停'}).waitFor();await screenshot(page,'focus-display-pause-offer');
+    await page.getByRole('button',{name:'留在这里',exact:true}).click();assert.equal(await page.getByRole('group',{name:'专注已暂停'}).count(),0);assert.equal(await shown(),1,'staying keeps the display');
+    await bar.getByRole('button',{name:'继续专注'}).click();await bar.getByRole('button',{name:'暂停专注'}).click();await page.getByRole('button',{name:'返回小屋',exact:true}).first().click();assert.equal(await shown(),0,'the pause offer returns to the cabin');
+    await page.evaluate(()=>{window.__cmds=[];window.addEventListener('cabin:player-command',e=>window.__cmds.push(e.detail.action));window.dispatchEvent(new CustomEvent('cabin:deck-item',{detail:{id:'r1',title:'测试专辑',artist:'测试歌手',cover:''}}));});
+    await page.evaluate(()=>document.activeElement?.blur());await page.keyboard.press('z');await page.locator('.focus-display').waitFor();
+    await page.getByRole('radio',{name:'唱片计时'}).click();await page.locator('.record-now-disc').waitFor();assert.match(await page.locator('.record-now-caption').innerText(),/测试专辑/);
+    await page.locator('.record-now-disc').click();await page.locator('.focus-display').focus();await page.keyboard.press('ArrowRight');await page.keyboard.press('ArrowLeft');
+    assert.deepEqual(await page.evaluate(()=>window.__cmds),['toggle','next','previous'],'the record plays/pauses music and arrows skip tracks');
+    assert.equal(await page.locator('.focus-display').count(),1,'clicking the record does not close 沉浸');await screenshot(page,'focus-display-record-now');
+    assert.equal(await page.evaluate(()=>getComputedStyle(document.querySelector('.room-now-playing')||document.body).visibility),await page.locator('.room-now-playing').count()?'hidden':'visible');
+    await page.keyboard.press('Escape');assert.equal(await shown(),0,'Esc leaves 沉浸');
+    await page.getByRole('navigation',{name:'小屋工具'}).getByRole('button',{name:'沉浸',exact:true}).click();await page.locator('.focus-display').waitFor();await page.mouse.click(40,300);assert.equal(await shown(),0,'a click on empty space leaves 沉浸');
+    await page.evaluate(()=>document.activeElement?.blur());await page.keyboard.press('h');assert.equal(await page.evaluate(()=>document.documentElement.classList.contains('room-zen')),true);assert.equal(await shown(),0,'收起工具 does not open the focus display');await screenshot(page,'tools-hidden');
+    await page.keyboard.press('h');assert.equal(await page.evaluate(()=>document.documentElement.classList.contains('room-zen')),false);
+    assert.equal(await page.getByRole('button',{name:'整窗'}).count(),0,'整窗 is folded into 沉浸');
+ },{autoEnter:true});
   await run('immersive-tools-keep-focus-button-clickable',async page=>{
-    await page.getByRole('button',{name:'沉浸',exact:true}).click();await page.getByRole('button',{name:'显示工具',exact:true}).click();await screenshot(page,'immersive-tools-focus-entry');await openFocus(page);assert.equal(await page.locator('.focus-dock').count(),1);await screenshot(page,'immersive-tools-focus-open');
+    await page.getByRole('button',{name:'收起工具',exact:true}).click();await page.getByRole('button',{name:'显示工具',exact:true}).click();await screenshot(page,'immersive-tools-focus-entry');await openFocus(page);assert.equal(await page.locator('.focus-dock').count(),1);await screenshot(page,'immersive-tools-focus-open');
   });
   await run('album-wall-escape-preserves-lower-layers',async page=>{
     await openFocus(page,'随手记');
     await page.evaluate(()=>{document.documentElement.dataset.desktopFullscreen='true';window.dispatchEvent(new CustomEvent('album-desktop-fullscreen',{detail:true}));});
-    await page.getByRole('button',{name:'沉浸模式',exact:true}).click();await page.getByRole('button',{name:'显示工具',exact:true}).click();
+    await page.getByRole('button',{name:'收起工具',exact:true}).click();await page.getByRole('button',{name:'显示工具',exact:true}).click();
     await openAlbumWall(page);await page.getByRole('dialog',{name:'专辑墙编辑器',exact:true}).waitFor();await screenshot(page,'album-wall-over-focus');await page.keyboard.press('Escape');
     assert.equal(await page.locator('.album-wall-overlay').count(),0);assert.equal(await page.locator('.focus-dock').count(),1,'only the top album-wall modal should close');
     assert.equal(await page.evaluate(()=>document.documentElement.classList.contains('room-zen')),true);assert.equal(await page.evaluate(()=>window.__nativeCommands.some(x=>x.endsWith('/fullscreen-exit'))),false);
@@ -137,7 +158,7 @@ try {
     for(let i=0;i<20;i++){
       await page.getByRole('button',{name:'进入全屏模式',exact:true}).click();assert.match(await page.evaluate(()=>window.__nativeCommands.at(-1)),/\/fullscreen$/);
       await page.evaluate(()=>{document.documentElement.dataset.desktopFullscreen='true';window.dispatchEvent(new CustomEvent('album-desktop-fullscreen',{detail:true}));});
-      await page.evaluate(()=>document.activeElement?.blur());await page.keyboard.press('z');assert.equal(await page.evaluate(()=>document.documentElement.classList.contains('room-zen')),true);
+      await page.evaluate(()=>document.activeElement?.blur());await page.keyboard.press('h');assert.equal(await page.evaluate(()=>document.documentElement.classList.contains('room-zen')),true);
       await page.keyboard.press('Escape');assert.equal(await page.evaluate(()=>document.documentElement.classList.contains('room-zen')),false);
       await page.getByRole('button',{name:'退出全屏模式',exact:true}).click();await page.evaluate(()=>{document.documentElement.dataset.desktopFullscreen='false';window.dispatchEvent(new CustomEvent('album-desktop-fullscreen',{detail:false}));});
     }

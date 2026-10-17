@@ -3,7 +3,7 @@ import { reportTrayPet } from './desktop/desktop-sink-client.mjs';
 import { getRoomScene } from './scene-catalog.mjs';
 import { normalizePetId, getPet } from './pet/pet-catalog.mjs';
 import { setBeat } from './player/beat-clock.mjs';
-import { Up, Down, ArrowUpRight, Wand2, EyeSlash, Heart, Plus, ListBullet, Check, Computer, Play, SpeakerWave, SpeakerOff, Grid3X3, Refresh } from './icons';
+import { Up, Down, ArrowUpRight, Wand2, EyeSlash, Heart, Plus, ListBullet, Check, Computer, Play, SpeakerWave, SpeakerOff, Grid3X3, Refresh, Expand } from './icons';
 import { RecordBoxControls, useRecordLibrary, useRecordStyle } from './RecordLibrary';
 import { desktopCommand, useDesktopAppearance } from './desktop-client';
 import useReducedMotion from './useReducedMotion';
@@ -22,6 +22,7 @@ import useDeck from './room/useDeck';
 import useRoomChrome from './room/useRoomChrome';
 import useOnboardingFlow from './room/useOnboardingFlow';
 import useCompanionSnapshot from './room/useCompanionSnapshot';
+import { coverThumb } from './focus/session-log.mjs';
 import './companion-room.css';
 
 // Opened on demand: Settings (with 音源 › 账户与文件夹), the first-run guide and
@@ -65,6 +66,8 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
   useEffect(() => { sound?.setDucked(deck.audible); }, [deck.audible]);
   usePrefetch();
   const recordStyle = useRecordStyle(deckItem);
+  // The deck's record for other surfaces (专注画面 › 唱片计时): cabin:deck-item, docs/events.md.
+  useEffect(() => { const detail = deckItem ? { id: deckItem.id, title: deckItem.title || '', artist: deckItem.artist || '', cover: deckItem.cover || '' } : null; window.__cabinDeckItem = detail; window.dispatchEvent(new CustomEvent('cabin:deck-item', { detail })); if (detail?.cover) coverThumb(detail.cover).then((thumb) => { if (window.__cabinDeckItem === detail) window.__cabinDeckItem = { ...detail, thumb }; }); }, [deckItem?.id, deckItem?.title, deckItem?.artist, deckItem?.cover]);
   // Weather and the cat's accessory come from the focus record, not its clock:
   // the room does not re-render while a timer ticks (RoomCat keeps its own clock).
   const catFocus = useMemo(() => focus ? focusSnapshot(focus.state, Date.now()) : {}, [focus?.state]), weather = catFocus.weather || 'snow';
@@ -90,7 +93,8 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
         {sound && <button type="button" className={sound.enabled ? 'is-on' : ''} aria-label={sound.enabled ? '小屋声音（开）' : '小屋声音（关）'} aria-expanded={dock.open && dock.tab === 'sound'} title="Lo-fi 电台与环境音" onClick={() => saveDock(dock.open && dock.tab === 'sound' ? { open: false } : { open: true, tab: 'sound' })}>{sound.enabled ? <SpeakerWave size={17}/> : <SpeakerOff size={17}/>}<span>声音</span></button>}
         <button type="button" aria-label={petLabel} title={pet.active ? `让${petName}回家` : `${petName}出门：到桌面上散步`} aria-pressed={Boolean(pet.active)} onClick={() => desktopCommand(pet.active ? 'pet-stop' : 'pet-start')}><Heart size={17}/><span>{petLabel}</span></button>
         <button type="button" aria-label={sink.busy ? '取消沉入桌面' : sink.active ? '浮出桌面' : '沉入桌面'} aria-pressed={Boolean(sink.active)} disabled={appearance.client && !sink.supported} title={sink.active ? '浮出桌面：回到小屋窗口 · Ctrl/⌘+Alt+D' : sink.reason || '沉入桌面：窗口收起，小屋变成桌面背景，伙伴和迷你唱机还能点 · Ctrl/⌘+Alt+D'} onClick={chrome.toggleDesktopMode}><Computer size={17}/><span>{sink.busy ? '正在沉入…' : sink.active ? '浮出桌面' : '沉入桌面'}</span></button>
-        {!zen && !fullscreen && <button type="button" aria-pressed={false} aria-keyshortcuts="Z" title="沉浸模式：只留房间和时钟 · Z" onClick={chrome.toggleZen}><EyeSlash size={17}/><span>沉浸</span></button>}
+        <button type="button" aria-keyshortcuts="Z" title="沉浸：窗口变成专注画面（翻页钟等），Esc 或点空白处返回 · Z" onClick={() => window.dispatchEvent(new CustomEvent('cabin-focus-display', { detail: { open: true } }))}><Expand size={17}/><span>沉浸</span></button>
+        {!zen && !fullscreen && <button type="button" aria-pressed={false} aria-keyshortcuts="H" title="收起工具：只留房间和时钟 · H" onClick={chrome.toggleZen}><EyeSlash size={17}/><span>收起工具</span></button>}
       </span>
     </nav>
     {filtersOpen && <section id="cabin-shelf-filters" className="shelf-filters" aria-label="整理唱片架">

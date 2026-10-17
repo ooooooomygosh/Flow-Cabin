@@ -56,11 +56,10 @@
 .focus-display-bar > button { display: inline-flex; align-items: center; gap: 5px; height: 32px; padding: 0 10px; font: inherit; font-size: 12px; white-space: nowrap; color: var(--px-ink-dim); background: var(--px-surface-2); border: 0; border-left: 2px solid var(--px-border); cursor: pointer; }
 .focus-display-bar > button:first-child { border-left: 0; }
 .focus-display-bar > button:hover { color: var(--px-ink); background: var(--px-surface-3); }
-.focus-display-name { min-width: 7em; padding: 0 6px; text-align: center; font: 400 12px/32px var(--px-font-cn); color: var(--px-ink); background: var(--px-surface-2); }
 .focus-display-bar .face-show { border-left: 2px solid var(--px-border); }
 .focus-display-bar .face-show button { height: 32px; border: 0; margin: 0; }
 :root.room-focus-display .immersive-exit { visibility: hidden; }
-@media (max-width: 720px) { .focus-display-bar .face-show, .focus-display-name { display: none; } .focus-face.is-full .focus-face-fit { height: 46vh; } }
+@media (max-width: 720px) { .focus-display-bar .face-show, .focus-display-bar .face-tabs { display: none; } .focus-face.is-full .focus-face-fit { height: 46vh; } }
 @keyframes face-display-in { from { opacity: 0; } }
 @keyframes face-flash { 0% { opacity: 0; } 12%, 80% { opacity: 1; } 100% { opacity: 0; } }
 }
@@ -68,4 +67,30 @@
 /* Under the whole-window display the dimmed room holds still: its canvas loops stop
    (frame-clock occlusion) and its CSS sprites pause too. */
 :root.room-focus-display .cabin-stage-wrap, :root.room-focus-display .cabin-stage-wrap * { animation-play-state: paused; }
+}
+
+/* 唱片计时 in the whole window: the deck's record, its cover as the label. */
+.focus-face-art { position: relative; display: inline-block; line-height: 0; }
+.record-now { position: absolute; inset: 0; pointer-events: none; }
+.record-now-disc { position: absolute; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; background: transparent; cursor: pointer; pointer-events: auto; }
+.record-now-disc:focus-visible { outline: 2px dashed var(--px-accent-hi); outline-offset: 2px; }
+.record-now-label { display: block; overflow: hidden; border-radius: 50%; box-shadow: 0 0 0 2px var(--px-shadow); image-rendering: pixelated; }
+.record-now-label > img, .record-now-label > .record-sleeve, .record-now-label canvas { display: block; width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; }
+.record-now.is-playing .record-now-label { animation: record-now-spin 1.8s steps(12, end) infinite; }
+.record-now-skip { position: absolute; display: grid; place-items: center; width: 8%; aspect-ratio: 1; min-width: 28px; padding: 0; color: var(--px-ink); background: var(--px-surface-hud); border: 2px solid var(--px-border); box-shadow: var(--px-shadow-2); opacity: 0; cursor: pointer; pointer-events: auto; transition: opacity 120ms steps(2, end); }
+.record-now:hover .record-now-skip, .record-now-skip:focus-visible { opacity: 1; }
+.record-now-caption { position: absolute; left: 0; right: 0; top: 100%; margin: 10px 0 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; text-align: center; font: 400 24px/1.4 var(--px-font-cn); color: var(--px-ink); text-shadow: 2px 2px 0 var(--px-shadow); line-height: 1.4; }
+.record-now-caption span { color: var(--px-ink-dim); }
+.focus-display-offer { position: absolute; top: 12vh; left: 50%; translate: -50% 0; display: flex; align-items: center; gap: 0; background: var(--px-surface-hud); border: 2px solid var(--px-border); box-shadow: var(--px-shadow-2); }
+.focus-display-offer strong { padding: 0 12px; font: 400 12px/34px var(--px-font-cn); color: var(--px-ink); }
+.focus-display-offer button { display: inline-flex; align-items: center; gap: 5px; height: 34px; padding: 0 12px; font: inherit; font-size: 12px; color: var(--px-ink); background: var(--px-surface-2); border: 0; border-left: 2px solid var(--px-border); cursor: pointer; }
+.focus-display-offer button:hover { background: var(--px-surface-3); }
+.focus-display-bar .face-tabs { border-left: 2px solid var(--px-border); }
+.focus-display-bar .face-tabs button { height: 32px; border: 0; margin: 0; }
+@media (prefers-reduced-motion: reduce) { .record-now.is-playing .record-now-label { animation: none; } }
+:root[data-desktop-reduce-motion=true] .record-now.is-playing .record-now-label { animation: none; }
+@keyframes record-now-spin { to { rotate: 1turn; } }
+@layer overrides {
+/* The shelf caption under the display would sit on the bottom bar. */
+:root.room-focus-display .room-now-playing { visibility: hidden; }
 }

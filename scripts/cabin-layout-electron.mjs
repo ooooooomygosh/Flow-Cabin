@@ -57,8 +57,8 @@ try {
   await openRoomSettings(page); await page.getByRole('button',{name:'选择场景 月夜书桌',exact:true}).click(); await closeSettings(page);
   await page.waitForTimeout(400); await verifyCabinLayout({page});
   await screenshot('night-study-1440x900.png');
-  await page.keyboard.press('z'); await page.locator('.focus-badge').click(); await page.waitForTimeout(400); await verifyFocusLayout({page});
-  await page.keyboard.press('Escape'); await page.keyboard.press('z');
+  await page.keyboard.press('h'); await page.locator('.focus-badge').click(); await page.waitForTimeout(400); await verifyFocusLayout({page});
+  await page.keyboard.press('Escape'); await page.keyboard.press('h');
   assert.deepEqual(report.errors,[]); report.passed=true;
 } catch (error) {
   report.passed=false; report.error=error.stack; process.exitCode=1; console.error(error);

@@ -2,6 +2,7 @@
 // the lead-in when the round starts and tracks inward to the run-out groove as
 // it ends; a break is side B (moss label). The time sits on the brass plate.
 // The record never rotates: the grooves are symmetric, the sheen is the lamp's.
+// In the whole-window display the deck's cover sits on the label (RecordNowPlaying) and the arm follows the music.
 import { SMALL, layoutText } from '../pixel-digits.mjs';
 import { createRaster, fill, px, disc, line, text, mix } from '../raster.mjs';
 import { panel, stud, led } from './kit.mjs';
@@ -39,7 +40,8 @@ export function paint(model, pal) {
   fill(r, CX - 5, CY - 5, 10, 1, label[2]); fill(r, CX - 3, CY + 4, 6, 1, label[0]); fill(r, CX - 4, CY + 6, 8, 1, label[0]);
   fill(r, CX - 1, CY - 1, 2, 2, pal.outline); px(r, CX - 1, CY - 1, pal.metal[3]);
   // tonearm: pivot, counterweight, a 3-tone 2-px arm and the headshell
-  const down = model.mode === 'timer' && model.phase !== 'idle', tip = down ? stylus(model.progress ?? 0) : REST;
+  // With the deck's music (whole-window display) the arm follows the music: down while it plays.
+  const timing = model.mode === 'timer' && model.phase !== 'idle', down = model.music ? Boolean(model.music.playing) : timing, tip = down ? stylus(timing ? (model.progress ?? 0) : .35) : REST;
   stud(r, REST[0] - 2, REST[1] + 2, 4, 3, pal.metal);                              // arm rest post
   fill(r, PIVOT[0] + 3, PIVOT[1] - 9, 7, 6, pal.outline); fill(r, PIVOT[0] + 4, PIVOT[1] - 8, 5, 4, pal.metal[1]); fill(r, PIVOT[0] + 4, PIVOT[1] - 8, 5, 1, pal.metal[3]);
   line(r, PIVOT[0] + 5, PIVOT[1] - 4, PIVOT[0], PIVOT[1], pal.outline, 3);

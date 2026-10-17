@@ -226,7 +226,7 @@ try {
   rematch = ''; await chooseSource(page, sourceBefore);
   await page.locator('.focus-badge').click(); await page.getByRole('tab', { name: '待办', exact: true }).click(); await page.getByLabel('新的待办').fill('浏览器测试待办'); await page.getByRole('button', { name: '添加待办' }).click(); await page.getByRole('checkbox', { name: '完成：浏览器测试待办' }).check(); assert.equal(await page.locator('.focus-task-list li.is-done').count(), 1); check('focus-tasks-create-and-complete');
   await page.getByRole('tab', { name: '随手记', exact: true }).click(); await page.getByLabel('随手记内容').fill('QA 随手记备份内容'); check('quick-notes-save-local-text');
-  await page.getByRole('tab', { name: '番茄钟' }).click(); await page.getByRole('button', { name: '计时设置' }).click(); await page.getByLabel('专注（分）').fill('2'); await page.getByLabel('专注（分）').blur(); await page.getByRole('button', { name: '开始专注' }).click(); await page.clock.fastForward(121000); await page.locator('.focus-phase', { hasText: '短休息' }).waitFor(); await page.getByRole('tab', { name: '统计' }).click(); assert.match(await page.locator('.focus-stat-tiles').innerText(), /2 分钟/); await screenshot('focus-statistics'); check('focus-timer-completes-and-records-session'); await page.locator('.focus-dock-close').click();
+  await page.getByRole('tab', { name: '番茄钟' }).click(); await page.getByRole('button', { name: '计时设置' }).click(); await page.getByLabel('专注（分）').fill('2'); await page.getByLabel('专注（分）').blur(); await page.getByRole('button', { name: '开始专注' }).click(); await page.locator('.focus-display').waitFor(); await page.keyboard.press('Escape'); await page.locator('.focus-display').waitFor({ state: 'detached' }); await page.clock.fastForward(121000); await page.locator('.focus-phase', { hasText: '短休息' }).waitFor(); await page.getByRole('tab', { name: '统计' }).click(); assert.match(await page.locator('.focus-stat-tiles').innerText(), /2 分钟/); await screenshot('focus-statistics'); check('focus-timer-completes-and-records-session'); await page.locator('.focus-dock-close').click();
   // 学习: a deck, pasted cards, a keyboard review (Space flips, 1–4 rate), a countdown.
   await page.locator('.focus-badge').click(); await page.getByRole('tab', { name: '学习', exact: true }).click();
   await page.getByLabel('新卡组名称').fill('QA 单词'); await page.getByRole('button', { name: '新建', exact: true }).click();
@@ -264,7 +264,7 @@ try {
   await page.getByLabel('导入备份文件').setInputFiles({ name: 'fixture.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(imported)) }); await page.getByText('导入完成：新增 1 张唱片，唱片架现在共有 19 张。', { exact: true }).waitFor(); assert(items.some(i => i.id === 'backup-imported')); check('backup-import-merges-new-album'); await closeDialog();
   assert.equal(await page.locator('.app-titlebar').getByRole('button', { name: /专辑墙|我的歌单/ }).count(), 0, 'the titlebar keeps one add button'); await openAlbumWall(page); await page.locator('.wall-library-album').first().click(); await page.waitForFunction(() => { const c = document.querySelector('.wall-canvas-wrap canvas'); return c?.width > 300 && !document.querySelector('.wall-preview-bar').textContent.includes('正在更新'); }); await screenshot('album-wall');
   const pngPromise = page.waitForEvent('download'); await page.getByRole('button', { name: '下载 PNG', exact: true }).click(); const png = await pngPromise; await png.saveAs(path.join(output, 'fixture-album-wall.png')); const pngBytes = await fs.readFile(path.join(output, 'fixture-album-wall.png')); assert.equal(pngBytes.subarray(1, 4).toString(), 'PNG'); assert(pngBytes.length > 1000); check('album-wall-paints-and-downloads-real-png'); await closeDialog();
-  await page.keyboard.press('z'); assert(await page.evaluate(() => document.documentElement.classList.contains('room-zen'))); await screenshot('zen-mode'); await page.keyboard.press('Escape'); check('zen-mode-keyboard');
+  await page.keyboard.press('h'); assert(await page.evaluate(() => document.documentElement.classList.contains('room-zen'))); await screenshot('zen-mode'); await page.keyboard.press('Escape'); check('zen-mode-keyboard');
   // 我的歌单: account playlists, link import, file import; a playlist plays like an album.
   neteaseLoggedIn = true;
   await openAddToShelf(page, '我的歌单');
@@ -409,7 +409,7 @@ try {
     return out;
   }, state); };
   await page.locator('.focus-badge').click(); await page.getByRole('tab', { name: '番茄钟' }).click();
-  const startFocus = page.getByRole('button', { name: '开始专注', exact: true }); if (await startFocus.count()) await startFocus.click();
+  const startFocus = page.getByRole('button', { name: '开始专注', exact: true }); if (await startFocus.count()) { await startFocus.click(); await page.locator('.focus-display').waitFor(); await page.keyboard.press('Escape'); }
   await page.getByRole('button', { name: '收起专注工具', exact: true }).click(); await page.locator('.room-cat-bubble').waitFor();
   for (const scene of ROOM_SCENES) {
     await page.setViewportSize({ width: 1440, height: 900 }); await openRoomSettings(page); await page.getByRole('button', { name: `选择场景 ${scene.label}`, exact: true }).click(); await closeSettings(page);
@@ -424,7 +424,7 @@ try {
   }
   check('every-scene-deck-cells-and-cat-bubble-clear-of-toolbar-panels-and-focus-panel-at-5-viewports');
   // Immersive: console fully hidden, steps back in when the pointer comes near it.
-  await page.setViewportSize({ width: 1280, height: 800 }); await page.mouse.move(1200, 120); await page.keyboard.press('z'); await page.waitForTimeout(400);
+  await page.setViewportSize({ width: 1280, height: 800 }); await page.mouse.move(1200, 120); await page.keyboard.press('h'); await page.waitForTimeout(400);
   const deckBox = await page.locator('.room-turntable').boundingBox(), deckStyle = () => page.locator('.room-turntable').evaluate(e => [getComputedStyle(e).opacity, getComputedStyle(e).visibility, getComputedStyle(e).pointerEvents].join(' '));
   assert.equal(await deckStyle(), '0 hidden none', 'immersive console must be fully hidden');
   await page.waitForTimeout(700); assert.deepEqual(await layoutIssues('immersive'), []); assert.equal(await page.locator('.room-cat[data-perch]').count(), 0, 'cat leaves the hidden console');
@@ -484,7 +484,7 @@ try {
       assert(idleUnsupported <= 50, `${label}: ${Math.round(idleUnsupported)}ms unsupported outside the hop`); assert(worstHover <= 50, `${label}: hovered ${Math.round(worstHover)}ms in place without support`);
       return { positions: positions.size, idleUnsupported: Math.round(idleUnsupported), worstHover: Math.round(worstHover), frames: frames.length };
     };
-    await page.locator('.focus-badge').click(); const startFocusM = page.getByRole('button', { name: '开始专注', exact: true }); if (await startFocusM.count()) await startFocusM.click(); await page.waitForTimeout(1500);
+    await page.locator('.focus-badge').click(); const startFocusM = page.getByRole('button', { name: '开始专注', exact: true }); if (await startFocusM.count()) { await startFocusM.click(); await page.locator('.focus-display').waitFor(); await page.keyboard.press('Escape'); } await page.waitForTimeout(1500);
     // This scene's painted floor is clear of the panels at 1280x800, so the cat stays down there.
     // Raise the floor line to the old 118px baseline (under console and footer): every floor spot is
     // blocked, the cat must perch, and the hops below start from the console.
@@ -495,7 +495,7 @@ try {
     await page.evaluate(() => document.querySelector('.room-scene').style.removeProperty('--scene-floor'));
     await page.getByRole('button', { name: '收起专注工具', exact: true }).click(); await page.waitForTimeout(1200); await page.mouse.move(1200, 120);
     assert.equal(await page.locator('.room-cat[data-perch="console"]').count(), 1, 'cat still perched before immersive');
-    const immersive = await hopDuring('immersive hides the console', () => page.keyboard.press('z'));
+    const immersive = await hopDuring('immersive hides the console', () => page.keyboard.press('h'));
     // Hover held on the revealed console: a brief pass leaves the cat alone, a held hover (> 1.2s) brings it back up; hiding again sends it down.
     const zenDeck = await page.locator('.room-turntable').boundingBox(), perchCount = () => page.locator('.room-cat[data-perch="console"]').count();
     await page.mouse.move(zenDeck.x + zenDeck.width / 2, zenDeck.y + 10); await page.waitForTimeout(500); await page.mouse.move(1200, 120); await page.waitForTimeout(900);
