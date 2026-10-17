@@ -65,7 +65,7 @@ const check = (value) => report.checks.push(value);
   assert.equal(await application.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find(window => window.webContents.getURL().startsWith('album-desktop://shell')).isFullScreen()), true);
   await openAddToShelf(site, '我的歌单'); await nativeKey('ESC'); await site.getByRole('dialog').waitFor({ state:'hidden' });
   assert.equal(await site.evaluate(() => document.documentElement.dataset.desktopFullscreen), 'true');
-  await site.getByRole('button', { name:'沉浸模式', exact:true }).click();
+  await site.getByRole('button', { name:'收起工具', exact:true }).click();
   await site.getByRole('button', { name:'显示工具', exact:true }).click();
   // 学习 is a 专注 dock tab, reached from the toolbar's 专注 badge (the toolbar stays under 显示工具).
   if (!await site.locator('.focus-dock').count()) await site.locator('.cabin-toolbar .focus-badge').click();
@@ -90,7 +90,7 @@ const check = (value) => report.checks.push(value);
   assert.equal(await site.evaluate(()=>document.documentElement.classList.contains('room-zen')),true);
   assert.equal(await site.evaluate(()=>document.documentElement.dataset.desktopFullscreen),'true');
   check('packaged-escape-closes-study-tools-before-immersive-and-fullscreen');
-  await site.getByRole('button', { name:'收起工具', exact:true }).click();
+  await site.getByRole('button', { name:'隐藏工具', exact:true }).click();
   await site.evaluate(() => document.activeElement?.blur()); await nativeKey('ESC');
   await site.waitForFunction(() => !document.documentElement.classList.contains('room-zen'));
   assert.equal(await site.evaluate(() => document.documentElement.dataset.desktopFullscreen), 'true');

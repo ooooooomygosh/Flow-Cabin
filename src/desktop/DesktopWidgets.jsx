@@ -152,7 +152,7 @@ export default function DesktopWidgets({ mode = 'desktop', exit, ...music }) {
 }
 
 // A persistent, small recovery control: fullscreen never removes interaction.
-// 沉浸模式 is a toggle: its label stays put and aria-pressed carries the state.
+// 收起工具 (room-zen, H) leaves this one 恢复工具 control; 沉浸 itself is the 专注画面.
 // `tools` (显示工具) may be owned by the room so the zen clock can step aside;
 // with the tools shown, the toolbar's 专注 badge opens every focus tool.
 export function ImmersiveChrome({ zen, fullscreen, exitFullscreen, toggleZen, tools: ownedTools, setTools: setOwnedTools }) {
@@ -165,8 +165,8 @@ export function ImmersiveChrome({ zen, fullscreen, exitFullscreen, toggleZen, to
   }, [zen, tools]);
   if (!zen && !fullscreen) return null;
   return <div className={`immersive-exit is-visible${zen ? ' is-zen' : ''}`} role="toolbar" aria-label="全屏与沉浸工具">
-    <button type="button" aria-pressed={zen} aria-keyshortcuts="Z" title={zen ? '回到正常模式 · Z' : '沉浸模式 · Z'} onClick={toggleZen}>沉浸模式</button>
-    {zen && <button type="button" aria-expanded={tools} onClick={() => setTools((value) => !value)}>{tools ? '收起工具' : '显示工具'}</button>}
+    <button type="button" aria-pressed={zen} aria-keyshortcuts="H" title={zen ? '恢复全部工具 · H' : '收起工具：只留房间和时钟 · H'} onClick={toggleZen}>{zen ? '恢复工具' : '收起工具'}</button>
+    {zen && <button type="button" aria-expanded={tools} onClick={() => setTools((value) => !value)}>{tools ? '隐藏工具' : '显示工具'}</button>}
     {fullscreen && zen && !tools && <button type="button" onClick={exitFullscreen}>退出全屏</button>}
   </div>;
 }

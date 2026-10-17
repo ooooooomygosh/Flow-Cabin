@@ -41,7 +41,9 @@ export default function useRoomChrome({ client, notify }) {
       if (event.defaultPrevented || event.repeat || event.target?.closest?.('input,textarea,select,[contenteditable="true"]') || event.altKey || event.ctrlKey || event.metaKey || roomCovered()) return;
       const { zen: isZen, corner: isCorner, dock: panel } = live.current;
       // 唱机特写 is modal: only T (close it again) reaches the room behind it.
-      if ((event.key === 'z' || event.key === 'Z') && !isCorner) { event.preventDefault(); setZen((value) => !value); }
+      // Z = 沉浸: the whole-window 专注画面. H = 收起工具 (room-zen), on its own.
+      if ((event.key === 'z' || event.key === 'Z') && !isCorner) { event.preventDefault(); window.dispatchEvent(new CustomEvent('cabin-focus-display', { detail: { open: true } })); }
+      else if ((event.key === 'h' || event.key === 'H') && !isCorner) { event.preventDefault(); setZen((value) => !value); }
       else if ((event.key === 't' || event.key === 'T') && !event.shiftKey) { event.preventDefault(); setCorner((value) => !value); }
       else if (event.key === 'Escape' && !isCorner && !panel.open) {
         if (isZen) setZen(false);

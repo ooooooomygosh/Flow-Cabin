@@ -42,7 +42,7 @@ export async function verifyCabinLayout({ page, check = () => {} }) {
   const toolbar = await page.locator('.cabin-toolbar').evaluate(nav => { const kids = [...nav.querySelectorAll('button')].filter(b => b.getBoundingClientRect().width); return { tops: [...new Set(kids.map(b => Math.round(b.getBoundingClientRect().top)))], right: Math.max(...kids.map(b => b.getBoundingClientRect().right)), width: innerWidth, order: kids.map(b => b.classList.contains('focus-badge') ? '专注' : (b.getAttribute('aria-label') || b.textContent).trim()) }; });
   assert.equal(toolbar.tops.length, 1, `toolbar is one row: ${toolbar.tops}`); assert(toolbar.width - toolbar.right < 40, 'toolbar sits at the right edge');
   const kind = name => /^小屋声音/.test(name) ? '声音' : /出门|回家/.test(name) ? '伙伴' : /桌面/.test(name) ? '桌面' : name;
-  assert.deepEqual(toolbar.order.map(kind), ['专注', '声音', '伙伴', '桌面', '沉浸'], `toolbar order: ${toolbar.order}`);
+  assert.deepEqual(toolbar.order.map(kind), ['专注', '声音', '伙伴', '桌面', '沉浸', '收起工具'], `toolbar order: ${toolbar.order}`);
   check('album-card-frame-alignment-background-alpha-and-console-tools');
   return measure;
 }

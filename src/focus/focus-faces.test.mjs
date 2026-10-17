@@ -60,14 +60,15 @@ test('the flip follows gluqlo: the top leaf folds and darkens, the bottom leaf o
 
 test('display preferences live in their own key, follow the scene until picked, and sync', () => {
   assert.equal(DISPLAY_KEY, 'album-circle-focus-display-v1');
-  assert.deepEqual(normalizeDisplay({ mode: 'nope', show: 'x', seconds: 1 }), { mode: '', show: 'auto', seconds: false });
-  assert.deepEqual(normalizeDisplay({ mode: 'ring', show: 'timer', seconds: true }), { mode: 'ring', show: 'timer', seconds: true });
+  assert.deepEqual(normalizeDisplay({ mode: 'nope', show: 'x', seconds: 1 }), { mode: '', show: 'auto', seconds: false, autoEnter: true });
+  assert.deepEqual(normalizeDisplay({ mode: 'ring', show: 'timer', seconds: true }), { mode: 'ring', show: 'timer', seconds: true, autoEnter: true });
+  assert.equal(normalizeDisplay({ autoEnter: false }).autoEnter, false, 'auto-enter on pomodoro start can be turned off');
   for (const id of ROOM_SCENE_IDS) assert.ok(FACE_IDS.includes(SCENE_FACES[id]), `${id} has a default face`);
   assert.equal(faceFor({}, 'warm'), 'flip'); assert.equal(faceFor({}, 'forest'), 'growth'); assert.equal(faceFor({ mode: 'record' }, 'forest'), 'record');
   assert.equal(cycleFace('growth', 1), 'flip'); assert.equal(cycleFace('flip', -1), 'growth'); assert.equal(cycleFace('bogus', 1), FACE_IDS[1]);
   const storage = memory();
-  assert.deepEqual(readDisplay(storage), { mode: '', show: 'auto', seconds: false });
-  storage.setItem(DISPLAY_KEY, '{broken'); assert.deepEqual(readDisplay(storage), { mode: '', show: 'auto', seconds: false });
+  assert.deepEqual(readDisplay(storage), { mode: '', show: 'auto', seconds: false, autoEnter: true });
+  storage.setItem(DISPLAY_KEY, '{broken'); assert.deepEqual(readDisplay(storage), { mode: '', show: 'auto', seconds: false, autoEnter: true });
   assert.equal(writeDisplay({ mode: 'window' }, storage), true); assert.equal(readDisplay(storage).mode, 'window');
   assert.equal(writeDisplay({}, { setItem() { throw new Error('quota'); } }), false);
   const listeners = {}, win = { addEventListener: (t, fn) => { listeners[t] = fn; }, removeEventListener: (t) => { delete listeners[t]; } };

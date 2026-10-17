@@ -55,6 +55,10 @@ Pet code listens the same way in both windows (`onCabinPlayback` in `src/scene/p
 
 This synchronizes the generated section's target tempo, not sample-accurate phase. The engine supplies no beat-origin timestamp and ramps between section tempos over two seconds; the slow lo-fi snapshot poll can add up to approximately 750 ms of visual delay.
 
+## `cabin:deck-item`
+
+Fired on `window` by the cabin whenever the record on the deck changes; `detail` is `{ id, title, artist, cover }` or `null` when the deck is empty. The latest value is also kept on `window.__cabinDeckItem`. 专注画面 › 唱片计时 uses it to put the cover on the record label; play / pause and skips go back through `cabin:player-command`.
+
 ## `cabin:player-command` (incoming)
 
 The cabin page listens on `window` and executes:
