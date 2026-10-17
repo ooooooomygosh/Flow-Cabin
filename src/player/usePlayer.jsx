@@ -127,10 +127,14 @@ export function usePlayerShortcuts({ playback, player, provider, toggleVisual, r
 }
 
 // Broadcasts `cabin:playback` on window (see docs/events.md).
+// Measured with click tracks against the element's currentTime (docs/cat-care.md › 跟着节拍): the analyser
+// read path reports kicks this much before the media clock has them.
+export const MEDIA_OFFSET_MS = 0;
 export function usePlaybackBroadcast({ playing, provider, spinning, record, trackIndex, trackTitle, audio }) {
   const cast = useRef(null), energy = useRef(0), tracker = useRef(null);
   cast.current ||= createPlaybackBroadcaster({ target: window });
   tracker.current ||= createBeatTracker();
+  const lastAt = useRef(0);
   const track = record ? { id: record.id, index: trackIndex, title: trackTitle || trackNames(record)[trackIndex] || record.title, artist: record.artist, album: record.title } : null;
   const state = { playing, provider, spinning, track };
   const latest = useRef(state); latest.current = state;
@@ -140,8 +144,10 @@ export function usePlaybackBroadcast({ playing, provider, spinning, record, trac
     if (now.playing) { if (graph && audio.current && !audio.current.paused) value = rmsEnergy(graph.read()); else { value = estimatedEnergy(performance.now()); estimated = true; } }
     energy.current = smoothEnergy(energy.current, value);
     // The beat, on the wall clock so other windows (the desktop pet) can share it.
+    // Tracker times are performance.now() of the analyser reads (smooth; the element's currentTime is
+    // too coarse to time beats). Moved to when the beat is heard: + output latency + the media → graph offset.
     const beat = estimated ? null : tracker.current.state();
-    const beatAt = beat?.confident ? Date.now() - (performance.now() - beat.beatAt) : 0;
+    const beatAt = beat?.confident ? Date.now() - (performance.now() - beat.beatAt) + (graph?.latency?.() || 0) + MEDIA_OFFSET_MS : 0;
     cast.current.update({ ...now, energy: energy.current, estimated, bpm: beatAt ? beat.bpm : 0, beatAt });
   };
   useEffect(() => { energy.current = 0; tracker.current.reset(); sample(); }, [playing, provider, spinning, track?.id, track?.index, track?.title]);
@@ -155,7 +161,10 @@ export function usePlaybackBroadcast({ playing, provider, spinning, record, trac
       const idle = background && !window.albumPetState?.active && !document.documentElement.classList.contains('room-desktop');
       timer = setInterval(sample, idle ? 500 : ENERGY_INTERVAL_MS);
       // The bass band is read ~60 times a second for beat tracking (cheap: 2048-point FFT).
-      if (!idle) listen = setInterval(() => { const graph = analyserFor(audio?.current); if (graph?.bass && audio.current && !audio.current.paused) tracker.current.push(performance.now(), graph.bass()); }, Math.round(1000 / 60));
+      if (!idle) listen = setInterval(() => { const graph = analyserFor(audio?.current), media = audio?.current; if (!graph?.bass || !media || media.paused) return; const at = media.currentTime * 1000;
+        // A seek (or loop) jumps the media clock: start over, and the cat listens until the beat is found again.
+        if (at < lastAt.current - 30 || at - lastAt.current > 600) tracker.current.reset(); lastAt.current = at;
+        tracker.current.push(performance.now(), graph.bass()); }, Math.round(1000 / 60));
     };
     const off = onBackgroundChange(start);
     return () => { off(); clearInterval(timer); clearInterval(listen); };

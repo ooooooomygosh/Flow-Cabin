@@ -18,7 +18,7 @@ export async function ensureAnalyser(element) {
   const Context = globalThis.AudioContext || globalThis.webkitAudioContext;
   if (!Context || !canAnalyse(element.currentSrc || element.src)) return null;
   try {
-    if (!context) { context = new Context({ latencyHint: 'playback' }); idle = createIdleSuspend(context, { ms: 2000, busy: () => [...routed].some((media) => !media.paused) }); }
+    if (!context) { context = new Context(/* default 'interactive': ~40 ms to the ear, not ~95 ms with 'playback' */); idle = createIdleSuspend(context, { ms: 2000, busy: () => [...routed].some((media) => !media.paused) }); }
     if (context.state !== 'running') await context.resume().catch(() => {});
     if (context.state !== 'running') return null;
     const source = context.createMediaElementSource(element), analyser = context.createAnalyser();
@@ -27,7 +27,9 @@ export async function ensureAnalyser(element) {
     analyser.fftSize = 2048; analyser.smoothingTimeConstant = 0.2;
     source.connect(analyser); analyser.connect(context.destination);
     const frame = new Uint8Array(analyser.fftSize), spectrum = new Uint8Array(analyser.frequencyBinCount);
-    const graph = { analyser, read: () => { analyser.getByteTimeDomainData(frame); return frame; }, bass: () => { analyser.getByteFrequencyData(spectrum); return bassLevel(spectrum, context.sampleRate, analyser.fftSize); } };
+    // Output latency (ms): how long after the graph renders a sample it is heard.
+    const latency = () => ((context.baseLatency || 0) + (context.outputLatency || 0)) * 1000;
+    const graph = { analyser, latency, read: () => { analyser.getByteTimeDomainData(frame); return frame; }, bass: () => { analyser.getByteFrequencyData(spectrum); return bassLevel(spectrum, context.sampleRate, analyser.fftSize); } };
     // The element now plays through this context: wake it with the music, let it sleep 2 s after.
     routed.add(element);
     element.addEventListener('play', () => idle.wake());

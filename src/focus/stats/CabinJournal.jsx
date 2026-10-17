@@ -32,7 +32,7 @@ export function Bars({ days, label, mini = false, set = 'records', best = null }
 // `cabin:open-journal` ({ detail: { tab } }).
 export default function CabinJournal() {
   const focus = useFocus();
-  const [open, setOpen] = useState(false), [view, setView] = useState('overview'), ref = useRef(null), openRef = useRef(false);
+  const [open, setOpen] = useState(false), [view, setView] = useState('overview'), ref = useRef(null), openRef = useRef(false), closingRef = useRef(false);
   openRef.current = open;
   // Close synchronously so an L pressed in the same frame as Esc (before React re-renders) reopens.
   const shut = () => { openRef.current = false; setOpen(false); };
@@ -47,10 +47,11 @@ export default function CabinJournal() {
   useEffect(() => {
     const el = ref.current; if (!el) return;
     if (open) { if (!el.open) { if (el.showModal) el.showModal(); else el.setAttribute('open', ''); } }
-    else if (el.open) el.close?.();
+    else if (el.open) { closingRef.current = true; el.close?.(); }
   }, [open]);
   if (!focus) return null;
-  return <dialog ref={ref} className="cabin-journal" aria-label="小屋日记" style={journalArtStyle()} onCancel={(event) => { event.preventDefault(); shut(); }} onClose={() => { if (openRef.current && !ref.current?.open) shut(); }}>
+  return <dialog ref={ref} className="cabin-journal" aria-label="小屋日记" style={journalArtStyle()} onCancel={(event) => { event.preventDefault(); shut(); }} onClose={() => { // Our own close() queues this event; if L / cabin:open-journal reopened meanwhile it must not shut again.
+    if (closingRef.current) { closingRef.current = false; return; } if (openRef.current && !ref.current?.open) shut(); }}>
     {open && <JournalBook state={focus.state} now={focus.now} view={view} setView={setView} close={shut}/>}
   </dialog>;
 }

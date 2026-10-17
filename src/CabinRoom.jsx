@@ -23,6 +23,7 @@ import useDeck from './room/useDeck';
 import useRoomChrome from './room/useRoomChrome';
 import useOnboardingFlow from './room/useOnboardingFlow';
 import useCompanionSnapshot from './room/useCompanionSnapshot';
+import { useCatCareHost } from './cat/useCatCare';
 import { coverThumb } from './focus/session-log.mjs';
 import './companion-room.css';
 
@@ -60,6 +61,7 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
   const deck = useDeck({ items, onLoad: (item) => setSelectedId(item.id) });
   const { record, provider, playback, player, deckItem, effectiveSpin } = deck;
   const focus = useFocusState(), sound = useSoundscape();
+  useCatCareHost();
   const [pet, setPet] = useState(() => window.albumPetState || {});
   const [wallpaperError, setWallpaperError] = useState(() => window.albumRoomWallpaperState?.error || '');
   useEffect(() => { const receive = (event) => { window.albumPetState = event.detail; setPet(event.detail || {}); }; window.addEventListener('album-pet-state', receive); return () => window.removeEventListener('album-pet-state', receive); }, []);
@@ -77,7 +79,8 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
   const grooving = useSustained(effectiveSpin || sound?.lofiState === 'playing', 1800);
   // Lo-fi alone: dance at its tempo (a detected song beat takes over when the deck plays).
   const lofiBpm = sound?.lofiState === 'playing' && !playback.playing ? sound.section?.bpm : 0;
-  useEffect(() => { if (lofiBpm) setBeat({ bpm: lofiBpm }); }, [lofiBpm]);
+  // Lo-fi alone: its tempo and its heard quarter-note phase, refreshed while it plays (the section tempo ramps).
+  useEffect(() => { if (!lofiBpm) return undefined; const apply = () => setBeat({ bpm: lofiBpm, beatAt: sound?.lofiBeatAt?.() || 0 }); apply(); const timer = setInterval(apply, 1000); return () => clearInterval(timer); }, [lofiBpm]);
   useCompanionSnapshot({ look, petId, petOut: Boolean(pet.active), weather, accessory: catFocus.accessory || '', grooving, track: deck.nowTrack, startRow: view.startRow, items: view.items, selectedId: selected?.id || '', record: deckItem, recordStyle, spinning: effectiveSpin, trackIndex: deck.shownTrackIndex, reduceMotion: appearance.reduceMotion, statusText: deck.statusText, actualTrack: deck.actualTrack, provider }, buildSnapshot, (state) => setWallpaperError(state.error || ''));
   const personalizeRoom = (patch) => library?.update((old) => ({ ...old, rooms: { ...old.rooms, [library.roomId]: { ...(old.rooms[library.roomId] || {}), ...patch } } }));
   const { zen, corner, dock, saveDock, filtersOpen, setFiltersOpen, fullscreen, desktopMode, sink } = chrome;

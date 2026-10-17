@@ -9,6 +9,8 @@ export function startPetAnimation({
   now = () => performance.now(), setTimer = setTimeout, clearTimer = clearTimeout,
   // Grooving follows the song's beat (two sprite frames per beat), on the wall clock.
   beat = currentBeat, wallClock = () => Date.now(),
+  // onFrame → React → canvas paint lands about one display frame later, so pick the frame one frame ahead.
+  beatLead = 16,
 }) {
   if (!enabled) return () => {};
   const safePose = Object.hasOwn(FPS, pose) ? pose : 'idle', fps = FPS[safePose];
@@ -16,7 +18,7 @@ export function startPetAnimation({
   const draw = () => {
     if (stopped) return;
     if (safePose === 'groove' && !reduceMotion) {
-      const { index, wait } = grooveFrame(wallClock(), beat());
+      const { index, wait } = grooveFrame(wallClock() + beatLead, beat());
       if (index !== last) { last = index; onFrame(index); }
       timer = setTimer(draw, Math.max(16, Math.ceil(wait)));
       return;

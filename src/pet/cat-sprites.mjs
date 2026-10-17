@@ -54,6 +54,7 @@ function head(g, hx, hy, { eyes = 'open', look = 0 } = {}) {
   for (const ex of [hx - 3, hx + 3]) {
     if (eyes === 'open') { rect(g, ex, ey - 1, ex + 1, ey, 6); put(g, ex, ey - 1, 7); }
     else if (eyes === 'happy') { put(g, ex, ey, 6); put(g, ex + 1, ey - 1, 6); put(g, ex + 2, ey, 6); }
+    else if (eyes === 'calm') { put(g, ex - 1, ey - 1, 6); put(g, ex, ey, 6); put(g, ex + 1, ey, 6); put(g, ex + 2, ey - 1, 6); }
     else { put(g, ex, ey, 6); put(g, ex + 1, ey, 6); }
   }
   put(g, hx, hy + 2, 5); put(g, hx + 1, hy + 2, 5);
@@ -82,8 +83,9 @@ function sparkle(g, x, y) { put(g, x, y, EFFECT); put(g, x - 1, y, EFFECT); put(
 function letterZ(g, x, y, size) { for (let i = 0; i < size; i++) { put(g, x + i, y, EFFECT); put(g, x + i, y + size - 1, EFFECT); put(g, x + size - 1 - i, y + i, EFFECT); } }
 function note(g, x, y) { rect(g, x, y + 3, x + 1, y + 4, EFFECT); rect(g, x + 2, y, x + 2, y + 4, EFFECT); put(g, x + 3, y, EFFECT); put(g, x + 4, y + 1, EFFECT); }
 
-function sitting(g, { dx = 0, dy = 0, hdx = 0, hdy = 0, eyes, tailUp = 0, paws = [0, 0], acc }) {
-  const tailPoints = [[23, 29], [25, 28], [26, 26], [27, 24], [27, 22 - tailUp], [26, 20 - tailUp], [25, 19 - tailUp]].map(([x, y]) => [x + dx, y + dy]);
+function sitting(g, { dx = 0, dy = 0, hdx = 0, hdy = 0, eyes, tailUp = 0, swing = 0, paws = [0, 0], acc }) {
+  // swing bends the upper tail sideways (0 at the base, full at the tip) so it can follow the head.
+  const tailPoints = [[23, 29], [25, 28], [26, 26], [27, 24], [27, 22 - tailUp], [26, 20 - tailUp], [25, 19 - tailUp]].map(([x, y], i) => [x + dx + Math.round(swing * Math.max(0, i - 2) / 4), y + dy + (swing && i > 4 ? 1 : 0)]);
   tail(g, tailPoints);
   ellipse(g, 16 + dx, 24 + dy, 8, 6.5, 2); ellipse(g, 16 + dx, 25 + dy, 4, 4.5, 3);
   put(g, 11 + dx, 22 + dy, 4); put(g, 11 + dx, 24 + dy, 4); put(g, 21 + dx, 22 + dy, 4); put(g, 21 + dx, 24 + dy, 4);
@@ -102,17 +104,22 @@ function lying(g, { hx = 9, hy = 21, eyes = 'closed', look = 0, tailFlick = 0, a
 
 const FRAMES = {
   idle: [{ tailUp: 0 }, { tailUp: 1 }, { tailUp: 2 }, { tailUp: 1, eyes: 'closed' }],
-  groove: [{ hdx: -1, eyes: 'happy', note: [3, 3] }, { hdy: 1, note: [4, 1] }, { hdx: 1, eyes: 'happy', note: [26, 2] }, { hdy: 1, note: [25, 0] }],
+  groove: [{ hdx: -1, eyes: 'happy', swing: -3, note: [3, 3] }, { hdy: 1, swing: 0, note: [4, 1] }, { hdx: 1, eyes: 'happy', swing: 3, note: [26, 2] }, { hdy: 1, swing: 0, note: [25, 0] }],
   celebrate: [{ dy: 0, eyes: 'happy', tailUp: 2, sparkles: [[4, 8], [27, 6]] }, { dy: -3, eyes: 'happy', tailUp: 3, paws: [-1, -1], sparkles: [[6, 4], [25, 10]] }, { dy: -1, eyes: 'happy', tailUp: 2, sparkles: [[3, 12], [28, 3]] }],
   walk: [{ dx: -1, paws: [-1, 0], tailUp: 1 }, { dx: 1, paws: [0, -1], tailUp: 0 }],
   sleep: [{ z: [22, 8, 4] }, { z: [24, 4, 5] }],
   focus: [{ tailFlick: 0 }, { tailFlick: 1 }]
 };
 export const POSES = Object.freeze(Object.fromEntries(Object.entries(FRAMES).map(([pose, frames]) => [pose, frames.length])));
+// Cat-only eyes-closed listening pose (body still; only the note drifts) for music whose
+// beat is missing or estimated. Kept out of POSES so other pet species need not draw it.
+const EXTRA_FRAMES = { listen: [{ eyes: 'calm', hdy: 1, tailUp: 1, note: [25, 1] }, { eyes: 'calm', hdy: 1, tailUp: 1, note: [25, 0] }] };
+export const LISTEN_POSE = 'listen';
+export const LISTEN_FRAMES = EXTRA_FRAMES.listen.length;
 export const ACCESSORIES = Object.freeze(['', 'headphones', 'scarf', 'beanie']);
 
 export function catFrame(pose, index = 0, acc = '') {
-  const frames = FRAMES[pose] || FRAMES.idle, frame = frames[((index % frames.length) + frames.length) % frames.length];
+  const frames = FRAMES[pose] || EXTRA_FRAMES[pose] || FRAMES.idle, frame = frames[((index % frames.length) + frames.length) % frames.length];
   const kind = ACCESSORIES.includes(acc) ? acc : '';
   let g = grid();
   if (pose === 'sleep') lying(g, { acc: kind === 'scarf' ? '' : kind });

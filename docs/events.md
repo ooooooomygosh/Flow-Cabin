@@ -24,6 +24,8 @@ window.addEventListener('cabin:playback', (event) => {
 | `track` | `object \| null` | `{ id, index, title, artist, album }`. `id` is the collection item id. `null` when the deck is empty. |
 | `bpm` | `number` | Tempo found by `src/player/beat-tracker.mjs` (kick-drum band of the analyser, autocorrelation), or `0` while no beat is certain or the signal is `estimated`. |
 | `beatAt` | `number` | Wall-clock time (`Date.now()` ms) of one beat when `bpm` is set, else `0`. Any beat works as the phase anchor: beats fall at `beatAt + k × 60000 / bpm`. |
+
+`beatAt` is when that beat is **heard**: tracker time + the AudioContext's `baseLatency + outputLatency`. `bpm` is `0` until the tracker is confident (≥ 4 periodic strong onsets in the last 4 s), after a seek or track change, and for steady tones or noise. The room cat and the desktop pet move only while the beat clock holds a real tempo (a detected `bpm`, or the lo-fi section tempo). With `bpm: 0` (e.g. `estimated` energy from cross-origin audio) they hold a still `listen` pose instead of dancing to the 96 BPM default. See `docs/cat-care.md` › 跟着节拍.
 | `reason` | `string` | `state` (play/pause/source/spin changed), `track` (track or record changed), `beat` (a new tempo, or a phase shift of more than 30 ms), or `energy` (periodic tick). |
 
 ### Timing
@@ -143,3 +145,23 @@ Events (on `window`), both trigger a re-read of the key, so the store must be wr
 | `cabin:cat-mood` | `{ mood, tier }` |
 
 Cross-window `storage` events for the key also trigger a re-read.
+
+## `cabin:cat-fed` / `cabin:cat-mood` / `cabin:cat-feed-request`
+
+格式已锁定，小屋日记（#57）按这个读取。
+
+- `cabin:cat-fed`：每喂一次，在 `window` 上触发一次，`detail` 为 `{ at, mood, tier, fishLeft, totalFeeds }`（`at` 是毫秒时间戳）。
+- `cabin:cat-mood`：心情数值或档位变化时触发（包括加载时和每 10 分钟随时间衰减跨档时，存储也会同步写回），`detail` 为 `{ mood, tier }`。`tier` 取值 `happy | ok | droopy`（开心 / 还不错 / 无精打采）。当前档位同时写在 `document.documentElement.dataset.catMood` 和 `.room-cat[data-mood]` 上。
+- `cabin:cat-feed-request`（输入）：请求喂一条，喂食按钮和把小鱼干拖到小猫身上都发这个事件。吃饱或没有小鱼干时不扣鱼，只显示提示。
+
+存储 `localStorage['flow-cabin-cat-mood-v1']`，只有以下字段：
+
+```js
+{ v: 1, mood: 62,                 // 0–100
+  tier: 'ok',                     // 'happy' | 'ok' | 'droopy'
+  updatedAt: 1760000000000,       // 上次结算心情的时间（毫秒）
+  feeds: [{ at: 1760000000000, fishLeft: 2 }],   // 最近 400 次喂食
+  totalFeeds: 3, unlockedActions: ['stretch'] }
+```
+
+每天摸摸的次数和已经加过心情的专注记录，另存在 `flow-cabin-cat-care-meta-v1`（只供内部使用）。规则见 `docs/cat-care.md`。

@@ -15,11 +15,13 @@ export function createBeatTracker({ step = STEP_MS, history = HISTORY_MS } = {})
   const size = Math.round(history / step), curve = new Float32Array(size);
   let head = 0, filled = 0, slotAt = -Infinity, slotMax = 0, previous = null, lastEstimate = -Infinity;
   let bpm = 0, pending = 0, pendingCount = 0, beatAt = -Infinity, confident = false, mean = 0, spread = 0;
+  // Recent strong onsets (kick-like hits). A steady tone or noise has none, so it never counts as a beat.
+  let onsets = [], lastOnset = -Infinity;
   const period = () => 60000 / (bpm || DEFAULT_BPM);
   const at = (back) => curve[(head - 1 - back + size * 2) % size];
 
   function estimate(time) {
-    if (filled < size * .6) return;
+    if (filled < size * .4) return;
     let best = 0, bestLag = 0, total = 0;
     for (let i = 0; i < filled; i++) total += at(i);
     const average = total / filled;
@@ -35,7 +37,7 @@ export function createBeatTracker({ step = STEP_MS, history = HISTORY_MS } = {})
     let variance = 0;
     for (let i = 0; i < filled; i++) variance += (at(i) - average) ** 2;
     variance /= filled;
-    confident = variance > 1e-6 && best / variance > .12;
+    confident = variance > 1e-6 && best / variance > .12 && periodic(time, exactLag * step);
     if (!confident || !bestLag) return;
     const found = 60000 / (exactLag * step);
     // A new tempo is believed only when it shows up twice in a row.
@@ -57,9 +59,35 @@ export function createBeatTracker({ step = STEP_MS, history = HISTORY_MS } = {})
     beatAt += Math.abs(error) > length * .15 ? error : error * .5;
   }
 
+  // Onsets stop (a quiet passage, a sustained tone): drop confidence within 2 s.
+  const periodicNow = () => onsets.length >= 4 && (lastPush - lastOnset) < 2000;
+  let lastPush = -Infinity;
+  function fitGrid(length) {
+    const recent = onsets.filter((t) => lastPush - t < 6000); if (recent.length < 4) return null;
+    // Anchor on the energy comb's beat so off-beat onsets (hi-hats, snares) are left out of the fit.
+    const base = Number.isFinite(beatAt) ? beatAt : recent.at(-1), points = [];
+    for (const t of recent) { const k = Math.round((t - base) / length); if (Math.abs(t - base - k * length) < length * .15) points.push([k, t]); }
+    if (points.length < 4) return null;
+    const n = points.length, mk = points.reduce((a, [k]) => a + k, 0) / n, mt = points.reduce((a, [, t]) => a + t, 0) / n;
+    let num = 0, den = 0; for (const [k, t] of points) { num += (k - mk) * (t - mt); den += (k - mk) ** 2; }
+    const fitted = den ? num / den : length; if (!(fitted > 60000 / 230 && fitted < 60000 / 40) || Math.abs(fitted - length) / length > .05) return null;
+    const origin = mt - mk * fitted; let rms = 0; for (const [k, t] of points) rms += (t - origin - k * fitted) ** 2; rms = Math.sqrt(rms / n);
+    if (rms > Math.max(15, fitted * .06)) return null;
+    // The most recent grid beat at or before the latest sample.
+    const lastBeat = origin + Math.floor((lastPush - origin) / fitted) * fitted;
+    return { length: fitted, beatAt: lastBeat, rms };
+  }
+  // Gate: at least 4 strong onsets in the last 4 s, most of them spaced by whole beats or off-beats (half beats).
+  function periodic(time, length) {
+    const recent = onsets.filter((t) => time - t < 4000);
+    if (recent.length < 4) return false;
+    let fit = 0;
+    for (let i = 1; i < recent.length; i++) { const half = length / 2, k = Math.max(1, Math.round((recent[i] - recent[i - 1]) / half)); if (k <= 8 && Math.abs(recent[i] - recent[i - 1] - k * half) < length * .12) fit++; }
+    return fit / (recent.length - 1) >= .6;
+  }
   return {
     push(time, bass) {
-      const level = Math.max(0, Math.min(1, Number(bass) || 0));
+      lastPush = time; const level = Math.max(0, Math.min(1, Number(bass) || 0));
       const flux = previous === null ? 0 : Math.max(0, level - previous);
       previous = level;
       // Running statistics of the onset strength pick out the strong hits.
@@ -72,6 +100,7 @@ export function createBeatTracker({ step = STEP_MS, history = HISTORY_MS } = {})
         slotAt = slot; slotMax = 0;
       }
       slotMax = Math.max(slotMax, flux);
+      if (flux > .02 && flux > mean + spread * 2.5 && time - lastOnset > 80) { lastOnset = time; onsets.push(time); if (onsets.length > 32) onsets.shift(); }
       if (time - lastEstimate > 1000) { lastEstimate = time; estimate(time); }
       // Keep beatAt on the most recent predicted beat, then lean it towards a strong onset.
       const length = period();
@@ -82,8 +111,15 @@ export function createBeatTracker({ step = STEP_MS, history = HISTORY_MS } = {})
         if (Math.abs(error) < length * .2) beatAt += error * .35;
       }
     },
-    state() { return { bpm: bpm ? Math.round(bpm * 10) / 10 : 0, beatAt, confident: Boolean(bpm) && confident }; },
-    reset() { curve.fill(0); head = 0; filled = 0; previous = null; bpm = 0; pending = 0; pendingCount = 0; beatAt = -Infinity; confident = false; mean = 0; spread = 0; slotAt = -Infinity; lastEstimate = -Infinity; }
+    state() {
+      const recent = onsets.length && periodicNow(), ok = Boolean(bpm) && confident && recent;
+      // With clear onsets the grid is fitted to them (least squares over the last 6 s): tempo and
+      // phase to a few ms, instead of the 20 ms autocorrelation grid.
+      const fit = ok ? fitGrid(60000 / bpm) : null;
+      if (fit) return { bpm: Math.round(60000 / fit.length * 100) / 100, beatAt: fit.beatAt, confident: true };
+      return { bpm: bpm ? Math.round(bpm * 10) / 10 : 0, beatAt, confident: ok };
+    },
+    reset() { onsets = []; lastOnset = -Infinity; curve.fill(0); head = 0; filled = 0; previous = null; bpm = 0; pending = 0; pendingCount = 0; beatAt = -Infinity; confident = false; mean = 0; spread = 0; slotAt = -Infinity; lastEstimate = -Infinity; }
   };
 }
 

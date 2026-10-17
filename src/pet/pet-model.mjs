@@ -1,27 +1,34 @@
 // What the cat is doing, derived from the room's state. Pure and testable.
-import { POSES } from './cat-sprites.mjs';
+import { POSES, LISTEN_POSE, LISTEN_FRAMES } from './cat-sprites.mjs';
 import { getPet } from './pet-catalog.mjs';
 
-export const FPS = Object.freeze({ idle: 2, groove: 4, celebrate: 6, walk: 4, sleep: 1, focus: 1.5 });
+// `listen` (eyes closed, music on but no beat to follow): beauty's cat-only pose, outside POSES.
+export const FPS = Object.freeze({ idle: 2, groove: 4, [LISTEN_POSE]: .5, celebrate: 6, walk: 4, sleep: 1, focus: 1.5 });
+export { LISTEN_POSE };
+const frameCount = (pose) => pose === LISTEN_POSE ? LISTEN_FRAMES : POSES[pose] || 1;
 const IDLE_SLEEP_MS = 5 * 60 * 1000, CELEBRATE_MS = 4000;
 export const isNight = (hour) => hour >= 23 || hour < 6;
 
-export function petPose({ playing = false, phase = 'idle', paused = false, idleMs = 0, hour = 12, celebrateUntil = 0, now = 0, poked = 0 } = {}) {
+// `synced`: a real detected beat (src/cat/beat-sync.mjs beatSynced). Without one the cat listens
+// (eyes closed) instead of dancing to a made-up tempo. Other pets draw `listen` as idle.
+export function petPose({ synced = false, playing = false, phase = 'idle', paused = false, idleMs = 0, hour = 12, celebrateUntil = 0, now = 0, poked = 0 } = {}) {
   if (now < celebrateUntil) return 'celebrate';
   if (poked && now - poked < 1500) return 'celebrate';
   if (phase === 'focus' && !paused) return 'focus';
-  if (playing) return 'groove';
+  if (playing) return synced ? 'groove' : LISTEN_POSE;
   if (phase === 'shortBreak' || phase === 'longBreak') return 'walk';
   if (isNight(hour) || idleMs > IDLE_SLEEP_MS) return 'sleep';
   return 'idle';
 }
 export function frameAt(pose, timeMs) {
-  const count = POSES[pose] || 1, fps = FPS[pose] || 2;
+  const count = frameCount(pose), fps = FPS[pose] || 2;
   return Math.floor(timeMs / 1000 * fps) % count;
 }
 // Groove frames move on every half beat; the head dips (frames 1 and 3) on the beat.
+// No tempo: hold frame 0 — never dance to a guessed 96 BPM.
 export function grooveFrame(now, { bpm, beatAt = 0 } = {}) {
-  const half = 30000 / (bpm > 0 ? bpm : 96), since = now - beatAt, halves = Math.floor(since / half);
+  if (!(bpm > 0)) return { index: 0, wait: 250 };
+  const half = 30000 / bpm, since = now - beatAt, halves = Math.floor(since / half);
   return { index: ((halves + 1) % 4 + 4) % 4, wait: half - ((since % half) + half) % half };
 }
 export function celebrateUntil(now) { return now + CELEBRATE_MS; }

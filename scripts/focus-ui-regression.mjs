@@ -58,6 +58,29 @@ try {
     catch(error){report.checks.push({name,passed:false,phase,error:error.stack});console.error(`FAIL ${name}: ${error.message}`);await screenshot(page,`${name}-failure`).catch(()=>{});}
     finally{await context.close();}
   };
+  await run('cat-feeding-spends-fish-cheers-the-cat-and-caps-friendly',async page=>{
+    await page.evaluate(key=>{const v=JSON.parse(localStorage.getItem(key)||'{}');v.rewards={...(v.rewards||{}),fish:4};localStorage.setItem(key,JSON.stringify(v));localStorage.setItem('flow-cabin-cat-mood-v1',JSON.stringify({v:1,mood:40,tier:'droopy',updatedAt:Date.now(),feeds:[],totalFeeds:2,unlockedActions:[]}));},KEY);await page.reload();
+    await page.locator('.room-cat').waitFor();assert.equal(await page.locator('.room-cat').getAttribute('data-mood'),'droopy');
+    await page.evaluate(()=>{window.__fed=[];window.addEventListener('cabin:cat-fed',e=>window.__fed.push(e.detail));});
+    // The panel is lazy-loaded; keep asking until its listener is mounted.
+    const panel=page.getByRole('dialog',{name:'小猫'});await page.waitForFunction(()=>{if(document.querySelector('[role=dialog][aria-label="小猫"]'))return true;window.dispatchEvent(new Event('cabin-open-cat'));return false;},null,{polling:250,timeout:15000}).catch(()=>{});await panel.waitFor();
+    await panel.getByRole('button',{name:'喂一条'}).click();
+    await page.waitForFunction(()=>window.__fed.length===1);const fed=await page.evaluate(()=>window.__fed[0]);
+    assert.deepEqual(Object.keys(fed).sort(),['at','fishLeft','mood','tier','totalFeeds']);assert.equal(fed.fishLeft,3);assert.equal(fed.mood,52);assert.equal(fed.tier,'ok');assert.equal(fed.totalFeeds,3);assert.equal((await focusState(page)).rewards.fish,3);
+    assert.match(await panel.locator('.cat-care-note').innerText(),/伸懒腰/);assert.match(await page.locator('.room-cat').getAttribute('class'),/cat--eating/);await screenshot(page,'cat-fed');
+    // A 小鱼干 dragged with the real mouse from the panel chip onto the cat feeds it too.
+    {const from=await panel.locator('.cat-fish-chip').boundingBox(),to=await page.locator('.room-cat').boundingBox();await page.mouse.move(from.x+from.width/2,from.y+from.height/2);await page.mouse.down();await page.mouse.move(to.x+to.width/2,to.y+to.height/2,{steps:12});await page.mouse.move(to.x+to.width/2+2,to.y+to.height/2,{steps:2});await page.mouse.up();}
+    await page.waitForFunction(()=>window.__fed.length===2,null,{timeout:5000});assert.equal((await focusState(page)).rewards.fish,2);
+        // A 小鱼干 dropped on the cat feeds it too.
+    await page.evaluate(()=>{const dt=new DataTransfer();dt.setData('application/x-cabin-fish','1');const cat=document.querySelector('.room-cat');for(const type of ['dragover','drop'])cat.dispatchEvent(new DragEvent(type,{dataTransfer:dt,bubbles:true,cancelable:true}));});
+    await page.waitForFunction(()=>window.__fed.length===3);assert.equal((await focusState(page)).rewards.fish,1);
+    const store=await page.evaluate(()=>JSON.parse(localStorage.getItem('flow-cabin-cat-mood-v1')));assert.equal(store.totalFeeds,5);assert.equal(store.feeds.length,3);assert.equal(store.feeds[2].fishLeft,1);assert.deepEqual(store.unlockedActions,['stretch']);
+    // Daily cap: friendly, no fish spent.
+    await page.evaluate(()=>{const s=JSON.parse(localStorage.getItem('flow-cabin-cat-mood-v1'));s.feeds=Array.from({length:5},()=>({at:Date.now(),fishLeft:1}));localStorage.setItem('flow-cabin-cat-mood-v1',JSON.stringify(s));window.dispatchEvent(new StorageEvent('storage',{key:'flow-cabin-cat-mood-v1'}));});
+    assert.equal(await panel.getByRole('button',{name:'喂一条'}).isDisabled(),true);assert.match(await panel.locator('.cat-care-note').innerText(),/吃饱/);
+    await page.evaluate(()=>window.dispatchEvent(new CustomEvent('cabin:cat-feed-request')));await page.waitForTimeout(200);assert.equal((await focusState(page)).rewards.fish,1,'a full cat costs nothing');
+    await screenshot(page,'cat-full');
+  });
   await run('todo-storage-warning-and-recovery',async page=>{
     await openFocus(page,'待办');await failStorage(page,true);await page.getByLabel('新的待办').fill('未保存的测试任务');await page.getByRole('button',{name:'添加待办',exact:true}).click();
     assert.equal((await focusState(page)).tasks?.length||0,0,'failed write must not pretend to persist');
@@ -125,6 +148,8 @@ try {
     await page.keyboard.press('Escape');await journal.waitFor({state:'hidden'});
     await page.keyboard.press('l');await journal.waitFor();await page.getByRole('button',{name:'返回小屋'}).click();await journal.waitFor({state:'hidden'});
     await page.evaluate(()=>window.dispatchEvent(new CustomEvent('cabin:open-journal',{detail:{tab:'weekly'}})));await journal.waitFor();
+    // Close and reopen in the same task: the queued close event of the old close() must not shut the new one.
+    await page.evaluate(()=>new Promise(done=>{const d=document.querySelector('dialog.cabin-journal');const mo=new MutationObserver(()=>{if(!d.open){mo.disconnect();window.dispatchEvent(new CustomEvent('cabin:open-journal',{detail:{tab:'weekly'}}));done();}});mo.observe(d,{attributes:true,attributeFilter:['open']});d.dispatchEvent(new Event('cancel',{cancelable:true}));}));await journal.waitFor();await page.waitForTimeout(300);assert.equal(await journal.isVisible(),true,'reopened journal stays open');
     assert.equal(await journal.getByRole('tab',{name:'周报'}).getAttribute('aria-selected'),'true');assert.match(await journal.locator('.fs-weekpick strong').innerText(),/本周/,'周报 opens on the current week when it has data');assert.equal(await journal.locator('.fs-stamp').count(),1,'stamp rendered once');
     assert.match(await journal.locator('.fs-polaroid').innerText(),/《/,'most played album comes from the session log');const cover=journal.locator('.fs-card-cover');await cover.waitFor();assert.equal(await cover.evaluate(img=>img.complete&&img.naturalWidth===8&&getComputedStyle(img).imageRendering),'pixelated','cover thumbnail renders pixelated');
     await page.context().grantPermissions(['clipboard-read','clipboard-write'],{origin});await journal.getByRole('button',{name:'复制文字'}).click();
@@ -318,6 +343,30 @@ try {
     await page.getByRole('button',{name:'添加到唱片架',exact:true}).click();await page.getByRole('dialog',{name:'添加到唱片架',exact:true}).waitFor();await page.keyboard.press('Escape');assert.equal(await page.getByRole('button',{name:'添加到唱片架',exact:true}).evaluate(e=>e===document.activeElement),true);
     await page.getByRole('button',{name:'设置',exact:true}).click();await page.getByRole('dialog',{name:'设置',exact:true}).waitFor();await page.keyboard.press('Escape');assert.equal(await page.getByRole('button',{name:'设置',exact:true}).evaluate(e=>e===document.activeElement),true);
   });
+  await run('stale-cat-mood-on-load-is-rewritten-and-announced',async page=>{
+    // 72/happy saved 30 h ago decays to 42 (droopy): storage is rewritten and cabin:cat-mood fires.
+    await page.addInitScript(()=>{window.__moods=[];window.addEventListener('cabin:cat-mood',e=>window.__moods.push({...e.detail,stored:JSON.parse(localStorage.getItem('flow-cabin-cat-mood-v1')).tier}));});
+    await page.evaluate(()=>localStorage.setItem('flow-cabin-cat-mood-v1',JSON.stringify({v:1,mood:72,tier:'happy',updatedAt:Date.now()-30*3600e3,feeds:[],totalFeeds:0,unlockedActions:[]})));await page.reload();
+    await page.waitForFunction(()=>window.__moods.length>0,null,{timeout:10000});
+    const [first]=await page.evaluate(()=>window.__moods);assert.equal(first.tier,'droopy');assert.equal(first.stored,'droopy','store written before the event');
+    const stored=await page.evaluate(()=>JSON.parse(localStorage.getItem('flow-cabin-cat-mood-v1')));assert.equal(stored.tier,'droopy');assert.ok(Date.now()-stored.updatedAt<60000);
+  });
+  await run('room-cat-moves-on-the-beat-and-listens-without-one',async page=>{
+    await page.evaluate(()=>localStorage.setItem('flow-cabin-cat-mood-v1',JSON.stringify({v:1,mood:90,tier:'happy',updatedAt:Date.now(),feeds:[],totalFeeds:0,unlockedActions:[]})));await page.reload();await page.locator('.room-cat').waitFor();
+    const cat=page.locator('.room-cat');assert.equal(await cat.getAttribute('data-music'),null,'nothing playing: no music pose');
+    await openFocus(page,'声音');await page.getByRole('checkbox',{name:'Lo-fi 电台 · 实时生成',exact:true}).check();
+    await page.waitForFunction(()=>document.querySelector('.room-cat')?.dataset.music==='beat',null,{timeout:30000}); // lo-fi: its own tempo
+    // Deck audio that cannot be analysed (estimated energy, bpm 0): listen, nothing moves.
+    await page.evaluate(()=>window.dispatchEvent(new CustomEvent('cabin:playback',{detail:{playing:true,energy:.4,estimated:true,bpm:0,beatAt:0}})));
+    await page.waitForFunction(()=>document.querySelector('.room-cat').dataset.music==='free'&&!document.querySelector('.room-cat').dataset.beatMotion,null,{timeout:5000});
+    assert.equal(await cat.getAttribute('data-art'),'cat-listen');
+    // A detected beat: the cat-groove strip (4 frames, 2 per beat) runs on it, phase-locked to beatAt.
+    const beatAt=await page.evaluate(()=>{const at=Date.now()-130;window.dispatchEvent(new CustomEvent('cabin:playback',{detail:{playing:true,energy:.5,bpm:120,beatAt:at}}));return at;});
+    await page.waitForFunction(()=>document.querySelector('.room-cat').dataset.beatMotion==='groove',null,{timeout:5000});
+    const lock=await page.evaluate(beatAt=>{const a=document.querySelector('.room-cat .cat-art.is-groove').getAnimations().find(x=>x.effect.getKeyframes().some(k=>k.backgroundPosition));const d=a.effect.getTiming().duration;const want=((Date.now()-beatAt)%d+d)%d,at=a.currentTime%d;return {d,off:Math.min(Math.abs(at-want),d-Math.abs(at-want))};},beatAt);
+    assert.equal(lock.d,1000);assert.ok(lock.off<40,`groove is ${Math.round(lock.off)} ms off the beat`);
+    await screenshot(page,'cat-on-the-beat');
+  },{motion:true});
   await run('companion-generated-lofi-tempo-reaches-pet',async page=>{
     const { cleanCompanion } = createRequire(path.join(root,'desktop/package.json'))('./wallpaper-model.cjs');
     await openFocus(page,'声音');await page.getByRole('checkbox',{name:'Lo-fi 电台 · 实时生成',exact:true}).check(); // enabling lo-fi starts sound itself

@@ -28,7 +28,7 @@ test('stroll cadence, bounded path, rest and disabled states', async () => {
   assert.equal(catStroll(124000).x, 16);
   assert.deepEqual(catStroll(128000), { walking: false, x: 0 });
   for (let t = 0; t < 300000; t += 500) { const v = catStroll(t); assert.ok(v.x >= 0 && v.x <= 16); assert.deepEqual(catStroll(t, 120000, false), { walking: false, x: 0 }); }
-  assert.equal(petPose({ phase: 'focus' }), 'focus'); assert.equal(petPose({ playing: true }), 'groove');
+  assert.equal(petPose({ phase: 'focus' }), 'focus'); assert.equal(petPose({ playing: true, synced: true }), 'groove'); assert.notEqual(petPose({ playing: true }), 'groove', 'no real beat: no dance');
 });
 test('both night palettes preserve every sprite silhouette and lower highlights', async () => {
   const { CAT_PALETTES, PALETTE, POSES, catFrame, drawFrame } = await import('../../src/pet/cat-sprites.mjs');

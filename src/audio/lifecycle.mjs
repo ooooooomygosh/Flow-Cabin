@@ -102,6 +102,8 @@ export function createSoundscapeController({ initialMix, createContext, createAm
     setMaster: (master) => save({ ...state.mix, master }),
     setLofi(lofiOn) { save({ ...state.mix, lofiOn }); if (lofiOn && !wanted) void turnOn(); },
     setLofiVolume: (lofi) => save({ ...state.mix, lofi }),
+    // Wall-clock time (ms) of a beat the listener hears now, from the lo-fi transport; 0 when unknown.
+    lofiBeatAt: () => player?.beatAt?.() || 0,
     setDucked(ducked) { emit({ ducked: Boolean(ducked) }); player?.setDuck(state.ducked); },
     skipSection() {
       if (!alive || !state.enabled || !state.mix.lofiOn) return;
