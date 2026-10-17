@@ -19,9 +19,9 @@
     --journal-spine-img: none;                      /* slot: stitched spine strip (repeat-y) */
     --journal-stitch: var(--px-accent-hi);
     --journal-tab: var(--px-surface-3);             /* bookmark ribbon */
-    --journal-tab-ink: var(--px-ink);
+    --journal-tab-ink: var(--px-paper);             /* 4.65:1 on the ribbon red #b5523b, 8.1:1 on its shade */
     --journal-tab-active: var(--px-accent);
-    --journal-tab-active-ink: var(--px-ink);
+    --journal-tab-active-ink: var(--px-paper);
     --journal-tab-img: none;                        /* slot: ribbon sprite (notched tail) */
     --journal-ink: var(--px-paper-ink);             /* chart bars ("ink") */
     --journal-ink-hi: var(--px-accent-lo);          /* today / best bar */
@@ -42,8 +42,8 @@
   .fs-spine { background: var(--journal-spine) var(--journal-spine-img) repeat-y center; }
   .fs-spine::before { content: ''; position: absolute; inset: 12px 5px; background: repeating-linear-gradient(to bottom, var(--journal-stitch) 0 4px, transparent 4px 12px); }
   .fs-spine.has-art::before { display: none; }
-  .fs-ribbons button { color: var(--journal-tab-ink); background: var(--journal-tab) var(--journal-tab-img) left top / 16px 32px repeat-x; image-rendering: pixelated; }
-  .fs-ribbons button[aria-selected='true'] { color: var(--journal-tab-active-ink); background-color: var(--journal-tab-active); background-size: 16px 40px; text-shadow: 0 2px 0 var(--px-shadow); }
+  .fs-ribbons button { color: var(--journal-tab-ink); text-shadow: 1px 0 0 var(--px-shadow), -1px 0 0 var(--px-shadow), 0 1px 0 var(--px-shadow), 0 -1px 0 var(--px-shadow); background: var(--journal-tab) var(--journal-tab-img) left top / 16px 32px repeat-x; image-rendering: pixelated; }
+  .fs-ribbons button[aria-selected='true'] { color: var(--journal-tab-active-ink); background-color: var(--journal-tab-active); background-size: 16px 40px; font-weight: 700; box-shadow: inset 0 2px 0 var(--px-accent-hi), inset 2px 0 0 var(--px-accent-hi), inset -2px 0 0 var(--px-accent-hi); text-shadow: 1px 0 0 var(--px-shadow), -1px 0 0 var(--px-shadow), 0 1px 0 var(--px-shadow), 0 -1px 0 var(--px-shadow), 0 2px 0 var(--px-shadow); }
   .fs-book .fs-bar small, .fs-book .fs-bar-value, .fs-book figcaption, .fs-book .fs-hint, .fs-book .fs-empty, .fs-book .fs-time, .fs-book .fs-min, .fs-book .fs-rank-num, .fs-book small { color: var(--journal-paper-faint); }
   .fs-book .fs-title, .fs-book .fs-rank li, .fs-book .fs-sessions li { color: var(--journal-paper-ink); }
   .fs-book .fs-sessions li, .fs-book .fs-rank li { background: transparent; box-shadow: inset 0 -2px 0 var(--journal-rule); }
