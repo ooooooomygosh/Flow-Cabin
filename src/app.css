@@ -56,6 +56,8 @@ a{color:var(--px-accent-hi)}
 .cabin-room .room-selection-actions .room-open-album{color:#24170d;background:var(--px-accent);border-color:var(--px-accent-hi);font-weight:700}
 .room-shelf-navigation{border-radius:0;border:2px solid #d4a46b88;box-shadow:4px 4px 0 #0d0805aa}.room-shelf-navigation button{border-radius:0}
 .cabin-scene .room-empty{display:grid;justify-items:center;gap:6px;border-radius:0;border:2px solid var(--px-brass);box-shadow:6px 6px 0 #0d0805cc;background:#24160ff0}
+/* Narrow windows: the pocket deck (.room-turntable z10) overlaps the centred empty-shelf card; the card's actions must stay on top. */
+@media (max-width: 640px){.cabin-scene .room-empty{z-index:11}}
 .cabin-scene .room-empty button{display:inline-flex;align-items:center;gap:6px;border-radius:0;font-weight:700;border:2px solid var(--px-accent-hi);background:var(--px-accent);color:#24170d;box-shadow:3px 3px 0 var(--px-shadow)}
 
 /* Dialogs */
