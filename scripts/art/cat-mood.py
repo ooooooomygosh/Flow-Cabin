@@ -501,6 +501,35 @@ def sticker_fed_sm():
     die_cut_sm(g)
     return g
 
+
+# ---------------------------------------------------------------- music (mirrors the room cat's groove/listen in src/pet/cat-sprites.mjs)
+def note8(g, x, y):
+    for yy in range(y, y + 7): g.put(x + 3, yy, 'z')
+    g.put(x + 4, y, 'z'); g.put(x + 5, y + 1, 'z'); g.put(x + 6, y + 2, 'z')
+    g.rect(x, y + 6, x + 2, y + 8, 'z')
+
+GROOVE = [  # head dx/dy, eyes, tail swing, note position: left, centre dip, right, centre dip
+    dict(hdx=-3, hdy=0, eyes='happy', swing=-6, note=(4, 8)),
+    dict(hdx=0, hdy=2, eyes='half', swing=0, note=(7, 4)),
+    dict(hdx=3, hdy=0, eyes='happy', swing=6, note=(50, 6)),
+    dict(hdx=0, hdy=2, eyes='half', swing=0, note=(47, 2)),
+]
+def sit_cat(hdx=0, hdy=0, eyes='half', swing=0, mouth='w', tail_up=0):
+    g = G(); c = G()
+    s = swing
+    tail(c, [(44, 56), (50, 53), (53 + s * .3, 47 - tail_up), (54 + s * .7, 41 - tail_up), (52 + s, 36 - tail_up)])
+    loaf(c, 32, 60, w=15, h=12)
+    head(c, 32 + hdx, 33 + hdy, eyes=eyes, mouth=mouth, ear='up')
+    phones(c, 32 + hdx, 33 + hdy)
+    c.outline(); g.paste(c)
+    shadow(g, 32, 61, 17)
+    return g
+def groove_frame(i):
+    f = GROOVE[i]; g = sit_cat(f['hdx'], f['hdy'], f['eyes'], f['swing']); note8(g, *f['note']); return g
+def cat_listen():
+    g = sit_cat(0, 2, eyes='closed', mouth='w', tail_up=2)
+    note8(g, 48, 4); return g
+
 def save(g, name):
     os.makedirs(OUT, exist_ok=True); im = g.img(); im.save(f'{OUT}/{name}.png', optimize=True); return im
 
@@ -510,6 +539,11 @@ if __name__ == '__main__':
     sheet = Image.new('RGBA', (64 * 8, 64), (0, 0, 0, 0))
     for i, f in enumerate(frames): sheet.paste(f, (64 * i, 0))
     sheet.save(f'{OUT}/cat-eat.png', optimize=True)
+    groove = [groove_frame(i).img() for i in range(4)]
+    gs = Image.new('RGBA', (64 * 4, 64), (0, 0, 0, 0))
+    for i, f in enumerate(groove): gs.paste(f, (64 * i, 0))
+    gs.save(f'{OUT}/cat-groove.png', optimize=True)
+    listen = save(cat_listen(), 'cat-listen')
     stick = {n: save(f(), n) for n, f in [('sticker-best-day', sticker_best_day), ('sticker-streak', sticker_streak), ('sticker-fed', sticker_fed)]}
     todo = save(todo_empty(), 'todo-empty')
     stick_sm = {n: save(f(), n) for n, f in [('sticker-best-day-sm', sticker_best_day_sm), ('sticker-streak-sm', sticker_streak_sm), ('sticker-fed-sm', sticker_fed_sm)]}
@@ -517,7 +551,7 @@ if __name__ == '__main__':
 
     # ---- 4x preview sheet on journal paper
     Z = 4; pad = 8
-    W = (64 * 5 + pad * 6) * Z; H = (pad * 7 + 64 * 4 + 32 + 48) * Z
+    W = (64 * 5 + pad * 6) * Z; H = (pad * 8 + 64 * 5 + 32 + 48) * Z
     bg = Image.new('RGBA', (W, H), rgba('c'))
     def put(im, x, y): bg.alpha_composite(im.resize((im.width * Z, im.height * Z), Image.NEAREST), (x * Z, y * Z))
     for i, n in enumerate(poses): put(poses[n], pad + i * (64 + pad), pad)
@@ -538,10 +572,17 @@ if __name__ == '__main__':
         for m in range(nb): put(bars['bar-book'], bx, ry + 60 - 6 * (m + 1))
         put(bars['bar-book-cap'], bx, ry + 60 - 6 * nb - 4)
         bg.alpha_composite(stick_sm[n], ((bx + 20) * Z, (ry + 48) * Z))   # true 1x size
+    # row 5: groove loop + listen
+    gy = ry + 64 + pad
+    for i, f in enumerate(groove + [listen]): put(f, pad + i * (64 + pad), gy)
     os.makedirs('docs/media', exist_ok=True); bg.convert('RGB').save('docs/media/cat-mood-sheet.png', optimize=True)
     # ---- eat-cycle GIF (4x, 120ms/frame, longer hold on the satisfied end)
     gif = []
     for f in frames:
         b = Image.new('RGBA', (64, 64), rgba('c')); b.alpha_composite(f); gif.append(b.convert('RGB').resize((256, 256), Image.NEAREST))
     gif[0].save('docs/media/cat-eat.gif', save_all=True, append_images=gif[1:], duration=[120] * 7 + [600], loop=0, disposal=2)
+    gif = []
+    for f in groove:
+        b = Image.new('RGBA', (64, 64), rgba('c')); b.alpha_composite(f); gif.append(b.convert('RGB').resize((256, 256), Image.NEAREST))
+    gif[0].save('docs/media/cat-groove.gif', save_all=True, append_images=gif[1:], duration=250, loop=0, disposal=2)  # 2 frames/beat at 120 BPM
     print('ok')
