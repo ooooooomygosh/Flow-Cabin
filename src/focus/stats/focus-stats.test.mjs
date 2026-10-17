@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { normalizeSessionRecord, readSessionLog, fromLegacySessions, mergeSessions, loadSessions, subscribeSessions, SESSION_LOG_KEY, FOCUS_SESSION_EVENT } from './session-source.mjs';
@@ -159,7 +159,48 @@ test('week card export draws journal-art slots with integer nearest scaling', as
   assert.equal(by('stamp').length, 1, 'stamp drawn once'); const [, , sx, sy, sw, sh] = by('stamp')[0];
   assert.equal(sw, 96); assert.equal(sh, 96); assert(sx + sw <= CARD_W - 16 && sy < 40, 'stamp sits top-right');
   assert(by('paper').length >= 12, 'paper tiled'); for (const c of by('paper')) assert.equal(c[4], c[8], 'tiles 1:1');
-  assert.equal(by('tape').length, 1); assert.equal(by('tape')[0][4], 128); assert.equal(by('doodle')[0][4], 64);
+  assert.equal(by('tape').length, 1); assert.equal(by('tape')[0][4], 128); assert.equal(by('doodle')[0][4], 128, 'doodle stands in for the cat pose at ≤128');
   for (const c of draws) { const [x, y, w, h] = c.length > 6 ? c.slice(6) : c.slice(2); assert(Number.isInteger(x) && Number.isInteger(y) && Number.isInteger(w) && Number.isInteger(h) && x >= 0 && y >= 0 && x + w <= CARD_W && y + h <= CARD_H, `${c[1].name} off-grid or out of bounds`); }
   calls.length = 0; drawWeekCard(ctx, r); assert(!calls.some((c) => c[0] === 'drawImage'), 'empty slots keep the baseline');
+});
+
+test('weekly stamp renders once: own element, never a (tiling) card background', () => {
+  const css = readFileSync(new URL('./journal-art.css', import.meta.url), 'utf8'), jsx = readFileSync(new URL('./CabinJournal.jsx', import.meta.url), 'utf8');
+  const uses = css.split('\n').filter((l) => /var\(--journal-card-img\)/.test(l));
+  assert.equal(uses.length, 1, 'card stamp slot is used by exactly one rule'); assert.match(uses[0], /^\s*\.fs-book \.fs-stamp \{/); assert.match(uses[0], /background-repeat: no-repeat/);
+  assert.doesNotMatch(css, /\.fs-card[^{]*\{[^}]*background:[^;}]*--journal-card-img/, 'card background never references the stamp');
+  assert.equal(jsx.match(/className="fs-stamp"/g)?.length, 1, 'one stamp element in the markup');
+});
+
+test('周报 defaults to the current week when it has data', async () => {
+  const { defaultWeekOffset, weekName } = await import('./journal-layout.mjs');
+  const now = at(2026, 10, 21, 20); // Wednesday
+  assert.equal(defaultWeekOffset([s(at(2026, 10, 20, 9), 25), s(at(2026, 10, 14, 9), 50)], [], now), 0);
+  assert.equal(defaultWeekOffset([s(at(2026, 10, 14, 9), 50)], [], now), -1, 'quiet week so far → last week');
+  assert.equal(defaultWeekOffset([], [], now), 0);
+  assert.equal(weekName(0), '本周'); assert.equal(weekName(-1), '上周'); assert.equal(weekName(-3), '3 周前');
+});
+
+test('journal layout: cat pose, stacked units, letter from real data', async () => {
+  const { catPose, barUnits, cabinLetter, CAT_POSES } = await import('./journal-layout.mjs');
+  assert.equal(catPose(0), 'cat-wait'); assert.equal(catPose(90), 'cat-desk'); assert.equal(catPose(400), 'cat-sleep-books');
+  assert.equal(catPose(30, { level: 'happy' }), 'cat-rub'); assert.equal(catPose(0, { level: 'low' }), 'cat-droopy');
+  for (const p of CAT_POSES) assert.ok(existsSync(new URL(`../../../public/journal/${p}.png`, import.meta.url)), p);
+  assert.equal(barUnits(0, 100), 0); assert.equal(barUnits(1, 100), 1); assert.equal(barUnits(100, 100), 10); assert.equal(barUnits(500, 100, 5), 5);
+  const r = weeklyReport([s(at(2026, 10, 13, 9), 50, { taskId: 't1', album: { title: '夜航' } })], [{ id: 't1', text: '写第三章', done: true, doneAt: at(2026, 10, 14) }], at(2026, 10, 19, 10));
+  const l = cabinLetter(r).join('');
+  assert.match(l, /50 分钟/); assert.match(l, /写第三章/); assert.match(l, /《夜航》/); assert.doesNotMatch(l, /小猫/, 'no feed line without mood data');
+  assert.match(cabinLetter(r, { feeds: 3, label: '心情很好' }).join(''), /喂了小猫 3 次/);
+  assert.match(cabinLetter(weeklyReport([], [], at(2026, 10, 19))).join(''), /安静/);
+});
+
+test('cat mood is read defensively and hidden when missing', async () => {
+  const { readCatMood, moodLevel, subscribeCatFed, CAT_MOOD_KEY, CAT_FED_EVENT } = await import('./cat-mood-source.mjs');
+  const st = (v) => ({ getItem: (k) => k === CAT_MOOD_KEY ? v : null }), from = at(2026, 10, 12), to = at(2026, 10, 19);
+  assert.equal(readCatMood(st(null), from, to), null); assert.equal(readCatMood(st('{bad'), from, to), null); assert.equal(readCatMood(undefined, from, to), null);
+  assert.equal(readCatMood(st(JSON.stringify({ hello: 1 })), from, to), null);
+  assert.deepEqual(readCatMood(st(JSON.stringify({ mood: 82, feeds: [at(2026, 10, 13), { at: at(2026, 10, 14) }, at(2026, 10, 1)] })), from, to), { feeds: 2, level: 'happy', label: '心情很好' });
+  assert.equal(readCatMood(st(JSON.stringify({ feeds: [at(2026, 10, 13)] })), from, to).label, '');
+  assert.equal(moodLevel(.2), 'low'); assert.equal(moodLevel('开心'), 'happy'); assert.equal(moodLevel(undefined), null);
+  const t = new EventTarget(); let n = 0; const off = subscribeCatFed(t, () => n++); t.dispatchEvent(new Event(CAT_FED_EVENT)); off(); t.dispatchEvent(new Event(CAT_FED_EVENT)); assert.equal(n, 1);
 });

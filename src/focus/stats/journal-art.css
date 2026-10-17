@@ -44,10 +44,8 @@
   .fs-spine.has-art::before { display: none; }
   .fs-ribbons button { color: var(--journal-tab-ink); background: var(--journal-tab) var(--journal-tab-img) left top / 16px 32px repeat-x; image-rendering: pixelated; }
   .fs-ribbons button[aria-selected='true'] { color: var(--journal-tab-active-ink); background-color: var(--journal-tab-active); text-shadow: 0 2px 0 var(--px-shadow); }
-  .fs-book .fs-bar-fill { background: repeating-linear-gradient(to bottom, var(--journal-ink) 0 6px, color-mix(in srgb, var(--journal-ink) 75%, var(--journal-paper)) 6px 8px); box-shadow: none; }
-  .fs-book .fs-bar-fill.is-today { background: var(--journal-ink-hi); }
-  .fs-book .fs-bar small, .fs-book .fs-bar-value, .fs-book figcaption, .fs-book .fs-hint, .fs-book .fs-empty, .fs-book .fs-time, .fs-book .fs-min, .fs-book .fs-rank-num, .fs-book small, .fs-book .fs-facts dt { color: var(--journal-paper-faint); }
-  .fs-book .fs-title, .fs-book .fs-rank li, .fs-book .fs-sessions li, .fs-book .fs-facts dd { color: var(--journal-paper-ink); }
+  .fs-book .fs-bar small, .fs-book .fs-bar-value, .fs-book figcaption, .fs-book .fs-hint, .fs-book .fs-empty, .fs-book .fs-time, .fs-book .fs-min, .fs-book .fs-rank-num, .fs-book small { color: var(--journal-paper-faint); }
+  .fs-book .fs-title, .fs-book .fs-rank li, .fs-book .fs-sessions li { color: var(--journal-paper-ink); }
   .fs-book .fs-sessions li, .fs-book .fs-rank li { background: transparent; box-shadow: inset 0 -2px 0 var(--journal-rule); }
   .fs-book .fs-meter { background: var(--journal-stamp-0); } .fs-book .fs-meter i { background: var(--journal-ink); }
   .fs-book .stats-chart-well { background: transparent; border: 0; box-shadow: none; }
@@ -59,12 +57,13 @@
   .fs-book .fs-seg button, .fs-book .fs-actions button, .fs-book .fs-weekpick button { color: var(--journal-paper-ink); background: transparent; border-color: var(--journal-paper-faint); }
   .fs-book .fs-seg button[aria-pressed='true'] { color: var(--px-ink-on-accent); background: var(--px-accent); border-color: var(--px-accent-lo); }
   .fs-book .fs-card { position: relative; background: var(--journal-card) var(--journal-card-paper-img) repeat; image-rendering: pixelated; color: var(--journal-paper-ink); border: 2px solid var(--journal-paper-faint); box-shadow: 4px 4px 0 rgba(13, 8, 5, .25); }
-  .fs-book .fs-card::before { content: ''; position: absolute; top: -8px; left: calc(50% - 32px); width: 64px; height: 16px; background: var(--journal-card-tape-img) center / contain no-repeat, var(--journal-card-tape); }
-  .fs-book .fs-card.has-tape::before { background-color: transparent; }
-  .fs-book .fs-card::after { content: ''; position: absolute; top: 8px; right: 8px; width: var(--journal-card-stamp-w, 64px); height: var(--journal-card-stamp-h, 64px); background: var(--journal-card-img) right top / contain no-repeat; image-rendering: pixelated; pointer-events: none; }
+  /* Tape strips (card, polaroid, notes): one element each, never a background of the card. */
+  .fs-book .fs-tape { position: absolute; z-index: 2; width: 64px; height: 16px; background: var(--journal-card-tape); pointer-events: none; }
+  .fs-book .fs-card.has-tape .fs-tape.is-card { width: 128px; height: 32px; top: -16px; background: var(--journal-card-tape-img) center / 128px 32px no-repeat; image-rendering: pixelated; }
+  /* The stamp + postmark sprite (slot `card`) is drawn ONCE by its own element.
+     It used to be the card's `background`, which tiles by default → six stamps over the chart. */
+  .fs-book .fs-stamp { position: absolute; z-index: 1; top: 8px; right: 8px; width: var(--journal-card-stamp-w, 104px); height: var(--journal-card-stamp-h, 56px); background-image: var(--journal-card-img); background-repeat: no-repeat; background-position: right top; background-size: 100% 100%; image-rendering: pixelated; pointer-events: none; }
   .fs-book .fs-card header, .fs-book .fs-card-total { color: var(--journal-paper-ink); }
   .fs-book .fs-card-summary { background: transparent; color: var(--journal-paper-ink); box-shadow: inset 0 0 0 2px var(--journal-rule); }
-  .fs-card-doodle { width: 48px; height: 48px; background: var(--journal-card-doodle) center / contain no-repeat; image-rendering: pixelated; }
-  .fs-card-doodle:not(.has-art) { display: none; }
   .fs-actions [role='status'] { color: var(--journal-ink-hi); }
 }

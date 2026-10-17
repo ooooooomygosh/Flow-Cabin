@@ -21,3 +21,14 @@ export const hasArt = (slot, art = JOURNAL_ART) => Boolean(art[slot]);
 export const CARD_EXPORT_SLOTS = Object.freeze(['paper', 'cardPaper', 'card', 'cardTape', 'doodle']);
 // Maps loaded slot images to drawWeekCard's art roles: tile, stamp, tape, doodle.
 export const cardArt = (img = {}) => ({ cardPaper: img.cardPaper || img.paper || null, cardStamp: img.card || null, cardTape: img.cardTape || null, doodle: img.doodle || null });
+// Sprite slots used as <img> (1× art, scaled by an integer with nearest-neighbour).
+// Files under public/journal/ are PLACEHOLDERS until the final art replaces them by name.
+export const JOURNAL_SPRITES = Object.freeze({
+  'cat-sleep-books': '/journal/cat-sleep-books.png', 'cat-wait': '/journal/cat-wait.png', 'cat-desk': '/journal/cat-desk.png',
+  'cat-rub': '/journal/cat-rub.png', 'cat-droopy': '/journal/cat-droopy.png',     // 64×64 each
+  'cat-eat': '/journal/cat-eat.png',                                                // 64×64 × 6–8 frames, horizontal, 120 ms/frame
+  'sticker-best-day': '/journal/sticker-best-day.png', 'sticker-streak': '/journal/sticker-streak.png', 'sticker-fed': '/journal/sticker-fed.png', // 32×32
+  'bar-books': '/journal/bar-books.png', 'bar-books-cap': '/journal/bar-books-cap.png',          // 16×6 unit + 16×4 cap
+  'bar-records': '/journal/bar-records.png', 'bar-records-cap': '/journal/bar-records-cap.png'
+});
+export const sprite = (name) => JOURNAL_SPRITES[name];
