@@ -7,7 +7,7 @@ import { drawWeekCard, canDrawCover, CARD_W, CARD_H } from './week-card.mjs';
 import { JOURNAL_EVENT, JOURNAL_TABS, journalTab, isJournalKey } from './journal-events.mjs';
 import './focus-stats.css';
 import './journal-art.css';
-import { journalArtStyle, hasArt } from './journal-art.mjs';
+import { journalArtStyle, hasArt, JOURNAL_ART, CARD_EXPORT_SLOTS, cardArt } from './journal-art.mjs';
 
 const clock = (t) => { const d = new Date(t); return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
 const typing = (el) => el?.closest?.('input,textarea,select,[contenteditable="true"]');
@@ -54,6 +54,8 @@ function JournalBook({ state, now, view, setView, close }) {
   const taskRows = useMemo(() => byTask(sessions, tasks), [sessions, tasks]);
   const tod = useMemo(() => timeOfDay(sessions), [sessions]);
   const report = useMemo(() => weeklyReport(sessions, tasks, now, weekOffset), [sessions, tasks, today, weekOffset]);
+  const pastWeeks = useMemo(() => Array.from({ length: 8 }, (_, i) => { const offset = -i; const w = weeklyReport(sessions, tasks, now, offset); return { offset, label: w.label, totalMinutes: w.totalMinutes, daily: w.daily }; }).reverse(), [sessions, tasks, today]);
+  const weekPeak = Math.max(30, ...pastWeeks.flatMap((w) => w.daily.map((d) => d.minutes)));
   const doneTasks = tasks.filter((t) => t.done).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0)).slice(0, 12);
   const taskName = (id) => tasks.find((t) => t.id === id)?.text;
   const activeDays = year.flat().filter((d) => d.minutes > 0).length, slotPeak = Math.max(1, ...tod.slots.map((s) => s.minutes)), taskPeak = Math.max(1, ...taskRows.map((r) => r.minutes));
@@ -69,7 +71,9 @@ function JournalBook({ state, now, view, setView, close }) {
   });
   const exportPng = async () => {
     const el = canvas.current || document.createElement('canvas'); el.width = CARD_W; el.height = CARD_H;
-    drawWeekCard(el.getContext('2d'), report, undefined, { cover: await loadCover(report.album?.cover) });
+    const [cover, ...imgs] = await Promise.all([loadCover(report.album?.cover), ...CARD_EXPORT_SLOTS.map((slot) => loadCover(JOURNAL_ART[slot]))]);
+    const art = cardArt(Object.fromEntries(CARD_EXPORT_SLOTS.map((slot, i) => [slot, imgs[i]])));
+    drawWeekCard(el.getContext('2d'), report, undefined, { cover, art });
     const a = document.createElement('a'); a.href = el.toDataURL('image/png'); a.download = `心流小屋周报-${dayKey(report.from)}.png`; a.click(); flash('周报图片已导出');
   };
   const [coverFailed, setCoverFailed] = useState('');
@@ -114,30 +118,32 @@ function JournalBook({ state, now, view, setView, close }) {
       {doneTasks.length ? <ul className="fs-sessions">{doneTasks.map((t) => <li key={t.id}><span className="fs-time">{t.doneAt ? clock(t.doneAt).split(' ')[0] : ''}</span><span className="fs-task">✓ {t.text}</span><span className="fs-min">{formatMinutes(taskRows.find((r) => r.id === t.id)?.minutes || 0)}</span></li>)}</ul>
         : <p className="fs-empty">勾掉的待办会留在这一页。</p>}
     </div></div>}
-    {view === 'weekly' && <div className="fs-spread" key="weekly" role="tabpanel" aria-label="周报"><div className="fs-page is-turning">
-      <article className="fs-card" aria-label="周报卡片">
+    {view === 'weekly' && <div className="fs-spread" key="weekly" role="tabpanel" aria-label="周报"><div className="fs-page is-turning fs-week-left">
+      <article className={`fs-card ${hasArt('card') ? 'has-stamp' : ''} ${hasArt('cardTape') ? 'has-tape' : ''}`} aria-label="周报卡片">
         <header><span>心流小屋 · 周报</span><small>{report.label}</small></header>
-        <span className={`fs-card-doodle ${hasArt('doodle') ? 'has-art' : ''}`} aria-hidden="true"/>
         <p className="fs-card-total">{formatMinutes(report.totalMinutes)} <small className={report.deltaMinutes >= 0 ? 'is-up' : ''}>{report.deltaMinutes === 0 ? '与上周持平' : `${report.deltaMinutes > 0 ? '比上周多' : '比上周少'} ${formatMinutes(Math.abs(report.deltaMinutes))}`} · {report.pomodoros} 个番茄</small></p>
         <Bars days={report.daily.map((d) => ({ ...d, isToday: d === report.bestDay }))} label="这一周 · 分钟"/>
-        <dl className="fs-facts">
-          <div><dt>最好的一天</dt><dd>{report.bestDay ? `${report.bestDay.label} · ${formatMinutes(report.bestDay.minutes)}` : '—'}</dd></div>
-          <div><dt>最专注时段</dt><dd>{report.bestSlot ? `${report.bestSlot.label} ${report.bestSlot.from}–${report.bestSlot.to} 点` : '—'}</dd></div>
-          <div><dt>最长连续</dt><dd>{report.longestStreak} 天</dd></div>
-          <div><dt>最常听</dt><dd className="fs-album">{report.album?.cover && coverFailed !== report.album.cover && <img className="fs-card-cover" src={report.album.cover} alt="" width={32} height={32} onError={() => setCoverFailed(report.album.cover)}/>}{report.album ? `《${report.album.title}》${report.album.artist ? ` · ${report.album.artist}` : ''}` : '—'}</dd></div>
-          <div><dt>主要待办</dt><dd>{report.topTasks.length ? report.topTasks.map((t) => `${t.name} ${formatMinutes(t.minutes)}`).join('、') : '—'}</dd></div>
-          <div><dt>完成待办</dt><dd>{report.completed.length ? report.completed.join('、') : '—'}</dd></div>
-        </dl>
-        <p className="fs-card-summary">{report.summary}</p>
+        <div className="fs-card-foot"><p className="fs-card-summary">{report.summary}</p><span className={`fs-card-doodle ${hasArt('doodle') ? 'has-art' : ''}`} aria-hidden="true"/></div>
       </article>
-    </div><div className={`fs-spine ${hasArt('spine') ? 'has-art' : ''}`} aria-hidden="true"/><div className="fs-page is-turning">
-      <h3 className="fs-title">翻看每一周</h3>
+    </div><div className={`fs-spine ${hasArt('spine') ? 'has-art' : ''}`} aria-hidden="true"/><div className="fs-page is-turning fs-week-right">
       <div className="fs-weekpick" role="group" aria-label="选择周">
         <button type="button" aria-label="上一周" onClick={() => setWeekOffset((w) => w - 1)}>‹</button>
         <strong>{weekOffset === -1 ? '上周' : weekOffset === 0 ? '本周' : `${-weekOffset} 周前`} · {report.label}</strong>
         <button type="button" aria-label="下一周" disabled={weekOffset >= 0} onClick={() => setWeekOffset((w) => Math.min(0, w + 1))}>›</button>
       </div>
-      <p className="fs-hint">每周一，上周的周报会写在这里。可以复制成文字，或导出一张图片。</p>
+      <p className="fs-week-line">{report.summary}</p>
+      <dl className="fs-facts">
+        <div><dt>最好的一天</dt><dd>{report.bestDay ? `${report.bestDay.label} · ${formatMinutes(report.bestDay.minutes)}` : '—'}</dd></div>
+        <div><dt>最专注时段</dt><dd>{report.bestSlot ? `${report.bestSlot.label} ${report.bestSlot.from}–${report.bestSlot.to} 点` : '—'}</dd></div>
+        <div><dt>主要待办</dt><dd>{report.topTasks.length ? report.topTasks.map((t) => `${t.name} ${formatMinutes(t.minutes)}`).join('、') : '—'}</dd></div>
+        <div><dt>完成待办</dt><dd>{report.completed.length ? report.completed.join('、') : '—'}</dd></div>
+        <div><dt>最长连续</dt><dd>{report.longestStreak} 天</dd></div>
+        <div><dt>最常听</dt><dd className="fs-album">{report.album?.cover && coverFailed !== report.album.cover && <img className="fs-card-cover" src={report.album.cover} alt="" width={32} height={32} onError={() => setCoverFailed(report.album.cover)}/>}{report.album ? `《${report.album.title}》${report.album.artist ? ` · ${report.album.artist}` : ''}` : '—'}</dd></div>
+      </dl>
+      <h3 className="fs-title">最近几周</h3>
+      <ol className="fs-weeks" aria-label="最近几周">{pastWeeks.map((w) => <li key={w.offset}><button type="button" aria-pressed={w.offset === weekOffset} aria-label={`${w.label} · ${formatMinutes(w.totalMinutes)}`} title={`${w.label} · ${formatMinutes(w.totalMinutes)}`} onClick={() => setWeekOffset(w.offset)}>
+        <span className="fs-weeks-bars" aria-hidden="true">{w.daily.map((d) => <i key={d.key} style={{ height: `${d.minutes ? Math.max(2, Math.round(d.minutes / weekPeak * 24 / 2) * 2) : 1}px` }}/>)}</span>
+        <small>{w.label.split(' – ')[0]}</small></button></li>)}</ol>
       <div className="fs-actions"><button type="button" onClick={copy}>复制文字</button><button type="button" onClick={exportPng}>导出图片</button><span role="status" aria-live="polite">{note}</span></div>
       <canvas ref={canvas} hidden/>
     </div></div>}

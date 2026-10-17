@@ -126,7 +126,15 @@ try {
     await page.context().grantPermissions(['clipboard-read','clipboard-write'],{origin});await journal.getByRole('button',{name:'复制文字'}).click();
     assert.match(await page.evaluate(()=>navigator.clipboard.readText()),/^## 心流小屋周报 · /);
     const [download]=await Promise.all([page.waitForEvent('download'),journal.getByRole('button',{name:'导出图片'}).click()]);assert.match(download.suggestedFilename(),/^心流小屋周报-.*\.png$/);await download.saveAs(path.join(output,'weekly-card-export.png'));
-    for(const [w,h] of [[1280,800],[1440,900]]){await page.setViewportSize({width:w,height:h});await page.screenshot({path:path.join(output,`journal-weekly-${w}x${h}.png`),animations:'disabled'});}
+    for(const [w,h] of [[1280,800],[1440,900],[1920,1080]]){await page.setViewportSize({width:w,height:h});
+      // Right page is balanced: summary, facts, week strip and actions fill most of it, nothing overflows.
+      const fill=await journal.locator('.fs-week-right').evaluate(el=>{const kids=[...el.children].filter(c=>c.offsetHeight);const r=el.getBoundingClientRect(),last=kids.at(-1).getBoundingClientRect();return {used:(last.bottom-r.top)/r.height,overflow:el.scrollHeight>el.clientHeight+1};});
+      assert(fill.used>0.5,`weekly right page only ${Math.round(fill.used*100)}% used at ${w}x${h}`);assert(!fill.overflow,`weekly right page scrolls at ${w}x${h}`);
+      assert(!(await journal.locator('.fs-week-left').evaluate(el=>el.scrollHeight>el.clientHeight+1)),`weekly card scrolls at ${w}x${h}`);
+      await page.screenshot({path:path.join(output,`journal-weekly-${w}x${h}.png`),animations:'disabled'});}
+    assert.equal(await journal.locator('.fs-weeks button').count(),8);assert.equal(await journal.locator('.fs-weeks button[aria-pressed="true"]').count(),1);
+    await journal.locator('.fs-weeks button').last().click();assert.match(await journal.locator('.fs-weekpick strong').innerText(),/本周/);
+    await journal.locator('.fs-weeks button').nth(6).click();
     await journal.getByRole('button',{name:'上一周'}).click();assert.match(await journal.locator('.fs-weekpick strong').innerText(),/2 周前/);
     await page.keyboard.press('Escape');await page.evaluate(()=>window.dispatchEvent(new CustomEvent('cabin-open-settings',{detail:{section:'focus'}})));
     const hub=page.getByRole('dialog',{name:'设置',exact:true});await hub.getByLabel('每日专注目标分钟').fill('60');await hub.getByLabel('每日专注目标分钟').press('Enter');assert.equal((await focusState(page)).settings.dailyGoal,60);

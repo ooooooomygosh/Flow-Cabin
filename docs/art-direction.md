@@ -76,7 +76,18 @@ The journal overlay ships with a tokens-only baseline. All of its visuals are va
 | spine | `--journal-spine`, `--journal-spine-img`, `--journal-stitch` | `--px-accent-lo` gutter with dashed stitches |
 | bookmark tabs | `--journal-tab`, `--journal-tab-active`, `--journal-tab-img` (+ `-ink`) | ribbons with a notched tail (clip-path) |
 | charts | `--journal-ink`, `--journal-ink-hi`, `--journal-stamp-0…4` | ink bars, stamp heatmap cells |
-| weekly card | `--journal-card`, `--journal-card-img`, `--journal-card-tape`, `--journal-card-doodle` (48×48) | taped paper card; doodle hidden until set |
+| weekly card | `--journal-card`, `--journal-card-paper-img` (slot `cardPaper`, defaults to `paper`), `--journal-card-img` (slot `card`), `--journal-card-tape` / `--journal-card-tape-img` (slot `cardTape`), `--journal-card-doodle` (slot `doodle`, 48×48) | taped paper card; doodle hidden until set |
 | page turn | `--journal-turn` | `steps(4)` scaleX turn; off under reduced motion |
 
-The weekly PNG export (`week-card.mjs`) draws with `CARD_PALETTE`, a mirror of the `--px-*` tokens.
+### Weekly card PNG export
+
+`week-card.mjs` draws the exported card on a canvas with `imageSmoothingEnabled = false` and integer scales only. It reads the same slots (`CARD_EXPORT_SLOTS`, same-origin URLs only so the canvas stays exportable):
+
+| slot | file (suggested) | how it is drawn | export size |
+| --- | --- | --- | --- |
+| `paper` / `cardPaper` | `paper.png` / `card-paper.png` | seamless tile, repeated 1:1 over the card; `cardPaper` overrides, otherwise the page `paper` is used | any tile size, already 4× |
+| `card` | `card.png` | **transparent** stamp + postmark corner, drawn **once** top-right, never tiled | largest integer scale ≤ 96×96 px |
+| `cardTape` (optional) | `card-tape.png` | once, top centre | largest integer scale ≤ 128×32 px |
+| `doodle` | `doodle.png` | once, right end of the summary box | largest integer scale ≤ 64×64 px |
+
+With a paper tile the export switches to `CARD_PAPER_PALETTE` (dark ink on paper); with every slot empty it keeps the dark `CARD_PALETTE` baseline (a mirror of the `--px-*` tokens).

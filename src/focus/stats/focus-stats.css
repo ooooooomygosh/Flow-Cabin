@@ -46,6 +46,19 @@
   .fs-album { display: flex; align-items: center; gap: 8px; }
   .fs-card-cover { width: 32px; height: 32px; flex: none; image-rendering: pixelated; box-shadow: 0 0 0 2px var(--px-border); }
   .fs-card-summary { margin: 0; padding: 8px; background: var(--px-surface-inset); color: var(--px-accent-hi); font-size: var(--px-text-body-sm); }
+  .fs-card.has-stamp header { padding-right: 72px; }
+  .fs-card-foot { display: flex; gap: 8px; align-items: center; } .fs-card-foot .fs-card-summary { flex: 1; }
+  .fs-week-left { align-content: center; } .fs-week-left .fs-card { padding: 20px 16px 16px; gap: 12px; }
+  .fs-week-right { gap: 12px; }
+  .fs-week-line { margin: 0; padding: 8px 0; font-size: var(--px-text-body); font-weight: 700; border-bottom: 2px dashed currentColor; }
+  .fs-week-right .fs-facts { gap: 8px; } .fs-week-right .fs-facts div { grid-template-columns: 96px 1fr; }
+  .fs-weeks { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px; margin: 0; padding: 0; list-style: none; }
+  .fs-weeks button { width: 100%; display: grid; justify-items: center; gap: 2px; padding: 4px 2px; min-height: var(--px-hit); font: inherit; color: inherit; background: transparent; border: 2px solid transparent; cursor: pointer; }
+  .fs-weeks button[aria-pressed='true'] { border-color: currentColor; }
+  .fs-weeks button:focus-visible { outline: 2px solid var(--px-focus); outline-offset: 1px; }
+  .fs-weeks-bars { display: flex; align-items: flex-end; gap: 1px; height: 24px; }
+  .fs-weeks-bars i { width: 4px; background: var(--journal-ink, var(--px-accent)); }
+  .fs-weeks small { font-size: 12px; white-space: nowrap; }
   .fs-actions [role='status'] { font-size: 12px; color: var(--px-good); }
   .fs-compact { display: grid; gap: 8px; }
   .fs-bars.is-mini .fs-bars-row { height: 64px; }

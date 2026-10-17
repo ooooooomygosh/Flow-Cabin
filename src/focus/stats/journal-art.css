@@ -28,7 +28,9 @@
     --journal-stamp-0: color-mix(in srgb, var(--px-paper-ink) 8%, var(--px-paper));
     --journal-stamp-1: var(--px-heat-2); --journal-stamp-2: var(--px-heat-3); --journal-stamp-3: var(--px-accent-lo); --journal-stamp-4: var(--px-heat-1);
     --journal-card: var(--px-paper);                /* weekly report card */
-    --journal-card-img: none;                       /* slot: postcard background */
+    --journal-card-img: none;                       /* slot card: stamp + postmark corner, once, top-right */
+    --journal-card-paper-img: var(--journal-paper-img); /* slot cardPaper: card paper tile (defaults to page paper) */
+    --journal-card-tape-img: none;                  /* slot cardTape: tape strip sprite */
     --journal-card-tape: color-mix(in srgb, var(--px-accent-hi) 70%, transparent); /* tape strip */
     --journal-card-doodle: none;                    /* slot: cat doodle sprite (shown 48×48) */
     --journal-turn: var(--px-dur-med, 240ms);       /* page-turn duration */
@@ -56,8 +58,10 @@
   .fs-book .fs-year-grid span[data-level='4'], .fs-book .focus-heatmap-legend span[data-level='4'] { background: var(--journal-stamp-4); }
   .fs-book .fs-seg button, .fs-book .fs-actions button, .fs-book .fs-weekpick button { color: var(--journal-paper-ink); background: transparent; border-color: var(--journal-paper-faint); }
   .fs-book .fs-seg button[aria-pressed='true'] { color: var(--px-ink-on-accent); background: var(--px-accent); border-color: var(--px-accent-lo); }
-  .fs-book .fs-card { position: relative; background: var(--journal-card) var(--journal-card-img); color: var(--journal-paper-ink); border: 2px solid var(--journal-paper-faint); box-shadow: 4px 4px 0 rgba(13, 8, 5, .25); }
-  .fs-book .fs-card::before { content: ''; position: absolute; top: -8px; left: calc(50% - 32px); width: 64px; height: 16px; background: var(--journal-card-tape); }
+  .fs-book .fs-card { position: relative; background: var(--journal-card) var(--journal-card-paper-img) repeat; image-rendering: pixelated; color: var(--journal-paper-ink); border: 2px solid var(--journal-paper-faint); box-shadow: 4px 4px 0 rgba(13, 8, 5, .25); }
+  .fs-book .fs-card::before { content: ''; position: absolute; top: -8px; left: calc(50% - 32px); width: 64px; height: 16px; background: var(--journal-card-tape-img) center / contain no-repeat, var(--journal-card-tape); }
+  .fs-book .fs-card.has-tape::before { background-color: transparent; }
+  .fs-book .fs-card::after { content: ''; position: absolute; top: 8px; right: 8px; width: var(--journal-card-stamp-w, 64px); height: var(--journal-card-stamp-h, 64px); background: var(--journal-card-img) right top / contain no-repeat; image-rendering: pixelated; pointer-events: none; }
   .fs-book .fs-card header, .fs-book .fs-card-total { color: var(--journal-paper-ink); }
   .fs-book .fs-card-summary { background: transparent; color: var(--journal-paper-ink); box-shadow: inset 0 0 0 2px var(--journal-rule); }
   .fs-card-doodle { width: 48px; height: 48px; background: var(--journal-card-doodle) center / contain no-repeat; image-rendering: pixelated; }
