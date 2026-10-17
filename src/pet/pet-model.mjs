@@ -2,15 +2,19 @@
 import { POSES } from './cat-sprites.mjs';
 import { getPet } from './pet-catalog.mjs';
 
-export const FPS = Object.freeze({ idle: 2, groove: 4, celebrate: 6, walk: 4, sleep: 1, focus: 1.5 });
+// `listen` (still, eyes closed) joins once the sprite sheet has it (cat-sprites.mjs, art PR).
+export const FPS = Object.freeze({ idle: 2, groove: 4, ...(Object.hasOwn(POSES, 'listen') ? { listen: POSES.listen } : {}), celebrate: 6, walk: 4, sleep: 1, focus: 1.5 });
 const IDLE_SLEEP_MS = 5 * 60 * 1000, CELEBRATE_MS = 4000;
 export const isNight = (hour) => hour >= 23 || hour < 6;
 
-export function petPose({ playing = false, phase = 'idle', paused = false, idleMs = 0, hour = 12, celebrateUntil = 0, now = 0, poked = 0 } = {}) {
+// `synced`: a real detected beat (src/cat/beat-sync.mjs beatSynced). Without one the cat listens
+// (eyes closed, still) instead of dancing to a made-up tempo; `listen` falls back to idle until the sprite has it.
+export const LISTEN_POSE = () => (Object.hasOwn(POSES, 'listen') ? 'listen' : 'idle');
+export function petPose({ synced = false, playing = false, phase = 'idle', paused = false, idleMs = 0, hour = 12, celebrateUntil = 0, now = 0, poked = 0 } = {}) {
   if (now < celebrateUntil) return 'celebrate';
   if (poked && now - poked < 1500) return 'celebrate';
   if (phase === 'focus' && !paused) return 'focus';
-  if (playing) return 'groove';
+  if (playing) return synced ? 'groove' : LISTEN_POSE();
   if (phase === 'shortBreak' || phase === 'longBreak') return 'walk';
   if (isNight(hour) || idleMs > IDLE_SLEEP_MS) return 'sleep';
   return 'idle';
@@ -20,8 +24,10 @@ export function frameAt(pose, timeMs) {
   return Math.floor(timeMs / 1000 * fps) % count;
 }
 // Groove frames move on every half beat; the head dips (frames 1 and 3) on the beat.
+// No tempo: hold frame 0 — never dance to a guessed 96 BPM.
 export function grooveFrame(now, { bpm, beatAt = 0 } = {}) {
-  const half = 30000 / (bpm > 0 ? bpm : 96), since = now - beatAt, halves = Math.floor(since / half);
+  if (!(bpm > 0)) return { index: 0, wait: 250 };
+  const half = 30000 / bpm, since = now - beatAt, halves = Math.floor(since / half);
   return { index: ((halves + 1) % 4 + 4) % 4, wait: half - ((since % half) + half) % half };
 }
 export function celebrateUntil(now) { return now + CELEBRATE_MS; }

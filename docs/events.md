@@ -24,6 +24,8 @@ window.addEventListener('cabin:playback', (event) => {
 | `track` | `object \| null` | `{ id, index, title, artist, album }`. `id` is the collection item id. `null` when the deck is empty. |
 | `bpm` | `number` | Tempo found by `src/player/beat-tracker.mjs` (kick-drum band of the analyser, autocorrelation), or `0` while no beat is certain or the signal is `estimated`. |
 | `beatAt` | `number` | Wall-clock time (`Date.now()` ms) of one beat when `bpm` is set, else `0`. Any beat works as the phase anchor: beats fall at `beatAt + k × 60000 / bpm`. |
+
+The room cat and the desktop pet move only while the beat clock holds a real tempo (a detected `bpm`, or the lo-fi section tempo). With `bpm: 0` (e.g. `estimated` energy from cross-origin audio) they hold a still `listen` pose instead of dancing to the 96 BPM default. See `docs/cat-care.md` › 跟着节拍.
 | `reason` | `string` | `state` (play/pause/source/spin changed), `track` (track or record changed), `beat` (a new tempo, or a phase shift of more than 30 ms), or `energy` (periodic tick). |
 
 ### Timing

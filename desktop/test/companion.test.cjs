@@ -65,7 +65,7 @@ test('pixel cat frames are 32×32 with valid palette indices for every pose and 
 test('cat behaviour follows focus, music, breaks and the night', async () => {
   const { petPose, bubbleText, frameAt } = await import('../../src/pet/pet-model.mjs');
   assert.equal(petPose({ phase: 'focus', playing: true, hour: 2 }), 'focus');
-  assert.equal(petPose({ phase: 'focus', paused: true, playing: true }), 'groove');
+  assert.equal(petPose({ phase: 'focus', paused: true, playing: true, synced: true }), 'groove');
   assert.equal(petPose({ phase: 'shortBreak' }), 'walk'); assert.equal(petPose({ hour: 1 }), 'sleep'); assert.equal(petPose({ hour: 14 }), 'idle');
   assert.equal(petPose({ hour: 14, idleMs: 6 * MIN }), 'sleep'); assert.equal(petPose({ celebrateUntil: 10, now: 5, phase: 'focus' }), 'celebrate');
   assert.equal(bubbleText({ phase: 'focus', remaining: 10 * MIN }), '专注中 · 还剩 10 分钟');

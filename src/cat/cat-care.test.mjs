@@ -59,7 +59,7 @@ test('care states map to the agreed art slots, and placeholders request nothing'
   const art = await import('./cat-art.mjs');
   assert.equal(art.catArtPose({ tier: 'droopy' }), 'cat-droopy'); assert.equal(art.catArtPose({ tier: 'happy', phase: 'focus' }), 'cat-desk');
   assert.equal(art.catArtPose({ tier: 'happy' }), 'cat-rub'); assert.equal(art.catArtPose({ tier: 'ok' }), 'cat-wait'); assert.equal(art.catArtPose({ tier: 'happy', pose: 'sleep' }), 'cat-rub'); assert.equal(art.catArtPose({ tier: 'droopy', pose: 'sleep' }), 'cat-droopy'); assert.equal(art.catArtPose({ tier: 'ok', pose: 'sleep' }), 'cat-sleep-books'); assert.equal(art.catArtPose({ tier: 'droopy', full: true }), 'cat-rub');
-  assert.deepEqual(Object.keys(art.CAT_POSES).sort(), ['cat-desk', 'cat-droopy', 'cat-rub', 'cat-sleep-books', 'cat-wait']);
+  assert.deepEqual(Object.keys(art.CAT_POSES).sort(), ['cat-desk', 'cat-droopy', 'cat-listen', 'cat-rub', 'cat-sleep-books', 'cat-wait']);
   assert.ok(art.CAT_EATING.frames >= 6 && art.CAT_EATING.frames <= 8); assert.equal(art.CAT_EATING.frameMs, 120);
   assert.equal(art.catArtLayer({ tier: 'happy' }), null, 'not ready → placeholder');
   const layer = art.catArtLayer({ eating: true }, { eating: { ...art.CAT_EATING, ready: true } }); assert.equal(layer.url, '/cat/cat-eat.png'); assert.equal(layer.frames, 8);
@@ -76,4 +76,31 @@ test('decay keeps the stored tier fresh; getCatMoodNow reads without writing', (
   assert.equal(JSON.parse(s.getItem(care.MOOD_KEY)).tier, 'happy', 'reading does not write');
   assert.equal(care.refreshCare(s, later).changed, true);
   const stored = JSON.parse(s.getItem(care.MOOD_KEY)); assert.equal(stored.tier, 'ok'); assert.equal(stored.updatedAt, later); assert.equal(stored.mood, 67);
+});
+
+test('beat: the cat dances only to a real detected beat, peaks on the beat', async () => {
+  const sync = await import('./beat-sync.mjs'), clock = await import('../player/beat-clock.mjs'), model = await import('../pet/pet-model.mjs'), art = await import('./cat-art.mjs');
+  const beat = { bpm: 120, beatAt: 1_000_000, detected: true, known: true };
+  assert.equal(sync.beatSynced({ playing: true, beat }), true);
+  assert.equal(sync.beatSynced({ playing: false, beat }), false, 'paused: nothing');
+  assert.equal(sync.beatSynced({ playing: true, beat: { bpm: 96, beatAt: 0, detected: false, known: false } }), false, 'default clock');
+  assert.equal(sync.beatSynced({ playing: true, beat: clock.setBeat({ bpm: 88 }) }), true, 'lo-fi: its own exact tempo');
+  assert.equal(sync.beatSynced({ playing: true, beat: clock.setBeat({ bpm: 0 }) }), false, 'estimated: no tempo, default clock');
+  // 120 BPM: 500 ms beats, frames every 250 ms: L on beat k, dip, R on beat k+1, dip.
+  assert.deepEqual([0, 250, 500, 750, 1000, 1500].map((t) => sync.grooveFrameIndex(beat.beatAt + t, beat)), [0, 1, 2, 3, 0, 2]);
+  assert.equal(sync.cyclePhase(beat.beatAt - 1, beat, 2), 999);
+  // The sway peaks (±3°) sit exactly on beats (offsets 0 and .5 of a 2-beat cycle).
+  assert.deepEqual(sync.SWAY_KEYS.filter((k) => k.rotate !== '0deg').map((k) => k.offset), [0, .5, 1]);
+  const anim = { currentTime: 0, timing: { duration: 1000 }, effect: { getTiming: () => anim.timing, updateTiming: (t) => Object.assign(anim.timing, t) } };
+  sync.lockToBeat(anim, { now: beat.beatAt + 1100, beat, beats: 2 }); assert.equal(anim.timing.duration, 1000); assert.equal(anim.currentTime, 100);
+  sync.lockToBeat(anim, { now: beat.beatAt + 1100, beat: { ...beat, bpm: 60 }, beats: 1 }); assert.equal(anim.timing.duration, 1000);
+  // Sprite cat: no beat → listen (idle until the sprite has it), never a made-up 96 BPM groove.
+  assert.equal(model.petPose({ playing: true, synced: true }), 'groove');
+  assert.equal(model.petPose({ playing: true, synced: false }), model.LISTEN_POSE());
+  assert.deepEqual(model.grooveFrame(5000, { bpm: 0, beatAt: 0 }), { index: 0, wait: 250 });
+  // PNG cat: groove strip with a beat, cat-listen without; droopy and focus keep their poses.
+  assert.equal(art.catArtPose({ tier: 'happy', music: 'beat' }), 'cat-groove'); assert.equal(art.catArtPose({ tier: 'ok', music: 'free' }), 'cat-listen');
+  assert.equal(art.catArtPose({ tier: 'droopy', music: 'beat' }), 'cat-droopy'); assert.equal(art.catArtPose({ tier: 'happy', phase: 'focus', music: 'beat' }), 'cat-desk');
+  assert.equal(art.catArtLayer({ tier: 'happy', music: 'beat' }, { groove: { ...art.CAT_GROOVE, ready: false } }), null, 'missing strip: the sprite cat dances instead');
+  assert.equal(art.catArtLayer({ tier: 'happy', music: 'beat' }, { groove: { ...art.CAT_GROOVE, ready: true } }).frames, 4);
 });

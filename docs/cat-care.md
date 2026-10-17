@@ -53,3 +53,18 @@
 - 开心时的尾巴摇摆只在音乐播放时出现（`.room-cat.is-playing[data-mood=happy]`）。
 - 拖小鱼干：`dataTransfer` 同时写 `application/x-cabin-fish` 和 `text/plain`（`cabin-fish`）。小猫面板是模态窗口，打开时房间不可交互，所以由面板在整页监听：小鱼干放在小猫所在区域就算喂食。有真实鼠标拖拽的 Playwright 测试覆盖。
 - 心情衰减后保持存储新鲜：加载时和每 10 分钟用 `refreshCare()` 结算一次；档位变了就写回 `flow-cabin-cat-mood-v1`（`mood`、`tier`、`updatedAt`），并发 `cabin:cat-mood`。`getCatMoodNow()` 返回带衰减的 `{ mood, tier }`，只读不写。
+
+## 跟着节拍（两只猫共用一个节拍时钟）
+
+节拍来自房间的节拍时钟 `src/player/beat-clock.mjs`：唱机音频由 `src/player/beat-tracker.mjs` 从分析器的低频段测出 `bpm` + `beatAt`，经 `cabin:playback` 广播；生成的 Lo-fi 电台用它自己的段落速度。`beatSynced()`（`src/cat/beat-sync.mjs`）只在「正在播放 + 速度是真的」时为真：
+
+| 情况 | 精灵小猫（PixelCat） | PNG 小猫（`public/cat/`） |
+| --- | --- | --- |
+| 测到节拍 / Lo-fi | `groove`：每半拍一帧，拍点上点头 | 开心：`cat-groove.png`（4 帧 64×64：头左 / 中间低头 / 头右 / 中间低头，每拍 2 帧）；还不错：同上 |
+| 播放中但没有节拍（`estimated`、跨域音频不能分析、刚换歌还没测出） | `listen`（美术加到 `cat-sprites.mjs` 之前用 `idle`），静止 | `cat-listen.png`（闭眼听歌），静止 |
+| 暂停 / 没在放 | 原来的发呆 / 睡觉 | 按心情 |
+
+- 不再用固定 96 BPM 假装跳舞：`grooveFrame` 没有速度时停在第 0 帧。
+- 开心时的尾巴摆动：Web Animation，一个周期 = 2 拍，每半拍一步，−3° / +3° 的峰值正好落在拍点上；漂移超过 35 ms 就拉回拍上（`lockToBeat`）。吃饱后的弹跳：每拍一次。
+- `cat-groove.png` 或 `cat-listen.png` 还没放进来时，PNG 层返回 null，由同一节拍时钟上的精灵小猫代替。
+- 减少动态效果：全部不动。小猫 `.room-cat` 上的 `data-music`（`beat` / `free`）和 `data-beat-motion`（`sway` / `groove` / `full`）可供测量拍点偏差。

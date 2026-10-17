@@ -342,6 +342,22 @@ try {
     await page.getByRole('button',{name:'添加到唱片架',exact:true}).click();await page.getByRole('dialog',{name:'添加到唱片架',exact:true}).waitFor();await page.keyboard.press('Escape');assert.equal(await page.getByRole('button',{name:'添加到唱片架',exact:true}).evaluate(e=>e===document.activeElement),true);
     await page.getByRole('button',{name:'设置',exact:true}).click();await page.getByRole('dialog',{name:'设置',exact:true}).waitFor();await page.keyboard.press('Escape');assert.equal(await page.getByRole('button',{name:'设置',exact:true}).evaluate(e=>e===document.activeElement),true);
   });
+  await run('room-cat-moves-on-the-beat-and-listens-without-one',async page=>{
+    await page.evaluate(()=>localStorage.setItem('flow-cabin-cat-mood-v1',JSON.stringify({v:1,mood:90,tier:'happy',updatedAt:Date.now(),feeds:[],totalFeeds:0,unlockedActions:[]})));await page.reload();await page.locator('.room-cat').waitFor();
+    const cat=page.locator('.room-cat');assert.equal(await cat.getAttribute('data-music'),null,'nothing playing: no music pose');
+    await openFocus(page,'声音');await page.getByRole('checkbox',{name:'Lo-fi 电台 · 实时生成',exact:true}).check();
+    await page.waitForFunction(()=>document.querySelector('.room-cat')?.dataset.music==='beat',null,{timeout:30000}); // lo-fi: its own tempo
+    // Deck audio that cannot be analysed (estimated energy, bpm 0): listen, nothing moves.
+    await page.evaluate(()=>window.dispatchEvent(new CustomEvent('cabin:playback',{detail:{playing:true,energy:.4,estimated:true,bpm:0,beatAt:0}})));
+    await page.waitForFunction(()=>document.querySelector('.room-cat').dataset.music==='free'&&!document.querySelector('.room-cat').dataset.beatMotion,null,{timeout:5000});
+    assert.equal(await cat.getAttribute('data-art'),'cat-listen');
+    // A detected beat: the happy sway runs on it, 2 beats per cycle, phase-locked to beatAt.
+    const beatAt=await page.evaluate(()=>{const at=Date.now()-130;window.dispatchEvent(new CustomEvent('cabin:playback',{detail:{playing:true,energy:.5,bpm:120,beatAt:at}}));return at;});
+    await page.waitForFunction(()=>document.querySelector('.room-cat').dataset.beatMotion==='sway',null,{timeout:5000});
+    const lock=await page.evaluate(beatAt=>{const a=document.querySelector('.room-cat .pet-life > .pixel-cat').getAnimations().find(x=>x.effect.getKeyframes().some(k=>k.rotate));const d=a.effect.getTiming().duration;const want=((Date.now()-beatAt)%d+d)%d,at=a.currentTime%d;return {d,off:Math.min(Math.abs(at-want),d-Math.abs(at-want))};},beatAt);
+    assert.equal(lock.d,1000);assert.ok(lock.off<40,`sway is ${Math.round(lock.off)} ms off the beat`);
+    await screenshot(page,'cat-on-the-beat');
+  },{motion:true});
   await run('companion-generated-lofi-tempo-reaches-pet',async page=>{
     const { cleanCompanion } = createRequire(path.join(root,'desktop/package.json'))('./wallpaper-model.cjs');
     await openFocus(page,'声音');await page.getByRole('checkbox',{name:'Lo-fi 电台 · 实时生成',exact:true}).check(); // enabling lo-fi starts sound itself

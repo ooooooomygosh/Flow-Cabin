@@ -2,7 +2,7 @@
    .cat--eating      a feed just happened (EAT_MS); .cat-eat-fish is the fish in front of the cat
    .cat--drop-target a 小鱼干 is being dragged over the cat
    .cat--by-desk     mood 开心 during a focus round (scene CSS may move the cat to the desk)
-   .cat--full        ~1.5 s after eating (FULL_MS); .is-roll once 打滚 is learned; .is-playing gates the happy sway
+   .cat--full        ~1.5 s after eating (FULL_MS); .is-roll once 打滚 is learned
    [data-mood]       happy | ok | droopy (无精打采) */
 @layer guards, reset, features, skin, overrides;
 @layer features {
@@ -11,16 +11,13 @@
   background: linear-gradient(90deg, transparent 0 12%, var(--px-accent) 12% 70%, var(--px-accent-hi) 70% 80%, transparent 80% 84%, var(--px-accent) 84% 100%);
   clip-path: polygon(0 50%, 15% 0, 70% 0, 82% 50%, 100% 0, 100% 100%, 82% 50%, 70% 100%, 15% 100%); animation: cat-eat-fish var(--cat-eat-ms, 2400ms) steps(4, end) forwards; }
 .room-cat.cat--drop-target { outline: 2px dashed var(--px-accent-hi); outline-offset: 4px; }
-.room-cat.is-playing[data-mood=happy]:not(.cat--eating) .pet-life > * { transform-origin: 50% 100%; animation: cat-happy-sway 1.6s steps(4, end) infinite alternate; }
-.room-cat.cat--full .pet-life { animation: cat-full 500ms steps(2, end) 3; }
+.room-cat[data-mood=happy] .pet-life > * { transform-origin: 50% 100%; } /* tail sway: a Web Animation on the beat clock (RoomCat, src/cat/beat-sync.mjs) */
 .room-cat.cat--full.is-roll .pet-life { animation: cat-roll 1.5s steps(8, end) 1; }
 .room-cat[data-mood=droopy] .pet-life { filter: saturate(.8) brightness(.94); }
-@keyframes cat-full { 50% { translate: 0 -4%; } }
 @keyframes cat-roll { to { rotate: 360deg; } }
 @keyframes cat-eat { 50% { translate: 0 3%; } }
 @keyframes cat-eat-fish { to { clip-path: polygon(0 50%, 15% 0, 15% 0, 15% 50%, 15% 0, 15% 100%, 15% 50%, 15% 100%, 15% 100%); } }
-@keyframes cat-happy-sway { from { rotate: calc(var(--pet-energy) * -3deg); } to { rotate: calc(var(--pet-energy) * 3deg); } }
-@media (prefers-reduced-motion: reduce) { .room-cat.cat--eating .pet-life, .room-cat.cat--full .pet-life, .room-cat[data-mood] .pet-life > *, .cat-eat-fish { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .room-cat.cat--eating .pet-life, .room-cat[data-mood] .pet-life > *, .cat-eat-fish { animation: none; } }
 }
 @layer overrides {
 :root[data-desktop-reduce-motion=true] .room-cat .pet-life, :root[data-desktop-reduce-motion=true] .room-cat .pet-life > *, :root[data-desktop-reduce-motion=true] .cat-eat-fish { animation: none; }
@@ -45,5 +42,6 @@
 .cat-art { position: absolute; inset: 0; background: center bottom / contain no-repeat; image-rendering: pixelated; pointer-events: none; }
 .cat-art.is-eating { background-size: calc(var(--cat-art-frames) * 100%) 100%; background-position: 0 100%; animation-name: cat-art-strip; animation-duration: var(--cat-art-ms); animation-timing-function: steps(8, jump-none); animation-iteration-count: infinite; }
 .room-cat:has(.cat-art) .pet-life { visibility: hidden; }
+.cat-art.is-groove { background-size: calc(var(--cat-art-frames) * 100%) 100%; background-position: 0 100%; }
 @keyframes cat-art-strip { to { background-position: 100% 100%; } }
 }
