@@ -112,6 +112,8 @@ try {
     const scrolls=await page.locator('.focus-dock').evaluate(dock=>[...dock.querySelectorAll('*')].filter(el=>['auto','scroll'].includes(getComputedStyle(el).overflowY)&&el.scrollHeight>el.clientHeight+1).map(el=>el.className));
     for(const [w,h] of [[1280,800],[1440,900]]){await page.setViewportSize({width:w,height:h});await page.screenshot({path:path.join(output,`stats-card-${w}x${h}.png`),animations:'disabled'});}
     assert.deepEqual(scrolls,[],'stats card does not scroll');
+    // Let the dock settle after the viewport changes above before clicking into it.
+    await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
     await page.getByRole('button',{name:'打开小屋日记 →'}).click();
     const journal=page.getByRole('dialog',{name:'小屋日记'});await journal.waitFor();
     assert.equal(await journal.getByRole('tab',{name:'概览'}).getAttribute('aria-selected'),'true');assert.equal(await journal.locator('.fs-year-grid span').count(),53*7);
