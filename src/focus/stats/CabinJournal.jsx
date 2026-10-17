@@ -30,17 +30,26 @@ export function Bars({ days, label, mini = false }) {
 // `cabin:open-journal` ({ detail: { tab } }).
 export default function CabinJournal() {
   const focus = useFocus();
-  const [open, setOpen] = useState(false), [view, setView] = useState('overview'), ref = useRef(null);
+  const [open, setOpen] = useState(false), [view, setView] = useState('overview'), ref = useRef(null), openRef = useRef(false);
+  openRef.current = open;
+  // Close synchronously so an L pressed in the same frame as Esc (before React re-renders) reopens.
+  const shut = () => { openRef.current = false; setOpen(false); };
+  const show = (tab) => { openRef.current = true; setView(tab); setOpen(true); };
   useEffect(() => {
-    const on = (event) => { setView(journalTab(event.detail?.tab)); setOpen(true); };
-    const key = (event) => { if (!open && isJournalKey(event) && !typing(event.target) && !document.querySelector('dialog[open]') && !document.documentElement.classList.contains('room-corner-open')) { event.preventDefault(); setView('overview'); setOpen(true); } };
+    const on = (event) => show(journalTab(event.detail?.tab));
+    // Our own dialog may still be mid-close (exit animation / pending effect): it never blocks L.
+    const key = (event) => { if (!openRef.current && isJournalKey(event) && !typing(event.target) && !document.querySelector('dialog[open]:not(.cabin-journal)') && !document.documentElement.classList.contains('room-corner-open')) { event.preventDefault(); show('overview'); } };
     window.addEventListener(JOURNAL_EVENT, on); document.addEventListener('keydown', key);
     return () => { window.removeEventListener(JOURNAL_EVENT, on); document.removeEventListener('keydown', key); };
+  }, []);
+  useEffect(() => {
+    const el = ref.current; if (!el) return;
+    if (open) { if (!el.open) { if (el.showModal) el.showModal(); else el.setAttribute('open', ''); } }
+    else if (el.open) el.close?.();
   }, [open]);
-  useEffect(() => { const el = ref.current; if (!el) return; if (open && !el.open) el.showModal?.() ?? el.setAttribute('open', ''); if (!open && el.open) el.close?.(); }, [open]);
   if (!focus) return null;
-  return <dialog ref={ref} className="cabin-journal" aria-label="小屋日记" style={journalArtStyle()} onCancel={(event) => { event.preventDefault(); setOpen(false); }} onClose={() => setOpen(false)}>
-    {open && <JournalBook state={focus.state} now={focus.now} view={view} setView={setView} close={() => setOpen(false)}/>}
+  return <dialog ref={ref} className="cabin-journal" aria-label="小屋日记" style={journalArtStyle()} onCancel={(event) => { event.preventDefault(); shut(); }} onClose={() => { if (openRef.current && !ref.current?.open) shut(); }}>
+    {open && <JournalBook state={focus.state} now={focus.now} view={view} setView={setView} close={shut}/>}
   </dialog>;
 }
 
