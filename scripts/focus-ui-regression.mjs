@@ -57,19 +57,23 @@ try {
     finally{await context.close();}
   };
   await run('cat-feeding-spends-fish-cheers-the-cat-and-caps-friendly',async page=>{
-    await page.evaluate(key=>{const v=JSON.parse(localStorage.getItem(key)||'{}');v.rewards={...(v.rewards||{}),fish:3};localStorage.setItem(key,JSON.stringify(v));localStorage.setItem('flow-cabin-cat-mood-v1',JSON.stringify({v:1,mood:40,tier:'droopy',updatedAt:Date.now(),feeds:[],totalFeeds:2,unlockedActions:[]}));},KEY);await page.reload();
+    await page.evaluate(key=>{const v=JSON.parse(localStorage.getItem(key)||'{}');v.rewards={...(v.rewards||{}),fish:4};localStorage.setItem(key,JSON.stringify(v));localStorage.setItem('flow-cabin-cat-mood-v1',JSON.stringify({v:1,mood:40,tier:'droopy',updatedAt:Date.now(),feeds:[],totalFeeds:2,unlockedActions:[]}));},KEY);await page.reload();
     await page.locator('.room-cat').waitFor();assert.equal(await page.locator('.room-cat').getAttribute('data-mood'),'droopy');
     await page.evaluate(()=>{window.__fed=[];window.addEventListener('cabin:cat-fed',e=>window.__fed.push(e.detail));});
     // The panel is lazy-loaded; keep asking until its listener is mounted.
     const panel=page.getByRole('dialog',{name:'小猫'});await page.waitForFunction(()=>{if(document.querySelector('[role=dialog][aria-label="小猫"]'))return true;window.dispatchEvent(new Event('cabin-open-cat'));return false;},null,{polling:250,timeout:15000}).catch(()=>{});await panel.waitFor();
     await panel.getByRole('button',{name:'喂一条'}).click();
     await page.waitForFunction(()=>window.__fed.length===1);const fed=await page.evaluate(()=>window.__fed[0]);
-    assert.deepEqual(Object.keys(fed).sort(),['at','fishLeft','mood','tier','totalFeeds']);assert.equal(fed.fishLeft,2);assert.equal(fed.mood,52);assert.equal(fed.tier,'ok');assert.equal(fed.totalFeeds,3);assert.equal((await focusState(page)).rewards.fish,2);
+    assert.deepEqual(Object.keys(fed).sort(),['at','fishLeft','mood','tier','totalFeeds']);assert.equal(fed.fishLeft,3);assert.equal(fed.mood,52);assert.equal(fed.tier,'ok');assert.equal(fed.totalFeeds,3);assert.equal((await focusState(page)).rewards.fish,3);
     assert.match(await panel.locator('.cat-care-note').innerText(),/伸懒腰/);assert.match(await page.locator('.room-cat').getAttribute('class'),/cat--eating/);await screenshot(page,'cat-fed');
-    // A 小鱼干 dropped on the cat feeds it too.
+    // A 小鱼干 dragged with the real mouse from the panel chip onto the cat feeds it too.
+    await page.waitForFunction(()=>!document.querySelector('.room-cat.cat--eating,.room-cat.cat--full'),null,{timeout:8000});
+    {const from=await panel.locator('.cat-fish-chip').boundingBox(),to=await page.locator('.room-cat').boundingBox();await page.mouse.move(from.x+from.width/2,from.y+from.height/2);await page.mouse.down();await page.mouse.move(to.x+to.width/2,to.y+to.height/2,{steps:12});await page.mouse.move(to.x+to.width/2+2,to.y+to.height/2,{steps:2});await page.mouse.up();}
+    await page.waitForFunction(()=>window.__fed.length===2,null,{timeout:5000});assert.equal((await focusState(page)).rewards.fish,2);
+        // A 小鱼干 dropped on the cat feeds it too.
     await page.evaluate(()=>{const dt=new DataTransfer();dt.setData('application/x-cabin-fish','1');const cat=document.querySelector('.room-cat');for(const type of ['dragover','drop'])cat.dispatchEvent(new DragEvent(type,{dataTransfer:dt,bubbles:true,cancelable:true}));});
-    await page.waitForFunction(()=>window.__fed.length===2);assert.equal((await focusState(page)).rewards.fish,1);
-    const store=await page.evaluate(()=>JSON.parse(localStorage.getItem('flow-cabin-cat-mood-v1')));assert.equal(store.totalFeeds,4);assert.equal(store.feeds.length,2);assert.equal(store.feeds[1].fishLeft,1);assert.deepEqual(store.unlockedActions,['stretch']);
+    await page.waitForFunction(()=>window.__fed.length===3);assert.equal((await focusState(page)).rewards.fish,1);
+    const store=await page.evaluate(()=>JSON.parse(localStorage.getItem('flow-cabin-cat-mood-v1')));assert.equal(store.totalFeeds,5);assert.equal(store.feeds.length,3);assert.equal(store.feeds[2].fishLeft,1);assert.deepEqual(store.unlockedActions,['stretch']);
     // Daily cap: friendly, no fish spent.
     await page.evaluate(()=>{const s=JSON.parse(localStorage.getItem('flow-cabin-cat-mood-v1'));s.feeds=Array.from({length:5},()=>({at:Date.now(),fishLeft:1}));localStorage.setItem('flow-cabin-cat-mood-v1',JSON.stringify(s));window.dispatchEvent(new StorageEvent('storage',{key:'flow-cabin-cat-mood-v1'}));});
     assert.equal(await panel.getByRole('button',{name:'喂一条'}).isDisabled(),true);assert.match(await panel.locator('.cat-care-note').innerText(),/吃饱/);

@@ -5,7 +5,7 @@ import Dialog from '../Dialog';
 import { useFocus } from './useFocus';
 import { levelInfo, UNLOCKS, unlockedIds, unlockPrice } from './focus-model.mjs';
 import { useCatCare, requestFeed } from '../cat/useCatCare';
-import { FISH_DRAG_TYPE } from '../cat/cat-care.mjs';
+import { FISH_DRAG_TYPE, FISH_DRAG_TEXT } from '../cat/cat-care.mjs';
 import { FishPixel } from '../icons';
 import { catPanelPlace } from './cat-panel-place.mjs';
 import { readSkySettings, writeSkySettings } from '../sky-clock.mjs';
@@ -28,7 +28,7 @@ function CatPanelBody({ close }) {
         <div className={`cat-mood-bar is-${mood.tier}`} role="meter" aria-label="心情" aria-valuemin={0} aria-valuemax={100} aria-valuenow={mood.mood} aria-valuetext={mood.label}><span style={{ width: `${mood.mood}%` }}/></div>
         <div className="cat-care-actions">
           <button type="button" className="pixel-button is-primary" disabled={!rewards.fish || full} onClick={requestFeed} title={full ? '今天已经吃饱啦' : rewards.fish ? '喂一条小鱼干，也可以把小鱼干拖到小猫身上' : '完成一轮专注就能得到一条小鱼干'}><FishPixel size={12}/>喂一条</button>
-          <span className="cat-fish-chip" draggable={rewards.fish > 0 && !full} aria-hidden="true" title="把小鱼干拖到小猫身上也能喂" onDragStart={(event) => { event.dataTransfer.setData(FISH_DRAG_TYPE, '1'); event.dataTransfer.effectAllowed = 'move'; }}><FishPixel size={12}/>×{rewards.fish}</span>
+          <span className="cat-fish-chip" draggable={rewards.fish > 0 && !full} aria-hidden="true" title="把小鱼干拖到小猫身上也能喂" onDragStart={(event) => { event.dataTransfer.setData(FISH_DRAG_TYPE, '1'); event.dataTransfer.setData('text/plain', FISH_DRAG_TEXT); event.dataTransfer.effectAllowed = 'move'; }}><FishPixel size={12}/>×{rewards.fish}</span>
         </div>
         <p className="cat-care-note" role="status">{mood.message || (full ? '小猫今天已经吃饱啦，明天再喂吧～' : mood.next ? `再喂 ${mood.next.feeds - mood.totalFeeds} 条，小猫会学会「${mood.next.name}」。` : '小猫已经学会了所有小动作。')}</p>
         {mood.actions.length > 0 && <small className="cat-care-learned">学会了：{mood.actions.map((a) => a.name).join('、')}</small>}
@@ -68,6 +68,19 @@ export default function CatPanel() {
     track(300);
     window.addEventListener('resize', track); document.addEventListener('transitionend', settle, true); document.addEventListener('animationend', settle, true);
     return () => { cancelAnimationFrame(frame); window.removeEventListener('resize', track); document.removeEventListener('transitionend', settle, true); document.removeEventListener('animationend', settle, true); };
+  }, [open]);
+  // The panel is modal, so the room (and the cat) is inert while it is open: catch a 小鱼干
+  // dropped over the cat's box here instead of on the cat itself.
+  useEffect(() => {
+    if (!open) return undefined;
+    const overCat = (event) => { const r = document.querySelector('.room-cat')?.getBoundingClientRect(); return !!r && event.clientX >= r.left && event.clientX <= r.right && event.clientY >= r.top && event.clientY <= r.bottom; };
+    const isFish = (event) => [...(event.dataTransfer?.types || [])].includes(FISH_DRAG_TYPE);
+    const mark = (on) => document.querySelectorAll('.room-cat').forEach((node) => node.classList.toggle('cat--drop-target', on));
+    const over = (event) => { if (!isFish(event)) return; const hit = overCat(event); mark(hit); if (hit) { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; } };
+    const drop = (event) => { mark(false); if (!isFish(event) || !overCat(event)) return; event.preventDefault(); requestFeed(); };
+    const end = () => mark(false);
+    document.addEventListener('dragover', over); document.addEventListener('drop', drop); document.addEventListener('dragend', end);
+    return () => { mark(false); document.removeEventListener('dragover', over); document.removeEventListener('drop', drop); document.removeEventListener('dragend', end); };
   }, [open]);
   return open ? <CatPanelBody close={() => setOpen(false)}/> : null;
 }

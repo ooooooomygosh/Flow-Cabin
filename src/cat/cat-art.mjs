@@ -19,10 +19,12 @@ export const CAT_EATING = Object.freeze({ file: 'cat-eat', size: 64, frames: 8, 
 export const STICKERS = Object.freeze(Object.fromEntries(['sticker-best-day', 'sticker-streak', 'sticker-fed'].map((name) => [name, { size: 32, ready: hasArt(name), url: `/cat/${name}.png` }])));
 
 // Which pose a state maps to.
-export function catArtPose({ tier = 'ok', pose = 'idle', phase = 'idle', pettedRecently = false } = {}) {
-  if (pose === 'sleep') return 'cat-sleep-books';
+export function catArtPose({ tier = 'ok', pose = 'idle', phase = 'idle', pettedRecently = false, full = false } = {}) {
+  if (full) return 'cat-rub'; // the ~1.5 s after eating
+  // Mood wins over the night/idle sleep: only a cat that is 还不错 naps on the books.
   if (tier === 'droopy') return 'cat-droopy';
   if (tier === 'happy') return phase === 'focus' ? 'cat-desk' : 'cat-rub';
+  if (pose === 'sleep') return 'cat-sleep-books';
   return pettedRecently ? 'cat-rub' : 'cat-wait';
 }
 export const artUrl = (name) => `${CAT_ART_BASE}${name}.png`;

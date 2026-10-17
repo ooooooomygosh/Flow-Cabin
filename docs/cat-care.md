@@ -45,3 +45,11 @@
 | `cat-droopy.png` | 64×64 | 心情「无精打采」 |
 | `cat-eat.png` | 512×64（8 帧横排，每帧 64×64，120 ms） | 喂食后 `EAT_MS` 内播放。CSS 用 `steps(8)`，帧数要改的话，同时改 `CAT_EATING.frames` 和 `cat-care.css`。 |
 | `sticker-best-day.png` / `sticker-streak.png` / `sticker-fed.png` | 32×32 | 给小屋日记用的贴纸（最好的一天、连续专注、喂过小猫），清单在 `STICKERS`。 |
+
+## 状态细节（bini 评审后）
+
+- 吃完（`EAT_MS` 2.4 秒）后有约 1.5 秒「吃饱」状态（`FULL_MS`）：`.cat--full`，美术姿势 `cat-rub`；学会「打滚」后加 `.is-roll`，打一个滚。
+- 心情优先于夜间/发呆睡觉：`happy` 和 `droopy` 夜里照样显示 `cat-rub`（专注时 `cat-desk`）和 `cat-droopy`，只有「还不错」才在书上睡（`cat-sleep-books`）。
+- 开心时的尾巴摇摆只在音乐播放时出现（`.room-cat.is-playing[data-mood=happy]`）。
+- 拖小鱼干：`dataTransfer` 同时写 `application/x-cabin-fish` 和 `text/plain`（`cabin-fish`）。小猫面板是模态窗口，打开时房间不可交互，所以由面板在整页监听：小鱼干放在小猫所在区域就算喂食。有真实鼠标拖拽的 Playwright 测试覆盖。
+- 心情衰减后保持存储新鲜：加载时和每 10 分钟用 `refreshCare()` 结算一次；档位变了就写回 `flow-cabin-cat-mood-v1`（`mood`、`tier`、`updatedAt`），并发 `cabin:cat-mood`。`getCatMoodNow()` 返回带衰减的 `{ mood, tier }`，只读不写。

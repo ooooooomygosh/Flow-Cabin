@@ -90,7 +90,7 @@ Other Electron windows (the desktop-mode mini turntable) do not dispatch this th
 格式已锁定，小屋日记（#57）按这个读取。
 
 - `cabin:cat-fed`：每喂一次，在 `window` 上触发一次，`detail` 为 `{ at, mood, tier, fishLeft, totalFeeds }`（`at` 是毫秒时间戳）。
-- `cabin:cat-mood`：心情数值或档位变化时触发，`detail` 为 `{ mood, tier }`。`tier` 取值 `happy | ok | droopy`（开心 / 还不错 / 无精打采）。当前档位同时写在 `document.documentElement.dataset.catMood` 和 `.room-cat[data-mood]` 上。
+- `cabin:cat-mood`：心情数值或档位变化时触发（包括加载时和每 10 分钟随时间衰减跨档时，存储也会同步写回），`detail` 为 `{ mood, tier }`。`tier` 取值 `happy | ok | droopy`（开心 / 还不错 / 无精打采）。当前档位同时写在 `document.documentElement.dataset.catMood` 和 `.room-cat[data-mood]` 上。
 - `cabin:cat-feed-request`（输入）：请求喂一条，喂食按钮和把小鱼干拖到小猫身上都发这个事件。吃饱或没有小鱼干时不扣鱼，只显示提示。
 
 存储 `localStorage['flow-cabin-cat-mood-v1']`，只有以下字段：

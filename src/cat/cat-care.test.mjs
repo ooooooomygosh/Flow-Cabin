@@ -58,10 +58,22 @@ test('小鱼干 buy extras early and are spent by feeding', () => {
 test('care states map to the agreed art slots, and placeholders request nothing', async () => {
   const art = await import('./cat-art.mjs');
   assert.equal(art.catArtPose({ tier: 'droopy' }), 'cat-droopy'); assert.equal(art.catArtPose({ tier: 'happy', phase: 'focus' }), 'cat-desk');
-  assert.equal(art.catArtPose({ tier: 'happy' }), 'cat-rub'); assert.equal(art.catArtPose({ tier: 'ok' }), 'cat-wait'); assert.equal(art.catArtPose({ tier: 'happy', pose: 'sleep' }), 'cat-sleep-books');
+  assert.equal(art.catArtPose({ tier: 'happy' }), 'cat-rub'); assert.equal(art.catArtPose({ tier: 'ok' }), 'cat-wait'); assert.equal(art.catArtPose({ tier: 'happy', pose: 'sleep' }), 'cat-rub'); assert.equal(art.catArtPose({ tier: 'droopy', pose: 'sleep' }), 'cat-droopy'); assert.equal(art.catArtPose({ tier: 'ok', pose: 'sleep' }), 'cat-sleep-books'); assert.equal(art.catArtPose({ tier: 'droopy', full: true }), 'cat-rub');
   assert.deepEqual(Object.keys(art.CAT_POSES).sort(), ['cat-desk', 'cat-droopy', 'cat-rub', 'cat-sleep-books', 'cat-wait']);
   assert.ok(art.CAT_EATING.frames >= 6 && art.CAT_EATING.frames <= 8); assert.equal(art.CAT_EATING.frameMs, 120);
   assert.equal(art.catArtLayer({ tier: 'happy' }), null, 'not ready → placeholder');
   const layer = art.catArtLayer({ eating: true }, { eating: { ...art.CAT_EATING, ready: true } }); assert.equal(layer.url, '/cat/cat-eat.png'); assert.equal(layer.frames, 8);
   assert.equal(art.catArtLayer({ tier: 'ok' }, { poses: { 'cat-wait': { size: 64, ready: true } } }).url, '/cat/cat-wait.png');
+});
+
+test('decay keeps the stored tier fresh; getCatMoodNow reads without writing', () => {
+  const data = new Map(), s = { getItem: (k) => data.get(k) ?? null, setItem: (k, v) => data.set(k, String(v)) };
+  const t0 = Date.UTC(2026, 9, 1, 12);
+  s.setItem(care.MOOD_KEY, JSON.stringify({ v: 1, mood: 72, tier: 'happy', updatedAt: t0, feeds: [], totalFeeds: 0, unlockedActions: [] }));
+  assert.deepEqual(care.getCatMoodNow(s, t0 + 3600e3), { mood: 71, tier: 'happy' });
+  assert.equal(care.refreshCare(s, t0 + 3600e3).changed, false);
+  const later = t0 + 5 * 3600e3; assert.deepEqual(care.getCatMoodNow(s, later), { mood: 67, tier: 'ok' });
+  assert.equal(JSON.parse(s.getItem(care.MOOD_KEY)).tier, 'happy', 'reading does not write');
+  assert.equal(care.refreshCare(s, later).changed, true);
+  const stored = JSON.parse(s.getItem(care.MOOD_KEY)); assert.equal(stored.tier, 'ok'); assert.equal(stored.updatedAt, later); assert.equal(stored.mood, 67);
 });

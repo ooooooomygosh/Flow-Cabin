@@ -6,7 +6,7 @@ import { useCatPlacement } from './useCatPlacement';
 import { useCatMotion } from './useCatMotion';
 import { getPet } from './pet-catalog.mjs';
 import { useCatCare, requestFeed } from '../cat/useCatCare';
-import { FED_EVENT, FISH_DRAG_TYPE } from '../cat/cat-care.mjs';
+import { FED_EVENT, FISH_DRAG_TYPE, FISH_DRAG_TEXT } from '../cat/cat-care.mjs';
 import { catArtLayer, catArtPose } from '../cat/cat-art.mjs';
 import './cat-care.css';
 import { bubbleText, celebrateUntil, petPose, pokeLine, catStroll } from './pet-model.mjs';
@@ -38,7 +38,7 @@ export function useCatBehaviour({ focus = {}, playing = false, track = '', lastA
 }
 
 // Placeholder eating time; beauty's frames replace the CSS bob (docs/cat-care.md).
-export const EAT_MS = 2400;
+export const EAT_MS = 2400, FULL_MS = 1500;
 export default function RoomCat({ focus, playing, track, reduceMotion, petId = 'cat', interactive = true, hidden = false }) {
   const [activity, setActivity] = useState(() => Date.now());
   useEffect(() => {
@@ -49,17 +49,20 @@ export default function RoomCat({ focus, playing, track, reduceMotion, petId = '
   }, [interactive, hidden]);
   const pet = getPet(petId), catRef = useRef(null), bubbleRef = useRef(null), pokeTimer = useRef(0);
   // Care (src/cat): eating after a feed, mood tier on data-mood, a 小鱼干 can be dropped on the cat.
-  const mood = useCatCare(), [eating, setEating] = useState(false), [dropping, setDropping] = useState(false);
-  useEffect(() => { let timer = 0; const on = () => { setEating(true); clearTimeout(timer); timer = setTimeout(() => setEating(false), EAT_MS); }; window.addEventListener(FED_EVENT, on); return () => { clearTimeout(timer); window.removeEventListener(FED_EVENT, on); }; }, []);
-  const fishDrag = (event) => [...(event.dataTransfer?.types || [])].includes(FISH_DRAG_TYPE);
-  const dropProps = interactive ? { onDragOver: (event) => { if (fishDrag(event)) { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; setDropping(true); } }, onDragLeave: () => setDropping(false), onDrop: (event) => { if (!fishDrag(event)) return; event.preventDefault(); setDropping(false); requestFeed(); } } : {};
+  const mood = useCatCare(), [eating, setEating] = useState(false), [full, setFull] = useState(false), [dropping, setDropping] = useState(false);
+  // Eat (EAT_MS), then a short contented 'full' beat: cat-rub, or a roll once 打滚 is learned.
+  useEffect(() => { let timer = 0, after = 0; const on = () => { setEating(true); setFull(false); clearTimeout(timer); clearTimeout(after); timer = setTimeout(() => { setEating(false); setFull(true); after = setTimeout(() => setFull(false), FULL_MS); }, EAT_MS); }; window.addEventListener(FED_EVENT, on); return () => { clearTimeout(timer); clearTimeout(after); window.removeEventListener(FED_EVENT, on); }; }, []);
+  const rolls = full && mood.actions.some((a) => a.id === 'roll');
+  const fishDrag = (event) => { const types = [...(event.dataTransfer?.types || [])]; return types.includes(FISH_DRAG_TYPE) || types.includes('text/plain'); };
+  const isFish = (event) => [...(event.dataTransfer?.types || [])].includes(FISH_DRAG_TYPE) || event.dataTransfer?.getData('text/plain') === FISH_DRAG_TEXT;
+  const dropProps = interactive ? { onDragOver: (event) => { if (fishDrag(event)) { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; setDropping(true); } }, onDragLeave: () => setDropping(false), onDrop: (event) => { setDropping(false); if (!isFish(event)) return; event.preventDefault(); setDropping(false); requestFeed(); } } : {};
   useEffect(() => () => clearTimeout(pokeTimer.current), []);
   const cat = useCatBehaviour({ focus, playing, track, petId: pet.id, lastActivity: interactive ? activity : 0, reduceMotion, hidden });
-  const artState = { tier: mood.tier, pose: cat.pose, phase: focus?.phase, eating, pettedRecently: Date.now() - cat.pokedAt < 4000 }, art = catArtLayer(artState);
+  const artState = { tier: mood.tier, pose: cat.pose, phase: focus?.phase, eating, full, pettedRecently: Date.now() - cat.pokedAt < 4000 }, art = catArtLayer(artState);
   useCatPlacement(catRef, bubbleRef, !hidden, [cat.pose, cat.bubble, cat.x]);
   if (hidden) return null;
   const body = <><PetLife pose={cat.pose} pokedAt={cat.pokedAt} reduced={cat.reduced}><PixelCat petId={pet.id} pose={cat.pose} accessory={focus?.accessory || ''} skin={focus?.catSkin} reduceMotion={cat.reduced} style={{ transform: `translateX(${cat.x}px)` }} label={`像素${pet.species} · ${pet.name} · ${{ idle: '发呆', groove: '跟着音乐摇摆', celebrate: '庆祝', walk: '散步', sleep: '睡觉', focus: '陪你专注' }[cat.pose]}`}/></PetLife>{art ? <span className={`cat-art is-${art.kind}`} aria-hidden="true" style={{ backgroundImage: `url(${art.url})`, '--cat-art-frames': art.frames || 1, '--cat-art-ms': `${(art.frameMs || 0) * (art.frames || 1)}ms` }}/> : eating && <span className="cat-eat-fish" aria-hidden="true"/>}{(eating ? '好吃！' : cat.bubble) && <CatBubble ref={bubbleRef} text={eating ? '好吃！' : cat.bubble}/>}</>;
   return interactive
-    ? <button ref={catRef} type="button" className={`room-cat${`${eating ? ' cat--eating' : ''}${dropping ? ' cat--drop-target' : ''}${mood.tier === 'happy' && focus?.phase === 'focus' ? ' cat--by-desk' : ''}`}`} data-mood={mood.tier} data-art={catArtPose(artState)} {...dropProps} aria-haspopup="dialog" aria-expanded="false" title={`点一下摸摸${pet.name} · 双击看看等级和打扮`} aria-label={`摸摸${pet.species}${pet.name}；双击打开等级和打扮`} data-pet-id={pet.id} onClick={(event) => { clearTimeout(pokeTimer.current); if (event.detail > 1) return; pokeTimer.current = setTimeout(cat.poke, event.detail === 0 ? 0 : 260); }} onDoubleClick={() => { clearTimeout(pokeTimer.current); window.dispatchEvent(new Event('cabin-open-cat')); }} onContextMenu={(event) => { event.preventDefault(); window.dispatchEvent(new Event('cabin-open-cat')); }}>{body}</button>
+    ? <button ref={catRef} type="button" className={`room-cat${`${eating ? ' cat--eating' : ''}${full ? ` cat--full${rolls ? ' is-roll' : ''}` : ''}${playing ? ' is-playing' : ''}${dropping ? ' cat--drop-target' : ''}${mood.tier === 'happy' && focus?.phase === 'focus' ? ' cat--by-desk' : ''}`}`} data-mood={mood.tier} data-art={catArtPose(artState)} {...dropProps} aria-haspopup="dialog" aria-expanded="false" title={`点一下摸摸${pet.name} · 双击看看等级和打扮`} aria-label={`摸摸${pet.species}${pet.name}；双击打开等级和打扮`} data-pet-id={pet.id} onClick={(event) => { clearTimeout(pokeTimer.current); if (event.detail > 1) return; pokeTimer.current = setTimeout(cat.poke, event.detail === 0 ? 0 : 260); }} onDoubleClick={() => { clearTimeout(pokeTimer.current); window.dispatchEvent(new Event('cabin-open-cat')); }} onContextMenu={(event) => { event.preventDefault(); window.dispatchEvent(new Event('cabin-open-cat')); }}>{body}</button>
     : <div ref={catRef} className={`room-cat${eating ? ' cat--eating' : ''}`} data-mood={mood.tier} data-pet-id={pet.id}>{body}</div>;
 }

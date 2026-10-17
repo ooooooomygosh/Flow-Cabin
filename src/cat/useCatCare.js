@@ -26,7 +26,7 @@ export function useCatCare() { return useSyncExternalStore(subscribe, current, c
 export function useCatCareHost() {
   const live = useRef(null); live.current = useFocusState();
   useEffect(() => {
-    publish(care.readCare(), '');
+    publish(care.refreshCare().care, '');
     const onSession = (event) => update((c) => care.focusDone(c, event.detail), '专注完成，小猫很开心。');
     const onPet = () => update((c) => care.pet(c), snapshot?.message || '');
     const onFeed = () => {
@@ -39,7 +39,7 @@ export function useCatCareHost() {
       window.dispatchEvent(new CustomEvent(care.FED_EVENT, { detail: { at: last.at, mood: snapshot.mood, tier: snapshot.tier, fishLeft: last.fishLeft, totalFeeds: result.care.totalFeeds } }));
     };
     const onStorage = (event) => { if (event.key === care.MOOD_KEY || event.key === care.META_KEY) publish(care.readCare(), ''); };
-    const clock = setInterval(() => publish(care.readCare(), snapshot?.message || ''), 5 * 60000);
+    const clock = setInterval(() => publish(care.refreshCare().care, snapshot?.message || ''), 10 * 60000);
     window.addEventListener('cabin:focus-session', onSession); window.addEventListener('cabin:cat-petted', onPet);
     window.addEventListener(care.FEED_REQUEST_EVENT, onFeed); window.addEventListener('storage', onStorage);
     return () => { clearInterval(clock); window.removeEventListener('cabin:focus-session', onSession); window.removeEventListener('cabin:cat-petted', onPet); window.removeEventListener(care.FEED_REQUEST_EVENT, onFeed); window.removeEventListener('storage', onStorage); };

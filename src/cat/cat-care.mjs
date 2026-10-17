@@ -38,6 +38,7 @@ export function normalizeCare(value, now = Date.now(), meta = null) {
   };
 }
 // Mood now: slow decay since `at`, never below FLOOR (and never pulled up by decay).
+export const FISH_DRAG_TEXT = 'cabin-fish';
 export function moodAt(care, now = Date.now()) {
   const hours = Math.max(0, now - care.updatedAt) / HOUR;
   return care.mood <= FLOOR ? care.mood : Math.max(FLOOR, care.mood - hours * DECAY_PER_HOUR);
@@ -75,6 +76,15 @@ const parse = (storage, key) => { try { return JSON.parse(storage.getItem(key));
 export function readCare(storage = globalThis.localStorage, now = Date.now()) { return normalizeCare(parse(storage, MOOD_KEY), now, parse(storage, META_KEY)); }
 // The stored record, exactly the shared schema (no extra fields).
 export const storedCare = (care) => ({ v: 1, mood: care.mood, tier: tierOf(care.mood), updatedAt: care.updatedAt, feeds: care.feeds.slice(-400), totalFeeds: care.totalFeeds, unlockedActions: care.unlockedActions });
+// Decay applied: the mood and tier right now, without writing (journal relies on the stored tier).
+export function getCatMoodNow(storage = globalThis.localStorage, now = Date.now()) { const mood = Math.round(moodAt(readCare(storage, now), now)); return { mood, tier: tierOf(mood) }; }
+// Re-settle the stored record when decay has moved it to another tier, so the stored tier stays true.
+export function refreshCare(storage = globalThis.localStorage, now = Date.now()) {
+  const care = readCare(storage, now), stored = parse(storage, MOOD_KEY);
+  const tier = tierOf(moodAt(care, now));
+  if (!stored || stored.tier === tier) return { care, changed: false };
+  const next = settle(care, now, 0); writeCare(next, storage); return { care: next, changed: true };
+}
 export function writeCare(care, storage = globalThis.localStorage) {
   try { storage.setItem(MOOD_KEY, JSON.stringify(storedCare(care))); storage.setItem(META_KEY, JSON.stringify({ pets: care.pets, rewarded: care.rewarded })); return true; } catch { return false; }
 }
