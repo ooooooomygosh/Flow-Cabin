@@ -31,6 +31,15 @@ test('stopping a focus round after a minute is logged as abandoned; under a minu
 
 test('only exportable covers are stored', async () => {
   const { storableCover } = await import('./session-log.mjs');
-  assert.equal(storableCover('https://x/c.jpg'), ''); assert.equal(storableCover('/covers/a.png'), '/covers/a.png');
+  assert.equal(storableCover('https://x/c.jpg'), ''); assert.equal(storableCover('/covers/a.png'), '', 'a same-origin path is downscaled first, never stored as is');
   assert.equal(storableCover('data:image/png;base64,' + 'A'.repeat(500 * 1024)), ''); assert.equal(storableCover('//evil/x.png'), '');
+});
+
+test('the record keeps only the 32×32 thumbnail: empty until it is ready, never the original cover', async () => {
+  const { sessionRecord } = await import('./session-log.mjs');
+  const base = { start: 0, end: 60_000, completed: true };
+  assert.equal(sessionRecord({ ...base, album: { title: 'A', cover: '/covers/a.png' } }).cover, '');
+  assert.equal(sessionRecord({ ...base, album: { title: 'A', cover: 'https://x/a.jpg' } }).cover, '');
+  assert.equal(sessionRecord({ ...base, album: { title: 'A', cover: 'data:image/png;base64,BIG', thumb: '' } }).cover, '', 'the original data URL is not stored either');
+  assert.equal(sessionRecord({ ...base, album: { title: 'A', cover: '/covers/a.png', thumb: 'data:image/png;base64,T' } }).cover, 'data:image/png;base64,T');
 });

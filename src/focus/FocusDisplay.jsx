@@ -70,6 +70,8 @@ export default function FocusDisplayStage() {
     else if (!paused && phase === 'focus') setOffer('');
   }, [open, phase, paused]);
   useEffect(() => { const on = (event) => setOpen(event.detail?.open !== false); window.addEventListener(OPEN_EVENT, on); return () => window.removeEventListener(OPEN_EVENT, on); }, []);
+  // Anything that opens 小屋日记 (cabin:open-journal, from any entry) closes 沉浸 first.
+  useEffect(() => { const on = () => { setOpen(false); setOffer(''); }; window.addEventListener('cabin:open-journal', on, true); return () => window.removeEventListener('cabin:open-journal', on, true); }, []);
   // F (room scope; 唱机特写 and dialogs keep their own keys).
   useEffect(() => {
     const key = (event) => {
@@ -89,6 +91,8 @@ export default function FocusDisplayStage() {
       if (event.key === 'Escape') { event.preventDefault(); event.stopImmediatePropagation(); setOpen(false); }
       // ←/→ skip tracks here (one meaning); the face itself changes with the tabs in the bar.
       else if ((event.key === 'ArrowLeft' || event.key === 'ArrowRight') && !typing(event.target) && !event.target?.closest?.('[role=radiogroup],[role=tablist]')) { event.preventDefault(); event.stopImmediatePropagation(); if (!event.repeat) playerCommand(event.key === 'ArrowRight' ? 'next' : 'previous'); }
+      // 小屋日记 (L) sits above the room, not above 沉浸: leave 沉浸 first, then open it.
+      else if ((event.key === 'l' || event.key === 'L') && !typing(event.target)) { event.preventDefault(); event.stopImmediatePropagation(); setOpen(false); setTimeout(() => window.dispatchEvent(new CustomEvent('cabin:open-journal', { detail: {} })), 0); }
       else if (/^[zZtT]$/.test(event.key)) event.preventDefault();
     };
     window.addEventListener('keydown', key, true);

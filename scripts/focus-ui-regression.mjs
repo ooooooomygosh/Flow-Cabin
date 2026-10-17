@@ -138,6 +138,12 @@ try {
     await page.evaluate(()=>document.activeElement?.blur());await page.keyboard.press('h');assert.equal(await page.evaluate(()=>document.documentElement.classList.contains('room-zen')),true);assert.equal(await shown(),0,'收起工具 does not open the focus display');await screenshot(page,'tools-hidden');
     await page.keyboard.press('h');assert.equal(await page.evaluate(()=>document.documentElement.classList.contains('room-zen')),false);
     assert.equal(await page.getByRole('button',{name:'整窗'}).count(),0,'整窗 is folded into 沉浸');
+    // 小屋日记 is opened above the room: L or cabin:open-journal leaves 沉浸 first.
+    await page.evaluate(()=>{window.__journal=0;window.addEventListener('cabin:open-journal',()=>window.__journal++);});
+    await page.keyboard.press('z');await page.locator('.focus-display').waitFor();await page.keyboard.press('l');
+    await page.locator('.focus-display').waitFor({state:'detached'});await page.waitForFunction(()=>window.__journal>=1);
+    await page.keyboard.press('Escape');await page.evaluate(()=>document.activeElement?.blur());await page.keyboard.press('z');await page.locator('.focus-display').waitFor();
+    await page.evaluate(()=>window.dispatchEvent(new CustomEvent('cabin:open-journal',{detail:{tab:'weekly'}})));await page.locator('.focus-display').waitFor({state:'detached'});
  },{autoEnter:true});
   await run('immersive-tools-keep-focus-button-clickable',async page=>{
     await page.getByRole('button',{name:'收起工具',exact:true}).click();await page.getByRole('button',{name:'显示工具',exact:true}).click();await screenshot(page,'immersive-tools-focus-entry');await openFocus(page);assert.equal(await page.locator('.focus-dock').count(),1);await screenshot(page,'immersive-tools-focus-open');

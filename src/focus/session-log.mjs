@@ -3,9 +3,9 @@
 // localStorage['flow-cabin-focus-sessions-v1'] is a JSON array of
 //   { id, start, end, durationMs, completed, taskId, taskText,
 //     album: { id, title, artist } | null, track: { title, artist, album } | null, cover }
-// `cover` is a small data URL (the deck cover drawn at 32×32, so the PNG export can
-// render it), an app-relative path, or '' (the journal then draws the pixel sleeve
-// from album title + artist). See coverThumb(). Each end also fires
+// `cover` is the deck cover drawn at 32×32 as a PNG data URL (so the PNG export can render
+// it), or '' while the thumbnail is not ready or the image is cross-origin without CORS
+// (the journal then draws the pixel sleeve from album title + artist). Never the original. Each end also fires
 // `cabin:focus-session` on window with the same record.
 export const SESSION_LOG_KEY = 'flow-cabin-focus-sessions-v1';
 export const SESSION_EVENT = 'cabin:focus-session';
@@ -18,21 +18,17 @@ export function sessionRecord({ start, end, completed, todo = null, album = null
     taskId: todo?.id || '', taskText: todo?.text || '',
     album: album?.title ? { id: album.id || '', title: album.title, artist: album.artist || '' } : null,
     track: track?.title ? { title: track.title, artist: track.artist || '', album: track.album || '' } : null,
-    cover: storableCover(album?.thumb ?? album?.cover)
+    cover: storableCover(album?.thumb)  // only the 32×32 thumbnail, '' until it is ready
   };
 }
-// Only covers the 小屋日记 export can draw: data URLs up to 400 KB or app paths.
+// Only small image data URLs are stored (≤ 400 KB, what 小屋日记 can export).
 export function storableCover(value) {
-  if (typeof value !== 'string' || !value) return '';
-  if (value.startsWith('data:image/')) return value.length <= 400 * 1024 ? value : '';
-  if (/^\/(?!\/)/.test(value) || /^\.\.?\//.test(value)) return value;
-  return '';
+  return typeof value === 'string' && value.startsWith('data:image/') && value.length <= 400 * 1024 ? value : '';
 }
-// Draws a cover at 32×32 and returns a PNG data URL ('' when it cannot be read,
-// e.g. a cross-origin image without CORS).
+// Draws any cover (same-origin path, data URL, or CORS-enabled remote) at 32×32 and returns
+// a PNG data URL; '' when it cannot be read (e.g. cross-origin without CORS).
 export function coverThumb(url, { size = 32, doc = globalThis.document } = {}) {
   if (!url || !doc) return Promise.resolve('');
-  if (storableCover(url) && !url.startsWith('data:')) return Promise.resolve(url);
   return new Promise((resolve) => {
     const img = new Image(); img.crossOrigin = 'anonymous'; img.decoding = 'async';
     img.onload = () => { try { const c = doc.createElement('canvas'); c.width = c.height = size; const ctx = c.getContext('2d'); ctx.imageSmoothingEnabled = true; const s = Math.min(img.naturalWidth, img.naturalHeight); ctx.drawImage(img, (img.naturalWidth - s) / 2, (img.naturalHeight - s) / 2, s, s, 0, 0, size, size); resolve(c.toDataURL('image/png')); } catch { resolve(''); } };
