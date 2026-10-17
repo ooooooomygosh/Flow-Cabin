@@ -35,10 +35,19 @@ function placeNearCat() {
   if (!rect || !rect.width) { root.style.removeProperty('--cat-panel-x'); root.style.removeProperty('--cat-panel-y'); return; }
   const width = Math.min(360, innerWidth - 24), right = rect.right + 12 + width <= innerWidth - 12;
   root.style.setProperty('--cat-panel-x', `${Math.max(12, right ? rect.right + 12 : rect.left - 12 - width)}px`);
-  root.style.setProperty('--cat-panel-y', `${Math.max(12, Math.min(rect.top - 40, innerHeight - 480))}px`);
+  const height = document.querySelector('.cabin-dialog.cat-panel')?.offsetHeight || 480;
+  root.style.setProperty('--cat-panel-y', `${Math.max(12, Math.min(rect.top - 40, innerHeight - 12 - height))}px`);
 }
 export default function CatPanel() {
   const [open, setOpen] = useState(false);
   useEffect(() => { const show = () => { placeNearCat(); setOpen(true); }; window.addEventListener(CAT_PANEL_EVENT, show); return () => window.removeEventListener(CAT_PANEL_EVENT, show); }, []);
+  useEffect(() => {
+    document.querySelectorAll('.room-cat').forEach((node) => node.setAttribute('aria-expanded', String(open)));
+    if (!open) return undefined;
+    let frame = requestAnimationFrame(placeNearCat); // real height once the card is in the DOM
+    const reflow = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(placeNearCat); };
+    window.addEventListener('resize', reflow);
+    return () => { cancelAnimationFrame(frame); window.removeEventListener('resize', reflow); };
+  }, [open]);
   return open ? <CatPanelBody close={() => setOpen(false)}/> : null;
 }
