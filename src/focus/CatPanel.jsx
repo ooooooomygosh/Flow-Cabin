@@ -5,6 +5,7 @@ import Dialog from '../Dialog';
 import { useFocus } from './useFocus';
 import { levelInfo, UNLOCKS, unlockedIds } from './focus-model.mjs';
 import { FishPixel } from '../icons';
+import { catPanelPlace } from './cat-panel-place.mjs';
 import { readSkySettings, writeSkySettings } from '../sky-clock.mjs';
 import { useRecordLibrary } from '../RecordLibrary';
 import { normalizePetId, getPet } from '../pet/pet-catalog.mjs';
@@ -29,14 +30,14 @@ function CatPanelBody({ close }) {
     </section>
   </Dialog>;
 }
-// Card sits beside the cat (right of it, or left when there is no room), clamped to the window.
+// Card sits beside the cat (right of it, else left, else above/below), clamped to the window
+// and never over the cat.
 function placeNearCat() {
   const root = document.documentElement, rect = document.querySelector('.room-cat')?.getBoundingClientRect();
   if (!rect || !rect.width) { root.style.removeProperty('--cat-panel-x'); root.style.removeProperty('--cat-panel-y'); return; }
-  const width = Math.min(360, innerWidth - 24), right = rect.right + 12 + width <= innerWidth - 12;
-  root.style.setProperty('--cat-panel-x', `${Math.max(12, right ? rect.right + 12 : rect.left - 12 - width)}px`);
-  const height = document.querySelector('.cabin-dialog.cat-panel')?.offsetHeight || 480;
-  root.style.setProperty('--cat-panel-y', `${Math.max(12, Math.min(rect.top - 40, innerHeight - 12 - height))}px`);
+  const node = document.querySelector('.cabin-dialog.cat-panel'), w = node?.offsetWidth || Math.min(360, innerWidth - 24), h = node?.offsetHeight || 480;
+  const { x, y } = catPanelPlace(rect, { w, h }, { w: innerWidth, h: innerHeight });
+  root.style.setProperty('--cat-panel-x', `${Math.round(x)}px`); root.style.setProperty('--cat-panel-y', `${Math.round(y)}px`);
 }
 export default function CatPanel() {
   const [open, setOpen] = useState(false);
@@ -44,10 +45,14 @@ export default function CatPanel() {
   useEffect(() => {
     document.querySelectorAll('.room-cat').forEach((node) => node.setAttribute('aria-expanded', String(open)));
     if (!open) return undefined;
-    let frame = requestAnimationFrame(placeNearCat); // real height once the card is in the DOM
-    const reflow = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(placeNearCat); };
-    window.addEventListener('resize', reflow);
-    return () => { cancelAnimationFrame(frame); window.removeEventListener('resize', reflow); };
+    // The cat glides to its new spot after a resize, so follow it every frame for a while.
+    let frame = 0, until = 0;
+    const follow = () => { placeNearCat(); frame = performance.now() < until ? requestAnimationFrame(follow) : 0; };
+    const track = (ms = 1200) => { until = performance.now() + ms; if (!frame) frame = requestAnimationFrame(follow); };
+    const settle = (event) => { if (event.target.closest?.('.room-cat')) track(120); };
+    track(300);
+    window.addEventListener('resize', track); document.addEventListener('transitionend', settle, true); document.addEventListener('animationend', settle, true);
+    return () => { cancelAnimationFrame(frame); window.removeEventListener('resize', track); document.removeEventListener('transitionend', settle, true); document.removeEventListener('animationend', settle, true); };
   }, [open]);
   return open ? <CatPanelBody close={() => setOpen(false)}/> : null;
 }
