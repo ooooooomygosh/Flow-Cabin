@@ -96,7 +96,7 @@ test('beat: the cat dances only to a real detected beat, peaks on the beat', asy
   sync.lockToBeat(anim, { now: beat.beatAt + 1100, beat: { ...beat, bpm: 60 }, beats: 1 }); assert.equal(anim.timing.duration, 1000);
   // Sprite cat: no beat → listen (idle until the sprite has it), never a made-up 96 BPM groove.
   assert.equal(model.petPose({ playing: true, synced: true }), 'groove');
-  assert.equal(model.petPose({ playing: true, synced: false }), model.LISTEN_POSE());
+  assert.equal(model.petPose({ playing: true, synced: false }), 'listen');
   assert.deepEqual(model.grooveFrame(5000, { bpm: 0, beatAt: 0 }), { index: 0, wait: 250 });
   // PNG cat: groove strip with a beat, cat-listen without; droopy and focus keep their poses.
   assert.equal(art.catArtPose({ tier: 'happy', music: 'beat' }), 'cat-groove'); assert.equal(art.catArtPose({ tier: 'ok', music: 'free' }), 'cat-listen');

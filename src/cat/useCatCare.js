@@ -13,10 +13,10 @@ const view = (c, now = Date.now(), message = snapshot?.message || '') => {
 };
 const current = () => snapshot || (snapshot = view(care.readCare()));
 const subscribe = (fn) => { listeners.add(fn); return () => listeners.delete(fn); };
-const publish = (c, message, { announceMood = true } = {}) => {
+const publish = (c, message, { announceMood = true, force = false } = {}) => {
   const before = snapshot; snapshot = view(c, Date.now(), message); emit();
   document.documentElement.dataset.catMood = snapshot.tier;
-  if (announceMood && (!before || before.mood !== snapshot.mood || before.tier !== snapshot.tier)) window.dispatchEvent(new CustomEvent(care.MOOD_EVENT, { detail: { mood: snapshot.mood, tier: snapshot.tier } }));
+  if (announceMood && (force || !before || before.mood !== snapshot.mood || before.tier !== snapshot.tier)) window.dispatchEvent(new CustomEvent(care.MOOD_EVENT, { detail: { mood: snapshot.mood, tier: snapshot.tier } }));
 };
 const update = (change, message) => { const next = change(care.readCare()); if (next) { care.writeCare(next); publish(next, message); } return next; };
 
@@ -26,7 +26,10 @@ export function useCatCare() { return useSyncExternalStore(subscribe, current, c
 export function useCatCareHost() {
   const live = useRef(null); live.current = useFocusState();
   useEffect(() => {
-    publish(care.refreshCare().care, '');
+    // A stale stored tier rewritten by decay is always announced: the first render already shows
+    // the decayed mood, so comparing with it would swallow the change (bini's retest #5).
+    const refresh = (message) => { const { care: c, changed } = care.refreshCare(); publish(c, message, { force: changed }); };
+    refresh('');
     const onSession = (event) => update((c) => care.focusDone(c, event.detail), '专注完成，小猫很开心。');
     const onPet = () => update((c) => care.pet(c), snapshot?.message || '');
     const onFeed = () => {
@@ -39,7 +42,7 @@ export function useCatCareHost() {
       window.dispatchEvent(new CustomEvent(care.FED_EVENT, { detail: { at: last.at, mood: snapshot.mood, tier: snapshot.tier, fishLeft: last.fishLeft, totalFeeds: result.care.totalFeeds } }));
     };
     const onStorage = (event) => { if (event.key === care.MOOD_KEY || event.key === care.META_KEY) publish(care.readCare(), ''); };
-    const clock = setInterval(() => publish(care.refreshCare().care, snapshot?.message || ''), 10 * 60000);
+    const clock = setInterval(() => refresh(snapshot?.message || ''), 10 * 60000);
     window.addEventListener('cabin:focus-session', onSession); window.addEventListener('cabin:cat-petted', onPet);
     window.addEventListener(care.FEED_REQUEST_EVENT, onFeed); window.addEventListener('storage', onStorage);
     return () => { clearInterval(clock); window.removeEventListener('cabin:focus-session', onSession); window.removeEventListener('cabin:cat-petted', onPet); window.removeEventListener(care.FEED_REQUEST_EVENT, onFeed); window.removeEventListener('storage', onStorage); };

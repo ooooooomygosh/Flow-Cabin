@@ -342,6 +342,14 @@ try {
     await page.getByRole('button',{name:'添加到唱片架',exact:true}).click();await page.getByRole('dialog',{name:'添加到唱片架',exact:true}).waitFor();await page.keyboard.press('Escape');assert.equal(await page.getByRole('button',{name:'添加到唱片架',exact:true}).evaluate(e=>e===document.activeElement),true);
     await page.getByRole('button',{name:'设置',exact:true}).click();await page.getByRole('dialog',{name:'设置',exact:true}).waitFor();await page.keyboard.press('Escape');assert.equal(await page.getByRole('button',{name:'设置',exact:true}).evaluate(e=>e===document.activeElement),true);
   });
+  await run('stale-cat-mood-on-load-is-rewritten-and-announced',async page=>{
+    // 72/happy saved 30 h ago decays to 42 (droopy): storage is rewritten and cabin:cat-mood fires.
+    await page.addInitScript(()=>{window.__moods=[];window.addEventListener('cabin:cat-mood',e=>window.__moods.push({...e.detail,stored:JSON.parse(localStorage.getItem('flow-cabin-cat-mood-v1')).tier}));});
+    await page.evaluate(()=>localStorage.setItem('flow-cabin-cat-mood-v1',JSON.stringify({v:1,mood:72,tier:'happy',updatedAt:Date.now()-30*3600e3,feeds:[],totalFeeds:0,unlockedActions:[]})));await page.reload();
+    await page.waitForFunction(()=>window.__moods.length>0,null,{timeout:10000});
+    const [first]=await page.evaluate(()=>window.__moods);assert.equal(first.tier,'droopy');assert.equal(first.stored,'droopy','store written before the event');
+    const stored=await page.evaluate(()=>JSON.parse(localStorage.getItem('flow-cabin-cat-mood-v1')));assert.equal(stored.tier,'droopy');assert.ok(Date.now()-stored.updatedAt<60000);
+  });
   await run('room-cat-moves-on-the-beat-and-listens-without-one',async page=>{
     await page.evaluate(()=>localStorage.setItem('flow-cabin-cat-mood-v1',JSON.stringify({v:1,mood:90,tier:'happy',updatedAt:Date.now(),feeds:[],totalFeeds:0,unlockedActions:[]})));await page.reload();await page.locator('.room-cat').waitFor();
     const cat=page.locator('.room-cat');assert.equal(await cat.getAttribute('data-music'),null,'nothing playing: no music pose');
@@ -351,11 +359,11 @@ try {
     await page.evaluate(()=>window.dispatchEvent(new CustomEvent('cabin:playback',{detail:{playing:true,energy:.4,estimated:true,bpm:0,beatAt:0}})));
     await page.waitForFunction(()=>document.querySelector('.room-cat').dataset.music==='free'&&!document.querySelector('.room-cat').dataset.beatMotion,null,{timeout:5000});
     assert.equal(await cat.getAttribute('data-art'),'cat-listen');
-    // A detected beat: the happy sway runs on it, 2 beats per cycle, phase-locked to beatAt.
+    // A detected beat: the cat-groove strip (4 frames, 2 per beat) runs on it, phase-locked to beatAt.
     const beatAt=await page.evaluate(()=>{const at=Date.now()-130;window.dispatchEvent(new CustomEvent('cabin:playback',{detail:{playing:true,energy:.5,bpm:120,beatAt:at}}));return at;});
-    await page.waitForFunction(()=>document.querySelector('.room-cat').dataset.beatMotion==='sway',null,{timeout:5000});
-    const lock=await page.evaluate(beatAt=>{const a=document.querySelector('.room-cat .pet-life > .pixel-cat').getAnimations().find(x=>x.effect.getKeyframes().some(k=>k.rotate));const d=a.effect.getTiming().duration;const want=((Date.now()-beatAt)%d+d)%d,at=a.currentTime%d;return {d,off:Math.min(Math.abs(at-want),d-Math.abs(at-want))};},beatAt);
-    assert.equal(lock.d,1000);assert.ok(lock.off<40,`sway is ${Math.round(lock.off)} ms off the beat`);
+    await page.waitForFunction(()=>document.querySelector('.room-cat').dataset.beatMotion==='groove',null,{timeout:5000});
+    const lock=await page.evaluate(beatAt=>{const a=document.querySelector('.room-cat .cat-art.is-groove').getAnimations().find(x=>x.effect.getKeyframes().some(k=>k.backgroundPosition));const d=a.effect.getTiming().duration;const want=((Date.now()-beatAt)%d+d)%d,at=a.currentTime%d;return {d,off:Math.min(Math.abs(at-want),d-Math.abs(at-want))};},beatAt);
+    assert.equal(lock.d,1000);assert.ok(lock.off<40,`groove is ${Math.round(lock.off)} ms off the beat`);
     await screenshot(page,'cat-on-the-beat');
   },{motion:true});
   await run('companion-generated-lofi-tempo-reaches-pet',async page=>{

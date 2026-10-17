@@ -1,6 +1,6 @@
 // Original hand-built pixel silhouettes. No image assets or remote requests.
 // Shared palette semantics let every accessory work on every species.
-import { catFrame, SIZE, PALETTE, CAT_PALETTES, POSES, ACCESSORIES } from './cat-sprites.mjs';
+import { catFrame, SIZE, PALETTE, CAT_PALETTES, POSES, ACCESSORIES, LISTEN_POSE, LISTEN_FRAMES } from './cat-sprites.mjs';
 import { normalizePetId } from './pet-catalog.mjs';
 export { SIZE, POSES, ACCESSORIES };
 const palette = (fur, light, shade, blush = '#ed9c9c') => Object.freeze(PALETTE.map((c, i) => ({ 2: fur, 3: light, 4: shade, 5: blush }[i] || c)));
@@ -81,7 +81,10 @@ export function normalizeFrame(pose = 'idle', index = 0) {
   return { pose: safePose, index: ((integer % POSES[safePose]) + POSES[safePose]) % POSES[safePose] };
 }
 export function petFrame(petId = 'cat', pose = 'idle', index = 0, acc = '') {
-  const pet = normalizePetId(petId), normalized = normalizeFrame(pose, index);
+  const pet = normalizePetId(petId);
+  // The cat's 听歌 pose lives outside POSES (cat-sprites.mjs); other pets idle instead.
+  if (pet === 'cat' && pose === LISTEN_POSE) { const i = Number.isFinite(index) ? Math.floor(index) : 0; return catFrame(LISTEN_POSE, ((i % LISTEN_FRAMES) + LISTEN_FRAMES) % LISTEN_FRAMES, ACCESSORIES.includes(acc) ? acc : ''); }
+  const normalized = normalizeFrame(pose, index);
   pose = normalized.pose; index = normalized.index;
   acc = ACCESSORIES.includes(acc) ? acc : '';
   if (pet === 'cat') return catFrame(pose, index, acc);
