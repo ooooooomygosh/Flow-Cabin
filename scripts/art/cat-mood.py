@@ -430,6 +430,77 @@ def bar_record_cap():
     g.rect(1, 1, 14, 3, 't'); g.rect(1, 3, 14, 3, 'T'); g.rect(4, 1, 11, 1, 'A'); g.rect(6, 2, 9, 2, 'c')  # sleeve top with title tag
     return g
 
+
+# ---------------------------------------------------------------- todo page empty state 64x64
+def pencil(g, x0, y, x1):
+    """Horizontal pencil from x0 (tip) to x1 (eraser), 3px thick, centred on y."""
+    g.rect(x0 + 4, y - 1, x1 - 4, y + 1, 'a'); g.rect(x0 + 4, y + 1, x1 - 4, y + 1, 'b'); g.rect(x0 + 4, y - 1, x1 - 4, y - 1, 'A')
+    g.tri([(x0, y), (x0 + 4, y - 1), (x0 + 4, y + 1)], 'l'); g.put(x0, y, 'e'); g.put(x0 + 1, y, 'e')
+    g.rect(x1 - 4, y - 1, x1 - 3, y + 1, 'Q'); g.put(x1 - 4, y - 1, 'q')
+    g.rect(x1 - 2, y - 1, x1, y + 1, 'p'); g.rect(x1 - 2, y + 1, x1, y + 1, 'r')
+
+def todo_empty():
+    g = G()
+    # blank notepad, spiral binding on top, faint empty rules and an unticked box
+    pad = G()
+    pad.rect(6, 31, 59, 61, 'C')            # back sheets peeking out
+    pad.rect(4, 29, 57, 59, 'c'); pad.rect(4, 58, 57, 59, 'C')
+    for y in (47, 52, 56): pad.rect(13, y, 53, y, 'C')
+    pad.rect(10, 31, 10, 57, 'p')
+    pad.outline(); g.paste(pad)
+    for x in range(8, 56, 6):
+        g.put(x, 28, 'H'); g.put(x, 29, 'h'); g.put(x + 1, 27, 'H'); g.put(x + 1, 30, 'j'); g.put(x + 2, 28, 'h'); g.put(x + 2, 29, 'j')
+    g.rect(14, 50, 17, 50, 'Q'); g.rect(14, 53, 17, 53, 'Q'); g.rect(14, 50, 14, 53, 'Q'); g.rect(17, 50, 17, 53, 'Q')
+    c = G()
+    tail(c, [(47, 41), (52, 42), (55, 39), (56, 35)])
+    c.ell(36, 38, 14, 5.5, 'f', shade='F', lit='L', sk=.45)
+    for dx in (-3, 3, 8): c.rect(36 + dx, 32, 37 + dx, 34, 'F')
+    for x0 in (14, 23): c.ell(x0, 42, 4, 2, 'l', shade='C', sk=.55); c.put(x0 - 2, 43, 'C'); c.put(x0, 43, 'C')
+    head(c, 19, 29, eyes='happy', mouth='flat', ear='up')
+    phones(c, 19, 29)
+    c.outline(); g.paste(c)
+    # pencil held crosswise in the mouth, tip poking out left, eraser right
+    pc = G(); pencil(pc, 7, 34, 30); pc.outline(); g.paste(pc)
+    sparkle(g, 47, 14); g.put(41, 20, 'z'); sparkle(g, 54, 23)
+    return g
+
+# ---------------------------------------------------------------- stickers 16x16 (narrow screens, sit on top of a bar)
+def die_cut_sm(g):
+    """1px paper border + 1px soft edge; the icon itself carries its own ink outline."""
+    for col in ('c', 'C'):
+        out = [row[:] for row in g.g]
+        for y in range(g.h):
+            for x in range(g.w):
+                if g.g[y][x] is None and any(g.get(x + dx, y + dy) for dx, dy in ((1,0),(-1,0),(0,1),(0,-1))): out[y][x] = col
+        g.g = out
+
+def sticker_best_day_sm():
+    g = G(16, 16)
+    g.rect(5, 10, 6, 12, 'r'); g.rect(9, 10, 10, 12, 'r'); g.put(5, 12, 'R'); g.put(10, 12, 'R')
+    g.ell(7.5, 6.5, 4.4, 4.4, 'b')
+    for j, row in enumerate(['...X...', '..XXX..', 'XXXXXXX', '.XXXXX.', '..XXX..', '.XX.XX.']):
+        for i, ch in enumerate(row):
+            if ch == 'X': g.put(4 + i, 3 + j, 'A')
+    g.put(7, 4, 'c')
+    g.outline(); die_cut_sm(g)
+    return g
+
+def sticker_streak_sm():
+    g = G(16, 16)
+    g.ell(8, 9, 3.6, 3.4, 'r', shade='R', sk=.6); g.tri([(8, 2), (4.5, 8), (11.5, 8)], 'r'); g.put(11, 5, 'r'); g.put(11, 6, 'r')
+    g.ell(8, 9.6, 1.8, 2.2, 'a'); g.put(8, 7, 'a'); g.put(8, 10, 'A')
+    g.outline(); die_cut_sm(g)
+    return g
+
+def sticker_fed_sm():
+    g = G(16, 16)
+    f = G(16, 16)
+    f.ell(6.5, 5, 2.8, 1.8, 's', shade='S', sk=.4); f.tri([(9, 5), (11.5, 3), (11.5, 7)], 's'); f.put(5, 4, 'e'); f.rect(5, 6, 7, 6, 'c')
+    f.rect(3, 8, 12, 8, 'q'); f.rect(3, 9, 12, 10, 't'); f.rect(4, 11, 11, 11, 'T'); f.put(5, 9, 'c'); f.put(10, 9, 'p')
+    f.outline(); g.paste(f)
+    die_cut_sm(g)
+    return g
+
 def save(g, name):
     os.makedirs(OUT, exist_ok=True); im = g.img(); im.save(f'{OUT}/{name}.png', optimize=True); return im
 
@@ -440,11 +511,13 @@ if __name__ == '__main__':
     for i, f in enumerate(frames): sheet.paste(f, (64 * i, 0))
     sheet.save(f'{OUT}/cat-eat.png', optimize=True)
     stick = {n: save(f(), n) for n, f in [('sticker-best-day', sticker_best_day), ('sticker-streak', sticker_streak), ('sticker-fed', sticker_fed)]}
+    todo = save(todo_empty(), 'todo-empty')
+    stick_sm = {n: save(f(), n) for n, f in [('sticker-best-day-sm', sticker_best_day_sm), ('sticker-streak-sm', sticker_streak_sm), ('sticker-fed-sm', sticker_fed_sm)]}
     bars = {n: save(f(), n) for n, f in [('bar-book', bar_book_unit), ('bar-book-cap', bar_book_cap), ('bar-record', bar_record_unit), ('bar-record-cap', bar_record_cap)]}
 
     # ---- 4x preview sheet on journal paper
     Z = 4; pad = 8
-    W = (64 * 5 + pad * 6) * Z; H = (pad * 6 + 64 * 3 + 32 + 48) * Z
+    W = (64 * 5 + pad * 6) * Z; H = (pad * 7 + 64 * 4 + 32 + 48) * Z
     bg = Image.new('RGBA', (W, H), rgba('c'))
     def put(im, x, y): bg.alpha_composite(im.resize((im.width * Z, im.height * Z), Image.NEAREST), (x * Z, y * Z))
     for i, n in enumerate(poses): put(poses[n], pad + i * (64 + pad), pad)
@@ -457,6 +530,14 @@ if __name__ == '__main__':
             bx = x0 + (j * 7 + k) * 17 + j * 6; base = pad * 5 + 192 + 32 + 48
             for m in range(n): put(bars[u], bx, base - 6 * (m + 1))
             put(bars[cap], bx, base - 6 * n - 4)
+    # row 4: todo empty state + 16px stickers (1x-scale true size beside the 4x copy) atop bars
+    ry = pad * 6 + 192 + 32 + 48
+    put(todo, pad, ry)
+    for i, n in enumerate(stick_sm):
+        bx = pad + 64 + pad + i * 40; nb = [4, 6, 3][i]; put(stick_sm[n], bx, ry + 60 - 6 * nb - 4 - 14)
+        for m in range(nb): put(bars['bar-book'], bx, ry + 60 - 6 * (m + 1))
+        put(bars['bar-book-cap'], bx, ry + 60 - 6 * nb - 4)
+        bg.alpha_composite(stick_sm[n], ((bx + 20) * Z, (ry + 48) * Z))   # true 1x size
     os.makedirs('docs/media', exist_ok=True); bg.convert('RGB').save('docs/media/cat-mood-sheet.png', optimize=True)
     # ---- eat-cycle GIF (4x, 120ms/frame, longer hold on the satisfied end)
     gif = []
