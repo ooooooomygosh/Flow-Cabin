@@ -3,7 +3,7 @@ import { useFocus } from '../useFocus';
 import useReducedMotion from '../../useReducedMotion';
 import useFocusSessions from './useFocusSessions.js';
 import { recentSummary, dailySeries, yearHeatmap, byTask, timeOfDay, weeklyReport, reportMarkdown, formatMinutes, dayKey } from './stats-model.mjs';
-import { drawWeekCard, CARD_W, CARD_H } from './week-card.mjs';
+import { drawWeekCard, canDrawCover, CARD_W, CARD_H } from './week-card.mjs';
 import { JOURNAL_EVENT, JOURNAL_TABS, journalTab, isJournalKey } from './journal-events.mjs';
 import './focus-stats.css';
 import './journal-art.css';
@@ -63,11 +63,16 @@ function JournalBook({ state, now, view, setView, close }) {
     try { await navigator.clipboard.writeText(text); } catch { const area = document.createElement('textarea'); area.value = text; document.body.append(area); area.select(); document.execCommand?.('copy'); area.remove(); }
     flash('已复制周报文字');
   };
-  const exportPng = () => {
+  const loadCover = (url) => new Promise((resolve) => {
+    if (!canDrawCover(url, location.origin)) return resolve(null);
+    const img = new Image(); img.onload = () => resolve(img); img.onerror = () => resolve(null); img.src = url;
+  });
+  const exportPng = async () => {
     const el = canvas.current || document.createElement('canvas'); el.width = CARD_W; el.height = CARD_H;
-    drawWeekCard(el.getContext('2d'), report);
+    drawWeekCard(el.getContext('2d'), report, undefined, { cover: await loadCover(report.album?.cover) });
     const a = document.createElement('a'); a.href = el.toDataURL('image/png'); a.download = `心流小屋周报-${dayKey(report.from)}.png`; a.click(); flash('周报图片已导出');
   };
+  const [coverFailed, setCoverFailed] = useState('');
   return <div className={`fs-book ${reduced ? 'is-reduced' : ''}`}>
     <header className="fs-book-head">
       <h2>小屋日记</h2>
@@ -119,7 +124,7 @@ function JournalBook({ state, now, view, setView, close }) {
           <div><dt>最好的一天</dt><dd>{report.bestDay ? `${report.bestDay.label} · ${formatMinutes(report.bestDay.minutes)}` : '—'}</dd></div>
           <div><dt>最专注时段</dt><dd>{report.bestSlot ? `${report.bestSlot.label} ${report.bestSlot.from}–${report.bestSlot.to} 点` : '—'}</dd></div>
           <div><dt>最长连续</dt><dd>{report.longestStreak} 天</dd></div>
-          <div><dt>最常听</dt><dd>{report.album ? `《${report.album.title}》` : '—'}</dd></div>
+          <div><dt>最常听</dt><dd className="fs-album">{report.album?.cover && coverFailed !== report.album.cover && <img className="fs-card-cover" src={report.album.cover} alt="" width={32} height={32} onError={() => setCoverFailed(report.album.cover)}/>}{report.album ? `《${report.album.title}》${report.album.artist ? ` · ${report.album.artist}` : ''}` : '—'}</dd></div>
           <div><dt>主要待办</dt><dd>{report.topTasks.length ? report.topTasks.map((t) => `${t.name} ${formatMinutes(t.minutes)}`).join('、') : '—'}</dd></div>
           <div><dt>完成待办</dt><dd>{report.completed.length ? report.completed.join('、') : '—'}</dd></div>
         </dl>

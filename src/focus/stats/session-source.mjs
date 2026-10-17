@@ -5,7 +5,8 @@
 // a JSON array (or { version, sessions: [] }) and announced on window as
 // `cabin:focus-session` with the same record in `event.detail`:
 //   { id?, start, end, durationMs, completed, taskId, taskText?,
-//     album?: { id?, title, artist? } | string, track?: { title, artist?, album? } }
+//     album?: { id?, title, artist? } | string, track?: { title, artist?, album? },
+//     cover?: string /* album cover: data:image/… or http(s)/same-site URL */ }
 // `start`/`end` are epoch ms. Aliases startedAt/endedAt/startAt/endAt are read
 // too. Records without a usable start/end are dropped.
 //
@@ -20,13 +21,22 @@ const MINUTE = 60000, MAX_SESSION = 4 * 60 * MINUTE, MAX_RECORDS = 5000;
 const num = (value) => { const n = Number(value); return Number.isFinite(n) ? n : 0; };
 const str = (value, max = 120) => typeof value === 'string' ? value.replace(/[\x00-\x1f\x7f]/g, ' ').trim().slice(0, max) : '';
 
-function normalizeAlbum(album, track) {
-  if (typeof album === 'string' && str(album)) return { key: str(album).toLowerCase(), title: str(album), artist: '' };
+// Cover: data:image/…, http(s) or a same-site path. Anything else is dropped.
+export function normalizeCover(value) {
+  if (typeof value !== 'string') return '';
+  const v = value.trim();
+  if (/^data:image\/(png|jpe?g|gif|webp);base64,[a-z0-9+/=\s]+$/i.test(v)) return v.length <= 400000 ? v : '';
+  if (/^https?:\/\/[^\s"'<>]+$/i.test(v) || /^\/[^/\s"'<>][^\s"'<>]*$/.test(v)) return v.slice(0, 2000);
+  return '';
+}
+function normalizeAlbum(album, track, cover = '') {
+  const withCover = (a) => a && { ...a, cover: normalizeCover(cover) || normalizeCover(album?.cover) };
+  if (typeof album === 'string' && str(album)) return withCover({ key: str(album).toLowerCase(), title: str(album), artist: '' });
   if (album && typeof album === 'object' && str(album.title)) {
     const title = str(album.title), artist = str(album.artist);
-    return { key: str(album.id, 80) || `${title}\u0000${artist}`.toLowerCase(), title, artist };
+    return withCover({ key: str(album.id, 80) || `${title}\u0000${artist}`.toLowerCase(), title, artist });
   }
-  if (track && typeof track === 'object' && str(track.album)) return normalizeAlbum({ title: track.album, artist: track.artist });
+  if (track && typeof track === 'object' && str(track.album)) return normalizeAlbum({ title: track.album, artist: track.artist }, null, cover);
   return null;
 }
 
@@ -39,7 +49,7 @@ export function normalizeSessionRecord(raw) {
   if (!start || end <= start || end - start > MAX_SESSION) return null;
   const durationMs = duration > 0 && duration <= end - start ? Math.round(duration) : end - start;
   const track = raw.track && typeof raw.track === 'object' ? { title: str(raw.track.title), artist: str(raw.track.artist), album: str(raw.track.album) } : null;
-  return { id: str(raw.id, 60) || `s${start}`, start, end, durationMs, completed: raw.completed !== false, taskId: str(raw.taskId, 40), taskText: str(raw.taskText), album: normalizeAlbum(raw.album, track), track };
+  return { id: str(raw.id, 60) || `s${start}`, start, end, durationMs, completed: raw.completed !== false, taskId: str(raw.taskId, 40), taskText: str(raw.taskText), album: normalizeAlbum(raw.album, track, raw.cover), track };
 }
 
 export function readSessionLog(storage) {

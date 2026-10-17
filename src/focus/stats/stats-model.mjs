@@ -134,14 +134,14 @@ export function weeklyReport(sessions, tasks, now, weekOffset = -1) {
   const daily = Array.from({ length: 7 }, (_, i) => { const t = addDays(from, i); return { key: dayKey(t), label: `周${WEEKDAYS[new Date(t).getDay()]}`, minutes: Math.round(days.get(dayKey(t)) || 0) }; });
   const bestDay = daily.reduce((a, b) => b.minutes > a.minutes ? b : a, daily[0]);
   const albums = new Map();
-  for (const s of week) if (s.album) { const a = albums.get(s.album.key) || { ...s.album, minutes: 0 }; a.minutes += s.durationMs / MINUTE; albums.set(s.album.key, a); }
+  for (const s of week) if (s.album) { const a = albums.get(s.album.key) || { ...s.album, minutes: 0 }; a.minutes += s.durationMs / MINUTE; if (!a.cover && s.album.cover) a.cover = s.album.cover; albums.set(s.album.key, a); }
   const album = [...albums.values()].sort((a, b) => b.minutes - a.minutes)[0] || null;
   const topTasks = byTask(week, tasks).slice(0, 3), completed = tasks.filter((t) => t.done && t.doneAt >= from && t.doneAt < to);
   const report = {
     from, to, label: `${md(from)} – ${md(to - DAY)}`, totalMinutes, previousMinutes, deltaMinutes: totalMinutes - previousMinutes,
     pomodoros: week.filter((s) => s.completed).length, daily, bestDay: bestDay.minutes ? bestDay : null, bestSlot: timeOfDay(week).best,
     topTasks, completed: completed.map((t) => t.text), longestStreak: longestRun(days, from, 7),
-    album: album && { title: album.title, artist: album.artist, minutes: Math.round(album.minutes) }
+    album: album && { title: album.title, artist: album.artist, cover: album.cover || '', minutes: Math.round(album.minutes) }
   };
   report.summary = gentleSummary({ ...report, topTask: topTasks[0], completedCount: completed.length });
   return report;
