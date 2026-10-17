@@ -84,3 +84,31 @@ Other Electron windows (the desktop-mode mini turntable) do not dispatch this th
 | `cabin-open-music-settings` | → cabin | no detail. Opens 设置 › 音源 (used by the player's error card and the turntable's source chip). |
 | `album-quick-search` | → app | `{ query }` opens 添加到唱片架 › 曲库搜索 with that query. |
 | `album-music-account` / `album-music-settings` | desktop → page | Sign-in or source settings changed. The player re-resolves the current track. |
+
+## `cabin:focus-session` *(assumed schema — to reconcile with the focus-entry PR)*
+
+Dispatched on `window` when a focus session ends; the same record is appended to `localStorage['flow-cabin-focus-sessions-v1']` (a JSON array, or `{ version, sessions: [] }`). The stats adapter `src/focus/stats/session-source.mjs` reads both, plus the pomodoro state's existing `sessions` (`album-circle-focus-v1:<user>` → `{ start, end, taskId, completed }`) as a fallback, and merges duplicates (start and end within a minute; the richer record wins).
+
+| field | type | meaning |
+| --- | --- | --- |
+| `id` | `string?` | Stable id; defaults to `s<start>`. |
+| `start`, `end` | `number` | Epoch ms. Aliases `startedAt`/`endedAt`/`startAt`/`endAt` are accepted. Sessions over 4 h are dropped. |
+| `durationMs` | `number` | Focused time without pauses; defaults to `end − start`. |
+| `completed` | `boolean` | `false` when ended early. Only completed sessions count as 番茄. |
+| `taskId` | `string` | Todo id, `''` for 自由专注. `taskText` (optional) keeps the name if the todo is later deleted. |
+| `album` | `{ id?, title, artist? } \| string` | What was on the deck. Falls back to `track.album`. |
+| `track` | `{ title, artist?, album? }?` | Optional. |
+
+## `cabin:open-journal`
+
+Opens the 小屋日记 overlay (`src/focus/stats/CabinJournal.jsx`). Also opened by **L** in the room and the 统计 card's 「打开小屋日记 →」.
+
+```js
+window.dispatchEvent(new CustomEvent('cabin:open-journal', { detail: { tab: 'weekly' } }));
+```
+
+| field | type | meaning |
+| --- | --- | --- |
+| `tab` | `'overview' \| 'tasks' \| 'weekly'`? | Page to open; unknown or missing → `overview`. |
+
+The overlay is a native `<dialog>` (top layer), so room keys pause while it is open; Esc or 「返回小屋」 closes it.

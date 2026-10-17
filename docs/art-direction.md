@@ -64,3 +64,19 @@ the toolbar cover the deck; side gutters show the same scene dimmed. On Moonlit
 Study the shelf paging sits on the wall left of the cabinet (canvas-relative via
 `--scene-x/y/k`), so it never covers a record. browser-smoke checks all scenes at
 1280×720, 1280×800, 1366×768, 1440×900 and 1920×1080.
+
+## 小屋日记 art slots
+
+The journal overlay ships with a tokens-only baseline. All of its visuals are variables in `src/focus/stats/journal-art.css` (scoped to `.cabin-journal`); image slots are also listed in `src/focus/stats/journal-art.mjs` (`JOURNAL_ART`), which sets the CSS variable and a `has-art` class when a URL is given. Drop PNGs (pixel art, 4× nearest, `image-rendering: pixelated`) into `public/journal/` and set the slot.
+
+| slot | CSS variable(s) | baseline |
+| --- | --- | --- |
+| cover frame | `--journal-frame`, `--journal-frame-img` (9-slice, `--journal-frame-slice`, `--journal-frame-w`) | `--px-border` edge, hard shadow |
+| paper | `--journal-paper`, `--journal-paper-img`, `--journal-rule`, `--journal-paper-ink`, `--journal-paper-faint` | `--px-paper` with 24 px ruled lines |
+| spine | `--journal-spine`, `--journal-spine-img`, `--journal-stitch` | `--px-accent-lo` gutter with dashed stitches |
+| bookmark tabs | `--journal-tab`, `--journal-tab-active`, `--journal-tab-img` (+ `-ink`) | ribbons with a notched tail (clip-path) |
+| charts | `--journal-ink`, `--journal-ink-hi`, `--journal-stamp-0…4` | ink bars, stamp heatmap cells |
+| weekly card | `--journal-card`, `--journal-card-img`, `--journal-card-tape`, `--journal-card-doodle` (48×48) | taped paper card; doodle hidden until set |
+| page turn | `--journal-turn` | `steps(4)` scaleX turn; off under reduced motion |
+
+The weekly PNG export (`week-card.mjs`) draws with `CARD_PALETTE`, a mirror of the `--px-*` tokens.

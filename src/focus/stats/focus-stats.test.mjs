@@ -112,3 +112,9 @@ test('journal events', async () => {
   assert.deepEqual(seen, ['weekly', 'overview', undefined]); assert.equal(journalTab('tasks'), 'tasks');
   assert(isJournalKey({ key: 'l' })); assert(!isJournalKey({ key: 'L', ctrlKey: true })); assert(!isJournalKey({ key: 'k' }));
 });
+
+test('journal art slots default to the token baseline', async () => {
+  const { JOURNAL_ART, journalArtStyle, hasArt } = await import('./journal-art.mjs');
+  assert.deepEqual(journalArtStyle(), {}); assert.equal(hasArt('spine'), false);
+  assert.deepEqual(journalArtStyle({ ...JOURNAL_ART, spine: '/journal/spine.png' }), { '--journal-spine-img': 'url("/journal/spine.png")' });
+});
