@@ -52,7 +52,7 @@ spine = img(8, 6, [
 save(spine, 'spine')
 
 # Ribbon: 4x8 fabric strip, tiled horizontally at native size; the notch is CSS clip-path.
-save(img(4, 8, ['RRRR', 'rrrr', 'rrAr', 'rrrr', 'rrrr', 'rArr', 'rrrr', 'RRRR']), 'ribbon')
+save(img(4, 8, ['RRRR', 'rArr', 'rrrr', 'rrrr', 'rrrr', 'rrrr', 'rrAr', 'RRRR']), 'ribbon')  # dots only on the edges, clear band behind the label
 
 # Postcard corner: 26x14 stamp + postmark on transparency, placed once top-right by CSS.
 import math
@@ -68,15 +68,15 @@ save(card, 'card')
 
 # Cat doodle: 12x12 orange cat with headphones, ink outline.
 doodle = img(12, 12, [
- '..kkkkkkkk..',
- '.kRrrrrrrRk.',
- 'kRkk....kkRk',
- 'kRook..kooRk',
- 'kRoookkoooRk',
- 'rrkwkoookwrr',
- 'rrkkkoookkrr',
- 'koooopppooo.',
- '.kooookooook',
+ '...kkkkkk...',
+ '..kRrrrrRk..',
+ '.kRk....kRk.',
+ 'kRRk....kRRk',
+ 'RrrRkkkkRrrR',
+ 'RrrRkookRrrR',
+ 'RrrRooooRrrR',
+ 'kRRkoppooRRk',
+ '.kooookoook.',
  '.koOOooOOok.',
  '..koooooook.',
  '...kkkkkkk..'])
