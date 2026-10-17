@@ -60,10 +60,6 @@
 .focus-stat-tiles{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:0}
 .focus-stat-tiles div{padding:8px 10px;background:#34210f;border:1px solid #5d3d24}.focus-stat-tiles dt{font-size:12px;color:var(--px-ink-dim)}.focus-stat-tiles dd{margin:2px 0 0;font-size:15px;font-weight:700;color:#ffe2a8;font-variant-numeric:tabular-nums}
 .stats-chart-well{margin:14px 0 0;padding:12px;background:var(--px-surface-inset);border:2px solid var(--px-border-subtle);box-shadow:var(--px-shadow-inset)}
-.focus-week-bars{display:flex;align-items:flex-end;gap:6px;height:110px}
-.focus-week-day{flex:1;display:grid;grid-template-rows:14px 1fr 16px;align-items:end;justify-items:center;height:100%;font-size:12px;color:var(--px-ink-dim)}
-.focus-week-bar{width:100%;background:repeating-linear-gradient(0deg,var(--px-accent-lo) 0 4px,transparent 4px 5px);align-self:end}.focus-week-bar.is-today{background:repeating-linear-gradient(0deg,var(--px-accent-hi) 0 4px,transparent 4px 5px)}
-.focus-week-value{color:var(--px-ink);font-variant-numeric:tabular-nums}.focus-week-day:has(.is-today) small{color:var(--px-accent-hi)}.focus-week figcaption{margin-top:8px;font-size:12px;color:var(--px-ink-faint);text-align:right}
 .focus-rewards{display:grid;gap:7px;margin-top:14px;padding-top:12px;border-top:2px dashed #5d3d24}
 .focus-task-rounds{display:inline-flex;align-items:center;gap:2px;color:var(--px-warn)}
 .focus-badge-paused{margin-left:4px;vertical-align:-1px}
@@ -132,3 +128,8 @@
 .focus-task-list li:hover .focus-task-rename,.focus-task-rename:focus-visible{opacity:1}
 @media(hover:none){.focus-task-rename{opacity:.7}}
 }
+
+.cat-panel .focus-rewards{margin-top:0;padding-top:0;border-top:0}
+.focus-cat-link{margin-top:14px;justify-self:start;display:inline-flex;align-items:center;gap:6px}
+.cabin-dialog.cat-panel{position:fixed;margin:0;inset:auto;left:var(--cat-panel-x,50%);top:var(--cat-panel-y,50%);width:min(360px,calc(100vw - 24px));max-height:calc(100vh - 24px);translate:var(--cat-panel-shift,0 0)}
+:root:not([style*='--cat-panel-x']) .cabin-dialog.cat-panel{translate:-50% -50%}
