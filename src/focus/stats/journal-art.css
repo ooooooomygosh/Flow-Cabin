@@ -8,8 +8,8 @@
     --journal-scrim: rgba(13, 8, 5, .82);
     --journal-frame: var(--px-border);              /* cover edge colour */
     --journal-frame-img: none;                      /* slot: 9-slice cover, e.g. url(/journal/frame.png) */
-    --journal-frame-slice: 8;                       /* art px of the 9-slice corner */
-    --journal-frame-w: 12px;                        /* drawn edge width (integer multiple of the art px) */
+    --journal-frame-slice: 16;                      /* art px of the 9-slice corner */
+    --journal-frame-w: 16px;                        /* drawn edge width (integer multiple of the art px) */
     --journal-paper: var(--px-paper);               /* page fill */
     --journal-paper-img: none;                      /* slot: tiling paper texture */
     --journal-paper-ink: var(--px-paper-ink);       /* text on paper */
@@ -21,14 +21,14 @@
     --journal-tab: var(--px-surface-3);             /* bookmark ribbon */
     --journal-tab-ink: var(--px-ink);
     --journal-tab-active: var(--px-accent);
-    --journal-tab-active-ink: var(--px-ink-on-accent);
+    --journal-tab-active-ink: var(--px-ink);
     --journal-tab-img: none;                        /* slot: ribbon sprite (notched tail) */
     --journal-ink: var(--px-paper-ink);             /* chart bars ("ink") */
     --journal-ink-hi: var(--px-accent-lo);          /* today / best bar */
-    --journal-stamp-0: color-mix(in srgb, var(--px-paper-ink) 8%, var(--px-paper));
+    --journal-stamp-0: color-mix(in srgb, var(--px-paper-ink) 20%, var(--px-paper));
     --journal-stamp-1: var(--px-heat-2); --journal-stamp-2: var(--px-heat-3); --journal-stamp-3: var(--px-accent-lo); --journal-stamp-4: var(--px-heat-1);
     --journal-card: var(--px-paper);                /* weekly report card */
-    --journal-card-img: none;                       /* slot card: stamp + postmark corner, once, top-right */
+    --journal-card-img: none; --journal-card-stamp-w: 104px; --journal-card-stamp-h: 56px;                       /* slot card: stamp + postmark corner, once, top-right */
     --journal-card-paper-img: var(--journal-paper-img); /* slot cardPaper: card paper tile (defaults to page paper) */
     --journal-card-tape-img: none;                  /* slot cardTape: tape strip sprite */
     --journal-card-tape: color-mix(in srgb, var(--px-accent-hi) 70%, transparent); /* tape strip */
@@ -36,14 +36,14 @@
     --journal-turn: var(--px-dur-med, 240ms);       /* page-turn duration */
   }
   .cabin-journal { background: var(--journal-scrim); }
-  .fs-book { background: var(--journal-frame); border-image: var(--journal-frame-img) var(--journal-frame-slice) fill / var(--journal-frame-w); padding: var(--journal-frame-w); box-shadow: 0 0 0 4px var(--px-shadow), 8px 8px 0 4px var(--px-shadow); image-rendering: pixelated; }
+  .fs-book { background: var(--journal-frame); border-image: var(--journal-frame-img) var(--journal-frame-slice) fill / var(--journal-frame-w) round; padding: var(--journal-frame-w); box-shadow: 0 0 0 4px var(--px-shadow), 8px 8px 0 4px var(--px-shadow); image-rendering: pixelated; }
   .fs-spread { background: var(--journal-paper) var(--journal-paper-img); }
-  .fs-page { color: var(--journal-paper-ink); background-image: repeating-linear-gradient(to bottom, transparent 0 23px, var(--journal-rule) 23px 24px); }
+  .fs-page { line-height: 24px; color: var(--journal-paper-ink); background-attachment: local; background-position: 0 16px; background-image: repeating-linear-gradient(to bottom, transparent 0 23px, var(--journal-rule) 23px 24px); }
   .fs-spine { background: var(--journal-spine) var(--journal-spine-img) repeat-y center; }
   .fs-spine::before { content: ''; position: absolute; inset: 12px 5px; background: repeating-linear-gradient(to bottom, var(--journal-stitch) 0 4px, transparent 4px 12px); }
   .fs-spine.has-art::before { display: none; }
-  .fs-ribbons button { color: var(--journal-tab-ink); background: var(--journal-tab) var(--journal-tab-img); }
-  .fs-ribbons button[aria-selected='true'] { color: var(--journal-tab-active-ink); background-color: var(--journal-tab-active); }
+  .fs-ribbons button { color: var(--journal-tab-ink); background: var(--journal-tab) var(--journal-tab-img) left top / 16px 32px repeat-x; image-rendering: pixelated; }
+  .fs-ribbons button[aria-selected='true'] { color: var(--journal-tab-active-ink); background-color: var(--journal-tab-active); background-size: 16px 40px; text-shadow: 0 2px 0 var(--px-shadow); }
   .fs-book .fs-bar-fill { background: repeating-linear-gradient(to bottom, var(--journal-ink) 0 6px, color-mix(in srgb, var(--journal-ink) 75%, var(--journal-paper)) 6px 8px); box-shadow: none; }
   .fs-book .fs-bar-fill.is-today { background: var(--journal-ink-hi); }
   .fs-book .fs-bar small, .fs-book .fs-bar-value, .fs-book figcaption, .fs-book .fs-hint, .fs-book .fs-empty, .fs-book .fs-time, .fs-book .fs-min, .fs-book .fs-rank-num, .fs-book small, .fs-book .fs-facts dt { color: var(--journal-paper-faint); }
@@ -59,7 +59,7 @@
   .fs-book .fs-seg button, .fs-book .fs-actions button, .fs-book .fs-weekpick button { color: var(--journal-paper-ink); background: transparent; border-color: var(--journal-paper-faint); }
   .fs-book .fs-seg button[aria-pressed='true'] { color: var(--px-ink-on-accent); background: var(--px-accent); border-color: var(--px-accent-lo); }
   .fs-book .fs-card { position: relative; background: var(--journal-card) var(--journal-card-paper-img) repeat; image-rendering: pixelated; color: var(--journal-paper-ink); border: 2px solid var(--journal-paper-faint); box-shadow: 4px 4px 0 rgba(13, 8, 5, .25); }
-  .fs-book .fs-card::before { content: ''; position: absolute; top: -8px; left: calc(50% - 32px); width: 64px; height: 16px; background: var(--journal-card-tape-img) center / contain no-repeat, var(--journal-card-tape); }
+  .fs-book .fs-card::before { content: ''; position: absolute; top: -16px; left: calc(50% - 64px); width: 128px; height: 32px; background: var(--journal-card-tape-img) center / 128px 32px no-repeat, var(--journal-card-tape); }
   .fs-book .fs-card.has-tape::before { background-color: transparent; }
   .fs-book .fs-card::after { content: ''; position: absolute; top: 8px; right: 8px; width: var(--journal-card-stamp-w, 64px); height: var(--journal-card-stamp-h, 64px); background: var(--journal-card-img) right top / contain no-repeat; image-rendering: pixelated; pointer-events: none; }
   .fs-book .fs-card header, .fs-book .fs-card-total { color: var(--journal-paper-ink); }
