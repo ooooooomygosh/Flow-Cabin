@@ -69,7 +69,6 @@ try {
     assert.deepEqual(Object.keys(fed).sort(),['at','fishLeft','mood','tier','totalFeeds']);assert.equal(fed.fishLeft,3);assert.equal(fed.mood,52);assert.equal(fed.tier,'ok');assert.equal(fed.totalFeeds,3);assert.equal((await focusState(page)).rewards.fish,3);
     assert.match(await panel.locator('.cat-care-note').innerText(),/伸懒腰/);assert.match(await page.locator('.room-cat').getAttribute('class'),/cat--eating/);await screenshot(page,'cat-fed');
     // A 小鱼干 dragged with the real mouse from the panel chip onto the cat feeds it too.
-    await page.waitForFunction(()=>!document.querySelector('.room-cat.cat--eating,.room-cat.cat--full'),null,{timeout:8000});
     {const from=await panel.locator('.cat-fish-chip').boundingBox(),to=await page.locator('.room-cat').boundingBox();await page.mouse.move(from.x+from.width/2,from.y+from.height/2);await page.mouse.down();await page.mouse.move(to.x+to.width/2,to.y+to.height/2,{steps:12});await page.mouse.move(to.x+to.width/2+2,to.y+to.height/2,{steps:2});await page.mouse.up();}
     await page.waitForFunction(()=>window.__fed.length===2,null,{timeout:5000});assert.equal((await focusState(page)).rewards.fish,2);
         // A 小鱼干 dropped on the cat feeds it too.
