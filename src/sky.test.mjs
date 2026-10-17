@@ -164,3 +164,12 @@ test('sky settings: off by default, normalised, stored under one key; minute tic
   store.set(SKY_SETTINGS_KEY, '{oops'); assert.deepEqual(readSkySettings(storage), { place: 'auto', realWeather: false });
   assert.equal(msToNextMinute(120000), 60050); assert.equal(msToNextMinute(179999), 51);
 });
+
+import { REAL_SWITCH_MS, steadyWeather } from './sky-clock.mjs';
+test('real weather holds steady against flaky or racing reports', () => {
+  const a = steadyWeather(null, { kind: 'rain' }, 0);
+  assert.equal(steadyWeather(a, null, 1000), a);
+  assert.equal(steadyWeather(a, { kind: 'clear' }, 60e3).kind, 'rain');
+  assert.equal(steadyWeather(a, { kind: 'clear' }, REAL_SWITCH_MS).kind, 'clear');
+  assert.equal(steadyWeather(a, { kind: 'rain', intensity: .8 }, 5e3).since, 0);
+});
