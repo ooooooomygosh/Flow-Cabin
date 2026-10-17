@@ -17,7 +17,7 @@ export const DECK_COLOURS = Object.freeze({
   8: '#5e5248', // platter rim shade
   9: '#d4a46b', // brass (--px-brass)
   10: '#ffd99c', // brass highlight
-  11: '#1f1612', // platter mat
+  11: '#3a2b23', // platter mat (warm felt: an empty deck must not read as a hole)
   12: '#3b2c22', // foot
   13: '#3a3631', // metal outline / headshell
   14: '#d9d2bf', // alloy lamp-side highlight
@@ -84,6 +84,8 @@ function body() {
   for (let x = 0; x < DECK_W; x += 2) for (let y = 9; y < 12; y++) if (g[y][x] === 8 && !inEllipse(x, y, cx, cy, RIM.rx, RIM.ry)) put(g, x, y, 7);
   ellipse(g, cx, cy, RIM.rx, RIM.ry, 7);
   ellipse(g, cx, cy, PLATTER.rx, PLATTER.ry, 11);
+  for (let x = Math.ceil(cx - 7); x <= cx + 7; x += 2) if (g[Math.round(cy)][x] === 11) put(g, x, Math.round(cy), 12); // felt ring, dithered
+  put(g, Math.round(cx), Math.round(cy), 14); // spindle
   for (let y = 0; y < DECK_H; y++) for (let x = 0; x < cx; x++) if (g[y][x] === 7 && y <= cy && (x < cx - 6 || y < cy - 2)) put(g, x, y, 14);
   // Tonearm furniture: rest post, pivot plate with gimbal, cue lever (brass).
   rect(g, REST[0], REST[1] + 1, 1, 2, 8); put(g, REST[0], REST[1] + 1, 7);
