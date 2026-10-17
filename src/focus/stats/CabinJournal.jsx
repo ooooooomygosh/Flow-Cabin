@@ -9,7 +9,7 @@ import './focus-stats.css';
 import './journal-art.css';
 import { journalArtStyle, hasArt, JOURNAL_ART, CARD_EXPORT_SLOTS, cardArt, sprite } from './journal-art.mjs';
 import { defaultWeekOffset, weekName, catPose, CAT_POSE_CAPTION, barUnits, cabinLetter } from './journal-layout.mjs';
-import { readCatMood, subscribeCatFed } from './cat-mood-source.mjs';
+import { readCatMood, subscribeCatMood } from './cat-mood-source.mjs';
 
 const clock = (t) => { const d = new Date(t); return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
 const typing = (el) => el?.closest?.('input,textarea,select,[contenteditable="true"]');
@@ -20,7 +20,7 @@ export function Bars({ days, label, mini = false, set = 'records', best = null }
     <div className="fs-bars-row">{days.map((d, i) => { const n = barUnits(d.minutes, peak, max); return <div key={d.key} className={`fs-bar ${d === best ? 'is-best' : ''} ${d.isToday ? 'is-today' : ''}`} title={`${d.key} · ${d.minutes} 分钟`}>
       {d === best && !mini && <img className="fs-sticker fs-bar-sticker" src={sprite('sticker-best-day')} alt="最好的一天" width={32} height={32}/>}
       {!dense && <span className="fs-bar-value">{d.minutes ? `${d.minutes}′` : ''}</span>}
-      <span className={`fs-bar-fill fs-stack is-${set}`} data-units={n} style={{ '--units': n }}>{n > 0 && <i className="fs-stack-cap"/>}</span>
+      <span className={`fs-bar-fill fs-stack is-${set}`} data-units={n} style={{ '--units': n }}>{n > 0 && <i className="fs-stack-cap"/>}{d === best && !mini && n > 0 && <SmallSticker name="sticker-best-day" className="fs-bar-sticker-sm"/>}</span>
       <small>{dense ? (i % 5 === 4 || d.isToday ? d.label : '') : d.label}</small>
     </div>; })}</div>
     <figcaption>{label}</figcaption>
@@ -55,9 +55,14 @@ export default function CabinJournal() {
   </dialog>;
 }
 
-function Sprite({ name, scale = 2, size = 64, className = '', alt = '' }) {
-  return <img className={`fs-sprite ${className}`} src={sprite(name)} alt={alt} width={size * scale} height={size * scale} draggable={false}/>;
+// `fallback`: sprite used when the file is not there yet (e.g. art still in review).
+function Sprite({ name, fallback, scale = 2, size = 64, className = '', alt = '' }) {
+  return <img className={`fs-sprite ${className}`} src={sprite(name)} alt={alt} width={size * scale} height={size * scale} draggable={false}
+    onError={fallback ? (e) => { const to = sprite(fallback); if (to && !e.currentTarget.src.endsWith(to)) e.currentTarget.src = to; } : undefined}/>;
 }
+// 16×16 sticker for narrow screens; until the -sm file exists the 32×32 one is drawn at 16 px.
+const SmallSticker = ({ name, className = '' }) => <img className={`fs-sticker-sm ${className}`} src={sprite(`${name}-sm`)} alt="" width={16} height={16} draggable={false}
+  onError={(e) => { const to = sprite(name); if (!e.currentTarget.src.endsWith(to)) e.currentTarget.src = to; }}/>;
 function Empty({ pose = 'cat-wait', title, children, action }) {
   return <div className="fs-empty-state"><Sprite name={pose} scale={2}/><p className="fs-empty-title">{title}</p><p className="fs-empty">{children}</p>{action}</div>;
 }
@@ -66,7 +71,7 @@ const Tape = ({ className = '' }) => <span className={`fs-tape ${className}`} ar
 function useCatMood(from, to) {
   const read = () => { try { return readCatMood(globalThis.localStorage, from, to); } catch { return null; } };
   const [mood, setMood] = useState(read);
-  useEffect(() => { setMood(read()); return subscribeCatFed(globalThis.window, () => setMood(read())); }, [from, to]);
+  useEffect(() => { setMood(read()); return subscribeCatMood(globalThis.window, () => setMood(read())); }, [from, to]);
   return mood;
 }
 
@@ -155,10 +160,13 @@ function JournalBook({ state, now, view, setView, close }) {
       {taskRows.some((r) => !r.free) && <figure className="fs-task-note"><Sprite name="cat-desk" scale={2}/><figcaption className="fs-hand">{(() => { const top = taskRows.find((r) => !r.free); const all = taskRows.reduce((n, r) => n + r.minutes, 0); return <>你最常陪伴的是「{top.name}」，<br/>占了全部专注的 {Math.round(top.minutes / Math.max(1, all) * 100)}%。<br/>{openTasks ? `还有 ${openTasks} 件在路上，慢慢来。` : '手头的事都做完了，休息一下吧。'}</>; })()}</figcaption></figure>}
     </div>{spine}<div className="fs-page is-turning fs-tasks-right">
       <h3 className="fs-title">做完的事 {doneTasks.length ? <small>· {tasks.filter((t) => t.done).length} 件{openTasks ? ` · 还有 ${openTasks} 件在路上` : ''}</small> : null}</h3>
-      {doneTasks.length ? <ul className="fs-notes">{doneTasks.map((t, i) => <li key={t.id} className="fs-note" style={{ '--tilt': `${[-2, 1.5, -1, 2, 0, -1.5][i % 6]}deg` }}>
+      {doneTasks.length > 0 && <ul className="fs-notes">{doneTasks.map((t, i) => <li key={t.id} className="fs-note" style={{ '--tilt': `${[-2, 1.5, -1, 2, 0, -1.5][i % 6]}deg` }}>
         <Tape className="is-note"/><span className="fs-note-check" aria-hidden="true">✓</span><span className="fs-note-text">{t.text}</span>
-        <small>{t.doneAt ? clock(t.doneAt).split(' ')[0] : ''} · {formatMinutes(taskRows.find((r) => r.id === t.id)?.minutes || 0)}</small></li>)}</ul>
-        : <Empty pose="cat-desk" title="这里会贴满做完的事">每勾掉一条待办，就会在这一页贴一张便签。{openTasks ? `现在还有 ${openTasks} 件在路上。` : ''}</Empty>}
+        <small>{t.doneAt ? clock(t.doneAt).split(' ')[0] : ''} · {formatMinutes(taskRows.find((r) => r.id === t.id)?.minutes || 0)}</small></li>)}</ul>}
+      {doneTasks.length < 3 && <figure className={`fs-todo-empty ${doneTasks.length ? 'is-under' : ''}`}><Sprite name="todo-empty" fallback="cat-wait" scale={2}/>
+        <figcaption><p className="fs-empty-title fs-hand">慢慢来，写下第一件事吧</p>
+          <p className="fs-empty">{doneTasks.length ? `已经贴上 ${doneTasks.length} 张便签了。每勾掉一条待办，这一页就多一张。` : '每勾掉一条待办，就会在这一页贴一张便签。'}{openTasks ? ` 现在还有 ${openTasks} 件在路上。` : ''}</p>
+          {!openTasks && <button type="button" className="fs-cta" onClick={close}>回小屋写一条待办</button>}</figcaption></figure>}
     </div></div>}
     {view === 'weekly' && <div className="fs-spread" key="weekly" role="tabpanel" aria-label="周报"><div className="fs-page is-turning fs-week-left">
       <article className={`fs-card ${hasArt('card') ? 'has-stamp' : ''} ${hasArt('cardTape') ? 'has-tape' : ''}`} aria-label="周报卡片">
@@ -188,7 +196,7 @@ function JournalBook({ state, now, view, setView, close }) {
         <ul className="fs-notes is-mini" aria-label="这周做完的事">{weekDone.length ? weekDone.slice(0, 3).map((t, i) => <li key={t.id} className="fs-note" style={{ '--tilt': `${[2, -1.5, 1][i]}deg` }}><span className="fs-note-check" aria-hidden="true">✓</span><span className="fs-note-text">{t.text}</span></li>)
           : <li className="fs-note is-blank" style={{ '--tilt': '1.5deg' }}><span className="fs-note-text">这周还没勾掉待办，也没关系。</span></li>}
           {weekDone.length > 3 && <li className="fs-note-more">还有 {weekDone.length - 3} 件</li>}</ul>
-        {mood && <figure className="fs-mood" aria-label="小猫心情"><Sprite name={mood.level === 'low' ? 'cat-droopy' : 'cat-rub'} scale={1}/>{mood.feeds > 0 && <img className="fs-sticker" src={sprite('sticker-fed')} alt="" width={32} height={32}/>}
+        {mood && <figure className="fs-mood" aria-label="小猫心情"><Sprite name={mood.tier === 'droopy' ? 'cat-droopy' : mood.tier === 'happy' ? 'cat-rub' : 'cat-wait'} scale={1}/>{mood.feeds > 0 && <img className="fs-sticker" src={sprite('sticker-fed')} alt="" width={32} height={32}/>}
           <figcaption className="fs-hand">{mood.feeds > 0 ? `喂了 ${mood.feeds} 次` : '还没喂过'}{mood.label ? <small>{mood.label}</small> : null}</figcaption></figure>}
       </div>
       <ol className="fs-weeks" aria-label="最近几周">{pastWeeks.map((w) => <li key={w.offset}><button type="button" aria-pressed={w.offset === weekOffset} aria-label={`${w.label} · ${formatMinutes(w.totalMinutes)}`} title={`${w.label} · ${formatMinutes(w.totalMinutes)}`} onClick={() => setWeekOffset(w.offset)}>

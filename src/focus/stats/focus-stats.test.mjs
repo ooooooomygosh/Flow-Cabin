@@ -184,9 +184,9 @@ test('周报 defaults to the current week when it has data', async () => {
 test('journal layout: cat pose, stacked units, letter from real data', async () => {
   const { catPose, barUnits, cabinLetter, CAT_POSES } = await import('./journal-layout.mjs');
   assert.equal(catPose(0), 'cat-wait'); assert.equal(catPose(90), 'cat-desk'); assert.equal(catPose(400), 'cat-sleep-books');
-  assert.equal(catPose(30, { level: 'happy' }), 'cat-rub'); assert.equal(catPose(0, { level: 'low' }), 'cat-droopy');
+  assert.equal(catPose(30, { tier: 'happy' }), 'cat-rub'); assert.equal(catPose(0, { tier: 'droopy' }), 'cat-droopy');
   for (const p of CAT_POSES) assert.ok(existsSync(new URL(`../../../public/cat/${p}.png`, import.meta.url)), p);
-  const { JOURNAL_SPRITES } = await import('./journal-art.mjs'); for (const u of Object.values(JOURNAL_SPRITES)) assert.ok(existsSync(new URL(`../../../public${u}`, import.meta.url)), u);
+  const { JOURNAL_SPRITES } = await import('./journal-art.mjs'); for (const u of Object.values(JOURNAL_SPRITES).filter((u) => !/todo-empty|-sm\.png/.test(u))) assert.ok(existsSync(new URL(`../../../public${u}`, import.meta.url)), u);
   assert.equal(barUnits(0, 100), 0); assert.equal(barUnits(1, 100), 1); assert.equal(barUnits(100, 100), 10); assert.equal(barUnits(500, 100, 5), 5);
   const r = weeklyReport([s(at(2026, 10, 13, 9), 50, { taskId: 't1', album: { title: '夜航' } })], [{ id: 't1', text: '写第三章', done: true, doneAt: at(2026, 10, 14) }], at(2026, 10, 19, 10));
   const l = cabinLetter(r).join('');
@@ -195,13 +195,19 @@ test('journal layout: cat pose, stacked units, letter from real data', async () 
   assert.match(cabinLetter(weeklyReport([], [], at(2026, 10, 19))).join(''), /安静/);
 });
 
-test('cat mood is read defensively and hidden when missing', async () => {
-  const { readCatMood, moodLevel, subscribeCatFed, CAT_MOOD_KEY, CAT_FED_EVENT } = await import('./cat-mood-source.mjs');
-  const st = (v) => ({ getItem: (k) => k === CAT_MOOD_KEY ? v : null }), from = at(2026, 10, 12), to = at(2026, 10, 19);
+test('cat mood: v1 store, weekly feed count from feeds[].at, tier drives pose', async () => {
+  const { readCatMood, subscribeCatMood, CAT_MOOD_KEY, CAT_FED_EVENT, CAT_MOOD_EVENT } = await import('./cat-mood-source.mjs');
+  const { catPose } = await import('./journal-layout.mjs');
+  const st = (v) => ({ getItem: (k) => k === CAT_MOOD_KEY ? (typeof v === 'string' ? v : JSON.stringify(v)) : null }), from = at(2026, 10, 12), to = at(2026, 10, 19);
+  const store = { v: 1, mood: 82, tier: 'happy', updatedAt: at(2026, 10, 15), feeds: [{ at: at(2026, 10, 13), fishLeft: 4 }, { at: at(2026, 10, 14), fishLeft: 3 }, { at: at(2026, 10, 6), fishLeft: 5 }], totalFeeds: 3, unlockedActions: [] };
+  assert.deepEqual(readCatMood(st(store), from, to), { feeds: 2, tier: 'happy', mood: 82, label: '心情很好' });
+  assert.equal(readCatMood(st(store), at(2026, 10, 5), from).feeds, 1, 'past weeks count their own feeds');
+  assert.equal(readCatMood(st({ ...store, tier: 'droopy' }), from, to).label, '有点无精打采');
   assert.equal(readCatMood(st(null), from, to), null); assert.equal(readCatMood(st('{bad'), from, to), null); assert.equal(readCatMood(undefined, from, to), null);
-  assert.equal(readCatMood(st(JSON.stringify({ hello: 1 })), from, to), null);
-  assert.deepEqual(readCatMood(st(JSON.stringify({ mood: 82, feeds: [at(2026, 10, 13), { at: at(2026, 10, 14) }, at(2026, 10, 1)] })), from, to), { feeds: 2, level: 'happy', label: '心情很好' });
-  assert.equal(readCatMood(st(JSON.stringify({ feeds: [at(2026, 10, 13)] })), from, to).label, '');
-  assert.equal(moodLevel(.2), 'low'); assert.equal(moodLevel('开心'), 'happy'); assert.equal(moodLevel(undefined), null);
-  const t = new EventTarget(); let n = 0; const off = subscribeCatFed(t, () => n++); t.dispatchEvent(new Event(CAT_FED_EVENT)); off(); t.dispatchEvent(new Event(CAT_FED_EVENT)); assert.equal(n, 1);
+  assert.equal(readCatMood(st({ ...store, v: 2 }), from, to), null, 'unknown version is ignored');
+  assert.equal(readCatMood(st({ v: 1, tier: 'sleepy', feeds: [] }), from, to), null, 'no tier and no feeds → hidden');
+  assert.equal(readCatMood(st({ v: 1, fedLog: [at(2026, 10, 13)], feeds: [{ time: at(2026, 10, 13) }] }), from, to), null, 'guessed aliases are not read');
+  assert.equal(catPose(30, { tier: 'happy' }), 'cat-rub'); assert.equal(catPose(0, { tier: 'droopy' }), 'cat-droopy'); assert.equal(catPose(0, { tier: 'ok' }), 'cat-wait');
+  const t = new EventTarget(); let n = 0; const off = subscribeCatMood(t, () => n++);
+  t.dispatchEvent(new Event(CAT_FED_EVENT)); t.dispatchEvent(new Event(CAT_MOOD_EVENT)); off(); t.dispatchEvent(new Event(CAT_FED_EVENT)); assert.equal(n, 2);
 });

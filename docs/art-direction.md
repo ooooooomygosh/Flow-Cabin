@@ -87,6 +87,8 @@ Final art by beauty lives in `public/cat/` (#55, preview `docs/media/cat-mood-sh
 | --- | --- | --- | --- |
 | cat poses | `cat-sleep-books`, `cat-wait`, `cat-desk`, `cat-rub`, `cat-droopy` | 64×64 each | 周报 card (2×, 128 px; 96 px under 1100 px wide), empty states, 待办 note, mood doodle (1×). Pose comes from `catPose()` in `journal-layout.mjs`: ≥300 min → sleep-books, ≥60 → desk, mood happy → rub, mood low and a quiet week → droopy, else wait. |
 | eating | `cat-eat.png` | 64×64 per frame, 6–8 frames in one horizontal strip, 120 ms/frame | Reserved for the feeding animation (pet logic). |
+| empty 待办 | `todo-empty` | 64×64 | 待办 right page (2×) when fewer than 3 to-dos are done, with 「慢慢来，写下第一件事吧」; falls back to `cat-wait` until the file exists. |
+| small stickers | `sticker-best-day-sm`, `sticker-streak-sm`, `sticker-fed-sm` | 16×16 | Narrow pages (≤1100 px wide or ≤760 px tall): the best-day sticker sits on the bar's top unit instead of beside the minute label. Falls back to the 32×32 sticker drawn at 16 px. |
 | stickers | `sticker-best-day`, `sticker-streak`, `sticker-fed` | 32×32 | best-day bar (once per chart), 概览 streak (≥2 days), mood doodle when fed this week. |
 | bar units | `bar-book` + `bar-book-cap`, `bar-record` + `bar-record-cap` | 16×6 unit + 16×4 cap | Bars are stacks of units, 2× (32×12 per unit, 32×8 cap), max 10 units per chart (`barUnits()`), mini card 1× and 5 units. 周报 uses books, 概览 uses records. |
 

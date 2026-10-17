@@ -28,6 +28,8 @@ export const JOURNAL_SPRITES = Object.freeze({
   'cat-rub': '/cat/cat-rub.png', 'cat-droopy': '/cat/cat-droopy.png',     // 64×64 each
   'cat-eat': '/cat/cat-eat.png',                                                // 64×64 × 6–8 frames, horizontal, 120 ms/frame
   'sticker-best-day': '/cat/sticker-best-day.png', 'sticker-streak': '/cat/sticker-streak.png', 'sticker-fed': '/cat/sticker-fed.png', // 32×32
+  'todo-empty': '/cat/todo-empty.png',                                           // 64×64, falls back to cat-wait until it lands
+  'sticker-best-day-sm': '/cat/sticker-best-day-sm.png', 'sticker-streak-sm': '/cat/sticker-streak-sm.png', 'sticker-fed-sm': '/cat/sticker-fed-sm.png', // 16×16, narrow screens; fall back to the 32×32 at 16 px
   'bar-books': '/cat/bar-book.png', 'bar-books-cap': '/cat/bar-book-cap.png',          // 16×6 unit + 16×4 cap
   'bar-records': '/cat/bar-record.png', 'bar-records-cap': '/cat/bar-record-cap.png'
 });

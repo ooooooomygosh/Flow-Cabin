@@ -12,10 +12,10 @@ export const weekName = (offset) => offset === 0 ? '本周' : offset === -1 ? '�
 // Cat pose slot for the week's focus amount (mood can lift it to cat-rub).
 export const CAT_POSES = Object.freeze(['cat-sleep-books', 'cat-wait', 'cat-desk', 'cat-rub', 'cat-droopy']);
 export function catPose(totalMinutes, mood = null) {
-  if (mood?.level === 'happy' && totalMinutes > 0) return 'cat-rub';
+  if (mood?.tier === 'happy' && totalMinutes > 0) return 'cat-rub';
   if (totalMinutes >= 300) return 'cat-sleep-books';
   if (totalMinutes >= 60) return 'cat-desk';
-  if (mood?.level === 'low') return 'cat-droopy';
+  if (mood?.tier === 'droopy') return 'cat-droopy';
   return 'cat-wait';
 }
 export const CAT_POSE_CAPTION = Object.freeze({

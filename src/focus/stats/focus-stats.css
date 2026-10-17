@@ -197,3 +197,19 @@
   .fs-ov-left .fs-year { margin-top: auto; }
   @media (max-height: 760px) { .fs-task-note img { width: 96px; height: 96px; } }
 }
+@layer features {
+  .fs-todo-empty { margin: auto 0; display: grid; justify-items: center; text-align: center; gap: 8px; padding: 16px; }
+  .fs-todo-empty.is-under { margin: 8px 0 0; padding-top: 20px; border-top: 2px dashed var(--journal-rule, var(--px-border)); }
+  .fs-todo-empty img { width: 128px; height: 128px; }
+  .fs-todo-empty figcaption { display: grid; justify-items: center; gap: 6px; }
+  .fs-todo-empty .fs-empty { max-width: 320px; line-height: 20px; }
+  .fs-tasks-right { display: flex; flex-direction: column; }
+  /* Best-day sticker: 32 px beside the label on wide pages, 16 px on the bar's top unit when narrow. */
+  .fs-sticker-sm { width: 16px; height: 16px; image-rendering: pixelated; }
+  .fs-bar-sticker-sm { position: absolute; z-index: 1; top: 2px; left: 50%; margin-left: -8px; display: none; }
+  .fs-bars.is-dense .fs-bar-sticker-sm { display: none; }
+  @media (max-width: 1100px), (max-height: 760px) {
+    .fs-bar-sticker { display: none; }
+    .fs-bars:not(.is-dense):not(.is-mini) .fs-bar-sticker-sm { display: block; }
+  }
+}
