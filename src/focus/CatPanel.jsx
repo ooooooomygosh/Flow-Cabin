@@ -5,7 +5,7 @@ import Dialog from '../Dialog';
 import { useFocus } from './useFocus';
 import { levelInfo, UNLOCKS, unlockedIds } from './focus-model.mjs';
 import { FishPixel } from '../icons';
-import { catPanelPlace } from './cat-panel-place.mjs';
+import { catPanelPlace, createCatPanelTracker } from './cat-panel-place.mjs';
 import { readSkySettings, writeSkySettings } from '../sky-clock.mjs';
 import { useRecordLibrary } from '../RecordLibrary';
 import { normalizePetId, getPet } from '../pet/pet-catalog.mjs';
@@ -46,13 +46,12 @@ export default function CatPanel() {
     document.querySelectorAll('.room-cat').forEach((node) => node.setAttribute('aria-expanded', String(open)));
     if (!open) return undefined;
     // The cat glides to its new spot after a resize, so follow it every frame for a while.
-    let frame = 0, until = 0;
-    const follow = () => { placeNearCat(); frame = performance.now() < until ? requestAnimationFrame(follow) : 0; };
-    const track = (ms = 1200) => { until = performance.now() + ms; if (!frame) frame = requestAnimationFrame(follow); };
+    const { track, stop } = createCatPanelTracker(placeNearCat);
+    const onResize = () => track();
     const settle = (event) => { if (event.target.closest?.('.room-cat')) track(120); };
     track(300);
-    window.addEventListener('resize', track); document.addEventListener('transitionend', settle, true); document.addEventListener('animationend', settle, true);
-    return () => { cancelAnimationFrame(frame); window.removeEventListener('resize', track); document.removeEventListener('transitionend', settle, true); document.removeEventListener('animationend', settle, true); };
+    window.addEventListener('resize', onResize); document.addEventListener('transitionend', settle, true); document.addEventListener('animationend', settle, true);
+    return () => { stop(); window.removeEventListener('resize', onResize); document.removeEventListener('transitionend', settle, true); document.removeEventListener('animationend', settle, true); };
   }, [open]);
   return open ? <CatPanelBody close={() => setOpen(false)}/> : null;
 }
