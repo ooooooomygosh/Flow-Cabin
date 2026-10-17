@@ -25,8 +25,9 @@ export const GROOVE_KEYS = [{ backgroundPosition: '0% 100%' }, { backgroundPosit
 // Keeps one Web Animation on the beat: duration = beats × beat length, phase measured from the
 // clock's stable anchor (beat parity never flips). Re-aligned only when the tempo really changed
 // (> 0.5 %) or the phase drifted past `tolerance`; the beat clock itself smooths small corrections.
-export function lockToBeat(animation, { now = Date.now(), beat = currentBeat(), beats = 2, tolerance = 12 } = {}) {
-  const duration = beatLength(beat) * beats, timing = animation.effect.getTiming(), want = cyclePhase(now, beat, beats);
+// `lead` (ms) runs the animation that far ahead, covering the paint delay (RoomCat uses 8).
+export function lockToBeat(animation, { now = Date.now(), beat = currentBeat(), beats = 2, tolerance = 12, lead = 0 } = {}) {
+  const duration = beatLength(beat) * beats, timing = animation.effect.getTiming(), want = cyclePhase(now + lead, beat, beats);
   if (Math.abs(Number(timing.duration) - duration) / duration > .005) { animation.effect.updateTiming({ duration }); animation.currentTime = want; return 0; }
   const at = ((Number(animation.currentTime) || 0) % duration + duration) % duration;
   const drift = Math.min(Math.abs(at - want), duration - Math.abs(at - want));

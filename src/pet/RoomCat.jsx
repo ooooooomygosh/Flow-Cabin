@@ -8,6 +8,8 @@ import { getPet } from './pet-catalog.mjs';
 import { useCatCare, requestFeed } from '../cat/useCatCare';
 import { FED_EVENT, FISH_DRAG_TYPE, FISH_DRAG_TEXT } from '../cat/cat-care.mjs';
 import { catArtLayer, catArtPose } from '../cat/cat-art.mjs';
+// The PNG cat's frame lands about one paint after the animation time; lead by half a frame (16 ms overshot: WAAPI paints sooner than the canvas).
+const BEAT_PAINT_LEAD_MS = 8;
 import { beatSynced, lockToBeat, SWAY_KEYS, FULL_KEYS, GROOVE_KEYS } from '../cat/beat-sync.mjs';
 import { onCabinPlayback } from '../scene/playback-listener.mjs';
 import './cat-care.css';
@@ -75,7 +77,7 @@ export default function RoomCat({ focus, playing, track, reduceMotion, petId = '
     const [keys, beats, easing] = beatMotion === 'groove' ? [GROOVE_KEYS, 2, 'steps(4, end)'] : beatMotion === 'sway' ? [SWAY_KEYS, 2, 'linear'] : [FULL_KEYS, 1, 'linear'];
     const animation = target.animate(keys, { duration: 1000, iterations: Infinity, easing, composite: 'add' });
     root.dataset.beatMotion = beatMotion;
-    const sync = () => lockToBeat(animation, { beats });
+    const sync = () => lockToBeat(animation, { beats, lead: BEAT_PAINT_LEAD_MS });
     sync(); const off = onCabinPlayback(sync), timer = setInterval(sync, 2000);
     return () => { off(); clearInterval(timer); animation.cancel(); delete root.dataset.beatMotion; };
   }, [beatMotion, art?.url]);
