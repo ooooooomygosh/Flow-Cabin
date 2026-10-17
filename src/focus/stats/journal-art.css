@@ -1,0 +1,69 @@
+@layer guards, reset, features, skin, overrides;
+/* 小屋日记 art slots. Structure lives in CabinJournal.jsx / focus-stats.css; every
+   visual of the notebook is a variable here so final art can drop in without
+   touching markup. Defaults are a clean --px-* baseline. See docs/art-direction.md
+   § 小屋日记. Image slots take `url(...)` or `none`; frames use border-image 9-slice. */
+@layer skin {
+  .cabin-journal {
+    --journal-scrim: rgba(13, 8, 5, .82);
+    --journal-frame: var(--px-border);              /* cover edge colour */
+    --journal-frame-img: none;                      /* slot: 9-slice cover, e.g. url(/journal/frame.png) */
+    --journal-frame-slice: 16;                      /* art px of the 9-slice corner */
+    --journal-frame-w: 16px;                        /* drawn edge width (integer multiple of the art px) */
+    --journal-paper: var(--px-paper);               /* page fill */
+    --journal-paper-img: none;                      /* slot: tiling paper texture */
+    --journal-paper-ink: var(--px-paper-ink);       /* text on paper */
+    --journal-paper-faint: color-mix(in srgb, var(--px-paper-ink) 60%, var(--px-paper));
+    --journal-rule: color-mix(in srgb, var(--px-accent) 22%, var(--px-paper)); /* ruled lines */
+    --journal-spine: var(--px-accent-lo);           /* gutter between pages */
+    --journal-spine-img: none;                      /* slot: stitched spine strip (repeat-y) */
+    --journal-stitch: var(--px-accent-hi);
+    --journal-tab: var(--px-surface-3);             /* bookmark ribbon */
+    --journal-tab-ink: var(--px-paper);             /* 4.65:1 on the ribbon red #b5523b, 8.1:1 on its shade */
+    --journal-tab-active: var(--px-accent);
+    --journal-tab-active-ink: var(--px-paper);
+    --journal-tab-img: none;                        /* slot: ribbon sprite (notched tail) */
+    --journal-ink: var(--px-paper-ink);             /* chart bars ("ink") */
+    --journal-ink-hi: var(--px-accent-lo);          /* today / best bar */
+    --journal-stamp-0: color-mix(in srgb, var(--px-paper-ink) 20%, var(--px-paper));
+    --journal-stamp-1: var(--px-heat-2); --journal-stamp-2: var(--px-heat-3); --journal-stamp-3: var(--px-accent-lo); --journal-stamp-4: var(--px-heat-1);
+    --journal-card: var(--px-paper);                /* weekly report card */
+    --journal-card-img: none; --journal-card-stamp-w: 104px; --journal-card-stamp-h: 56px;                       /* slot card: stamp + postmark corner, once, top-right */
+    --journal-card-paper-img: var(--journal-paper-img); /* slot cardPaper: card paper tile (defaults to page paper) */
+    --journal-card-tape-img: none;                  /* slot cardTape: tape strip sprite */
+    --journal-card-tape: color-mix(in srgb, var(--px-accent-hi) 70%, transparent); /* tape strip */
+    --journal-card-doodle: none;                    /* slot: cat doodle sprite (shown 48×48) */
+    --journal-turn: var(--px-dur-med, 240ms);       /* page-turn duration */
+  }
+  .cabin-journal { background: var(--journal-scrim); }
+  .fs-book { background: var(--journal-frame); border-image: var(--journal-frame-img) var(--journal-frame-slice) fill / var(--journal-frame-w) round; padding: var(--journal-frame-w); box-shadow: 0 0 0 4px var(--px-shadow), 8px 8px 0 4px var(--px-shadow); image-rendering: pixelated; }
+  .fs-spread { background: var(--journal-paper) var(--journal-paper-img); }
+  .fs-page { line-height: 24px; color: var(--journal-paper-ink); background-attachment: local; background-position: 0 16px; background-image: repeating-linear-gradient(to bottom, transparent 0 23px, var(--journal-rule) 23px 24px); }
+  .fs-spine { background: var(--journal-spine) var(--journal-spine-img) repeat-y center; }
+  .fs-spine::before { content: ''; position: absolute; inset: 12px 5px; background: repeating-linear-gradient(to bottom, var(--journal-stitch) 0 4px, transparent 4px 12px); }
+  .fs-spine.has-art::before { display: none; }
+  .fs-ribbons button { color: var(--journal-tab-ink); text-shadow: 1px 0 0 var(--px-shadow), -1px 0 0 var(--px-shadow), 0 1px 0 var(--px-shadow), 0 -1px 0 var(--px-shadow); background: var(--journal-tab) var(--journal-tab-img) left top / 16px 32px repeat-x; image-rendering: pixelated; }
+  .fs-ribbons button[aria-selected='true'] { color: var(--journal-tab-active-ink); background-color: var(--journal-tab-active); background-size: 16px 40px; font-weight: 700; box-shadow: inset 0 2px 0 var(--px-accent-hi), inset 2px 0 0 var(--px-accent-hi), inset -2px 0 0 var(--px-accent-hi); text-shadow: 1px 0 0 var(--px-shadow), -1px 0 0 var(--px-shadow), 0 1px 0 var(--px-shadow), 0 -1px 0 var(--px-shadow), 0 2px 0 var(--px-shadow); }
+  .fs-book .fs-bar small, .fs-book .fs-bar-value, .fs-book figcaption, .fs-book .fs-hint, .fs-book .fs-empty, .fs-book .fs-time, .fs-book .fs-min, .fs-book .fs-rank-num, .fs-book small { color: var(--journal-paper-faint); }
+  .fs-book .fs-title, .fs-book .fs-rank li, .fs-book .fs-sessions li { color: var(--journal-paper-ink); }
+  .fs-book .fs-sessions li, .fs-book .fs-rank li { background: transparent; box-shadow: inset 0 -2px 0 var(--journal-rule); }
+  .fs-book .fs-meter { background: var(--journal-stamp-0); } .fs-book .fs-meter i { background: var(--journal-ink); }
+  .fs-book .stats-chart-well { background: transparent; border: 0; box-shadow: none; }
+  .fs-book .fs-year-grid span { background: var(--journal-stamp-0); box-shadow: inset -1px -1px 0 rgba(13, 8, 5, .18); }
+  .fs-book .fs-year-grid span[data-level='1'], .fs-book .focus-heatmap-legend span[data-level='1'] { background: var(--journal-stamp-1); }
+  .fs-book .fs-year-grid span[data-level='2'], .fs-book .focus-heatmap-legend span[data-level='2'] { background: var(--journal-stamp-2); }
+  .fs-book .fs-year-grid span[data-level='3'], .fs-book .focus-heatmap-legend span[data-level='3'] { background: var(--journal-stamp-3); }
+  .fs-book .fs-year-grid span[data-level='4'], .fs-book .focus-heatmap-legend span[data-level='4'] { background: var(--journal-stamp-4); }
+  .fs-book .fs-seg button, .fs-book .fs-actions button, .fs-book .fs-weekpick button { color: var(--journal-paper-ink); background: transparent; border-color: var(--journal-paper-faint); }
+  .fs-book .fs-seg button[aria-pressed='true'] { color: var(--px-ink-on-accent); background: var(--px-accent); border-color: var(--px-accent-lo); }
+  .fs-book .fs-card { position: relative; background: var(--journal-card) var(--journal-card-paper-img) repeat; image-rendering: pixelated; color: var(--journal-paper-ink); border: 2px solid var(--journal-paper-faint); box-shadow: 4px 4px 0 rgba(13, 8, 5, .25); }
+  /* Tape strips (card, polaroid, notes): one element each, never a background of the card. */
+  .fs-book .fs-tape { position: absolute; z-index: 2; width: 64px; height: 16px; background: var(--journal-card-tape); pointer-events: none; }
+  .fs-book .fs-card.has-tape .fs-tape.is-card { width: 128px; height: 32px; top: -16px; background: var(--journal-card-tape-img) center / 128px 32px no-repeat; image-rendering: pixelated; }
+  /* The stamp + postmark sprite (slot `card`) is drawn ONCE by its own element.
+     It used to be the card's `background`, which tiles by default → six stamps over the chart. */
+  .fs-book .fs-stamp { position: absolute; z-index: 1; top: 8px; right: 8px; width: var(--journal-card-stamp-w, 104px); height: var(--journal-card-stamp-h, 56px); background-image: var(--journal-card-img); background-repeat: no-repeat; background-position: right top; background-size: 100% 100%; image-rendering: pixelated; pointer-events: none; }
+  .fs-book .fs-card header, .fs-book .fs-card-total { color: var(--journal-paper-ink); }
+  .fs-book .fs-card-summary { background: transparent; color: var(--journal-paper-ink); box-shadow: inset 0 0 0 2px var(--journal-rule); }
+  .fs-actions [role='status'] { color: var(--journal-ink-hi); }
+}

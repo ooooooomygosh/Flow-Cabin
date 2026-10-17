@@ -11,6 +11,7 @@ import RoomScene, { placeRecord } from './RoomScene';
 import RoomTurntable from './RoomTurntable';
 import FocusDock, { FocusBadge, loadStudy } from './focus/FocusDock';
 import { useFocusState } from './focus/useFocus';
+import CabinJournal from './focus/stats/CabinJournal.jsx';
 import { focusSnapshot } from './focus/focus-model.mjs';
 import { useSoundscape } from './audio/useSoundscape';
 import RoomCat from './pet/RoomCat';
@@ -128,6 +129,7 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
           already on, 加入待播 leads (and Enter / double-click still load). */}
       {!record && <button type="button" className="room-load-record is-primary" aria-keyshortcuts="Enter" title="放到唱机上播放 · 双击封面或按回车也可以" onClick={() => placeRecord(selected, document.querySelector('.room-record.is-selected') || stage.current, deck.place)}><Play size={16}/><span>放到唱机</span></button>}
       {record && record.id !== selected.id && <button type="button" className="room-queue-add" aria-label={queued ? '已在待播' : '加入待播'} aria-pressed={queued} title="当前唱片放完后接着放" onClick={(event) => { if (queued) { player.remove(selected.id); return; } if (!player.enqueue(selected.id)) return; const queueButton = document.querySelector('.room-turntable .player-mode[aria-label^="待播唱片"]'); flyRecord({ from: document.querySelector('.room-record.is-selected') || event.currentTarget, to: queueButton, target: queueButton, cover: selected.cover, mode: 'queue' }); }}>{queued ? <><Check size={16}/><span>已在待播</span></> : <><ListBullet size={16}/><span>加入待播</span></>}</button>}<button type="button" className="room-open-album" aria-label="唱片卡片" title="唱片卡片：曲目、笔记、自定义唱片与 Discogs" onClick={() => openRecord(selected.id)}><span>唱片卡片</span><ArrowUpRight size={18}/></button></div></div>}
+    {focus && <CabinJournal/>}
     {focus && <FocusDock open={dock.open} tab={dock.tab} setTab={(tab) => saveDock({ tab })} close={() => saveDock({ open: false })}/>}
     {desktopMode ? <DesktopWidgets mode="desktop" exit={chrome.toggleDesktopMode} item={deckItem} provider={provider} playback={playback} player={player} spinning={effectiveSpin} toggleVisual={deck.toggleVisual} trackIndex={deck.shownTrackIndex}/> : zen && !chrome.zenTools && <DesktopWidgets mode="zen"/>}
     {!desktopMode && <ImmersiveChrome zen={zen} fullscreen={fullscreen} exitFullscreen={chrome.exitFullscreen} toggleZen={chrome.toggleZen} tools={chrome.zenTools} setTools={chrome.setZenTools} />}

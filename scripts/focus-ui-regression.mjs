@@ -26,19 +26,19 @@ try {
   let log=''; server.stdout.on('data',b=>log+=b); server.stderr.on('data',b=>log+=b);
   for (let i=0;;i++) { if (server.exitCode!==null || i>150) throw new Error(log); if (hasViteLocalOrigin(log,origin) && await fetch(origin).then(r=>r.ok,()=>false)) break; await new Promise(r=>setTimeout(r,100)); }
   browser = await launchChromium();
-  const run = async (name,test,{firstVisit=false,collection}={}) => {
+  const run = async (name,test,{firstVisit=false,collection,motion=false}={}) => {
     if (process.env.FOCUS_FILTER && !process.env.FOCUS_FILTER.split(',').some(filter=>name.includes(filter))) return;
-    const context = await browser.newContext({viewport:{width:1440,height:900},locale:'zh-CN',reducedMotion:'reduce'});
-    await context.addInitScript(({key,firstVisit}) => {
+    const context = await browser.newContext({viewport:{width:1440,height:900},locale:'zh-CN',reducedMotion:motion?'no-preference':'reduce'});
+    await context.addInitScript(({key,firstVisit,motion}) => {
       if (location.origin==='null') return;
       if (!firstVisit) localStorage.setItem('flow-cabin-onboarding-v1',JSON.stringify({version:1,status:'done',step:'done'}));
       if (!firstVisit && !localStorage.getItem(key)) localStorage.setItem(key,JSON.stringify({notes:'原有随手记',settings:{focusMin:1,shortMin:1,notify:false,chime:false}}));
       window.__nativeCommands=[];
-      window.albumDesktopAppearance={client:true,reduceMotion:true};
+      window.albumDesktopAppearance={client:true,reduceMotion:!motion};
       window.open=url=>{ window.__nativeCommands.push(String(url)); return null; };
-      const init=()=>{document.documentElement.dataset.desktopClient='true';document.documentElement.dataset.desktopReduceMotion='true';};
+      const init=()=>{document.documentElement.dataset.desktopClient='true';document.documentElement.dataset.desktopReduceMotion=String(!motion);};
       if(document.documentElement) init(); else new MutationObserver((_,o)=>{if(document.documentElement){init();o.disconnect();}}).observe(document,{childList:true});
-    },{key:KEY,firstVisit});
+    },{key:KEY,firstVisit,motion});
     await context.route('**/*',async route=>{
       const u=new URL(route.request().url()), p=u.pathname;
       if(u.origin!==origin){report.unexpectedRequests.push(u.href);return route.abort();}
@@ -102,7 +102,7 @@ try {
     await page.getByRole('button',{name:'重试保存',exact:true}).click();assert.match(await page.locator('.focus-dock [role=alert]').innerText(),/另一窗口.*本窗口.*仍失败/,'failed explicit retry retains the conflict explanation');
     await failStorage(page,false);await page.evaluate(end=>{Date.now=()=>end+1;window.dispatchEvent(new Event('focus'));},deadline);await page.waitForFunction(()=>window.albumCompanionSnapshot?.().focus.fish===1);
     await page.getByLabel('随手记内容').fill('当前窗口继续写的草稿');assert.equal((await focusState(page)).notes,'另一窗口保存的笔记','automatic timer and note writes must remain paused during conflict');await screenshot(page,'notes-storage-conflict');
-    await openFocus(page,'统计');await page.getByLabel('每日专注目标分钟').fill('120');await page.getByLabel('每日专注目标分钟').press('Enter');assert.equal((await focusState(page)).settings.dailyGoal,100,'settings cannot bypass unresolved conflict');
+    await page.evaluate(()=>window.dispatchEvent(new CustomEvent('cabin-open-settings',{detail:{section:'focus'}})));const goalHub=page.getByRole('dialog',{name:'设置',exact:true});await goalHub.getByLabel('每日专注目标分钟').fill('120');await goalHub.getByLabel('每日专注目标分钟').press('Enter');assert.equal((await focusState(page)).settings.dailyGoal,100,'settings cannot bypass unresolved conflict');await page.keyboard.press('Escape');await goalHub.waitFor({state:'detached'});
     await openFocus(page,'待办');await page.getByLabel('新的待办').fill('冲突期间的任务草稿');await page.getByRole('button',{name:'添加待办',exact:true}).click();assert.equal(await page.getByLabel('新的待办').inputValue(),'冲突期间的任务草稿');assert.equal((await focusState(page)).tasks[0].id,'other-task','tasks cannot bypass unresolved conflict');
     await page.getByRole('button',{name:'重试保存',exact:true}).click();const resolved=await focusState(page);assert.equal(resolved.notes,'当前窗口继续写的草稿');assert.equal(resolved.rewards.fish,1);assert.equal(resolved.sessions.length,1);
     await page.getByRole('button',{name:'添加待办',exact:true}).click();assert.equal((await focusState(page)).tasks.length,1);assert.equal((await focusState(page)).tasks[0].text,'冲突期间的任务草稿');
@@ -115,6 +115,67 @@ try {
     assert.equal(await page.evaluate(()=>window.__phaseEvents.length),1);assert.equal((await focusState(page)).rewards.fish,0);assert.match(await page.locator('.focus-dock [role=alert]').innerText(),/无法保存/);await screenshot(page,'timer-unsaved-completion');
     await failStorage(page,false);await page.getByRole('button',{name:'重试保存',exact:true}).click();const after=await focusState(page);assert.equal(after.sessions.length,1);assert.equal(after.rewards.fish,1);assert.equal(after.timer.phase,'shortBreak');assert.equal(await page.evaluate(()=>window.__phaseEvents.length),1);
   });
+  await run('stats-card-and-cabin-journal',async page=>{
+    // Seeded demo data: legacy pomodoro sessions + the assumed focus-session log.
+    await page.evaluate(({key})=>{
+      const day=86400000,start=new Date();start.setHours(0,0,0,0);const base=start.getTime();
+      const tasks=[{id:'t-ch3',text:'写第三章',done:true,doneAt:base-3*day+18*3600e3},{id:'t-rev',text:'复习线代',done:false},{id:'t-mail',text:'回邮件',done:true,doneAt:base-9*day+11*3600e3}];
+      const albums=[{id:'a1',title:'夜航星',artist:'林间'},{id:'a2',title:'晨光练习曲',artist:'小屋乐队'},{id:'a3',title:'雨天唱片',artist:'Lo-fi Cat'}],covers={a1:'/missing-cover.png',a3:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAIAAABLbSncAAAAH0lEQVR4nGOw0ZADohMVNkCEzGbAKYEpBGHjlqCDHQD+cD/BDLcnygAAAABJRU5ErkJggg=='};
+      const sessions=[],log=[];
+      for(let d=1;d<200;d++){ if(d%9===4||(d>60&&d%3===0)) continue; const n=1+(d*7)%3; for(let i=0;i<n;i++){ const h=[9,14,21][(d+i)%3],s=base-d*day+h*3600e3+i*40*60e3,len=25+((d+i)%3)*12; const taskId=['t-ch3','t-rev','','t-mail'][(d+i)%4]; sessions.push({start:s,end:s+len*60e3,taskId,completed:(d+i)%5!==0}); if(d<21) log.push({start:s,end:s+len*60e3,durationMs:len*60e3,completed:(d+i)%5!==0,taskId,album:albums[(d+i)%3],cover:covers[albums[(d+i)%3].id]}); } }
+      sessions.push({start:base+9*3600e3,end:base+9*3600e3+25*60e3,taskId:'t-ch3',completed:true});
+      const old=JSON.parse(localStorage.getItem(key)||'{}');localStorage.setItem(key,JSON.stringify({...old,tasks,sessions:sessions.sort((a,b)=>a.start-b.start),settings:{...old.settings,dailyGoal:90}}));
+      localStorage.setItem('flow-cabin-focus-sessions-v1',JSON.stringify(log));
+    },{key:KEY});
+    await page.reload();await openFocus(page,'统计');
+    const card=page.locator('.fs-compact');await card.waitFor();
+    assert.equal(await card.getByRole('progressbar',{name:'每日目标进度'}).count(),1);assert.equal(await card.locator('.fs-bar').count(),7);
+    assert.equal(await page.locator('.focus-dock').getByLabel('每日专注目标分钟').count(),0,'goal is edited in Settings only');
+    const scrolls=await page.locator('.focus-dock').evaluate(dock=>[...dock.querySelectorAll('*')].filter(el=>['auto','scroll'].includes(getComputedStyle(el).overflowY)&&el.scrollHeight>el.clientHeight+1).map(el=>el.className));
+    for(const [w,h] of [[1280,800],[1440,900]]){await page.setViewportSize({width:w,height:h});await page.screenshot({path:path.join(output,`stats-card-${w}x${h}.png`),animations:'disabled'});}
+    assert.deepEqual(scrolls,[],'stats card does not scroll');
+    await page.getByRole('button',{name:'打开小屋日记 →'}).click();
+    const journal=page.getByRole('dialog',{name:'小屋日记'});await journal.waitFor();
+    assert.equal(await journal.getByRole('tab',{name:'概览'}).getAttribute('aria-selected'),'true');assert.equal(await journal.locator('.fs-year-grid span').count(),53*7);
+    assert.match(await journal.locator('.fs-sessions li').first().innerText(),/写第三章/);
+    for(const [w,h] of [[1280,800],[1440,900]]){await page.setViewportSize({width:w,height:h});await page.screenshot({path:path.join(output,`journal-overview-${w}x${h}.png`),animations:'disabled'});}
+    await journal.getByRole('button',{name:'近 30 天'}).click();assert.equal(await journal.locator('.fs-bar').count(),30);
+    await journal.getByRole('tab',{name:'待办'}).click();const rows=await journal.locator('.fs-rank li .fs-rank-name').allInnerTexts();assert(rows.some(t=>t.includes('自由专注')));assert(rows.some(t=>t.includes('写第三章')));
+    for(const [w,h] of [[1280,800],[1440,900]]){await page.setViewportSize({width:w,height:h});await page.screenshot({path:path.join(output,`journal-tasks-${w}x${h}.png`),animations:'disabled'});}
+    await page.keyboard.press('Escape');await journal.waitFor({state:'hidden'});
+    await page.keyboard.press('l');await journal.waitFor();await page.getByRole('button',{name:'返回小屋'}).click();await journal.waitFor({state:'hidden'});
+    await page.evaluate(()=>window.dispatchEvent(new CustomEvent('cabin:open-journal',{detail:{tab:'weekly'}})));await journal.waitFor();
+    assert.equal(await journal.getByRole('tab',{name:'周报'}).getAttribute('aria-selected'),'true');assert.match(await journal.locator('.fs-weekpick strong').innerText(),/本周/,'周报 opens on the current week when it has data');assert.equal(await journal.locator('.fs-stamp').count(),1,'stamp rendered once');
+    assert.match(await journal.locator('.fs-polaroid').innerText(),/《/,'most played album comes from the session log');const cover=journal.locator('.fs-card-cover');await cover.waitFor();assert.equal(await cover.evaluate(img=>img.complete&&img.naturalWidth===8&&getComputedStyle(img).imageRendering),'pixelated','cover thumbnail renders pixelated');
+    await page.context().grantPermissions(['clipboard-read','clipboard-write'],{origin});await journal.getByRole('button',{name:'复制文字'}).click();
+    assert.match(await page.evaluate(()=>navigator.clipboard.readText()),/^## 心流小屋周报 · /);
+    const [download]=await Promise.all([page.waitForEvent('download'),journal.getByRole('button',{name:'导出图片'}).click()]);assert.match(download.suggestedFilename(),/^心流小屋周报-.*\.png$/);await download.saveAs(path.join(output,'weekly-card-export.png'));
+    for(const [w,h] of [[1280,800],[1440,900],[1920,1080]]){await page.setViewportSize({width:w,height:h});
+      // Right page is balanced: summary, facts, week strip and actions fill most of it, nothing overflows.
+      const fill=await journal.locator('.fs-week-right').evaluate(el=>{const kids=[...el.children].filter(c=>c.offsetHeight);const r=el.getBoundingClientRect(),last=kids.at(-1).getBoundingClientRect();return {used:(last.bottom-r.top)/r.height,overflow:el.scrollHeight>el.clientHeight+1};});
+      assert(fill.used>0.5,`weekly right page only ${Math.round(fill.used*100)}% used at ${w}x${h}`);assert(!fill.overflow,`weekly right page scrolls at ${w}x${h}`);
+      assert(!(await journal.locator('.fs-week-left').evaluate(el=>el.scrollHeight>el.clientHeight+1)),`weekly card scrolls at ${w}x${h}`);
+      await page.screenshot({path:path.join(output,`journal-weekly-${w}x${h}.png`),animations:'disabled'});}
+    assert.equal(await journal.locator('.fs-weeks button').count(),8);assert.equal(await journal.locator('.fs-weeks button[aria-pressed="true"]').count(),1);
+    await journal.locator('.fs-weeks button').last().click();assert.match(await journal.locator('.fs-weekpick strong').innerText(),/本周/);
+    await journal.locator('.fs-weeks button').nth(6).click();
+    await journal.getByRole('button',{name:'上一周'}).click();assert.match(await journal.locator('.fs-weekpick strong').innerText(),/2 周前/);
+    await page.keyboard.press('Escape');await page.evaluate(()=>window.dispatchEvent(new CustomEvent('cabin-open-settings',{detail:{section:'focus'}})));
+    const hub=page.getByRole('dialog',{name:'设置',exact:true});await hub.getByLabel('每日专注目标分钟').fill('60');await hub.getByLabel('每日专注目标分钟').press('Enter');assert.equal((await focusState(page)).settings.dailyGoal,60);
+  });
+  await run('cabin-journal-motion-on-reopens-and-fits-1024',async page=>{
+    await page.evaluate(({key})=>{const day=86400000,base=new Date().setHours(0,0,0,0),sessions=[];for(let d=1;d<300;d+=2)sessions.push({start:base-d*day+9*3600e3,end:base-d*day+9*3600e3+40*60e3,completed:true});const old=JSON.parse(localStorage.getItem(key)||'{}');localStorage.setItem(key,JSON.stringify({...old,sessions}));},{key:KEY});
+    await page.setViewportSize({width:1024,height:768});await page.reload();await openFocus(page,'统计');await page.locator('.fs-compact').waitFor();await page.locator('body').click({position:{x:5,y:5}});
+    const journal=page.getByRole('dialog',{name:'小屋日记'});
+    
+    assert.equal(await page.evaluate(()=>matchMedia('(prefers-reduced-motion: reduce)').matches),false,'motion is on');
+    for(let i=0;i<3;i++){await page.keyboard.press('l');await journal.waitFor();await page.keyboard.press('Escape');await page.keyboard.press('l');await journal.waitFor({timeout:2000});assert(await journal.isVisible(),`L right after Esc reopens (round ${i+1})`);await page.keyboard.press('Escape');await journal.waitFor({state:'hidden'});}
+    await page.keyboard.press('l');await journal.waitFor();await page.waitForTimeout(400);
+    const fit=await journal.locator('.fs-year').evaluate(fig=>{const page=fig.closest('.fs-page').getBoundingClientRect(),r=fig.getBoundingClientRect(),cap=fig.querySelector('figcaption');return {inside:r.right<=page.right+0.5&&fig.querySelector('.fs-year-grid').getBoundingClientRect().right<=page.right+0.5,capClip:cap.scrollWidth>cap.clientWidth+1};});
+    assert(fit.inside,'year heatmap stays inside the left page at 1024x768');assert(!fit.capClip,'heatmap caption is not clipped');
+    await page.screenshot({path:path.join(output,'journal-overview-1024x768.png'),animations:'disabled'});
+    await journal.getByRole('tab',{name:'周报'}).click();await page.waitForTimeout(400);await page.screenshot({path:path.join(output,'journal-weekly-1024x768.png'),animations:'disabled'});
+  },{motion:true});
   await run('timer-pause-reload-resume-keeps-remaining-work',async page=>{
     await openFocus(page);await page.getByRole('button',{name:'开始专注',exact:true}).click();await page.getByRole('button',{name:'暂停',exact:true}).click();const paused=await focusState(page);assert.equal(paused.timer.paused,true);
     await page.reload();await openFocus(page);assert.equal((await focusState(page)).timer.remaining,paused.timer.remaining);await page.getByRole('button',{name:'继续',exact:true}).click();const resumed=await focusState(page);assert.equal(resumed.timer.paused,false);assert.equal(resumed.timer.duration,paused.timer.duration);assert.equal(resumed.sessions.length,0);await screenshot(page,'timer-reloaded-resumed');
