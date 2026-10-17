@@ -98,7 +98,7 @@ Dispatched on `window` when a focus session ends; the same record is appended to
 | `taskId` | `string` | Todo id, `''` for 自由专注. `taskText` (optional) keeps the name if the todo is later deleted. |
 | `album` | `{ id?, title, artist? } \| string` | What was on the deck. Falls back to `track.album`. |
 | `track` | `{ title, artist?, album? }?` | Optional. |
-| `cover` | `string?` | Album cover: `data:image/(png\|jpeg\|gif\|webp);base64,…` (≤ 400 KB), an `http(s)` URL or a same-site path. Also read from `album.cover`. Other values are dropped. The weekly report shows the most-played album's cover (32 px, pixelated) and falls back to the name only. PNG export draws only `data:` or same-origin covers (others would taint the canvas) and uses a pixel-record placeholder otherwise. |
+| `cover` | `string?` | Top-level, optional. Album cover — the focus view writes a 32×32 PNG data URL; accepted forms: `data:image/(png\|jpeg\|gif\|webp);base64,…` (≤ 400 KB), an `http(s)` URL or a same-site path. Also read from `album.cover`. Other values are dropped. The weekly report shows the most-played album's cover (32 px, pixelated) and falls back to the name only. PNG export draws only `data:` or same-origin covers (others would taint the canvas) and uses a pixel-record placeholder otherwise. |
 
 ## `cabin:open-journal`
 
