@@ -186,7 +186,7 @@ test('journal layout: cat pose, stacked units, letter from real data', async () 
   assert.equal(catPose(0), 'cat-wait'); assert.equal(catPose(90), 'cat-desk'); assert.equal(catPose(400), 'cat-sleep-books');
   assert.equal(catPose(30, { tier: 'happy' }), 'cat-rub'); assert.equal(catPose(0, { tier: 'droopy' }), 'cat-droopy');
   for (const p of CAT_POSES) assert.ok(existsSync(new URL(`../../../public/cat/${p}.png`, import.meta.url)), p);
-  const { JOURNAL_SPRITES } = await import('./journal-art.mjs'); for (const u of Object.values(JOURNAL_SPRITES).filter((u) => !/todo-empty|-sm\.png/.test(u))) assert.ok(existsSync(new URL(`../../../public${u}`, import.meta.url)), u);
+  const { JOURNAL_SPRITES } = await import('./journal-art.mjs'); for (const u of Object.values(JOURNAL_SPRITES)) assert.ok(existsSync(new URL(`../../../public${u}`, import.meta.url)), u);
   assert.equal(barUnits(0, 100), 0); assert.equal(barUnits(1, 100), 1); assert.equal(barUnits(100, 100), 10); assert.equal(barUnits(500, 100, 5), 5);
   const r = weeklyReport([s(at(2026, 10, 13, 9), 50, { taskId: 't1', album: { title: '夜航' } })], [{ id: 't1', text: '写第三章', done: true, doneAt: at(2026, 10, 14) }], at(2026, 10, 19, 10));
   const l = cabinLetter(r).join('');
