@@ -56,7 +56,7 @@ let app, site, host;
   await site.getByRole('tab', { name: '番茄钟' }).click(); await site.getByRole('button', { name: '计时设置' }).click();
   await site.getByLabel('专注（分）').fill('2'); await site.getByLabel('专注（分）').blur(); await site.getByLabel('隐藏秒数（仅显示剩余分钟）').check();
   await site.getByLabel('提示音', { exact: true }).uncheck(); await site.getByLabel('系统通知', { exact: true }).uncheck();
-  await site.getByRole('button', { name: '开始专注', exact: true }).click();
+  await site.getByRole('button', { name: '开始专注', exact: true }).click(); await site.locator('.focus-display').waitFor(); await site.keyboard.press('Escape'); await site.locator('.focus-display').waitFor({ state: 'detached' }); // 开始专注 enters 沉浸
   assert.match(await site.locator('.focus-badge').innerText(), /2 分钟/);
   const clock = await site.locator('.focus-timer .pixel-clock').innerHTML(), progress = await site.locator('.focus-progress span').getAttribute('style');
   await site.clock.fastForward(10000);

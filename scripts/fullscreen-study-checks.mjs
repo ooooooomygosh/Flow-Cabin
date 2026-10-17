@@ -43,7 +43,7 @@ export async function verifyFullscreenStudy({ browser, origin, output, check }) 
     assert.equal(await page.evaluate(() => window.__commands.some(x => x.endsWith('/fullscreen-exit'))), false);
     await page.locator('.room-cat').click(); await shot('fullscreen-normal');
     check('fullscreen-normal-record-playlist-pet-and-dialog-remain-interactive');
-    await page.getByRole('button', { name: '沉浸模式', exact: true }).click();
+    await page.getByRole('button', { name: '收起工具', exact: true }).click();
     assert.equal(await page.locator('.app-titlebar').isVisible(), false);
     await page.getByRole('button', { name: '显示工具', exact: true }).waitFor(); await shot('fullscreen-immersive');
     // The physical deck remains an actual drag target in immersive mode.
@@ -61,7 +61,7 @@ export async function verifyFullscreenStudy({ browser, origin, output, check }) 
     await page.locator('.focus-dock').waitFor({ state:'detached' });
     assert.equal(await page.evaluate(() => document.documentElement.classList.contains('room-zen')),true);
     assert.equal(await page.evaluate(() => window.__commands.some(x => x.endsWith('/fullscreen-exit'))),false);
-    await page.getByRole('button', { name: '收起工具', exact: true }).click();
+    await page.getByRole('button', { name: '隐藏工具', exact: true }).click();
     await page.evaluate(() => document.activeElement?.blur()); await page.keyboard.press('Escape');
     assert.equal(await page.evaluate(() => document.documentElement.classList.contains('room-zen')), false);
     assert.equal(await page.evaluate(() => window.__commands.some(x => x.endsWith('/fullscreen-exit'))), false);

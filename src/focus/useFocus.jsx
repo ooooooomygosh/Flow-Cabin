@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { recordEnd } from './session-log.mjs';
 import * as model from './focus-model.mjs';
 import { playChime } from '../lib/chime.mjs';
 
@@ -56,6 +57,7 @@ export function FocusProvider({ userId, children }) {
     if (!resultCommit.applied) return false;
     setNow(time);
     if (next.timer.phase === 'focus' && (previous.timer.phase !== 'focus' || previous.timer.startedAt !== next.timer.startedAt)) window.dispatchEvent(new CustomEvent('album-focus-start', { detail: { phase: 'focus', autoSound: next.settings.autoSound } }));
+    try { recordEnd(previous, next, time); } catch {}
     if (result?.event) announce(result.event);
     return resultCommit.persisted;
   };
@@ -71,7 +73,8 @@ export function FocusProvider({ userId, children }) {
     const advance = () => {
       const time = Date.now(); setNow(time);
       const result = model.tick(current.current, time);
-      if (result.event && commit(result.state, { volatile: true }).applied) announce(result.event);
+      const before = current.current;
+      if (result.event && commit(result.state, { volatile: true }).applied) { try { recordEnd(before, result.state, time); } catch {} announce(result.event); }
     };
     let timer = 0;
     const loop = () => { advance(); clearTimeout(timer); timer = setTimeout(loop, nextSecondDelay(current.current.timer.endsAt, Date.now())); };

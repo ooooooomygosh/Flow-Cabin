@@ -21,11 +21,12 @@ export function fitScale(box, w, h, dpr = 1, max = 64) {
 // single wall-clock-aligned setTimeout to the next visible change (minute,
 // second or progress step), stops while the window is hidden or the room is
 // covered, and only uses the shared frame clock for the 250 ms of a flip.
-export default function FocusFace({ face: faceId, look = 'pixel', focus = null, show = 'auto', seconds = false, variant = 'dock', still = false, className = '', maxScale = 64, caption = false }) {
+export default function FocusFace({ face: faceId, look = 'pixel', focus = null, show = 'auto', seconds = false, variant = 'dock', still = false, className = '', maxScale = 64, caption = false, music = null, children = null }) {
   const box = useRef(null), canvas = useRef(null), painted = useRef({ key: '', chars: '' }), anim = useRef(null);
   const [now, setNow] = useState(() => Date.now()), [scale, setScale] = useState(0);
   const face = getFace(faceId), pal = facePalette(look);
-  const model = still ? previewModel(face.id) : faceModel({ now, focus, show, seconds });
+  const base = still ? previewModel(face.id) : faceModel({ now, focus, show, seconds });
+  const model = music ? { ...base, music } : base;
   const { w, h } = face.size(model);
   const focusKey = focus ? [focus.phase, focus.paused, focus.endsAt, focus.remaining, focus.duration, focus.hideSeconds, focus.focusMin].join('|') : '';
   // Wake exactly when something drawn changes.
@@ -54,7 +55,7 @@ export default function FocusFace({ face: faceId, look = 'pixel', focus = null, 
   }, [w, h, maxScale]);
   useEffect(() => () => anim.current?.(), []);
   // Paint when what the face shows changes; flip the changed cards.
-  const key = `${face.id}|${look}|${w}x${h}|${modelKey(model, face.steps)}`;
+  const key = `${face.id}|${look}|${w}x${h}|${modelKey(model, face.steps)}|${music ? (music.playing ? 'm1' : 'm0') : ''}`;
   useLayoutEffect(() => {
     const el = canvas.current, ctx = el?.getContext?.('2d'); if (!ctx) return;
     const chars = model.groups.join('') + model.small, prev = painted.current;
@@ -75,7 +76,7 @@ export default function FocusFace({ face: faceId, look = 'pixel', focus = null, 
   });
   const style = scale ? { width: `${w * scale}px`, height: `${h * scale}px` } : { width: `${w}px`, height: `${h}px`, visibility: 'hidden' };
   return <div className={`focus-face is-${variant} ${className}`} data-face={face.id}>
-    <div ref={box} className="focus-face-fit"><canvas ref={canvas} className="pixel-clock focus-face-canvas" width={w} height={h} style={style} role="img" aria-label={model.label}/></div>
+    <div ref={box} className="focus-face-fit">{children ? <span className="focus-face-art"><canvas ref={canvas} className="pixel-clock focus-face-canvas" width={w} height={h} style={style} role="img" aria-label={model.label}/>{scale ? children : null}</span> : <canvas ref={canvas} className="pixel-clock focus-face-canvas" width={w} height={h} style={style} role="img" aria-label={model.label}/>}</div>
     {caption && <p className="focus-face-caption">{model.caption}</p>}
   </div>;
 }

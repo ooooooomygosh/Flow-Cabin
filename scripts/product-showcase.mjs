@@ -83,7 +83,7 @@ try {
   for (const name of ['奶糖', '蛋挞', '棉花', '可可', '枫糖']) await fits(page.locator('.pet-choice strong', { hasText: name }));
   await fits(page.getByRole('button', { name: '关闭设置', exact: true })); check('six-scene-thumbnails-and-all-partner-names-visible');
   await shot('personalization', true); await closeSettings(page);
-  await page.keyboard.press('z'); assert(await page.evaluate(() => document.documentElement.classList.contains('room-zen'))); await shot('immersive'); await page.keyboard.press('Escape'); check('immersive-enter-and-exit');
+  await page.keyboard.press('h'); assert(await page.evaluate(() => document.documentElement.classList.contains('room-zen'))); await shot('immersive'); await page.keyboard.press('Escape'); check('immersive-enter-and-exit');
   await page.setViewportSize({ width: 960, height: 600 }); await shot('cabin-960x600');
   const { ROOM_SCENES } = await import('../src/scene-catalog.mjs');
   for (const scene of ROOM_SCENES) {
@@ -116,7 +116,7 @@ try {
     await demo.getByRole('button', { name: '选择场景 林间书屋', exact: true }).click();
     await demo.getByRole('button', { name: '选择桌宠 枫糖', exact: true }).click(); await demo.waitForTimeout(1200);
     await closeSettings(demo); await demo.waitForTimeout(1700);
-    await demo.keyboard.press('z'); await demo.waitForTimeout(2000);
+    await demo.keyboard.press('h'); await demo.waitForTimeout(2000);
     const video = demo.video(); await tour.close();
     await promisify(execFile)('ffmpeg', ['-y', '-i', await video.path(), '-an', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '25', '-movflags', '+faststart', path.join(output, 'cabin-tour.mp4')], { timeout: 60000 });
     report.video = 'cabin-tour.mp4';

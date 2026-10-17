@@ -51,7 +51,7 @@ let app, site, host;
   check('quick-notes-persist-as-plain-text-and-clear-needs-confirmation');
   await site.getByRole('tab', { name: '番茄钟' }).click();
   await site.getByRole('button', { name: '计时设置' }).click(); await site.getByLabel('专注（分）').fill('2');
-  await site.getByRole('button', { name: '开始专注' }).click();
+  await site.getByRole('button', { name: '开始专注' }).click(); await site.locator('.focus-display').waitFor(); await site.keyboard.press('Escape'); await site.locator('.focus-display').waitFor({ state: 'detached' }); // 开始专注 enters 沉浸
   await site.waitForFunction(() => document.querySelector('.focus-badge')?.textContent.includes('02:00') || document.querySelector('.focus-badge')?.textContent.includes('01:5'));
   await site.locator('.room-cat .pixel-cat[data-pose="focus"]').waitFor(); check('focus-starts-and-cat-keeps-company');
   await site.screenshot({ path: path.join(output, 'focus-running.png') });
@@ -73,7 +73,7 @@ let app, site, host;
   const snapshot = await site.evaluate(() => window.albumCompanionSnapshot());
   assert.equal(snapshot.focus.fish, 1); assert.ok(snapshot.room.items.length > 0); assert.equal(JSON.stringify(snapshot).includes('desktop-qa-invalid-token'), false); check('companion-snapshot-has-no-session');
 
-  await site.locator('.focus-dock-close').click(); await site.keyboard.press('z');
+  await site.locator('.focus-dock-close').click(); await site.keyboard.press('h');
   assert.equal(await site.evaluate(() => document.documentElement.classList.contains('room-zen')), true);
   assert.equal(await site.locator('.app .topbar').isVisible(), false);
   assert.equal(await site.locator('.focus-badge').isVisible(), true); assert.equal(await site.getByRole('button', { name: /退出沉浸/ }).isVisible(), true); assert.equal(await site.locator('.app-titlebar').isVisible(), false);
