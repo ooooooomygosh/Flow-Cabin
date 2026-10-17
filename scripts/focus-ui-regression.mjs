@@ -96,9 +96,9 @@ try {
     await page.evaluate(({key})=>{
       const day=86400000,start=new Date();start.setHours(0,0,0,0);const base=start.getTime();
       const tasks=[{id:'t-ch3',text:'写第三章',done:true,doneAt:base-3*day+18*3600e3},{id:'t-rev',text:'复习线代',done:false},{id:'t-mail',text:'回邮件',done:true,doneAt:base-9*day+11*3600e3}];
-      const albums=[{id:'a1',title:'夜航星',artist:'林间'},{id:'a2',title:'晨光练习曲',artist:'小屋乐队'},{id:'a3',title:'雨天唱片',artist:'Lo-fi Cat'}];
+      const albums=[{id:'a1',title:'夜航星',artist:'林间'},{id:'a2',title:'晨光练习曲',artist:'小屋乐队'},{id:'a3',title:'雨天唱片',artist:'Lo-fi Cat'}],covers={a1:'/missing-cover.png',a3:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAIAAABLbSncAAAAH0lEQVR4nGOw0ZADohMVNkCEzGbAKYEpBGHjlqCDHQD+cD/BDLcnygAAAABJRU5ErkJggg=='};
       const sessions=[],log=[];
-      for(let d=1;d<200;d++){ if(d%9===4||(d>60&&d%3===0)) continue; const n=1+(d*7)%3; for(let i=0;i<n;i++){ const h=[9,14,21][(d+i)%3],s=base-d*day+h*3600e3+i*40*60e3,len=25+((d+i)%3)*12; const taskId=['t-ch3','t-rev','','t-mail'][(d+i)%4]; sessions.push({start:s,end:s+len*60e3,taskId,completed:(d+i)%5!==0}); if(d<21) log.push({start:s,end:s+len*60e3,durationMs:len*60e3,completed:(d+i)%5!==0,taskId,album:albums[(d+i)%3]}); } }
+      for(let d=1;d<200;d++){ if(d%9===4||(d>60&&d%3===0)) continue; const n=1+(d*7)%3; for(let i=0;i<n;i++){ const h=[9,14,21][(d+i)%3],s=base-d*day+h*3600e3+i*40*60e3,len=25+((d+i)%3)*12; const taskId=['t-ch3','t-rev','','t-mail'][(d+i)%4]; sessions.push({start:s,end:s+len*60e3,taskId,completed:(d+i)%5!==0}); if(d<21) log.push({start:s,end:s+len*60e3,durationMs:len*60e3,completed:(d+i)%5!==0,taskId,album:albums[(d+i)%3],cover:covers[albums[(d+i)%3].id]}); } }
       sessions.push({start:base+9*3600e3,end:base+9*3600e3+25*60e3,taskId:'t-ch3',completed:true});
       const old=JSON.parse(localStorage.getItem(key)||'{}');localStorage.setItem(key,JSON.stringify({...old,tasks,sessions:sessions.sort((a,b)=>a.start-b.start),settings:{...old.settings,dailyGoal:90}}));
       localStorage.setItem('flow-cabin-focus-sessions-v1',JSON.stringify(log));
@@ -122,7 +122,7 @@ try {
     await page.keyboard.press('l');await journal.waitFor();await page.getByRole('button',{name:'返回小屋'}).click();await journal.waitFor({state:'hidden'});
     await page.evaluate(()=>window.dispatchEvent(new CustomEvent('cabin:open-journal',{detail:{tab:'weekly'}})));await journal.waitFor();
     assert.equal(await journal.getByRole('tab',{name:'周报'}).getAttribute('aria-selected'),'true');assert.match(await journal.locator('.fs-weekpick strong').innerText(),/上周/);
-    assert.match(await journal.locator('.fs-facts').innerText(),/《/,'most played album comes from the session log');
+    assert.match(await journal.locator('.fs-facts').innerText(),/《/,'most played album comes from the session log');const cover=journal.locator('.fs-card-cover');await cover.waitFor();assert.equal(await cover.evaluate(img=>img.complete&&img.naturalWidth===8&&getComputedStyle(img).imageRendering),'pixelated','cover thumbnail renders pixelated');
     await page.context().grantPermissions(['clipboard-read','clipboard-write'],{origin});await journal.getByRole('button',{name:'复制文字'}).click();
     assert.match(await page.evaluate(()=>navigator.clipboard.readText()),/^## 心流小屋周报 · /);
     const [download]=await Promise.all([page.waitForEvent('download'),journal.getByRole('button',{name:'导出图片'}).click()]);assert.match(download.suggestedFilename(),/^心流小屋周报-.*\.png$/);await download.saveAs(path.join(output,'weekly-card-export.png'));

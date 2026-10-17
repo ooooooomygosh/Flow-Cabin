@@ -85,7 +85,7 @@ Other Electron windows (the desktop-mode mini turntable) do not dispatch this th
 | `album-quick-search` | → app | `{ query }` opens 添加到唱片架 › 曲库搜索 with that query. |
 | `album-music-account` / `album-music-settings` | desktop → page | Sign-in or source settings changed. The player re-resolves the current track. |
 
-## `cabin:focus-session` *(assumed schema — to reconcile with the focus-entry PR)*
+## `cabin:focus-session` *(schema agreed with the focus-entry PR)*
 
 Dispatched on `window` when a focus session ends; the same record is appended to `localStorage['flow-cabin-focus-sessions-v1']` (a JSON array, or `{ version, sessions: [] }`). The stats adapter `src/focus/stats/session-source.mjs` reads both, plus the pomodoro state's existing `sessions` (`album-circle-focus-v1:<user>` → `{ start, end, taskId, completed }`) as a fallback, and merges duplicates (start and end within a minute; the richer record wins).
 
@@ -98,6 +98,7 @@ Dispatched on `window` when a focus session ends; the same record is appended to
 | `taskId` | `string` | Todo id, `''` for 自由专注. `taskText` (optional) keeps the name if the todo is later deleted. |
 | `album` | `{ id?, title, artist? } \| string` | What was on the deck. Falls back to `track.album`. |
 | `track` | `{ title, artist?, album? }?` | Optional. |
+| `cover` | `string?` | Album cover: `data:image/(png\|jpeg\|gif\|webp);base64,…` (≤ 400 KB), an `http(s)` URL or a same-site path. Also read from `album.cover`. Other values are dropped. The weekly report shows the most-played album's cover (32 px, pixelated) and falls back to the name only. PNG export draws only `data:` or same-origin covers (others would taint the canvas) and uses a pixel-record placeholder otherwise. |
 
 ## `cabin:open-journal`
 

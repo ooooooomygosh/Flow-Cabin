@@ -118,3 +118,23 @@ test('journal art slots default to the token baseline', async () => {
   assert.deepEqual(journalArtStyle(), {}); assert.equal(hasArt('spine'), false);
   assert.deepEqual(journalArtStyle({ ...JOURNAL_ART, spine: '/journal/spine.png' }), { '--journal-spine-img': 'url("/journal/spine.png")' });
 });
+
+test('optional cover: sanitised, carried to the weekly album, CORS-safe export', async () => {
+  const { normalizeCover } = await import('./session-source.mjs');
+  const { canDrawCover } = await import('./week-card.mjs');
+  const png = 'data:image/png;base64,iVBORw0KGgo=';
+  assert.equal(normalizeCover(png), png); assert.equal(normalizeCover('javascript:alert(1)'), ''); assert.equal(normalizeCover('/covers/a.png'), '/covers/a.png'); assert.equal(normalizeCover('//evil/a.png'), ''); assert.equal(normalizeCover(5), '');
+  const r = normalizeSessionRecord({ start: at(2026, 10, 13), end: at(2026, 10, 13, 9, 30), album: { title: '夜航' }, cover: png });
+  assert.equal(r.album.cover, png);
+  assert.equal(normalizeSessionRecord({ start: at(2026, 10, 13), end: at(2026, 10, 13, 9, 30), album: { title: '夜航', cover: '/c.png' } }).album.cover, '/c.png');
+  assert.equal(normalizeSessionRecord({ start: at(2026, 10, 13), end: at(2026, 10, 13, 9, 30), album: '夜航' }).album.cover, '');
+  const week = weeklyReport([s(at(2026, 10, 13, 9), 25, { album: { title: '夜航' } }), s(at(2026, 10, 14, 9), 25, { album: { title: '夜航' }, cover: png })], [], at(2026, 10, 19, 10));
+  assert.equal(week.album.cover, png, 'first record with a cover wins');
+  assert.equal(weeklyReport([s(at(2026, 10, 13, 9), 25, { album: { title: '夜航' } })], [], at(2026, 10, 19, 10)).album.cover, '');
+  const origin = 'http://127.0.0.1:4332';
+  assert(canDrawCover(png, origin)); assert(canDrawCover('/c.png', origin)); assert(canDrawCover(origin + '/c.png', origin));
+  assert(!canDrawCover('https://y.qq.com/c.png', origin)); assert(!canDrawCover('', origin));
+  const calls = []; const ctx = new Proxy({ measureText: (t) => ({ width: String(t).length * 14 }) }, { get: (o, k) => k in o ? o[k] : (...a) => calls.push([k, ...a]), set: () => true });
+  drawWeekCard(ctx, { ...week, album: { ...week.album, cover: 'https://y.qq.com/c.png' } }); assert(!calls.some((c) => c[0] === 'drawImage'), 'cross-origin → placeholder');
+  calls.length = 0; drawWeekCard(ctx, week, undefined, { cover: {} }); assert(calls.some((c) => c[0] === 'drawImage'));
+});

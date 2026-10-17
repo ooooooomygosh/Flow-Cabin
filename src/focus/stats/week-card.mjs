@@ -18,7 +18,21 @@ function wrap(ctx, text, max) {
   return line ? [...lines, line] : lines;
 }
 
-export function drawWeekCard(ctx, r, p = CARD_PALETTE) {
+// PNG export may only draw covers that cannot taint the canvas.
+export function canDrawCover(url, origin) {
+  if (!url) return false;
+  if (/^data:image\//i.test(url)) return true;
+  try { return new URL(url, origin).origin === origin; } catch { return false; }
+}
+// 32×32 cover at 1.5× (48 px), or a pixel record placeholder.
+function drawCover(ctx, x, y, image, p) {
+  ctx.fillStyle = p.border; ctx.fillRect(x - 2, y - 2, 52, 52);
+  if (image) { ctx.imageSmoothingEnabled = false; ctx.drawImage(image, x, y, 48, 48); return; }
+  ctx.fillStyle = p.inset; ctx.fillRect(x, y, 48, 48);
+  ctx.fillStyle = p.lo; ctx.fillRect(x + 8, y + 8, 32, 32); ctx.fillStyle = p.inset; ctx.fillRect(x + 12, y + 12, 24, 24);
+  ctx.fillStyle = p.accent; ctx.fillRect(x + 20, y + 20, 8, 8);
+}
+export function drawWeekCard(ctx, r, p = CARD_PALETTE, { cover = null } = {}) {
   ctx.imageSmoothingEnabled = false; ctx.textBaseline = 'top';
   ctx.fillStyle = p.bg; ctx.fillRect(0, 0, CARD_W, CARD_H); frame(ctx, 8, 8, CARD_W - 16, CARD_H - 16, p);
   ctx.fillStyle = p.accent; ctx.font = `bold 22px ${FONT}`; ctx.fillText('心流小屋 · 周报', 32, 32);
@@ -41,12 +55,13 @@ export function drawWeekCard(ctx, r, p = CARD_PALETTE) {
     ['最好的一天', r.bestDay ? `${r.bestDay.label} · ${formatMinutes(r.bestDay.minutes)}` : '—'],
     ['最专注时段', r.bestSlot ? `${r.bestSlot.label} ${r.bestSlot.from}–${r.bestSlot.to} 点` : '—'],
     ['最长连续', `${r.longestStreak} 天`],
-    ['最常听', r.album ? `《${r.album.title}》` : '—'],
+    ['最常听', r.album ? `《${r.album.title}》${r.album.artist ? ` · ${r.album.artist}` : ''}` : '—'],
     ['主要待办', r.topTasks.length ? r.topTasks.map((t) => t.name).join('、') : '—'],
     ['完成待办', r.completed.length ? `${r.completed.length} 件：${r.completed.join('、')}` : '—']
   ];
   ctx.font = `14px ${FONT}`;
   facts.forEach(([k, v], i) => { const y = 326 + i * 30; ctx.fillStyle = p.faint; ctx.fillText(k, 32, y); ctx.fillStyle = p.ink; ctx.fillText(clip(ctx, v, CARD_W - 160), 128, y); });
+  if (r.album && (cover || r.album.cover)) drawCover(ctx, CARD_W - 84, 28, cover, p);
   // Summary
   ctx.fillStyle = p.inset; ctx.fillRect(32, 520, CARD_W - 64, 84); ctx.fillStyle = p.hi; ctx.font = `15px ${FONT}`;
   wrap(ctx, r.summary, CARD_W - 96).slice(0, 3).forEach((line, i) => ctx.fillText(line, 48, 534 + i * 22));
