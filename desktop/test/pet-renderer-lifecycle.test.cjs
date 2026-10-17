@@ -115,7 +115,7 @@ test('grooving follows the beat: two frames per beat, the head dips on each beat
   const { startPetAnimation } = await import('../../src/pet/pet-animation.mjs');
   const { grooveFrame } = await import('../../src/pet/pet-model.mjs');
   const clock = fakeClock(1000), frames = []; let beat = { bpm: 120, beatAt: 1000 };
-  const stop = startPetAnimation({ pose: 'groove', onFrame: index => frames.push([clock.now(), index]), ...clock, wallClock: clock.now, beat: () => beat });
+  const stop = startPetAnimation({ pose: 'groove', onFrame: index => frames.push([clock.now(), index]), ...clock, wallClock: clock.now, beat: () => beat, beatLead: 0 });
   clock.advance(2000);
   assert.deepEqual(frames.map(([time]) => time), [1000, 1250, 1500, 1750, 2000], 'a frame every half beat (250 ms at 120 BPM)');
   assert.deepEqual(frames.map(([, index]) => index), [1, 2, 3, 0, 1], 'frames 1 and 3 (head dip) land on the beats');
@@ -123,4 +123,8 @@ test('grooving follows the beat: two frames per beat, the head dips on each beat
   assert.deepEqual(frames.slice(5).map(([time]) => time), [2500, 3000], 'after the change, frames move every 500 ms on the new beat');
   assert.deepEqual(grooveFrame(4000, { bpm: 60, beatAt: 2000 }), { index: 1, wait: 500 });
   stop(); assert.equal(clock.jobs.size, 0);
+  // Default lead: each frame is picked one display frame (16 ms) early, so it paints on the beat.
+  const lead = fakeClock(1000), led = [];
+  const stopLead = startPetAnimation({ pose: 'groove', onFrame: index => led.push(lead.now()), ...lead, wallClock: lead.now, beat: () => ({ bpm: 120, beatAt: 1000 }) });
+  lead.advance(2000); assert.deepEqual(led, [1000, 1234, 1484, 1734, 1984]); stopLead();
 });

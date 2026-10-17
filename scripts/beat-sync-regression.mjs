@@ -72,7 +72,7 @@ async function measure(page, bpm, ms = 8000) {
   for (const [key, col] of [['png', 3], ['canvas', 4]]) {
     const changes = []; for (let i = 1; i < n; i++) if (rows[i][col] !== rows[i - 1][col]) changes.push((rows[i][0] + rows[i - 1][0]) / 2);
     const abs = changes.map((t) => Math.abs(offset(t))).sort((x, y) => x - y), intervals = changes.slice(1).map((t, i) => t - changes[i]);
-    result[key] = { changes: changes.length, mean: +(abs.reduce((s, v) => s + v, 0) / (abs.length || 1)).toFixed(1), p95: +(abs[Math.floor(abs.length * .95)] || 0).toFixed(1), max: +(abs.at(-1) || 0).toFixed(1), interval: +(intervals.reduce((s, v) => s + v, 0) / (intervals.length || 1)).toFixed(1) };
+    const signed = changes.map((t) => offset(t)); result[key] = { vsCurrentTime: +(signed.reduce((s, v) => s + v, 0) / (signed.length || 1) + latency).toFixed(1), bias: +(signed.reduce((s, v) => s + v, 0) / (signed.length || 1)).toFixed(1), changes: changes.length, mean: +(abs.reduce((s, v) => s + v, 0) / (abs.length || 1)).toFixed(1), p95: +(abs[Math.floor(abs.length * .95)] || 0).toFixed(1), max: +(abs.at(-1) || 0).toFixed(1), interval: +(intervals.reduce((s, v) => s + v, 0) / (intervals.length || 1)).toFixed(1) };
   }
   return result;
 }
@@ -80,9 +80,18 @@ const gate = (name, m, bpm) => {
   for (const key of ['png', 'canvas']) {
     const v = m[key]; assert.ok(v.changes >= 8, `${name} ${key}: frames change (${v.changes})`);
     assert.ok(Math.abs(v.interval - 30000 / bpm) < 30000 / bpm * .08, `${name} ${key}: one frame per half beat (${v.interval} ms)`);
-    assert.ok(v.mean < 20, `${name} ${key}: mean ${v.mean} ms`); assert.ok(v.p95 < 50, `${name} ${key}: p95 ${v.p95} ms`);
+    assert.ok(v.mean < 20, `${name} ${key}: mean ${v.mean} ms`); assert.ok(Math.abs(v.bias) < 20, `${name} ${key}: frames sit ${v.bias} ms off the heard click (click media time + output latency ${m.latency} ms)`); assert.ok(v.p95 < 50, `${name} ${key}: p95 ${v.p95} ms`);
   }
 };
+// After a (re-)lock, wait until the clock's anchor stops moving (phase steady to < 3 ms for 1.5 s), so the
+// gate measures the settled lock, not the slew-in right after it. Limits are unchanged.
+const settled = (page, ms = 8000) => page.waitForFunction(() => {
+  const w = window.__beatSettle ||= { last: null, steady: 0, at: 0 }, now = performance.now(); if (now - w.at < 250) return false; w.at = now;
+  return import('/src/player/beat-clock.mjs').then(({ currentBeat }) => { const b = currentBeat(), L = 60000 / b.bpm;
+    if (!b.detected || !b.beatAt) { w.steady = 0; w.last = null; return false; }
+    let d = w.last == null ? Infinity : (((b.beatAt - w.last) % L) + L) % L; if (d > L / 2) d = L - d; w.last = b.beatAt;
+    w.steady = d < 3 ? w.steady + 1 : 0; if (w.steady >= 6) { delete window.__beatSettle; return true; } return false; });
+}, null, { timeout: ms, polling: 100 });
 const lockedWithin = (page, ms) => page.waitForFunction(() => document.querySelector('button.room-cat')?.dataset.music === 'beat', null, { timeout: ms });
 
 try {
@@ -106,14 +115,14 @@ try {
     // 3.25 s = 6.5 beats: the beats now fall half a beat away from where they were.
     const t0 = Date.now(); await page.locator('audio[data-deck="active"]').evaluate((a) => { a.currentTime += 3.25; });
     await page.waitForFunction(() => document.querySelector('button.room-cat').dataset.music === 'free', null, { timeout: 2000 });
-    await lockedWithin(page, 7000); report.seekRelockMs = Date.now() - t0; await page.waitForTimeout(3500);
+    await lockedWithin(page, 7000); report.seekRelockMs = Date.now() - t0; await page.waitForTimeout(1500); await settled(page);
     const m = await measure(page, 120, 6000); report.seek = m; console.log('seek', report.seekRelockMs, JSON.stringify(m)); gate('after seek', m, 120);
   });
   await run('track-skip-resets-and-relocks', async (page) => {
     await play(page, ['click120', 'click90']); await lockedWithin(page, 9000);
     const t0 = Date.now(); await page.evaluate(() => window.dispatchEvent(new CustomEvent('cabin:player-command', { detail: { action: 'next' } })));
     await page.waitForFunction(() => document.querySelector('button.room-cat').dataset.music !== 'beat', null, { timeout: 3000 });
-    await lockedWithin(page, 9000); report.skipRelockMs = Date.now() - t0; await page.waitForTimeout(3500);
+    await lockedWithin(page, 9000); report.skipRelockMs = Date.now() - t0; await page.waitForTimeout(1500); await settled(page);
     const bpm = await page.evaluate(async () => (await import('/src/player/beat-clock.mjs')).currentBeat().bpm); assert.ok(Math.abs(bpm - 90) < 1, `new track tempo ${bpm}`);
     const m = await measure(page, 90, 6000); report.skip = m; console.log('skip', report.skipRelockMs, JSON.stringify(m)); gate('after skip', m, 90);
   });
