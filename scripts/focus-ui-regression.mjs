@@ -121,8 +121,8 @@ try {
     await page.keyboard.press('Escape');await journal.waitFor({state:'hidden'});
     await page.keyboard.press('l');await journal.waitFor();await page.getByRole('button',{name:'返回小屋'}).click();await journal.waitFor({state:'hidden'});
     await page.evaluate(()=>window.dispatchEvent(new CustomEvent('cabin:open-journal',{detail:{tab:'weekly'}})));await journal.waitFor();
-    assert.equal(await journal.getByRole('tab',{name:'周报'}).getAttribute('aria-selected'),'true');assert.match(await journal.locator('.fs-weekpick strong').innerText(),/上周/);
-    assert.match(await journal.locator('.fs-facts').innerText(),/《/,'most played album comes from the session log');const cover=journal.locator('.fs-card-cover');await cover.waitFor();assert.equal(await cover.evaluate(img=>img.complete&&img.naturalWidth===8&&getComputedStyle(img).imageRendering),'pixelated','cover thumbnail renders pixelated');
+    assert.equal(await journal.getByRole('tab',{name:'周报'}).getAttribute('aria-selected'),'true');assert.match(await journal.locator('.fs-weekpick strong').innerText(),/本周/,'周报 opens on the current week when it has data');assert.equal(await journal.locator('.fs-stamp').count(),1,'stamp rendered once');
+    assert.match(await journal.locator('.fs-polaroid').innerText(),/《/,'most played album comes from the session log');const cover=journal.locator('.fs-card-cover');await cover.waitFor();assert.equal(await cover.evaluate(img=>img.complete&&img.naturalWidth===8&&getComputedStyle(img).imageRendering),'pixelated','cover thumbnail renders pixelated');
     await page.context().grantPermissions(['clipboard-read','clipboard-write'],{origin});await journal.getByRole('button',{name:'复制文字'}).click();
     assert.match(await page.evaluate(()=>navigator.clipboard.readText()),/^## 心流小屋周报 · /);
     const [download]=await Promise.all([page.waitForEvent('download'),journal.getByRole('button',{name:'导出图片'}).click()]);assert.match(download.suggestedFilename(),/^心流小屋周报-.*\.png$/);await download.saveAs(path.join(output,'weekly-card-export.png'));

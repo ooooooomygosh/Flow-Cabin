@@ -79,6 +79,21 @@ The journal overlay ships with a tokens-only baseline. All of its visuals are va
 | weekly card | `--journal-card`, `--journal-card-paper-img` (slot `cardPaper`, defaults to `paper`), `--journal-card-img` (slot `card`), `--journal-card-tape` / `--journal-card-tape-img` (slot `cardTape`), `--journal-card-doodle` (slot `doodle`, 48×48) | taped paper card; doodle hidden until set |
 | page turn | `--journal-turn` | `steps(4)` scaleX turn; off under reduced motion |
 
+### Notebook sprites (cat, stickers, stacked bars)
+
+Final art by beauty lives in `public/cat/` (#55, preview `docs/media/cat-mood-sheet.png`); the journal reads it through `JOURNAL_SPRITES` in `src/focus/stats/journal-art.mjs`. All are **transparent PNGs drawn at 1×** and shown at an integer scale with `image-rendering: pixelated` (nearest-neighbour). Replace a file by name to update it.
+
+| slot | file | size (1×) | where it shows |
+| --- | --- | --- | --- |
+| cat poses | `cat-sleep-books`, `cat-wait`, `cat-desk`, `cat-rub`, `cat-droopy` | 64×64 each | 周报 card (2×, 128 px; 96 px under 1100 px wide), empty states, 待办 note, mood doodle (1×). Pose comes from `catPose()` in `journal-layout.mjs`: ≥300 min → sleep-books, ≥60 → desk, mood happy → rub, mood low and a quiet week → droopy, else wait. |
+| eating | `cat-eat.png` | 64×64 per frame, 6–8 frames in one horizontal strip, 120 ms/frame | Reserved for the feeding animation (pet logic). |
+| stickers | `sticker-best-day`, `sticker-streak`, `sticker-fed` | 32×32 | best-day bar (once per chart), 概览 streak (≥2 days), mood doodle when fed this week. |
+| bar units | `bar-book` + `bar-book-cap`, `bar-record` + `bar-record-cap` | 16×6 unit + 16×4 cap | Bars are stacks of units, 2× (32×12 per unit, 32×8 cap), max 10 units per chart (`barUnits()`), mini card 1× and 5 units. 周报 uses books, 概览 uses records. |
+
+The weekly stamp (`card` slot) is a **single element** `.fs-stamp`; it must never be a background of `.fs-card` (backgrounds tile by default, which is how six stamps ended up over the chart). `focus-stats.test.mjs` checks this.
+
+The PNG export (`week-card.mjs`, 600×840) mirrors the 周报 spread: tape and stamp once, cat pose ≤128, stacked book bars with minute labels and the best-day sticker, 小屋来信, a polaroid of the most-played cover and the mood line (only when mood data exists).
+
 ### Weekly card PNG export
 
 `week-card.mjs` draws the exported card on a canvas with `imageSmoothingEnabled = false` and integer scales only. It reads the same slots (`CARD_EXPORT_SLOTS`, same-origin URLs only so the canvas stays exportable):
@@ -88,6 +103,6 @@ The journal overlay ships with a tokens-only baseline. All of its visuals are va
 | `paper` / `cardPaper` | `paper.png` / `card-paper.png` | seamless tile, repeated 1:1 over the card; `cardPaper` overrides, otherwise the page `paper` is used | any tile size, already 4× |
 | `card` | `card.png` | **transparent** stamp + postmark corner, drawn **once** top-right, never tiled | largest integer scale ≤ 96×96 px |
 | `cardTape` (optional) | `card-tape.png` | once, top centre | largest integer scale ≤ 128×32 px |
-| `doodle` | `doodle.png` | once, right end of the summary box | largest integer scale ≤ 64×64 px |
+| `doodle` | `doodle.png` | stands in for the cat pose when the pose sprite fails to load | largest integer scale ≤ 128×128 px |
 
 With a paper tile the export switches to `CARD_PAPER_PALETTE` (dark ink on paper); with every slot empty it keeps the dark `CARD_PALETTE` baseline (a mirror of the `--px-*` tokens).

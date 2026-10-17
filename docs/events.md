@@ -113,3 +113,16 @@ window.dispatchEvent(new CustomEvent('cabin:open-journal', { detail: { tab: 'wee
 | `tab` | `'overview' \| 'tasks' \| 'weekly'`? | Page to open; unknown or missing → `overview`. |
 
 The overlay is a native `<dialog>` (top layer), so room keys pause while it is open; Esc or 「返回小屋」 closes it.
+
+## `cabin:cat-fed` and `flow-cabin-cat-mood-v1` *(owned by the pet mood/feeding logic)*
+
+The 小屋日记 only **reads** these (`src/focus/stats/cat-mood-source.mjs`), defensively: a missing key, bad JSON or unknown shape hides the cat line in 小屋来信, the mood doodle and the export line. Nothing is ever shown as a penalty.
+
+`localStorage['flow-cabin-cat-mood-v1']` — JSON object. Fields the journal understands:
+
+| field | type | meaning |
+| --- | --- | --- |
+| `mood` | `number` (0–100, or 0–1) \| `string` | ≥70 → 心情很好, ≥35 → 心情不错, else 有点无精打采 (the floor). Strings: `happy`/`开心`, `low`/`蔫`/`无精打采`, anything else → ok. Aliases `value`, `level`. |
+| `feeds` | `Array<number \| { at }>` | Feed times (epoch ms). Aliases `fedLog`, `feedLog`, `history`; items may use `at`/`time`/`t`. The journal counts the ones inside the shown week. |
+
+`cabin:cat-fed` — dispatched on `window` after a feed (detail optional, e.g. `{ at, mood }`). The journal re-reads the key when it fires (and on cross-window `storage` events for that key), so the store must be written **before** the event.

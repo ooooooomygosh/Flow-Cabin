@@ -74,7 +74,7 @@ function JournalBook({ state, now, view, setView, close }) {
   const sessions = useFocusSessions(state.sessions), tasks = state.tasks, reduced = useReducedMotion();
   const [range, setRange] = useState(7), [weekOffset, setWeekOffset] = useState(() => defaultWeekOffset(sessions, tasks, now)), [note, setNote] = useState('');
   const today = dayKey(now), canvas = useRef(null);
-  const recent = useMemo(() => recentSummary(sessions, now, 6), [sessions, today]);
+  const recent = useMemo(() => recentSummary(sessions, now, 4), [sessions, today]);
   const daily = useMemo(() => dailySeries(sessions, now, range), [sessions, today, range]);
   const year = useMemo(() => yearHeatmap(sessions, now), [sessions, today]);
   const taskRows = useMemo(() => byTask(sessions, tasks), [sessions, tasks]);
@@ -152,6 +152,7 @@ function JournalBook({ state, now, view, setView, close }) {
         <span className="fs-rank-name"><b className="fs-rank-no">{i + 1}</b>{r.name}{r.done ? <small> · 已完成</small> : null}</span><span className="fs-rank-num">{formatMinutes(r.minutes)} · {r.pomodoros} 个番茄</span>
         <span className="fs-meter" aria-hidden="true"><i style={{ width: `${r.minutes / taskPeak * 100}%` }}/></span></li>)}</ol>
         : <Empty pose="cat-wait" title="还没有按待办记下的专注" action={<button type="button" className="fs-cta" onClick={close}>回小屋写一条待办</button>}>在「待办」里选一件事再开番茄，这一页就会告诉你时间都花在了哪里。</Empty>}
+      {taskRows.some((r) => !r.free) && <figure className="fs-task-note"><Sprite name="cat-desk" scale={2}/><figcaption className="fs-hand">{(() => { const top = taskRows.find((r) => !r.free); const all = taskRows.reduce((n, r) => n + r.minutes, 0); return <>你最常陪伴的是「{top.name}」，<br/>占了全部专注的 {Math.round(top.minutes / Math.max(1, all) * 100)}%。<br/>{openTasks ? `还有 ${openTasks} 件在路上，慢慢来。` : '手头的事都做完了，休息一下吧。'}</>; })()}</figcaption></figure>}
     </div>{spine}<div className="fs-page is-turning fs-tasks-right">
       <h3 className="fs-title">做完的事 {doneTasks.length ? <small>· {tasks.filter((t) => t.done).length} 件{openTasks ? ` · 还有 ${openTasks} 件在路上` : ''}</small> : null}</h3>
       {doneTasks.length ? <ul className="fs-notes">{doneTasks.map((t, i) => <li key={t.id} className="fs-note" style={{ '--tilt': `${[-2, 1.5, -1, 2, 0, -1.5][i % 6]}deg` }}>

@@ -93,7 +93,7 @@ export function drawWeekCard(ctx, r, palette, { cover = null, art = {}, letter =
     ctx.fillStyle = best ? p.accent : p.faint; ctx.font = `${best ? 'bold ' : ''}12px ${FONT}`;
     if (d.minutes) { const t = `${d.minutes}′`; ctx.fillText(t, cx - Math.round(ctx.measureText(t).width / 2), top - 26); }
     ctx.fillStyle = p.faint; ctx.font = `12px ${FONT}`; ctx.fillText(d.label, cx - 12, base + 8);
-    if (best && n) sprite(ctx, art.bestSticker, cx + 4, Math.max(260, top - 60), 32, 32);
+    if (best && n) sprite(ctx, art.bestSticker, cx + 4, Math.max(260, top - 64), 32, 32);
   });
   // Divider + 小屋来信
   ctx.fillStyle = p.lo; for (let x = 36; x < CARD_W - 36; x += 8) ctx.fillRect(x, 476, 4, 2);

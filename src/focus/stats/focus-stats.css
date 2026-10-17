@@ -92,8 +92,8 @@
   .fs-bar-fill.fs-stack { position: relative; display: block; width: 32px; max-width: 100%; height: calc(var(--units) * 12px); margin-top: 8px; background: var(--fs-unit) center bottom / 32px 12px repeat-y; box-shadow: none; image-rendering: pixelated; transition: height .24s steps(6); }
   .fs-bar-fill.fs-stack[data-units='0'] { height: 2px; margin-top: 0; background: var(--journal-rule, var(--px-heat-0)); }
   .fs-stack-cap { position: absolute; left: 0; right: 0; top: -8px; height: 8px; background: var(--fs-cap) center / 32px 8px no-repeat; image-rendering: pixelated; }
-  .fs-stack.is-books { --fs-unit: url('/journal/bar-books.png'); --fs-cap: url('/journal/bar-books-cap.png'); }
-  .fs-stack.is-records { --fs-unit: url('/journal/bar-records.png'); --fs-cap: url('/journal/bar-records-cap.png'); }
+  .fs-stack.is-books { --fs-unit: url('/cat/bar-book.png'); --fs-cap: url('/cat/bar-book-cap.png'); }
+  .fs-stack.is-records { --fs-unit: url('/cat/bar-record.png'); --fs-cap: url('/cat/bar-record-cap.png'); }
   .fs-bars:not(.is-mini) .fs-bars-row { min-height: calc(10 * 12px + 8px + 32px); }
   .fs-bars.is-mini .fs-bars-row { height: auto; min-height: calc(5 * 12px + 8px + 16px); }
   .fs-bars.is-mini .fs-bar-fill.fs-stack { width: 16px; height: calc(var(--units) * 6px); background-size: 16px 6px; margin-top: 4px; }
@@ -101,7 +101,7 @@
   .fs-bars.is-dense .fs-bar-fill.fs-stack { width: 100%; max-width: 16px; background-size: 16px 12px; }
   .fs-bars.is-dense .fs-stack-cap { background-size: 16px 8px; }
   .fs-bar.is-best .fs-bar-value, .fs-bar.is-today .fs-bar-value { font-weight: 700; color: var(--journal-ink-hi, var(--px-accent)); }
-  .fs-bar-sticker { position: absolute; top: -26px; left: 50%; margin-left: -16px; transform: rotate(-8deg); }
+  .fs-bar-sticker { position: absolute; top: -18px; left: 50%; margin-left: 16px; transform: rotate(-8deg); }
   .fs-bar.is-best { padding-top: 0; }
   /* Page furniture */
   .fs-book .fs-page { gap: 12px; padding: 16px 28px 20px; }
@@ -187,4 +187,13 @@
 @layer features {
   @media (prefers-reduced-motion: reduce) { .fs-bar-fill.fs-stack { transition: none; } }
   html[data-desktop-reduce-motion=true] .fs-bar-fill.fs-stack { transition: none; }
+}
+@layer features {
+  .fs-task-note { margin: auto 0 0; display: flex; align-items: center; gap: 16px; padding: 12px 16px; border: 2px dashed var(--journal-rule, var(--px-border)); }
+  .fs-task-note img { width: 128px; height: 128px; }
+  .fs-ov-right { gap: 8px; }
+  .fs-ov-right .fs-slots li { padding: 3px 8px; }
+  .fs-ov-right .fs-sessions li { padding: 2px 8px; }
+  .fs-ov-left .fs-year { margin-top: auto; }
+  @media (max-height: 760px) { .fs-task-note img { width: 96px; height: 96px; } }
 }
