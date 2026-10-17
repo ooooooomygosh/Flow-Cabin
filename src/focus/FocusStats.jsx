@@ -1,3 +1,4 @@
+import { readSkySettings, writeSkySettings } from '../sky-clock.mjs';
 import React, { useMemo } from 'react';
 import { useFocus } from './useFocus';
 import { focusStats, levelInfo, UNLOCKS, unlockedIds, minutesByDay, dayKey } from './focus-model.mjs';
@@ -47,7 +48,7 @@ export default function FocusStats() {
         {cat && <fieldset><legend>小猫毛色 · 夜景柔光</legend>{[['orange', '橘猫'], ['black', '黑猫']].map(([skin, name]) => <button type="button" key={skin} aria-pressed={focus.state.settings.catSkin === skin} onClick={() => focus.settings({ catSkin: skin })}>{name}</button>)}</fieldset>}
         {['accessory', 'weather'].map((kind) => <fieldset key={kind}><legend>{kind === 'accessory' ? (cat ? '小猫配饰' : '伙伴配饰') : '窗外天气'}</legend>
           {kind === 'accessory' && <button type="button" aria-pressed={!rewards.equipped.accessory} onClick={() => focus.equip('accessory', '')}>不戴</button>}
-          {UNLOCKS.filter((item) => item.kind === kind).map((item) => <button type="button" key={item.id} disabled={!unlocked.has(item.id)} aria-pressed={rewards.equipped[kind] === item.id} title={unlocked.has(item.id) ? item.name : `Lv.${item.level} 解锁`} onClick={() => focus.equip(kind, item.id)}>{!unlocked.has(item.id) && <span className="focus-lock" aria-hidden="true"/>}{item.name}{!unlocked.has(item.id) && <small> · Lv.{item.level}</small>}</button>)}
+          {UNLOCKS.filter((item) => item.kind === kind).map((item) => <button type="button" key={item.id} disabled={!unlocked.has(item.id)} aria-pressed={rewards.equipped[kind] === item.id} title={unlocked.has(item.id) ? item.name : `Lv.${item.level} 解锁`} onClick={() => { focus.equip(kind, item.id); if (kind === 'weather' && readSkySettings().realWeather) writeSkySettings({ realWeather: false }); }}>{!unlocked.has(item.id) && <span className="focus-lock" aria-hidden="true"/>}{item.name}{!unlocked.has(item.id) && <small> · Lv.{item.level}</small>}</button>)}
         </fieldset>)}
       </div>
     </section>

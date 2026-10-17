@@ -15,7 +15,7 @@ export default function SkySettings() {
   const change = (patch) => setSettings(writeSkySettings(patch));
   const real = snapshot?.real ? effectiveWeather(null, snapshot.real) : null;
   const sky = snapshot ? `${city ? city.name : '固定作息'} · ${BUCKETS[snapshot.state.bucket] || ''}` : '';
-  const weatherHint = !settings.realWeather ? '关着时窗外是你装上的窗景；打开后按所选城市的实时天气下雨、下雪或起雾，每 30 分钟更新一次。'
+  const weatherHint = !settings.realWeather ? '关着时窗外是你装上的窗景；打开后按所选城市的实时天气下雨、下雪或起雾，每 30 分钟更新一次。之后再手动换窗景，会自动关掉这里。'
     : !city ? '固定作息没有地点，先选一座城市。'
     : real?.source === 'real' ? `${city.name}现在${KINDS[real.kind] || '晴'}（${clockText(snapshot.real.fetchedAt)} 更新）。`
     : '正在问天气…连不上时窗外照旧是你装上的窗景。';
