@@ -8,8 +8,8 @@
     --journal-scrim: rgba(13, 8, 5, .82);
     --journal-frame: var(--px-border);              /* cover edge colour */
     --journal-frame-img: none;                      /* slot: 9-slice cover, e.g. url(/journal/frame.png) */
-    --journal-frame-slice: 8;                       /* art px of the 9-slice corner */
-    --journal-frame-w: 12px;                        /* drawn edge width (integer multiple of the art px) */
+    --journal-frame-slice: 16;                      /* art px of the 9-slice corner */
+    --journal-frame-w: 16px;                        /* drawn edge width (integer multiple of the art px) */
     --journal-paper: var(--px-paper);               /* page fill */
     --journal-paper-img: none;                      /* slot: tiling paper texture */
     --journal-paper-ink: var(--px-paper-ink);       /* text on paper */
@@ -40,7 +40,7 @@
   .fs-spine { background: var(--journal-spine) var(--journal-spine-img) repeat-y center; }
   .fs-spine::before { content: ''; position: absolute; inset: 12px 5px; background: repeating-linear-gradient(to bottom, var(--journal-stitch) 0 4px, transparent 4px 12px); }
   .fs-spine.has-art::before { display: none; }
-  .fs-ribbons button { color: var(--journal-tab-ink); background: var(--journal-tab) var(--journal-tab-img); }
+  .fs-ribbons button { color: var(--journal-tab-ink); background: var(--journal-tab) var(--journal-tab-img) center / 100% 100% no-repeat; image-rendering: pixelated; }
   .fs-ribbons button[aria-selected='true'] { color: var(--journal-tab-active-ink); background-color: var(--journal-tab-active); }
   .fs-book .fs-bar-fill { background: repeating-linear-gradient(to bottom, var(--journal-ink) 0 6px, color-mix(in srgb, var(--journal-ink) 75%, var(--journal-paper)) 6px 8px); box-shadow: none; }
   .fs-book .fs-bar-fill.is-today { background: var(--journal-ink-hi); }

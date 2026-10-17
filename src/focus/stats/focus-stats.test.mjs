@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { normalizeSessionRecord, readSessionLog, fromLegacySessions, mergeSessions, loadSessions, subscribeSessions, SESSION_LOG_KEY, FOCUS_SESSION_EVENT } from './session-source.mjs';
@@ -113,8 +114,10 @@ test('journal events', async () => {
   assert(isJournalKey({ key: 'l' })); assert(!isJournalKey({ key: 'L', ctrlKey: true })); assert(!isJournalKey({ key: 'k' }));
 });
 
-test('journal art slots default to the token baseline', async () => {
+test('journal art slots map to CSS variables, and empty slots keep the token baseline', async () => {
   const { JOURNAL_ART, journalArtStyle, hasArt } = await import('./journal-art.mjs');
-  assert.deepEqual(journalArtStyle(), {}); assert.equal(hasArt('spine'), false);
-  assert.deepEqual(journalArtStyle({ ...JOURNAL_ART, spine: '/journal/spine.png' }), { '--journal-spine-img': 'url("/journal/spine.png")' });
+  const none = Object.fromEntries(Object.keys(JOURNAL_ART).map((slot) => [slot, null]));
+  assert.deepEqual(journalArtStyle(none), {}); assert.equal(hasArt('spine', none), false); assert.equal(hasArt('spine'), true);
+  for (const url of Object.values(JOURNAL_ART)) assert.ok(existsSync(new URL(`../../../public${url}`, import.meta.url)), url);
+  assert.deepEqual(journalArtStyle({ ...none, spine: '/journal/spine.png' }), { '--journal-spine-img': 'url("/journal/spine.png")' });
 });
