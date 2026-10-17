@@ -94,3 +94,6 @@
 /* The shelf caption under the display would sit on the bottom bar. */
 :root.room-focus-display .room-now-playing { visibility: hidden; }
 }
+.focus-display-bar .face-tabs, .focus-display-bar .face-show { display: inline-flex; flex: none; }
+.focus-display-bar .face-tabs button, .focus-display-bar .face-show button { white-space: nowrap; padding: 0 8px; }
+@media (max-width: 1100px) { .focus-display-bar .face-show { display: none; } }
