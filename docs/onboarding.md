@@ -68,9 +68,9 @@
 
 ### 桌面
 
-- 沉入桌面：`src/desktop/desktop-sink-client.mjs`（`window.cabinDesktop` 同一组函数）：`enterDesktopMode()`、`exitDesktopMode()`、`getDesktopModeStatus() → { active, busy, supported, via, reason }`、`onDesktopModeChange(cb)`。`busy` 时开关禁用；`supported=false` 时禁用并直接显示 `reason`（中文）。退出快捷键 Ctrl/⌘+Alt+D 写在设置 › 桌面 与引导完成页。
+- 沉入桌面：`src/desktop/desktop-sink-client.mjs`（`window.cabinDesktop` 同一组函数）：`enterDesktopMode()`、`exitDesktopMode()`、`getDesktopModeStatus() → { active, busy, supported, via, reason }`、`onDesktopModeChange(cb)`。`busy` 时开关禁用；`supported=false` 时禁用并直接显示 `reason`（中文）。退出快捷键 Ctrl/⌘+Alt+D 写在 设置 › 显示与桌面 与引导完成页。
 - 开机启动：`src/desktop/autostart-client.mjs`：`setAutostart(enabled) → Promise<{ supported, enabled }>`、`getAutostart()`、`onAutostartChange(cb)`。页面命令 `album-desktop://action/autostart?enabled=true|false`，主进程（`desktop/main/autostart.cjs`）调用 Electron `app.setLoginItemSettings({ openAtLogin })`，结果写到 `window.cabinAutostart` 并派发 `cabin:autostart`。只有打包后的 macOS / Windows 应用支持；其他情况返回 `supported: false`，引导里显示「不支持」。引导的「开机时打开小屋」用 `requestPermission('autostart')`。
 
 ## 5. 待办（TODO）
 
-- 设置 › 桌面 还没有「开机时打开小屋」开关；接 `getAutostart()` / `setAutostart()` 即可。
+- 暂无。设置 › 显示与桌面 已有「开机时打开小屋」开关（`SettingsHub.jsx`，仅在桌面版报告支持时显示）。

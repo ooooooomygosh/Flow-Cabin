@@ -155,11 +155,11 @@
 
 | 你的电脑 | 下载 | 怎么打开 |
 | --- | --- | --- |
-| Mac · Apple Silicon（M 系列） | [DMG · arm64](https://github.com/ooooooomygosh/album-web/releases/download/v1.11.0/FlowCabin-1.11.0-mac-arm64.dmg) | 打开 DMG，把小屋拖进「应用程序」 |
-| Mac · Intel | [DMG · x64](https://github.com/ooooooomygosh/album-web/releases/download/v1.11.0/FlowCabin-1.11.0-mac-x64.dmg) | 打开 DMG，把小屋拖进「应用程序」 |
-| Windows · x64 | [安装版](https://github.com/ooooooomygosh/album-web/releases/download/v1.11.0/FlowCabin-1.11.0-x64-setup.exe) · [便携版](https://github.com/ooooooomygosh/album-web/releases/download/v1.11.0/FlowCabin-1.11.0-x64-portable.exe) | 安装版按提示安装；便携版直接运行 |
+| Mac · Apple Silicon（M 系列） | [DMG · arm64](https://github.com/ooooooomygosh/album-web/releases/download/v1.16.0/FlowCabin-1.16.0-mac-arm64.dmg) | 打开 DMG，把小屋拖进「应用程序」 |
+| Mac · Intel | [DMG · x64](https://github.com/ooooooomygosh/album-web/releases/download/v1.16.0/FlowCabin-1.16.0-mac-x64.dmg) | 打开 DMG，把小屋拖进「应用程序」 |
+| Windows · x64 | [安装版](https://github.com/ooooooomygosh/album-web/releases/download/v1.16.0/FlowCabin-1.16.0-x64-setup.exe) · [便携版](https://github.com/ooooooomygosh/album-web/releases/download/v1.16.0/FlowCabin-1.16.0-x64-portable.exe) | 安装版按提示安装；便携版直接运行 |
 
-以上文件对应 **v1.11.0**，新版本请到 [Release 页面](https://github.com/ooooooomygosh/album-web/releases/latest)。macOS 尚未完成开发者签名与公证，Windows 可能提示未知发布者，请先核对下载来源，再看[安装说明](docs/getting-started.md#安装与首次打开)。使用小屋不需要注册账号。
+以上文件对应 **v1.16.0**，新版本请到 [Release 页面](https://github.com/ooooooomygosh/album-web/releases/latest)。macOS 尚未完成开发者签名与公证，Windows 可能提示未知发布者，请先核对下载来源，再看[安装说明](docs/getting-started.md#安装与首次打开)。使用小屋不需要注册账号。
 
 ## 🎧 音源支持
 
