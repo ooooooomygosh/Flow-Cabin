@@ -61,7 +61,7 @@ function SceneDeck({ anchor, item, spinning = false, vinyl, readOnly = false, on
     </svg>
     <span className="scene-deck-led" aria-hidden="true"/>
     <span className="scene-deck-notes" aria-hidden="true"><i/><i/><i/></span>
-    {!readOnly && <button type="button" className="scene-deck-hit" aria-label={item ? (spinning ? `唱机：暂停《${item.title}》` : `唱机：播放《${item.title}》`) : '唱机：双击封面或把唱片拖到这里'} title={item ? '点一下播放 / 暂停' : '把唱片拖到唱机上'} onClick={onActivate}/>}
+    {!readOnly && <button type="button" className="scene-deck-hit" aria-label={item ? `打开唱机特写：《${item.title}》${spinning ? '，正在播放' : ''}` : '打开唱机特写；也可以把唱片拖到这里'} title={item ? '唱机特写 · T（播放 / 暂停：空格）' : '唱机特写 · T；把唱片拖到唱机上即可放盘'} aria-keyshortcuts="T" onClick={onActivate}/>}
   </div>, host);
 }
 export default memo(SceneDeck);
