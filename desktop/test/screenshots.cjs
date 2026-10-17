@@ -56,7 +56,7 @@ const items = ALBUMS.map(([title, artist, background, accent, motif], index) => 
   await site.locator('.room-record').nth(5).dblclick(); await shot('cabin-pixel.jpg');
   await site.locator('.focus-badge').click(); await site.getByRole('button', { name: '开始专注' }).click(); await shot('cabin-focus.jpg');
   await site.getByRole('tab', { name: '统计' }).click(); await shot('cabin-stats.jpg');
-  await site.locator('.focus-dock-close').click(); await site.keyboard.press('z'); await shot('cabin-zen.jpg'); await site.keyboard.press('Escape');
+  await site.locator('.focus-dock-close').click(); await site.keyboard.press('h'); await shot('cabin-zen.jpg'); await site.keyboard.press('Escape');
   await chooseRoomScene(site, 'warm'); await site.waitForTimeout(600); await shot('cabin-warm.jpg');
   await chooseRoomScene(site, 'pixel');
   await site.locator('.room-record').nth(2).click(); await site.getByRole('button', { name: /唱片卡片/ }).click(); await site.locator('.record-card').waitFor(); await shot('record-card.jpg');
