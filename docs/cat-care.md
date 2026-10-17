@@ -68,3 +68,13 @@
 - 开心时的尾巴摆动：Web Animation，一个周期 = 2 拍，每半拍一步，−3° / +3° 的峰值正好落在拍点上；漂移超过 35 ms 就拉回拍上（`lockToBeat`）。吃饱后的弹跳：每拍一次。
 - `cat-groove.png` 或 `cat-listen.png` 还没放进来时，PNG 层返回 null，由同一节拍时钟上的精灵小猫代替。
 - 减少动态效果：全部不动。小猫 `.room-cat` 上的 `data-music`（`beat` / `free`）和 `data-beat-motion`（`sway` / `groove` / `full`）可供测量拍点偏差。
+
+### 节拍精度（bini 复测后）
+
+- **测速**（`src/player/beat-tracker.mjs`）：自相关先粗估速度，再用最近 6 秒的强起拍点做最小二乘拟合，得到精确的速度和相位（误差几毫秒）。**置信门槛**：最近 4 秒里至少 4 个强起拍点，而且多数间隔是整数拍；鼓点停了 2 秒就失去置信。所以持续的音调（如 220 Hz）和噪声不算节拍，小猫只闭眼听。
+- **听到的时刻**：分析器读数用 `performance.now()` 计时（元素的 `currentTime` 太粗，不能用来定拍），再加上 AudioContext 的 `baseLatency + outputLatency`，也就是拍子真正从扬声器出来的时间。用点击音轨实测，分析器测到的起拍点和 `currentTime` 只差约 +5 ms。
+- **稳定的时钟**（`src/player/beat-clock.mjs`）：整个过程只有一个锚点，每次只按「两拍」整数平移，所以奇偶拍（4 帧 = 2 拍）永远不会翻。小于 8 ms 的误差忽略；更大的误差每次只修正 20%；超过 1/4 拍、连续 4 次都这样，才算真的换了相位，直接对齐。速度变化超过 3%，或者 bpm 变成 0，就重新锚定。
+- **跳曲和拖进度**：换歌会重置测速；拖进度（媒体时间往回跳，或一次跳超过 600 ms）也会重置。重置后 bpm 为 0，小猫闭眼听，约 3.5 秒后重新锁定。
+- **Lo-fi**：取 Tone 走带的四分音符网格在「正在播放的时刻」的位置，用 `getOutputTimestamp`；拿不到时用 `currentTime` 加延迟。这样 lo-fi 也有真实相位（`beatAt`），不再只有速度。
+- **Web Animation 只在必要时调整**：速度变化超过 0.5%，或者相位漂移超过 12 ms（`lockToBeat`）。
+- **自动测试** `npm run test:beat`（`scripts/beat-sync-regression.mjs`，已进 CI 和 `qa`）：用生成的 120 / 90 BPM 点击音轨、220 Hz 音调测试，也测拖进度和跳曲。对比 PNG 小猫和画布小猫每次换帧的时刻与「听到的半拍」：平均 < 20 ms、p95 < 50 ms；音调时只闭眼听；拖进度和跳曲后先闭眼听，再重新锁定。

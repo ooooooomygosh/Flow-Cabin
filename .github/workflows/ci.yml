@@ -42,6 +42,8 @@ jobs:
         run: npm run test:playback
       - name: Run focus and mode regressions
         run: npm run test:focus-ui
+      - name: Run cat beat-sync regressions (click tracks, tone, seek, skip)
+        run: npm run test:beat
       - name: Run shelf and window-control regressions
         run: npm run test:shelf-ui
       - name: Save browser test evidence
@@ -54,5 +56,6 @@ jobs:
             desktop/test-results/playback/
             desktop/test-results/focus-ui/
             desktop/test-results/shelf-ui/
+            desktop/test-results/beat-sync/
           if-no-files-found: warn
           retention-days: 14

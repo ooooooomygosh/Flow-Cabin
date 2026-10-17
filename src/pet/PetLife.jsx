@@ -31,7 +31,7 @@ export default function PetLife({ pose = 'idle', pokedAt = 0, reduced = false, c
       if (!hop) { hop = cat.animate(BOP, { duration: length, iterations: Infinity }); try { shadow = host.animate(SHADOW, { duration: length, iterations: Infinity, pseudoElement: '::before' }); } catch { shadow = null; } }
       else if (Math.abs(hop.effect.getTiming().duration - length) > 2) { hop.effect.updateTiming({ duration: length }); shadow?.effect.updateTiming({ duration: length }); }
       const at = (Number(hop.currentTime) || 0) % length, drift = Math.min(Math.abs(at - phase), length - Math.abs(at - phase));
-      if (drift > 35) { hop.currentTime = phase; if (shadow) shadow.currentTime = phase; }
+      if (drift > 12) { hop.currentTime = phase; if (shadow) shadow.currentTime = phase; }
     };
     const off = onCabinPlayback(sync), timer = setInterval(sync, 2000); // also re-checks the lo-fi / default tempo
     return () => { off(); clearInterval(timer); hop?.cancel(); shadow?.cancel(); };

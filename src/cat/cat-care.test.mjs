@@ -104,3 +104,38 @@ test('beat: the cat dances only to a real detected beat, peaks on the beat', asy
   assert.equal(art.catArtLayer({ tier: 'happy', music: 'beat' }, { groove: { ...art.CAT_GROOVE, ready: false } }), null, 'missing strip: the sprite cat dances instead');
   assert.equal(art.catArtLayer({ tier: 'happy', music: 'beat' }, { groove: { ...art.CAT_GROOVE, ready: true } }).frames, 4);
 });
+
+test('beat tracker: synthetic click tracks lock fast and precisely; a steady tone or noise never counts', async () => {
+  const { createBeatTracker } = await import('../player/beat-tracker.mjs');
+  const feed = (level, ms = 10000) => { const t = createBeatTracker(); let locked = 0; for (let at = 0; at < ms; at += 1000 / 60) { t.push(at, level(at)); if (!locked && t.state().confident) locked = at; } return { ...t.state(), locked }; };
+  for (const bpm of [120, 90, 75, 150]) {
+    const B = 60000 / bpm, s = feed((at) => { const p = at % B; return p < 60 ? .8 * Math.exp(-p / 25) : .1; });
+    assert.equal(s.confident, true, `${bpm}`); assert.ok(Math.abs(s.bpm - bpm) < .6, `${bpm}: ${s.bpm}`);
+    let err = ((s.beatAt % B) + B) % B; if (err > B / 2) err -= B; assert.ok(Math.abs(err) < 12, `${bpm} phase ${err}`); assert.ok(s.locked < 4500, `${bpm} locked at ${s.locked}`);
+  }
+  assert.equal(feed(() => .4 + Math.random() * .004).confident, false, 'steady tone');
+  assert.equal(feed(() => Math.random() * .3).confident, false, 'noise');
+  // Kicks stop (a quiet passage): confidence drops within ~2 s.
+  const t = createBeatTracker(); for (let at = 0; at < 8000; at += 1000 / 60) t.push(at, at % 500 < 60 ? .8 : .1); assert.equal(t.state().confident, true);
+  for (let at = 8000; at < 10500; at += 1000 / 60) t.push(at, .1); assert.equal(t.state().confident, false);
+});
+
+test('beat clock: one stable anchor — jittery estimates never flip beat parity; tempo change / reset re-anchor', async () => {
+  const clock = await import('../player/beat-clock.mjs'), sync = await import('./beat-sync.mjs');
+  clock.resetBeat(); const B = 500, t0 = 1_000_000;
+  clock.setBeat({ bpm: 120, beatAt: t0 }, t0); const parity = (now) => Math.floor(sync.cyclePhase(now, clock.currentBeat(), 2) / B);
+  const truth = (now) => Math.floor((((now - t0) % 1000) + 1000) % 1000 / B);
+  let flips = 0, worst = 0;
+  for (let now = t0; now < t0 + 12000; now += 66) { // ~15 updates a second, each naming "the latest beat" with ±15 ms jitter
+    const latest = t0 + Math.floor((now - t0) / B) * B + (Math.random() * 30 - 15); clock.setBeat({ bpm: 120 + (Math.random() - .5) * .2, beatAt: latest }, now);
+    const probe = now + 120, edge = Math.abs((((probe - t0) % B) + B) % B - B / 2) > B / 2 - 25; if (!edge && parity(probe) !== truth(probe)) flips++;
+    let e = ((clock.currentBeat().beatAt - t0) % B + B) % B; if (e > B / 2) e -= B; worst = Math.max(worst, Math.abs(e));
+  }
+  assert.equal(flips, 0, 'parity stays'); assert.ok(worst < 20, `anchor stays within ${worst} ms`);
+  // A real phase change (seek without reset) snaps after a few consistent updates; a new tempo re-anchors at once.
+  for (let i = 0; i < 5; i++) clock.setBeat({ bpm: 120, beatAt: t0 + 250 }, t0 + 20000 + i * 66);
+  let e = ((clock.currentBeat().beatAt - t0 - 250) % B + B) % B; if (e > B / 2) e -= B; assert.ok(Math.abs(e) < 5, `snapped (${e})`);
+  clock.setBeat({ bpm: 90, beatAt: t0 + 123 }, t0 + 21000); assert.equal(clock.currentBeat().beatAt, t0 + 123);
+  clock.setBeat({ bpm: 0 }); assert.equal(clock.currentBeat().known, false, 'bpm 0 (seek / skip / estimated) → listen');
+  clock.resetBeat();
+});

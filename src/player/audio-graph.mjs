@@ -27,7 +27,9 @@ export async function ensureAnalyser(element) {
     analyser.fftSize = 2048; analyser.smoothingTimeConstant = 0.2;
     source.connect(analyser); analyser.connect(context.destination);
     const frame = new Uint8Array(analyser.fftSize), spectrum = new Uint8Array(analyser.frequencyBinCount);
-    const graph = { analyser, read: () => { analyser.getByteTimeDomainData(frame); return frame; }, bass: () => { analyser.getByteFrequencyData(spectrum); return bassLevel(spectrum, context.sampleRate, analyser.fftSize); } };
+    // Output latency (ms): how long after the graph renders a sample it is heard.
+    const latency = () => ((context.baseLatency || 0) + (context.outputLatency || 0)) * 1000;
+    const graph = { analyser, latency, read: () => { analyser.getByteTimeDomainData(frame); return frame; }, bass: () => { analyser.getByteFrequencyData(spectrum); return bassLevel(spectrum, context.sampleRate, analyser.fftSize); } };
     // The element now plays through this context: wake it with the music, let it sleep 2 s after.
     routed.add(element);
     element.addEventListener('play', () => idle.wake());

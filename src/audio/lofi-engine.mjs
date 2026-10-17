@@ -83,6 +83,21 @@ export async function createLofiPlayer({ onSection } = {}) {
   return {
     get section() { return section; },
     start() { if (disposed || started) return; started = true; activePlayers.add(identity); transport.bpm.value = section.bpm; transport.swing = .32; transport.swingSubdivision = '16n'; crackle.start(); loop.start(0); transport.start(); applyVolume(); },
+    // A beat as heard (wall clock ms): the transport's quarter-note grid at the context time now at the
+    // speakers (getOutputTimestamp), so the cat's beat clock gets lo-fi's real phase, not just its tempo.
+    beatAt() {
+      if (!started || disposed) return 0;
+      try {
+        const raw = getContext().rawContext, stamp = raw.getOutputTimestamp?.(), length = 60000 / transport.bpm.value;
+        if (stamp?.performanceTime > 0 && stamp.contextTime > 0) {
+          const quarters = transport.getTicksAtTime(stamp.contextTime) / transport.PPQ;
+          return Date.now() - (performance.now() - stamp.performanceTime) - (quarters % 1) * length;
+        }
+        // No output timestamp (e.g. no audio device): the context's clock plus its reported latency.
+        const quarters = transport.getTicksAtTime(raw.currentTime) / transport.PPQ, latency = ((raw.baseLatency || 0) + (raw.outputLatency || 0)) * 1000;
+        return raw.currentTime > 0 ? Date.now() + latency - (quarters % 1) * length : 0;
+      } catch { return 0; }
+    },
     setVolume(value) { volume = value; applyVolume(); },
     setDuck(value) { duck = value ? .25 : 1; applyVolume(); },
     dispose() {
