@@ -420,8 +420,11 @@ try {
     await fresh.mouse.click(point.x, point.y); await fresh.waitForTimeout(60); await fresh.mouse.click(point.x, point.y);
     await fresh.locator('.pet-stage[data-action="hop"]').waitFor({ timeout: 2000 });
     await fresh.waitForTimeout(800); await fresh.mouse.click(point.x, point.y);
-    const heart = fresh.locator('.pet-fx .fx-heart').first(); await heart.waitFor({ timeout: 2000 });
-    assert.match(await heart.evaluate((e) => getComputedStyle(e).backgroundImage), /^url\("data:image\/svg\+xml/);
+    // Hearts are short-lived: read the style in-page while one is attached (CI raced a detached node → ''),
+    // then load that exact data: image under the page's CSP — it must decode, not be blocked.
+    const heartImage = await (await fresh.waitForFunction(() => { const e = document.querySelector('.pet-fx .fx-heart'); const bg = e && e.isConnected ? getComputedStyle(e).backgroundImage : ''; return bg && bg !== 'none' ? bg : null; }, null, { timeout: 2000, polling: 'raf' })).jsonValue();
+    assert.match(heartImage, /^url\("data:image\/svg\+xml/);
+    assert.equal(await fresh.evaluate((bg) => new Promise((resolve) => { const img = new Image(); img.onload = () => resolve('loaded'); img.onerror = () => resolve('blocked'); img.src = bg.slice(5, -2).replace(/\\"/g, '"'); }), heartImage), 'loaded', 'the heart data: image is allowed by img-src');
     page = fresh; await screenshot('desktop-pet-hearts-under-shell-csp'); page = mainPage;
     assert.deepEqual(await fresh.evaluate(() => window.__cspViolations), [], 'no CSP violation for the pet-life effects');
     await fresh.close(); check('desktop-pet-first-double-click-hops-and-hearts-render-under-shell-csp');
