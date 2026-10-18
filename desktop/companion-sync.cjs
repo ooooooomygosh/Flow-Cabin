@@ -40,7 +40,7 @@ function createCompanionPoller({ getSite, clean, interval = 750, onValue }) {
 }
 
 // Sends a whitelisted command from a companion window to the business page.
-const COMMANDS = new Set(['focus-start', 'focus-pause', 'focus-toggle', 'focus-skip', 'sound-toggle', 'open-settings', 'open-onboarding', 'open-about']);
+const COMMANDS = new Set(['focus-start', 'focus-pause', 'focus-toggle', 'focus-skip', 'sound-toggle', 'cat-feed', 'open-settings', 'open-onboarding', 'open-about']);
 function sendCompanionCommand(site, command) {
   if (!COMMANDS.has(command) || !site || site.isDestroyed()) return false;
   site.executeJavaScript(`window.dispatchEvent(new CustomEvent('album-companion-command', { detail: { command: ${JSON.stringify(command)} } }));`).catch(() => {});

@@ -1,10 +1,14 @@
 'use strict';
-// Desktop pet movement, in the spirit of Shimeji: let go of the pet in mid-air
-// and it falls to the bottom of the screen (the taskbar / Dock line) with a
-// small bounce; toss it and it keeps the throw; when nothing is going on it
-// sometimes strolls along the bottom of the screen. Pure and time-stepped.
-const GRAVITY = 2600, MAX_SPEED = 2600, WALK_SPEED = 56, LAND_MS = 260;
+// Desktop pet movement: let go of the pet and it stays exactly where it was put — anywhere on any
+// display, by a screen edge, just above the Dock / taskbar, just under the menu bar (the work area
+// already excludes those). Toss it and it glides with the throw, bounces off the work-area edges
+// and settles where it stops (no gravity: it does not drop to the bottom). When nothing else is
+// going on, a pet resting on the bottom edge sometimes strolls along it. Pure and time-stepped.
+// (mode 'fall' = flying after a throw; the name is kept for the renderer.)
+const MAX_SPEED = 2600, WALK_SPEED = 56, LAND_MS = 260, FRICTION = 2.4, STOP_SPEED = 45, THROW_SPEED = 240;
 const floorOf = (bounds, area) => area.y + area.height - bounds.height + 10;
+// The highest the window may go: its top 48 px are bubble space, so the cat itself sits below the menu bar.
+const ceilingOf = (area) => area.y - 48;
 const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
 
 function createPetPhysics({ random = Math.random, now = () => Date.now() } = {}) {
@@ -25,7 +29,7 @@ function createPetPhysics({ random = Math.random, now = () => Date.now() } = {})
       vx = span ? clamp(recent.reduce((sum, sample) => sum + sample.dx, 0) / span * 1000, -MAX_SPEED, MAX_SPEED) : 0;
       vy = span ? clamp(recent.reduce((sum, sample) => sum + sample.dy, 0) / span * 1000, -MAX_SPEED, MAX_SPEED) : 0;
       x = bounds.x; y = bounds.y;
-      mode = bounds.y < floorOf(bounds, area) - 2 || Math.abs(vx) > 240 ? 'fall' : 'idle';
+      mode = Math.hypot(vx, vy) > THROW_SPEED ? 'fall' : 'idle';
       if (mode === 'idle') schedule();
       return mode;
     },
@@ -40,18 +44,13 @@ function createPetPhysics({ random = Math.random, now = () => Date.now() } = {})
       }
       if (mode === 'walk' && !allowWalk) { mode = 'idle'; schedule(); }
       if (mode === 'fall') {
-        const step = Math.min(dt, .05);
-        vy += GRAVITY * step; vx *= Math.exp(-1.2 * step);
-        x += vx * step; y += vy * step;
+        const step = Math.min(dt, .05), ceiling = ceilingOf(area), drag = Math.exp(-FRICTION * step);
+        vx *= drag; vy *= drag; x += vx * step; y += vy * step;
+        // Every work-area edge is a soft wall: the menu bar, the Dock / taskbar and the sides.
         if (x < minX) { x = minX; vx = -vx * .45; } else if (x > maxX) { x = maxX; vx = -vx * .45; }
-        if (y < area.y - 40) { y = area.y - 40; vy = Math.max(0, vy); } // the top of the screen is a ceiling
+        if (y < ceiling) { y = ceiling; vy = -vy * .45; } else if (y > floor) { y = floor; vy = -vy * .35; }
         if (Math.abs(vx) > 30) facing = Math.sign(vx);
-        if (y >= floor) {
-          y = floor;
-          if (vy > 700) { vy = -vy * .28; vx *= .6; } // one small bounce
-          else if (Math.abs(vx) > 60) { vy = 0; vx *= Math.exp(-5 * step); } // a sideways toss slides along the floor
-          else { vy = 0; vx = 0; mode = 'land'; landedAt = time; }
-        }
+        if (Math.hypot(vx, vy) < STOP_SPEED) { vx = vy = 0; mode = 'land'; landedAt = time; } // settles right there
       } else if (mode === 'walk') {
         const distance = targetX - x, move = Math.sign(distance) * Math.min(Math.abs(distance), WALK_SPEED * Math.min(dt, .1));
         x += move; y = floor;
@@ -62,4 +61,4 @@ function createPetPhysics({ random = Math.random, now = () => Date.now() } = {})
     }
   };
 }
-module.exports = { createPetPhysics, floorOf };
+module.exports = { createPetPhysics, floorOf, ceilingOf };

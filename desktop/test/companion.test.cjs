@@ -100,7 +100,8 @@ test('desktop pet stays reachable on screen', () => {
   require.cache[electron] = { exports: { screen: { getDisplayMatching: () => ({ workArea: { x: 0, y: 0, width: 1920, height: 1040 } }) } } };
   try {
     delete require.cache[require.resolve('../pet.cjs')]; const { clampToWorkArea: clamp } = require('../pet.cjs');
-    const far = clamp({ x: 99999, y: -9999, width: 288, height: 256 }); assert.ok(far.x <= 1920 - 96 && far.y >= -40);
+    const far = clamp({ x: 99999, y: -9999, width: 288, height: 256 }); assert.ok(far.x <= 1920 - 96 && far.y >= -48);
+    const placed = clamp({ x: 700, y: 300, width: 288, height: 256 }); assert.deepEqual([placed.x, placed.y], [700, 300], 'a spot inside the work area is kept as is');
     const left = clamp({ x: -99999, y: 99999, width: 288, height: 256 }); assert.ok(left.x >= -96 && left.y <= 1040 - 256 + 10);
   } finally { if (old) require.cache[electron] = old; else delete require.cache[electron]; delete require.cache[require.resolve('../pet.cjs')]; }
 });
