@@ -79,6 +79,8 @@ function tail(g, points) {
     for (let s = 0; s <= steps; s++) { const x = x0 + (x1 - x0) * s / steps, y = y0 + (y1 - y0) * s / steps; put(g, x, y, colour); put(g, x + 1, y, colour); put(g, x, y + 1, colour); }
   }
 }
+// 8x6 envelope with a red wax dot, drawn over the outline as a prop.
+function letter(g, x, y) { rect(g, x, y, x + 7, y + 5, 1); rect(g, x + 1, y + 1, x + 6, y + 4, 12); for (let i = 0; i < 3; i++) { put(g, x + 1 + i, y + 1 + i, 3); put(g, x + 6 - i, y + 1 + i, 3); } put(g, x + 3, y + 3, 8); put(g, x + 4, y + 3, 8); }
 function sparkle(g, x, y) { put(g, x, y, EFFECT); put(g, x - 1, y, EFFECT); put(g, x + 1, y, EFFECT); put(g, x, y - 1, EFFECT); put(g, x, y + 1, EFFECT); }
 function letterZ(g, x, y, size) { for (let i = 0; i < size; i++) { put(g, x + i, y, EFFECT); put(g, x + i, y + size - 1, EFFECT); put(g, x + size - 1 - i, y + i, EFFECT); } }
 function note(g, x, y) { rect(g, x, y + 3, x + 1, y + 4, EFFECT); rect(g, x + 2, y, x + 2, y + 4, EFFECT); put(g, x + 3, y, EFFECT); put(g, x + 4, y + 1, EFFECT); }
@@ -113,9 +115,28 @@ const FRAMES = {
 export const POSES = Object.freeze(Object.fromEntries(Object.entries(FRAMES).map(([pose, frames]) => [pose, frames.length])));
 // Cat-only eyes-closed listening pose (body still; only the note drifts) for music whose
 // beat is missing or estimated. Kept out of POSES so other pet species need not draw it.
-const EXTRA_FRAMES = { listen: [{ eyes: 'calm', hdy: 1, tailUp: 1, note: [25, 1] }, { eyes: 'calm', hdy: 1, tailUp: 1, note: [25, 0] }] };
+// v1.18 cat-only extras (art only; pet logic decides when to play them):
+//  typing  – paw-tap loop at a little keyboard: left down, up, right down, up.
+//  eat     – desktop-pet eating, mirrors public/cat/cat-eat.png (fish shrinks bite by bite).
+//  hop     – double-click reaction: crouch, surprised hop with "!", land, settle.
+//  deliver – walks in from the right with a letter in its mouth, drops it, sits proud.
+const EXTRA_FRAMES = {
+  listen: [{ eyes: 'calm', hdy: 1, tailUp: 1, note: [25, 1] }, { eyes: 'calm', hdy: 1, tailUp: 1, note: [25, 0] }],
+  typing: [{ tap: [1, 0], hdx: -1 }, { tap: [0, 0] }, { tap: [0, 1], hdx: 1 }, { tap: [0, 0] }].map((f) => ({ dy: -3, eyes: 'open', ...f })),
+  eat: [{ bite: 0, hdy: 0, eyes: 'open', sparkles: [[4, 18], [28, 18]] }, { bite: 0, hdy: 3 }, { bite: 2, hdy: 3, eyes: 'happy' }, { bite: 4, hdy: 2, eyes: 'happy' }, { bite: 6, hdy: 3, eyes: 'happy' }, { bite: 9, hdy: 0, eyes: 'happy', sparkles: [[5, 6], [27, 4]] }],
+  hop: [{ dy: 1, paws: [0, 0], tailUp: 0 }, { dy: -4, eyes: 'open', tailUp: 3, paws: [-1, -1], bang: [27, 1] }, { dy: -5, eyes: 'open', tailUp: 3, swing: 3, paws: [-1, -1], bang: [27, 0] }, { dy: -2, eyes: 'happy', tailUp: 2, swing: -2 }, { dy: 1, eyes: 'happy', tailUp: 0 }, { dy: 0, eyes: 'happy', tailUp: 1, sparkles: [[4, 8], [27, 6]] }],
+  deliver: [{ dx: 14, paws: [-1, 0] }, { dx: 10, paws: [0, -1] }, { dx: 6, paws: [-1, 0] }, { dx: 2, paws: [0, -1] }, { dx: 0 }, { dx: 0, hdy: 3, drop: 'mid' }, { dx: 0, eyes: 'happy', tailUp: 2, drop: 'floor' }, { dx: 0, eyes: 'happy', tailUp: 3, drop: 'floor', sparkles: [[5, 6]] }].map((f) => ({ tailUp: 1, eyes: 'open', letter: !f.drop, ...f }))
+};
 export const LISTEN_POSE = 'listen';
 export const LISTEN_FRAMES = EXTRA_FRAMES.listen.length;
+export const TYPING_POSE = 'typing';
+export const TYPING_FRAMES = EXTRA_FRAMES.typing.length;
+export const EAT_POSE = 'eat';
+export const EAT_FRAMES = EXTRA_FRAMES.eat.length;
+export const HOP_POSE = 'hop';
+export const HOP_FRAMES = EXTRA_FRAMES.hop.length;
+export const DELIVER_POSE = 'deliver';
+export const DELIVER_FRAMES = EXTRA_FRAMES.deliver.length;
 export const ACCESSORIES = Object.freeze(['', 'headphones', 'scarf', 'beanie']);
 
 export function catFrame(pose, index = 0, acc = '') {
@@ -131,6 +152,23 @@ export function catFrame(pose, index = 0, acc = '') {
     rect(g, 16, 24, 29, 31, 1); rect(g, 17, 25, 22, 30, 12); rect(g, 23, 25, 28, 30, 12); rect(g, 22, 24, 23, 31, 11);
     [26, 28].forEach((y) => { rect(g, 18, y, 21, y, 4); rect(g, 24, y, 27 - frame.tailFlick, y, 4); });
   }
+  if (pose === 'typing') { // Desk edge + tiny keyboard in front; the tapping paw presses a key.
+    rect(g, 0, 27, 31, 31, 11); rect(g, 0, 27, 31, 27, 13); rect(g, 6, 24, 25, 28, 1); rect(g, 7, 25, 24, 27, 12);
+    for (let x = 8; x <= 23; x += 3) { put(g, x, 25, 9); put(g, x, 27, 9); }
+    const [l, r] = frame.tap;
+    for (const [px, down] of [[11 + (frame.hdx || 0), l], [19 + (frame.hdx || 0), r]]) {
+      const py = down ? 23 : 19; rect(g, px - 3, py - 2, px + 2, py + 2, 1); rect(g, px - 2, py - 1, px + 1, py + 1, 3); put(g, px - 1, py + 1, 5); if (down) { put(g, px - 3, 23, EFFECT); put(g, px + 3, 23, EFFECT); }
+    }
+  }
+  if (pose === 'eat') { // Plate + fish after the outline; bites eat the fish from its head.
+    rect(g, 7, 30, 25, 31, 1); rect(g, 8, 30, 24, 30, 12);
+    if (frame.bite < 9) { rect(g, 10 + frame.bite, 27, 19, 29, 1); rect(g, 11 + frame.bite, 28, 18, 28, 10); rect(g, 19, 27, 22, 29, 10); put(g, 22, 28, 1); }
+    else { rect(g, 11, 28, 18, 28, 12); rect(g, 19, 27, 21, 29, 10); }
+  }
+  if (frame.letter) letter(g, 12 + (frame.dx || 0), 16 + (frame.hdy || 0));
+  if (frame.drop === 'mid') letter(g, 12, 23);
+  if (frame.drop === 'floor') letter(g, 3, 25);
+  if (frame.bang) { const [x, y] = frame.bang; rect(g, x, y, x + 1, y + 4, EFFECT); rect(g, x, y + 6, x + 1, y + 7, EFFECT); }
   if (frame.z) { const [x, y, size] = frame.z; letterZ(g, x, y, size); letterZ(g, x - 5, y + 6, Math.max(2, size - 2)); }
   if (frame.note) note(g, ...frame.note);
   (frame.sparkles || []).forEach(([x, y]) => sparkle(g, x, y));
