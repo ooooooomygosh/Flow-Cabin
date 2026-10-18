@@ -5,7 +5,7 @@ const READ_SCRIPT = `(() => {
   const companion = window.albumCompanionSnapshot?.() || null;
   const room = window.albumRoomSnapshot?.() || null;
   return { room: room ? { ...room, focus: companion?.focus || null, focusDisplay: companion?.focusDisplay || null } : null,
-    companion: companion ? { petId: companion.petId || room?.petId, focus: companion.focus, playing: companion.playing, track: companion.track, musicPlaying: companion.musicPlaying, energy: companion.energy, energyEstimated: companion.energyEstimated, bpm: companion.bpm, beatAt: companion.beatAt, lofiBpm: companion.lofiBpm, reduceMotion: document.documentElement.dataset.desktopReduceMotion === 'true' } : null };
+    companion: companion ? { petId: companion.petId || room?.petId, focus: companion.focus, playing: companion.playing, track: companion.track, musicPlaying: companion.musicPlaying, energy: companion.energy, energyEstimated: companion.energyEstimated, bpm: companion.bpm, beatAt: companion.beatAt, lofiBpm: companion.lofiBpm, care: companion.care, reduceMotion: document.documentElement.dataset.desktopReduceMotion === 'true' } : null };
 })()`;
 
 async function readCompanion(site) {

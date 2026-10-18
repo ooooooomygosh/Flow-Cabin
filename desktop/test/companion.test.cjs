@@ -207,3 +207,11 @@ test('lo-fi relay updates tempo without pretending music plays, then resets on s
   relay({ companion: source }); relay({ companion: null }); assert.equal(currentBeat().bpm, 96);
   relay({ companion: { ...source, lofiBpm: Infinity } }); assert.equal(currentBeat().bpm, 96);
 });
+
+test('the last feed (care) survives the page read so the desktop pet can eat or explain', async () => {
+  const { readCompanion } = require('../companion-sync.cjs'), vm = require('node:vm');
+  const raw = { care: { fedAt: 1234, ok: false, note: '小猫今天已经吃饱啦，明天再喂吧～', tier: 'happy', secret: 'x' } };
+  const value = await readCompanion({ isDestroyed: () => false, executeJavaScript: async script => vm.runInNewContext(script, { window: { albumCompanionSnapshot: () => raw }, document: { documentElement: { dataset: {} } } }) });
+  const care = cleanCompanion(value.companion).care;
+  assert.equal(care.fedAt, 1234); assert.equal(care.ok, false); assert.match(care.note, /吃饱啦/); assert.equal('secret' in care, false);
+});
