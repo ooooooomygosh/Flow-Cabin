@@ -391,7 +391,15 @@ try {
   await page.mouse.click(opaque.x, opaque.y); await page.waitForTimeout(80); await page.mouse.click(opaque.x, opaque.y);
   await page.locator('.pet-stage[data-action="hop"]').waitFor(); await screenshot('desktop-pet-hop');
   await page.mouse.click(opaque.x, opaque.y, { button: 'right' }); assert.ok((await calls()).includes('menu'), 'right-click opens the pet menu');
-  check('desktop-pet-feed-drop-eat-refusal-double-click-hop'); await page.close(); page = mainPage;
+  check('desktop-pet-feed-drop-eat-refusal-double-click-hop');
+  // 打字跟随: a key-activity time from the shell hook, or the cabin's own keydown time, shows TYPING_POSE, then it settles.
+  await page.waitForTimeout(700);
+  await page.evaluate(({ companion }) => window.__pushPet({ companion: { ...companion, petId: 'cat' }, size: 192, typingAt: Date.now() }), { companion });
+  await page.locator('.pet-stage[data-typing="true"]').waitFor(); await screenshot('desktop-pet-typing');
+  await page.locator('.pet-stage:not([data-typing])').waitFor({ timeout: 3000 });
+  await page.evaluate(({ companion }) => window.__pushPet({ companion: { ...companion, petId: 'cat', typingAt: Date.now() }, size: 192 }), { companion });
+  await page.locator('.pet-stage[data-typing="true"]').waitFor();
+  check('desktop-pet-typing-follow-hook-and-in-cabin-fallback'); await page.close(); page = mainPage;
   // bini v1.18: (1) a double-click right after the desk pet loads must hop: the pointer resting on the cat is
   // hit-tested from the shell's cursor point (no mousemove needed); (2) under the shell's real CSP the
   // pet-life hearts (data: SVG) render with no CSP violation. Only the shell's img-src is applied here:

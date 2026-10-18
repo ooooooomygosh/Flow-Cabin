@@ -1,6 +1,6 @@
 'use strict';
 const { execFile } = require('node:child_process');
-const DEFAULT_SETTINGS = Object.freeze({ font: 'bundled', weight: 400, zoom: 100, reduceMotion: false });
+const DEFAULT_SETTINGS = Object.freeze({ font: 'bundled', weight: 400, zoom: 100, reduceMotion: false, typingFollow: false });
 const WEIGHTS = [250, 300, 400, 500, 700, 900];
 function normalizeSettings(value = {}) {
   const font = typeof value.font === 'string' && value.font.length <= 160 && !/[\x00-\x1f\x7f"'\\;{}<>]/.test(value.font) ? value.font : 'bundled';
@@ -8,7 +8,8 @@ function normalizeSettings(value = {}) {
     font,
     weight: WEIGHTS.includes(Number(value.weight)) ? Number(value.weight) : 400,
     zoom: Number.isFinite(Number(value.zoom)) ? Math.max(75, Math.min(150, Math.round(Number(value.zoom) / 5) * 5)) : 100,
-    reduceMotion: value.reduceMotion === true
+    reduceMotion: value.reduceMotion === true,
+    typingFollow: value.typingFollow === true
   };
 }
 function appearanceScript(value, extra = {}) {
