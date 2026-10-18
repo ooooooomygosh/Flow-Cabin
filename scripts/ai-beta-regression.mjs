@@ -236,6 +236,44 @@ try {
     await shot(page, 'letter-sent-with-local-reply');
   }, { ai: { enabled: false, baseUrl: API, model: 'm' } });
 
+  await run('mailbox-search-favorites-and-trash-survive-reload', async (page) => {
+    await openLetters(page);
+    let mailbox = page.getByRole('tabpanel', { name: '信箱' });
+    await mailbox.getByRole('button', { name: '写一封信' }).click();
+    await mailbox.getByLabel('写给小屋的信').fill('今天把窗边的绿植照顾好了。');
+    await mailbox.getByRole('button', { name: '寄给小屋' }).click();
+    await mailbox.getByRole('region', { name: '小屋回信' }).waitFor();
+    await mailbox.getByRole('button', { name: '收藏这封信', exact: true }).click();
+    await mailbox.getByRole('button', { name: '收藏', exact: true }).click();
+    assert.equal(await mailbox.locator('.fs-mail-list li').count(), 1);
+    await mailbox.getByLabel('搜索信件').fill('我把你的信读完了');
+    assert.equal(await mailbox.locator('.fs-mail-list li').count(), 1, 'reply text is searchable');
+    await mailbox.getByLabel('搜索信件').fill('不存在的信件词');
+    assert.equal(await mailbox.locator('.fs-mail-list li').count(), 0);
+    await mailbox.getByLabel('搜索信件').fill('');
+    await mailbox.getByRole('button', { name: '移到回收站', exact: true }).click();
+    assert.equal(await mailbox.locator('.fs-mail-list li').count(), 0);
+    await page.reload(); await page.locator('.focus-badge').waitFor(); await openLetters(page);
+    mailbox = page.getByRole('tabpanel', { name: '信箱' });
+    await mailbox.getByRole('button', { name: '回收站', exact: true }).click();
+    assert.equal(await mailbox.locator('.fs-mail-list li').count(), 1);
+    await mailbox.getByRole('region', { name: '小屋回信' }).waitFor();
+    assert.equal(await mailbox.getByRole('button', { name: '已收藏', exact: true }).getAttribute('aria-pressed'), 'true');
+    for (const viewport of [{ width: 1440, height: 900 }, { width: 960, height: 600 }]) {
+      await page.setViewportSize(viewport);
+      const restore = mailbox.getByRole('button', { name: '放回信箱', exact: true });
+      await restore.scrollIntoViewIfNeeded();
+      const box = await restore.boundingBox();
+      assert.ok(box.x >= 0 && box.y >= 0 && box.x + box.width <= viewport.width && box.y + box.height <= viewport.height);
+      await shot(page, `mailbox-organized-${viewport.width}`);
+    }
+    await mailbox.getByRole('button', { name: '放回信箱', exact: true }).click();
+    await mailbox.getByRole('button', { name: '收藏', exact: true }).click();
+    assert.equal(await mailbox.locator('.fs-mail-list li').count(), 1);
+    await mailbox.getByRole('button', { name: '已收藏', exact: true }).click();
+    assert.equal(await mailbox.locator('.fs-mail-list li').count(), 0);
+  }, { ai: { enabled: false, baseUrl: API, model: 'm' } });
+
   await run('interrupted-ai-local-letter-reply-can-be-recovered', async (page) => {
     await openLetters(page);
     const journal = page.getByRole('dialog', { name: '小屋日记' });

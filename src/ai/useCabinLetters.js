@@ -4,7 +4,7 @@ import { readAi, readLetters, markRead, unreadCount, AI_EVENT, LETTER_EVENT } fr
 import { keyState, AI_KEY_EVENT } from './ai-transport.mjs';
 import { deliverLetter } from './letter-delivery.mjs';
 import {
-  mailboxRows, pageSlice, readLetterDraft, saveLetterDraft, clearLetterDraft, sendCabinLetter, recoverCabinLetter
+  mailboxRows, pageSlice, readLetterDraft, saveLetterDraft, clearLetterDraft, sendCabinLetter, recoverCabinLetter, organizeLetterThread
 } from './letter-reply.mjs';
 export { deliverLetter } from './letter-delivery.mjs';
 
@@ -31,7 +31,8 @@ export function useLetters() {
     list,
     unread: unreadCount(list),
     draft: readLetterDraft(store()),
-    rows: (filter = 'all') => mailboxRows(list, filter),
+    rows: (filter = 'all', query = '') => mailboxRows(list, filter, query),
+    organize: (id, action) => organizeLetterThread({ storage: store(), id, action }),
     page: (rows, page, size) => pageSlice(rows, page, size),
     markRead: (id) => { markRead(store(), id); emit(); },
     saveDraft: (value) => saveLetterDraft(store(), value),

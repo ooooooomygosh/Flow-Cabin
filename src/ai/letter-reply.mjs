@@ -52,7 +52,8 @@ export function threadRows(list) {
 
 // Stable mailbox rows. An outbound letter and its reply are one row; automatic
 // letters are their own row. Drafts live only in the composer.
-export function mailboxRows(list, filter = 'all') {
+export function mailboxRows(list, filter = 'all', query = '') {
+  const term = query.trim().toLocaleLowerCase();
   const rows = threadRows(list).map(({ letter, reply }) => {
     const outbound = letter.direction === 'out';
     const latestAt = Math.max(letter.at, reply?.at || 0);
@@ -65,8 +66,23 @@ export function mailboxRows(list, filter = 'all') {
       pending: outbound && letter.status === 'sending',
       failed: outbound && letter.status === 'failed'
     };
-  }).filter((row) => filter === 'in' ? row.direction === 'in' : filter === 'out' ? row.direction === 'out' : true);
+  }).filter((row) => Boolean(row.letter.trashed) === (filter === 'trash')
+    && (filter === 'in' ? row.direction === 'in' : filter === 'out' ? row.direction === 'out' : filter === 'favorites' ? row.letter.favorite : true)
+    && (!term || [row.title, ...row.letter.lines, ...(row.reply?.lines || [])].join('\n').toLocaleLowerCase().includes(term)));
   return rows.sort((a, b) => b.latestAt - a.latestAt || String(b.id).localeCompare(String(a.id)));
+}
+
+export function organizeLetterThread({ storage, id, action, now = Date.now(), win = globalThis } = {}) {
+  const list = readLetters(storage), root = list.find((letter) => letter.id === id && !letter.replyTo && letter.status !== 'draft');
+  if (!root) return { ok: false, error: '找不到这封信，请重新打开信箱。' };
+  if (!['favorite', 'trash', 'restore'].includes(action)) return { ok: false, error: '无法执行这个信件操作。' };
+  const organizedAt = Math.max(now, (root.organizedAt || 0) + 1);
+  const favorite = action === 'favorite' ? !root.favorite : Boolean(root.favorite);
+  const trashed = action === 'trash' || (action === 'favorite' && Boolean(root.trashed));
+  const result = tryWriteLetters(storage, list.map((letter) => letter.id === id || letter.replyTo === id
+    ? { ...letter, favorite, trashed, organizedAt } : letter));
+  if (result.ok) emit(win);
+  return result;
 }
 
 export function pageSlice(rows, page = 1, size = 6) {
@@ -90,6 +106,9 @@ export function recoverCabinLetter({ storage, id, win = globalThis } = {}) {
     subject: `回信 · ${outgoing.subject}`, lines: localLetterReply(outgoing.lines.join('\n')),
     source: 'template', at: Date.now(), read: false
   };
+  if (outgoing.organizedAt != null) Object.assign(reply, {
+    organizedAt: outgoing.organizedAt, favorite: outgoing.favorite, trashed: outgoing.trashed
+  });
   const sent = { ...outgoing, status: 'sent' };
   const written = tryWriteLetters(storage, [sent, reply, ...list.filter((letter) => letter.id !== id
     && !(letter.id === DRAFT_ID && letter.at <= outgoing.at
@@ -149,12 +168,16 @@ export async function sendCabinLetter({
     lines: replyLines, source: aiLines.length ? 'ai' : 'template', at: Date.now(), read: false,
     ...(summary?.evidence?.length ? { evidence: summary.evidence } : {})
   };
-  const sent = { ...outgoing, status: 'sent' };
   const current = readLetters(storage);
   // A restore or deletion while waiting owns the new state; do not resurrect it.
   if (!current.some((letter) => letter.id === outgoing.id)) {
     return { ok: false, error: '信箱在另一处发生了变化，信的内容仍在编辑框中。', outgoing: null, reply: null };
   }
+  const latestOutgoing = current.find((letter) => letter.id === outgoing.id);
+  const sent = { ...latestOutgoing, status: 'sent' };
+  if (latestOutgoing.organizedAt != null) Object.assign(reply, {
+    organizedAt: latestOutgoing.organizedAt, favorite: latestOutgoing.favorite, trashed: latestOutgoing.trashed
+  });
   const recovered = replyFor(outgoing.id, current);
   if (recovered) return { ok: true, outgoing: { ...outgoing, status: 'sent' }, reply: recovered, fallback: true, error: '' };
   const latest = current.filter((letter) => letter.id !== outgoing.id && letter.id !== reply.id

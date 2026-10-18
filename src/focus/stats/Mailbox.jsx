@@ -51,7 +51,7 @@ function LetterBody({ letter, reduced = false }) {
   </div>;
 }
 
-function ThreadView({ row, reduced, sending, onRecover }) {
+function ThreadView({ row, reduced, sending, onRecover, onOrganize }) {
   if (!row) return <div className="fs-mail-empty-detail">
     <JournalSprite name="cat-wait" width={128} height={128}/>
     <strong>一页安静的空白</strong>
@@ -63,6 +63,11 @@ function ThreadView({ row, reduced, sending, onRecover }) {
       <div><small>{outbound ? '我寄出的信' : '小屋寄来的信'}</small><h3>{row.title}</h3></div>
       <span className={`fs-mail-status is-${letter.status}`}>{outbound ? STATUS_LABEL[letter.status] || '已寄出' : '已送达'}</span>
     </header>
+    <div className="fs-mail-organize" role="group" aria-label="整理这封信">
+      <button type="button" className="fs-mail-quiet" aria-pressed={Boolean(letter.favorite)} onClick={() => onOrganize(letter.id, 'favorite')}>{letter.favorite ? '已收藏' : '收藏这封信'}</button>
+      <button type="button" className="fs-mail-quiet" onClick={() => onOrganize(letter.id, letter.trashed ? 'restore' : 'trash')}>{letter.trashed ? '放回信箱' : '移到回收站'}</button>
+    </div>
+    {letter.trashed && <p className="fs-mail-pending-copy">原信和回信一起收在回收站，随时可以放回。</p>}
     <LetterBody letter={letter} reduced={reduced}/>
     <Evidence items={letter.evidence}/>
     {outbound && letter.status === 'sending' && <div className="fs-mail-pending" role="status">
@@ -131,6 +136,7 @@ export default function Mailbox({ sessions, state, now, reduced = false }) {
   const [selectedId, setSelectedId] = useState('');
   const [compose, setCompose] = useState(() => Boolean(letters.draft));
   const [filter, setFilter] = useState('all');
+  const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
   const [text, setText] = useState(() => letters.draft?.lines.join('\n') || '');
   const [shareContext, setShareContext] = useState(() => letters.draft?.shareContext !== false);
@@ -139,15 +145,15 @@ export default function Mailbox({ sessions, state, now, reduced = false }) {
   const [status, setStatus] = useState('');
   const [statusError, setStatusError] = useState(false);
   const [draftState, setDraftState] = useState(() => letters.draft ? '草稿已从抽屉里接上' : '');
-  const allRows = letters.rows('all'), rows = letters.rows(filter), paged = letters.page(rows, page, 6);
+  const allRows = [...letters.rows('all'), ...letters.rows('trash')], rows = letters.rows(filter, query), paged = letters.page(rows, page, 6);
   const selectedRow = allRows.find((row) => row.id === selectedId) || null;
 
   useEffect(() => { if (page > paged.totalPages) setPage(paged.totalPages); }, [page, paged.totalPages]);
   useEffect(() => {
-    if (!compose && !selectedId && allRows[0]) setSelectedId(allRows[0].id);
-  }, [compose, selectedId, allRows.length]);
+    if (!compose && !selectedId && rows[0]) setSelectedId(rows[0].id);
+  }, [compose, selectedId, rows[0]?.id]);
   useEffect(() => {
-    if (!selectedRow?.unread) return;
+    if (!selectedRow?.unread || selectedRow.letter.trashed) return;
     letters.markRead(selectedRow.direction === 'out' ? selectedRow.reply.id : selectedRow.letter.id);
   }, [selectedRow?.id, selectedRow?.unread]);
   // Save during the input event so closing the book immediately cannot lose
@@ -164,6 +170,12 @@ export default function Mailbox({ sessions, state, now, reduced = false }) {
     if (letters.draft) { setText(letters.draft.lines.join('\n')); setShareContext(letters.draft.shareContext !== false); setDraftState('草稿已从抽屉里接上'); }
   };
   const choose = (row) => { setCompose(false); setSelectedId(row.id); setStatus(''); };
+  const organize = (id, action) => {
+    const result = letters.organize(id, action);
+    setStatusError(!result.ok);
+    setStatus(result.ok ? action === 'trash' ? '已移到回收站，原信与回信都保留着。' : action === 'restore' ? '这封信已放回信箱。' : '收藏状态已保存。' : result.error);
+    if (result.ok && action !== 'favorite') setSelectedId('');
+  };
   const send = async () => {
     if (!cleanUserLetter(text).length || sending) return;
     setSending(true); setStatus(''); setStatusError(false);
@@ -177,7 +189,7 @@ export default function Mailbox({ sessions, state, now, reduced = false }) {
     setSending(false);
     if (!result.ok) { setStatus(result.error); setStatusError(true); return; }
     setCompose(false); setText(''); setIncludeNotes(false); setDraftState('');
-    setFilter('out'); setSelectedId(result.outgoing.id);
+    setFilter('out'); setQuery(''); setSelectedId(result.outgoing.id);
     setStatus(result.notice || '信已经寄出，回信也落在这一页了。');
   };
   const canUsePaper = hasArt('paper');
@@ -188,8 +200,9 @@ export default function Mailbox({ sessions, state, now, reduced = false }) {
         <div className="fs-mail-title"><MailArt/><div><h3>信箱</h3><p>{letters.unread ? `${letters.unread} 封来信还没拆` : '来信与寄出的信都收在这里'}</p></div></div>
         <button type="button" className="fs-mail-write" onClick={openComposer}>写一封信</button>
       </header>
+      <label className="fs-mail-search"><span className="sr-only">搜索信件</span><input type="search" aria-label="搜索信件" placeholder="找原信或回信中的一句话" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); setSelectedId(''); }}/></label>
       <div className="fs-mail-filters" role="group" aria-label="筛选信件">
-        {[['all', '全部'], ['in', '来信'], ['out', '寄出']].map(([id, label]) => <button key={id} type="button" aria-pressed={filter === id} onClick={() => { setFilter(id); setPage(1); }}>{label}</button>)}
+        {[['all', '全部'], ['in', '来信'], ['out', '寄出'], ['favorites', '收藏'], ['trash', '回收站']].map(([id, label]) => <button key={id} type="button" aria-pressed={filter === id} onClick={() => { setFilter(id); setPage(1); setSelectedId(''); }}>{label}</button>)}
       </div>
       {letters.draft && !compose && <button type="button" className="fs-mail-draft" onClick={openComposer}><span>未写完</span><strong>{letters.draft.lines[0]}</strong><small>继续写 ›</small></button>}
       {paged.rows.length ? <ol className="fs-mail-list">{paged.rows.map((row) => <li key={row.id}>
@@ -199,7 +212,7 @@ export default function Mailbox({ sessions, state, now, reduced = false }) {
           <time dateTime={new Date(row.latestAt).toISOString()}>{clock(row.latestAt).split(' ')[0]}</time>
           {row.unread && <i className="fs-mail-unread-dot" aria-label="未读"/>}
         </button>
-      </li>)}</ol> : <div className="fs-mail-list-empty"><JournalSprite name="cat-wait" width={96} height={96}/><p>{filter === 'out' ? '还没寄出过信。' : filter === 'in' ? '小屋还没有来信。' : '信箱里空空的。'}</p><small>{filter === 'all' ? '想说话的时候，随时可以写一封。' : '换个筛选看看。'}</small></div>}
+      </li>)}</ol> : <div className="fs-mail-list-empty"><JournalSprite name="cat-wait" width={96} height={96}/><p>{query ? '没有找到这句话。' : filter === 'trash' ? '回收站是空的。' : filter === 'favorites' ? '还没有收藏的信。' : filter === 'out' ? '还没寄出过信。' : filter === 'in' ? '小屋还没有来信。' : '信箱里空空的。'}</p><small>{filter === 'all' && !query ? '想说话的时候，随时可以写一封。' : '换个筛选或关键词看看。'}</small></div>}
       {paged.totalPages > 1 && <nav className="fs-mail-pages" aria-label="信件分页">
         <button type="button" disabled={paged.page <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))}>‹</button>
         <span>{paged.page} / {paged.totalPages} · 第 {paged.from + 1}–{paged.to} 封</span>
@@ -213,7 +226,7 @@ export default function Mailbox({ sessions, state, now, reduced = false }) {
       {compose ? <Composer sessions={sessions} state={state} now={now} reduced={reduced} draft={Boolean(letters.draft)}
         shareContext={shareContext} setShareContext={changeContext} includeNotes={includeNotes} setIncludeNotes={setIncludeNotes}
         text={text} setText={changeText} sending={sending} status={status} onSend={send} onClose={() => setCompose(false)}/>
-        : <ThreadView row={selectedRow} reduced={reduced} sending={sending} onRecover={(id) => {
+        : <ThreadView row={selectedRow} reduced={reduced} sending={sending} onOrganize={organize} onRecover={(id) => {
           const result = letters.recover(id);
           setStatusError(!result.ok);
           setStatus(result.ok ? '小屋已接上这封回信，信的内容没有重新发送。' : result.error);

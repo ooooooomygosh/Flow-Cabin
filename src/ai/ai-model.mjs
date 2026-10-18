@@ -169,6 +169,7 @@ export function normalizeLetter(value) {
     ...(optionalText(value.period, 40) ? { period: optionalText(value.period, 40) } : {}),
     ...(optionalText(value.subject, 80) ? { subject: optionalText(value.subject, 80) } : {}),
     lines, source, at: value.at, read,
+    ...(finite(value.organizedAt) ? { organizedAt: value.organizedAt, favorite: value.favorite === true, trashed: value.trashed === true } : {}),
     ...(direction === 'out' ? { shareContext: value.shareContext !== false && value.period !== '不附小屋近况' } : {}),
     ...(finite(value.readAt) ? { readAt: value.readAt } : {}),
     ...(optionalText(value.replyTo, 100) ? { replyTo: optionalText(value.replyTo, 100) } : {}),
@@ -298,7 +299,7 @@ export function removeLetter(storage, id) {
   try { storage?.setItem?.(LETTERS_KEY, JSON.stringify(list)); } catch { /* keep the previous list */ }
   return list;
 }
-export const unreadCount = (list) => list.filter((l) => l.direction === 'in' && l.status !== 'draft' && !l.read).length;
+export const unreadCount = (list) => list.filter((l) => l.direction === 'in' && l.status !== 'draft' && !l.read && !l.trashed).length;
 // Generate once per period: skip when an AI letter exists, or a failed try was under an hour ago.
 export const TRY_KEY = 'flow-cabin-letter-try-v1';
 export function needsLetter(list, period, lastTry, now, retryMs = 3600000) {

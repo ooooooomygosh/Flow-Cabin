@@ -19,6 +19,20 @@ const memoryStorage = (entries = []) => {
 };
 const at = Date.parse('2026-10-18T08:00:00Z');
 const letter = (id = 'w:2026-10-12', time = at) => ({ id, cadence: 'weekly', tone: 'warm', period: '上周', lines: ['今天也很努力。', '明天见。'], source: 'ai', at: time, read: false });
+test('letter organization survives backup restore without reviving an older trash or favorite state', () => {
+  const storage = memoryStorage();
+  const old = { ...letter(), organizedAt: at + 10, favorite: true, trashed: false };
+  const latest = { ...old, organizedAt: at + 20, favorite: false, trashed: true };
+  saveLetter(storage, latest);
+  restoreBackupMemory({ memory: { letters: [old] } }, { storage });
+  assert.equal(readLetters(storage)[0].trashed, true);
+  assert.equal(readLetters(storage)[0].favorite, false);
+  const fresh = memoryStorage();
+  restoreBackupMemory(parseBackup(JSON.stringify(buildBackup({ storage }))), { storage: fresh });
+  assert.deepEqual(readLetters(fresh), readLetters(storage));
+  restoreBackupMemory({ memory: { letters: [{ ...latest, organizedAt: at + 30, trashed: false }] } }, { storage });
+  assert.equal(readLetters(storage)[0].trashed, false);
+});
 const journalEntry = (id = 'journal', patch = {}) => ({ id, version: `v-${id}`, body: '一页手记', tags: ['夜晚', '复盘'],
   createdAt: at, updatedAt: at + 10, revisions: [{ version: `old-${id}`, body: '旧稿', tags: ['旧'], at: at - 100 }], ...patch });
 function populateMemory(storage) {

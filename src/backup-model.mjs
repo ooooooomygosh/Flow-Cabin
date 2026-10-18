@@ -228,6 +228,11 @@ function mergeLetter(local, saved) {
   const readTimes = read ? candidates.map((record) => record.readAt).filter(finite) : [];
   const readAt = readTimes.length ? Math.max(...readTimes) : null;
   const merged = { ...latest, read };
+  const organized = candidates.reduce((best, record) => (record.organizedAt || 0) > (best.organizedAt || 0)
+    || (record.organizedAt === best.organizedAt && record.trashed) ? record : best);
+  if (organized.organizedAt != null) Object.assign(merged, {
+    organizedAt: organized.organizedAt, favorite: organized.favorite, trashed: organized.trashed
+  });
   if (readAt == null) delete merged.readAt; else merged.readAt = readAt;
   return normalizeLetter(merged);
 }
