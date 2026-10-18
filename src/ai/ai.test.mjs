@@ -7,11 +7,29 @@ import {
   localLetterReply, templateLetter, summarizeListening, userLetterSubject, tryWriteLetters
 } from './ai-model.mjs';
 import { mailboxRows, pageSlice, readLetterDraft, saveLetterDraft, sendCabinLetter, clearLetterDraft, recoverCabinLetter, organizeLetterThread, DRAFT_ID } from './letter-reply.mjs';
-import { buildLetterContext, hasLetterFacts, recentLetterPeriod } from './letter-context.mjs';
+import { buildLetterContext, hasLetterFacts, recentLetterPeriod, journalExcerpt, journalSelectionCurrent } from './letter-context.mjs';
 import { chat } from './ai-transport.mjs';
 
 const mem = () => { const m = new Map(); return { getItem: (k) => m.has(k) ? m.get(k) : null, setItem: (k, v) => m.set(k, String(v)), removeItem: (k) => m.delete(k), m }; };
 const KEY = 'sk-unit-SECRET-abcdef123456';
+
+test('selected journal excerpts are bounded, explicit, and invalidated by edits or removal', () => {
+  const entry = { id: 'private-id', version: 'v1', createdAt: 1000, body: '选中的记忆'.repeat(100), tags: ['不发送的标签'] };
+  const selected = journalExcerpt(entry);
+  assert.equal(selected.excerpt.length, 240);
+  assert.equal(journalExcerpt({ ...entry, deletedAt: 2000 }), null);
+  assert.equal(journalSelectionCurrent([selected], [entry]), true);
+  assert.equal(journalSelectionCurrent([selected], [{ ...entry, version: 'v2' }]), false);
+  assert.equal(journalSelectionCurrent([selected], [{ ...entry, deletedAt: 2000 }]), false);
+  assert.equal(journalSelectionCurrent([selected], []), false);
+  assert.equal(buildLetterContext({ shareContext: false, selectedJournal: [selected] }), null);
+  assert.equal(buildLetterContext({}).journal, undefined);
+  const summary = buildLetterContext({ selectedJournal: [selected] });
+  assert.deepEqual(summary.journal, [{ excerpt: selected.excerpt }]);
+  assert.equal(JSON.stringify(summary).includes('private-id'), false);
+  assert.equal(JSON.stringify(summary).includes('不发送的标签'), false);
+  assert.equal(buildLetterContext({ selectedJournal: Array(4).fill(selected) }).journal.length, 3);
+});
 
 test('mailbox searches reply text and keeps favorite/trash operations on the whole thread', async () => {
   const storage = mem(), win = new EventTarget();

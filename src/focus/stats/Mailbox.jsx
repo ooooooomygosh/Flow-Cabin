@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLetters, useAiSettings } from '../../ai/useCabinLetters.js';
 import { aiReady, chatUrl, cleanUserLetter } from '../../ai/ai-model.mjs';
-import { buildLetterContext, recentLetterPeriod, ambienceSnapshot } from '../../ai/letter-context.mjs';
+import { buildLetterContext, recentLetterPeriod, ambienceSnapshot, journalSelectionCurrent } from '../../ai/letter-context.mjs';
+import { readJournalRecords } from '../journal-entries.mjs';
+import LetterJournalPicker from './LetterJournalPicker.jsx';
 import { readPlaybackSessions } from '../../player/playback-log.mjs';
 import { readCatMood, subscribeCatMood } from './cat-mood-source.mjs';
 import { hasArt, LETTER_PLACEHOLDER, sprite } from './journal-art.mjs';
@@ -85,7 +87,7 @@ function ThreadView({ row, reduced, sending, onRecover, onOrganize }) {
   </div>;
 }
 
-function Composer({ sessions, state, now, reduced, draft, shareContext, setShareContext, includeNotes, setIncludeNotes, text, setText, sending, status, onSend, onClose }) {
+function Composer({ sessions, state, now, reduced, draft, shareContext, setShareContext, includeNotes, setIncludeNotes, selectedJournal, setSelectedJournal, text, setText, sending, status, onSend, onClose }) {
   const { settings, key } = useAiSettings();
   const ready = aiReady(settings, key.stored) && key.endpoint === chatUrl(settings.baseUrl);
   const minute = minuteKey(now);
@@ -96,8 +98,8 @@ function Composer({ sessions, state, now, reduced, draft, shareContext, setShare
   const playback = useMemo(() => readPlaybackSessions(globalThis.localStorage), [minute]);
   const summary = useMemo(() => buildLetterContext({
     sessions, playbackSessions: playback, mood, notes: state?.notes || '',
-    includeNotes, shareContext, weather: ambience, now
-  }), [sessions, playback, mood, state?.notes, includeNotes, shareContext, ambience, minute]);
+    includeNotes, shareContext, selectedJournal, weather: ambience, now
+  }), [sessions, playback, mood, state?.notes, includeNotes, shareContext, selectedJournal, ambience, minute]);
   const evidence = summary?.evidence || [];
   const hasNotes = Boolean(state?.notes?.trim());
   const lines = cleanUserLetter(text);
@@ -119,6 +121,7 @@ function Composer({ sessions, state, now, reduced, draft, shareContext, setShare
         <input type="checkbox" checked={includeNotes} disabled={!shareContext || !hasNotes || sending} onChange={(event) => setIncludeNotes(event.target.checked)}/>
         <span><strong>允许这次回信参考我的随手记</strong><small>{hasNotes ? 'AI 开启时会把最近一段摘录发给你配置的服务；本地回信不会外发。' : '写几句随手记之后，这里才可以使用。'}</small></span>
       </label>
+      {shareContext && <LetterJournalPicker selected={selectedJournal} onChange={setSelectedJournal} disabled={sending}/>}
       <Evidence items={evidence}/>
       {!shareContext && <p className="fs-mail-context-note">这次只寄出你亲手写下的内容。</p>}
     </fieldset>
@@ -141,6 +144,7 @@ export default function Mailbox({ sessions, state, now, reduced = false }) {
   const [text, setText] = useState(() => letters.draft?.lines.join('\n') || '');
   const [shareContext, setShareContext] = useState(() => letters.draft?.shareContext !== false);
   const [includeNotes, setIncludeNotes] = useState(false);
+  const [selectedJournal, setSelectedJournal] = useState([]);
   const [sending, setSending] = useState(false);
   const [status, setStatus] = useState('');
   const [statusError, setStatusError] = useState(false);
@@ -163,13 +167,13 @@ export default function Mailbox({ sessions, state, now, reduced = false }) {
     setDraftState(result.ok ? (nextText.trim() ? '草稿已保存' : '') : result.error);
   };
   const changeText = (value) => { setText(value); persistDraft(value, shareContext); };
-  const changeContext = (value) => { setShareContext(value); persistDraft(text, value); };
+  const changeContext = (value) => { setShareContext(value); if (!value) setSelectedJournal([]); persistDraft(text, value); };
 
   const openComposer = () => {
-    setCompose(true); setSelectedId(''); setStatus('');
+    setCompose(true); setSelectedId(''); setStatus(''); setSelectedJournal([]); setIncludeNotes(false);
     if (letters.draft) { setText(letters.draft.lines.join('\n')); setShareContext(letters.draft.shareContext !== false); setDraftState('草稿已从抽屉里接上'); }
   };
-  const choose = (row) => { setCompose(false); setSelectedId(row.id); setStatus(''); };
+  const choose = (row) => { setCompose(false); setSelectedId(row.id); setStatus(''); setSelectedJournal([]); setIncludeNotes(false); };
   const organize = (id, action) => {
     const result = letters.organize(id, action);
     setStatusError(!result.ok);
@@ -178,17 +182,26 @@ export default function Mailbox({ sessions, state, now, reduced = false }) {
   };
   const send = async () => {
     if (!cleanUserLetter(text).length || sending) return;
+    if (selectedJournal.length && shareContext) {
+      try {
+        if (!journalSelectionCurrent(selectedJournal, readJournalRecords(globalThis.localStorage))) {
+          setStatus('选中的手记已改变，请重新选择摘录后再寄信。'); setStatusError(true); return;
+        }
+      } catch {
+        setStatus('无法核对手记，请取消摘录或检查本机存储后重试。'); setStatusError(true); return;
+      }
+    }
     setSending(true); setStatus(''); setStatusError(false);
     const period = recentLetterPeriod(Date.now());
     const mood = (() => { try { return readCatMood(globalThis.localStorage, period.from, period.to); } catch { return null; } })();
     const summary = buildLetterContext({
       sessions, playbackSessions: readPlaybackSessions(globalThis.localStorage), mood,
-      notes: state?.notes || '', includeNotes, shareContext, weather: ambienceSnapshot(), now: Date.now()
+      notes: state?.notes || '', includeNotes, shareContext, selectedJournal, weather: ambienceSnapshot(), now: Date.now()
     });
     const result = await letters.send({ text, summary, now: Date.now() });
     setSending(false);
     if (!result.ok) { setStatus(result.error); setStatusError(true); return; }
-    setCompose(false); setText(''); setIncludeNotes(false); setDraftState('');
+    setCompose(false); setText(''); setIncludeNotes(false); setSelectedJournal([]); setDraftState('');
     setFilter('out'); setQuery(''); setSelectedId(result.outgoing.id);
     setStatus(result.notice || '信已经寄出，回信也落在这一页了。');
   };
@@ -225,7 +238,8 @@ export default function Mailbox({ sessions, state, now, reduced = false }) {
       {status && <p className={`fs-mail-toast ${statusError ? 'is-error' : ''}`} role="status">{status}</p>}
       {compose ? <Composer sessions={sessions} state={state} now={now} reduced={reduced} draft={Boolean(letters.draft)}
         shareContext={shareContext} setShareContext={changeContext} includeNotes={includeNotes} setIncludeNotes={setIncludeNotes}
-        text={text} setText={changeText} sending={sending} status={status} onSend={send} onClose={() => setCompose(false)}/>
+        selectedJournal={selectedJournal} setSelectedJournal={setSelectedJournal}
+        text={text} setText={changeText} sending={sending} status={status} onSend={send} onClose={() => { setCompose(false); setSelectedJournal([]); setIncludeNotes(false); }}/>
         : <ThreadView row={selectedRow} reduced={reduced} sending={sending} onOrganize={organize} onRecover={(id) => {
           const result = letters.recover(id);
           setStatusError(!result.ok);

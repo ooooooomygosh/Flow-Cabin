@@ -210,7 +210,7 @@ export function localLetterReply(text, summary = null) {
   if (focus || listen) out.push(`${focus}${focus && listen ? '，' : ''}${listen}。你为自己留出的这些时间，都收在小屋里了。`);
   if (summary?.weather?.kind) out.push(`写这封信的时候，窗外是${WEATHER_LABELS[summary.weather.kind] || summary.weather.kind}。小屋替你留着这一刻。`);
   if (summary?.cat?.feeds > 0) out.push(`这段时间你给奶糖喂了 ${summary.cat.feeds} 次。谢谢你还记得它的小碗。`);
-  if (summary?.note?.chars > 0) out.push('你附在信里的那几行随手记，也一起收好了。想说的话，可以慢慢说。');
+  if (summary?.note?.chars > 0 || summary?.journal?.length) out.push('你主动附在信里的那些摘录，也一起收好了。想说的话，可以慢慢说。');
   out.push('如果今天还有一点力气，就只做眼前最小的一件事；如果没有，也可以先歇一会儿。');
   out.push('你的位置和桌边那盏灯，都还在。');
   return out.slice(0, 5);
