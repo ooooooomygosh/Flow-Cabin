@@ -185,3 +185,71 @@ test('study: a deleted card or countdown comes back unchanged with 撤销', asyn
   const exam = state.countdowns[1];
   assert.deepEqual(restoreCountdown(removeCountdown(state, exam.id), exam).countdowns, state.countdowns);
 });
+
+test('word sources import from TSV columns and JSON as plain text; old two-column imports stay unchanged', () => {
+  const source = '<b>合成 fixture</b> & 测试来源';
+  const expected = [{ front: 'word', back: '词', source }];
+  assert.deepEqual(previewWordImport(`word\t词\t${source}`).cards, expected);
+  assert.deepEqual(previewWordImport(`front\tback\tsource\nword\t词\t${source}`, { header: true }).cards, expected);
+  assert.deepEqual(previewWordImport(`\uFEFFSOURCE\tmeaning\tword\n${source}\t词\tword`, { header: true, frontColumn: 2, backColumn: 1 }).cards, expected);
+  assert.deepEqual(previewWordImport(JSON.stringify(expected), { format: 'json' }).cards, expected);
+  assert.deepEqual(previewWordImport('word\t词').cards, [{ front: 'word', back: '词' }]);
+  assert.deepEqual(previewWordImport('ignored\t词\tword', { frontColumn: 2 }).cards, [{ front: 'word', back: '词' }], 'a mapped front column cannot also become attribution');
+});
+
+test('source length and type errors are reported without silently importing truncated attribution', async () => {
+  const { LIMITS } = await import('./study-model.mjs');
+  const source = '来'.repeat(LIMITS.source);
+  assert.equal(previewWordImport(`word\t词\t${source}`).cards[0].source, source);
+  for (const badSource of [source + '源', 42, {}, []]) {
+    const result = previewWordImport(JSON.stringify([{ front: 'bad', back: '错误', source: badSource }, { front: 'good', back: '有效' }]), { format: 'json' });
+    assert.deepEqual(result.cards, [{ front: 'good', back: '有效' }]);
+    assert.equal(result.errors, 1);
+    assert.match(result.message, /300/);
+  }
+  assert.equal(previewWordImport(`word\t词\t${source}源`).errors, 1);
+});
+
+test('deck and card sources normalize compatibly, sanitize controls and survive repeated serialization', async () => {
+  const { LIMITS } = await import('./study-model.mjs');
+  const legacy = normalizeStudy({ decks: [{ id: 'd', name: '旧词书' }], cards: [{ id: 'c', deckId: 'd', front: 'word', back: '词' }] });
+  assert.equal(Object.hasOwn(legacy.decks[0], 'source'), false);
+  assert.equal(Object.hasOwn(legacy.cards[0], 'source'), false);
+  for (const invalid of [null, '', '  ', 12, {}, []]) {
+    assert.deepEqual(normalizeStudy({ ...legacy, decks: [{ ...legacy.decks[0], source: invalid }], cards: [{ ...legacy.cards[0], source: invalid }] }), legacy);
+  }
+  const sourced = {
+    ...legacy,
+    decks: [{ ...legacy.decks[0], source: '合成卡组来源（非真实授权）' }],
+    cards: [{ ...legacy.cards[0], source: '<b>合成词条来源</b> & fixture' }]
+  };
+  assert.deepEqual(normalizeStudy(JSON.parse(JSON.stringify(sourced))), sourced, 'JSON roundtrip preserves both source fields verbatim');
+  let saved = normalizeStudy({ ...legacy, decks: [{ ...legacy.decks[0], source: ' \u0000合成来源 ' }], cards: [{ ...legacy.cards[0], source: '来'.repeat(LIMITS.source + 1) }] });
+  assert.equal(saved.decks[0].source, '合成来源');
+  assert.equal(saved.cards[0].source.length, LIMITS.source);
+  const expected = structuredClone(saved);
+  for (let index = 0; index < 3; index++) saved = normalizeStudy(JSON.parse(JSON.stringify(saved)));
+  assert.deepEqual(saved, expected);
+});
+
+test('mixed imported sources and existing progress survive duplicate imports, editing and review', async () => {
+  const { updateCard } = await import('./study-model.mjs');
+  let state = addDeck(normalizeStudy(), '合成词书', T0);
+  const deckId = state.decks[0].id;
+  state = addCards(state, deckId, previewWordImport('first\t一\t来源甲\nsecond\t二\t来源乙').cards, T0).state;
+  state = review(state, state.cards[0].id, RATINGS[2].rating, T0);
+  const learned = structuredClone(state.cards[0]);
+  const duplicate = addCards(state, deckId, [{ front: 'FIRST', back: '覆盖', source: '新来源' }], T0);
+  assert.equal(duplicate.added, 0);
+  assert.deepEqual(duplicate.state.cards[0], learned);
+  const edited = normalizeStudy(updateCard(state, learned.id, { back: '新释义' }));
+  assert.equal(edited.cards[0].source, '来源甲');
+  assert.deepEqual(edited.cards[0].memory, learned.memory);
+  assert.equal(edited.cards[1].source, '来源乙');
+  assert.equal(edited.decks[0].source, undefined, 'mixed card sources must not be asserted as a single deck source');
+});
+
+test('built-in wordbooks persist their declared catalog source on the deck', () => {
+  const state = normalizeStudy(openWordBook(normalizeStudy(), WORD_BOOKS[0].id, T0));
+  assert.equal(state.decks[0].source, WORD_BOOKS[0].source);
+});

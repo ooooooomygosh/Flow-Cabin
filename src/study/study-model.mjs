@@ -4,7 +4,7 @@
 import { fsrs, generatorParameters, createEmptyCard, Rating, State } from 'ts-fsrs';
 
 export const STUDY_PREFIX = 'album-circle-study-v1:';
-export const LIMITS = Object.freeze({ decks: 40, cards: 5000, side: 600, countdowns: 12, perDayNew: 20 });
+export const LIMITS = Object.freeze({ decks: 40, cards: 5000, side: 600, source: 300, countdowns: 12, perDayNew: 20 });
 export const RATINGS = Object.freeze([
   { rating: Rating.Again, key: '1', label: '忘了', tone: 'again' },
   { rating: Rating.Hard, key: '2', label: '模糊', tone: 'hard' },
@@ -15,6 +15,11 @@ const scheduler = fsrs(generatorParameters({ enable_fuzz: true, request_retentio
 const strict = fsrs(generatorParameters({ enable_fuzz: false, request_retention: 0.9, maximum_interval: 3650 }));
 const DAY = 86400000;
 const text = (value, max) => (typeof value === 'string' ? value : '').replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, '').trim().slice(0, max);
+// Optional metadata keeps legacy cards/decks unchanged; source is plain text.
+export function sourceFields(value) {
+  const source = text(value, LIMITS.source);
+  return source ? { source } : {};
+}
 const number = (value, low, high, fallback = 0) => Number.isFinite(Number(value)) ? Math.max(low, Math.min(high, Number(value))) : fallback;
 const uid = (prefix) => `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 import { dayKey } from '../focus/focus-model.mjs';
@@ -42,11 +47,11 @@ function normalizeCard(value, decks) {
   if (!value || typeof value !== 'object') return null;
   const front = text(value.front, LIMITS.side), back = text(value.back, LIMITS.side), deckId = text(value.deckId, 60);
   if (!front || !decks.has(deckId)) return null;
-  return { id: text(value.id, 60) || uid('card'), deckId, front, back, createdAt: number(value.createdAt, 0, 9e15, 0), memory: normalizeMemory(value.memory) };
+  return { id: text(value.id, 60) || uid('card'), deckId, front, back, ...sourceFields(value.source), createdAt: number(value.createdAt, 0, 9e15, 0), memory: normalizeMemory(value.memory) };
 }
 export function normalizeStudy(value = {}) {
   const v = value && typeof value === 'object' ? value : {};
-  const decks = (Array.isArray(v.decks) ? v.decks : []).map((deck) => deck && typeof deck === 'object' && text(deck.name, 40) ? { id: text(deck.id, 60) || uid('deck'), name: text(deck.name, 40), createdAt: number(deck.createdAt, 0, 9e15, 0) } : null).filter(Boolean).slice(0, LIMITS.decks);
+  const decks = (Array.isArray(v.decks) ? v.decks : []).map((deck) => deck && typeof deck === 'object' && text(deck.name, 40) ? { id: text(deck.id, 60) || uid('deck'), name: text(deck.name, 40), ...sourceFields(deck.source), createdAt: number(deck.createdAt, 0, 9e15, 0) } : null).filter(Boolean).slice(0, LIMITS.decks);
   const ids = new Set(decks.map((deck) => deck.id));
   const log = v.log && typeof v.log === 'object' ? Object.fromEntries(Object.entries(v.log).filter(([key]) => /^\d{4}-\d{2}-\d{2}$/.test(key)).slice(-400).map(([key, entry]) => [key, { reviews: number(entry?.reviews, 0, 1e5, 0), learned: number(entry?.learned, 0, 1e5, 0) }])) : {};
   return {
@@ -80,7 +85,7 @@ export function addCards(state, deckId, cards, now = Date.now()) {
   for (const card of cards) {
     if (state.cards.length + fresh.length >= LIMITS.cards) break;
     const key = cardKey(card.front); if (existing.has(key)) continue; existing.add(key);
-    fresh.push({ id: uid('card'), deckId, front: card.front, back: card.back, createdAt: now + fresh.length, memory: null });
+    fresh.push({ id: uid('card'), deckId, front: card.front, back: card.back, ...sourceFields(card.source), createdAt: now + fresh.length, memory: null });
   }
   return { state: { ...state, cards: [...state.cards, ...fresh] }, added: fresh.length };
 }

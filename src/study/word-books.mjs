@@ -1,6 +1,6 @@
 // Original short teaching notes written for Flow Cabin; no scraped dictionary,
 // examination list, pronunciation audio, or third-party quotations are bundled.
-import { addCards, cardKey, dayKey, LIMITS } from './study-model.mjs';
+import { addCards, cardKey, dayKey, LIMITS, sourceFields } from './study-model.mjs';
 const book = (id, name, description, rows) => Object.freeze({ id: `book-${id}`, name, description, source: '小屋原创入门词书 · 不是考试完整词库', words: rows.map(([front, back]) => ({ front, back })) });
 export const WORD_BOOKS = Object.freeze([
   book('daily', '日常小事', '从家、食物和天气开始。', [['morning', 'n. 早晨；一天开始的时段'], ['window', 'n. 窗户；房间采光通风的开口'], ['bread', 'n. 面包'], ['water', 'n. 水'], ['quiet', 'adj. 安静的；声音很少的'], ['garden', 'n. 花园；栽种花草的地方']]),
@@ -10,7 +10,7 @@ export const WORD_BOOKS = Object.freeze([
 export function openWordBook(state, id, now = Date.now()) {
   const book = WORD_BOOKS.find(book => book.id === id);
   if (!book || state.decks.some(deck => deck.id === id) || state.decks.length >= LIMITS.decks) return state;
-  return { ...state, decks: [...state.decks, { id, name: book.name, createdAt: now }] };
+  return { ...state, decks: [...state.decks, { id, name: book.name, source: book.source, createdAt: now }] };
 }
 // Content stays in the catalog. Create only the next card when it is presented;
 // changing books cannot reset a previous card's memory or daily learning limit.
@@ -30,14 +30,22 @@ export function previewWordImport(text, { format = 'tsv', frontColumn = 0, backC
   let rows;
   try {
     if (format === 'json') { rows = JSON.parse(text); if (!Array.isArray(rows)) throw new Error(); }
-    else rows = String(text).replace(/^\uFEFF/, '').split(/\r?\n/).filter(line => line.trim()).slice(header ? 1 : 0).map(line => { const parts = line.split('\t'); return { front: parts[frontColumn], back: parts[backColumn] }; });
+    else {
+      const lines = String(text).replace(/^\uFEFF/, '').split(/\r?\n/).filter(line => line.trim());
+      const sourceColumn = header ? (lines[0] || '').split('\t').findIndex(label => label.trim().toLowerCase() === 'source') : 2;
+      rows = lines.slice(header ? 1 : 0).map(line => {
+        const parts = line.split('\t');
+        return { front: parts[frontColumn], back: parts[backColumn], source: sourceColumn >= 0 && ![frontColumn, backColumn].includes(sourceColumn) ? parts[sourceColumn] : undefined };
+      });
+    }
   } catch { return { cards: [], duplicates: 0, errors: 1, message: 'JSON 需要是 [{"front":"单词","back":"释义"}] 数组。' }; }
-  let duplicates = 0, errors = 0; const cards = [];
+  let duplicates = 0, errors = 0, sourceErrors = 0; const cards = [];
   for (const row of rows) {
     if (!row || typeof row.front !== 'string' || typeof row.back !== 'string' || !row.front.trim() || !row.back.trim() || row.front.length > LIMITS.side || row.back.length > LIMITS.side) { errors++; continue; }
+    if (row.source != null && (typeof row.source !== 'string' || row.source.trim().length > LIMITS.source)) { errors++; sourceErrors++; continue; }
     const key = cardKey(row.front);
     if (seen.has(key)) { duplicates++; continue; }
-    seen.add(key); cards.push({ front: row.front.trim(), back: row.back.trim() });
+    seen.add(key); cards.push({ front: row.front.trim(), back: row.back.trim(), ...sourceFields(row.source) });
   }
-  return { cards, duplicates, errors, message: '' };
+  return { cards, duplicates, errors, message: sourceErrors ? `来源须为不超过 ${LIMITS.source} 字符的纯文本；请修改错误行后重试。` : '' };
 }

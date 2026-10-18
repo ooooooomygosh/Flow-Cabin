@@ -115,3 +115,7 @@
 .study-import input[type=file] { max-width:100%; font-size:12px; }
 .study-import-columns { display:flex; flex-wrap:wrap; gap:8px; margin:8px 0; }
 }
+@layer overrides {
+  .study-source { display: block; min-width: 0; max-width: 100%; margin: 0; font-size: 12px; line-height: 1.6; color: var(--px-ink-dim); white-space: pre-wrap; overflow-wrap: anywhere; }
+  .study-card-list .study-source { grid-column: 1 / -1; overflow: visible; }
+}

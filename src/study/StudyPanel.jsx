@@ -11,6 +11,12 @@ import { NumberField } from '../lib/NumberField.jsx';
 // 每天新词: one number field; an empty field while typing does not save 0.
 const NewPerDay = ({ study }) => <label className="study-limit">每天新词（个）<NumberField live min={0} max={200} list="study-new-per-day" aria-label="词书每日新词" value={study.state.newPerDay} onCommit={study.setNewPerDay}/><datalist id="study-new-per-day"><option value="5"/><option value="10"/><option value="20"/></datalist></label>;
 const whenLabel = (time) => new Date(time).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+const Source = ({ value }) => value ? <small className="study-source">来源：{value}</small> : null;
+const deckSource = (deck) => deck.source || WORD_BOOKS.find(book => book.id === deck.id)?.source;
+function DeckSource({ deck, cards }) {
+  const sources = [...new Set([deckSource(deck), ...cards.filter(card => card.deckId === deck.id).map(card => card.source)].filter(Boolean))];
+  return <Source value={sources.length > 1 ? `${sources.length} 种来源（学习时逐张查看）` : sources[0]}/>;
+}
 
 // 学习: today's review in a deck (Space flips, 1–4 rates), a quick way to add
 // or paste many cards, and the countdowns that keep the goal in view.
@@ -51,6 +57,7 @@ function Review({ deck, close, edit }) {
         <span className="study-card-front">{card.front}</span>
         {flipped ? <span className="study-card-back">{card.back || '（没有背面，想一想就好）'}</span> : <span className="study-card-hint">想一想，再按空格翻面</span>}
       </button>
+      <Source value={card.source || deckSource(deck)}/>
       {flipped ? <div className="study-ratings" role="group" aria-label="记得怎么样">{RATINGS.map((entry) => <button type="button" key={entry.rating} className={`is-${entry.tone}`} onClick={() => rate(entry.rating)}><b>{entry.label}</b><small>{labels[entry.rating]}</small><kbd>{entry.key}</kbd></button>)}</div>
         : <button type="button" className="pixel-button is-primary study-flip" onClick={() => setFlipped(true)}>翻面 · 空格</button>}
     </> : <div className="study-done">{status.kind === 'empty' || status.kind === 'new' ? <BookOpen size={22}/> : <Check size={22}/>}<strong>{notice.title}</strong><small>{notice.copy}</small><div className="study-done-actions">{notice.edit && <button type="button" className="pixel-button is-primary" onClick={edit}>添加或导入词条</button>}<button type="button" className="pixel-button is-quiet" onClick={close}>回到词书架</button></div></div>}
@@ -67,6 +74,7 @@ function DeckEditor({ deck, close }) {
   const add = (event) => { event.preventDefault(); const added = study.addCards(deck.id, input); setMessage(added === null ? '' : added ? `添加了 ${added} 张卡片。` : '没有新卡片（可能都已经在这组里了，或已达卡片上限）。'); if (added) setInput(''); };
   return <div className="study-editor">
     <header className="study-review-head"><button type="button" className="study-back" onClick={close}><ArrowLeft size={14}/>卡组</button><span>{deck.name} · {cards.length} 张</span></header>
+    <DeckSource deck={deck} cards={cards}/>
     <WordImport deck={deck} cards={cards}/>
     <form onSubmit={add} className="study-add">
       <label>每行一张：<span className="study-sample">正面 - 背面</span>，也可以粘贴 Anki / Excel 导出的两列文本<textarea rows={5} aria-label="新卡片" value={input} onChange={(event) => setInput(event.target.value)} placeholder={'ephemeral - 短暂的\n光合作用：植物利用光能把二氧化碳和水合成有机物'}/></label>
@@ -79,7 +87,7 @@ function DeckEditor({ deck, close }) {
       <label>背面<textarea aria-label="编辑卡片背面" maxLength={600} value={editing.back} onChange={event => setEditing({ ...editing, back: event.target.value })}/></label>
       <div><button type="submit" className="pixel-button is-primary" disabled={!editing.front.trim()}>保存卡片</button><button type="button" className="pixel-button is-quiet" onClick={() => setEditing(null)}>取消编辑</button></div>
     </form>}
-    <ul className="study-card-list" aria-label="这组卡片">{visible.slice(-60).reverse().map((card) => <li key={card.id}><span title={card.front}>{card.front}</span><small title={card.back}>{card.back}</small><button type="button" aria-label={`编辑卡片 ${card.front}`} onClick={() => { setEditing({ id: card.id, front: card.front, back: card.back }); setMessage(''); }}>编辑</button><button type="button" aria-label={`删除卡片 ${card.front}`} onClick={() => { if (!study.removeCard(card.id)) return; offerUndo(`已删除卡片「${card.front}」`, () => study.restoreCard(card)); if (editing?.id === card.id) setEditing(null); }}><Trash2 size={16}/></button></li>)}</ul>
+    <ul className="study-card-list" aria-label="这组卡片">{visible.slice(-60).reverse().map((card) => <li key={card.id}><span title={card.front}>{card.front}</span><small title={card.back}>{card.back}</small><button type="button" aria-label={`编辑卡片 ${card.front}`} onClick={() => { setEditing({ id: card.id, front: card.front, back: card.back }); setMessage(''); }}>编辑</button><button type="button" aria-label={`删除卡片 ${card.front}`} onClick={() => { if (!study.removeCard(card.id)) return; offerUndo(`已删除卡片「${card.front}」`, () => study.restoreCard(card)); if (editing?.id === card.id) setEditing(null); }}><Trash2 size={16}/></button><Source value={card.source || deckSource(deck)}/></li>)}</ul>
     <UndoLine offer={undo} clear={clearUndo}/>
     {visible.length > 60 && <small className="study-more">显示最近 60 张匹配卡片，搜索可查找这组全部 {cards.length} 张。</small>}
     {query && !visible.length && <p role="status">没有找到匹配卡片，试试正面或背面的关键词。</p>}
@@ -98,12 +106,13 @@ function WordImport({ deck, cards }) {
   };
   return <details className="study-import"><summary>导入本地词书</summary>
     <p>支持 UTF-8 的 TSV / Anki 两列纯文本，或 front、back 字段的 JSON 数组。追加词条，不覆盖已有复习进度。</p>
+    <p>可选来源：无标题 TSV 用第三列；有标题 TSV 用 source 列；JSON 用 source 字段。来源最多 {LIMITS.source} 字符，按纯文本显示。</p>
     <label>选择词书文件<input aria-label="选择词书文件" type="file" accept=".tsv,.txt,.json" onChange={read}/></label>
     <button type="button" className="pixel-button is-quiet" onClick={() => downloadBlob(new Blob(['word\tmeaning\nwindow\t窗户\n'], { type: 'text/tab-separated-values' }), '小屋词书模板.tsv')}>下载两列模板</button>
     {text && <><label>格式<select aria-label="词书导入格式" value={format} onChange={event => setFormat(event.target.value)}><option value="tsv">Tab 分隔文本</option><option value="json">JSON 数组</option></select></label>
       {format === 'tsv' && <div className="study-import-columns">{[['正面列', frontColumn, setFrontColumn], ['背面列', backColumn, setBackColumn]].map(([label, value, update]) => <label key={label}>{label}<select aria-label={label} value={value} onChange={event => update(Number(event.target.value))}>{[0,1,2,3].map(index => <option key={index} value={index}>第 {index+1} 列</option>)}</select></label>)}<label><input type="checkbox" checked={header} onChange={event => setHeader(event.target.checked)}/>首行为标题</label></div>}
       <p role="status">有效 {preview.cards.length} · 重复 {preview.duplicates} · 错误 {preview.errors}{preview.message && ` · ${preview.message}`}</p>
-      <ul className="study-import-preview">{preview.cards.slice(0,5).map(card => <li key={card.front}><b>{card.front}</b><span>{card.back}</span></li>)}</ul>
+      <ul className="study-import-preview">{preview.cards.slice(0,5).map(card => <li key={card.front}><b>{card.front}</b><span>{card.back}</span><Source value={card.source}/></li>)}</ul>
       <button type="button" className="pixel-button" disabled={!preview.cards.length} onClick={() => { const added = study.addCards(deck.id, preview.cards); setMessage(added === null ? '' : `已追加 ${added} 张卡片；旧进度保持不变。`); if (added) setText(''); }}>确认追加 {preview.cards.length} 张</button></>}
     {message && <p role="status">{message}</p>}
   </details>;
@@ -149,7 +158,7 @@ export default function StudyPanel() {
       const detail = shelf.kind === 'done' && shelf.upcoming ? `下次复习 ${whenLabel(shelf.upcoming)}` : shelf.detail;
       const summary = [shelf.label, detail].filter(Boolean).join(' · ');
       return <li key={entry.id}>
-        <button type="button" className="study-deck-open" aria-label={`${entry.name}：${summary}，${shelf.action === 'edit' ? '添加或导入词条' : '打开复习'}`} onClick={() => setView({ mode: shelf.action, deckId: entry.id })}><strong>{entry.name}</strong><small>{status.total} 张 · {summary}</small></button>
+        <button type="button" className="study-deck-open" aria-label={`${entry.name}：${summary}，${shelf.action === 'edit' ? '添加或导入词条' : '打开复习'}`} onClick={() => setView({ mode: shelf.action, deckId: entry.id })}><strong>{entry.name}</strong><small>{status.total} 张 · {summary}</small><DeckSource deck={entry} cards={study.state.cards}/></button>
         {status.due + status.fresh > 0 && <span className="study-deck-badge" aria-label={`待复习 ${status.due + status.fresh} 张`}>{status.due + status.fresh}</span>}
         <button type="button" className="study-deck-edit" onClick={() => setView({ mode: 'edit', deckId: entry.id })}>{shelf.action === 'edit' ? '添加词条' : '编辑'}</button>
       </li>;
