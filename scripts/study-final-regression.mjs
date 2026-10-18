@@ -8,7 +8,7 @@ import { launchChromium } from './launch-browser.mjs';
 import { hasViteLocalOrigin } from './vite-readiness.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const output = process.env.STUDY_OUTPUT || path.resolve(root, '../../outputs/study-final');
+const output = process.env.STUDY_OUTPUT || path.join(root, 'desktop/test-results/study-ui');
 const port = Number(process.env.STUDY_PORT || 4232);
 const origin = `http://127.0.0.1:${port}`;
 const FOCUS_KEY = 'album-circle-focus-v1:local-owner';
@@ -31,7 +31,7 @@ const report = {
   startedAt: new Date().toISOString(),
   repo: root,
   output,
-  browser: 'Microsoft Edge via BROWSER_EXECUTABLE',
+  browser: process.env.BROWSER_EXECUTABLE || 'Playwright Chromium',
   viewport: { width: 1440, height: 900 },
   checks: [],
   defects: [],

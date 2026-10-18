@@ -38,7 +38,12 @@ async function launch(profile) {
   assert.equal(await app.evaluate(({ app }) => app.getPath('userData')), profile);
   await site.locator('.app-titlebar').waitFor();
   const onboarding = site.getByRole('dialog', { name: '新手引导', exact: true });
-  if (await onboarding.isVisible()) await onboarding.getByRole('button', { name: '跳过引导', exact: true }).click();
+  const needsOnboarding = await site.evaluate(() => !localStorage.getItem('flow-cabin-onboarding-v1'));
+  if (needsOnboarding) await onboarding.waitFor();
+  if (await onboarding.isVisible()) {
+    await onboarding.getByRole('button', { name: '跳过引导', exact: true }).click();
+    await onboarding.waitFor({ state: 'hidden' });
+  }
   await site.locator('.cabin-room').waitFor();
 }
 async function close() { await app.close(); app = null; site = null; }
@@ -122,16 +127,16 @@ function compareStores(stage, expected, actual) {
     sessions: [{ start: at - 1500000, end: at, completed: true, taskId: 'qa-task' }],
     rewards: { xp: 60, fish: 7, equipped: { accessory: 'bow', weather: 'snow' } },
     settings: { notify: false, chime: false, catSkin: 'black', hideSeconds: true } });
-  let studyState = study.normalizeStudy({ decks: [{ id: 'qa-deck', name: 'QA retained words', createdAt: at }],
-    cards: [{ id: 'qa-card', deckId: 'qa-deck', front: 'window', back: 'a view outside', createdAt: at }],
+  let studyState = study.normalizeStudy({ decks: [{ id: 'qa-deck', name: 'QA retained words', source: 'Original QA teaching fixture', createdAt: at }],
+    cards: [{ id: 'qa-card', deckId: 'qa-deck', front: 'window', back: 'a view outside', source: 'QA word attribution', createdAt: at }],
     countdowns: [{ id: 'qa-exam', title: 'QA exam', date: '2026-11-30' }], newPerDay: 9 });
   studyState = study.review(studyState, 'qa-card', study.RATINGS[2].rating, at, { fuzz: false });
   const record = sessions.sessionRecord({ start: at - 1500000, end: at, completed: true,
     todo: { id: 'qa-task', text: 'QA completed task' }, album, track: { title: 'First song', artist: album.artist, album: album.title } });
   const sourceLetters = [
     { id: 'qa-draft', direction: 'out', status: 'draft', at: at + 20, lines: ['QA draft stays private'], shareContext: false },
-    { id: 'qa-reply', direction: 'in', status: 'delivered', at: at + 10, lines: ['QA offline reply'], replyTo: 'qa-sent', read: true, readAt: at + 11 },
-    { id: 'qa-sent', direction: 'out', status: 'sent', at, lines: ['QA sent letter'], shareContext: false }
+    { id: 'qa-reply', direction: 'in', status: 'delivered', at: at + 10, lines: ['QA offline reply'], replyTo: 'qa-sent', read: true, readAt: at + 11, organizedAt: at + 30, favorite: true, trashed: true },
+    { id: 'qa-sent', direction: 'out', status: 'sent', at, lines: ['QA sent letter'], shareContext: false, organizedAt: at + 30, favorite: true, trashed: true }
   ].map(letters.normalizeLetter);
   const journalRows = [
     { id: 'qa-trash', version: 'trash-v2', body: 'QA recycled page', tags: ['trash'], createdAt: at - 100, updatedAt: at + 30, deletedAt: at + 30, revisions: [] },

@@ -19,13 +19,14 @@
     "test:playback": "node scripts/playback-regression.mjs",
     "test:layout": "node scripts/cabin-layout-electron.mjs",
     "check": "npm test && npm run build",
-    "qa": "npm run check && npm --prefix desktop run build:music && npm run test:browser && npm run test:playback && npm run test:focus-ui && npm run test:beat && npm run test:shelf-ui && npm run test:ai && npm run test:journal",
+    "qa": "npm run check && npm --prefix desktop run build:music && npm run test:browser && npm run test:playback && npm run test:focus-ui && npm run test:beat && npm run test:shelf-ui && npm run test:ai && npm run test:journal && npm run test:study-ui",
     "screenshots:product": "node scripts/product-showcase.mjs",
     "screenshots:readme": "node scripts/readme-assets.mjs",
     "test:focus-ui": "node scripts/focus-ui-regression.mjs",
     "test:shelf-ui": "node scripts/shelf-ui-regression.mjs",
     "test:ai": "node scripts/ai-beta-regression.mjs",
-    "test:journal": "node scripts/journal-entries-regression.mjs"
+    "test:journal": "node scripts/journal-entries-regression.mjs",
+    "test:study-ui": "node scripts/study-final-regression.mjs"
   },
   "dependencies": {
     "@heroicons/react": "2.2.0",

@@ -27,6 +27,7 @@
     "dist:win": "npm run dist -- --publish never",
     "pack:mac": "npm run build:music && npm run build:web && electron-builder --mac --arm64 --dir --publish never",
     "test:client": "node test/client-ui.cjs",
+    "test:backup": "node test/backup-profile-ui.cjs",
     "test:focus": "node test/focus-ui.cjs",
     "test:cat-focus": "node test/cat-focus-ui.cjs",
     "test:pet": "node test/pet-ui.cjs",

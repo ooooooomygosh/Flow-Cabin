@@ -3,7 +3,7 @@
 // clock, rewards, the room cat, the sound mixer and Zen mode.
 const { _electron } = require('playwright'), fs = require('node:fs'), path = require('node:path'), assert = require('node:assert/strict');
 const { mountFixture, chooseRoomScene, openRoomSettings } = require('./ui-fixture.cjs');
-const desktop = path.resolve(__dirname, '..'), output = path.join(desktop, 'test-results'); fs.mkdirSync(output, { recursive: true });
+const desktop = path.resolve(__dirname, '..'), output = path.resolve(process.env.ALBUM_QA_EVIDENCE || path.join(desktop, 'test-results', `cat-focus-${Date.now()}`)); fs.mkdirSync(output, { recursive: true });
 const env = { ...process.env, ALBUM_DESKTOP_TEST_PROFILE: path.join(output, `cat-focus-ui-profile-${Date.now()}`) }; delete env.ELECTRON_RUN_AS_NODE;
 const executablePath = process.env.ALBUM_QA_EXE || path.join(desktop, 'node_modules/electron/dist/electron.exe');
 const report = { executablePath, startedAt: new Date().toISOString(), fixtureData: true, checks: [], pageErrors: [] };
@@ -45,22 +45,29 @@ let app, site, host;
   await host.evaluate(() => window.albumDesktop.settings('apply', { reduceMotion: false }));
   await site.locator('.room-cat .pixel-cat[data-reduced-motion="false"]').waitFor();
   await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find(w => w.webContents.getURL().includes('shell/')).hide());
+  // Electron forwards hide as an untrusted blur after the native window is gone;
+  // wait for the shared frame clock to publish its paused state before sampling.
+  await site.locator('html[data-app-background="true"]').waitFor();
   await site.clock.runFor(500); const paints = await site.evaluate(() => window.__catPaints);
   await site.clock.runFor(1500); assert.equal(await site.evaluate(() => window.__catPaints), paints);
   await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find(w => w.webContents.getURL().includes('shell/')).show());
+  await site.locator('html:not([data-app-background])').waitFor();
   await site.clock.runFor(1200); assert.ok(await site.evaluate(() => window.__catPaints) > paints);
   check('background-pauses-drawing-and-visible-resumes');
   await site.locator('.focus-badge').click(); await site.getByRole('tab', { name: '统计' }).click();
+  await site.locator('.focus-cat-link').click();
   await site.getByRole('button', { name: '黑猫', exact: true }).click(); assert.equal(await cat.getAttribute('data-skin'), 'black');
   await site.screenshot({ path: path.join(output, 'cat-black-room.png') });
+  await site.getByRole('button', { name: '关闭小猫', exact: true }).click();
   await site.getByRole('tab', { name: '番茄钟' }).click(); await site.getByRole('button', { name: '计时设置' }).click();
   await site.getByLabel('专注（分）').fill('2'); await site.getByLabel('专注（分）').blur(); await site.getByLabel('隐藏秒数（仅显示剩余分钟）').check();
   await site.getByLabel('提示音', { exact: true }).uncheck(); await site.getByLabel('系统通知', { exact: true }).uncheck();
   await site.getByRole('button', { name: '开始专注', exact: true }).click(); await site.locator('.focus-display').waitFor(); await site.keyboard.press('Escape'); await site.locator('.focus-display').waitFor({ state: 'detached' }); // 开始专注 enters 沉浸
   assert.match(await site.locator('.focus-badge').innerText(), /2 分钟/);
-  const clock = await site.locator('.focus-timer .pixel-clock').innerHTML(), progress = await site.locator('.focus-progress span').getAttribute('style');
+  // The face canvas carries the accessible clock; the old CSS progress bar was removed.
+  const clock = await site.locator('.focus-timer .pixel-clock').getAttribute('aria-label'); assert.equal(clock, '2 分钟');
   await site.clock.fastForward(10000);
-  assert.equal(await site.locator('.focus-timer .pixel-clock').innerHTML(), clock); assert.equal(await site.locator('.focus-progress span').getAttribute('style'), progress);
+  assert.equal(await site.locator('.focus-timer .pixel-clock').getAttribute('aria-label'), clock);
   await site.clock.fastForward(51000); assert.match(await site.locator('.focus-badge').innerText(), /1 分钟/);
   await site.getByRole('button', { name: '暂停', exact: true }).click(); await site.clock.fastForward(120000); assert.match(await site.locator('.focus-badge').innerText(), /1 分钟/);
   await site.getByRole('button', { name: '继续', exact: true }).click();
@@ -68,7 +75,7 @@ let app, site, host;
   await site.evaluate(() => { window.__phaseCount = 0; window.addEventListener('album-focus-phase', () => window.__phaseCount++); });
   await site.clock.fastForward(60000); assert.equal(await site.evaluate(() => window.__phaseCount), 1);
   await site.clock.fastForward(1000); assert.equal(await site.evaluate(() => window.__phaseCount), 1);
-  await site.getByRole('tab', { name: '统计' }).click(); assert.match(await site.locator('.focus-stat-tiles').innerText(), /2 分钟/); assert.match(await site.locator('.focus-rewards header').innerText(), /🐟 1/);
+  await site.getByRole('tab', { name: '统计' }).click(); assert.match(await site.locator('.focus-stat-tiles').innerText(), /2 分钟/); assert.match(await site.locator('.focus-cat-link').innerText(), /1 小鱼干/);
   check('minutes-stay-still-between-boundaries-pause-resume-and-finish-once-with-active-duration-and-reward');
   await site.reload(); await cat.waitFor(); assert.equal(await cat.getAttribute('data-skin'), 'black');
   if (!await site.getByRole('tab', { name: '番茄钟' }).isVisible()) await site.locator('.focus-badge').click(); await site.getByRole('tab', { name: '番茄钟' }).click(); await site.getByRole('button', { name: '计时设置' }).click(); assert.equal(await site.getByLabel('隐藏秒数（仅显示剩余分钟）').isChecked(), true);
@@ -80,23 +87,62 @@ let app, site, host;
   await pet.locator('.pixel-cat[data-skin="black"]').waitFor();
   const bounds = () => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find(w => w.webContents.getURL().includes('/pet/pet.html')).getBounds());
   const before = await bounds();
-  await pet.clock.install();
+  // Electron pages share Playwright's context clock. Reinstalling it here
+  // resets the cabin date too, expires its break and races a new sleep pose.
+  assert.equal(pet.clock, site.clock);
+  report.clockScope = { shared: true, mainAtPetOpen: await site.evaluate(() => Date.now()), petAtOpen: await pet.evaluate(() => Date.now()) };
+  assert.ok(Math.abs(report.clockScope.mainAtPetOpen - report.clockScope.petAtOpen) < 1000);
   let petWalk = false;
   for (let i = 0; i < 170; i++) { await pet.clock.fastForward(1000); if (await pet.locator('.pixel-cat').getAttribute('data-pose') === 'walk') { petWalk = true; break; } }
   assert.ok(petWalk); await pet.clock.fastForward(2000);
   assert.deepEqual(await bounds(), before);
   await pet.screenshot({ path: path.join(output, 'cat-black-pet-walking.png') });
-  await pet.emulateMedia({ reducedMotion: 'reduce' }); await pet.clock.runFor(500);
-  assert.notEqual(await pet.locator('.pixel-cat').getAttribute('data-pose'), 'walk');
-  const petPaint = await pet.locator('.pixel-cat').evaluate(el => el.toDataURL()); await pet.clock.runFor(1000); assert.equal(await pet.locator('.pixel-cat').evaluate(el => el.toDataURL()), petPaint);
+  await pet.evaluate(async () => {
+    const trace = window.__qaPetTrace = [];
+    const record = (type, extra = {}) => {
+      const canvas = document.querySelector('.pixel-cat');
+      trace.push({ type, at: Date.now(), time: performance.now(), ...canvas?.dataset, ...extra });
+    };
+    window.albumPet.onSnapshot(value => record('snapshot', { snapshot: value }));
+    record('initial', { snapshot: await window.albumPet.getSnapshot() });
+    const clear = CanvasRenderingContext2D.prototype.clearRect;
+    CanvasRenderingContext2D.prototype.clearRect = function(...args) {
+      const result = clear.apply(this, args);
+      if (this.canvas.matches('.pixel-cat')) queueMicrotask(() => record('paint', { image: this.canvas.toDataURL() }));
+      return result;
+    };
+    new MutationObserver(() => record('attributes')).observe(document.querySelector('.pixel-cat'), { attributes: true });
+  });
+  await pet.emulateMedia({ reducedMotion: 'reduce' });
+  await pet.locator('.pixel-cat[data-reduced-motion="true"]').waitFor();
+  await pet.clock.runFor(500);
+  assert.equal(await pet.locator('.pixel-cat').getAttribute('data-pose'), 'idle');
+  const focusBefore = await site.evaluate(() => window.albumCompanionSnapshot().focus.phase);
+  assert.equal(focusBefore, 'shortBreak');
+  const traceStart = await pet.evaluate(() => window.__qaPetTrace.length);
+  const petPaint = await pet.locator('.pixel-cat').evaluate(el => el.toDataURL());
+  await pet.clock.runFor(1000);
+  const petAfter = await pet.locator('.pixel-cat').evaluate(el => el.toDataURL());
+  report.reducedMotionTrace = await pet.evaluate(() => window.__qaPetTrace);
+  report.reducedMotionWindow = { focusBefore, focusAfter: await site.evaluate(() => window.albumCompanionSnapshot().focus.phase),
+    paints: report.reducedMotionTrace.slice(traceStart).filter(entry => entry.type === 'paint').length };
+  for (const [name, image] of [['before', petPaint], ['after', petAfter]])
+    fs.writeFileSync(path.join(output, `pet-reduced-${name}.png`), Buffer.from(image.split(',')[1], 'base64'));
+  assert.equal(petAfter, petPaint);
+  assert.equal(report.reducedMotionWindow.focusAfter, focusBefore);
+  assert.equal(report.reducedMotionWindow.paints, 0);
   check('desktop-pet-receives-black-skin-walks-without-moving-native-window-and-respects-reduced-motion');
   await site.getByRole('button', { name: '让伙伴回家', exact: true }).click(); await cat.waitFor(); assert.equal(pet.isClosed(), true);
   await site.getByRole('button', { name: '伙伴出门', exact: true }).click(); await site.waitForFunction(() => !document.querySelector('.room-cat'));
   await site.clock.runFor(500); const afterUnmount = await site.evaluate(() => window.__catPaints);
   await site.clock.runFor(1500); assert.equal(await site.evaluate(() => window.__catPaints), afterUnmount);
   check('unmounted-room-sprite-stops-drawing');
+  // The wallpaper hides the room cat while the desktop pet is out, so bring it
+  // home before capturing the snapshot used by the isolated wallpaper window.
+  await site.getByRole('button', { name: '让伙伴回家', exact: true }).click(); await site.locator('.room-cat').waitFor();
 
   const snapshot = await site.evaluate(() => ({ ...window.albumRoomSnapshot(), focus: { ...window.albumCompanionSnapshot().focus, phase: 'focus', paused: true, endsAt: 0, remaining: 61000 } }));
+  const wallpaperOpened = app.waitForEvent('window');
   await app.evaluate(async ({ app, BrowserWindow, ipcMain, session }, snapshot) => {
     const require = process.getBuiltinModule('module').createRequire(app.getAppPath() + '/main.cjs');
     const { registerShellProtocol } = require('./shell-protocol.cjs'), { cleanSnapshot } = require('./wallpaper-model.cjs');
@@ -105,7 +151,8 @@ let app, site, host;
     const win = new BrowserWindow({ width: 1280, height: 900, show: true, webPreferences: { partition: 'album-circle-wallpaper', preload: app.getAppPath() + '/wallpaper-preload.cjs', sandbox: true, contextIsolation: true, nodeIntegration: false } });
     await win.loadURL('album-desktop://wallpaper/wallpaper.html'); globalThis.__qaWallpaper = win;
   }, snapshot);
-  const wallpaper = app.context().pages().find(p => p.url().includes('/wallpaper/wallpaper.html'));
+  const wallpaper = await wallpaperOpened;
+  await wallpaper.waitForURL('album-desktop://wallpaper/wallpaper.html');
   wallpaper.on('pageerror', e => report.pageErrors.push(e.message));
   await wallpaper.locator('.pixel-cat[data-skin="black"]').waitFor();
   assert.equal(await wallpaper.locator('.pixel-clock').getAttribute('aria-label'), '2 分钟');
