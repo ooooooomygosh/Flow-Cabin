@@ -144,13 +144,15 @@ const gate = (name, m, bpm) => {
 };
 // After a (re-)lock, wait until the clock's anchor stops moving (phase steady to < 3 ms for 1.5 s), so the
 // gate measures the settled lock, not the slew-in right after it. Limits are unchanged.
-const settled = (page, ms = 8000) => page.waitForFunction(() => {
+// After changing tempo, a steady anchor alone can precede the tracker finishing
+// its tempo fit. Require the same final tempo bound throughout the settle window.
+const settled = (page, ms = 8000, expectedBpm = null) => page.waitForFunction((expectedBpm) => {
   const w = window.__beatSettle ||= { last: null, steady: 0, at: 0 }, now = performance.now(); if (now - w.at < 250) return false; w.at = now;
   return import('/src/player/beat-clock.mjs').then(({ currentBeat }) => { const b = currentBeat(), L = 60000 / b.bpm;
-    if (!b.detected || !b.beatAt) { w.steady = 0; w.last = null; return false; }
+    if (!b.detected || !b.beatAt || (expectedBpm != null && Math.abs(b.bpm - expectedBpm) >= 1)) { w.steady = 0; w.last = null; return false; }
     let d = w.last == null ? Infinity : (((b.beatAt - w.last) % L) + L) % L; if (d > L / 2) d = L - d; w.last = b.beatAt;
     w.steady = d < 3 ? w.steady + 1 : 0; if (w.steady >= 6) { delete window.__beatSettle; return true; } return false; });
-}, null, { timeout: ms, polling: 100 });
+}, expectedBpm, { timeout: ms, polling: 100 });
 const lockedWithin = (page, ms) => page.waitForFunction(() => document.querySelector('button.room-cat')?.dataset.music === 'beat', null, { timeout: ms });
 
 try {
@@ -190,7 +192,7 @@ try {
     await page.waitForFunction(() => document.querySelector('button.room-cat').dataset.music !== 'beat', null, { timeout: 3000 });
     await page.waitForFunction(() => document.querySelector('button.room-cat').dataset.music === 'free', null, { timeout: 2000 });
     const listening = await sampleFrames(page, 100, ['listen']); report.skipListeningFrames = listening.frames;
-    await lockedWithin(page, 9000); report.skipRelockMs = Date.now() - t0; await page.waitForTimeout(1500); await settled(page);
+    await lockedWithin(page, 9000); report.skipRelockMs = Date.now() - t0; await page.waitForTimeout(1500); await settled(page, 8000, 90);
     const bpm = await page.evaluate(async () => (await import('/src/player/beat-clock.mjs')).currentBeat().bpm); assert.ok(Math.abs(bpm - 90) < 1, `new track tempo ${bpm}`);
     const m = await measure(page, 90, 6000); report.skip = m; console.log('skip', report.skipRelockMs, JSON.stringify(m)); gate('after skip', m, 90);
   });
