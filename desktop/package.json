@@ -71,6 +71,7 @@
       "mini-player.cjs",
       "mini-preload.cjs",
       "tray-icons.cjs",
+      "status-bar.cjs",
       "typing-hook.cjs",
       "shell-protocol.cjs",
       "wallpaper-model.cjs",
