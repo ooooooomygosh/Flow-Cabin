@@ -64,8 +64,8 @@ export function rankCandidates(candidates, record, index) {
 }
 
 const SOURCE_NAMES = { qq: 'QQ 音乐', netease: '网易云' };
-// Plays the first source that really starts. Order: the match that worked last
-// time (memory) → the record's own platform id → ranked search results, up to
+// Plays the first source that really starts. An explicit source takes priority;
+// within each source: memory → the record's own platform id → ranked search, up to
 // AUTO_MATCH_ATTEMPTS per platform. Nothing is reported as playing unless
 // `play` resolved; when nothing works the caller gets the candidates + error.
 export async function findPlayableSource({ record, index, provider, request, play, isCurrent = () => true, memory = null }) {
@@ -101,13 +101,18 @@ export async function findPlayableSource({ record, index, provider, request, pla
   const raw = record?.tracks?.[index], name = typeof raw === 'string' ? raw : raw?.title || raw?.name;
   if (!name) return { candidates: [], error: '原始资料没有曲目，无法定位音频。' };
   const remembered = memory?.get(key);
-  if (remembered && providers.includes(remembered.provider)) {
+  if (provider === 'auto' && remembered && providers.includes(remembered.provider)) {
     if (await attempt(remembered)) return { candidate: remembered, candidates: [], remembered: true };
     if (!active()) return null;
     memory.forget(key);
   }
   for (const source of providers) {
     if (!active()) return null;
+    if (remembered?.provider === source && !tried.has(`${source}:${remembered.id}`)) {
+      if (await attempt(remembered)) return { candidate: remembered, candidates: [], remembered: true };
+      if (!active()) return null;
+      memory.forget(key);
+    }
     const exact = exactTrack(record, index, source);
     if (exact && await attempt(exact)) return { candidate: exact, candidates: [] };
     if (!active()) return null;
