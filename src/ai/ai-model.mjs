@@ -248,42 +248,57 @@ export function templateLetter(summary = null) {
 
 // Saved letters and drafts. Newest first. Old records default to an incoming,
 // delivered letter, so every existing v1/v2/v3 backup still opens.
-export function readLetters(storage) {
-  try {
-    const list = JSON.parse(storage?.getItem?.(LETTERS_KEY) || '[]');
-    if (!Array.isArray(list)) return [];
-    return list.map(normalizeLetter).filter(Boolean).sort((a, b) => b.at - a.at || String(b.id).localeCompare(String(a.id)));
-  } catch { return []; }
+export function normalizeStoredLetter(value) {
+  if (value?.purgedAt != null) return typeof value.id === 'string' && value.id.length > 0 && value.id.length <= 100
+    && finite(value.purgedAt) && value.purgedAt >= 0 && value.purgedAt <= 8640000000000000
+    ? { id: value.id, purgedAt: value.purgedAt } : null;
+  return normalizeLetter(value);
 }
-const sortedLetters = (list) => list.sort((a, b) => b.at - a.at || String(b.id).localeCompare(String(a.id)));
+export function readLetterRecords(storage) {
+  const list = JSON.parse(storage?.getItem?.(LETTERS_KEY) || '[]');
+  if (!Array.isArray(list)) throw new Error('信箱格式异常');
+  const records = list.map(normalizeStoredLetter);
+  if (records.some((value) => !value)) throw new Error('信箱格式异常');
+  return records;
+}
+export function mergeLetterDeletions(records) {
+  const removed = new Map();
+  for (const item of records) if (item.purgedAt != null) removed.set(item.id, { id: item.id, purgedAt: Math.max(item.purgedAt, removed.get(item.id)?.purgedAt ?? 0) });
+  return [...removed.values(), ...records.filter((item) => item.purgedAt == null && !removed.has(item.id) && !removed.has(item.replyTo))];
+}
+export function readLetters(storage) {
+  try { return sortedLetters(mergeLetterDeletions(readLetterRecords(storage)).filter((item) => item.purgedAt == null)); }
+  catch { return []; }
+}
+const sortedLetters = (list) => list.sort((a, b) => (b.purgedAt ?? b.at) - (a.purgedAt ?? a.at) || String(b.id).localeCompare(String(a.id)));
 export function tryWriteLetters(storage, letters) {
-  const list = sortedLetters((Array.isArray(letters) ? letters : []).map(normalizeLetter).filter(Boolean));
   try {
-    if (!storage?.setItem) throw new Error('storage unavailable');
+    if (!storage?.setItem || !Array.isArray(letters)) throw new Error('storage unavailable');
+    const records = letters.map(normalizeStoredLetter);
+    if (records.some((value) => !value)) throw new Error('invalid letter');
+    // Preserve deletion markers even when a stale caller supplies its old list.
+    const list = sortedLetters(mergeLetterDeletions([...readLetterRecords(storage).filter((item) => item.purgedAt != null), ...records]));
     storage.setItem(LETTERS_KEY, JSON.stringify(list));
-    return { ok: true, list, error: '' };
+    return { ok: true, list: list.filter((item) => item.purgedAt == null), error: '' };
   } catch {
-    return { ok: false, list: readLetters(storage), error: '信箱空间不足，刚才的修改没有保存。请先导出备份或清理空间。' };
+    return { ok: false, list: readLetters(storage), error: '信箱修改没有保存，原数据保留。请检查本机存储或备份后重试。' };
   }
 }
 export function saveLetter(storage, letter) {
-  const value = normalizeLetter(letter);
-  if (!value) return readLetters(storage);
-  const list = sortedLetters([value, ...readLetters(storage).filter((l) => l.id !== value.id)]);
-  try { storage?.setItem?.(LETTERS_KEY, JSON.stringify(list)); } catch { /* the composer reports the failed write */ }
-  return list;
+  return trySaveLetter(storage, letter).list;
 }
 export function trySaveLetter(storage, letter) {
   const value = normalizeLetter(letter);
   if (!value) return { ok: false, list: readLetters(storage), error: '这封信还没有可以保存的内容。' };
-  const list = sortedLetters([value, ...readLetters(storage).filter((l) => l.id !== value.id)]);
-  const result = tryWriteLetters(storage, list);
-  return result.ok ? result : { ...result, error: '信箱空间不足，草稿还在这里，请先导出备份或清理空间。' };
+  try {
+    if (readLetterRecords(storage).some((item) => item.purgedAt != null && (item.id === value.id || item.id === value.replyTo)))
+      return { ok: false, deleted: true, list: readLetters(storage), error: '这封信已永久删除，不再接收旧窗口的内容或迟到回信。' };
+  } catch { return { ok: false, list: [], error: '信箱无法读取，原数据没有覆盖。' }; }
+  return tryWriteLetters(storage, [value, ...readLetters(storage).filter((item) => item.id !== value.id)]);
 }
 export function markRead(storage, id) {
   const list = readLetters(storage).map((l) => l.id === id && l.direction === 'in' ? { ...l, read: true, readAt: Date.now() } : l);
-  try { storage?.setItem?.(LETTERS_KEY, JSON.stringify(list)); } catch { /* leave the sealed letter intact */ }
-  return list;
+  return tryWriteLetters(storage, list).list;
 }
 export function updateLetter(storage, id, patch) {
   const current = readLetters(storage).find((l) => l.id === id);
@@ -296,8 +311,7 @@ export function tryUpdateLetter(storage, id, patch) {
 }
 export function removeLetter(storage, id) {
   const list = readLetters(storage).filter((l) => l.id !== id);
-  try { storage?.setItem?.(LETTERS_KEY, JSON.stringify(list)); } catch { /* keep the previous list */ }
-  return list;
+  return tryWriteLetters(storage, list).list;
 }
 export const unreadCount = (list) => list.filter((l) => l.direction === 'in' && l.status !== 'draft' && !l.read && !l.trashed).length;
 // Generate once per period: skip when an AI letter exists, or a failed try was under an hour ago.

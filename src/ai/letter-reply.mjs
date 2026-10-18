@@ -1,6 +1,6 @@
 import {
   AI_EVENT, AI_SETTINGS_KEY, AI_KEY_KEY, LETTER_EVENT, LETTERS_KEY, aiReady, chatUrl, cleanLetter, cleanUserLetter,
-  localLetterReply, readAi, readLetters, userLetterMessages, userLetterSubject,
+  localLetterReply, readAi, readLetters, readLetterRecords, userLetterMessages, userLetterSubject,
   trySaveLetter, tryWriteLetters
 } from './ai-model.mjs';
 import { chat, keyState, AI_KEY_EVENT } from './ai-transport.mjs';
@@ -19,13 +19,21 @@ export function readLetterDraft(storage) {
 }
 
 export function saveLetterDraft(storage, value) {
+  let records;
+  try { records = readLetterRecords(storage); }
+  catch { return { ok: false, error: '信箱无法读取，原数据没有覆盖。' }; }
+  if (value?.expectedDraftId && records.some((letter) => letter.id === value.expectedDraftId && letter.purgedAt != null))
+    return { ok: false, deleted: true, error: '这份草稿已随往来信永久删除，请重新写一封。' };
   const lines = cleanUserLetter(value?.text);
   if (!lines.length) {
     const cleared = clearLetterDraft(storage);
     return { ...cleared, draft: null };
   }
+  const previous = readLetterDraft(storage);
+  const id = previous?.id || (records.some((letter) => letter.id === DRAFT_ID && letter.purgedAt != null)
+    ? `draft:${newOutgoingId()}` : DRAFT_ID);
   const draft = {
-    id: DRAFT_ID, direction: 'out', status: 'draft', source: 'user',
+    id, direction: 'out', status: 'draft', source: 'user',
     subject: userLetterSubject(value.text), lines, at: Date.now(), read: true,
     shareContext: value?.shareContext !== false,
     ...(value?.shareContext === false ? { period: '不附小屋近况' } : {})
@@ -36,8 +44,8 @@ export function saveLetterDraft(storage, value) {
 
 export function clearLetterDraft(storage) {
   const list = readLetters(storage);
-  if (!list.some((letter) => letter.id === DRAFT_ID)) return { ok: true, list, error: '' };
-  return tryWriteLetters(storage, list.filter((letter) => letter.id !== DRAFT_ID));
+  if (!list.some((letter) => letter.status === 'draft')) return { ok: true, list, error: '' };
+  return tryWriteLetters(storage, list.filter((letter) => letter.status !== 'draft'));
 }
 
 export function replyFor(outgoingId, list = []) {
@@ -85,6 +93,20 @@ export function organizeLetterThread({ storage, id, action, now = Date.now(), wi
   return result;
 }
 
+export function purgeLetterThread({ storage, id, expectedOrganizedAt, now = Date.now(), win = globalThis } = {}) {
+  const list = readLetters(storage), root = list.find((letter) => letter.id === id && !letter.replyTo && letter.status !== 'draft');
+  if (!root?.trashed || root.organizedAt !== expectedOrganizedAt)
+    return { ok: false, error: '信件状态已改变。只能永久删除仍在回收站里的往来信，请重新确认。' };
+  const removed = list.filter((letter) => letter.id === id || letter.replyTo === id
+    || (letter.status === 'draft' && letter.at <= root.at && letter.lines.join('\n') === root.lines.join('\n')));
+  const result = tryWriteLetters(storage, [
+    ...removed.map((letter) => ({ id: letter.id, purgedAt: now })),
+    ...list.filter((letter) => !removed.includes(letter))
+  ]);
+  if (result.ok) emit(win);
+  return result;
+}
+
 export function pageSlice(rows, page = 1, size = 6) {
   const all = Array.isArray(rows) ? rows : [], per = Math.max(1, Math.round(size));
   const totalPages = Math.max(1, Math.ceil(all.length / per));
@@ -111,7 +133,7 @@ export function recoverCabinLetter({ storage, id, win = globalThis } = {}) {
   });
   const sent = { ...outgoing, status: 'sent' };
   const written = tryWriteLetters(storage, [sent, reply, ...list.filter((letter) => letter.id !== id
-    && !(letter.id === DRAFT_ID && letter.at <= outgoing.at
+    && !(letter.status === 'draft' && letter.at <= outgoing.at
       && letter.lines.join('\n') === outgoing.lines.join('\n')))]);
   if (!written.ok) return written;
   emit(win);
@@ -124,11 +146,15 @@ export function recoverCabinLetter({ storage, id, win = globalThis } = {}) {
  * or leave the composer stuck.
  */
 export async function sendCabinLetter({
-  storage, text, summary = null, now = Date.now(),
+  storage, text, summary = null, now = Date.now(), draftId,
   chatImpl = chat, win = globalThis, replyDelayMs = 650
 } = {}) {
   const lines = cleanUserLetter(text);
   if (!lines.length) return { ok: false, error: '写一点内容再寄出吧。', outgoing: null, reply: null };
+  try {
+    if (draftId && readLetterRecords(storage).some((letter) => letter.id === draftId && letter.purgedAt != null))
+      return { ok: false, deleted: true, error: '这份草稿已永久删除，请重新写一封。' };
+  } catch { return { ok: false, error: '信箱无法读取，信没有寄出。' }; }
   const settings = readAi(storage), key = keyState(win);
   const outgoing = {
     id: newOutgoingId(now), direction: 'out', status: 'sending', source: 'user',
@@ -171,7 +197,7 @@ export async function sendCabinLetter({
   const current = readLetters(storage);
   // A restore or deletion while waiting owns the new state; do not resurrect it.
   if (!current.some((letter) => letter.id === outgoing.id)) {
-    return { ok: false, error: '信箱在另一处发生了变化，信的内容仍在编辑框中。', outgoing: null, reply: null };
+    return { ok: false, deleted: true, error: '这封信已被移除，迟到的回信没有保存。', outgoing: null, reply: null };
   }
   const latestOutgoing = current.find((letter) => letter.id === outgoing.id);
   const sent = { ...latestOutgoing, status: 'sent' };
@@ -181,7 +207,7 @@ export async function sendCabinLetter({
   const recovered = replyFor(outgoing.id, current);
   if (recovered) return { ok: true, outgoing: { ...outgoing, status: 'sent' }, reply: recovered, fallback: true, error: '' };
   const latest = current.filter((letter) => letter.id !== outgoing.id && letter.id !== reply.id
-    && !(letter.id === DRAFT_ID && JSON.stringify(letter) === JSON.stringify(draftAtSend)));
+    && !(letter.status === 'draft' && JSON.stringify(letter) === JSON.stringify(draftAtSend)));
   const written = tryWriteLetters(storage, [sent, reply, ...latest]);
   if (!written.ok) return { ok: false, error: written.error, outgoing: { ...outgoing, status: 'sending' }, reply: null, fallback: !aiLines.length };
   emit(win);

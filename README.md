@@ -64,7 +64,7 @@
 <td width="33%" valign="top">
 
 ### 📊 统计与小屋日记
-「统计」是一张小卡片：今日专注、每日目标、连续天数（每周可以歇一天）和 7 天迷你柱状图。点「打开小屋日记」或按 L，翻开整本日记：近 7 / 30 天、过去一年热力图、专注时段、按待办统计，还有每周一写好的周报，可复制文字或导出图片，全部在本地。每完成一轮得 1 条小鱼干，升级解锁小猫配饰与窗外天气。随手记把突然冒出的念头先存下来。
+「统计」是一张小卡片：今日专注、每日目标、连续天数（每周可以歇一天）和 7 天迷你柱状图。点「打开小屋日记」或按 L，翻开整本日记：近 7 / 30 天、过去一年热力图、专注时段、按待办统计，还有每周一写好的周报，可复制文字或导出图片，全部在本地。每完成一轮得 1 条小鱼干，升级解锁小猫配饰与窗外天气。随手记把突然冒出的念头先存下来；手记和「小屋来信」可以搜索、整理并回看整组往来。
 
 </td>
 </tr>
@@ -84,7 +84,7 @@
 <td valign="top">
 
 ### 🐱 伙伴、桌宠与动态桌面
-六个统一像素风的场景（像素小屋 / 琥珀小屋 / 月夜书桌 / 林间书屋 / 海边慢屋 / 星夜阁楼），默认是像素小屋；再配五位像素伙伴。伙伴会呼吸、被戳会冒爱心、跟着音乐摇摆，还可以出门成为桌宠。所有动效都支持「减少动态效果」。
+六个统一像素风的场景（像素小屋 / 琥珀小屋 / 月夜书桌 / 林间书屋 / 海边慢屋 / 星夜阁楼），默认是像素小屋；再配五位像素伙伴。伙伴会呼吸、被戳会冒爱心、跟着音乐摇摆，还可以出门成为桌宠。琥珀、林间、海边、星夜各有一件可触摸的小物：泡茶、浇花与转盆、开合海风窗、连一张想象星图。茶、植物和星图的到访状态会在离开场景后复原；海风窗复用并更新现有声音混音，不新增备份键。所有动效都支持「减少动态效果」。
 
 </td>
 </tr>
@@ -104,7 +104,7 @@
 <td valign="top">
 
 ### 🔒 数据留在本机
-收藏、笔记、专注记录、待办和随手记保存在本机，可在「设置 › 数据与备份」中导出 / 导入。平台凭据通过 Electron safeStorage 加密保存，不能安全加密时拒绝保存。
+收藏、笔记、专注记录、待办、随手记、手记和信件保存在本机，可在「设置 › 数据与备份」中导出 / 导入。手记和整组来信只有从回收站再次确认后才会永久删除；删除后只保留 `{ id, purgedAt }` 标记，v4 备份保留该标记但不含已删除正文。纪念物独立保存，清理信件不会一并删除。平台凭据通过 Electron safeStorage 加密保存，不能安全加密时拒绝保存。
 
 </td>
 </tr>
@@ -124,7 +124,7 @@
 <td valign="top">
 
 ### 🖥 桌面模式与学习
-桌面层挂不上时（比如装了别的动态壁纸），「沉入桌面」会改用贴在桌面上的可操作窗口，时钟、正在播放、专注和待办变成可拖动的桌面小组件。托盘 / 菜单栏图标会跟着你选的伙伴变。「学习」页有 FSRS 闪卡复习、考试倒计时、每日目标和专注热力图；桌宠可以抛起、落地，空闲时沿屏幕底边散步。
+桌面层挂不上时（比如装了别的动态壁纸），「沉入桌面」会改用贴在桌面上的可操作窗口，时钟、正在播放、专注和待办变成可拖动的桌面小组件。托盘 / 菜单栏图标会跟着你选的伙伴变。「学习」页有 FSRS 闪卡复习、考试倒计时、每日目标和专注热力图；内置 15 本、258 词，其中 12 个原创日常主题各 20 词，另保留三本共 18 词的兼容入门书。每张新卡包含中文释义、原创英文例句和中文译意；这不是完整考试词库或官方分级。桌宠可以抛起、落地，空闲时沿屏幕底边散步。
 
 </td>
 </tr>
@@ -149,17 +149,17 @@
 | :---: | :---: | :---: |
 | <img src="docs/assets/screenshots/focus.jpg" alt="专注计时运行中，小猫冒泡提示剩余时间"> | <img src="docs/assets/screenshots/personalization.jpg" alt="六个场景与五位像素伙伴的选择器"> | <img src="docs/assets/screenshots/onboarding.png" alt="新手引导：选择音源"> |
 
-<sub>截图展示当前开发分支的界面，可能尚未打包进最新 Release。重现方法见 <a href="#-截图是怎么来的">截图是怎么来的</a>。</sub>
+<sub>截图展示 v1.18.0 稳定版界面；v1.19.0 开发预览中的新增内容可能尚未出现在这组截图中。重现方法见 <a href="#-截图是怎么来的">截图是怎么来的</a>。</sub>
 
 ## ⬇ 下载
 
 | 你的电脑 | 下载 | 怎么打开 |
 | --- | --- | --- |
-| Mac · Apple Silicon（M 系列） | [DMG · arm64](https://github.com/ooooooomygosh/album-web/releases/download/v1.16.0/FlowCabin-1.16.0-mac-arm64.dmg) | 打开 DMG，把小屋拖进「应用程序」 |
-| Mac · Intel | [DMG · x64](https://github.com/ooooooomygosh/album-web/releases/download/v1.16.0/FlowCabin-1.16.0-mac-x64.dmg) | 打开 DMG，把小屋拖进「应用程序」 |
-| Windows · x64 | [安装版](https://github.com/ooooooomygosh/album-web/releases/download/v1.16.0/FlowCabin-1.16.0-x64-setup.exe) · [便携版](https://github.com/ooooooomygosh/album-web/releases/download/v1.16.0/FlowCabin-1.16.0-x64-portable.exe) | 安装版按提示安装；便携版直接运行 |
+| Mac · Apple Silicon（M 系列） | [DMG · arm64](https://github.com/ooooooomygosh/album-web/releases/download/v1.18.0/FlowCabin-1.18.0-mac-arm64.dmg) | 打开 DMG，把小屋拖进「应用程序」 |
+| Mac · Intel | [DMG · x64](https://github.com/ooooooomygosh/album-web/releases/download/v1.18.0/FlowCabin-1.18.0-mac-x64.dmg) | 打开 DMG，把小屋拖进「应用程序」 |
+| Windows · x64 | [安装版](https://github.com/ooooooomygosh/album-web/releases/download/v1.18.0/FlowCabin-1.18.0-x64-setup.exe) · [便携版](https://github.com/ooooooomygosh/album-web/releases/download/v1.18.0/FlowCabin-1.18.0-x64-portable.exe) | 安装版按提示安装；便携版直接运行 |
 
-以上文件对应 **v1.16.0**，新版本请到 [Release 页面](https://github.com/ooooooomygosh/album-web/releases/latest)。macOS 尚未完成开发者签名与公证，Windows 可能提示未知发布者，请先核对下载来源，再看[安装说明](docs/getting-started.md#安装与首次打开)。使用小屋不需要注册账号。
+以上文件对应当前稳定版 **v1.18.0**，新版本请到 [Release 页面](https://github.com/ooooooomygosh/album-web/releases/latest)。macOS 尚未完成开发者签名与公证，Windows 可能提示未知发布者，请先核对下载来源，再看[安装说明](docs/getting-started.md#安装与首次打开)。使用小屋不需要注册账号。
 
 ## 🎧 音源支持
 
@@ -241,12 +241,17 @@ album-web/
 - [x] 十二格唱片架、唱机、唱片卡片与专辑墙导出
 - [x] 番茄钟 / 待办 / 统计 / 声音 / 随手记一体化专注工具
 - [x] 六个像素场景（含月夜书桌）、五位像素伙伴、桌宠、动态桌面与交互全屏
+- [x] 琥珀、林间、海边、星夜四间小屋的到访互动，以及奶糖动作与装扮细化
 - [x] 自动匹配可播放音源
 - [x] 本地音乐、QQ / 网易云、系统播放、Music Assistant 接入
 - [x] 收藏与专注数据本机备份、导入
+- [x] 手记、整组来信与 v4 备份删除标记；纪念物独立保存
+- [x] 15 本、258 词的内置学习目录与原创中英对照内容
+- [x] 根项目与桌面生产依赖在本轮锁文件下报告 0 个已知 npm 公告
 - [ ] macOS 签名与公证、Windows 代码签名
-- [ ] 网易云、Music / Spotify 控制与 Windows 平台的真实设备验收
-- [ ] QQ 音乐「我的歌单」导入
+- [ ] v1.17.0 到当前版本的同路径安装器升级、重启与逐域数据恢复验收
+- [ ] 真实键鼠与原生焦点、全天办公，以及 Windows / Intel Mac 真机验收
+- [ ] 真实音乐账号、全局输入权限与系统壁纸挂载验收
 - [ ] 官方 Spotify / Apple Music SDK 接入（需单独评估授权与订阅限制）
 - [ ] 根项目许可证与 GPL 模块分发义务澄清
 
@@ -272,6 +277,8 @@ npm run check && npm run test:browser
 
 **专辑封面**：README 与截图中的专辑封面版权归各自唱片公司 / 艺术家所有，仅用于说明收藏界面的实际呈现，不属于本项目原创素材，也不在任何项目许可范围内。如权利人希望移除，请提 Issue。
 
+当前锁文件下，根项目与桌面生产依赖的 `npm audit` 记录为 0 个已知公告；这不等同于不存在漏洞，也不解决 GPL 组合分发或正式签名 / 公证问题。详情见[依赖安全审查](docs/security-dependencies.md)。
+
 <details>
 <summary>致谢与来源</summary>
 
@@ -292,10 +299,12 @@ npm run check && npm run test:browser
 - **Sound** — procedurally synthesised rain, fire, wind, white noise and vinyl crackle, plus an offline Tone.js lo-fi radio that ducks when the turntable plays.
 - **Music** — local files, QQ Music / NetEase Cloud Music, the system's Now Playing, or Music Assistant. The turntable is animation-only until you pick a source; **auto match** finds a playable copy by title, artist and version (original track ID first, then QQ, then NetEase) and never swaps in a live version or cover.
 - **Scenes** — six pixel-art rooms: 像素小屋 Pixel Cabin (default), 琥珀小屋 Amber Cabin, 月夜书桌 Moonlit Study, 林间书屋 Forest Glade, 海边慢屋 Seaside and 星夜阁楼 Starry Night. In 月夜书桌 a girl at a moonlit window writes, lifts her pen and spins it, beside a nine-slot shelf whose covers are shaded by the desk lamp.
+- **Small rituals** — Amber Cabin, Forest Glade, Seaside and Starry Night each add one visit-local interaction: tea, plant care, a sea-wind window tied to the existing sound mix, and an imaginary constellation. Tea, plant and constellation state resets when you leave; none adds a new saved interaction key.
 - **Desktop** — set the room as a live wallpaper behind your desktop icons (it keeps running after the main window closes), or press F11 for native fullscreen. Fullscreen and immersive mode are independent; records, playlists and study tools remain interactive. Use “Show tools” in immersive mode. Esc closes the active dialog/tool before leaving immersive mode and fullscreen; F11 toggles fullscreen directly.
 - **Companions** — five pixel pals that breathe, react to pokes and bop to the music, a desktop pet and a live wallpaper. Reduced motion is respected.
 - **Look & feel** — one pixel style throughout: Fusion Pixel / Silkscreen fonts, notched pixel frames, `steps()` motion, dust motes and a time-of-day window light.
 - **Local-first** — collection, notes and focus data stay on your machine, with export/import backups.
+- **Study** — FSRS review with 15 built-in books and 258 words: twelve original everyday themes of 20 words, plus three six-word compatibility books. New cards include Chinese meaning, an original English example and a Chinese translation; this is not an exam syllabus or official graded lexicon.
 - **First run** — a skippable, resumable onboarding wizard sets up a music source, permissions, room and companion, and plays a test sound. Everything else lives in one **Settings** hub (Sources · Room & companion · Focus · Desktop · Data & backup · About → re-run onboarding). See [docs/onboarding.md](docs/onboarding.md).
 
 ```bash

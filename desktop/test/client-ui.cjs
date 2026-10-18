@@ -81,7 +81,7 @@ const check = (value) => report.checks.push(value);
   await site.getByRole('button', { name:'显示工具', exact:true }).click();
   // 学习 is a 专注 dock tab, reached from the toolbar's 专注 badge (the toolbar stays under 显示工具).
   if (!await site.locator('.focus-dock').count()) await site.locator('.cabin-toolbar .focus-badge').click();
-  await site.getByRole('tab', { name:'学习', exact:true }).click(); await site.getByLabel('入门词书', { exact:true }).waitFor();
+  await site.getByRole('tab', { name:'学习', exact:true }).click(); await site.getByLabel('词书', { exact:true }).waitFor();
   await site.screenshot({ path:path.join(output, 'native-fullscreen-study.png') });
   await site.getByLabel('新卡组名称').fill('模板验收'); await site.getByRole('button',{name:'新建',exact:true}).click();
   const templateDeck = site.locator('.study-decks li',{hasText:'模板验收'});

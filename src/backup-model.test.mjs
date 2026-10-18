@@ -147,7 +147,7 @@ test('v3 round-trip uses real session, care, letters and study writers/readers',
   const backup = buildBackup({ storage: source, library, roomId: 'home', focus, study, sound: { master: .5, tracks: { rain: .2 } } });
   const parsed = parseBackup(JSON.stringify(backup));
   assert.equal(backup.version, BACKUP_VERSION);
-  assert.equal(parsed.version, 3);
+  assert.equal(parsed.version, BACKUP_VERSION);
   assert.equal(parsed.roomId, 'home');
   assert.deepEqual(parsed.study, study, 'FSRS memory and review log survive');
   assert.deepEqual(normalizeFocus(restoreFocus(parsed.focus, {})), { ...focus, timer: normalizeFocus().timer });
@@ -243,7 +243,7 @@ test('journal merge deduplicates history without reviving a deleted page at the 
 });
 
 test('legacy letter records normalize as incoming delivered letters in every backup version', () => {
-  for (const version of [1, 2, 3]) {
+  for (const version of [1, 2, 3, 4]) {
     const parsed = parseBackup(JSON.stringify({ kind: 'FlowCabinBackup', version, items: [], memory: { version: 1, letters: [letter()] } }));
     const expected = { ...letter(), direction: 'in', status: 'delivered' };
     assert.deepEqual(parsed.memory.letters, [expected]);
@@ -403,7 +403,7 @@ test('invalid versions, structures and records are rejected without storage chan
   const base = { kind: 'FlowCabinBackup', version: 3, items: [] }, storage = memoryStorage(); populateMemory(storage);
   const before = [...storage.data];
   const invalid = [
-    ...[0, -1, 4, '3', 2.5, null].map((version) => ({ version })),
+    ...[0, -1, BACKUP_VERSION + 1, '3', 2.5, null].map((version) => ({ version })),
     { focus: [] }, { focus: { notes: {} } }, { focus: { tasks: [null] } }, { focus: { sessions: [{ start: 1, end: 0 }] } },
     { study: [] }, { study: { decks: 'bad' } }, { study: { cards: [{ id: 'orphan', front: 'lost' }] } },
     { sound: [] }, { memory: [] }, { memory: { version: 2 } }, { memory: { focusSessions: null } },
@@ -562,4 +562,55 @@ test('playback restore upserts checkpoints without adding durations or replacing
   assert.deepEqual(readPlaybackSessions(storage), [updated]);
   restoreBackupMemory(parseBackup('{"kind":"FlowCabinBackup","version":2,"items":[]}'), { storage });
   assert.deepEqual(readPlaybackSessions(storage), [updated]);
+});
+
+test('v4 deletion markers beat old and future-dated backups; fresh profiles can recover an external old copy', async () => {
+  const { purgeJournalEntry } = await import('./focus/journal-entries.mjs');
+  const { organizeLetterThread, purgeLetterThread } = await import('./ai/letter-reply.mjs');
+  const storage = memoryStorage();
+  let page = saveJournalEntry({ storage, body: 'private-journal-original', now: at }).entry;
+  page = saveJournalEntry({ storage, id: page.id, expectedVersion: page.version, body: 'private-journal-edited', tags: ['private-tag'], now: at + 1 }).entry;
+  saveLetter(storage, { id: 'outgoing-letter', direction: 'out', status: 'sent', lines: ['private-letter'], at });
+  saveLetter(storage, { id: 'draft:my-letter', direction: 'out', status: 'draft', lines: ['private-letter'], at });
+  saveLetter(storage, { id: 'reply-letter', replyTo: 'outgoing-letter', lines: ['private-reply'], at: at + 1 });
+  saveSouvenirs({ storage, state: souvenirState([letterSouvenir]) });
+  const old = buildBackup({ storage });
+  page = moveJournalEntry({ storage, id: page.id, expectedVersion: page.version, trash: true, now: at + 2 }).entry;
+  assert.equal(purgeJournalEntry({ storage, id: page.id, expectedVersion: page.version, now: at + 3 }).ok, true);
+  organizeLetterThread({ storage, id: 'outgoing-letter', action: 'trash' });
+  assert.equal(purgeLetterThread({ storage, id: 'outgoing-letter', expectedOrganizedAt: readLetters(storage).find((x) => x.id === 'outgoing-letter').organizedAt }).ok, true);
+  const clean = buildBackup({ storage });
+  assert.equal(clean.version, 4); assert.ok(!JSON.stringify(clean).includes('private-'));
+  for (const version of [1, 2, 3, 4]) {
+    const saved = parseBackup(JSON.stringify({ ...old, version }));
+    saved.memory.journalEntries[0].updatedAt = at + 99999;
+    saved.memory.letters.forEach((letter) => { letter.at = at + 99999; });
+    restoreBackupMemory(saved, { storage });
+    assert.deepEqual(readJournalRecords(storage), []); assert.deepEqual(readLetters(storage), []);
+    assert.ok(!JSON.stringify(buildBackup({ storage })).includes('private-'));
+  }
+  const fresh = memoryStorage();
+  restoreBackupMemory(parseBackup(JSON.stringify(old)), { storage: fresh });
+  assert.equal(readJournalRecords(fresh).length, 1); assert.equal(readLetters(fresh).length, 3);
+  restoreBackupMemory(parseBackup(JSON.stringify(clean)), { storage: fresh });
+  assert.deepEqual(readJournalRecords(fresh), []); assert.deepEqual(readLetters(fresh), []);
+  assert.deepEqual(readSouvenirs(fresh), souvenirState([letterSouvenir]));
+  assert.deepEqual(restoreBackupMemory(parseBackup(JSON.stringify(clean)), { storage: fresh }).changed, []);
+  const before = new Map(fresh.data);
+  const bad = { getItem: fresh.getItem, removeItem: fresh.removeItem, setItem(key, value) { if (key === JOURNAL_KEY) throw new Error('quota'); fresh.setItem(key, value); } };
+  const other = { memory: { letters: [{ id: 'another', lines: ['new'], at }], journalEntries: [{ id: 'another', purgedAt: at }] } };
+  assert.throws(() => restoreBackupMemory(other, { storage: bad }), /原有内容保持不变/);
+  assert.deepEqual(fresh.data, before);
+});
+
+test('malformed deletion markers reject backup before writing and discard hidden payload fields', () => {
+  const storage = memoryStorage();
+  for (const domain of ['letters', 'journalEntries']) {
+    for (const marker of [{ id: 'x', purgedAt: -1 }, { id: '', purgedAt: at }, { id: 'x', purgedAt: 'yesterday' }]) {
+      assert.throws(() => restoreBackupMemory({ memory: { [domain]: [marker] } }, { storage }), /格式无效/);
+    }
+    const parsed = parseBackup(JSON.stringify({ kind: 'FlowCabinBackup', version: 4, items: [], memory: { [domain]: [{ id: 'x', purgedAt: at, body: 'private', lines: ['private'], revisions: [{ body: 'private' }] }] } }));
+    assert.deepEqual(parsed.memory[domain], [{ id: 'x', purgedAt: at }]);
+  }
+  assert.equal(storage.writes.length, 0);
 });

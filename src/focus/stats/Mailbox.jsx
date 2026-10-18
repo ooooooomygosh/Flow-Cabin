@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLetters, useAiSettings } from '../../ai/useCabinLetters.js';
-import { aiReady, chatUrl, cleanUserLetter } from '../../ai/ai-model.mjs';
+import { aiReady, chatUrl, cleanUserLetter, readLetterRecords } from '../../ai/ai-model.mjs';
 import { buildLetterContext, recentLetterPeriod, ambienceSnapshot, journalSelectionCurrent } from '../../ai/letter-context.mjs';
 import { readJournalRecords } from '../journal-entries.mjs';
 import LetterJournalPicker from './LetterJournalPicker.jsx';
@@ -53,7 +53,7 @@ function LetterBody({ letter, reduced = false }) {
   </div>;
 }
 
-function ThreadView({ row, reduced, sending, onRecover, onOrganize }) {
+function ThreadView({ row, reduced, sending, onRecover, onOrganize, onPurge, inTrash }) {
   if (!row) return <div className="fs-mail-empty-detail">
     <JournalSprite name="cat-wait" width={128} height={128}/>
     <strong>一页安静的空白</strong>
@@ -68,6 +68,7 @@ function ThreadView({ row, reduced, sending, onRecover, onOrganize }) {
     <div className="fs-mail-organize" role="group" aria-label="整理这封信">
       <button type="button" className="fs-mail-quiet" aria-pressed={Boolean(letter.favorite)} onClick={() => onOrganize(letter.id, 'favorite')}>{letter.favorite ? '已收藏' : '收藏这封信'}</button>
       <button type="button" className="fs-mail-quiet" onClick={() => onOrganize(letter.id, letter.trashed ? 'restore' : 'trash')}>{letter.trashed ? '放回信箱' : '移到回收站'}</button>
+      {inTrash && letter.trashed && <button type="button" className="fs-mail-quiet" onClick={() => onPurge(letter)}>永久删除往来信</button>}
     </div>
     {letter.trashed && <p className="fs-mail-pending-copy">原信和回信一起收在回收站，随时可以放回。</p>}
     <LetterBody letter={letter} reduced={reduced}/>
@@ -148,9 +149,19 @@ export default function Mailbox({ sessions, state, now, reduced = false }) {
   const [sending, setSending] = useState(false);
   const [status, setStatus] = useState('');
   const [statusError, setStatusError] = useState(false);
+  const [purging, setPurging] = useState(null);
   const [draftState, setDraftState] = useState(() => letters.draft ? '草稿已从抽屉里接上' : '');
+  const draftId = useRef(letters.draft?.id);
   const allRows = [...letters.rows('all'), ...letters.rows('trash')], rows = letters.rows(filter, query), paged = letters.page(rows, page, 6);
   const selectedRow = allRows.find((row) => row.id === selectedId) || null;
+  useEffect(() => {
+    try {
+      if (draftId.current && readLetterRecords(globalThis.localStorage).some((letter) => letter.id === draftId.current && letter.purgedAt != null)) {
+        setCompose(false); setText(''); setSelectedJournal([]); setDraftState('');
+        setStatus('这份草稿已随往来信永久删除。'); setStatusError(false);
+      }
+    } catch { /* Keep the editor intact if storage cannot be read. */ }
+  }, [letters.list]);
 
   useEffect(() => { if (page > paged.totalPages) setPage(paged.totalPages); }, [page, paged.totalPages]);
   useEffect(() => {
@@ -163,17 +174,26 @@ export default function Mailbox({ sessions, state, now, reduced = false }) {
   // Save during the input event so closing the book immediately cannot lose
   // the last keystrokes. Drafts are small and never leave local storage.
   const persistDraft = (nextText, nextShare) => {
-    const result = letters.saveDraft({ text: nextText, shareContext: nextShare });
+    const result = letters.saveDraft({ text: nextText, shareContext: nextShare, expectedDraftId: draftId.current });
+    if (result.ok) draftId.current = result.draft?.id;
+    if (result.deleted) { setCompose(false); setText(''); }
     setDraftState(result.ok ? (nextText.trim() ? '草稿已保存' : '') : result.error);
   };
   const changeText = (value) => { setText(value); persistDraft(value, shareContext); };
   const changeContext = (value) => { setShareContext(value); if (!value) setSelectedJournal([]); persistDraft(text, value); };
 
   const openComposer = () => {
+    draftId.current = letters.draft?.id;
     setCompose(true); setSelectedId(''); setStatus(''); setSelectedJournal([]); setIncludeNotes(false);
     if (letters.draft) { setText(letters.draft.lines.join('\n')); setShareContext(letters.draft.shareContext !== false); setDraftState('草稿已从抽屉里接上'); }
   };
-  const choose = (row) => { setCompose(false); setSelectedId(row.id); setStatus(''); setSelectedJournal([]); setIncludeNotes(false); };
+  const choose = (row) => { setCompose(false); setSelectedId(row.id); setStatus(''); setPurging(null); setSelectedJournal([]); setIncludeNotes(false); };
+  const purge = () => {
+    const result = letters.purge({ id: purging.id, expectedOrganizedAt: purging.organizedAt });
+    setStatusError(!result.ok);
+    setStatus(result.ok ? '这组往来信已永久删除，迟到的回信不会再保存。已获得的纪念物保留。' : result.error);
+    if (result.ok) { setSelectedId(''); setPurging(null); }
+  };
   const organize = (id, action) => {
     const result = letters.organize(id, action);
     setStatusError(!result.ok);
@@ -198,9 +218,12 @@ export default function Mailbox({ sessions, state, now, reduced = false }) {
       sessions, playbackSessions: readPlaybackSessions(globalThis.localStorage), mood,
       notes: state?.notes || '', includeNotes, shareContext, selectedJournal, weather: ambienceSnapshot(), now: Date.now()
     });
-    const result = await letters.send({ text, summary, now: Date.now() });
+    const result = await letters.send({ text, summary, now: Date.now(), draftId: draftId.current });
     setSending(false);
-    if (!result.ok) { setStatus(result.error); setStatusError(true); return; }
+    if (!result.ok) {
+      if (result.deleted) { setCompose(false); setText(''); setSelectedJournal([]); setDraftState(''); }
+      setStatus(result.error); setStatusError(true); return;
+    }
     setCompose(false); setText(''); setIncludeNotes(false); setSelectedJournal([]); setDraftState('');
     setFilter('out'); setQuery(''); setSelectedId(result.outgoing.id);
     setStatus(result.notice || '信已经寄出，回信也落在这一页了。');
@@ -235,12 +258,18 @@ export default function Mailbox({ sessions, state, now, reduced = false }) {
     </section>
     <div className={`fs-spine ${canUsePaper ? 'has-art' : ''}`} aria-hidden="true"/>
     <section className={`fs-page fs-mail-main ${canUsePaper ? 'has-paper' : ''} ${reduced ? 'is-reduced' : ''}`} aria-label="信件内容">
-      {status && <p className={`fs-mail-toast ${statusError ? 'is-error' : ''}`} role="status">{status}</p>}
+      {status && <p className={`fs-mail-toast ${statusError ? 'is-error' : ''}`} role={statusError ? 'alert' : 'status'}>{status}</p>}
+      {filter === 'trash' && !compose && purging && selectedRow?.id === purging.id && selectedRow.letter.trashed && <div role="group" aria-label="确认永久删除往来信">
+        <p>永久删除这封原信和它的全部回信，包括正文、标题和附带近况？未完成寄信中与原信相同的旧草稿也会删除。此操作不能撤销，已获得的纪念物保留。</p>
+        <p>本机只保留编号和删除时间，导入旧备份也不会恢复这组信。外部旧备份不会被擦除；在没有删除记录的新小屋仍可恢复旧备份。原手记和随手记不会删除。</p>
+        <button type="button" className="fs-mail-quiet" onClick={() => setPurging(null)}>取消</button>
+        <button type="button" className="fs-mail-quiet" onClick={purge}>确认永久删除</button>
+      </div>}
       {compose ? <Composer sessions={sessions} state={state} now={now} reduced={reduced} draft={Boolean(letters.draft)}
         shareContext={shareContext} setShareContext={changeContext} includeNotes={includeNotes} setIncludeNotes={setIncludeNotes}
         selectedJournal={selectedJournal} setSelectedJournal={setSelectedJournal}
         text={text} setText={changeText} sending={sending} status={status} onSend={send} onClose={() => { setCompose(false); setSelectedJournal([]); setIncludeNotes(false); }}/>
-        : <ThreadView row={selectedRow} reduced={reduced} sending={sending} onOrganize={organize} onRecover={(id) => {
+        : <ThreadView row={selectedRow} reduced={reduced} sending={sending} inTrash={filter === 'trash'} onPurge={setPurging} onOrganize={organize} onRecover={(id) => {
           const result = letters.recover(id);
           setStatusError(!result.ok);
           setStatus(result.ok ? '小屋已接上这封回信，信的内容没有重新发送。' : result.error);

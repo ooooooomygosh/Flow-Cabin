@@ -134,6 +134,20 @@ test('word books keep catalog separate, introduce one card, preserve memory acro
   state = nextBookCard(state, WORD_BOOKS[1].id, T0 + 86400000); assert.equal(state.cards.length, 2);
   assert.deepEqual(normalizeStudy(state).cards[0], saved);
 });
+
+test('pending new cards share one daily quota across multiple books', () => {
+  let state = { ...normalizeStudy(), newPerDay: 1 };
+  for (const id of [WORD_BOOKS[0].id, WORD_BOOKS[1].id]) state = openWordBook(state, id, T0);
+  state = nextBookCard(state, WORD_BOOKS[0].id, T0);
+  assert.equal(state.cards.filter(card => !card.memory).length, 1);
+  assert.equal(nextBookCard(state, WORD_BOOKS[1].id, T0), state, 'a pending card consumes the shared slot');
+  state = { ...state, newPerDay: 2 };
+  state = nextBookCard(state, WORD_BOOKS[1].id, T0);
+  assert.equal(state.cards.filter(card => !card.memory).length, 2);
+  assert.equal(studyQueue(state, WORD_BOOKS[0].id, T0).fresh, 1);
+  assert.equal(studyQueue(state, WORD_BOOKS[1].id, T0).fresh, 1);
+  assert.equal(studyQueue(state, '', T0).fresh, 2);
+});
 test('word book import maps columns, counts errors and duplicates without changing existing cards', () => {
   const existing = [{ front: 'Window', back: 'saved', memory: { reps: 4 } }];
   const snapshot = structuredClone(existing);

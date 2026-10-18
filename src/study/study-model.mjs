@@ -104,7 +104,12 @@ export function studyQueue(state, deckId, now = Date.now()) {
   const pool = state.cards.filter((card) => !deckId || card.deckId === deckId);
   const learnedToday = state.log[dayKey(now)]?.learned || 0;
   const due = pool.filter((card) => card.memory && card.memory.due <= now).sort((a, b) => a.memory.due - b.memory.due);
-  const fresh = pool.filter((card) => !card.memory).sort((a, b) => a.createdAt - b.createdAt).slice(0, Math.max(0, state.newPerDay - learnedToday));
+  // Allocate the shared fresh-card budget globally before filtering by deck,
+  // so each deck cannot independently advertise a full daily allowance.
+  const fresh = state.cards.filter((card) => !card.memory)
+    .sort((a, b) => a.createdAt - b.createdAt)
+    .slice(0, Math.max(0, state.newPerDay - learnedToday))
+    .filter((card) => !deckId || card.deckId === deckId);
   return { cards: [...due, ...fresh], due: due.length, fresh: fresh.length, total: pool.length, upcoming: pool.filter((card) => card.memory && card.memory.due > now).sort((a, b) => a.memory.due - b.memory.due)[0]?.memory.due || 0 };
 }
 // A deck with no cards is empty, not finished. Keep empty, unstarted,

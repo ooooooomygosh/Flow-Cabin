@@ -3,15 +3,16 @@ import { normalizeStudy } from './study/study-model.mjs';
 import { normalizeFocus } from './focus/focus-model.mjs';
 import { SESSION_LOG_KEY, normalizeSessionRecord, normalizeCover } from './focus/stats/session-source.mjs';
 import { MOOD_KEY, META_KEY, MOOD_EVENT, normalizeCare, storedCare, getCatMoodNow } from './cat/cat-care.mjs';
-import { LETTERS_KEY, LETTER_EVENT, normalizeLetter } from './ai/ai-model.mjs';
+import { LETTERS_KEY, LETTER_EVENT, normalizeLetter, normalizeStoredLetter, mergeLetterDeletions } from './ai/ai-model.mjs';
 import { normalizeMix, AMBIENCE_TRACKS } from './audio/ambience.mjs';
 import { PLAYBACK_LOG_KEY, readPlaybackSessions } from './player/playback-log.mjs';
-import { JOURNAL_KEY, JOURNAL_CHANGE, normalizeJournalRecord, readJournalRecords, mergeJournalRecord } from './focus/journal-entries.mjs';
+import { JOURNAL_KEY, JOURNAL_CHANGE, normalizeJournalStoredRecord, readJournalState, mergeJournalRecord } from './focus/journal-entries.mjs';
 import { SOUVENIR_KEYS, SOUVENIR_PREFIX, SOUVENIR_CHANGE, normalizeSouvenirs, readSouvenirs, mergeSouvenirs } from './focus/souvenirs.mjs';
 
-// v3 adds the journal's independent stores. Credentials and AI connection settings are never read.
+// v4 carries content-free permanent deletion markers; older backups remain readable.
+// Credentials and AI connection settings are never read.
 export const BACKUP_KIND = 'FlowCabinBackup';
-export const BACKUP_VERSION = 3;
+export const BACKUP_VERSION = 4;
 export const MAX_BACKUP_BYTES = 8 * 1024 * 1024;
 // Earlier releases exported "AlbumCircleCollection" files with the same fields.
 const KINDS = [BACKUP_KIND, 'AlbumCircleCollection'];
@@ -47,6 +48,7 @@ function sessionRecord(value) {
 }
 
 function letterRecord(value) {
+  if (value?.purgedAt != null) { const record = normalizeStoredLetter(value); if (!record) invalid('小屋来信'); return record; }
   if (!plain(value) || typeof value.id !== 'string' || !value.id || !finite(value.at)
     || !Array.isArray(value.lines) || value.lines.some((line) => typeof line !== 'string')) invalid('小屋来信');
   const letter = normalizeLetter(value);
@@ -63,7 +65,7 @@ function playbackRecord(value) {
 
 function journalEntries(value) {
   const entries = array(value, '小屋手记').map((entry) => {
-    const record = normalizeJournalRecord(entry);
+    const record = normalizeJournalStoredRecord(entry);
     if (!record) invalid('小屋手记');
     return record;
   });
@@ -102,7 +104,7 @@ function normalizeMemory(value) {
     out.catCare = { ...(own(meta, 'pets') ? { pets: pick(meta.pets, ['day', 'count']) } : {}),
       ...(own(meta, 'rewarded') ? { rewarded: [...meta.rewarded] } : {}) };
   }
-  if (own(value, 'letters')) out.letters = array(value.letters, '小屋来信').map(letterRecord);
+  if (own(value, 'letters')) out.letters = mergeLetterDeletions(array(value.letters, '小屋来信').map(letterRecord));
   if (own(value, 'playbackSessions')) out.playbackSessions = array(value.playbackSessions, '听歌记录').map(playbackRecord);
   if (own(value, 'journalEntries')) out.journalEntries = journalEntries(value.journalEntries);
   if (own(value, 'souvenirs')) out.souvenirs = normalizeSouvenirs(value.souvenirs);
@@ -120,7 +122,7 @@ export function readBackupMemory(storage = localStorageOrNull()) {
       if (domain === 'journalEntries') {
         try {
           if (!raw) throw new Error('手记存储为空');
-          memory[domain] = readJournalRecords({ getItem: () => raw });
+          memory[domain] = readJournalState({ getItem: () => raw });
         } catch (error) {
           throw new Error(`小屋手记格式异常，原有内容保持不变：${error?.message || '无法读取'}`);
         }
@@ -192,7 +194,7 @@ export function parseBackup(text) {
   try { data = JSON.parse(text); } catch { throw new Error('文件内容无法读取。'); }
   if (!plain(data) || !KINDS.includes(data.kind) || !Array.isArray(data.items)) throw new Error('请选择心流小屋导出的备份文件。');
   const version = own(data, 'version') ? data.version : 1;
-  if (![1, 2, BACKUP_VERSION].includes(version)) throw new Error('不支持此备份版本，请使用兼容版本的小屋。');
+  if (![1, 2, 3, BACKUP_VERSION].includes(version)) throw new Error('不支持此备份版本，请使用兼容版本的小屋。');
   const study = data.study == null ? null : studyRecord(data.study);
   return {
     version, items: backupItems(data.items), roomId: typeof data.roomId === 'string' ? data.roomId : '', library: normalizeLibrary(data.library),
@@ -221,6 +223,7 @@ const mergeRecords = (local, incoming, key, combine = (previous, record) => reco
 
 const LETTER_STATUS_ORDER = Object.freeze({ draft: 0, sending: 1, failed: 2, sent: 3, delivered: 3 });
 function mergeLetter(local, saved) {
+  if (local.purgedAt != null || saved.purgedAt != null) return { id: local.id, purgedAt: Math.max(local.purgedAt ?? 0, saved.purgedAt ?? 0) };
   // A user letter and an incoming letter are different sides of a thread. If
   // legacy data ever collides on an id, keep the outbound side instead of
   // silently turning the user's own words into a letter from the cabin.
@@ -254,12 +257,12 @@ export function restoreBackupMemory(parsed, { storage = localStorageOrNull(), ta
     (local, saved) => local.durationMs > saved.durationMs || (local.durationMs === saved.durationMs
       && (local.end > saved.end || (local.reason !== 'checkpoint' && saved.reason === 'checkpoint'))) ? local : saved).sort((a, b) => a.start - b.start);
   if (incoming.letters) {
-    next.letters = mergeRecords(current.letters || [], incoming.letters, (record) => record.id, mergeLetter)
-      .sort((a, b) => b.at - a.at);
+    next.letters = mergeLetterDeletions(mergeRecords(current.letters || [], incoming.letters, (record) => record.id, mergeLetter))
+      .sort((a, b) => (b.purgedAt ?? b.at) - (a.purgedAt ?? a.at));
   }
   if (incoming.journalEntries) {
     next.journalEntries = mergeRecords(current.journalEntries || [], incoming.journalEntries, (record) => record.id, mergeJournalRecord)
-      .sort((a, b) => b.updatedAt - a.updatedAt || a.id.localeCompare(b.id));
+      .sort((a, b) => (b.purgedAt ?? b.updatedAt) - (a.purgedAt ?? a.updatedAt) || a.id.localeCompare(b.id));
   }
   if (incoming.catMood && current.catMood) {
     const feeds = mergeRecords(current.catMood.feeds, incoming.catMood.feeds, (feed) => feed.at).sort((a, b) => a.at - b.at);

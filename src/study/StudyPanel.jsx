@@ -144,12 +144,15 @@ export default function StudyPanel() {
   return <div className="study-panel">
     <p className="study-summary"><BookOpen size={15}/>{totals.total ? <>今天要复习 <b>{totals.due}</b> 张 · 新卡 <b>{totals.fresh}</b> 张</> : '还没有学习卡片：选一本词书开始，或新建卡组导入词表。'}</p>
     <section className="study-books" aria-label="小屋词书架">
-      <label>选一本词书<select aria-label="入门词书" value={bookId} onChange={event => setBookId(event.target.value)}>{WORD_BOOKS.map(book => <option key={book.id} value={book.id}>{book.name} · {book.words.length} 词</option>)}</select></label>
+      <label>选一本词书<select aria-label="词书" value={bookId} onChange={event => setBookId(event.target.value)}>
+        <optgroup label="入门 · 3 本 18 词">{WORD_BOOKS.slice(0, 3).map(book => <option key={book.id} value={book.id}>{book.name} · {book.words.length} 词</option>)}</optgroup>
+        <optgroup label="日常实用英语 · 12 主题 240 词">{WORD_BOOKS.slice(3).map(book => <option key={book.id} value={book.id}>{book.name} · {book.words.length} 词</option>)}</optgroup>
+      </select></label>
       <p>{selectedBook.description}<small>{selectedBook.source}</small></p>
       <details><summary>预览 {selectedBook.words.length} 个词</summary><ul>{selectedBook.words.map(word => <li key={word.front}><b>{word.front}</b><span>{word.back}</span></li>)}</ul></details>
       <div className="study-book-start"><NewPerDay study={study}/><button type="button" className="pixel-button is-primary" onClick={() => { if (study.openBook(bookId)) setView({ mode: 'review', deckId: bookId }); }}>开始学习 / 复习</button></div>
     </section>
-    <details className="study-guide"><summary>怎么使用词书与复习？</summary><ol><li>选书并预览，设置每天新词数，再开始学习。已有卡组也可以直接打开。</li><li>先回忆，再按空格揭示答案。到期的旧词优先，新词遵守每日总额度。</li><li>忘记选「忘了」；费力想起选「模糊」；正常想起选「记得」；非常熟悉选「简单」。按钮下方显示下一次复习时间。</li><li>按 1–4 评分，Esc 返回词书架。切换词书保留已学进度。每天回来复习到期词。</li><li>新建卡组后可导入自己有权使用的 TSV、JSON 或 Anki 两列纯文本；不支持 .apkg 或导入第三方调度历史。</li></ol><p>内置 3 本小屋原创主题书，每本 6 词。更多内容可自行导入。</p></details>
+    <details className="study-guide"><summary>怎么使用词书与复习？</summary><ol><li>选书并预览，设置每天新词数，再开始学习。已有卡组也可以直接打开。</li><li>先回忆，再按空格揭示答案。到期的旧词优先，新词遵守每日总额度。</li><li>忘记选「忘了」；费力想起选「模糊」；正常想起选「记得」；非常熟悉选「简单」。按钮下方显示下一次复习时间。</li><li>按 1–4 评分，Esc 返回词书架。切换词书保留已学进度。每天回来复习到期词。</li><li>新建卡组后可导入自己有权使用的 TSV、JSON 或 Anki 两列纯文本；不支持 .apkg 或导入第三方调度历史。</li></ol><p>内置 3 本入门书和 12 个日常实用主题，共 258 词，均为小屋原创学习材料，不是完整考试词库或官方分级。更多内容可自行导入。</p></details>
     {!study.state.decks.length && <p className="study-empty" role="status"><BookOpen size={15}/><span>还没有开始任何词书。选上面一本内置词书开始，或新建卡组后导入自己的词表。</span></p>}
     {study.state.decks.length > 0 && <ul className="study-decks">{study.state.decks.map((entry) => {
       const status = deckStatus(study.state, entry.id, Date.now());

@@ -1,4 +1,4 @@
-import { readAi, readLetters, trySaveLetter, needsLetter, letterPeriod, letterSummary, letterMessages, cleanLetter, templateLetter, aiReady, chatUrl, AI_EVENT, LETTER_EVENT, AI_SETTINGS_KEY, AI_KEY_KEY, TRY_KEY } from './ai-model.mjs';
+import { readAi, readLetters, readLetterRecords, trySaveLetter, needsLetter, letterPeriod, letterSummary, letterMessages, cleanLetter, templateLetter, aiReady, chatUrl, AI_EVENT, LETTER_EVENT, AI_SETTINGS_KEY, AI_KEY_KEY, TRY_KEY } from './ai-model.mjs';
 import { chat, keyState, AI_KEY_EVENT } from './ai-transport.mjs';
 import { readCatMood } from '../focus/stats/cat-mood-source.mjs';
 import { readPlaybackSessions } from '../player/playback-log.mjs';
@@ -10,6 +10,9 @@ let inflight = null;
 export async function deliverLetter({ sessions, notes = '', now = Date.now(), force = false, chatImpl = chat, win = globalThis } = {}) {
   const settings = readAi(win.localStorage), key = keyState(win);
   const period = letterPeriod(now, settings.cadence);
+  try {
+    if (readLetterRecords(win.localStorage).some((letter) => letter.id === period.id && letter.purgedAt != null)) return null;
+  } catch { return null; }
   let lastTry = null; try { lastTry = JSON.parse(win.localStorage.getItem(TRY_KEY) || 'null'); } catch { /* ignore */ }
   if (!force && !needsLetter(readLetters(win.localStorage), period, lastTry, now)) return null;
   if (inflight) return inflight;

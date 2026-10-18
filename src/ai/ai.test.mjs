@@ -206,7 +206,7 @@ test('drafts autosave, reload and clear; write failures are explicit', () => {
   assert.equal(readLetterDraft(s), null);
   const bad = { getItem: s.getItem, setItem: () => { throw new Error('quota'); } };
   const failure = trySaveLetter(bad, { id: 'x', lines: ['x'], at: 1 });
-  assert.equal(failure.ok, false); assert.match(failure.error, /信箱空间不足/);
+  assert.equal(failure.ok, false); assert.match(failure.error, /没有保存/);
   assert.equal(tryWriteLetters(bad, []).ok, false);
   assert.equal(clearLetterDraft(s).ok, true);
 });
@@ -245,7 +245,7 @@ test('a failed first write keeps the draft and reports why sending stopped', asy
   assert.equal(saveLetterDraft(s, { text: '别丢掉这一封。' }).ok, true);
   fail = true;
   const result = await sendCabinLetter({ storage: s, win, text: '别丢掉这一封。', now: 1, replyDelayMs: 0 });
-  assert.equal(result.ok, false); assert.match(result.error, /空间不足/);
+  assert.equal(result.ok, false); assert.match(result.error, /没有保存/);
   fail = false;
   assert.equal(readLetterDraft(s).lines[0], '别丢掉这一封。');
 });
@@ -400,4 +400,63 @@ test('cross-tab activity keeps letters; only credential/settings changes or clea
     assert.equal(Boolean(await pending), expected, `storage key: ${key}`);
     assert.equal(readLetters(win.localStorage).length, expected ? 1 : 0);
   }
+});
+
+test('purging a thread removes all replies atomically and blocks stale saves and late delivery', async () => {
+  const { purgeLetterThread } = await import('./letter-reply.mjs');
+  const { readLetterRecords } = await import('./ai-model.mjs');
+  const storage = mem(), win = new EventTarget(); win.localStorage = storage;
+  saveLetterDraft(storage, { text: 'private-outgoing' });
+  const pending = sendCabinLetter({ storage, win, text: 'private-outgoing', now: Date.now() + 1, replyDelayMs: 20 });
+  const outgoing = readLetters(storage).find((letter) => letter.status === 'sending');
+  assert.equal(purgeLetterThread({ storage, id: outgoing.id, win }).ok, false);
+  saveLetter(storage, { id: 'extra-reply', at: 1, lines: ['private-extra'], replyTo: outgoing.id });
+  organizeLetterThread({ storage, id: outgoing.id, action: 'trash', win });
+  const trash = readLetters(storage).find((letter) => letter.id === outgoing.id);
+  const old = storage.getItem(LETTERS_KEY), stale = readLetters(storage);
+  const bad = { getItem: storage.getItem, setItem() { throw new Error('quota'); } };
+  assert.equal(purgeLetterThread({ storage: bad, id: outgoing.id, expectedOrganizedAt: trash.organizedAt, win }).ok, false);
+  assert.equal(storage.getItem(LETTERS_KEY), old);
+  assert.equal(purgeLetterThread({ storage, id: outgoing.id, expectedOrganizedAt: trash.organizedAt - 1, win }).ok, false);
+  assert.equal(purgeLetterThread({ storage, id: outgoing.id, expectedOrganizedAt: trash.organizedAt, now: 100, win }).ok, true);
+  assert.equal((await pending).deleted, true);
+  assert.equal(recoverCabinLetter({ storage, id: outgoing.id, win }).ok, false);
+  assert.deepEqual(readLetters(storage), []);
+  assert.equal(readLetterDraft(storage), null);
+  assert.equal(trySaveLetter(storage, outgoing).deleted, true);
+  assert.equal(trySaveLetter(storage, { id: 'late-reply', at: 999, lines: ['private-late'], replyTo: outgoing.id }).deleted, true);
+  assert.equal(tryWriteLetters(storage, stale).ok, true);
+  markRead(storage, 'extra-reply');
+  assert.equal(readLetters(storage).length, 0);
+  assert.equal(readLetterRecords(storage).length, 3);
+  assert.ok(!storage.getItem(LETTERS_KEY).includes('private'));
+  saveLetter(storage, { id: 'unrelated', at: 1000, lines: ['new'] });
+  assert.equal(readLetterRecords(storage).filter((letter) => letter.purgedAt != null).length, 3);
+  assert.equal(saveLetterDraft(storage, { text: 'private-outgoing', expectedDraftId: DRAFT_ID }).deleted, true);
+  assert.equal((await sendCabinLetter({ storage, win, text: 'private-outgoing', draftId: DRAFT_ID, replyDelayMs: 0 })).deleted, true);
+  const fresh = saveLetterDraft(storage, { text: 'fresh draft' });
+  assert.equal(fresh.ok, true); assert.notEqual(fresh.draft.id, DRAFT_ID);
+  assert.equal(saveLetterDraft(storage, { text: 'fresh edited', expectedDraftId: fresh.draft.id }).draft.id, fresh.draft.id);
+  assert.equal(clearLetterDraft(storage).ok, true); assert.equal(readLetterDraft(storage), null);
+});
+
+test('purged automatic letters do not regenerate or dispatch another AI request', async () => {
+  const { deliverLetter } = await import('./letter-delivery.mjs');
+  const { purgeLetterThread } = await import('./letter-reply.mjs');
+  const win = new EventTarget(); win.localStorage = mem();
+  const now = Date.now(), id = letterPeriod(now, 'weekly').id;
+  saveLetter(win.localStorage, { id, lines: ['old'], at: now });
+  organizeLetterThread({ storage: win.localStorage, id, action: 'trash', win });
+  const root = readLetters(win.localStorage)[0];
+  assert.equal(purgeLetterThread({ storage: win.localStorage, id, expectedOrganizedAt: root.organizedAt, win }).ok, true);
+  let calls = 0;
+  assert.equal(await deliverLetter({ win, now, force: true, sessions: [], chatImpl: async () => { calls++; } }), null);
+  assert.equal(calls, 0); assert.equal(readLetters(win.localStorage).length, 0);
+});
+
+test('corrupt letter stores refuse writes instead of clearing unknown existing data', () => {
+  const storage = mem(); storage.setItem(LETTERS_KEY, '{broken');
+  assert.equal(trySaveLetter(storage, { id: 'new', lines: ['new'], at: 1 }).ok, false);
+  assert.equal(tryWriteLetters(storage, []).ok, false);
+  assert.equal(storage.getItem(LETTERS_KEY), '{broken');
 });

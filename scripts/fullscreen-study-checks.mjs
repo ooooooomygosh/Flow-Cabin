@@ -55,7 +55,7 @@ export async function verifyFullscreenStudy({ browser, origin, output, check }) 
     await page.getByRole('button', { name: '显示工具', exact: true }).click();
     await page.locator('.app-titlebar').waitFor(); await page.getByRole('button', { name: '添加到唱片架', exact: true }).click(); await page.getByRole('dialog').waitFor(); await page.keyboard.press('Escape');
     assert.equal(await page.getByRole('toolbar', { name: '全屏与沉浸工具' }).getByRole('button', { name: '学习' }).count(), 0, 'immersive tools do not duplicate the dock tabs');
-    await openStudy(); await page.getByLabel('入门词书', { exact: true }).waitFor();
+    await openStudy(); await page.getByLabel('词书', { exact: true }).waitFor();
     await shot('fullscreen-immersive-tools-study'); check('immersive-drag-target-recovery-playlists-and-study');
     await page.evaluate(() => document.activeElement?.blur()); await page.keyboard.press('Escape');
     await page.locator('.focus-dock').waitFor({ state:'detached' });
@@ -74,7 +74,7 @@ export async function verifyFullscreenStudy({ browser, origin, output, check }) 
     assert.equal((await studyState()).cards.length, 1);
     await page.getByRole('button', { name: '翻面 · 空格', exact: true }).click(); await page.getByRole('button', { name: /^记得/ }).click();
     const saved = (await studyState()).cards.find(card => card.memory); assert(saved.memory.reps > 0);
-    await page.keyboard.press('Escape'); await page.getByLabel('入门词书', { exact: true }).selectOption('book-music');
+    await page.keyboard.press('Escape'); await page.getByLabel('词书', { exact: true }).selectOption('book-music');
     await page.getByRole('button', { name: '开始学习 / 复习', exact: true }).click();
     await page.getByRole('button', { name: '翻到背面（空格）', exact: true }).waitFor(); await shot('study-review');
     assert.deepEqual((await studyState()).cards.find(card => card.id === saved.id), saved);

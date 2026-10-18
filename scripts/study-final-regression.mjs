@@ -79,7 +79,7 @@ async function openDock(page, tab = '学习') {
 
 async function openStudy(page) {
   const dock = await openDock(page, '学习');
-  await page.getByLabel('入门词书', { exact: true }).waitFor();
+  await page.getByLabel('词书', { exact: true }).waitFor();
   return dock;
 }
 

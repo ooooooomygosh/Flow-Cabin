@@ -108,3 +108,30 @@ test('history has no count cap and invalid dates cannot reach the renderer', () 
   assert.equal(normalizeJournalRecord({ ...entry, createdAt: 1e99 }), null);
   assert.equal(normalizeJournalRecord({ ...entry, revisions: [{ version: 'bad', body: 'x', at: 1e99 }] }), null);
 });
+
+test('permanent deletion is trash-only, strips history, blocks stale editors and survives unrelated saves', async () => {
+  const { purgeJournalEntry, readJournalState } = await import('./journal-entries.mjs');
+  const storage = memory(), target = new EventTarget(); let events = 0;
+  target.addEventListener(JOURNAL_CHANGE, () => events++);
+  const first = saveJournalEntry({ storage, body: 'private-first', tags: ['secret'], target: null, now: 10 }).entry;
+  const edited = saveJournalEntry({ storage, id: first.id, expectedVersion: first.version, body: 'private-last', target: null, now: 11 }).entry;
+  assert.equal(purgeJournalEntry({ storage, id: first.id, expectedVersion: edited.version, target }).ok, false);
+  const trash = moveJournalEntry({ storage, id: first.id, expectedVersion: edited.version, trash: true, now: 12, target: null }).entry;
+  const before = storage.getItem(JOURNAL_KEY);
+  const bad = { getItem: storage.getItem, setItem() { throw new Error('quota'); } };
+  assert.equal(purgeJournalEntry({ storage: bad, id: first.id, expectedVersion: trash.version, target }).ok, false);
+  assert.equal(storage.getItem(JOURNAL_KEY), before); assert.equal(events, 0);
+  assert.equal(purgeJournalEntry({ storage, id: first.id, expectedVersion: edited.version, target }).ok, false);
+  assert.equal(purgeJournalEntry({ storage, id: first.id, expectedVersion: trash.version, now: 13, target }).ok, true);
+  assert.equal(events, 1);
+  assert.deepEqual(readJournalState(storage), [{ id: first.id, purgedAt: 13 }]);
+  assert.deepEqual(readJournalRecords(storage), []);
+  assert.equal(saveJournalEntry({ storage, id: first.id, expectedVersion: edited.version, body: 'late' }).deleted, true);
+  assert.equal(moveJournalEntry({ storage, id: first.id, expectedVersion: trash.version, trash: false }).ok, false);
+  assert.equal(restoreJournalRevision({ storage, id: first.id, expectedVersion: trash.version, revision: first.version }).ok, false);
+  saveJournalEntry({ storage, body: 'unrelated', now: 14 });
+  assert.ok(readJournalState(storage).some((entry) => entry.purgedAt === 13));
+  for (const secret of ['private-first', 'private-last', 'secret']) assert.ok(!storage.getItem(JOURNAL_KEY).includes(secret));
+  assert.deepEqual(mergeJournalRecord(edited, { id: first.id, purgedAt: 13 }), { id: first.id, purgedAt: 13 });
+  assert.deepEqual(mergeJournalRecord({ id: first.id, purgedAt: 13 }, { ...edited, updatedAt: 999 }), { id: first.id, purgedAt: 13 });
+});

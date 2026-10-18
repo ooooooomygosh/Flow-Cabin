@@ -20,6 +20,27 @@ const focusState = page => page.evaluate(key => JSON.parse(localStorage.getItem(
 const openAlbumWall = async page => { const tools = page.getByRole('button',{name:'整理唱片架',exact:true}); if (await tools.getAttribute('aria-expanded') !== 'true') await tools.click(); await page.getByRole('region',{name:'整理唱片架',exact:true}).getByRole('button',{name:'专辑墙',exact:true}).click(); };
 const openFocus = async (page, tab = '番茄钟') => { const badge = page.locator('.focus-badge'); await badge.waitFor({timeout:30000}); if (await badge.getAttribute('aria-expanded') === 'false') await badge.click(); await page.locator('.focus-dock').waitFor(); await page.locator('.focus-dock').getByRole('tab', { name: tab, exact: true }).click(); };
 const screenshot = async (page, name) => { for (const [width, height] of [[1440,900],[960,600]]) { await page.setViewportSize({width,height}); await page.screenshot({ path: path.join(output, `${name}-${width}x${height}.png`), animations:'disabled', timeout:15000 }); } };
+// screenshot() resizes the window twice, and the cat panel follows the repositioned cat asynchronously.
+// Return drag handles only after the chip, cat and the chip's real hit-test target have stayed put
+// across frames. The quiet window is longer than the slowest deferred placement (280 ms).
+const stableDragHandles = (page, timeout = 5000) => page.evaluate(async timeout => {
+  const rect = element => { const r = element.getBoundingClientRect(); return {x:r.left,y:r.top,width:r.width,height:r.height}; };
+  const keyOf = sample => [sample.from.x, sample.from.y, sample.from.width, sample.from.height, sample.to.x, sample.to.y, sample.to.width, sample.to.height, sample.hit]
+    .map(value => typeof value === 'number' ? Math.round(value * 10) / 10 : value).join('|');
+  const deadline = performance.now() + timeout;
+  let last = '', stableSince = performance.now();
+  while (performance.now() < deadline) {
+    const chip = document.querySelector('.cat-fish-chip'), cat = document.querySelector('.room-cat');
+    if (chip && cat) {
+      const from = rect(chip), hit = document.elementFromPoint(from.x + from.width / 2, from.y + from.height / 2);
+      const sample = {from,to:rect(cat),hit:chip.contains(hit) ? 'chip' : 'outside'}, key = keyOf(sample);
+      if (sample.hit !== 'chip' || key !== last) { last = key; stableSince = performance.now(); }
+      else if (performance.now() - stableSince >= 350) return {from:sample.from,to:sample.to};
+    } else { last = ''; stableSince = performance.now(); }
+    await new Promise(requestAnimationFrame);
+  }
+  throw new Error('cat fish drag handles did not settle');
+}, timeout);
 const failStorage = (page, fail) => page.evaluate(fail => { window.__failFocusStorage = fail; if (window.__focusStorageOriginal) return; window.__focusStorageOriginal = Storage.prototype.setItem; Storage.prototype.setItem = function(key, value) { if (window.__failFocusStorage && key === 'album-circle-focus-v1:local-owner') throw new DOMException('Synthetic quota failure', 'QuotaExceededError'); return window.__focusStorageOriginal.call(this,key,value); }; }, fail);
 try {
   server = spawn(process.execPath, [path.join(root,'node_modules/vite/bin/vite.js'),'--host','127.0.0.1','--port',String(port),'--strictPort'], {cwd:root,env:{...process.env,FLOW_CABIN_VITE_CACHE_DIR:path.join(output,'vite-cache')},stdio:['ignore','pipe','pipe']});
@@ -69,7 +90,7 @@ try {
     assert.deepEqual(Object.keys(fed).sort(),['at','fishLeft','mood','tier','totalFeeds']);assert.equal(fed.fishLeft,3);assert.equal(fed.mood,52);assert.equal(fed.tier,'ok');assert.equal(fed.totalFeeds,3);assert.equal((await focusState(page)).rewards.fish,3);
     assert.match(await panel.locator('.cat-care-note').innerText(),/伸懒腰/);assert.match(await page.locator('.room-cat').getAttribute('class'),/cat--eating/);await screenshot(page,'cat-fed');
     // A 小鱼干 dragged with the real mouse from the panel chip onto the cat feeds it too.
-    {const from=await panel.locator('.cat-fish-chip').boundingBox(),to=await page.locator('.room-cat').boundingBox();await page.mouse.move(from.x+from.width/2,from.y+from.height/2);await page.mouse.down();await page.mouse.move(to.x+to.width/2,to.y+to.height/2,{steps:12});await page.mouse.move(to.x+to.width/2+2,to.y+to.height/2,{steps:2});await page.mouse.up();}
+    {const {from,to}=await stableDragHandles(page);await page.mouse.move(from.x+from.width/2,from.y+from.height/2);await page.mouse.down();await page.mouse.move(to.x+to.width/2,to.y+to.height/2,{steps:12});await page.mouse.move(to.x+to.width/2+2,to.y+to.height/2,{steps:2});await page.mouse.up();}
     await page.waitForFunction(()=>window.__fed.length===2,null,{timeout:5000});assert.equal((await focusState(page)).rewards.fish,2);
         // A 小鱼干 dropped on the cat feeds it too.
     await page.evaluate(()=>{const dt=new DataTransfer();dt.setData('application/x-cabin-fish','1');const cat=document.querySelector('.room-cat');for(const type of ['dragover','drop'])cat.dispatchEvent(new DragEvent(type,{dataTransfer:dt,bubbles:true,cancelable:true}));});
@@ -283,7 +304,7 @@ try {
     const memory = backupMemory('export');
     await seedBackupMemory(page, memory); await openBackup(page);
     const exported = await downloadBackup(page);
-    assert.equal(exported.version, 3); assert.equal(exported.roomId, 'local-room');
+    assert.equal(exported.version, 4); assert.equal(exported.roomId, 'local-room');
     assert.equal(exported.items.length, items.length); assert.equal(exported.focus.notes, '原有随手记');
     for (const domain of Object.keys(backupKeys)) assert.ok(exported.memory[domain], domain + ' exported');
     assert.equal(exported.memory.playbackSessions[0].durationMs, 1000);
