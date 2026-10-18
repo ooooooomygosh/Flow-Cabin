@@ -1,6 +1,9 @@
 // Original hand-built pixel silhouettes. No image assets or remote requests.
 // Shared palette semantics let every accessory work on every species.
-import { catFrame, SIZE, PALETTE, CAT_PALETTES, POSES, ACCESSORIES, LISTEN_POSE, LISTEN_FRAMES } from './cat-sprites.mjs';
+import { catFrame, SIZE, PALETTE, CAT_PALETTES, POSES, ACCESSORIES, LISTEN_POSE, LISTEN_FRAMES, TYPING_POSE, TYPING_FRAMES, EAT_POSE, EAT_FRAMES, HOP_POSE, HOP_FRAMES } from './cat-sprites.mjs';
+const CAT_ACTIONS = { [TYPING_POSE]: TYPING_FRAMES, [EAT_POSE]: EAT_FRAMES, [HOP_POSE]: HOP_FRAMES };
+// What other pets draw for the cat-only actions.
+const ACTION_FALLBACK = { [TYPING_POSE]: 'idle', [EAT_POSE]: 'celebrate', [HOP_POSE]: 'celebrate' };
 import { normalizePetId } from './pet-catalog.mjs';
 export { SIZE, POSES, ACCESSORIES };
 const palette = (fur, light, shade, blush = '#ed9c9c') => Object.freeze(PALETTE.map((c, i) => ({ 2: fur, 3: light, 4: shade, 5: blush }[i] || c)));
@@ -84,6 +87,10 @@ export function petFrame(petId = 'cat', pose = 'idle', index = 0, acc = '') {
   const pet = normalizePetId(petId);
   // The cat's 听歌 pose lives outside POSES (cat-sprites.mjs); other pets idle instead.
   if (pet === 'cat' && pose === LISTEN_POSE) { const i = Number.isFinite(index) ? Math.floor(index) : 0; return catFrame(LISTEN_POSE, ((i % LISTEN_FRAMES) + LISTEN_FRAMES) % LISTEN_FRAMES, ACCESSORIES.includes(acc) ? acc : ''); }
+  if (Object.hasOwn(CAT_ACTIONS, pose)) {
+    if (pet === 'cat') { const n = CAT_ACTIONS[pose], i = Number.isFinite(index) ? Math.floor(index) : 0; return catFrame(pose, ((i % n) + n) % n, ACCESSORIES.includes(acc) ? acc : ''); }
+    pose = ACTION_FALLBACK[pose];
+  }
   const normalized = normalizeFrame(pose, index);
   pose = normalized.pose; index = normalized.index;
   acc = ACCESSORIES.includes(acc) ? acc : '';

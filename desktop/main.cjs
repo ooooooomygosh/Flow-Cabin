@@ -1,6 +1,6 @@
 'use strict';
 
-const { app, BrowserWindow, WebContentsView, Menu, Tray, dialog, ipcMain, clipboard, shell, protocol, screen, net, safeStorage, nativeImage, powerSaveBlocker, globalShortcut, powerMonitor } = require('electron');
+const { app, BrowserWindow, WebContentsView, Menu, Tray, dialog, ipcMain, clipboard, shell, protocol, screen, net, safeStorage, nativeImage, powerSaveBlocker, globalShortcut, powerMonitor, systemPreferences } = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
 const { SITE_ORIGIN, SHELL_URL, isSiteUrl, isShellUrl, isExternalUrl, safeSavedWindow } = require('./policy.cjs');
@@ -12,6 +12,7 @@ const { createDesktopMode } = require('./desktop-mode.cjs');
 const { createDesktopSink, migrateDesktopPreferences } = require('./desktop-sink.cjs');
 const { createMiniPlayer } = require('./mini-player.cjs');
 const { trayIconPath, createTrayPet } = require('./tray-icons.cjs');
+const { createTypingHook } = require('./typing-hook.cjs');
 const { createCollectionStore } = require('./collection-store.cjs');
 const { createMusicService } = require('./music-service.cjs');
 const { openQQLogin, openNeteaseLogin, clearQQLogin, clearNeteaseLogin } = require('./music-login.cjs');
@@ -116,8 +117,12 @@ const statusPoller = createCompanionPoller({ getSite: () => siteView?.webContent
     const key = [trayStatus.statusLine, trayStatus.playing, trayStatus.phase, trayStatus.paused, trayWanted()].join('|');
     if (key !== trayMenuKey || !companionTray) { trayMenuKey = key; refreshTray(); } else statusBar.apply(trayStatus);
   } });
+// 打字跟随: the global key-activity hook runs only while the setting is on AND the pet is out.
+const typingHook = createTypingHook({ systemPreferences, onActivity: (at) => pet?.typing(at), log: (...args) => writeLog(...args) });
+function syncTyping() { return typingHook.setEnabled(Boolean(appearance.typingFollow && petState.active)); }
+function typingInfo() { return { status: appearance.typingFollow && !petState.active ? 'waiting-pet' : typingHook.status(), platform: process.platform }; }
 function petStatus(state) {
-  petState = state; refreshTray();
+  petState = state; syncTyping(); refreshTray();
   if (siteView && !siteView.webContents.isDestroyed()) siteView.webContents.executeJavaScript(`window.albumPetState = ${JSON.stringify(state)}; window.dispatchEvent(new CustomEvent('album-pet-state', {detail: window.albumPetState}));`).catch(() => {});
 }
 function wallpaperStatus(state) {
@@ -153,8 +158,8 @@ async function saveAppearance(value) {
   fs.renameSync(settingsPath() + '.tmp', settingsPath());
   appearance = next;
   await applyAppearance();
-  sendState();
-  return { settings: appearance, display: currentDisplay() };
+  sendState(); syncTyping();
+  return { settings: appearance, display: currentDisplay(), typing: typingInfo() };
 }
 
 // Window state and the renderer's immersive state are independent.
@@ -396,7 +401,8 @@ function registerIpc() {
   });
   ipcMain.handle('desktop:settings', async (event, operation, value) => {
     if (event.sender !== mainWindow?.webContents || event.senderFrame !== mainWindow.webContents.mainFrame || !isShellUrl(event.senderFrame.url)) throw new Error('Unknown sender');
-    if (operation === 'get') return { settings: appearance, fonts: await listSystemFonts(), display: currentDisplay() };
+    if (operation === 'get') { typingHook.retry(); return { settings: appearance, fonts: await listSystemFonts(), display: currentDisplay(), typing: typingInfo() }; }
+    if (operation === 'typing-permission') { typingHook.requestPermission(); return { typing: typingInfo() }; }
     if (operation === 'apply') return saveAppearance(value);
     if (operation === 'reset') return saveAppearance(DEFAULT_SETTINGS);
     throw new Error('Unknown settings operation');
@@ -511,6 +517,8 @@ else {
     app.quit();
   });
   app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
+  // Coming back from System Settings after granting permission starts the hook without a restart.
+  app.on('browser-window-focus', () => { if (typingHook.status() === 'needs-permission') typingHook.retry(); });
   app.on('activate', () => {
     if (updates.newerCopyInstalled()) {
       if (!mainWindow || mainWindow.isDestroyed() || !mainWindow.isVisible()) { writeLog('relaunch-installed', updates.installedVersion()); updates.relaunchInstalledCopy(); return; }
@@ -518,5 +526,5 @@ else {
     }
     if (mainWindow) restoreMainWindow(); else createWindow().catch((error) => writeLog('startup-error', error.message));
   });
-  app.on('before-quit', () => { quitting = true; statusPoller.stop(); if (awakeBlocker !== null) { powerSaveBlocker.stop(awakeBlocker); awakeBlocker = null; } globalShortcut.unregisterAll(); desktopSink?.stop(); miniPlayer?.hide(); wallpaper?.stop(); pet?.stop(); weather.dispose(); music?.stop(); companionTray?.destroy(); companionTray = null; if (startupComplete) writeLog('closed'); });
+  app.on('before-quit', () => { quitting = true; statusPoller.stop(); typingHook.stop(); if (awakeBlocker !== null) { powerSaveBlocker.stop(awakeBlocker); awakeBlocker = null; } globalShortcut.unregisterAll(); desktopSink?.stop(); miniPlayer?.hide(); wallpaper?.stop(); pet?.stop(); weather.dispose(); music?.stop(); companionTray?.destroy(); companionTray = null; if (startupComplete) writeLog('closed'); });
 }

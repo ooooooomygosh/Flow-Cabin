@@ -6,14 +6,16 @@ const { BrowserWindow, ipcMain, Menu, screen } = require('electron');
 const fs = require('node:fs'), path = require('node:path');
 const { cleanCompanion } = require('./wallpaper-model.cjs');
 const { createCompanionPoller, sendCompanionCommand } = require('./companion-sync.cjs');
-const { createPetPhysics } = require('./pet-physics.cjs');
+const { createPetPhysics, floorOf, ceilingOf } = require('./pet-physics.cjs');
 const URL = 'album-desktop://pet/pet.html';
 const SIZES = { S: 128, M: 192, L: 256 };
 const windowSize = (size) => ({ width: Math.max(240, Math.round(size * 1.5)), height: size + 64 });
 
+// Keeps the pet on the display it is over (or the nearest one after a display was unplugged), with
+// the cat itself inside that display's work area: under the menu bar, above the Dock / taskbar.
 function clampToWorkArea(bounds) {
   const area = screen.getDisplayMatching(bounds).workArea;
-  return { ...bounds, x: Math.max(area.x - Math.round(bounds.width / 3), Math.min(area.x + area.width - Math.round(bounds.width * 2 / 3), bounds.x)), y: Math.max(area.y - 40, Math.min(area.y + area.height - bounds.height + 10, bounds.y)) };
+  return { ...bounds, x: Math.max(area.x - Math.round(bounds.width / 3), Math.min(area.x + area.width - Math.round(bounds.width * 2 / 3), bounds.x)), y: Math.max(ceilingOf(area), Math.min(floorOf(bounds, area), bounds.y)) };
 }
 
 function createPet({ directory, getSite, getFocus, status, registerProtocol, restoreMain, log = () => {} }) {
@@ -23,9 +25,10 @@ function createPet({ directory, getSite, getFocus, status, registerProtocol, res
   try { prefs = { ...prefs, ...JSON.parse(fs.readFileSync(prefsPath, 'utf8')) }; } catch {}
   if (!SIZES[prefs.size]) prefs.size = 'M';
   const save = () => { clearTimeout(saveTimer); saveTimer = setTimeout(() => { try { fs.mkdirSync(directory, { recursive: true }); fs.writeFileSync(prefsPath, JSON.stringify(prefs)); } catch {} }, 300); };
-  const payload = () => ({ companion: latest, size: SIZES[prefs.size], motion });
+  let typingAt = 0;
+  const payload = () => ({ companion: latest, size: SIZES[prefs.size], motion, typingAt });
   // ~8 Hz while music plays so the pet can sway with it; 750 ms otherwise.
-  const poller = createCompanionPoller({ getSite, interval: (value) => value?.musicPlaying ? 125 : 750, clean: (value) => cleanCompanion(value?.companion), onValue: (value) => { latest = value; window?.webContents.send('pet:update', payload()); } });
+  const poller = createCompanionPoller({ getSite, interval: (value) => value?.musicPlaying || Date.now() - (value?.typingAt || 0) < 3000 ? 125 : 750, clean: (value) => cleanCompanion(value?.companion), onValue: (value) => { latest = value; window?.webContents.send('pet:update', payload()); } });
   const announce = () => status({ active: Boolean(window), size: prefs.size });
   const validSender = (event) => window && !window.isDestroyed() && event.sender === window.webContents && event.senderFrame === window.webContents.mainFrame && event.senderFrame.url === URL;
 
@@ -95,6 +98,9 @@ function createPet({ directory, getSite, getFocus, status, registerProtocol, res
   function menu() {
     const focus = getFocus?.() || latest?.focus, running = focus && focus.phase !== 'idle' && !focus.paused;
     Menu.buildFromTemplate([
+      // Same as the cat panel's 「喂一条」: 1 条小鱼干, the pet plays its eating frames.
+      { label: '喂一条', click: () => sendCompanionCommand(getSite(), 'cat-feed') },
+      { type: 'separator' },
       { label: running ? '暂停专注' : focus?.phase && focus.phase !== 'idle' ? '继续专注' : '开始专注', click: () => sendCompanionCommand(getSite(), running ? 'focus-pause' : 'focus-start') },
       ...(focus && focus.phase !== 'idle' ? [{ label: focus.phase === 'focus' ? '提前结束本轮' : '跳过休息', click: () => sendCompanionCommand(getSite(), 'focus-skip') }] : []),
       { label: '开关小屋声音', click: () => sendCompanionCommand(getSite(), 'sound-toggle') },
@@ -120,6 +126,10 @@ function createPet({ directory, getSite, getFocus, status, registerProtocol, res
   ipcMain.on('pet:menu', (event) => { if (validSender(event)) menu(); });
   ipcMain.on('pet:open', (event) => { if (validSender(event)) restoreMain(); });
   ipcMain.on('pet:command', (event, command) => { if (validSender(event)) sendCompanionCommand(getSite(), command); });
-  return { start, stop, resize, get active() { return Boolean(window); }, get window() { return window; }, get size() { return prefs.size; }, reposition() { if (window) { const bounds = clampToWorkArea(window.getBounds()); resetMotion(bounds); window.setBounds(bounds); prefs = { ...prefs, x: bounds.x, y: bounds.y }; save(); } } };
+  // A 小鱼干 is being dragged in the cabin: let the pet window take the drop (it plays the eat frames).
+  function acceptDrops(on) { if (window && !window.isDestroyed()) window.setIgnoreMouseEvents(!on, { forward: true }); }
+  // 打字跟随 (typing-hook.cjs): only a timestamp, already throttled.
+  function typing(at) { typingAt = at; window?.webContents.send('pet:update', payload()); }
+  return { start, stop, resize, acceptDrops, typing, get active() { return Boolean(window); }, get window() { return window; }, get size() { return prefs.size; }, reposition() { if (window) { const bounds = clampToWorkArea(window.getBounds()); resetMotion(bounds); window.setBounds(bounds); prefs = { ...prefs, x: bounds.x, y: bounds.y }; save(); } } };
 }
 module.exports = { createPet, SIZES, windowSize, clampToWorkArea };

@@ -26,13 +26,21 @@ function cleanFocusDisplay(value) {
   const v = value && typeof value === 'object' ? value : {};
   return { mode: FACES.includes(v.mode) ? v.mode : '', show: SHOWS.includes(v.show) ? v.show : 'auto', seconds: v.seconds === true };
 }
+// The last feed attempt (src/cat/useCatCare.js careForCompanion): display data only.
+const TIERS = ['happy', 'ok', 'sleepy'];
+function cleanCare(value) {
+  const fedAt = Number(value?.fedAt);
+  return { fedAt: Number.isFinite(fedAt) && fedAt > 0 ? Math.round(fedAt) : 0, ok: value?.ok === true, note: string(value?.note, 80), tier: TIERS.includes(value?.tier) ? value.tier : '' };
+}
 function cleanCompanion(value) {
   if (!value || typeof value !== 'object') return null;
   const musicPlaying = value.musicPlaying === true, energy = Number(value.energy), bpm = Number(value.bpm), beatAt = Number(value.beatAt), lofiBpm = Number(value.lofiBpm);
   const beat = musicPlaying && bpm >= 40 && bpm <= 220 && Number.isFinite(beatAt) && beatAt > 0 ? { bpm: Math.round(bpm * 10) / 10, beatAt: Math.round(beatAt) } : { bpm: 0, beatAt: 0 };
   return { petId: petId(value.petId), focus: cleanFocus(value.focus), playing: value.playing === true, track: string(value.track, 200), reduceMotion: value.reduceMotion === true,
     lofiBpm: !musicPlaying && value.playing === true && Number.isFinite(lofiBpm) && lofiBpm >= 40 && lofiBpm <= 220 ? Math.round(lofiBpm * 10) / 10 : 0,
-    musicPlaying, energy: musicPlaying && Number.isFinite(energy) ? Math.round(Math.max(0, Math.min(1, energy)) * 100) / 100 : 0, energyEstimated: musicPlaying && value.energyEstimated === true, ...beat };
+    musicPlaying, energy: musicPlaying && Number.isFinite(energy) ? Math.round(Math.max(0, Math.min(1, energy)) * 100) / 100 : 0, energyEstimated: musicPlaying && value.energyEstimated === true, ...beat, care: cleanCare(value.care),
+    // 打字跟随 fallback: when the cabin last saw a keydown (a time only, never the key).
+    typingAt: Number.isFinite(Number(value.typingAt)) && Number(value.typingAt) > 0 ? Math.round(Number(value.typingAt)) : 0 };
 }
 const colour = (value, fallback) => /^#[\da-f]{6}$/i.test(value || '') ? value : fallback;
 function cleanSnapshot(value) {

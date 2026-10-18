@@ -1,6 +1,6 @@
 'use strict';
 const { contextBridge, ipcRenderer } = require('electron');
-const COMMANDS = new Set(['focus-start', 'focus-pause', 'focus-toggle', 'focus-skip', 'sound-toggle']);
+const COMMANDS = new Set(['focus-start', 'focus-pause', 'focus-toggle', 'focus-skip', 'sound-toggle', 'cat-feed']);
 contextBridge.exposeInMainWorld('albumPet', Object.freeze({
   getSnapshot: () => ipcRenderer.invoke('pet:snapshot'),
   onSnapshot: (callback) => {

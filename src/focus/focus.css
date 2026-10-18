@@ -131,5 +131,7 @@
 
 .cat-panel .focus-rewards{margin-top:0;padding-top:0;border-top:0}
 .focus-cat-link{margin-top:14px;justify-self:start;display:inline-flex;align-items:center;gap:6px}
-.cabin-dialog.cat-panel{position:fixed;margin:0;inset:auto;left:var(--cat-panel-x,50%);top:var(--cat-panel-y,50%);width:min(360px,calc(100vw - 24px));max-height:calc(100vh - 24px);translate:var(--cat-panel-shift,0 0)}
+.cabin-dialog.cat-panel{position:fixed;margin:0;inset:auto;left:var(--cat-panel-x,50%);top:var(--cat-panel-y,50%);width:min(360px,calc(100vw - 24px));max-height:var(--cat-panel-max-h,calc(100vh - 24px));overflow:auto;translate:var(--cat-panel-shift,0 0)}
 :root:not([style*='--cat-panel-x']) .cabin-dialog.cat-panel{translate:-50% -50%}
+/* The cat stays in view next to its panel: no dimming backdrop over the room. */
+.cabin-dialog.cat-panel::backdrop{background:transparent}

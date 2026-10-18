@@ -347,7 +347,7 @@ try {
     window.albumWallpaper = { getSnapshot: async () => ({ ...companion.room, focus: companion.focus }), onSnapshot: fn => { window.__pushWallpaper = fn; return () => {}; } };
     window.__miniCalls = [];
     window.albumMini = { getSnapshot: async () => ({ ...companion, track: '雪夜 · 预览', musicPlaying: true }), onSnapshot: () => () => {}, command: v => window.__miniCalls.push(v), player: a => window.__miniCalls.push('player:' + a), exit: () => window.__miniCalls.push('exit') };
-    window.albumPet = { getSnapshot: async () => ({ companion, size: 192 }), onSnapshot: fn => { window.__pushPet = fn; return () => {}; }, setHit: v => window.__nativeFixtureCalls.push(['hit', v]), moveBy: (x, y) => window.__nativeFixtureCalls.push(['move', x, y]), dragEnd: () => {}, menu: () => {}, open: () => window.__nativeFixtureCalls.push(['open']) };
+    window.albumPet = { getSnapshot: async () => ({ companion, size: 192 }), onSnapshot: fn => { window.__pushPet = fn; return () => {}; }, setHit: v => window.__nativeFixtureCalls.push(['hit', v]), moveBy: (x, y) => window.__nativeFixtureCalls.push(['move', x, y]), dragEnd: () => {}, menu: () => window.__nativeFixtureCalls.push(['menu']), open: () => window.__nativeFixtureCalls.push(['open']), command: v => window.__nativeFixtureCalls.push(['command', v]) };
   }, { companion });
   const mainPage = page;
   page = await context.newPage(); await page.goto(origin + '/wallpaper.html'); await page.locator('.wallpaper-room').waitFor();
@@ -372,7 +372,33 @@ try {
     await page.evaluate(({ companion, petId }) => window.__pushPet({ companion: { ...companion, petId }, size: 192 }), { companion, petId: pet.id });
     await page.locator(`.pet-cat .pixel-cat[data-pet-id="${pet.id}"]`).waitFor(); await screenshot(`desktop-pet-${pet.id}`);
   }
-  await page.locator('.pet-cat').press('Enter'); await page.locator('.pet-bubble').waitFor(); check('pet-renderer-all-species-and-keyboard-poke-mocked-bridge'); await page.close(); page = mainPage;
+  await page.locator('.pet-cat').press('Enter'); await page.locator('.pet-bubble').waitFor(); check('pet-renderer-all-species-and-keyboard-poke-mocked-bridge');
+  // v1.18 desktop-pet actions: feed (menu / dropped 小鱼干 → cat-feed; a new fedAt plays the eat frames),
+  // a refused feed says why, double-click hops, right-click opens the shell menu.
+  await page.evaluate(({ companion }) => window.__pushPet({ companion: { ...companion, petId: 'cat' }, size: 192 }), { companion }); await page.waitForTimeout(300);
+  const calls = () => page.evaluate(() => window.__nativeFixtureCalls.filter((c) => c[0] === 'command' || c[0] === 'menu').map((c) => c.join(':')));
+  await page.evaluate(() => { const stage = document.querySelector('.pet-stage'), cat = document.querySelector('.pet-cat').getBoundingClientRect(); const dt = new DataTransfer(); dt.setData('application/x-cabin-fish', '1');
+    const at = { clientX: cat.left + cat.width / 2, clientY: cat.top + cat.height * .6, bubbles: true, cancelable: true, dataTransfer: dt };
+    stage.dispatchEvent(new DragEvent('dragover', at)); stage.dispatchEvent(new DragEvent('drop', at)); });
+  assert.ok((await calls()).includes('command:cat-feed'), 'a 小鱼干 dropped on the desktop pet asks the cabin to feed it');
+  await page.evaluate(({ companion }) => window.__pushPet({ companion: { ...companion, petId: 'cat', care: { fedAt: Date.now(), ok: true, note: '', tier: 'happy' } }, size: 192 }), { companion });
+  await page.locator('.pet-stage[data-action="eat"]').waitFor(); await screenshot('desktop-pet-eating');
+  await page.locator('.pet-stage:not([data-action])').waitFor({ timeout: 4000 });
+  await page.evaluate(({ companion }) => window.__pushPet({ companion: { ...companion, petId: 'cat', care: { fedAt: Date.now() + 1, ok: false, note: '小猫今天已经吃饱啦，明天再喂吧～', tier: 'happy' } }, size: 192 }), { companion });
+  await page.locator('.pet-bubble', { hasText: '吃饱啦' }).waitFor();
+  const opaque = await page.evaluate(async () => { const { opaqueAt } = await import('/src/pet/PixelCat.jsx'); const r = document.querySelector('.pet-cat').getBoundingClientRect(); for (let y = .95; y > .3; y -= .05) for (let x = .3; x < .7; x += .05) if (opaqueAt('idle', 0, '', x, y)) return { x: r.left + x * r.width, y: r.top + y * r.height }; return null; });
+  await page.mouse.click(opaque.x, opaque.y); await page.waitForTimeout(80); await page.mouse.click(opaque.x, opaque.y);
+  await page.locator('.pet-stage[data-action="hop"]').waitFor(); await screenshot('desktop-pet-hop');
+  await page.mouse.click(opaque.x, opaque.y, { button: 'right' }); assert.ok((await calls()).includes('menu'), 'right-click opens the pet menu');
+  check('desktop-pet-feed-drop-eat-refusal-double-click-hop');
+  // 打字跟随: a key-activity time from the shell hook, or the cabin's own keydown time, shows TYPING_POSE, then it settles.
+  await page.waitForTimeout(700);
+  await page.evaluate(({ companion }) => window.__pushPet({ companion: { ...companion, petId: 'cat' }, size: 192, typingAt: Date.now() }), { companion });
+  await page.locator('.pet-stage[data-typing="true"]').waitFor(); await screenshot('desktop-pet-typing');
+  await page.locator('.pet-stage:not([data-typing])').waitFor({ timeout: 3000 });
+  await page.evaluate(({ companion }) => window.__pushPet({ companion: { ...companion, petId: 'cat', typingAt: Date.now() }, size: 192 }), { companion });
+  await page.locator('.pet-stage[data-typing="true"]').waitFor();
+  check('desktop-pet-typing-follow-hook-and-in-cabin-fallback'); await page.close(); page = mainPage;
   page = await context.newPage(); page.setDefaultTimeout(12000); await page.setViewportSize({ width: 1280, height: 800 }); await page.goto(origin); await page.locator('.room-record').nth(5).waitFor();
   const stage = () => page.evaluate(() => { const box = s => { const r = document.querySelector(s)?.getBoundingClientRect(); return r && [r.x, r.y, r.width, r.height].map(Math.round).join(','); }; const scrolled = [...document.querySelectorAll('*')].filter(el => el.scrollTop || el.scrollLeft).map(el => el.className); return { scrollY, scrolled, canvas: box('.cabin-scene-canvas'), rack: box('.room-rack') }; });
   await page.waitForTimeout(400); const stageBefore = await stage();
