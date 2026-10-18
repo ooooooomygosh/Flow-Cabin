@@ -17,8 +17,6 @@ const report = { checks: [], pageErrors: [], unexpectedRequests: [], aiRequests:
 await fs.mkdir(output, { recursive: true });
 let browser, server;
 const shot = (page, name) => page.screenshot({ path: path.join(output, `${name}.png`), animations: 'disabled' });
-// Sessions in last week, so the weekly letter has data.
-const lastWeek = () => { const d = new Date(); d.setHours(10, 0, 0, 0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7) - 3); return d.getTime(); };
 try {
   server = spawn(process.execPath, [path.join(root, 'node_modules/vite/bin/vite.js'), '--host', '127.0.0.1', '--port', String(port), '--strictPort'], { cwd: root, env: { ...process.env, FLOW_CABIN_VITE_CACHE_DIR: path.join(output, 'vite-cache') }, stdio: ['ignore', 'pipe', 'pipe'] });
   let log = ''; server.stdout.on('data', (b) => log += b); server.stderr.on('data', (b) => log += b);
@@ -26,16 +24,27 @@ try {
   browser = await launchChromium();
   const run = async (name, test, { desktop = false, ai = null, mode = () => ({ status: 200 }) } = {}) => {
     if (process.env.AI_FILTER && !name.includes(process.env.AI_FILTER)) return;
-    const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'zh-CN', reducedMotion: 'reduce' });
-    await context.addInitScript(({ FOCUS, desktop, ai, KEY, endpoint, start }) => {
+    const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'zh-CN', reducedMotion: 'reduce', ...(process.env.AI_TIMEZONE ? { timezoneId: process.env.AI_TIMEZONE } : {}) });
+    await context.addInitScript(({ FOCUS, desktop, ai, KEY, endpoint }) => {
       if (location.origin === 'null' || sessionStorage.getItem('seeded')) return;
       sessionStorage.setItem('seeded', '1');
       localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 1, status: 'done', step: 'done' }));
       localStorage.setItem('album-circle-focus-display-v1', JSON.stringify({ autoEnter: false }));
-      const sessions = [0, 1, 2].map((i) => ({ id: `s${i}`, start: start + i * 86400000, end: start + i * 86400000 + 75 * 60000, durationMs: 75 * 60000, completed: true, taskText: '秘密待办内容', album: { key: 'a1', title: '测试唱片', artist: '离线测试' } }));
+      // Seed the browser's actual reporting period. Daily letters need yesterday,
+      // not last week's weekend (those coincide only on Monday).
+      const daily = ai?.cadence === 'daily', base = new Date();
+      base.setHours(10, 0, 0, 0);
+      base.setDate(base.getDate() - (daily ? 1 : (base.getDay() + 6) % 7 + 3));
+      const sessions = [0, 1, 2].map((i) => {
+        const date = new Date(base);
+        if (daily) date.setHours(10 + i * 2);
+        else date.setDate(date.getDate() + i);
+        const start = date.getTime();
+        return { id: `s${i}`, start, end: start + 75 * 60000, durationMs: 75 * 60000, completed: true, taskText: '秘密待办内容', album: { key: 'a1', title: '测试唱片', artist: '离线测试' } };
+      });
       localStorage.setItem('flow-cabin-focus-sessions-v1', JSON.stringify(sessions));
       localStorage.setItem(FOCUS, JSON.stringify({ settings: { focusMin: 25, shortMin: 5, notify: false, chime: false } }));
-      localStorage.setItem('flow-cabin-cat-mood-v1', JSON.stringify({ v: 1, mood: 80, tier: 'happy', updatedAt: Date.now(), feeds: [{ at: start + 3600000, fishLeft: 2 }], totalFeeds: 1, unlockedActions: [] }));
+      localStorage.setItem('flow-cabin-cat-mood-v1', JSON.stringify({ v: 1, mood: 80, tier: 'happy', updatedAt: Date.now(), feeds: [{ at: sessions[0].start + 3600000, fishLeft: 2 }], totalFeeds: 1, unlockedActions: [] }));
       if (ai) { localStorage.setItem('flow-cabin-ai-v1', JSON.stringify({ v: 1, ...ai })); if (!desktop) localStorage.setItem('flow-cabin-ai-key-v1', JSON.stringify({ v: 2, key: KEY, endpoint, revision: 'fixture:1' })); }
       window.__nativeCommands = [];
       if (desktop) {
@@ -44,7 +53,7 @@ try {
         const init = () => { document.documentElement.dataset.desktopClient = 'true'; };
         if (document.documentElement) init(); else new MutationObserver((_, o) => { if (document.documentElement) { init(); o.disconnect(); } }).observe(document, { childList: true });
       }
-    }, { FOCUS, desktop, ai, KEY, endpoint: ai ? chatUrl(ai.baseUrl) : '', start: lastWeek() });
+    }, { FOCUS, desktop, ai, KEY, endpoint: ai ? chatUrl(ai.baseUrl) : '' });
     await context.route('**/*', async (route) => {
       const req = route.request(), u = new URL(req.url()), p = u.pathname;
       if (u.origin === API) {
