@@ -399,6 +399,32 @@ try {
   await page.evaluate(({ companion }) => window.__pushPet({ companion: { ...companion, petId: 'cat', typingAt: Date.now() }, size: 192 }), { companion });
   await page.locator('.pet-stage[data-typing="true"]').waitFor();
   check('desktop-pet-typing-follow-hook-and-in-cabin-fallback'); await page.close(); page = mainPage;
+  // bini v1.18: (1) a double-click right after the desk pet loads must hop: the pointer resting on the cat is
+  // hit-tested from the shell's cursor point (no mousemove needed); (2) under the shell's real CSP the
+  // pet-life hearts (data: SVG) render with no CSP violation. Only the shell's img-src is applied here:
+  // vite dev needs inline scripts that the full shell CSP (built pages only) would block.
+  {
+    const shellCsp = (await fs.readFile(new URL('../desktop/shell-protocol.cjs', import.meta.url), 'utf8')).match(/'pet'[\s\S]*?'Content-Security-Policy': "([^"]+)"/)[1];
+    const fresh = await context.newPage(); await fresh.emulateMedia({ reducedMotion: 'no-preference' }); await fresh.setViewportSize({ width: 420, height: 420 });
+    // A <meta> CSP added before the stylesheets load (a routed response would trip Chromium's local-network check on vite's socket).
+    const imgSrc = shellCsp.split(';').map((d) => d.trim()).find((d) => d.startsWith('img-src'));
+    await fresh.addInitScript((policy) => { const add = () => { const meta = document.createElement('meta'); meta.httpEquiv = 'Content-Security-Policy'; meta.content = policy; document.head.prepend(meta); };
+      if (document.head) add(); else new MutationObserver((_, o) => { if (document.head) { add(); o.disconnect(); } }).observe(document, { childList: true, subtree: true }); }, imgSrc);
+    await fresh.addInitScript(() => { window.__cspViolations = []; document.addEventListener('securitypolicyviolation', (e) => window.__cspViolations.push(`${e.violatedDirective} ${e.blockedURI}`));
+      const at = () => { const r = document.querySelector('.pet-cat')?.getBoundingClientRect(); return r ? { x: r.left + r.width / 2, y: r.top + r.height * .75 } : null; };
+      const base = window.albumPet; window.albumPet = { ...base, cursor: () => new Promise((resolve) => { const wait = () => at() ? resolve(at()) : requestAnimationFrame(wait); wait(); }) }; });
+    await fresh.goto(origin + '/pet.html'); await fresh.locator('.pet-cat .pixel-cat').waitFor();
+    await fresh.waitForFunction(() => window.__nativeFixtureCalls.some((c) => c[0] === 'hit' && c[1] === true), null, { timeout: 3000 });
+    const point = await fresh.evaluate(() => { const r = document.querySelector('.pet-cat').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height * .75, now: performance.now() }; });
+    await fresh.mouse.click(point.x, point.y); await fresh.waitForTimeout(60); await fresh.mouse.click(point.x, point.y);
+    await fresh.locator('.pet-stage[data-action="hop"]').waitFor({ timeout: 2000 });
+    await fresh.waitForTimeout(800); await fresh.mouse.click(point.x, point.y);
+    const heart = fresh.locator('.pet-fx .fx-heart').first(); await heart.waitFor({ timeout: 2000 });
+    assert.match(await heart.evaluate((e) => getComputedStyle(e).backgroundImage), /^url\("data:image\/svg\+xml/);
+    page = fresh; await screenshot('desktop-pet-hearts-under-shell-csp'); page = mainPage;
+    assert.deepEqual(await fresh.evaluate(() => window.__cspViolations), [], 'no CSP violation for the pet-life effects');
+    await fresh.close(); check('desktop-pet-first-double-click-hops-and-hearts-render-under-shell-csp');
+  }
   page = await context.newPage(); page.setDefaultTimeout(12000); await page.setViewportSize({ width: 1280, height: 800 }); await page.goto(origin); await page.locator('.room-record').nth(5).waitFor();
   const stage = () => page.evaluate(() => { const box = s => { const r = document.querySelector(s)?.getBoundingClientRect(); return r && [r.x, r.y, r.width, r.height].map(Math.round).join(','); }; const scrolled = [...document.querySelectorAll('*')].filter(el => el.scrollTop || el.scrollLeft).map(el => el.className); return { scrollY, scrolled, canvas: box('.cabin-scene-canvas'), rack: box('.room-rack') }; });
   await page.waitForTimeout(400); const stageBefore = await stage();

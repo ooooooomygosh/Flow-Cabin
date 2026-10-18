@@ -42,6 +42,9 @@ function createPet({ directory, getSite, getFocus, status, registerProtocol, res
   async function start() {
     if (window) { window.showInactive(); return; }
     const created = new BrowserWindow({ ...defaultBounds(), title: '心流小屋 · 桌宠伙伴', frame: false, transparent: true, backgroundColor: '#00000000', hasShadow: false, resizable: false, maximizable: false, minimizable: false, fullscreenable: false, skipTaskbar: true, alwaysOnTop: true, show: false,
+      // The pet is shown inactive: without this macOS swallows the first click (it only activates the
+      // window), so a double-click right after the pet appears arrived as one click and never hopped.
+      acceptFirstMouse: true,
       webPreferences: { preload: path.join(__dirname, 'pet-preload.cjs'), partition: 'album-circle-pet', sandbox: true, contextIsolation: true, nodeIntegration: false, webSecurity: true, backgroundThrottling: false, spellcheck: false } });
     window = created;
     try {
@@ -111,6 +114,9 @@ function createPet({ directory, getSite, getFocus, status, registerProtocol, res
     ]).popup({ window });
   }
   ipcMain.handle('pet:snapshot', (event) => { if (!validSender(event)) throw new Error('Unknown pet sender'); return payload(); });
+  // Where the pointer is, relative to the pet window: lets a freshly loaded pet take clicks before
+  // the first forwarded mousemove (a pointer already resting on the cat).
+  ipcMain.handle('pet:cursor', (event) => { if (!validSender(event)) throw new Error('Unknown pet sender'); const p = screen.getCursorScreenPoint(), b = window.getBounds(); return { x: p.x - b.x, y: p.y - b.y }; });
   ipcMain.on('pet:hit', (event, value) => { if (validSender(event)) window.setIgnoreMouseEvents(!value, { forward: true }); });
   ipcMain.on('pet:move', (event, dx, dy) => {
     if (!validSender(event) || !Number.isFinite(dx) || !Number.isFinite(dy) || Math.abs(dx) > 2000 || Math.abs(dy) > 2000) return;

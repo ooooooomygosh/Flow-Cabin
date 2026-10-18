@@ -21,7 +21,7 @@ function PetApp() {
   const cat = useCatBehaviour({ petId, focus: snapshot?.focus || {}, playing: Boolean(snapshot?.playing), track: snapshot?.track || '', lastActivity: 0, reduceMotion: Boolean(snapshot?.reduceMotion) });
   const box = useRef(null), frame = useRef(0), hit = useRef(false), drag = useRef(null), [dragging, setDragging] = useState(false);
   // A one-shot action over the usual pose: eat (fed from the menu, a dropped 小鱼干 or the cabin) or hop.
-  const [hookTypingAt, setHookTypingAt] = useState(0), [action, setAction] = useState(null), [note, setNote] = useState(''), lastClick = useRef(0), mounted = useRef(Date.now()), seenFeed = useRef(0);
+  const [hookTypingAt, setHookTypingAt] = useState(0), [action, setAction] = useState(null), [note, setNote] = useState(''), lastClick = useRef(-Infinity), mounted = useRef(Date.now()), seenFeed = useRef(0);
   const play = (pose) => { const at = performance.now(); setAction({ pose, at }); };
   useEffect(() => { if (!action) return undefined; const timer = setTimeout(() => setAction((now) => now === action ? null : now), ACTION_MS[action.pose] || 800); return () => clearTimeout(timer); }, [action]);
   useEffect(() => { if (!note) return undefined; const timer = setTimeout(() => setNote(''), 2600); return () => clearTimeout(timer); }, [note]);
@@ -58,6 +58,9 @@ function PetApp() {
     };
     const leave = () => { if (hit.current && !drag.current) { hit.current = false; api?.setHit(false); } };
     document.addEventListener('pointermove', move); document.addEventListener('pointerleave', leave);
+    // Init race (bini): until the first forwarded mousemove the window ignores clicks, so a pointer already
+    // resting on the cat could not double-click. Ask the shell where the pointer is and hit-test once.
+    if (!hit.current) Promise.resolve(api?.cursor?.()).then((p) => { if (p && Number.isFinite(p.x) && Number.isFinite(p.y) && !hit.current && overCat({ clientX: p.x, clientY: p.y })) { hit.current = true; api?.setHit(true); } }).catch(() => {});
     return () => { document.removeEventListener('pointermove', move); document.removeEventListener('pointerleave', leave); };
   }, [pose, accessory, petId]);
   const down = (event) => {
