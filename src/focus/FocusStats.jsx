@@ -2,12 +2,11 @@ import React, { useMemo } from 'react';
 import { useFocus } from './useFocus';
 import { focusStats, levelInfo, dayKey } from './focus-model.mjs';
 import { FishPixel } from '../icons';
-import { Bars } from './stats/CabinJournal.jsx';
+import { Bars, Strip } from './stats/CabinJournal.jsx';
 import { openJournal } from './stats/journal-events.mjs';
 import { graceStreak, minutesByDay, isMonday } from './stats/stats-model.mjs';
 import useFocusSessions from './stats/useFocusSessions.js';
 import { useLetters } from '../ai/useCabinLetters.js';
-import { sprite } from './stats/journal-art.mjs';
 import '../study/study.css';
 import './stats/focus-stats.css';
 
@@ -30,7 +29,7 @@ export default function FocusStats() {
     </div> : <p className="fs-hint">每日目标已关闭，可在「设置 › 专注工具」里打开。</p>}
     <Bars days={stats.week.map((d) => ({ ...d, isToday: d.key === today }))} label="最近 7 天 · 分钟" mini/>
     <button type="button" className="fs-open-journal" aria-keyshortcuts="L" title="概览、待办与周报 · L" onClick={() => openJournal()}>打开小屋日记 →</button>
-    {unread > 0 && <button type="button" className="fs-link fs-mail-entry" data-unread={unread} onClick={() => openJournal('weekly')}><img src={sprite('mailbox-flag')} alt="" width={16} height={16}/>信箱里有 {unread} 封小屋来信</button>}
+    {unread > 0 && <button type="button" className="fs-link fs-mail-entry" data-unread={unread} onClick={() => openJournal('weekly')}><Strip name="mailbox" w={32} h={32} frames={2} frame={1}/>信箱里有 {unread} 封小屋来信</button>}
     {isMonday(focus.now) && <button type="button" className="fs-link" onClick={() => openJournal('weekly')}>新的一周 · 上周的小屋周报写好了，去看看</button>}
     <button type="button" className="pixel-button is-quiet focus-cat-link" onClick={() => window.dispatchEvent(new Event('cabin-open-cat'))}><FishPixel size={12}/>Lv.{level.level} · {rewards.fish} 小鱼干 · 去看看小猫 ›</button>
   </div>;

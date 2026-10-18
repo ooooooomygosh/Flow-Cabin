@@ -218,7 +218,19 @@
 .fs-letter-head { display: flex; align-items: center; gap: 6px; }
 .fs-letter-head .fs-title { flex: 1; }
 .fs-letter-head small { font-size: .75em; opacity: .75; }
-.fs-mailbox img, .fs-envelope img, .fs-mail-entry img { image-rendering: pixelated; }
+.fs-strip { display: inline-block; position: relative; overflow: hidden; vertical-align: middle; flex: none; }
+.fs-strip img { display: block; max-width: none; image-rendering: pixelated; }
+.fs-letter-nav button { min-width: 24px; }
+.fs-envelope { position: relative; display: grid; justify-items: center; gap: 8px; padding: 8px 0; }
+.fs-envelope-art { position: relative; display: block; width: 96px; height: 64px; }
+.fs-envelope-art .fs-seal { position: absolute; left: 40px; top: 30px; }
+.fs-deliver.is-playing img { animation: fs-deliver 1.12s steps(8, jump-none) forwards; }
+@keyframes fs-deliver { from { transform: translateX(0); } to { transform: translateX(calc(var(--fw) * -7)); } }
+@media (prefers-reduced-motion: reduce) { .fs-deliver.is-playing img { animation: none; transform: translateX(calc(var(--fw) * -7)) !important; } }
+.fs-letter-paper { background-repeat: repeat; image-rendering: pixelated; padding: 8px 10px; position: relative; }
+.fs-envelope-open { float: right; margin: 0 0 4px 6px; }
+.fs-sign-seal { margin-left: 4px; }
+.fs-mail-entry img { image-rendering: pixelated; }
 .fs-letter-nav button { min-width: 24px; }
 .fs-envelope { position: relative; display: grid; justify-items: center; gap: 8px; padding: 8px 0; }
 .fs-envelope-art { position: relative; display: block; width: 96px; height: 72px; }

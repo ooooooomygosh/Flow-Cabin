@@ -7,7 +7,7 @@ import { drawWeekCard, canDrawCover, CARD_W, CARD_H } from './week-card.mjs';
 import { JOURNAL_EVENT, JOURNAL_TABS, journalTab, isJournalKey } from './journal-events.mjs';
 import './focus-stats.css';
 import './journal-art.css';
-import { journalArtStyle, hasArt, JOURNAL_ART, CARD_EXPORT_SLOTS, cardArt, sprite } from './journal-art.mjs';
+import { journalArtStyle, hasArt, JOURNAL_ART, CARD_EXPORT_SLOTS, cardArt, sprite, LETTER_PLACEHOLDER } from './journal-art.mjs';
 import { defaultWeekOffset, weekName, catPose, CAT_POSE_CAPTION, barUnits, cabinLetter } from './journal-layout.mjs';
 import { readCatMood, subscribeCatMood } from './cat-mood-source.mjs';
 import { useLetters, useLetterDelivery } from '../../ai/useCabinLetters.js';
@@ -72,8 +72,18 @@ function Empty({ pose = 'cat-wait', title, children, action }) {
 }
 const Tape = ({ className = '' }) => <span className={`fs-tape ${className}`} aria-hidden="true"/>;
 
-// 小屋来信 spot: the newest AI letter when there is one (sealed until opened), else the
-// template letter built from this week's data. The 信箱 flag is up while a letter is unread.
+// One frame of a horizontal sprite strip (or the whole strip, animated by CSS), falling back
+// to the placeholder in public/letters/ when the art file is missing.
+export function Strip({ name, w, h, frames = 1, frame = 0, scale = 1, className = '', alt = '' }) {
+  return <span className={`fs-strip ${className}`} role={alt ? 'img' : undefined} aria-label={alt || undefined} aria-hidden={alt ? undefined : true}
+    style={{ width: w * scale, height: h * scale, '--frames': frames, '--fw': `${w * scale}px` }}>
+    <img src={sprite(name)} alt="" width={w * frames * scale} height={h * scale} draggable={false} style={{ transform: `translateX(${-frame * w * scale}px)` }}
+      onError={(e) => { const to = LETTER_PLACEHOLDER[name]; if (to && !e.currentTarget.src.endsWith(to)) e.currentTarget.src = to; }}/></span>;
+}
+
+// 小屋来信 spot: the newest AI letter when there is one (sealed until opened; the cat walks
+// it in once), else the template letter built from this week's data. The 信箱 flag is up
+// while any letter is unread.
 function LetterSpot({ template, reduced }) {
   const { list, unread, markRead } = useLetters();
   const [index, setIndex] = useState(0), ai = list[index] || null;
@@ -81,14 +91,16 @@ function LetterSpot({ template, reduced }) {
   const tone = ai && TONES.find((t) => t.id === ai.tone)?.label;
   return <section className={`fs-letter ${ai ? 'is-ai' : 'is-template'}`} aria-label="小屋来信">
     <div className="fs-letter-head"><h3 className="fs-title">小屋来信{ai ? <small> · {ai.period}{tone ? ` · ${tone}` : ''} · AI</small> : null}</h3>
-      <span className={`fs-mailbox ${unread ? 'has-flag' : ''}`} data-unread={unread} title={unread ? `${unread} 封未读` : '信箱'}><img src={sprite(unread ? 'mailbox-flag' : 'mailbox-down')} alt={unread ? `信箱：${unread} 封未读` : '信箱'} width={32} height={32} draggable={false}/></span>
+      <span className={`fs-mailbox ${unread ? 'has-flag' : ''}`} data-unread={unread} title={unread ? `${unread} 封未读` : '信箱'}><Strip name="mailbox" w={32} h={32} frames={2} frame={unread ? 1 : 0} alt={unread ? `信箱：${unread} 封未读` : '信箱'}/></span>
       {list.length > 1 && <span className="fs-letter-nav"><button type="button" aria-label="更早的信" disabled={index >= list.length - 1} onClick={() => setIndex((i) => i + 1)}>‹</button><button type="button" aria-label="更新的信" disabled={index === 0} onClick={() => setIndex((i) => i - 1)}>›</button></span>}
     </div>
     {sealed ? <div className="fs-envelope">
-      <span className={`fs-deliver ${reduced ? '' : 'is-walking'}`} aria-hidden="true" style={{ backgroundImage: `url(${sprite('cat-deliver')})` }}/>
-      <span className="fs-envelope-art" aria-hidden="true"><img src={sprite('letter-envelope')} alt="" width={96} height={72}/><img className="fs-seal" src={sprite('letter-seal')} alt="" width={32} height={32}/></span>
+      <Strip name="cat-deliver" w={64} h={64} frames={8} frame={reduced ? 7 : 0} className={`fs-deliver ${reduced ? '' : 'is-playing'}`}/>
+      <span className="fs-envelope-art"><Strip name="letter-envelope" w={48} h={32} frames={2} frame={0} scale={2}/><Strip name="letter-seal" w={16} h={16} className="fs-seal"/></span>
       <button type="button" className="fs-cta" onClick={() => markRead(ai.id)}>小猫送来一封信 · 拆开看看</button>
-    </div> : <div className="fs-hand">{(ai ? ai.lines : template).map((l, i) => <p key={i}>{l}</p>)}<p className="fs-sign">—— 小屋里的猫</p></div>}
+    </div> : <div className={`fs-hand ${ai ? 'fs-letter-paper' : ''}`} style={ai ? { backgroundImage: `url(${sprite('letter-paper')}), url(${LETTER_PLACEHOLDER['letter-paper']})` } : undefined}>
+      {ai && <Strip name="letter-envelope" w={48} h={32} frames={2} frame={1} className="fs-envelope-open"/>}
+      {(ai ? ai.lines : template).map((l, i) => <p key={i}>{l}</p>)}<p className="fs-sign">—— 小屋里的猫{ai && <Strip name="letter-seal" w={16} h={16} className="fs-sign-seal"/>}</p></div>}
   </section>;
 }
 
