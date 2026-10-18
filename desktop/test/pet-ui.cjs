@@ -25,7 +25,7 @@ let app, site, host;
   await site.getByRole('button', { name: '让伙伴回家', exact: true }).waitFor(); assert.equal(await site.getByRole('button', { name: '让伙伴回家', exact: true }).getAttribute('title'), '让奶糖回家'); assert.equal(await site.locator('.room-cat').count(), 0);
   check('pet-window-opens-on-top-and-room-cat-leaves', info);
   assert.equal(await pet.evaluate(() => typeof window.require), 'undefined');
-  assert.deepEqual(Object.keys(await pet.evaluate(() => window.albumPet)).sort(), ['command', 'dragEnd', 'getSnapshot', 'menu', 'moveBy', 'onSnapshot', 'open', 'setHit']);
+  assert.deepEqual(Object.keys(await pet.evaluate(() => window.albumPet)).sort(), ['command', 'cursor', 'dragEnd', 'getSnapshot', 'menu', 'moveBy', 'onSnapshot', 'open', 'setHit']);
   check('pet-is-sandboxed-with-a-narrow-bridge');
 
   await pet.evaluate(() => window.albumPet.command('focus-start'));
@@ -33,7 +33,7 @@ let app, site, host;
   await pet.locator('.pixel-cat[data-pose="focus"]').waitFor(); await pet.locator('.pet-bubble', { hasText: '专注中' }).waitFor();
   check('pet-starts-focus-and-mirrors-it');
   await pet.evaluate(() => window.albumPet.command('evil-command')); await pet.evaluate(() => window.albumPet.command('focus-pause'));
-  await site.waitForFunction(() => document.querySelector('.focus-badge')?.textContent.includes('⏸')); check('pet-commands-are-whitelisted');
+  await site.locator('.focus-badge.is-paused').waitFor(); assert.equal(await site.evaluate(() => window.albumCompanionSnapshot().focus.paused), true); check('pet-commands-are-whitelisted');
   const before = await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find((w) => w.webContents.getURL().includes('pet.html')).getBounds());
   await pet.evaluate(() => window.albumPet.moveBy(-40, -30)); await pet.evaluate(() => window.albumPet.dragEnd()); await new Promise((r) => setTimeout(r, 500));
   const after = await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find((w) => w.webContents.getURL().includes('pet.html')).getBounds());
@@ -41,6 +41,7 @@ let app, site, host;
   const saved = JSON.parse(fs.readFileSync(path.join(env.ALBUM_DESKTOP_TEST_PROFILE, 'pet.json'), 'utf8')); assert.equal(saved.x, after.x); check('pet-drags-and-remembers-position');
   await pet.screenshot({ path: path.join(output, 'pet-window.png') });
 
+  await site.keyboard.press('Escape'); await site.locator('.focus-display').waitFor({ state: 'detached' });
   await site.getByRole('button', { name: '让伙伴回家', exact: true }).click(); await site.locator('.room-cat').waitFor();
   assert.equal(await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().some((w) => w.webContents.getURL().includes('pet.html'))), false); check('pet-returns-home');
   assert.deepEqual(report.pageErrors, []);
