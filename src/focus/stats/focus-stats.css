@@ -226,7 +226,7 @@
 .fs-envelope-art .fs-seal { position: absolute; left: 40px; top: 30px; }
 .fs-deliver.is-playing img { animation: fs-deliver 1.12s steps(8, jump-none) forwards; }
 @keyframes fs-deliver { from { transform: translateX(0); } to { transform: translateX(calc(var(--fw) * -7)); } }
-@media (prefers-reduced-motion: reduce) { .fs-deliver.is-playing img { animation: none; transform: translateX(calc(var(--fw) * -7)) !important; } }
+@media (prefers-reduced-motion: reduce) { .fs-deliver.is-playing img { animation: none; } }
 .fs-letter-paper { background-repeat: repeat; image-rendering: pixelated; padding: 8px 10px; position: relative; }
 .fs-envelope-open { float: right; margin: 0 0 4px 6px; }
 .fs-sign-seal { margin-left: 4px; }
