@@ -13,8 +13,10 @@ fs.mkdirSync(path.join(desktop, 'test-results'), { recursive: true });
 const profiles = fs.mkdtempSync(path.join(desktop, 'test-results/backup-profiles-'));
 const sourceProfile = path.join(profiles, 'source'), targetProfile = path.join(profiles, 'target');
 const packagedExecutable = process.env.ALBUM_QA_EXE ? path.resolve(process.env.ALBUM_QA_EXE) : '';
+const mockKeychain = process.env.ALBUM_QA_MOCK_KEYCHAIN === '1';
 const report = { startedAt: new Date().toISOString(), desktop, sourceProfile, targetProfile,
   packagedExecutable: packagedExecutable || null, launchMode: packagedExecutable ? 'packaged' : 'electron-entry',
+  mockKeychain, credentialsTested: false,
   syntheticSourceData: true, realBackupUI: true, realCollectionStore: true, checks: [], comparisons: [], pageErrors: [] };
 let app, site;
 const save = (name, value) => fs.writeFileSync(path.join(output, name), JSON.stringify(value, null, 2));
@@ -24,9 +26,11 @@ let keys;
 async function launch(profile) {
   const env = { ...process.env, ALBUM_DESKTOP_TEST_PROFILE: profile, PORT: '0', HOST: '127.0.0.1' };
   delete env.ELECTRON_RUN_AS_NODE; delete env.ALBUM_QA_EXE;
+  const fixtureArgs = mockKeychain ? ['--use-mock-keychain'] : [];
+  console.log(`Launching ${packagedExecutable ? 'packaged app' : 'Electron entry'} with isolated profile: ${path.basename(profile)}`);
   app = packagedExecutable
-    ? await _electron.launch({ executablePath: packagedExecutable, args: [], env })
-    : await _electron.launch({ executablePath: require('electron'), args: [desktop], env });
+    ? await _electron.launch({ executablePath: packagedExecutable, args: fixtureArgs, env, timeout: 30000 })
+    : await _electron.launch({ executablePath: require('electron'), args: [desktop, ...fixtureArgs], env, timeout: 30000 });
   app.context().setDefaultTimeout(20000);
   await app.firstWindow();
   report.runtime = await app.evaluate(({ app, screen }) => ({
@@ -47,7 +51,10 @@ async function launch(profile) {
   assert.equal(await app.evaluate(({ app }) => app.getPath('userData')), profile);
   await site.locator('.app-titlebar').waitFor();
   const onboarding = site.getByRole('dialog', { name: '新手引导', exact: true });
-  const needsOnboarding = await site.evaluate(() => !localStorage.getItem('flow-cabin-onboarding-v1'));
+  const needsOnboarding = await site.evaluate(() => {
+    const state = JSON.parse(localStorage.getItem('flow-cabin-onboarding-v1') || 'null');
+    return !state || ['new', 'active'].includes(state.status);
+  });
   if (needsOnboarding) await onboarding.waitFor();
   if (await onboarding.isVisible()) {
     await onboarding.getByRole('button', { name: '跳过引导', exact: true }).click();
@@ -152,7 +159,7 @@ function compareStores(stage, expected, actual) {
     { id: 'qa-sent', direction: 'out', status: 'sent', at, lines: ['QA sent letter'], shareContext: false, organizedAt: at + 30, favorite: true, trashed: true }
   ].map(letters.normalizeLetter);
   const day = 24 * 60 * 60 * 1000;
-  const journalRows = [
+  const rawJournalRows = [
     { id: 'qa-first-page', version: 'page-v2', body: 'QA first writing day', tags: ['memory'],
       createdAt: at - 2 * day, updatedAt: at - 2 * day, revisions: [] },
     { id: 'qa-second-page', version: 'page-v2', body: 'QA second writing day', tags: ['memory'],
@@ -161,7 +168,12 @@ function compareStores(stage, expected, actual) {
     { id: 'qa-page', version: 'page-v2', body: 'QA revised page', tags: ['test', 'memory'], createdAt: at - 100, updatedAt: at + 10,
       revisions: [{ version: 'page-v1', body: 'QA first draft', tags: ['test'], at: at - 100 }] }
   ];
-  const playbackRows = [
+  const journalRows = journal.readJournalRecords({ getItem: () => JSON.stringify(rawJournalRows) });
+  assert.equal(journalRows.length, rawJournalRows.length, 'Journal fixture must not lose records');
+  assert.deepEqual(journalRows.map(({ id }) => id), ['qa-trash', 'qa-page', 'qa-second-page', 'qa-first-page']);
+  const writingDays = [...new Set(journalRows.map(({ createdAt }) => care.dayKey(createdAt)))].sort();
+  assert.equal(writingDays.length, 3, 'Journal fixture must represent three distinct local writing days');
+  const rawPlaybackRows = [
     { id: 'qa-listen-a', start: at - 700000, end: at - 370000, durationMs: 330000, reason: 'pause',
       album: { id: album.id, title: album.title, artist: album.artist }, track: { index: 0, title: 'First song', artist: album.artist, album: album.title } },
     { id: 'qa-listen-b', start: at - 360000, end: at - 30000, durationMs: 330000, reason: 'pause',
@@ -169,6 +181,11 @@ function compareStores(stage, expected, actual) {
     { id: 'qa-listen', start: at - 10000, end: at, durationMs: 9000, reason: 'pause',
       album: { id: album.id, title: album.title, artist: album.artist }, track: { index: 0, title: 'First song', artist: album.artist } }
   ];
+  const playbackRows = playback.readPlaybackSessions({ getItem: () => JSON.stringify(rawPlaybackRows) });
+  assert.equal(playbackRows.length, rawPlaybackRows.length, 'Playback fixture must not lose records');
+  assert.deepEqual(playbackRows.map(({ id }) => id), ['qa-listen-a', 'qa-listen-b', 'qa-listen']);
+  assert.ok(playbackRows.every(({ track }) => !Object.hasOwn(track, 'album')), 'Track metadata must match the stored playback contract');
+  assert.equal(playbackRows.reduce((total, row) => total + row.durationMs, 0), 669000);
   // Generate all four awards from the same legal logs that the app will export.
   // This checks the evidence shape instead of hand-writing decorative records.
   const souvenirState = souvenirs.eligibleSouvenirs({ focus: [record], playback: playbackRows, letters: sourceLetters, journal: journalRows }, Date.now());
@@ -177,9 +194,10 @@ function compareStores(stage, expected, actual) {
   const souvenirSeed = Object.fromEntries(souvenirState.records.map((record) => ['souvenir:' + record.id, record]));
   assert.deepEqual(Object.keys(souvenirSeed).sort(), Object.keys(souvenirDomains).sort());
   assert.deepEqual(souvenirSeed['souvenir:first-focus'].evidence, { sessionId: record.id, durationMs: record.durationMs });
-  assert.ok(souvenirSeed['souvenir:listening-ten'].evidence.verifiedMs >= 10 * 60 * 1000);
+  assert.deepEqual(souvenirSeed['souvenir:listening-ten'].evidence, { verifiedMs: 660000, segments: 2 });
   assert.equal(souvenirSeed['souvenir:first-letter'].evidence.letterId, 'qa-sent');
-  assert.equal(souvenirSeed['souvenir:journal-three-days'].evidence.days.length, 3);
+  assert.deepEqual(souvenirSeed['souvenir:journal-three-days'].evidence.days, writingDays);
+  assert.equal(souvenirSeed['souvenir:journal-three-days'].earnedOn, writingDays.at(-1));
   const seed = { focus: state, study: studyState,
     library: library.normalizeLibrary({ styles: { ['item:' + album.id]: { base: '#aabbcc' } },
       genres: { ['item:' + album.id]: ['Jazz'] }, rooms: { 'local-room': { look: 'warm', petId: 'cat',
