@@ -10,12 +10,12 @@ const { EventEmitter } = require('node:events');
 // is touched; these assertions do not claim native click-through acceptance.
 function fixture() {
   let push, timerId = 0, singleDisplay = false;
-  const jobs = new Map(), ipcMain = new EventEmitter(); ipcMain.handle = () => {};
+  const jobs = new Map(), ipcMain = new EventEmitter(); const handlers = {}; ipcMain.handle = (name, fn) => { handlers[name] = fn; };
   const primary = { workArea: { x: 0, y: 0, width: 1920, height: 1080 } };
   const builtin = { workArea: { x: 1920, y: 0, width: 1728, height: 1080 } };
   class Window extends EventEmitter {
     constructor(options) {
-      super(); this.bounds = { x: options.x, y: options.y, width: options.width, height: options.height }; this.destroyed = false;
+      super(); this.options = options; this.bounds = { x: options.x, y: options.y, width: options.width, height: options.height }; this.destroyed = false;
       this.webContents = new EventEmitter(); Object.assign(this.webContents, { mainFrame: { url: 'album-desktop://pet/pet.html' }, setWindowOpenHandler() {}, send() {}, session: { protocol: { isProtocolHandled: async () => true }, setPermissionRequestHandler() {}, setPermissionCheckHandler() {} } });
     }
     getBounds() { return { ...this.bounds }; }
@@ -25,7 +25,7 @@ function fixture() {
     setAlwaysOnTop() {} setVisibleOnAllWorkspaces() {} setIgnoreMouseEvents() {} showInactive() {}
     async loadURL() {}
   }
-  const fakeElectron = { BrowserWindow: Window, ipcMain, Menu: {}, screen: { getPrimaryDisplay: () => primary, getDisplayMatching: bounds => singleDisplay || bounds.x < 1920 ? primary : builtin } };
+  const fakeElectron = { BrowserWindow: Window, ipcMain, Menu: {}, screen: { getPrimaryDisplay: () => primary, getDisplayMatching: bounds => singleDisplay || bounds.x < 1920 ? primary : builtin, getCursorScreenPoint: () => ({ x: 2500, y: 900 }) } };
   const sandbox = { module: { exports: {} }, __dirname: path.resolve(__dirname, '..'), console,
     setTimeout: (fn, delay) => { const id = ++timerId; jobs.set(id, { fn, delay }); return id; }, clearTimeout: id => jobs.delete(id),
     setInterval: () => ++timerId, clearInterval() {},
@@ -33,7 +33,7 @@ function fixture() {
   };
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../pet.cjs'), 'utf8'), sandbox);
   const pet = sandbox.module.exports.createPet({ directory: '/fixture', getSite: () => ({ getBounds: () => ({ x: 2100, y: 40, width: 1000, height: 700 }), isDestroyed: () => false }), status() {}, registerProtocol() {} });
-  return { pet, jobs, removeDisplay: () => { singleDisplay = true; }, push: value => push(value), event: (name, ...args) => { const sender = pet.window.webContents; ipcMain.emit(name, { sender, senderFrame: sender.mainFrame }, ...args); } };
+  return { pet, jobs, handlers, removeDisplay: () => { singleDisplay = true; }, push: value => push(value), event: (name, ...args) => { const sender = pet.window.webContents; ipcMain.emit(name, { sender, senderFrame: sender.mainFrame }, ...args); } };
 }
 
 test('new desktop pet starts on the main cabin display, not always the primary display', async () => {
@@ -55,4 +55,13 @@ test('reduced motion drag release never schedules a throw; enabling it cancels a
   const frame = [...f.jobs.entries()].find(([, job]) => job.delay === 16); assert(frame);
   f.jobs.delete(frame[0]); f.push({ reduceMotion: true }); frame[1].fn();
   assert(![...f.jobs.values()].some(job => job.delay === 16)); f.pet.stop();
+});
+
+test('a freshly shown pet takes the first click (macOS) and can hit-test a pointer already resting on it', async () => {
+  const f = fixture(); await f.pet.start();
+  assert.equal(f.pet.window.options.acceptFirstMouse, true, 'the inactive pet must not swallow the first click of a double-click');
+  const sender = f.pet.window.webContents, b = f.pet.window.getBounds();
+  assert.deepEqual({ ...(await f.handlers['pet:cursor']({ sender, senderFrame: sender.mainFrame })) }, { x: 2500 - b.x, y: 900 - b.y });
+  await assert.rejects(async () => f.handlers['pet:cursor']({ sender: {}, senderFrame: {} }));
+  f.pet.stop();
 });
