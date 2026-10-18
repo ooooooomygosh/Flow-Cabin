@@ -1,0 +1,8 @@
+{
+  "name": "node-forge",
+  "version": "1.4.0-flowcabin.1",
+  "private": true,
+  "description": "Narrow RSA public-key encryption compatibility layer backed by Node crypto",
+  "main": "index.cjs",
+  "license": "MIT"
+}

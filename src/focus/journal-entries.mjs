@@ -29,17 +29,27 @@ export function normalizeJournalRecord(value) {
   };
 }
 
+export function normalizeJournalStoredRecord(value) {
+  if (value?.purgedAt != null) return typeof value.id === 'string' && value.id.length > 0 && value.id.length <= 100 && date(value.purgedAt)
+    ? { id: value.id, purgedAt: value.purgedAt } : null;
+  return normalizeJournalRecord(value);
+}
+
 export function readJournalRecords(storage) {
+  return readJournalState(storage).filter((entry) => entry.purgedAt == null);
+}
+
+export function readJournalState(storage) {
   const raw = storage?.getItem(JOURNAL_KEY);
   if (!raw) return [];
   let value;
   try { value = JSON.parse(raw); }
   catch { throw new Error('手记数据无法读取，请保留原数据并检查备份。'); }
   if (!Array.isArray(value)) throw new Error('手记数据无法读取，请保留原数据并检查备份。');
-  const entries = value.map(normalizeJournalRecord);
+  const entries = value.map(normalizeJournalStoredRecord);
   if (entries.some((entry) => !entry) || new Set(entries.map((entry) => entry.id)).size !== entries.length)
     throw new Error('手记数据格式异常，已停止写入以保护原文。');
-  return entries.sort((a, b) => b.updatedAt - a.updatedAt || a.id.localeCompare(b.id));
+  return entries.sort((a, b) => (b.purgedAt ?? b.updatedAt) - (a.purgedAt ?? a.updatedAt) || a.id.localeCompare(b.id));
 }
 
 function write(storage, records, target) {
@@ -58,7 +68,8 @@ export function saveJournalEntry({ storage, id, expectedVersion, body, tags = []
   if (new Set(rawTags.map((tag) => tag.trim())).size > 8 || rawTags.some((tag) => tag.trim().length > 24))
     return { ok: false, error: '最多 8 个标签，每个最多 24 字。请调整标签后重试保存。' };
   try {
-    const entries = readJournalRecords(storage), previous = id ? entries.find((entry) => entry.id === id) : null;
+    const entries = readJournalState(storage), previous = id ? entries.find((entry) => entry.id === id) : null;
+    if (previous?.purgedAt != null) return { ok: false, deleted: true, error: '这页已被永久删除，旧窗口不能恢复它。' };
     if (id && (!previous || previous.version !== expectedVersion || previous.deletedAt != null)) return conflict();
     const nextTags = journalTags(tags);
     if (previous && previous.body === body && JSON.stringify(previous.tags) === JSON.stringify(nextTags)) return { ok: true, entry: previous };
@@ -85,8 +96,8 @@ export function archiveScratch({ storage, body, now = Date.now(), target = globa
 
 export function moveJournalEntry({ storage, id, expectedVersion, trash, now = Date.now(), target = globalThis.window } = {}) {
   try {
-    const entries = readJournalRecords(storage), previous = entries.find((entry) => entry.id === id);
-    if (!previous || previous.version !== expectedVersion) return conflict();
+    const entries = readJournalState(storage), previous = entries.find((entry) => entry.id === id);
+    if (!previous || previous.purgedAt != null || previous.version !== expectedVersion) return conflict();
     const entry = { ...previous, version: uid(), updatedAt: Math.max(now, previous.updatedAt + 1) };
     if (trash) entry.deletedAt = entry.updatedAt;
     else delete entry.deletedAt;
@@ -110,8 +121,20 @@ export function findJournalEntries(entries, { query = '', tag = '', trash = fals
     && (!term || `${entry.body}\n${entry.tags.join(' ')}`.toLocaleLowerCase().includes(term)));
 }
 
+export function purgeJournalEntry({ storage, id, expectedVersion, now = Date.now(), target = globalThis.window } = {}) {
+  try {
+    const entries = readJournalState(storage), entry = entries.find((item) => item.id === id);
+    if (!entry || entry.purgedAt != null || entry.version !== expectedVersion) return conflict();
+    if (entry.deletedAt == null) return { ok: false, error: '只能永久删除回收站里的手记。' };
+    if (!date(now)) throw new Error();
+    write(storage, entries.map((item) => item.id === id ? { id, purgedAt: Math.max(now, entry.updatedAt) } : item), target);
+    return { ok: true };
+  } catch { return { ok: false, error: '永久删除失败，手记正文和历史仍保留。请检查本机存储后重试。' }; }
+}
+
 // Backups preserve both edits when histories diverge; newer trash state wins.
 export function mergeJournalRecord(local, incoming) {
+  if (local.purgedAt != null || incoming.purgedAt != null) return { id: local.id, purgedAt: Math.max(local.purgedAt ?? 0, incoming.purgedAt ?? 0) };
   const sameTime = local.updatedAt === incoming.updatedAt;
   const localWinsTie = (local.deletedAt != null) !== (incoming.deletedAt != null) ? local.deletedAt != null : local.version > incoming.version;
   const newer = local.updatedAt > incoming.updatedAt || (sameTime && localWinsTie) ? local : incoming;

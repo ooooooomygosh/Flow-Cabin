@@ -11,6 +11,7 @@ import StudyWriting from './StudyWriting';
 import { flyRecord } from './turntable/record-flight.mjs';
 import './study-room.css';
 import CabinDetails from './room/CabinDetails';
+import ThemeInteractions from './scene/ThemeInteractions';
 
 export const ROOM_DRAG_TYPE = 'application/x-album-circle-record';
 // Put a shelf record on the deck: the sleeve flies to the scene deck first
@@ -91,6 +92,7 @@ function RoomScene({ look = 'warm', items = [], selectedId, select, load, startR
       <div className="cabin-nightshade" aria-hidden="true"/>
       <AmbientLife look={scene.id} time={sky.bucket}/>
       {scene.id === 'pixel' && load && <CabinDetails/>}
+      {load && <ThemeInteractions key={scene.id} look={scene.id}/>}
     </div>
     {cat}
     {children}

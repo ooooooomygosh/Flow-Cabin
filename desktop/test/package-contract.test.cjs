@@ -22,3 +22,9 @@ test('disposable preview scripts are not desktop release inputs', () => {
   const index = fs.readFileSync(path.join(desktop, '../index.html'), 'utf8');
   assert(!index.includes('qa-preview') && !index.includes('qa-self-test'));
 });
+test('the narrowed node-forge adapter is included in packaged apps', () => {
+  assert(build.files.includes('vendor/node-forge-encrypt-only/**/*'));
+  const pkg = require('../package.json');
+  assert.equal(pkg.overrides['node-forge'], 'file:vendor/node-forge-encrypt-only');
+  assert(fs.existsSync(path.join(desktop, 'vendor/node-forge-encrypt-only/index.cjs')));
+});

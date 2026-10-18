@@ -1,0 +1,54 @@
+@layer guards, reset, features, skin, overrides;
+@layer features {
+.theme-interactions { position: absolute; inset: 0; pointer-events: none; z-index: 6; }
+.theme-object { position: absolute; padding: 0; border: 0; background: none; color: #ead4a4; pointer-events: auto; cursor: pointer; min-width: 44px; min-height: 44px; }
+.theme-object-warm { pointer-events: none; }
+/* Keep the cup where it reads on the sill, but leave the room cat's floor
+   clickable; only the upper cup area is the tea hit target. */
+.theme-object-warm::after { content: ''; position: absolute; inset: 0 0 14% 0; pointer-events: auto; }
+.theme-pixels { display: block; width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
+.theme-object-label { position: absolute; bottom: 100%; left: 50%; translate: -50% -4px; width: max-content; max-width: 180px; padding: 4px 8px; background: #24342ef0; color: #ecdbb6; border: 1px solid #ae9771; font-size: 12px; opacity: 0; pointer-events: none; }
+.theme-object:is(:hover, :focus-visible) .theme-object-label { opacity: 1; }
+.theme-object:focus-visible { outline: 2px dashed #edd397; outline-offset: 4px; }
+.theme-telescope-glint { position: absolute; left: 4%; top: 10%; color: #edcc8e; font-size: 24px; text-shadow: 2px 2px #1c2c39; }
+.theme-window-chart { position: absolute; left: 6.6%; top: 23%; width: 18.4%; height: 20%; clip-path: circle(48%); opacity: .85; pointer-events: none; }
+.theme-tool { position: fixed; z-index: 110; left: 20px; top: 118px; width: min(328px, calc(100vw - 40px)); max-height: calc(100dvh - 138px); overflow: auto; padding: 18px; color: #e7e1bf; font-size: 14px; line-height: 1.65; }
+.theme-tool::before { content: ''; position: absolute; z-index: -1; inset: 0; background: #263e34; border: 2px solid #a4ad81; box-shadow: 4px 5px 0 #18271c99; }
+.theme-tool header, .theme-observatory header { display: flex; gap: 12px; justify-content: space-between; align-items: start; margin-bottom: 12px; }
+.theme-tool h2, .theme-observatory h2 { margin: 0; font: 24px/1.4 var(--px-font-cn); color: inherit; }
+.theme-tool p, .theme-observatory p { margin: 8px 0; }
+.theme-tool button, .theme-observatory button { min-height: 36px; padding: 6px 10px; border: 1px solid #a89c76; border-radius: 0; background: #e1cc9b; color: #2f362b; font: inherit; cursor: pointer; }
+.theme-tool button:disabled, .theme-observatory button:disabled { opacity: .55; cursor: default; }
+.theme-tool button:focus-visible, .theme-observatory button:focus-visible, .theme-wind-control input:focus-visible { outline: 3px solid #f4e0ad; outline-offset: 3px; }
+.theme-tool header button, .theme-observatory header button { flex: none; background: transparent; color: inherit; font-size: 12px; }
+.theme-tool-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.theme-garden-work { display: grid; grid-template-columns: 100px 1fr; gap: 14px; align-items: center; }
+.theme-garden-work .theme-pixels { width: 100px; height: 120px; }
+.theme-garden-work meter { display: block; width: 100%; height: 18px; accent-color: #9dbe83; }
+.theme-garden-work small, .theme-footnote { font-size: 12px; line-height: 1.65; }
+.theme-tool .theme-footnote, .theme-observatory .theme-footnote { margin-top: 14px; opacity: .85; }
+.theme-tool-sea::before { background: #e0e0c9; border-color: #5c8a83; }
+.theme-tool-sea { color: #304c48; }
+.theme-wind-control { display: block; margin: 18px 0 12px; }
+.theme-wind-control output { float: right; font-variant-numeric: tabular-nums; }
+.theme-wind-control input { display: block; width: 100%; margin-top: 10px; accent-color: #3d776b; }
+.theme-tool-tea { top: auto; bottom: 24px; }
+.theme-tool-tea::before { background: #4b3422; border-color: #c5a671; }
+.theme-tea-work { display: flex; align-items: center; gap: 16px; }
+.theme-tea-work .theme-pixels { flex: none; width: 96px; height: 96px; }
+.theme-observatory { width: min(680px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); margin: auto; padding: 22px; overflow: auto; border: 2px solid #a99d82; border-radius: 0; background: #202f40; color: #e5d4ae; font-size: 14px; line-height: 1.6; }
+.theme-observatory::backdrop { background: #101b28cc; }
+.theme-observatory fieldset { display: flex; gap: 10px; border: 0; padding: 0; margin: 0 0 16px; }
+.theme-observatory legend { font-size: 12px; margin-bottom: 8px; }
+.theme-observatory button[aria-pressed=true] { background: #8ba1a4; color: #172a36; }
+.theme-star-field { border: 2px solid #687888; padding: 6px; background: #182534; }
+.theme-star-field canvas { width: 100%; height: auto; aspect-ratio: 5 / 3; cursor: crosshair; }
+@media (max-height: 650px) {
+  .theme-tool { top: 106px; max-height: calc(100dvh - 122px); }
+  .theme-tool-tea { top: auto; bottom: 16px; }
+  .theme-observatory { width: min(610px, calc(100vw - 32px)); padding: 14px; }
+  .theme-star-field canvas { max-height: 240px; object-fit: fill; }
+  .theme-observatory .theme-footnote { margin: 6px 0 0; }
+}
+/* Discrete redraws only: neither foreground nor background has an animation loop. */
+}

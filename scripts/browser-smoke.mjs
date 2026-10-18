@@ -213,7 +213,13 @@ try {
   await page.getByRole('button', { name: '恢复原封面' }).click(); await page.getByText('已恢复原封面。', { exact: true }).waitFor(); assert.equal(pixelled.cover, cover); await closeDialog();
   check('record-card-pixel-cover-preview-apply-and-restore');
   items = items.filter(i => !i.externalIds?.fileAlbum); await page.reload(); await page.locator('.room-record').first().waitFor(); // later checks count the 18 fixture albums
-  await chooseSource(page, 'system'); await page.locator('.turntable-track', { hasText: '系统测试歌曲' }).waitFor(); assert.deepEqual(await page.locator('audio').evaluateAll(decks => decks.map(a => a.getAttribute('src'))), [null, null]); await page.getByRole('button', { name: '暂停系统播放器' }).click(); await page.getByRole('button', { name: '继续系统播放器' }).waitFor(); await page.getByRole('button', { name: '系统播放器下一首' }).click(); assert.deepEqual(systemCommands, ['toggle', 'next']); check('system-source-and-transport-mocked'); await chooseSource(page, 'visual');
+  await chooseSource(page, 'system'); await page.locator('.turntable-track', { hasText: '系统测试歌曲' }).waitFor(); assert.deepEqual(await page.locator('audio').evaluateAll(decks => decks.map(a => a.getAttribute('src'))), [null, null]); await page.getByRole('button', { name: '暂停系统播放器' }).click(); await page.getByRole('button', { name: '继续系统播放器' }).waitFor();
+  // The next command is a fetch; wait for the mocked response before asserting the relayed command.
+  await Promise.all([
+    page.waitForResponse(response => response.url().endsWith('/desktop-music/now-playing/control') && response.request().postDataJSON()?.action === 'next'),
+    page.getByRole('button', { name: '系统播放器下一首' }).click(),
+  ]);
+  assert.deepEqual(systemCommands, ['toggle', 'next']); check('system-source-and-transport-mocked'); await chooseSource(page, 'visual');
   await openMusicSettings(page); await page.locator('.music-local-status', { hasText: '1 张专辑 · 2 首歌曲' }).waitFor(); await screenshot('music-settings'); const sourceBefore = await page.locator('.room-turntable').getAttribute('data-provider');
   // 账户与文件夹 manages logins and folders only; the deck's source has one picker, one page up.
   assert.equal(await accountsRegion(page).getByRole('button', { name: /在唱机上用|唱机改用/ }).count(), 0, 'no second source picker in 账户与文件夹'); assert.equal(await settingsDialog(page).getByRole('combobox', { name: '唱机音源' }).count(), 0, 'no 唱机音源 select');

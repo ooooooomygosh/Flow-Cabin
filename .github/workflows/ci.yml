@@ -54,8 +54,12 @@ jobs:
         run: npm run test:ai
       - name: Run journal entry and recovery regressions
         run: npm run test:journal
+      - name: Run permanent deletion and backup recovery regressions
+        run: npm run test:memory
       - name: Run wordbook provenance and flip clock regressions
         run: npm run test:study-ui
+      - name: Run room theme interaction regressions
+        run: npm run test:theme
       - name: Run earned souvenir persistence and recovery regressions
         run: npm run test:souvenirs
       - name: Save browser test evidence
@@ -71,7 +75,9 @@ jobs:
             desktop/test-results/beat-sync/
             desktop/test-results/ai-beta/
             desktop/test-results/journal-entries/
+            desktop/test-results/memory-deletion/
             desktop/test-results/study-ui/
+            desktop/test-results/theme-interactions/
             desktop/test-results/souvenirs/
           if-no-files-found: warn
           retention-days: 14

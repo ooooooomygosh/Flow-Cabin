@@ -1,6 +1,6 @@
 {
   "name": "album-circle-desktop",
-  "version": "1.18.0",
+  "version": "1.19.0",
   "description": "心流小屋 · Flow Cabin — a pixel lo-fi cabin for your favourite albums, focus timer and desktop cat",
   "productName": "心流小屋",
   "author": "Flow Cabin",
@@ -98,6 +98,7 @@
       "music-login.cjs",
       "vendor/simple-music/LICENSE",
       "vendor/simple-music/SOURCE.txt",
+      "vendor/node-forge-encrypt-only/**/*",
       "web/**/*",
       "renderer/**/*",
       "assets/**/*",
@@ -174,8 +175,13 @@
   },
   "dependencies": {
     "electron-updater": "6.8.9",
-    "music-metadata": "11.15.0",
+    "music-metadata": "11.16.1",
     "NeteaseCloudMusicApi": "4.32.0",
     "uiohook-napi": "1.5.5"
+  },
+  "overrides": {
+    "music-metadata": "$music-metadata",
+    "basic-ftp": "6.2.3",
+    "node-forge": "file:vendor/node-forge-encrypt-only"
   }
 }

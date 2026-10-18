@@ -223,7 +223,7 @@ function compareStores(stage, expected, actual) {
   compare('seed:souvenirs', souvenirState, sourceSouvenirs);
   await openBackup();
   const exported = await exportBackup('source-export.json');
-  assert.equal(exported.version, 3);
+  assert.equal(exported.version, 4);
   compare('export:collection', before.items, exported.items);
   for (const domain of ['library', 'study']) compare('export:' + domain, before.stores[domain], exported[domain]);
   for (const domain of ['focusSessions', 'catMood', 'catCare', 'letters', 'journalEntries', 'playbackSessions'])

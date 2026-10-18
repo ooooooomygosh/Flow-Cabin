@@ -67,6 +67,7 @@ export default function BackupDialog({ items, close, reload }) {
       <div><dt>小鱼干</dt><dd>{focus?.state.rewards.fish ?? '—'}</dd></div>
     </dl>
     <p className="add-intro">唱片、小屋外观、专注与听歌记录、待办、随手记、学习记录、小猫照顾和来信都只保存在这台电脑上。换电脑时导出备份，在新电脑上导入即可。备份不包含 API Key 或账户凭据。</p>
+    <p className="add-intro">永久删除的手记和往来信只保留编号、删除时间，新备份不含其正文或历史。恢复时删除记录优先：本机或备份中已永久删除的内容不会恢复，纪念物仍保留。外部旧备份不会被擦除；没有删除记录的新小屋仍可从旧备份恢复原文。</p>
     <div className="backup-actions">
       <button type="button" className="pixel-button is-primary" disabled={busy} onClick={exportBackup}><Download size={16}/>导出备份</button>
       <button type="button" className="pixel-button" disabled={busy} onClick={() => picker.current?.click()}><FolderOpen size={16}/>导入备份</button>
@@ -75,6 +76,7 @@ export default function BackupDialog({ items, close, reload }) {
     {notice && <p className="add-status" role="status">{notice}</p>}
     {problems.length > 0 && <ul className="status is-error" role="alert">{problems.map((text) => <li key={text}>{text}</li>)}</ul>}
     {pending && <div className="backup-replace" role="group" aria-label={mergesMemory ? '恢复本机记录' : '替换本机记录'}>
+      {mergesMemory && <p className="add-intro">永久删除记录优先于正文：备份中的删除记录也会移除本机对应的手记或往来信。不会移除已获得的纪念物。</p>}
       <p className="add-intro">备份里还有{pending.replacements.map((entry) => entry.label).join('、')}。{mergesMemory
         ? `小屋记忆会合并并保留本机记录${pending.replacements.some(({ id }) => id !== 'memory') ? '，其他列出的内容会被备份替换' : ''}。要继续恢复吗？`
         : '要用备份替换这台电脑上的这些内容吗？'}</p>
