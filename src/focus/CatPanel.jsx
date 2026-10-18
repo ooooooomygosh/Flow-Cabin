@@ -11,6 +11,12 @@ import { catPanelPlace, createCatPanelTracker } from './cat-panel-place.mjs';
 import { readSkySettings, writeSkySettings } from '../sky-clock.mjs';
 import { useRecordLibrary } from '../RecordLibrary';
 import { normalizePetId, getPet } from '../pet/pet-catalog.mjs';
+import { desktopCommand } from '../desktop/desktop-command.mjs';
+
+// While a 小鱼干 is dragged and the cat is out on the desktop, the shell lets the pet window take
+// the drop (it normally lets clicks pass through everywhere but the cat's pixels).
+const petOut = () => document.documentElement.dataset.desktopClient === 'true' && Boolean(window.albumPetState?.active);
+const petDrag = (active) => { if (petOut()) desktopCommand('pet-drag', { active }); };
 
 export const CAT_PANEL_EVENT = 'cabin-open-cat';
 function CatPanelBody({ close }) {
@@ -28,7 +34,7 @@ function CatPanelBody({ close }) {
         <div className={`cat-mood-bar is-${mood.tier}`} role="meter" aria-label="心情" aria-valuemin={0} aria-valuemax={100} aria-valuenow={mood.mood} aria-valuetext={mood.label}><span style={{ width: `${mood.mood}%` }}/></div>
         <div className="cat-care-actions">
           <button type="button" className="pixel-button is-primary" disabled={!rewards.fish || full} onClick={requestFeed} title={full ? '今天已经吃饱啦' : rewards.fish ? '喂一条小鱼干，也可以把小鱼干拖到小猫身上' : '完成一轮专注就能得到一条小鱼干'}><FishPixel size={12}/>喂一条</button>
-          <span className="cat-fish-chip" draggable={rewards.fish > 0 && !full} aria-hidden="true" title="把小鱼干拖到小猫身上也能喂" onDragStart={(event) => { event.dataTransfer.setData(FISH_DRAG_TYPE, '1'); event.dataTransfer.setData('text/plain', FISH_DRAG_TEXT); event.dataTransfer.effectAllowed = 'move'; }}><FishPixel size={12}/>×{rewards.fish}</span>
+          <span className="cat-fish-chip" draggable={rewards.fish > 0 && !full} aria-hidden="true" title="把小鱼干拖到小猫身上也能喂" onDragStart={(event) => { event.dataTransfer.setData(FISH_DRAG_TYPE, '1'); event.dataTransfer.setData('text/plain', FISH_DRAG_TEXT); event.dataTransfer.effectAllowed = 'move'; petDrag(true); }} onDragEnd={() => petDrag(false)}><FishPixel size={12}/>×{rewards.fish}</span>
         </div>
         <p className="cat-care-note" role="status">{mood.message || (full ? '小猫今天已经吃饱啦，明天再喂吧～' : mood.next ? `再喂 ${mood.next.feeds - mood.totalFeeds} 条，小猫会学会「${mood.next.name}」。` : '小猫已经学会了所有小动作。')}</p>
         {mood.actions.length > 0 && <small className="cat-care-learned">学会了：{mood.actions.map((a) => a.name).join('、')}</small>}
@@ -49,10 +55,10 @@ function CatPanelBody({ close }) {
 // and never over the cat.
 function placeNearCat() {
   const root = document.documentElement, rect = document.querySelector('.room-cat')?.getBoundingClientRect();
-  if (!rect || !rect.width) { root.style.removeProperty('--cat-panel-x'); root.style.removeProperty('--cat-panel-y'); return; }
+  if (!rect || !rect.width) { root.style.removeProperty('--cat-panel-x'); root.style.removeProperty('--cat-panel-y'); root.style.removeProperty('--cat-panel-max-h'); return; }
   const node = document.querySelector('.cabin-dialog.cat-panel'), w = node?.offsetWidth || Math.min(360, innerWidth - 24), h = node?.offsetHeight || 480;
-  const { x, y } = catPanelPlace(rect, { w, h }, { w: innerWidth, h: innerHeight });
-  root.style.setProperty('--cat-panel-x', `${Math.round(x)}px`); root.style.setProperty('--cat-panel-y', `${Math.round(y)}px`);
+  const { x, y, maxH } = catPanelPlace(rect, { w, h: node?.scrollHeight || h }, { w: innerWidth, h: innerHeight });
+  root.style.setProperty('--cat-panel-x', `${Math.round(x)}px`); root.style.setProperty('--cat-panel-y', `${Math.round(y)}px`); root.style.setProperty('--cat-panel-max-h', `${Math.floor(maxH)}px`);
 }
 export default function CatPanel() {
   const [open, setOpen] = useState(false);

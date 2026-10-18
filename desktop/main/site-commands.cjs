@@ -29,6 +29,8 @@ function createSiteCommands(ctx) {
     '/close': () => window().close(),
     '/pet-start': () => ctx.pet().start().catch((error) => ctx.writeLog('pet-error', error.message)),
     '/pet-stop': () => ctx.pet().stop(),
+    // A 小鱼干 drag in the cabin: the desktop pet accepts the drop while it lasts.
+    '/pet-drag': ({ searchParams }) => { const active = flag(searchParams, 'active'); if (active !== null) ctx.pet()?.acceptDrops?.(active); },
     '/local-music-folder': () => ctx.chooseMusicFolder(),
     '/music-login': ({ searchParams }) => { const provider = searchParams.get('provider'); if (ACCOUNT_PROVIDERS.includes(provider)) ctx.music().login(provider).then((result) => ctx.notifyMusic(result)).catch((error) => ctx.notifyMusic({ error: error.message })); },
     '/music-logout': ({ searchParams }) => { const provider = searchParams.get('provider'); if (ACCOUNT_PROVIDERS.includes(provider)) ctx.music().logout(provider).then(() => ctx.notifyMusic({ ok: true })).catch((error) => ctx.notifyMusic({ error: error.message })); },

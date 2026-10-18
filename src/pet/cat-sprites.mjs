@@ -15,7 +15,9 @@ export const PALETTE = Object.freeze([
   '#4f7bb5', // 10 beanie
   '#7a5236', // 11 book cover
   '#efe6cf', // 12 pages
-  '#ffe08a' // 13 sparkle / notes / zzz
+  '#ffe08a', // 13 sparkle / notes / zzz
+  '#1f6fd6', // 14 fish blue (desktop-pet eat)
+  '#9fd4ff' // 15 fish belly / fin
 ]);
 export const CAT_PALETTES = Object.freeze({
   orange: Object.freeze(PALETTE.map((color, i) => ({ 2: '#b77d48', 3: '#ccb18a', 4: '#88522f', 5: '#bd7e86', 7: '#dfceb0', 12: '#cabea2', 13: '#d0b370' }[i] || color))),
@@ -81,6 +83,19 @@ function tail(g, points) {
 }
 // 8x6 envelope with a red wax dot, drawn over the outline as a prop.
 function letter(g, x, y) { rect(g, x, y, x + 7, y + 5, 1); rect(g, x + 1, y + 1, x + 6, y + 4, 12); for (let i = 0; i < 3; i++) { put(g, x + 1 + i, y + 1 + i, 3); put(g, x + 6 - i, y + 1 + i, 3); } put(g, x + 3, y + 3, 8); put(g, x + 4, y + 3, 8); }
+// Props drawn on their own grid, outlined, then laid over the cat.
+function prop(g, draw) { const p = grid(); draw(p); const o = outline(p); for (let y = 0; y < SIZE; y++) for (let x = 0; x < SIZE; x++) if (o[y][x]) g[y][x] = o[y][x]; }
+// Fish with its head at (hx, y) facing left (into the mouth) and `len` px of body + tail to the right.
+function fish(g, hx, y, len) {
+  prop(g, (p) => {
+    const tailLen = len >= 7 ? 3 : 2, body = Math.max(2, len - tailLen), cx = hx + (body - 1) / 2;
+    ellipse(p, cx, y, (body - 1) / 2, body > 6 ? 1.5 : 1, 14);
+    if (body > 4) rect(p, hx + 2, y + 1, hx + body - 2, y + 1, 15);
+    const tx = hx + body; for (let i = 0; i < tailLen; i++) rect(p, tx + i, y - 1 - i, tx + i, y + 1 + i, 14);
+    if (len >= 9) { put(p, hx + 1, y - 1, 7); put(p, hx + 1, y, 6); put(p, cx, y - 2, 15); }
+  });
+}
+function bone(g, hx, y) { prop(g, (p) => { rect(p, hx, y, hx + 6, y, 7); rect(p, hx + 6, y - 1, hx + 7, y - 1, 7); rect(p, hx + 6, y + 1, hx + 7, y + 1, 7); put(p, hx + 3, y - 1, 7); put(p, hx + 3, y + 1, 7); }); }
 function sparkle(g, x, y) { put(g, x, y, EFFECT); put(g, x - 1, y, EFFECT); put(g, x + 1, y, EFFECT); put(g, x, y - 1, EFFECT); put(g, x, y + 1, EFFECT); }
 function letterZ(g, x, y, size) { for (let i = 0; i < size; i++) { put(g, x + i, y, EFFECT); put(g, x + i, y + size - 1, EFFECT); put(g, x + size - 1 - i, y + i, EFFECT); } }
 function note(g, x, y) { rect(g, x, y + 3, x + 1, y + 4, EFFECT); rect(g, x + 2, y, x + 2, y + 4, EFFECT); put(g, x + 3, y, EFFECT); put(g, x + 4, y + 1, EFFECT); }
@@ -117,13 +132,14 @@ export const POSES = Object.freeze(Object.fromEntries(Object.entries(FRAMES).map
 // beat is missing or estimated. Kept out of POSES so other pet species need not draw it.
 // v1.18 cat-only extras (art only; pet logic decides when to play them):
 //  typing  – paw-tap loop at a little keyboard: left down, up, right down, up.
-//  eat     – desktop-pet eating, mirrors public/cat/cat-eat.png (fish shrinks bite by bite).
+//  eat     – desktop-pet eating: big blue fish on the floor, head down picks it up, chews it
+//            shorter, only the bone is left, licks lips, happy. 6 frames.
 //  hop     – double-click reaction: crouch, surprised hop with "!", land, settle.
 //  deliver – walks in from the right with a letter in its mouth, drops it, sits proud.
 const EXTRA_FRAMES = {
   listen: [{ eyes: 'calm', hdy: 1, tailUp: 1, note: [25, 1] }, { eyes: 'calm', hdy: 1, tailUp: 1, note: [25, 0] }],
   typing: [{ tap: [1, 0], hdx: -1 }, { tap: [0, 0] }, { tap: [0, 1], hdx: 1 }, { tap: [0, 0] }].map((f) => ({ dy: -3, eyes: 'open', ...f })),
-  eat: [{ bite: 0, hdy: 0, eyes: 'open', sparkles: [[4, 18], [28, 18]] }, { bite: 0, hdy: 3 }, { bite: 2, hdy: 3, eyes: 'happy' }, { bite: 4, hdy: 2, eyes: 'happy' }, { bite: 6, hdy: 3, eyes: 'happy' }, { bite: 9, hdy: 0, eyes: 'happy', sparkles: [[5, 6], [27, 4]] }],
+  eat: [{ eyes: 'open', fish: 'floor', sparkles: [[4, 17]] }, { hdy: 4, eyes: 'open', fish: 12 }, { hdy: 3, eyes: 'happy', fish: 9 }, { hdy: 2, eyes: 'happy', fish: 5 }, { hdy: 1, eyes: 'happy', bone: true }, { eyes: 'happy', tailUp: 2, lick: true, sparkles: [[5, 6], [27, 4]] }],
   hop: [{ dy: 1, paws: [0, 0], tailUp: 0 }, { dy: -4, eyes: 'open', tailUp: 3, paws: [-1, -1], bang: [27, 1] }, { dy: -5, eyes: 'open', tailUp: 3, swing: 3, paws: [-1, -1], bang: [27, 0] }, { dy: -2, eyes: 'happy', tailUp: 2, swing: -2 }, { dy: 1, eyes: 'happy', tailUp: 0 }, { dy: 0, eyes: 'happy', tailUp: 1, sparkles: [[4, 8], [27, 6]] }],
   deliver: [{ dx: 14, paws: [-1, 0] }, { dx: 10, paws: [0, -1] }, { dx: 6, paws: [-1, 0] }, { dx: 2, paws: [0, -1] }, { dx: 0 }, { dx: 0, hdy: 3, drop: 'mid' }, { dx: 0, eyes: 'happy', tailUp: 2, drop: 'floor' }, { dx: 0, eyes: 'happy', tailUp: 3, drop: 'floor', sparkles: [[5, 6]] }].map((f) => ({ tailUp: 1, eyes: 'open', letter: !f.drop, ...f }))
 };
@@ -160,10 +176,12 @@ export function catFrame(pose, index = 0, acc = '') {
       const py = down ? 23 : 19; rect(g, px - 3, py - 2, px + 2, py + 2, 1); rect(g, px - 2, py - 1, px + 1, py + 1, 3); put(g, px - 1, py + 1, 5); if (down) { put(g, px - 3, 23, EFFECT); put(g, px + 3, 23, EFFECT); }
     }
   }
-  if (pose === 'eat') { // Plate + fish after the outline; bites eat the fish from its head.
-    rect(g, 7, 30, 25, 31, 1); rect(g, 8, 30, 24, 30, 12);
-    if (frame.bite < 9) { rect(g, 10 + frame.bite, 27, 19, 29, 1); rect(g, 11 + frame.bite, 28, 18, 28, 10); rect(g, 19, 27, 22, 29, 10); put(g, 22, 28, 1); }
-    else { rect(g, 11, 28, 18, 28, 12); rect(g, 19, 27, 21, 29, 10); }
+  if (pose === 'eat') { // Props after the outline so the fish / bone always read on top of the fur.
+    const hy = 13 + (frame.hdy || 0), my = hy + 3;
+    if (frame.fish === 'floor') fish(g, 9, 29, 13);
+    else if (frame.fish) fish(g, 15, my, frame.fish);
+    if (frame.bone) bone(g, 15, my);
+    if (frame.lick) { rect(g, 16, hy + 4, 17, hy + 5, 5); put(g, 15, hy + 3, 6); put(g, 18, hy + 3, 6); }
   }
   if (frame.letter) letter(g, 12 + (frame.dx || 0), 16 + (frame.hdy || 0));
   if (frame.drop === 'mid') letter(g, 12, 23);

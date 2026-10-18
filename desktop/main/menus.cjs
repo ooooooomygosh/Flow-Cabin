@@ -34,14 +34,23 @@ function appMenuTemplate(ctx) {
   ];
 }
 
-// ctx: { restore, companion(command), checkUpdates, petActive, petStart, petStop, sinkActive, sinkEnter, sinkExit, quit }
+// ctx: { restore, companion(command), checkUpdates, status (status-bar.cjs statusFrom), player(action), openJournal,
+//        petActive, petStart, petStop, sinkActive, sinkEnter, sinkExit, quit }
 function trayMenuTemplate(ctx) {
+  const status = ctx.status || {}, focusActive = status.phase && status.phase !== 'idle';
   return [
+    { label: status.statusLine || '心流小屋', enabled: false },
+    { type: 'separator' },
+    { label: status.playing ? '暂停音乐' : '播放音乐', click: () => ctx.player?.('toggle') },
+    { label: '下一首', click: () => ctx.player?.('next') },
+    { label: !focusActive ? '开始番茄钟' : status.paused ? '继续专注' : '暂停专注', click: () => ctx.companion(focusActive ? 'focus-toggle' : 'focus-start') },
+    { label: '喂小猫一条小鱼干', click: () => ctx.companion('cat-feed') },
+    { label: '打开小屋日记', click: () => ctx.openJournal?.() },
+    { type: 'separator' },
     { label: '打开小屋', click: ctx.restore },
     { label: '小屋设置…', click: () => { ctx.restore(); ctx.companion('open-settings'); } },
-    { label: '检查更新…', click: ctx.checkUpdates },
-    { label: '开始 / 暂停专注', click: () => ctx.companion('focus-toggle') },
     { label: '开关小屋声音', click: () => ctx.companion('sound-toggle') },
+    { label: '检查更新…', click: ctx.checkUpdates },
     { type: 'separator' },
     ctx.petActive ? { label: '让伙伴回家', click: ctx.petStop } : { label: '伙伴出门（桌宠）', click: ctx.petStart },
     ctx.sinkActive ? { label: '浮出桌面（回到窗口）', accelerator: SINK_HOTKEY, click: ctx.sinkExit } : { label: '沉入桌面', accelerator: SINK_HOTKEY, click: ctx.sinkEnter },

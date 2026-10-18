@@ -100,7 +100,8 @@ test('desktop pet stays reachable on screen', () => {
   require.cache[electron] = { exports: { screen: { getDisplayMatching: () => ({ workArea: { x: 0, y: 0, width: 1920, height: 1040 } }) } } };
   try {
     delete require.cache[require.resolve('../pet.cjs')]; const { clampToWorkArea: clamp } = require('../pet.cjs');
-    const far = clamp({ x: 99999, y: -9999, width: 288, height: 256 }); assert.ok(far.x <= 1920 - 96 && far.y >= -40);
+    const far = clamp({ x: 99999, y: -9999, width: 288, height: 256 }); assert.ok(far.x <= 1920 - 96 && far.y >= -48);
+    const placed = clamp({ x: 700, y: 300, width: 288, height: 256 }); assert.deepEqual([placed.x, placed.y], [700, 300], 'a spot inside the work area is kept as is');
     const left = clamp({ x: -99999, y: 99999, width: 288, height: 256 }); assert.ok(left.x >= -96 && left.y <= 1040 - 256 + 10);
   } finally { if (old) require.cache[electron] = old; else delete require.cache[electron]; delete require.cache[require.resolve('../pet.cjs')]; }
 });
@@ -205,4 +206,12 @@ test('lo-fi relay updates tempo without pretending music plays, then resets on s
   relay({ companion: { ...source, playing: false, lofiBpm: 0 } }); assert.equal(currentBeat().bpm, 96); assert.equal(events.at(-1).detail.playing, false);
   relay({ companion: source }); relay({ companion: null }); assert.equal(currentBeat().bpm, 96);
   relay({ companion: { ...source, lofiBpm: Infinity } }); assert.equal(currentBeat().bpm, 96);
+});
+
+test('the last feed (care) survives the page read so the desktop pet can eat or explain', async () => {
+  const { readCompanion } = require('../companion-sync.cjs'), vm = require('node:vm');
+  const raw = { care: { fedAt: 1234, ok: false, note: '小猫今天已经吃饱啦，明天再喂吧～', tier: 'happy', secret: 'x' } };
+  const value = await readCompanion({ isDestroyed: () => false, executeJavaScript: async script => vm.runInNewContext(script, { window: { albumCompanionSnapshot: () => raw }, document: { documentElement: { dataset: {} } } }) });
+  const care = cleanCompanion(value.companion).care;
+  assert.equal(care.fedAt, 1234); assert.equal(care.ok, false); assert.match(care.note, /吃饱啦/); assert.equal('secret' in care, false);
 });

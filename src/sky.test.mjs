@@ -173,3 +173,29 @@ test('real weather holds steady against flaky or racing reports', () => {
   assert.equal(steadyWeather(a, { kind: 'clear' }, REAL_SWITCH_MS).kind, 'clear');
   assert.equal(steadyWeather(a, { kind: 'rain', intensity: .8 }, 5e3).since, 0);
 });
+
+import { windTime } from './sky-weather.mjs';
+test('window weather drift stays continuous when the 窗景 or real weather changes (no flip-flopping clouds)', () => {
+  // Absolute time, as on screen: seconds ≈ 1.7e9.
+  const t0 = 1_760_000_000_000;
+  let timeline = createTimeline({ kind: 'snow' }, t0);
+  const steps = [];
+  // Click a 窗景, then another mid-fade, then real weather (different wind) mid-fade again.
+  const changes = { [t0 + 1000]: { kind: 'clear' }, [t0 + 9000]: { kind: 'storm', intensity: 1, wind: 1 }, [t0 + 20000]: { kind: 'rain', intensity: .4, wind: .05 } };
+  let last = windTime(timeline, t0);
+  for (let now = t0 + 16; now < t0 + 70000; now += 16) {
+    const change = Object.entries(changes).find(([at]) => now - 16 < Number(at) && now >= Number(at)); if (change) timeline = retarget(timeline, change[1], now);
+    const value = windTime(timeline, now), step = value - last; last = value; steps.push(step);
+    // Per 16 ms frame the drift moves by at most wind(≤1) × 0.016 s, never by seconds × Δwind.
+    assert.ok(step >= 0 && step <= .0161, `drift step ${step} at +${now - t0} ms`);
+  }
+  // And the clouds drawn on consecutive frames barely change while the fade runs.
+  const mask = windowMasks({ box: [0, 0, 160, 120], panes: [[0, 0, 160, 120]] }), size = mask.width * mask.height * 4;
+  const frameAt = (tl, now) => ({ layers: layersAt(tl, now), pal: skyPalette(skyColors(skyState(new Date(now), null), .6), layersAt(tl, now)), sky: { stars: 0 }, seconds: now / 1000, drift: windTime(tl, now), bodies: { sun: { visible: false }, moon: { visible: false } } });
+  // (rain, not storm: a lightning flash would change every pixel by design.) Before the fix: ~7.6 %.
+  const fade = retarget(createTimeline({ kind: 'clear' }, t0), { kind: 'rain', intensity: .4, wind: .05 }, t0);
+  const a = new Uint8ClampedArray(size), b = new Uint8ClampedArray(size);
+  paintSky(a, mask, frameAt(fade, t0 + 10000)); paintSky(b, mask, frameAt(fade, t0 + 10016));
+  let diff = 0; for (let i = 3; i < size; i += 4) if (a[i] !== b[i]) diff++;
+  assert.ok(diff / (size / 4) < .03, `clouds changed on ${(100 * diff / (size / 4)).toFixed(1)}% of pixels in one frame`);
+});

@@ -37,3 +37,10 @@ test('shell route keeps exact authority, method and HEAD restrictions after extr
   f.breakAsset();
   for (const method of ['GET', 'HEAD']) assert.equal(f.fetch('album-desktop://shell/index.html', method).status, 404);
 });
+test('desk pet CSP allows data: images (pet-life hearts / sparkles) and nothing else new', async () => {
+  const f = fixture(), csp = f.fetch('album-desktop://pet/pet.html').headers.get('Content-Security-Policy');
+  const directives = Object.fromEntries(csp.split(';').map((d) => d.trim().split(/\s+/)).map(([name, ...values]) => [name, values]));
+  assert.deepEqual(directives['img-src'], ["'self'", 'https:', 'data:']);
+  for (const [name, values] of Object.entries(directives)) if (name !== 'img-src') assert.ok(!values.includes('data:') && !values.includes('*') && !values.includes("'unsafe-eval'"), `${name} stays strict`);
+  assert.deepEqual(directives['script-src'], ["'self'"]); assert.deepEqual(directives['connect-src'], ["'none'"]); assert.deepEqual(directives['default-src'], ["'self'"]);
+});

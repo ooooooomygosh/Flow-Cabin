@@ -10,6 +10,16 @@ test('cat panel never covers the cat', () => {
   }
 });
 
+test('cat panel in a short, narrow window gets shorter (scrolls) instead of covering the cat', () => {
+  const size = { w: 360, h: 480 };
+  for (const [vw, vh, top] of [[640, 560, 300], [520, 600, 120], [600, 720, 360]]) {
+    const cat = { left: 200, right: 328, top, bottom: top + 128 }, p = catPanelPlace(cat, size, { w: vw, h: vh });
+    const shown = { w: size.w, h: Math.min(size.h, p.maxH) };
+    assert.ok(!overlaps(cat, p, shown), `${vw}x${vh} cat@${top}: ${JSON.stringify(p)}`);
+    assert.ok(p.y >= 12 && p.y + shown.h <= vh - 12 + .5, `inside the window ${JSON.stringify(p)}`);
+  }
+});
+
 function fakeClock() {
   let t = 0, id = 0; const q = new Map();
   return {
