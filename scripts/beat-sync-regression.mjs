@@ -75,6 +75,7 @@ async function sampleFrames(page, ms, poses, startupTimeoutMs = 0) {
   await page.locator('button.room-cat canvas.pixel-cat').waitFor({ state: 'visible' });
   return page.evaluate(async ({ ms, poses, startupTimeoutMs }) => {
     const { cachedPetFrame, drawPetFrame, SIZE, POSES, CAT_ONLY_FRAMES } = await import('/src/pet/pet-sprites.mjs');
+    const { currentBeat } = await import('/src/player/beat-clock.mjs');
     const canvas = document.querySelector('button.room-cat canvas.pixel-cat'), context = canvas.getContext('2d');
     if (!context || canvas.width !== SIZE || canvas.height !== SIZE) throw new Error('Room PixelCat must have a readable native-size canvas');
     const reference = document.createElement('canvas'); reference.width = reference.height = SIZE;
@@ -114,7 +115,7 @@ async function sampleFrames(page, ms, poses, startupTimeoutMs = 0) {
           if (!frame) { window.__beatFrameFailure = snapshot(); throw new Error(`Room canvas matched ${matches.map((candidate) => candidate.id).join('/') || 'no known pose'}, expected ${poses.join('/')} after ${rows.length} samples (${Math.round(n - t0)} ms into measurement)`); }
           window.__beatFrameFailure = null;
           if (t0 === null) { clearTimeout(startupTimer); t0 = n; startup.waitMs = +(n - started).toFixed(1); }
-          rows.push([n, audio.currentTime, frame.id]);
+          rows.push([n, audio.currentTime, frame.id, currentBeat().bpm]);
           if (n - t0 < ms) frameRequest = requestAnimationFrame(step); else done();
         } catch (error) { fail(error); }
       };
@@ -134,7 +135,8 @@ async function measure(page, bpm, ms = 8000) {
   const changes = []; for (let i = 1; i < n; i++) if (rows[i][2] !== rows[i - 1][2]) changes.push((rows[i][0] + rows[i - 1][0]) / 2);
   const abs = changes.map((t) => Math.abs(offset(t))).sort((x, y) => x - y), intervals = changes.slice(1).map((t, i) => t - changes[i]);
   const signed = changes.map((t) => offset(t));
-  return { latency: Math.round(latency), samples: n, frames, startup, canvas: { vsCurrentTime: +(signed.reduce((s, v) => s + v, 0) / (signed.length || 1) + latency).toFixed(1), bias: +(signed.reduce((s, v) => s + v, 0) / (signed.length || 1)).toFixed(1), changes: changes.length, mean: +(abs.reduce((s, v) => s + v, 0) / (abs.length || 1)).toFixed(1), p95: +(abs[Math.floor(abs.length * .95)] || 0).toFixed(1), max: +(abs.at(-1) || 0).toFixed(1), interval: +(intervals.reduce((s, v) => s + v, 0) / (intervals.length || 1)).toFixed(1) } };
+  const tempos = rows.map((row) => row[3]).sort((a, b) => a - b);
+  return { latency: Math.round(latency), samples: n, frames, startup, tempo: { median: tempos[Math.floor(tempos.length / 2)], min: tempos[0], max: tempos.at(-1) }, canvas: { vsCurrentTime: +(signed.reduce((s, v) => s + v, 0) / (signed.length || 1) + latency).toFixed(1), bias: +(signed.reduce((s, v) => s + v, 0) / (signed.length || 1)).toFixed(1), changes: changes.length, mean: +(abs.reduce((s, v) => s + v, 0) / (abs.length || 1)).toFixed(1), p95: +(abs[Math.floor(abs.length * .95)] || 0).toFixed(1), max: +(abs.at(-1) || 0).toFixed(1), interval: +(intervals.reduce((s, v) => s + v, 0) / (intervals.length || 1)).toFixed(1) } };
 }
 const gate = (name, m, bpm) => {
   const v = m.canvas; assert.ok(v.changes >= 8, `${name} canvas: frames change (${v.changes})`);
@@ -193,8 +195,11 @@ try {
     await page.waitForFunction(() => document.querySelector('button.room-cat').dataset.music === 'free', null, { timeout: 2000 });
     const listening = await sampleFrames(page, 100, ['listen']); report.skipListeningFrames = listening.frames;
     await lockedWithin(page, 9000); report.skipRelockMs = Date.now() - t0; await page.waitForTimeout(1500); await settled(page, 8000, 90);
-    const bpm = await page.evaluate(async () => (await import('/src/player/beat-clock.mjs')).currentBeat().bpm); assert.ok(Math.abs(bpm - 90) < 1, `new track tempo ${bpm}`);
     const m = await measure(page, 90, 6000); report.skip = m; console.log('skip', report.skipRelockMs, JSON.stringify(m)); gate('after skip', m, 90);
+    // A single estimate can briefly use the coarse autocorrelation grid between
+    // onset fits. Validate tempo across the same six seconds as the actual pixels.
+    assert.ok(Math.abs(m.tempo.median - 90) < 1, `new track median tempo ${m.tempo.median}`);
+    assert.ok(m.tempo.min > 87 && m.tempo.max < 93, `new track tempo stays near its own beat: ${JSON.stringify(m.tempo)}`);
   });
   assert.deepEqual(report.pageErrors, []); if (report.checks.some((x) => !x.passed)) process.exitCode = 1;
 } finally { await fs.writeFile(path.join(output, 'report.json'), JSON.stringify(report, null, 2)); await browser?.close(); server?.kill(); }
