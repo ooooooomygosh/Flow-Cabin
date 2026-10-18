@@ -17,6 +17,104 @@ function setup({ fetch, safe = fakeSafe(), timeout } = {}) {
   return { dir, out, logs, ai };
 }
 
+function guardedSafe(implementation = {}) {
+  const calls = [];
+  const safe = Object.fromEntries(['isEncryptionAvailable', 'getSelectedStorageBackend', 'encryptString', 'decryptString'].map((name) => [name, (...args) => {
+    calls.push(name);
+    if (!implementation[name]) throw new Error('Unexpected Keychain access');
+    return implementation[name](...args);
+  }]));
+  return { safe, calls };
+}
+
+test('empty profile never probes safeStorage for state, publication, chat or clearing', async () => {
+  const { safe, calls } = guardedSafe();
+  let fetched = false;
+  const { ai, out } = setup({ safe, fetch: async () => { fetched = true; } });
+  const empty = { stored: false, secure: false, endpoint: '', revision: 0 };
+  assert.deepEqual(ai.state(), empty);
+  ai.publishKey();
+  assert.deepEqual(out.at(-1), { type: 'key', ...empty });
+  for (const [url, text] of [['file:///etc/passwd', body], [URL_OK, '{"model":1}'], [URL_OK, body]]) {
+    await ai.chat('empty', url, text);
+    assert.equal(out.at(-1).kind, 'config');
+    assert.deepEqual(calls, []);
+  }
+  ai.setKey(KEY, 'invalid endpoint');
+  assert.deepEqual(out.at(-1), { type: 'key', ...empty });
+  ai.setKey('', URL_OK);
+  assert.deepEqual(out.at(-1), { type: 'key', ...empty, revision: 1 });
+  ai.publishKey();
+  assert.deepEqual(ai.state(), { ...empty, revision: 1 });
+  assert.equal(fetched, false);
+  assert.deepEqual(calls, []);
+});
+
+test('explicit save encrypts and a fresh relay decrypts the persisted bound credential', async () => {
+  const { safe, calls } = guardedSafe({ ...fakeSafe(), getSelectedStorageBackend: () => 'keychain' });
+  const { ai, dir } = setup({ safe });
+  ai.setKey(KEY, URL_OK);
+  assert.ok(calls.includes('isEncryptionAvailable'));
+  assert.ok(calls.includes('getSelectedStorageBackend'));
+  assert.equal(calls.filter((name) => name === 'encryptString').length, 1);
+  calls.length = 0;
+  const out = [];
+  let authorization;
+  const restored = createAi({ directory: dir, safeStorage: safe, publish: (d) => out.push(d), fetch: async (_url, options) => {
+    authorization = options.headers.Authorization;
+    return { ok: true, json: async () => ({ choices: [{ message: { content: 'restored' } }] }) };
+  } });
+  // Invalid requests must not unlock even an existing credential.
+  await restored.chat('url', 'file:///etc/passwd', body);
+  await restored.chat('body', URL_OK, 'not json');
+  assert.deepEqual(calls, []);
+  assert.deepEqual(restored.state(), { stored: true, secure: true, endpoint: URL_OK, revision: 0 });
+  assert.ok(calls.includes('decryptString'));
+  await restored.chat('restored', URL_OK, body);
+  assert.equal(authorization, `Bearer ${KEY}`);
+  assert.equal(out.at(-1).text, 'restored');
+  calls.length = 0;
+  restored.setKey('');
+  restored.publishKey();
+  assert.equal(restored.state().stored, false);
+  assert.deepEqual(calls, []);
+});
+
+test('encryption and disk failures report memory-only credentials without further probes', async (t) => {
+  for (const failure of ['unavailable', 'probe', 'encrypt', 'write']) {
+    await t.test(failure, async () => {
+      const implementation = { ...fakeSafe(), getSelectedStorageBackend: () => 'keychain' };
+      if (failure === 'unavailable') implementation.isEncryptionAvailable = () => false;
+      if (failure === 'probe') delete implementation.isEncryptionAvailable;
+      if (failure === 'encrypt') delete implementation.encryptString;
+      const { safe, calls } = guardedSafe(implementation);
+      let authorization;
+      const { ai, dir, out } = setup({ safe, fetch: async (_url, options) => {
+        authorization = options.headers.Authorization;
+        return { ok: true, json: async () => ({ choices: [{ message: { content: 'memory' } }] }) };
+      } });
+      if (failure === 'write') {
+        fs.rmdirSync(dir);
+        fs.writeFileSync(dir, 'Blocks credential directory creation');
+      }
+      ai.setKey(KEY, URL_OK);
+      const saved = { stored: true, secure: false, endpoint: URL_OK, revision: 1 };
+      assert.deepEqual(out.at(-1), { type: 'key', ...saved });
+      assert.equal(fs.existsSync(path.join(dir, 'ai-key.bin')), false);
+      calls.length = 0;
+      assert.deepEqual(ai.state(), saved);
+      ai.publishKey();
+      await ai.chat('memory', URL_OK, body);
+      assert.equal(authorization, `Bearer ${KEY}`);
+      assert.equal(out.at(-1).text, 'memory');
+      ai.setKey('');
+      assert.deepEqual(out.at(-1), { type: 'key', stored: false, secure: false, endpoint: '', revision: 2 });
+      assert.deepEqual(calls, []);
+      fs.rmSync(dir, { recursive: true, force: true });
+    });
+  }
+});
+
 test('key is encrypted with safeStorage, never published or written in clear', () => {
   const { dir, out, ai } = setup();
   ai.setKey(KEY, URL_OK);
@@ -26,7 +124,7 @@ test('key is encrypted with safeStorage, never published or written in clear', (
   assert.ok(!aiScript(out.at(-1)).includes(KEY));
   ai.setKey('');
   assert.equal(fs.existsSync(path.join(dir, 'ai-key.bin')), false);
-  assert.deepEqual(out.at(-1), { type: 'key', stored: false, secure: true, endpoint: '', revision: 2 });
+  assert.deepEqual(out.at(-1), { type: 'key', stored: false, secure: false, endpoint: '', revision: 2 });
 });
 
 test('without OS encryption the key stays in memory only', () => {

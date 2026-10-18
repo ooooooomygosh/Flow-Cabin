@@ -395,7 +395,7 @@ try {
     }, save.searchParams.get('endpoint'));
     await page.waitForFunction(() => document.querySelector('.ai-settings input[type="password"]')?.value === '');
     assert.equal(await page.evaluate(() => localStorage.getItem('flow-cabin-ai-key-v1')), null);
-    await region.getByText('safeStorage').waitFor();
+    await region.getByText('Key 用系统加密，只存在这台电脑上，请求由桌面版发出。', { exact: true }).waitFor();
     await shot(page, 'ai-settings-desktop');
   }, { desktop: true, ai: { enabled: true, baseUrl: API, model: 'm', cadence: 'daily' } });
 
