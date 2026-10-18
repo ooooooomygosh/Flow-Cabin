@@ -112,7 +112,11 @@ function fish(g, hx, y, len) {
   });
 }
 function bone(g, hx, y) { prop(g, (p) => { rect(p, hx, y, hx + 6, y, 7); rect(p, hx + 6, y - 1, hx + 7, y - 1, 7); rect(p, hx + 6, y + 1, hx + 7, y + 1, 7); put(p, hx + 3, y - 1, 7); put(p, hx + 3, y + 1, 7); }); }
-function sparkle(g, x, y) { put(g, x, y, EFFECT); put(g, x - 1, y, EFFECT); put(g, x + 1, y, EFFECT); put(g, x, y - 1, EFFECT); put(g, x, y + 1, EFFECT); }
+function sparkle(g, x, y) {
+  // Sparkles sit behind the silhouette, including a head lowered for headwear.
+  for (const [dx, dy] of [[0, 0], [-1, 0], [1, 0], [0, -1], [0, 1]])
+    if (!g[y + dy]?.[x + dx]) put(g, x + dx, y + dy, EFFECT);
+}
 function letterZ(g, x, y, size) { for (let i = 0; i < size; i++) { put(g, x + i, y, EFFECT); put(g, x + i, y + size - 1, EFFECT); put(g, x + size - 1 - i, y + i, EFFECT); } }
 function note(g, x, y) { rect(g, x, y + 3, x + 1, y + 4, EFFECT); rect(g, x + 2, y, x + 2, y + 4, EFFECT); put(g, x + 3, y, EFFECT); put(g, x + 4, y + 1, EFFECT); }
 
@@ -125,7 +129,10 @@ function sitting(g, { dx = 0, dy = 0, hdx = 0, hdy = 0, eyes, tailUp = 0, swing 
   put(g, 12 + dx, 20 + dy, 16); put(g, 13 + dx, 19 + dy, 16);
   put(g, 11 + dx, 22 + dy, 4); put(g, 11 + dx, 24 + dy, 4); put(g, 21 + dx, 22 + dy, 4); put(g, 21 + dx, 24 + dy, 4);
   ellipse(g, 13 + dx, 30 + dy + paws[0], 2, 1, 3); ellipse(g, 19 + dx, 30 + dy + paws[1], 2, 1, 3);
-  const hx = 16 + dx + hdx, hy = 13 + dy + hdy; head(g, hx, hy, { eyes });
+  // Keep the head and its headwear together, with one pixel for the outline.
+  // The torso and paws retain their action lift; no sprite is scaled or shifted off the floor.
+  const headroom = acc === 'sprout' ? 14 : acc === 'beanie' ? 12 : 0;
+  const hx = 16 + dx + hdx, hy = Math.max(headroom, 13 + dy + hdy); head(g, hx, hy, { eyes });
   if (acc) accessory(g, acc, hx, hy);
   return { hx, hy };
 }
@@ -176,11 +183,11 @@ export const ACCESSORIES = Object.freeze(['', 'headphones', 'scarf', 'beanie', '
 export function catFrame(pose, index = 0, acc = '') {
   const frames = FRAMES[pose] || EXTRA_FRAMES[pose] || FRAMES.idle, frame = frames[((index % frames.length) + frames.length) % frames.length];
   const kind = ACCESSORIES.includes(acc) ? acc : '';
-  let g = grid();
+  let g = grid(), sittingHead;
   if (pose === 'sleep') lying(g, { acc: kind });
   else if (pose === 'focus') {
     lying(g, { hx: 10, hy: 18, eyes: 'open', look: 1, tailFlick: frame.tailFlick, acc: kind });
-  } else sitting(g, { ...frame, acc: kind });
+  } else sittingHead = sitting(g, { ...frame, acc: kind });
   g = outline(g);
   if (pose === 'focus') { // An open book after the outline so it reads as a prop.
     rect(g, 16, 24, 29, 31, 1); rect(g, 17, 25, 22, 30, 12); rect(g, 23, 25, 28, 30, 12); rect(g, 22, 24, 23, 31, 11);
@@ -191,17 +198,17 @@ export function catFrame(pose, index = 0, acc = '') {
     for (let x = 8; x <= 23; x += 3) { put(g, x, 25, 9); put(g, x, 27, 9); }
     const [l, r] = frame.tap;
     for (const [px, down] of [[11 + (frame.hdx || 0), l], [19 + (frame.hdx || 0), r]]) {
-      const py = down ? 23 : 19; rect(g, px - 3, py - 2, px + 2, py + 2, 1); rect(g, px - 2, py - 1, px + 1, py + 1, 3); put(g, px - 1, py + 1, 5); if (down) { put(g, px - 3, 23, EFFECT); put(g, px + 3, 23, EFFECT); }
+      const py = down ? 23 : Math.max(19, sittingHead.hy + 7); rect(g, px - 3, py - 2, px + 2, py + 2, 1); rect(g, px - 2, py - 1, px + 1, py + 1, 3); put(g, px - 1, py + 1, 5); if (down) { put(g, px - 3, 23, EFFECT); put(g, px + 3, 23, EFFECT); }
     }
   }
   if (pose === 'eat') { // Props after the outline so the fish / bone always read on top of the fur.
-    const hy = 13 + (frame.hdy || 0), my = hy + 3;
+    const hy = sittingHead.hy, my = hy + 3;
     if (frame.fish === 'floor') fish(g, 9, 29, 13);
     else if (frame.fish) fish(g, 15, my, frame.fish);
     if (frame.bone) bone(g, 15, my);
     if (frame.lick) { rect(g, 16, hy + 4, 17, hy + 5, 5); put(g, 15, hy + 3, 6); put(g, 18, hy + 3, 6); }
   }
-  if (frame.letter) letter(g, 12 + (frame.dx || 0), 16 + (frame.hdy || 0));
+  if (frame.letter) letter(g, sittingHead.hx - 4, sittingHead.hy + 3);
   if (frame.drop === 'mid') letter(g, 12, 23);
   if (frame.drop === 'floor') letter(g, 3, 25);
   if (frame.bang) { const [x, y] = frame.bang; rect(g, x, y, x + 1, y + 4, EFFECT); rect(g, x, y + 6, x + 1, y + 7, EFFECT); }
