@@ -10,6 +10,7 @@ import { ShowroomArtwork } from './RoomArtwork';
 import StudyWriting from './StudyWriting';
 import { flyRecord } from './turntable/record-flight.mjs';
 import './study-room.css';
+import CabinDetails from './room/CabinDetails';
 
 export const ROOM_DRAG_TYPE = 'application/x-album-circle-record';
 // Put a shelf record on the deck: the sleeve flies to the scene deck first
@@ -80,8 +81,8 @@ function RoomScene({ look = 'warm', items = [], selectedId, select, load, startR
   const { columns, rows } = scene.geometry;
   return <div ref={viewport} className="room-scene cabin-scene" onScroll={pinStage} style={{ background: scene.style.background, '--scene-x': `${geometry.left || 0}px`, '--scene-y': `${geometry.top || 0}px`, '--scene-k': (geometry.width || 1448) / 1448, '--scene-view': `url(${scene.view || scene.art})`, ...sky.vars }} aria-label={scene.label} data-scene-scale={(geometry.width || 1448) < 1448 ? 'down' : 'up'} data-room-look={look} data-weather={sky.weather.kind} data-time-of-day={sky.bucket} data-sky={sky.ready ? 'live' : undefined}>
     <div className="cabin-scene-canvas" style={geometry}>
-      <CabinAtmosphereSky windows={scene.windows} art={scene.view || scene.art} weather={sky.weather} state={sky.state} colors={sky.colors} instant={!sky.ready}>
-        <img key={scene.id} className="cabin-scene-art" src={scene.view || scene.art} alt={scene.alt} width="1448" height="1086" draggable="false"/>
+      <CabinAtmosphereSky windows={scene.windows} art={scene.skyMask || scene.view || scene.art} weather={sky.weather} state={sky.state} colors={sky.colors} instant={!sky.ready}>
+        <img key={scene.id} className="cabin-scene-art" src={scene.view || scene.art} style={scene.skyMask ? { maskImage: `url(${scene.skyMask})`, maskSize: '100% 100%' } : undefined} alt={scene.alt} width="1448" height="1086" draggable="false"/>
       </CabinAtmosphereSky>
       {scene.id === 'night-study' && <StudyWriting/>}
       <RoomRack items={items} selectedId={selectedId} select={select} load={load} startRow={startRow} columns={columns} rows={rows} pixel={scene.pixel}/>
@@ -89,6 +90,7 @@ function RoomScene({ look = 'warm', items = [], selectedId, select, load, startR
       <div className="cabin-daylight" aria-hidden="true"/>
       <div className="cabin-nightshade" aria-hidden="true"/>
       <AmbientLife look={scene.id} time={sky.bucket}/>
+      {scene.id === 'pixel' && load && <CabinDetails/>}
     </div>
     {cat}
     {children}

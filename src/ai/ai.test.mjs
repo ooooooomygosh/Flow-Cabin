@@ -49,10 +49,13 @@ test('summary carries stats only — no task text, notes or timestamps', () => {
   const s = letterSummary(sessions, period, { tier: 'happy', mood: 82, feeds: 3 });
   assert.equal(s.focusMinutes, 85); assert.equal(s.sessions, 3); assert.equal(s.completedSessions, 2);
   assert.deepEqual(s.topAlbums.map((a) => a.title), ['专辑B', '专辑A']);
+  assert.equal(s.albumContext, '专注时放在唱机上的唱片');
+  assert(s.topAlbums.every((album) => !('minutes' in album)), 'focus duration must not imply album playback duration');
   assert.deepEqual(s.cat, { tier: 'happy', mood: 82, feeds: 3 });
   const text = JSON.stringify(letterMessages(s, 'calm'));
   assert.ok(!text.includes('秘密待办')); assert.ok(!/"start"|1000/.test(text));
   assert.match(text, /平静/);
+  assert.match(text, /不得把专注时长写成听歌时长/);
 });
 
 test('letters: save, unread flag, once per period, retry after an hour', () => {
@@ -70,7 +73,7 @@ test('letters: save, unread flag, once per period, retry after an hour', () => {
 
 test('web transport: mocked endpoint, auth header, errors, timeout', async () => {
   const win = { localStorage: mem(), document: { documentElement: { dataset: {} } }, addEventListener() {}, removeEventListener() {} };
-  win.localStorage.setItem(AI_KEY_KEY, KEY);
+  win.localStorage.setItem(AI_KEY_KEY, JSON.stringify({ v: 2, key: KEY, endpoint: 'https://api.mock/v1/chat/completions', revision: 1 }));
   const settings = { baseUrl: 'https://api.mock/v1', model: 'm' };
   let seen;
   const ok = await chat(settings, [{ role: 'user', content: 'hi' }], { win, fetchImpl: async (u, o) => { seen = { u, o }; return { ok: true, json: async () => ({ choices: [{ message: { content: '好' } }] }) }; } });
@@ -92,4 +95,58 @@ test('desktop transport goes through the shell command and result event', async 
   assert.deepEqual(r, { ok: true, text: '好' });
   assert.equal(cmds[0][0], 'ai-chat'); assert.ok(!('key' in cmds[0][1]));
   assert.equal(cmds[0][1].url, 'https://api.mock/chat/completions');
+});
+
+
+test('letters discard late replies after settings/key changes, including off then on', async () => {
+  const { deliverLetter } = await import('./letter-delivery.mjs');
+  const { saveKey } = await import('./ai-transport.mjs');
+  const win = new EventTarget(); win.localStorage = mem();
+  const settings = { enabled: true, baseUrl: 'https://api.mock/v1', model: 'm' };
+  writeAi(win.localStorage, settings); saveKey(KEY, { win });
+  let finish;
+  const pending = deliverLetter({ win, sessions: [], force: true, chatImpl: () => new Promise((resolve) => { finish = resolve; }) });
+  win.dispatchEvent(new Event('cabin:ai-settings'));
+  finish({ ok: true, text: 'late reply' });
+  assert.equal(await pending, null);
+  assert.equal(readLetters(win.localStorage).length, 0);
+  const letter = await deliverLetter({ win, sessions: [], force: true, chatImpl: async () => ({ ok: true, text: 'Welcome home.' }) });
+  assert.equal(letter.lines[0], 'Welcome home.');
+  assert.equal(readLetters(win.localStorage).length, 1);
+});
+
+test('web credential cannot follow an edited endpoint or a redirect', async () => {
+  const { saveKey, keyState } = await import('./ai-transport.mjs');
+  const win = new EventTarget(); win.localStorage = mem();
+  saveKey(KEY, { win, baseUrl: 'https://api.mock/v1' });
+  let calls = 0;
+  const bad = await chat({ baseUrl: 'https://other.mock/v1', model: 'm' }, [], { win, fetchImpl: async () => { calls++; } });
+  assert.equal(bad.ok, false); assert.equal(calls, 0);
+  assert.equal(keyState(win).endpoint, 'https://api.mock/v1/chat/completions');
+  assert.equal(chatUrl('http://remote.mock/v1'), null);
+  assert.equal(chatUrl('https://api.mock/v1?token=secret'), null);
+});
+
+test('cross-tab activity keeps letters; only credential/settings changes or clear invalidate them', async () => {
+  const { deliverLetter } = await import('./letter-delivery.mjs');
+  const { saveKey } = await import('./ai-transport.mjs');
+  for (const [key, expected] of [
+    ['flow-cabin-playback-sessions-v1', true],
+    ['album-circle-sound-v1', true],
+    ['flow-cabin-ai-v1', false],
+    ['flow-cabin-ai-key-v1', false],
+    [null, false]
+  ]) {
+    const win = new EventTarget(); win.localStorage = mem();
+    writeAi(win.localStorage, { enabled: true, baseUrl: 'https://api.mock/v1', model: 'm' });
+    saveKey(KEY, { win });
+    let finish;
+    const pending = deliverLetter({ win, sessions: [], force: true, chatImpl: () => new Promise(resolve => { finish = resolve; }) });
+    const event = new Event('storage');
+    Object.defineProperties(event, { key: { value: key }, storageArea: { value: win.localStorage } });
+    win.dispatchEvent(event);
+    finish({ ok: true, text: 'A quiet moment at home.' });
+    assert.equal(Boolean(await pending), expected, `storage key: ${key}`);
+    assert.equal(readLetters(win.localStorage).length, expected ? 1 : 0);
+  }
 });

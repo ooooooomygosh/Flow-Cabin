@@ -57,7 +57,7 @@ function sprite(ctx, img, x, y, maxW, maxH, anchor = 'tl') {
 }
 function tapeRect(ctx, x, y, w, h, p) { ctx.fillStyle = p === CARD_PAPER_PALETTE ? 'rgba(224, 173, 105, .55)' : 'rgba(255, 217, 156, .45)'; ctx.fillRect(x, y, w, h); }
 // Mirrors the 周报 spread: taped card (cat, total, stacked book bars, best-day
-// sticker), then 小屋来信, polaroid of the most-played album and the cat line.
+// sticker), then 小屋来信, an album snapshot from focus records and the cat line.
 // art: { cardPaper, cardStamp, cardTape, doodle, cat, bestSticker, barUnit, barCap, fedSticker }
 // — loaded same-origin images; any missing slot falls back to flat pixels.
 export function drawWeekCard(ctx, r, palette, { cover = null, art = {}, letter = null, mood = null } = {}) {
@@ -108,10 +108,10 @@ export function drawWeekCard(ctx, r, palette, { cover = null, art = {}, letter =
   if (r.album && cover) ctx.drawImage(cover, 44, rowY + 8, 68, 68);
   else { ctx.fillStyle = '#3b2a20'; ctx.fillRect(44, rowY + 8, 68, 68); ctx.fillStyle = '#1c120b'; ctx.fillRect(52, rowY + 16, 52, 52); ctx.fillStyle = '#e0ad69'; ctx.fillRect(72, rowY + 36, 12, 12); }
   tapeRect(ctx, 56, rowY - 6, 44, 12, p);
-  ctx.fillStyle = '#3b2a20'; ctx.font = `12px ${FONT}`; ctx.fillText(clip(ctx, r.album ? `《${r.album.title}》` : '还没放唱片', 76), 40, rowY + 82);
+  ctx.fillStyle = '#3b2a20'; ctx.font = `12px ${FONT}`; ctx.fillText(clip(ctx, r.album ? `《${r.album.title}》` : '无唱片记录', 76), 40, rowY + 82);
   ctx.font = `14px ${FONT}`; let y = rowY + 6;
   const facts = [
-    r.album ? `最常听 · 《${r.album.title}》${r.album.artist ? ` · ${r.album.artist}` : ''}` : null,
+    r.album ? `专注时放在唱机上的唱片 · 《${r.album.title}》${r.album.artist ? ` · ${r.album.artist}` : ''}` : null,
     r.bestDay ? `最好的一天 · ${r.bestDay.label} ${formatMinutes(r.bestDay.minutes)}` : null,
     r.completed.length ? `✓ 勾掉 ${r.completed.length} 件 · ${r.completed.slice(0, 3).join('、')}` : '这周没有勾掉待办，也没关系',
     mood && (mood.feeds > 0 || mood.label) ? `小猫 · ${mood.feeds > 0 ? `喂了 ${mood.feeds} 次` : ''}${mood.feeds > 0 && mood.label ? '，' : ''}${mood.label || ''}` : null

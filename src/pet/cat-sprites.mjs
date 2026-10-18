@@ -17,11 +17,15 @@ export const PALETTE = Object.freeze([
   '#efe6cf', // 12 pages
   '#ffe08a', // 13 sparkle / notes / zzz
   '#1f6fd6', // 14 fish blue (desktop-pet eat)
-  '#9fd4ff' // 15 fish belly / fin
+  '#9fd4ff', // 15 fish belly / fin
+  '#ffd49a', // 16 warm fur highlight
+  '#b67c43', // 17 lower fur shade
+  '#91a972', // 18 sage accessories
+  '#d8e4a5' // 19 leaf highlight
 ]);
 export const CAT_PALETTES = Object.freeze({
   orange: Object.freeze(PALETTE.map((color, i) => ({ 2: '#b77d48', 3: '#ccb18a', 4: '#88522f', 5: '#bd7e86', 7: '#dfceb0', 12: '#cabea2', 13: '#d0b370' }[i] || color))),
-  black: Object.freeze(PALETTE.map((color, i) => ({ 1: '#292932', 2: '#55545e', 3: '#85808a', 4: '#3c3b46', 5: '#ad7f88', 6: '#24232c', 7: '#c9bd96', 12: '#cabea2', 13: '#d0b370' }[i] || color)))
+  black: Object.freeze(PALETTE.map((color, i) => ({ 1: '#292932', 2: '#55545e', 3: '#85808a', 4: '#3c3b46', 5: '#ad7f88', 6: '#24232c', 7: '#c9bd96', 12: '#cabea2', 13: '#d0b370', 16: '#a19aa7', 17: '#41404b' }[i] || color)))
 });
 const EFFECT = 13;
 
@@ -49,18 +53,21 @@ function head(g, hx, hy, { eyes = 'open', look = 0 } = {}) {
   triangle(g, hx - 5, hy - 10, hx - 7, hx - 2, hy - 4, 2); triangle(g, hx + 5, hy - 10, hx + 2, hx + 7, hy - 4, 2);
   triangle(g, hx - 5, hy - 8, hx - 6, hx - 4, hy - 5, 5); triangle(g, hx + 5, hy - 8, hx + 4, hx + 6, hy - 5, 5);
   ellipse(g, hx, hy, 7, 5.5, 2);
+  rect(g, hx - 4, hy - 4, hx + 3, hy - 4, 16);
+  put(g, hx - 6, hy - 2, 16); put(g, hx + 6, hy + 2, 17);
   ellipse(g, hx - 4, hy + 2, 2, 1.5, 3); ellipse(g, hx + 4, hy + 2, 2, 1.5, 3); ellipse(g, hx, hy + 3, 3, 2, 3);
   [-2, 0, 2].forEach((dx) => { put(g, hx + dx, hy - 5, 4); put(g, hx + dx, hy - 4, 4); });
   put(g, hx - 7, hy + 1, 4); put(g, hx + 7, hy + 1, 4);
   const ey = hy + look;
   for (const ex of [hx - 3, hx + 3]) {
-    if (eyes === 'open') { rect(g, ex, ey - 1, ex + 1, ey, 6); put(g, ex, ey - 1, 7); }
+    if (eyes === 'open') { rect(g, ex, ey - 1, ex + 1, ey + 1, 6); put(g, ex, ey - 1, 7); }
     else if (eyes === 'happy') { put(g, ex, ey, 6); put(g, ex + 1, ey - 1, 6); put(g, ex + 2, ey, 6); }
     else if (eyes === 'calm') { put(g, ex - 1, ey - 1, 6); put(g, ex, ey, 6); put(g, ex + 1, ey, 6); put(g, ex + 2, ey - 1, 6); }
     else { put(g, ex, ey, 6); put(g, ex + 1, ey, 6); }
   }
   put(g, hx, hy + 2, 5); put(g, hx + 1, hy + 2, 5);
   put(g, hx - 1, hy + 3, 6); put(g, hx + 2, hy + 3, 6);
+  put(g, hx - 5, hy + 2, 5); put(g, hx + 5, hy + 2, 5);
 }
 function accessory(g, kind, hx, hy) {
   if (kind === 'headphones') {
@@ -72,6 +79,15 @@ function accessory(g, kind, hx, hy) {
   } else if (kind === 'beanie') {
     for (let y = hy - 8; y <= hy - 3; y++) { const half = Math.round(Math.sqrt(Math.max(0, 1 - ((y - (hy - 3)) / 6) ** 2)) * 7.5); for (let x = hx - half; x <= hx + half + 1; x++) put(g, x, y, 10); }
     rect(g, hx - 7, hy - 3, hx + 8, hy - 3, 12); rect(g, hx, hy - 11, hx + 1, hy - 10, 7);
+  } else if (kind === 'bow') {
+    rect(g, hx - 5, hy + 5, hx + 5, hy + 5, 18);
+    triangle(g, hx - 4, hy + 4, hx - 4, hx, hy + 7, 18);
+    triangle(g, hx + 4, hy + 4, hx, hx + 4, hy + 7, 18);
+    rect(g, hx, hy + 5, hx + 1, hy + 6, 19);
+  } else if (kind === 'sprout') {
+    rect(g, hx, hy - 10, hx, hy - 6, 18);
+    ellipse(g, hx - 2, hy - 10, 2, 1, 18); ellipse(g, hx + 2, hy - 12, 2, 1, 18);
+    put(g, hx - 2, hy - 11, 19); put(g, hx + 2, hy - 13, 19);
   }
 }
 // A thick polyline; the last segment is the darker tail tip.
@@ -105,6 +121,8 @@ function sitting(g, { dx = 0, dy = 0, hdx = 0, hdy = 0, eyes, tailUp = 0, swing 
   const tailPoints = [[23, 29], [25, 28], [26, 26], [27, 24], [27, 22 - tailUp], [26, 20 - tailUp], [25, 19 - tailUp]].map(([x, y], i) => [x + dx + Math.round(swing * Math.max(0, i - 2) / 4), y + dy + (swing && i > 4 ? 1 : 0)]);
   tail(g, tailPoints);
   ellipse(g, 16 + dx, 24 + dy, 8, 6.5, 2); ellipse(g, 16 + dx, 25 + dy, 4, 4.5, 3);
+  rect(g, 21 + dx, 26 + dy, 23 + dx, 28 + dy, 17);
+  put(g, 12 + dx, 20 + dy, 16); put(g, 13 + dx, 19 + dy, 16);
   put(g, 11 + dx, 22 + dy, 4); put(g, 11 + dx, 24 + dy, 4); put(g, 21 + dx, 22 + dy, 4); put(g, 21 + dx, 24 + dy, 4);
   ellipse(g, 13 + dx, 30 + dy + paws[0], 2, 1, 3); ellipse(g, 19 + dx, 30 + dy + paws[1], 2, 1, 3);
   const hx = 16 + dx + hdx, hy = 13 + dy + hdy; head(g, hx, hy, { eyes });
@@ -153,13 +171,13 @@ export const HOP_POSE = 'hop';
 export const HOP_FRAMES = EXTRA_FRAMES.hop.length;
 export const DELIVER_POSE = 'deliver';
 export const DELIVER_FRAMES = EXTRA_FRAMES.deliver.length;
-export const ACCESSORIES = Object.freeze(['', 'headphones', 'scarf', 'beanie']);
+export const ACCESSORIES = Object.freeze(['', 'headphones', 'scarf', 'beanie', 'bow', 'sprout']);
 
 export function catFrame(pose, index = 0, acc = '') {
   const frames = FRAMES[pose] || EXTRA_FRAMES[pose] || FRAMES.idle, frame = frames[((index % frames.length) + frames.length) % frames.length];
   const kind = ACCESSORIES.includes(acc) ? acc : '';
   let g = grid();
-  if (pose === 'sleep') lying(g, { acc: kind === 'scarf' ? '' : kind });
+  if (pose === 'sleep') lying(g, { acc: kind });
   else if (pose === 'focus') {
     lying(g, { hx: 10, hy: 18, eyes: 'open', look: 1, tailFlick: frame.tailFlick, acc: kind });
   } else sitting(g, { ...frame, acc: kind });

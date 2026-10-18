@@ -1,9 +1,11 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { normalizeSessionRecord, readSessionLog, fromLegacySessions, mergeSessions, loadSessions, subscribeSessions, SESSION_LOG_KEY, FOCUS_SESSION_EVENT } from './session-source.mjs';
 import { graceStreak, minutesByDay, recentSummary, dailySeries, yearHeatmap, byTask, timeOfDay, weeklyReport, reportMarkdown, startOfWeek, isMonday, FREE_FOCUS } from './stats-model.mjs';
 import { drawWeekCard, intScale, CARD_W, CARD_H } from './week-card.mjs';
+import { focusStats, currentStreak } from '../focus-model.mjs';
 
 const M = 60000, at = (y, mo, d, h = 9, mi = 0) => new Date(y, mo - 1, d, h, mi).getTime();
 const s = (start, min, extra = {}) => normalizeSessionRecord({ start, end: start + min * M, completed: true, ...extra });
@@ -53,6 +55,111 @@ test('streak forgives one missed day per week, not two', () => {
   // Gaps in two different weeks are each forgiven (Sun 11 is last week's).
   assert.equal(graceStreak(days([16, 15, 14, 13, 12, 10, 9]), now).days, 7);
   assert.equal(graceStreak(new Map(), now).days, 0);
+});
+
+test('current streak agrees across panels; grace and weekly best retain their own history', () => {
+  const now = at(2026, 10, 18, 20);
+  const list = [12, 13, 14, 15, 17, 18].map((d) => s(at(2026, 10, d), 25));
+  const recent = recentSummary(list, now), report = weeklyReport(list, [], now, 0);
+  assert.equal(focusStats(list, now).streak, 2);
+  assert.equal(recent.streak, 2);
+  assert.equal(recent.graceStreak, 6);
+  assert.equal(recent.forgiven, 1);
+  assert.equal(report.longestStreak, 4);
+  assert.match(reportMarkdown(report), /本周最长连续专注.*4 天.*仅此周.*不含宽限/);
+  assert.equal(recentSummary(list, at(2026, 10, 19)).streak, 2, 'empty today preserves yesterday');
+  assert.equal(recentSummary(list, at(2026, 10, 20)).streak, 0, 'empty yesterday breaks the current streak');
+  assert.equal(recentSummary([], now).streak, 0);
+});
+
+test('streak uses actual accumulated focus minutes, not rounded minutes or paused wall time', () => {
+  const now = at(2026, 10, 18, 20);
+  const list = [
+    s(at(2026, 10, 17), 25),
+    s(at(2026, 10, 18), 25, { durationMs: 30000 }),
+  ];
+  const recent = recentSummary(list, now), compact = focusStats(list, now);
+  assert.equal(recent.todayMinutes, compact.today);
+  assert.equal(recent.streak, 1);
+  assert.equal(compact.streak, 1, 'sub-minute today still starts from yesterday');
+  assert.equal(weeklyReport(list, [], now, 0).longestStreak, 1);
+  list.push(s(at(2026, 10, 18, 12), 25, { durationMs: 30000 }));
+  assert.equal(recentSummary(list, now).streak, 2, 'two half-minutes qualify together');
+  assert.equal(focusStats(list, now).streak, 2);
+  assert.equal(weeklyReport(list, [], now, 0).longestStreak, 2);
+  assert.equal(currentStreak(new Map([['2026-10-18', 1], ['2026-10-17', .99], ['2026-10-16', 25]]), now), 1);
+});
+
+// Child processes pin the timezone independently of the host and other tests.
+for (const scenario of [
+  { name: 'Sydney spring DST', now: [2026, 10, 5], yesterday: '2026-10-04', monday: '2026-09-28', label: '9月28日 – 10月4日', dayHours: 23, weekHours: 167 },
+  { name: 'Sydney autumn DST', now: [2026, 4, 6], yesterday: '2026-04-05', monday: '2026-03-30', label: '3月30日 – 4月5日', dayHours: 25, weekHours: 169 },
+  { name: 'Sydney year boundary', now: [2027, 1, 4], yesterday: '2027-01-03', monday: '2026-12-28', label: '12月28日 – 1月3日', dayHours: 24, weekHours: 168 },
+]) test(`${scenario.name}: local periods, seven-day report, slicing and streaks`, () => {
+  const script = `
+    import assert from 'node:assert/strict';
+    import { addDays, dayKey, startOfDay, startOfWeek } from ${JSON.stringify(new URL('../../lib/local-calendar.mjs', import.meta.url).href)};
+    import { focusStats, minutesByDay } from ${JSON.stringify(new URL('../focus-model.mjs', import.meta.url).href)};
+    import { recentSummary, weeklyReport, dailySeries, yearHeatmap, timeOfDay } from ${JSON.stringify(new URL('./stats-model.mjs', import.meta.url).href)};
+    import { letterPeriod, letterSummary } from ${JSON.stringify(new URL('../../ai/ai-model.mjs', import.meta.url).href)};
+    const c = ${JSON.stringify(scenario)}, H = 3600000, M = 60000;
+    const now = new Date(c.now[0], c.now[1] - 1, c.now[2], 12).getTime();
+    const today = startOfDay(now), yesterday = addDays(today, -1);
+    assert.equal(Intl.DateTimeFormat().resolvedOptions().timeZone, 'Australia/Sydney');
+    assert.equal(dayKey(yesterday), c.yesterday);
+    assert.equal(addDays(yesterday, 1), today);
+    assert.equal((today - yesterday) / H, c.dayHours);
+    const daily = letterPeriod(now, 'daily'), weekly = letterPeriod(now, 'weekly');
+    assert.deepEqual(daily, { id: 'd:' + c.yesterday, from: yesterday, to: today, label: '昨天' });
+    assert.equal(weekly.id, 'w:' + c.monday);
+    assert.equal(weekly.to, startOfWeek(now));
+    assert.equal((weekly.to - weekly.from) / H, c.weekHours);
+    for (const t of [daily.from, daily.to, weekly.from, weekly.to]) {
+      const d = new Date(t);
+      assert.equal(d.getHours(), 0); assert.equal(d.getMinutes(), 0);
+    }
+    const report = weeklyReport([], [], now);
+    assert.equal(report.label, c.label);
+    assert.equal(report.from, weekly.from); assert.equal(report.to, weekly.to);
+    const keys = Array.from({ length: 7 }, (_, i) => dayKey(addDays(weekly.from, i)));
+    assert.equal(new Set(keys).size, 7);
+    assert.deepEqual(report.daily.map(d => d.key), keys);
+    assert.equal(keys[6], c.yesterday);
+    assert.deepEqual(dailySeries([], yesterday, 7).map(d => d.key), keys);
+    assert.deepEqual(focusStats([], yesterday).week.map(d => d.key), keys);
+    assert.deepEqual(yearHeatmap([], now, 2)[0].map(d => d.key), keys);
+    const sessions = keys.map((_, i) => {
+      const start = addDays(weekly.from, i) + 12 * H;
+      return { start, end: start + M, durationMs: M, completed: true };
+    });
+    assert.equal(focusStats(sessions, now).streak, 7);
+    assert.equal(recentSummary(sessions, now).streak, 7);
+    assert.equal(recentSummary(sessions, now).graceStreak, 7);
+    assert.equal(weeklyReport(sessions, [], now).longestStreak, 7);
+    assert.equal(weeklyReport(sessions, [], now).totalMinutes, 7);
+    assert.equal(letterSummary(sessions, weekly).focusMinutes, 7);
+    const midnight = { start: today - 10 * M, end: today + 10 * M, durationMs: 10 * M, completed: true };
+    const days = minutesByDay([midnight]);
+    assert.equal(days.get(c.yesterday), 5); assert.equal(days.get(dayKey(today)), 5);
+    assert.equal(weeklyReport([midnight], [], now).totalMinutes, 5);
+    assert.equal(weeklyReport([midnight], [], now).daily[6].minutes, 5);
+    const d = new Date(yesterday), start = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 1, 30).getTime();
+    const end = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 3, 30).getTime();
+    const transition = { start, end, durationMs: end - start, completed: true };
+    const expected = (c.dayHours - 24 + 2) * 60;
+    assert.equal(minutesByDay([transition]).get(c.yesterday), expected);
+    assert.equal(timeOfDay([transition]).hours.reduce((a, b) => a + b, 0), expected);
+    const boundaries = [yesterday - M, yesterday, today - M, today].map(start => ({ start, durationMs: M }));
+    assert.equal(letterSummary(boundaries, daily).focusMinutes, 2, 'from inclusive, to exclusive');
+    if (c.name.includes('year')) {
+      const newYear = new Date(2027, 0, 1, 12).getTime(), period = letterPeriod(newYear, 'daily');
+      assert.equal(period.id, 'd:2026-12-31');
+      assert.equal(period.from, new Date(2026, 11, 31).getTime());
+      assert.equal(period.to, new Date(2027, 0, 1).getTime());
+      assert.equal(letterPeriod(newYear, 'weekly').id, 'w:2026-12-21');
+    }
+  `;
+  execFileSync(process.execPath, ['--input-type=module', '-e', script], { env: { ...process.env, TZ: 'Australia/Sydney' }, stdio: 'pipe' });
 });
 
 test('recent, daily, year heatmap and midnight splitting', () => {
@@ -193,6 +300,23 @@ test('journal layout: cat pose, stacked units, letter from real data', async () 
   assert.match(l, /50 分钟/); assert.match(l, /写第三章/); assert.match(l, /《夜航》/); assert.doesNotMatch(l, /小猫/, 'no feed line without mood data');
   assert.match(cabinLetter(r, { feeds: 3, label: '心情很好' }).join(''), /喂了小猫 3 次/);
   assert.match(cabinLetter(weeklyReport([], [], at(2026, 10, 19))).join(''), /安静/);
+});
+
+test('journal, markdown and image export describe album snapshots without playback claims', async () => {
+  const { cabinLetter } = await import('./journal-layout.mjs');
+  const list = [12, 13, 14, 15].map((d) => s(at(2026, 10, d), 25, { album: { title: '夜航' } }));
+  const r = weeklyReport(list, [], at(2026, 10, 19));
+  assert.equal(r.album.minutes, 100, 'associated focus minutes remain available as historical data');
+  const calls = [], ctx = new Proxy({ measureText: (t) => ({ width: String(t).length * 8 }) }, {
+    get: (o, k) => k in o ? o[k] : (...args) => calls.push([k, ...args]), set: () => true,
+  });
+  drawWeekCard(ctx, r);
+  const imageText = calls.filter(([name]) => name === 'fillText').map(([, text]) => text).join('\n');
+  for (const text of [reportMarkdown(r), cabinLetter(r).join('\n'), imageText]) {
+    assert.match(text, /专注时放在唱机上的唱片/);
+    assert.doesNotMatch(text, /最常听|唱针转了|陪你最久|播放了/);
+  }
+  assert.match(cabinLetter(r).join('\n'), /这一周里，最长连续 4 天都有至少 1 分钟专注/);
 });
 
 test('cat mood: v1 store, weekly feed count from feeds[].at, tier drives pose', async () => {

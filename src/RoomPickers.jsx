@@ -6,7 +6,7 @@ import { ROOM_SCENES } from './scene-catalog.mjs';
 import './room-pickers.css';
 
 // Small picker art (scripts/art/scene-thumbs.py), not the full room illustration.
-export const sceneThumb = (scene) => `/room-scenes/thumbs/${scene.id}.png`;
+export const sceneThumb = (scene) => scene.id === 'pixel' ? '/room-scenes/amber-retreat.png' : `/room-scenes/thumbs/${scene.id}.png`;
 
 // Scene + companion pickers: Settings › 房间与桌宠 and the first-run guide's 房间 step.
 // `compact` drops the headings' hints and the descriptions for the guide's narrower column.

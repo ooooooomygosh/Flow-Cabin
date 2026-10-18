@@ -2,7 +2,18 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
 test('cover sampling resizes and releases temporary bitmaps without touching wall export cache', async (t) => {
-  const { loadWallCover, readCoverPixels } = await import('../../src/album-wall-canvas.mjs');
+  // The module-level wall cache keeps a 90 s idle timer plus a 60 s delayed
+  // bitmap close. Capture those timers so the test can advance them instead
+  // of keeping this test process alive for 150 seconds.
+  const timers = [], nativeSetTimeout = globalThis.setTimeout, nativeClearTimeout = globalThis.clearTimeout;
+  globalThis.setTimeout = (fn, ms) => { const timer = { fn, ms, cancelled: false }; timers.push(timer); return timer; };
+  globalThis.clearTimeout = (timer) => { if (timer) timer.cancelled = true; };
+  let loadWallCover, readCoverPixels;
+  try {
+    ({ loadWallCover, readCoverPixels } = await import('../../src/album-wall-canvas.mjs'));
+  } finally {
+    globalThis.setTimeout = nativeSetTimeout; globalThis.clearTimeout = nativeClearTimeout;
+  }
   const { dominantColour } = await import('../../src/cover-colour.mjs');
   const originals = new Map(['window', 'document', 'fetch', 'createImageBitmap'].map((key) => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
   t.after(() => { for (const [key, descriptor] of originals) { if (descriptor) Object.defineProperty(globalThis, key, descriptor); else delete globalThis[key]; } });
@@ -36,4 +47,11 @@ test('cover sampling resizes and releases temporary bitmaps without touching wal
   invalidImage = true;
   assert.equal(await readCoverPixels(cover), null); assert.equal(bitmaps.length, 3);
   assert.equal(await readCoverPixels(''), null);
+  for (;;) {
+    const index = timers.findIndex((timer) => !timer.cancelled);
+    if (index < 0) break;
+    const [timer] = timers.splice(index, 1);
+    timer.fn(); await Promise.resolve();
+  }
+  assert.equal(wall.closed, true);
 });

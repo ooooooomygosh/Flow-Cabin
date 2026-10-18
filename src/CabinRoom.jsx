@@ -3,6 +3,8 @@ import { reportTrayPet } from './desktop/desktop-sink-client.mjs';
 import { getRoomScene } from './scene-catalog.mjs';
 import { normalizePetId, getPet } from './pet/pet-catalog.mjs';
 import { setBeat } from './player/beat-clock.mjs';
+import { currentCabinPlayback, onCabinPlayback } from './scene/playback-listener.mjs';
+import CabinWelcome from './room/CabinWelcome';
 import { Up, Down, ArrowUpRight, Wand2, EyeSlash, Heart, Plus, ListBullet, Check, Computer, Play, SpeakerWave, SpeakerOff, Grid3X3, Refresh, Expand } from './icons';
 import { RecordBoxControls, useRecordLibrary, useRecordStyle } from './RecordLibrary';
 import { desktopCommand, useDesktopAppearance } from './desktop-client';
@@ -80,7 +82,12 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
   // Lo-fi alone: dance at its tempo (a detected song beat takes over when the deck plays).
   const lofiBpm = sound?.lofiState === 'playing' && !playback.playing ? sound.section?.bpm : 0;
   // Lo-fi alone: its tempo and its heard quarter-note phase, refreshed while it plays (the section tempo ramps).
-  useEffect(() => { if (!lofiBpm) return undefined; const apply = () => setBeat({ bpm: lofiBpm, beatAt: sound?.lofiBeatAt?.() || 0 }); apply(); const timer = setInterval(apply, 1000); return () => clearInterval(timer); }, [lofiBpm]);
+  useEffect(() => {
+    if (!lofiBpm) return undefined;
+    const apply = () => { if (!currentCabinPlayback().playing) setBeat({ bpm: lofiBpm, beatAt: sound?.lofiBeatAt?.() || 0 }); };
+    const off = onCabinPlayback(apply), timer = setInterval(apply, 1000);
+    return () => { clearInterval(timer); off(); };
+  }, [lofiBpm]);
   useCompanionSnapshot({ look, petId, petOut: Boolean(pet.active), weather, accessory: catFocus.accessory || '', grooving, track: deck.nowTrack, startRow: view.startRow, items: view.items, selectedId: selected?.id || '', record: deckItem, recordStyle, spinning: effectiveSpin, trackIndex: deck.shownTrackIndex, reduceMotion: appearance.reduceMotion, statusText: deck.statusText, actualTrack: deck.actualTrack, provider }, buildSnapshot, (state) => setWallpaperError(state.error || ''));
   const personalizeRoom = (patch) => library?.update((old) => ({ ...old, rooms: { ...old.rooms, [library.roomId]: { ...(old.rooms[library.roomId] || {}), ...patch } } }));
   const { zen, corner, dock, saveDock, filtersOpen, setFiltersOpen, fullscreen, desktopMode, sink } = chrome;
@@ -90,6 +97,7 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
   const petLabel = pet.active ? '让伙伴回家' : '伙伴出门', petName = getPet(petId).name;
   const queued = player.queue.ids.includes(selected?.id);
   return <div className={`listening-room cabin-room cabin-${look}`} style={{ '--scene-accent': getRoomScene(look).style.accent }}>
+    {look === 'pixel' && <CabinWelcome petName={petName} onNotes={() => saveDock({ open: true, tab: 'notes' })}/>}
     {/* One row of room actions, right-aligned: focus · sound · companion · 沉入桌面 · 沉浸.
         Preferences live in Settings (titlebar ⚙). */}
     <nav className="cabin-toolbar" aria-label="小屋工具">
@@ -114,7 +122,7 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
     {library?.error && flow.hub !== 'room' && !flow.wizard && !filtersOpen && <p className="room-preferences-error" role="alert">设置未保存：{library.error}</p>}
     {wallpaperError && <p className="wallpaper-error" role="alert">{wallpaperError}<button type="button" aria-label="关闭动态背景提示" onClick={() => setWallpaperError('')}>×</button></p>}
     {/* Under the opaque 唱机特写 the room is skipped entirely: no style, layout or paint work. */}
-    <div ref={stage} className="cabin-stage-wrap" style={corner ? { contentVisibility: 'hidden' } : undefined}><RoomScene look={look} items={view.items} selectedId={selected?.id} select={setSelectedId} load={deck.place} startRow={view.startRow} weather={weather} cat={cat}>
+    <div ref={stage} className="cabin-stage-wrap"><RoomScene look={look} items={view.items} selectedId={selected?.id} select={setSelectedId} load={deck.place} startRow={view.startRow} weather={weather} cat={cat}>
       <RoomTurntable item={deckItem} spinning={effectiveSpin} system={deck.system} trackIndex={deck.shownTrackIndex} style={recordStyle} items={items} load={deck.load} toggle={deck.toggleVisual} track={deck.setTrackIndex} eject={deck.eject} provider={provider} setProvider={deck.chooseProvider} playback={playback} player={player} tools={<nav className="turntable-room-tools" aria-label="唱片架">
         <button type="button" aria-label="整理唱片架" title="排序、筛选、唱片盒与专辑墙" aria-controls="cabin-shelf-filters" aria-expanded={filtersOpen} className={filtered ? 'is-active' : ''} onClick={() => setFiltersOpen(!filtersOpen)}><Wand2 size={17}/><span>整理唱片架{filtered ? ` · ${visible.length}` : ''}</span></button>
       </nav>}/>

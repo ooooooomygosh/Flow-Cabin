@@ -1,10 +1,10 @@
 import React, { useMemo } from 'react';
 import { useFocus } from './useFocus';
-import { focusStats, levelInfo, dayKey } from './focus-model.mjs';
+import { focusStats, levelInfo, dayKey, STREAK_HINT } from './focus-model.mjs';
 import { FishPixel } from '../icons';
 import { Bars, Strip } from './stats/CabinJournal.jsx';
 import { openJournal } from './stats/journal-events.mjs';
-import { graceStreak, minutesByDay, isMonday } from './stats/stats-model.mjs';
+import { isMonday } from './stats/stats-model.mjs';
 import useFocusSessions from './stats/useFocusSessions.js';
 import { useLetters } from '../ai/useCabinLetters.js';
 import '../study/study.css';
@@ -15,13 +15,12 @@ const hours = (minutes) => minutes >= 60 ? `${Math.floor(minutes / 60)} 小时 $
 export default function FocusStats() {
   const focus = useFocus(), sessions = useFocusSessions(focus.state.sessions);
   const today = dayKey(focus.now), stats = useMemo(() => focusStats(sessions, focus.now), [sessions, today]);
-  const streak = useMemo(() => graceStreak(minutesByDay(sessions), focus.now).days, [sessions, today]);
   const { unread } = useLetters();
   const goal = focus.state.settings.dailyGoal, { rewards } = focus.state, level = levelInfo(rewards.xp);
   return <div className="focus-stats fs-compact">
     <dl className="focus-stat-tiles">
       <div><dt>今日专注</dt><dd>{hours(stats.today)}</dd></div>
-      <div><dt>连续天数</dt><dd>{streak} 天</dd></div>
+      <div title={STREAK_HINT}><dt>当前连续</dt><dd>{stats.streak} 天</dd></div>
     </dl>
     {goal > 0 ? <div className={`focus-goal ${stats.today >= goal ? 'is-met' : ''}`}>
       <span>每日目标 {stats.today} / {goal} 分钟{stats.today >= goal ? ' · 今天达成了' : ` · 还差 ${goal - stats.today} 分钟`}</span>

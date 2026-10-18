@@ -18,12 +18,18 @@ export default function CompanionBridge() {
     const receive = (event) => { const d = event.detail || {}, energy = Number(d.energy); music.current = { playing: d.playing === true, energy: d.playing === true && Number.isFinite(energy) ? Math.round(Math.max(0, Math.min(1, energy)) / ENERGY_STEP) * ENERGY_STEP : 0, estimated: d.estimated === true, bpm: d.playing === true ? Number(d.bpm) || 0 : 0, beatAt: d.playing === true ? Number(d.beatAt) || 0 : 0 }; };
     window.addEventListener(PLAYBACK_EVENT, receive); return () => window.removeEventListener(PLAYBACK_EVENT, receive);
   }, []);
-  // 打字跟随 fallback (no global hook / no permission): typing inside the cabin. Only the time
-  // of the last keydown is kept — never which key — and only real typing keys count.
+  // 键鼠跟随 fallback: keyboard and pointer activity inside the cabin.
+  // Ignore event objects entirely; both sources share a timestamp-only throttle.
   const typedAt = useRef(0);
   useEffect(() => {
-    const key = (event) => { if (!event.repeat && !event.metaKey && !event.ctrlKey && !event.altKey) typedAt.current = Date.now(); };
-    window.addEventListener('keydown', key, true); return () => window.removeEventListener('keydown', key, true);
+    let last = -Infinity;
+    const activity = () => { const at = Date.now(); if (at - last >= 120) { last = at; typedAt.current = at; } };
+    window.addEventListener('keydown', activity, true);
+    window.addEventListener('pointerdown', activity, true);
+    return () => {
+      window.removeEventListener('keydown', activity, true);
+      window.removeEventListener('pointerdown', activity, true);
+    };
   }, []);
   latest.current = { focus, sound };
   useEffect(() => {

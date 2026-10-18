@@ -7,11 +7,9 @@ import { useCatMotion } from './useCatMotion';
 import { getPet } from './pet-catalog.mjs';
 import { useCatCare, requestFeed } from '../cat/useCatCare';
 import { FED_EVENT, FISH_DRAG_TYPE, FISH_DRAG_TEXT } from '../cat/cat-care.mjs';
-import { catArtLayer, catArtPose } from '../cat/cat-art.mjs';
-// The PNG cat's frame lands about one paint after the animation time; lead by half a frame (16 ms overshot: WAAPI paints sooner than the canvas).
-const BEAT_PAINT_LEAD_MS = 8;
-import { beatSynced, lockToBeat, SWAY_KEYS, FULL_KEYS, GROOVE_KEYS } from '../cat/beat-sync.mjs';
-import { onCabinPlayback } from '../scene/playback-listener.mjs';
+import { roomPetPose } from './pet-presence.mjs';
+import { useInputPresence } from './useInputPresence';
+import { beatSynced } from '../cat/beat-sync.mjs';
 import './cat-care.css';
 import { bubbleText, celebrateUntil, petPose, pokeLine, catStroll } from './pet-model.mjs';
 
@@ -42,48 +40,33 @@ export function useCatBehaviour({ focus = {}, playing = false, track = '', lastA
   return { pose, synced, bubble, now, x: stroll.x, reduced: motion.reduced, pokedAt: poke.at, poke: () => { setPoke({ text: pokeLine(Math.random, petId), at: Date.now() }); window.dispatchEvent(new Event('cabin:cat-petted')); } };
 }
 
-// Placeholder eating time; beauty's frames replace the CSS bob (docs/cat-care.md).
 export const EAT_MS = 2400, FULL_MS = 1500;
 export default function RoomCat({ focus, playing, track, reduceMotion, petId = 'cat', interactive = true, hidden = false }) {
-  const [activity, setActivity] = useState(() => Date.now());
-  useEffect(() => {
-    if (!interactive || hidden) return;
-    let last = 0; const mark = () => { const time = Date.now(); if (time - last > 5000) { last = time; setActivity(time); } };
-    ['pointermove', 'keydown', 'wheel'].forEach((name) => window.addEventListener(name, mark, { passive: true }));
-    return () => ['pointermove', 'keydown', 'wheel'].forEach((name) => window.removeEventListener(name, mark));
-  }, [interactive, hidden]);
   const pet = getPet(petId), catRef = useRef(null), bubbleRef = useRef(null), pokeTimer = useRef(0);
-  // Care (src/cat): eating after a feed, mood tier on data-mood, a 小鱼干 can be dropped on the cat.
-  const mood = useCatCare(), [eating, setEating] = useState(false), [full, setFull] = useState(false), [dropping, setDropping] = useState(false);
-  // Eat (EAT_MS), then a short contented 'full' beat: cat-rub, or a roll once 打滚 is learned.
-  useEffect(() => { let timer = 0, after = 0; const on = () => { setEating(true); setFull(false); clearTimeout(timer); clearTimeout(after); timer = setTimeout(() => { setEating(false); setFull(true); after = setTimeout(() => setFull(false), FULL_MS); }, EAT_MS); }; window.addEventListener(FED_EVENT, on); return () => { clearTimeout(timer); clearTimeout(after); window.removeEventListener(FED_EVENT, on); }; }, []);
-  const rolls = full && mood.actions.some((a) => a.id === 'roll');
-  const fishDrag = (event) => { const types = [...(event.dataTransfer?.types || [])]; return types.includes(FISH_DRAG_TYPE) || types.includes('text/plain'); };
-  const isFish = (event) => [...(event.dataTransfer?.types || [])].includes(FISH_DRAG_TYPE) || event.dataTransfer?.getData('text/plain') === FISH_DRAG_TEXT;
-  const dropProps = interactive ? { onDragOver: (event) => { if (fishDrag(event)) { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; setDropping(true); } }, onDragLeave: () => setDropping(false), onDrop: (event) => { setDropping(false); if (!isFish(event)) return; event.preventDefault(); setDropping(false); requestFeed(); } } : {};
-  useEffect(() => () => clearTimeout(pokeTimer.current), []);
-  const cat = useCatBehaviour({ focus, playing, track, petId: pet.id, lastActivity: interactive ? activity : 0, reduceMotion, hidden });
-  const music = playing ? (cat.synced ? 'beat' : 'free') : '';
-  const artState = { tier: mood.tier, pose: cat.pose, phase: focus?.phase, eating, full, music, pettedRecently: Date.now() - cat.pokedAt < 4000 }, art = catArtLayer(artState);
-  useCatPlacement(catRef, bubbleRef, !hidden, [cat.pose, cat.bubble, cat.x]);
-  // Music motions on the room's beat clock (docs/cat-care.md › 跟着节拍): the groove strip, the happy
-  // tail sway (half-beat steps, peak on each beat) and the post-eat bounce (one per beat). No real beat,
-  // paused or reduced motion: nothing moves.
-  const beatMotion = !hidden && cat.synced && !cat.reduced ? (eating ? '' : art?.kind === 'groove' ? 'groove' : full ? (rolls ? '' : 'full') : mood.tier === 'happy' ? 'sway' : '') : '';
+  const input = useInputPresence(interactive && !hidden);
+  const mood = useCatCare(), [fedAt, setFedAt] = useState(0), [dropping, setDropping] = useState(false);
+  const cat = useCatBehaviour({ focus, playing, track, petId: pet.id, lastActivity: input.at, reduceMotion, hidden });
+  const elapsed = cat.now - fedAt, eating = fedAt > 0 && elapsed < EAT_MS, full = fedAt > 0 && elapsed >= EAT_MS && elapsed < EAT_MS + FULL_MS;
+  const actionOrigin = useRef(0);
   useEffect(() => {
-    const root = catRef.current; if (!beatMotion || !root) return undefined;
-    const target = beatMotion === 'groove' ? root.querySelector('.cat-art') : root.querySelector('.pet-life > .pixel-cat') || root.querySelector('.pet-life');
-    if (!target?.animate) return undefined;
-    const [keys, beats, easing] = beatMotion === 'groove' ? [GROOVE_KEYS, 2, 'steps(4, end)'] : beatMotion === 'sway' ? [SWAY_KEYS, 2, 'linear'] : [FULL_KEYS, 1, 'linear'];
-    const animation = target.animate(keys, { duration: 1000, iterations: Infinity, easing, composite: 'add' });
-    root.dataset.beatMotion = beatMotion;
-    const sync = () => lockToBeat(animation, { beats, lead: BEAT_PAINT_LEAD_MS });
-    sync(); const off = onCabinPlayback(sync), timer = setInterval(sync, 2000);
-    return () => { off(); clearInterval(timer); animation.cancel(); delete root.dataset.beatMotion; };
-  }, [beatMotion, art?.url]);
+    const feed = () => { actionOrigin.current = performance.now(); setFedAt(Date.now()); };
+    window.addEventListener(FED_EVENT, feed);
+    return () => window.removeEventListener(FED_EVENT, feed);
+  }, []);
+  useEffect(() => () => clearTimeout(pokeTimer.current), []);
+  const pose = roomPetPose({ base: cat.pose, eating, full, input: input.active, petId: pet.id });
+  const music = playing ? (cat.synced ? 'beat' : 'free') : '';
+  const fishDrag = (event) => [...(event.dataTransfer?.types || [])].includes(FISH_DRAG_TYPE);
+  const dropProps = interactive ? {
+    onDragOver: (event) => { if (fishDrag(event)) { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; setDropping(true); } },
+    onDragLeave: () => setDropping(false),
+    onDrop: (event) => { setDropping(false); if (!fishDrag(event) && event.dataTransfer?.getData('text/plain') !== FISH_DRAG_TEXT) return; event.preventDefault(); requestFeed(); }
+  } : {};
+  useCatPlacement(catRef, bubbleRef, !hidden, [pose, cat.bubble, cat.x]);
   if (hidden) return null;
-  const body = <><PetLife pose={cat.pose} pokedAt={cat.pokedAt} reduced={cat.reduced}><PixelCat petId={pet.id} pose={cat.pose} accessory={focus?.accessory || ''} skin={focus?.catSkin} reduceMotion={cat.reduced} style={{ transform: `translateX(${cat.x}px)` }} label={`像素${pet.species} · ${pet.name} · ${{ idle: '发呆', groove: '跟着音乐摇摆', celebrate: '庆祝', walk: '散步', sleep: '睡觉', focus: '陪你专注', listen: '闭眼听歌' }[cat.pose]}`}/></PetLife>{art ? <span className={`cat-art is-${art.kind}`} aria-hidden="true" style={{ backgroundImage: `url(${art.url})`, '--cat-art-frames': art.frames || 1, '--cat-art-ms': `${(art.frameMs || 0) * (art.frames || 1)}ms` }}/> : eating && <span className="cat-eat-fish" aria-hidden="true"/>}{(eating ? '好吃！' : cat.bubble) && <CatBubble ref={bubbleRef} text={eating ? '好吃！' : cat.bubble}/>}</>;
-  return interactive
-    ? <button ref={catRef} type="button" className={`room-cat${`${eating ? ' cat--eating' : ''}${full ? ` cat--full${rolls ? ' is-roll' : ''}` : ''}${dropping ? ' cat--drop-target' : ''}${mood.tier === 'happy' && focus?.phase === 'focus' ? ' cat--by-desk' : ''}`}`} data-mood={mood.tier} data-music={music || undefined} data-art={catArtPose(artState)} {...dropProps} aria-haspopup="dialog" aria-expanded="false" title={`点一下摸摸${pet.name} · 双击看看等级和打扮`} aria-label={`摸摸${pet.species}${pet.name}；双击打开等级和打扮`} data-pet-id={pet.id} onClick={(event) => { clearTimeout(pokeTimer.current); if (event.detail > 1) return; pokeTimer.current = setTimeout(cat.poke, event.detail === 0 ? 0 : 260); }} onDoubleClick={() => { clearTimeout(pokeTimer.current); window.dispatchEvent(new Event('cabin-open-cat')); }} onContextMenu={(event) => { event.preventDefault(); window.dispatchEvent(new Event('cabin-open-cat')); }}>{body}</button>
-    : <div ref={catRef} className={`room-cat${eating ? ' cat--eating' : ''}`} data-mood={mood.tier} data-pet-id={pet.id}>{body}</div>;
+  const labels = { idle: '等你回来', groove: '跟着音乐摇摆', celebrate: '开心地庆祝', walk: '轻轻散步', sleep: '蜷着打盹', focus: '陪你读书', listen: '闭眼听歌', typing: '陪你敲敲键盘', eat: '认真吃小鱼干' };
+  const bubble = eating ? '慢慢吃，今天也辛苦啦。' : full ? '吃饱啦，再陪你一会儿。' : cat.bubble;
+  const body = <><PetLife pose={pose} pokedAt={cat.pokedAt} reduced={cat.reduced}><PixelCat petId={pet.id} pose={pose} accessory={focus?.accessory || ''} skin={focus?.catSkin} reduceMotion={cat.reduced} origin={eating ? actionOrigin.current : 0} style={{ transform: `translateX(${cat.x}px)` }} label={`像素${pet.species} · ${pet.name} · ${labels[pose] || labels.idle}`}/></PetLife>{bubble && <CatBubble ref={bubbleRef} text={bubble}/>}</>;
+  const props = { ref: catRef, className: `room-cat${eating ? ' cat--eating' : ''}${dropping ? ' cat--drop-target' : ''}`, 'data-mood': mood.tier, 'data-pet-id': pet.id, 'data-music': music || undefined, 'data-pose': pose, 'data-art': `sprite-${pet.id}`, 'data-typing': input.active || undefined };
+  return interactive ? <button {...props} type="button" {...dropProps} aria-haspopup="dialog" aria-expanded="false" title={`点一下摸摸${pet.name} · 双击看看等级和打扮`} aria-label={`摸摸${pet.species}${pet.name}；双击打开等级和打扮`} onClick={(event) => { clearTimeout(pokeTimer.current); if (event.detail > 1) return; pokeTimer.current = setTimeout(cat.poke, event.detail === 0 ? 0 : 260); }} onDoubleClick={() => { clearTimeout(pokeTimer.current); window.dispatchEvent(new Event('cabin-open-cat')); }} onContextMenu={(event) => { event.preventDefault(); window.dispatchEvent(new Event('cabin-open-cat')); }}>{body}</button> : <div {...props}>{body}</div>;
 }

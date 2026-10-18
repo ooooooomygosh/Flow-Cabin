@@ -42,8 +42,8 @@ export function cabinLetter(r, mood = null) {
     const top = r.topTasks.find((t) => !t.free);
     if (top) lines.push(`你把最多的时间给了「${top.name}」。`);
     if (r.completed.length) lines.push(`还勾掉了 ${r.completed.length} 件待办，${r.completed.length > 2 ? '真了不起' : '一件一件来'}。`);
-    if (r.album) lines.push(`陪你最久的是《${r.album.title}》，唱针转了 ${formatMinutes(r.album.minutes)}。`);
-    if (r.longestStreak >= 3) lines.push(`连续 ${r.longestStreak} 天都有来，小屋记住了。`);
+    if (r.album) lines.push(`专注时放在唱机上的唱片里，有一张《${r.album.title}》。`);
+    if (r.longestStreak >= 3) lines.push(`这一周里，最长连续 ${r.longestStreak} 天都有至少 1 分钟专注，小屋记住了。`);
   }
   if (mood?.feeds > 0) lines.push(`你喂了小猫 ${mood.feeds} 次，它${mood.label ? `现在${mood.label}` : '很满足'}。`);
   return lines;

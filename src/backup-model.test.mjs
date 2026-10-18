@@ -1,7 +1,34 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { backupFileName, backupReplacements, buildBackup, mergeBackupLibrary, parseBackup, remapItemKeys, restoreFocus } from './backup-model.mjs';
+import { BACKUP_VERSION, MAX_BACKUP_BYTES, backupFileName, backupReplacements, buildBackup, mergeBackupLibrary, parseBackup, readBackupMemory, remapItemKeys, restoreBackupMemory, restoreFocus } from './backup-model.mjs';
 import { normalizeLibrary } from './record-library.mjs';
+import { normalizeFocus } from './focus/focus-model.mjs';
+import { normalizeStudy, review, RATINGS } from './study/study-model.mjs';
+import { appendSession, sessionRecord, SESSION_LOG_KEY } from './focus/session-log.mjs';
+import { loadSessions } from './focus/stats/session-source.mjs';
+import { normalizeCare, feed, pet, focusDone, writeCare, readCare, MOOD_KEY, META_KEY } from './cat/cat-care.mjs';
+import { readCatMood, subscribeCatMood } from './focus/stats/cat-mood-source.mjs';
+import { saveLetter, readLetters, markRead, LETTERS_KEY, AI_KEY_KEY, AI_SETTINGS_KEY } from './ai/ai-model.mjs';
+import { PLAYBACK_LOG_KEY, createPlaybackLog, readPlaybackSessions } from './player/playback-log.mjs';
+
+const memoryStorage = (entries = []) => {
+  const data = new Map(entries), reads = [], writes = [];
+  return { data, reads, writes, getItem(key) { reads.push(key); return data.get(key) ?? null; },
+    setItem(key, value) { writes.push(key); data.set(key, String(value)); }, removeItem(key) { data.delete(key); } };
+};
+const at = Date.parse('2026-10-18T08:00:00Z');
+const letter = (id = 'w:2026-10-12', time = at) => ({ id, cadence: 'weekly', tone: 'warm', period: '上周', lines: ['今天也很努力。', '明天见。'], source: 'ai', at: time, read: false });
+function populateMemory(storage) {
+  const record = sessionRecord({ start: at - 25 * 60000, end: at, completed: true, todo: { id: 'task', text: '读书' },
+    album: { id: 'album', title: 'Night', artist: 'Artist', thumb: 'data:image/png;base64,AAAA' }, track: { title: 'Track', artist: 'Artist', album: 'Night' } });
+  appendSession(record, storage);
+  let care = focusDone(normalizeCare(null, at), record, at);
+  care = pet(feed(care, 5, at + 1).care, at + 2);
+  writeCare(care, storage);
+  saveLetter(storage, letter());
+  markRead(storage, letter().id);
+  return { record, care };
+}
 
 const library = normalizeLibrary({
   styles: { 'item:old': { base: '#aa0000' }, 'qq:1': { base: '#00aa00' } }, genres: { 'item:old': ['爵士'] },
@@ -10,7 +37,7 @@ const library = normalizeLibrary({
 
 test('backup round-trips through build and parse', () => {
   const now = new Date('2026-10-16T08:00:00Z');
-  const backup = buildBackup({ items: [{ id: 'a', title: 'T', artist: 'A' }], library, focus: { tasks: [], sessions: [], rewards: {}, settings: {}, notes: 'n', timer: { phase: 'focus' } }, sound: { rain: 0.5 }, now });
+  const backup = buildBackup({ storage: null, items: [{ id: 'a', title: 'T', artist: 'A' }], library, focus: { tasks: [], sessions: [], rewards: {}, settings: {}, notes: 'n', timer: { phase: 'focus' } }, sound: { rain: 0.5 }, now });
   assert.equal(backupFileName(now), 'FlowCabin-backup-20261016.json');
   assert.equal(backup.focus.timer, undefined, 'an active countdown is never exported');
   const parsed = parseBackup(JSON.stringify(backup));
@@ -36,4 +63,265 @@ test('vinyl styles, genres and boxes follow albums the shelf gave a new id', () 
   assert.equal(remapItemKeys(library, {}), library);
   const merged = mergeBackupLibrary(normalizeLibrary({ styles: { 'qq:9': { base: '#000000' } } }), { library, roomId: 'home' }, 'here', { old: 'new' });
   assert.ok(merged.styles['qq:9'] && merged.styles['item:new']); assert.deepEqual(merged.rooms.here.boxes[0].keys, ['item:new', 'qq:1']);
+});
+
+test('v3 round-trip uses real session, care, letters and study writers/readers', () => {
+  const source = memoryStorage(), { record, care } = populateMemory(source), destination = memoryStorage();
+  const study = review(normalizeStudy({ decks: [{ id: 'deck', name: 'English' }], cards: [{ id: 'card', deckId: 'deck', front: 'cat', back: '猫' }], countdowns: [{ id: 'exam', title: '考试', date: '2026-12-01' }], newPerDay: 7 }), 'card', RATINGS[2].rating, at);
+  const focus = normalizeFocus({ notes: '日记\n第二行', sessions: [record], tasks: [{ id: 'task', text: '读书' }], rewards: { fish: 4, xp: 25 }, timer: { phase: 'focus', endsAt: at + 60000 } });
+  const backup = buildBackup({ storage: source, library, roomId: 'home', focus, study, sound: { master: .5, tracks: { rain: .2 } } });
+  const parsed = parseBackup(JSON.stringify(backup));
+  assert.equal(backup.version, BACKUP_VERSION);
+  assert.equal(parsed.version, 3);
+  assert.equal(parsed.roomId, 'home');
+  assert.deepEqual(parsed.study, study, 'FSRS memory and review log survive');
+  assert.deepEqual(normalizeFocus(restoreFocus(parsed.focus, {})), { ...focus, timer: normalizeFocus().timer });
+  assert.deepEqual(parsed.memory, backup.memory);
+  const target = new EventTarget(), events = [];
+  target.addEventListener('storage', () => {
+    for (const key of [SESSION_LOG_KEY, MOOD_KEY, META_KEY, LETTERS_KEY]) assert.ok(destination.getItem(key), 'observers see all stores committed');
+  });
+  for (const type of ['storage', 'cabin:cat-mood', 'cabin:letter', 'cabin:focus-session', 'cabin:cat-fed']) target.addEventListener(type, (event) => events.push(event));
+  let moods = 0;
+  const unsubscribe = subscribeCatMood(target, () => { moods++; });
+  assert.deepEqual(restoreBackupMemory(parsed, { storage: destination, target }).changed, [SESSION_LOG_KEY, MOOD_KEY, META_KEY, LETTERS_KEY]);
+  assert.deepEqual(loadSessions({ storage: destination }), loadSessions({ storage: source }));
+  assert.equal(JSON.parse(destination.getItem(SESSION_LOG_KEY))[0].cover, record.cover);
+  assert.deepEqual(readCare(destination, at + 2), care);
+  assert.deepEqual(readLetters(destination), readLetters(source));
+  assert.deepEqual(readCatMood(destination, at - 1, at + 10), readCatMood(source, at - 1, at + 10));
+  assert.ok(moods > 0);
+  assert.equal(events.filter((event) => event.type === 'storage').length, 4);
+  assert.ok(events.some((event) => event.type === 'cabin:letter'));
+  assert.ok(!events.some((event) => ['cabin:focus-session', 'cabin:cat-fed'].includes(event.type)), 'restore does not grant rewards or play a new feeding');
+  for (const event of events.filter((event) => event.type === 'storage')) {
+    assert.equal(event.storageArea, destination);
+    assert.equal(event.newValue, destination.getItem(event.key));
+  }
+  unsubscribe();
+});
+
+test('v1/v2 and unversioned files preserve absent domains and newer focus fields', () => {
+  const storage = memoryStorage(); populateMemory(storage);
+  const before = [...storage.data], current = normalizeFocus({ notes: '保留', tasks: [{ id: 'local', text: '本机任务' }], rewards: { fish: 12 } });
+  for (const kind of ['AlbumCircleCollection', 'FlowCabinBackup']) for (const version of [undefined, 1, 2]) {
+    const parsed = parseBackup(JSON.stringify({ kind, version, items: [], focus: { settings: { focusMin: 50 } } }));
+    assert.equal(parsed.memory, null);
+    assert.deepEqual(restoreBackupMemory(parsed, { storage }), { changed: [] });
+    const restored = normalizeFocus(restoreFocus(parsed.focus, current));
+    assert.equal(restored.notes, current.notes);
+    assert.deepEqual(restored.tasks, current.tasks);
+    assert.deepEqual(restored.rewards, current.rewards);
+    assert.equal(restored.settings.focusMin, 50);
+  }
+  assert.deepEqual([...storage.data], before);
+  assert.equal(normalizeFocus(restoreFocus({ notes: '' }, current)).notes, '');
+});
+
+test('legacy wrapped session logs migrate without losing album, track and cover', () => {
+  const storage = memoryStorage();
+  const { record } = populateMemory(storage);
+  storage.setItem(SESSION_LOG_KEY, JSON.stringify({ version: 1, sessions: [{ ...record, start: undefined, end: undefined, startedAt: record.start, endedAt: record.end }] }));
+  const parsed = parseBackup(JSON.stringify(buildBackup({ storage })));
+  const destination = memoryStorage();
+  restoreBackupMemory(parsed, { storage: destination });
+  assert.deepEqual(loadSessions({ storage: destination }), loadSessions({ storage }));
+  assert.equal(JSON.parse(destination.getItem(SESSION_LOG_KEY))[0].album.id, 'album');
+});
+
+test('study logs and daily limits remain restorable with no decks or countdowns', () => {
+  for (const study of [{ log: { '2026-10-18': { reviews: 8, learned: 3 } } }, { newPerDay: 0 }]) {
+    const parsed = parseBackup(JSON.stringify(buildBackup({ study, storage: null })));
+    assert.deepEqual(parsed.study, normalizeStudy(study));
+    assert.equal(backupReplacements(parsed, { study: true })[0].id, 'study');
+  }
+});
+
+test('restore merges local history and is idempotent, including read and reward state', () => {
+  const source = memoryStorage(), destination = memoryStorage();
+  const { record } = populateMemory(source); populateMemory(destination);
+  const localSession = { ...record, id: 'local', start: at + 60000, end: at + 120000 };
+  appendSession(localSession, destination);
+  saveLetter(destination, letter('local', at + 10));
+  markRead(destination, letter().id);
+  saveLetter(source, letter());
+  const care = readCare(destination, at + 2);
+  writeCare({ ...care, pets: { ...care.pets, count: 8 }, rewarded: [...care.rewarded, 'local'], feeds: [...care.feeds, { at: at + 20, fishLeft: 2 }], totalFeeds: 2 }, destination);
+  const parsed = parseBackup(JSON.stringify(buildBackup({ storage: source }))), target = new EventTarget();
+  let eventCount = 0; target.addEventListener('storage', () => { eventCount++; });
+  restoreBackupMemory(parsed, { storage: destination, target });
+  assert.equal(loadSessions({ storage: destination }).length, 2);
+  assert.equal(readLetters(destination).length, 2);
+  assert.equal(readLetters(destination).find((value) => value.id === letter().id).read, true);
+  assert.equal(readCare(destination, at).pets.count, 8);
+  assert.ok(readCare(destination, at).rewarded.includes('local'));
+  assert.equal(readCare(destination, at).feeds.length, 2);
+  const saved = [...destination.data], beforeEvents = eventCount;
+  assert.deepEqual(restoreBackupMemory(parsed, { storage: destination, target }), { changed: [] });
+  assert.equal(eventCount, beforeEvents);
+  assert.deepEqual([...destination.data], saved);
+  restoreBackupMemory({ memory: { version: 1, focusSessions: [], letters: [], catCare: {} } }, { storage: destination });
+  assert.deepEqual([...destination.data], saved, 'empty imported lists do not erase local history');
+});
+
+test('backup reads only memory allowlist and drops arbitrary credential-bearing fields', () => {
+  const storage = memoryStorage(); const { record } = populateMemory(storage);
+  storage.setItem(AI_KEY_KEY, 'DO_NOT_EXPORT_KEY');
+  storage.setItem(AI_SETTINGS_KEY, JSON.stringify({ baseUrl: 'https://example.test?token=DO_NOT_EXPORT_KEY' }));
+  storage.setItem('provider-login', 'DO_NOT_EXPORT_KEY');
+  const addSecret = (key) => {
+    const value = JSON.parse(storage.getItem(key));
+    storage.setItem(key, JSON.stringify(Array.isArray(value) ? value.map((entry) => ({ ...entry, credentials: 'DO_NOT_EXPORT_KEY' })) : { ...value, apiKey: 'DO_NOT_EXPORT_KEY' }));
+  };
+  for (const key of [SESSION_LOG_KEY, MOOD_KEY, META_KEY, LETTERS_KEY]) addSecret(key);
+  storage.reads.length = 0;
+  const backup = buildBackup({ storage, apiKey: 'DO_NOT_EXPORT_KEY',
+    focus: { sessions: [{ ...record, token: 'DO_NOT_EXPORT_KEY' }], settings: { apiKey: 'DO_NOT_EXPORT_KEY' } },
+    study: { apiKey: 'DO_NOT_EXPORT_KEY' }, sound: { rain: .5, apiKey: 'DO_NOT_EXPORT_KEY' },
+    items: [{ id: 'album', title: 'Night', artist: 'Artist', credential: 'DO_NOT_EXPORT_KEY', externalIds: { itunesTrackId: '123', apiKey: 'DO_NOT_EXPORT_KEY' },
+      trackDetails: [{ title: 'Track', credential: 'DO_NOT_EXPORT_KEY' }] }] });
+  assert.deepEqual(storage.reads, [SESSION_LOG_KEY, MOOD_KEY, META_KEY, LETTERS_KEY, PLAYBACK_LOG_KEY]);
+  assert.ok(!JSON.stringify(backup).includes('DO_NOT_EXPORT_KEY'));
+  assert.equal(backup.items[0].externalIds.itunesTrackId, '123');
+  const destination = memoryStorage([[AI_KEY_KEY, 'LOCAL_KEY'], ['unrelated', 'keep']]);
+  restoreBackupMemory(parseBackup(JSON.stringify(backup)), { storage: destination });
+  assert.equal(destination.getItem(AI_KEY_KEY), 'LOCAL_KEY');
+  assert.equal(destination.getItem('unrelated'), 'keep');
+});
+
+test('invalid versions, structures and records are rejected without storage changes', () => {
+  const base = { kind: 'FlowCabinBackup', version: 3, items: [] }, storage = memoryStorage(); populateMemory(storage);
+  const before = [...storage.data];
+  const invalid = [
+    ...[0, -1, 4, '3', 2.5, null].map((version) => ({ version })),
+    { focus: [] }, { focus: { notes: {} } }, { focus: { tasks: [null] } }, { focus: { sessions: [{ start: 1, end: 0 }] } },
+    { study: [] }, { study: { decks: 'bad' } }, { study: { cards: [{ id: 'orphan', front: 'lost' }] } },
+    { sound: [] }, { memory: [] }, { memory: { version: 2 } }, { memory: { focusSessions: null } },
+    { memory: { focusSessions: [{ start: 1, end: 0 }] } }, { memory: { focusSessions: { version: 2, sessions: [] } } },
+    { memory: { catMood: { mood: 101, updatedAt: at } } }, { memory: { catMood: { mood: 60, updatedAt: at, feeds: [null] } } },
+    { memory: { catCare: { pets: { day: '2026-10-18', count: -1 } } } }, { memory: { catCare: { rewarded: {} } } },
+    { memory: { letters: [{ ...letter(), lines: [{}] }] } }, { memory: { letters: [{ ...letter(), at: 'bad' }] } },
+    { memory: { playbackSessions: {} } }, { memory: { playbackSessions: [{ id: 'play', start: at, end: at + 1000, durationMs: 1001 }] } }
+  ];
+  for (const patch of invalid) assert.throws(() => parseBackup(JSON.stringify({ ...base, ...patch })), /格式无效|版本/);
+  assert.throws(() => restoreBackupMemory({ memory: { letters: [null] } }, { storage }), /格式无效/);
+  assert.deepEqual([...storage.data], before);
+});
+
+test('preview and parsing never write, and memory replacement requires an available handler', () => {
+  const storage = memoryStorage(); populateMemory(storage);
+  const backup = buildBackup({ storage }), before = storage.writes.length;
+  const parsed = parseBackup(JSON.stringify(backup));
+  assert.deepEqual(backupReplacements(parsed), []);
+  assert.deepEqual(backupReplacements(parsed, { memory: true }).map((entry) => entry.id), ['memory']);
+  assert.equal(storage.writes.length, before);
+});
+
+test('UTF-8 byte limits apply to parsing and the actual formatted export', () => {
+  assert.throws(() => parseBackup(`{"kind":"FlowCabinBackup","items":[],"padding":"${'猫'.repeat(Math.ceil(MAX_BACKUP_BYTES / 3))}"}`), /8 MB/);
+  assert.throws(() => buildBackup({ storage: null, memory: { letters: [{ ...letter(), lines: ['猫'.repeat(Math.ceil(MAX_BACKUP_BYTES / 3))] }] } }), /8 MB/);
+});
+
+test('failed writes roll back every committed store and emit no refresh', () => {
+  const source = memoryStorage(); populateMemory(source);
+  const parsed = parseBackup(JSON.stringify(buildBackup({ storage: source })));
+  for (const preexisting of [false, true]) {
+    const destination = memoryStorage([[AI_KEY_KEY, 'LOCAL_KEY']]);
+    if (preexisting) {
+      appendSession({ ...JSON.parse(source.getItem(SESSION_LOG_KEY))[0], id: 'old' }, destination);
+      writeCare(normalizeCare(null, at), destination);
+    }
+    const before = [...destination.data], write = destination.setItem, target = new EventTarget();
+    let refreshes = 0; target.addEventListener('storage', () => refreshes++);
+    destination.setItem = (key, value) => { if (key === LETTERS_KEY) throw new Error('quota'); write(key, value); };
+    assert.throws(() => restoreBackupMemory(parsed, { storage: destination, target }), /原有内容保持不变/);
+    assert.deepEqual([...destination.data], before);
+    assert.equal(refreshes, 0);
+  }
+});
+
+test('unavailable or corrupt local storage fails visibly rather than claiming a complete backup', () => {
+  assert.throws(() => buildBackup({ storage: { getItem() { throw new Error('blocked'); } } }), /blocked/);
+  assert.throws(() => readBackupMemory(memoryStorage([[LETTERS_KEY, '{bad'] ])), /格式无效/);
+  assert.throws(() => restoreBackupMemory({ memory: { letters: [letter()] } }, { storage: null }), /无法保存/);
+});
+
+test('legacy album identities survive session backup without inventing catalog ids', () => {
+  for (const album of ['Night', { title: 'Night', artist: 'Artist' }, null]) {
+    const source = memoryStorage(), destination = memoryStorage();
+    source.setItem(SESSION_LOG_KEY, JSON.stringify([{ id: 'session', start: at, end: at + 60000, album, track: { title: 'Track', artist: 'Artist', album: 'Night' }, cover: '/cover.png' }]));
+    const parsed = parseBackup(JSON.stringify(buildBackup({ storage: source })));
+    restoreBackupMemory(parsed, { storage: destination });
+    assert.deepEqual(loadSessions({ storage: destination }), loadSessions({ storage: source }));
+  }
+});
+
+test('older sparse memories cannot erase newer letters, album snapshots or cat care', () => {
+  const destination = memoryStorage(), { record } = populateMemory(destination);
+  saveLetter(destination, { ...letter(), at: at + 100, lines: ['Newer letter'], read: true });
+  const incoming = { version: 1, letters: [letter()], focusSessions: [{ ...record, album: null, track: null, cover: '', taskText: '' }],
+    catMood: { mood: 35, updatedAt: at - 100, feeds: [], totalFeeds: 0 }, catCare: { pets: { day: '2026-1-1', count: 9 }, rewarded: [] } };
+  const currentCare = readCare(destination, at + 2);
+  restoreBackupMemory({ memory: incoming }, { storage: destination });
+  assert.equal(readLetters(destination)[0].lines[0], 'Newer letter');
+  assert.deepEqual(readCare(destination, at + 2), currentCare);
+  const restored = JSON.parse(destination.getItem(SESSION_LOG_KEY))[0];
+  assert.deepEqual(restored.album, record.album);
+  assert.deepEqual(restored.track, record.track);
+  assert.equal(restored.cover, record.cover);
+  assert.equal(restored.taskText, record.taskText);
+});
+
+test('merging histories does not truncate existing feeds, rewards, sessions or letters', () => {
+  const destination = memoryStorage(), source = memoryStorage();
+  const { record } = populateMemory(source);
+  const feeds = Array.from({ length: 400 }, (_, index) => ({ at: at - index - 1, fishLeft: 2 }));
+  destination.setItem(MOOD_KEY, JSON.stringify({ v: 1, mood: 60, updatedAt: at - 1, feeds, totalFeeds: 400 }));
+  destination.setItem(META_KEY, JSON.stringify({ rewarded: Array.from({ length: 200 }, (_, index) => `local-${index}`) }));
+  destination.setItem(LETTERS_KEY, JSON.stringify(Array.from({ length: 60 }, (_, index) => letter(`local-${index}`, at - index - 1))));
+  destination.setItem(SESSION_LOG_KEY, JSON.stringify(Array.from({ length: 5000 }, (_, index) => ({ ...record, id: `local-${index}`, start: at - (index + 1) * 60000, end: at - index * 60000 }))));
+  restoreBackupMemory(parseBackup(JSON.stringify(buildBackup({ storage: source }))), { storage: destination });
+  const memory = readBackupMemory(destination);
+  assert.equal(memory.catMood.feeds.length, 401);
+  assert.equal(memory.catCare.rewarded.length, 201);
+  assert.equal(memory.letters.length, 61);
+  assert.equal(memory.focusSessions.length, 5001);
+});
+
+test('real playback logs round-trip verified listening time and refresh without a focus session', () => {
+  const source = memoryStorage(), destination = memoryStorage(), target = new EventTarget(), events = [];
+  let time = at;
+  const log = createPlaybackLog({ storage: source, now: () => time, wallNow: () => time, makeId: () => 'backup-test' });
+  const track = { id: 'album', index: 0, title: 'Song', artist: 'Artist', album: 'Night', url: 'https://example.test/?token=SECRET', apiKey: 'SECRET' };
+  log.remoteSample({ playing: true, position: 0, track });
+  time += 1000; log.remoteSample({ playing: true, position: 1, track });
+  time += 1000; log.remoteSample({ playing: true, position: 2, track });
+  time += 1000; log.remoteSample({ playing: false, position: 2, track });
+  const recorded = readPlaybackSessions(source);
+  assert.equal(recorded[0].end - recorded[0].start, 2000);
+  assert.equal(recorded[0].durationMs, 1000);
+  const backup = buildBackup({ storage: source });
+  assert.equal(JSON.stringify(backup).includes('SECRET'), false);
+  assert.deepEqual(backup.memory.playbackSessions, recorded);
+  target.addEventListener('storage', (event) => events.push(event.key));
+  target.addEventListener('cabin:focus-session', () => assert.fail('listening is not focus'));
+  restoreBackupMemory(parseBackup(JSON.stringify(backup)), { storage: destination, target });
+  assert.deepEqual(readPlaybackSessions(destination), recorded);
+  assert.deepEqual(events, [PLAYBACK_LOG_KEY]);
+});
+
+test('playback restore upserts checkpoints without adding durations or replacing a final flush', () => {
+  const storage = memoryStorage();
+  const final = { id: 'p-song', start: at, end: at + 30000, durationMs: 20000, reason: 'pause', track: { index: 0, title: 'Song', artist: 'Artist' }, album: { id: 'album', title: 'Night', artist: 'Artist' } };
+  storage.setItem(PLAYBACK_LOG_KEY, JSON.stringify([final]));
+  const checkpoint = { ...final, end: at + 15000, durationMs: 10000, reason: 'checkpoint' };
+  const parsed = parseBackup(JSON.stringify(buildBackup({ storage: null, memory: { playbackSessions: [checkpoint] } })));
+  restoreBackupMemory(parsed, { storage });
+  assert.deepEqual(readPlaybackSessions(storage), [final]);
+  const updated = { ...final, end: at + 40000, durationMs: 25000 };
+  restoreBackupMemory({ memory: { playbackSessions: [updated] } }, { storage });
+  restoreBackupMemory({ memory: { playbackSessions: [updated] } }, { storage });
+  assert.deepEqual(readPlaybackSessions(storage), [updated]);
+  restoreBackupMemory(parseBackup('{"kind":"FlowCabinBackup","version":2,"items":[]}'), { storage });
+  assert.deepEqual(readPlaybackSessions(storage), [updated]);
 });

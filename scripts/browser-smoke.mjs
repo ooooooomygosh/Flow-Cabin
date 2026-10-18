@@ -1,6 +1,7 @@
 import { verifyWeatherMotion, verifyWeatherSwitchSteady } from './weather-motion-checks.mjs';
 import { launchChromium } from './launch-browser.mjs';
 import { verifyFullscreenStudy } from './fullscreen-study-checks.mjs';
+import { verifyBenchmarkCabin } from './benchmark-cabin-checks.mjs';
 import { verifyAppleHandoff } from './apple-handoff-checks.mjs';
 import { hasViteLocalOrigin } from './vite-readiness.mjs';
 import { openRoomSettings, openMusicSettings, chooseSource, openSettingsSection, closeSettings, settingsDialog, accountsRegion, openAddToShelf, addDialog, openAlbumWall } from './settings-actions.mjs';
@@ -93,6 +94,8 @@ try {
   await verifyOnboarding({ browser, origin, routeHandler: welcomeRoute, evidence: output, output, check });
   await verifyQQRegression({ browser, origin, check });
   await verifyAppleHandoff({ browser, origin, output, check });
+  try { report.benchmarkCabin = await verifyBenchmarkCabin(browser, origin, { output, check }); }
+  catch (error) { report.benchmarkCabin = error.report; throw error; }
   await verifyFullscreenStudy({ browser, origin, output, check });
   await verifyPlaylistPagination({ browser, origin, check });
   context.on('page', watched => { watched.on('pageerror', error => report.pageErrors.push(error.message)); watched.on('console', message => { if (message.type() === 'error') report.consoleErrors.push(message.text()); }); watched.on('requestfailed', request => { if (request.failure()?.errorText !== 'net::ERR_ABORTED') report.failedRequests.push({ url: request.url(), error: request.failure()?.errorText }); }); });
@@ -231,7 +234,13 @@ try {
   // 学习: a deck, pasted cards, a keyboard review (Space flips, 1–4 rate), a countdown.
   await page.locator('.focus-badge').click(); await page.getByRole('tab', { name: '学习', exact: true }).click();
   await page.getByLabel('新卡组名称').fill('QA 单词'); await page.getByRole('button', { name: '新建', exact: true }).click();
-  await page.getByRole('button', { name: '编辑', exact: true }).click(); await page.getByLabel('新卡片').fill('ephemeral - 短暂的\n光合作用：植物利用光能'); await page.getByRole('button', { name: '添加 2 张' }).click(); await page.getByText('添加了 2 张卡片。').waitFor();
+  const studyDeck = page.locator('.study-decks li', { hasText: 'QA 单词' });
+  await studyDeck.getByText('0 张 · 空词书 · 添加或导入词条后开始', { exact: true }).waitFor();
+  assert.doesNotMatch(await studyDeck.innerText(), /已完成/);
+  await studyDeck.getByRole('button', { name: '添加词条', exact: true }).click(); await page.getByLabel('新卡片').fill('ephemeral - 短暂的\n光合作用：植物利用光能'); await page.getByRole('button', { name: '添加 2 张' }).click(); await page.getByText('添加了 2 张卡片。').waitFor();
+  await page.getByRole('button', { name: '卡组', exact: true }).click();
+  await studyDeck.getByText('2 张 · 未开始', { exact: true }).waitFor();
+  await studyDeck.getByRole('button', { name: '编辑', exact: true }).click();
   await page.getByLabel('查找这组全部卡片').fill('ephemeral'); assert.equal(await page.locator('.study-card-list li').count(), 1);
   await page.getByRole('button', { name: '编辑卡片 ephemeral', exact: true }).click();
   await page.getByLabel('编辑卡片背面').fill('短暂的；转瞬即逝');
@@ -256,7 +265,7 @@ try {
   await page.locator('.study-card-front', { hasText: 'ephemeral' }).waitFor(); await page.keyboard.press(' '); await page.locator('.study-card-back', { hasText: '短暂的' }).waitFor();
   assert.equal(await page.locator('.study-ratings button').count(), 4); await page.keyboard.press('4'); await page.locator('.study-card-front', { hasText: '光合作用' }).waitFor();
   assert.equal(await page.evaluate(() => document.querySelector('audio[data-deck="active"]')?.paused ?? true), true, 'Space in a review does not start music');
-  await page.keyboard.press(' '); await page.keyboard.press('3'); await page.locator('.study-done').waitFor(); await page.getByRole('button', { name: '回到卡组' }).click();
+  await page.keyboard.press(' '); await page.keyboard.press('3'); await page.locator('.study-done').waitFor(); await page.getByRole('button', { name: '回到词书架', exact: true }).click();
   await page.getByLabel('倒计时名称').fill('期末'); await page.getByLabel('倒计时日期').fill('2026-12-20'); await page.getByRole('button', { name: '添加倒计时' }).click(); await page.locator('.study-countdowns li', { hasText: '期末' }).getByText('73 天').waitFor();
   check('study-flashcards-fsrs-keyboard-review-and-countdown'); await page.locator('.focus-dock-close').click();
   await page.getByRole('button', { name: '设置', exact: true }).click(); await page.getByRole('tab', { name: '数据与备份', exact: true }).click(); await page.getByRole('button', { name: '收藏与备份', exact: true }).click(); const downloadPromise = page.waitForEvent('download'); await page.getByRole('button', { name: '导出备份', exact: true }).click(); const download = await downloadPromise; await download.saveAs(path.join(output, 'fixture-backup.json')); const backup = JSON.parse(await fs.readFile(path.join(output, 'fixture-backup.json'))); assert.equal(backup.kind, 'FlowCabinBackup'); assert.equal(backup.items.length, 18); assert.equal(backup.focus.tasks.length, 1); assert.equal(backup.focus.notes, 'QA 随手记备份内容'); assert.equal(backup.study.cards.length, 2); assert.equal(backup.study.countdowns[0].title, '期末'); check('backup-exports-collection-and-focus');

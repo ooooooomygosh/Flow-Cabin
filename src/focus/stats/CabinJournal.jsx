@@ -3,6 +3,7 @@ import { useFocus } from '../useFocus';
 import useReducedMotion from '../../useReducedMotion';
 import useFocusSessions from './useFocusSessions.js';
 import { recentSummary, dailySeries, yearHeatmap, byTask, timeOfDay, weeklyReport, reportMarkdown, formatMinutes, dayKey } from './stats-model.mjs';
+import { STREAK_HINT } from '../focus-model.mjs';
 import { drawWeekCard, canDrawCover, CARD_W, CARD_H } from './week-card.mjs';
 import { JOURNAL_EVENT, JOURNAL_TABS, journalTab, isJournalKey } from './journal-events.mjs';
 import './focus-stats.css';
@@ -164,7 +165,7 @@ function JournalBook({ state, now, view, setView, close }) {
         <section className="fs-today" aria-label="今天">
           <div className="fs-today-num"><small>今天</small><strong>{formatMinutes(recent.todayMinutes)}</strong>{goal ? <small>目标 {goal} 分钟{recent.todayMinutes >= goal ? ' · 达成 ✓' : ''}</small> : null}</div>
           <div className="fs-today-num"><small>番茄</small><strong>{recent.todayPomodoros} 个</strong></div>
-          <div className="fs-today-num fs-today-streak">{recent.streak >= 2 && <img className="fs-sticker" src={sprite('sticker-streak')} alt="" width={32} height={32}/>}<small>连续</small><strong>{recent.streak} 天</strong>{recent.forgiven ? <small>有 {recent.forgiven} 天被原谅了</small> : null}</div>
+          <div className="fs-today-num fs-today-streak" title={STREAK_HINT}>{recent.streak >= 2 && <img className="fs-sticker" src={sprite('sticker-streak')} alt="" width={32} height={32}/>}<small>当前连续</small><strong>{recent.streak} 天</strong>{recent.forgiven ? <small title="每个周一开始的自然周可宽限一天；宽限日不计入坚持天数。">坚持 {recent.graceStreak} 天（含宽限；休息 {recent.forgiven} 天）</small> : null}</div>
         </section>
         <div className="fs-section-head"><h3 className="fs-title">每天</h3><div className="fs-seg" role="group" aria-label="时间范围">{[7, 30].map((n) => <button key={n} type="button" aria-pressed={range === n} onClick={() => setRange(n)}>近 {n} 天</button>)}</div></div>
         <Bars days={daily} label={`最近 ${range} 天 · 分钟`} set="records"/>
@@ -227,7 +228,7 @@ function JournalBook({ state, now, view, setView, close }) {
       <div className="fs-board">
         <figure className="fs-polaroid" style={{ '--tilt': '-3deg' }}><Tape className="is-polaroid"/>
           {report.album ? (showCover ? <img className="fs-card-cover" src={report.album.cover} alt="" width={96} height={96} onError={() => setCoverFailed(report.album.cover)}/> : <span className="fs-cover-ph" aria-hidden="true"/>) : <span className="fs-cover-ph is-empty" aria-hidden="true"/>}
-          <figcaption className="fs-hand">{report.album ? `《${report.album.title}》` : '这周还没放唱片'}{report.album?.artist ? <small>{report.album.artist}</small> : null}</figcaption></figure>
+          <figcaption className="fs-hand"><small>专注时放在唱机上的唱片</small>{report.album ? `《${report.album.title}》` : '这周没有唱片记录'}{report.album?.artist ? <small>{report.album.artist}</small> : null}</figcaption></figure>
         <ul className="fs-notes is-mini" aria-label="这周做完的事">{weekDone.length ? weekDone.slice(0, 3).map((t, i) => <li key={t.id} className="fs-note" style={{ '--tilt': `${[2, -1.5, 1][i]}deg` }}><span className="fs-note-check" aria-hidden="true">✓</span><span className="fs-note-text">{t.text}</span></li>)
           : <li className="fs-note is-blank" style={{ '--tilt': '1.5deg' }}><span className="fs-note-text">这周还没勾掉待办，也没关系。</span></li>}
           {weekDone.length > 3 && <li className="fs-note-more">还有 {weekDone.length - 3} 件</li>}</ul>

@@ -9,7 +9,7 @@ function item(value) {
 }
 const PETS = ['cat', 'chick', 'bunny', 'bear', 'fox'], LOOKS = ['warm', 'pixel', 'forest', 'seaside', 'starlight', 'night-study'];
 const petId = (value) => PETS.includes(value) ? value : 'cat';
-const PHASES = ['idle', 'focus', 'shortBreak', 'longBreak'], WEATHERS = ['snow', 'clear', 'rain', 'starry'], ACCESSORIES = ['', 'headphones', 'scarf', 'beanie'];
+const PHASES = ['idle', 'focus', 'shortBreak', 'longBreak'], WEATHERS = ['snow', 'clear', 'rain', 'starry'], ACCESSORIES = ['', 'headphones', 'scarf', 'beanie', 'bow', 'sprout'];
 // Mirrors of renderer catalogs (main never loads ../src); test/catalog-contract.test.cjs keeps them equal.
 const DECK_PROVIDERS = ['visual', 'auto', 'qq', 'netease', 'local', 'appleMusic', 'ma', 'system'];
 const FACES = ['flip', 'ring', 'record', 'minimal', 'window', 'growth'], SHOWS = ['auto', 'clock', 'timer'];

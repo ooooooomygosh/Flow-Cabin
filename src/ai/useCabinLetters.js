@@ -1,8 +1,9 @@
 // 小屋来信 state shared by the journal, the 信箱 entry and 设置 › AI（Beta）.
 import { useEffect, useState } from 'react';
-import { readAi, readLetters, saveLetter, markRead, unreadCount, needsLetter, letterPeriod, letterSummary, letterMessages, cleanLetter, aiReady, AI_EVENT, LETTER_EVENT, TRY_KEY } from './ai-model.mjs';
-import { chat, keyState, AI_KEY_EVENT } from './ai-transport.mjs';
-import { readCatMood } from '../focus/stats/cat-mood-source.mjs';
+import { readAi, readLetters, markRead, unreadCount, aiReady, AI_EVENT, LETTER_EVENT } from './ai-model.mjs';
+import { keyState, AI_KEY_EVENT } from './ai-transport.mjs';
+import { deliverLetter } from './letter-delivery.mjs';
+export { deliverLetter } from './letter-delivery.mjs';
 
 const store = () => globalThis.localStorage;
 const emit = () => globalThis.dispatchEvent?.(new CustomEvent(LETTER_EVENT));
@@ -26,28 +27,6 @@ export function useLetters() {
   return { list, unread: unreadCount(list), markRead: (id) => { markRead(store(), id); emit(); } };
 }
 
-let inflight = null;
-// Writes this period's letter once. Returns the saved letter, or null (AI off / failed → template).
-export async function deliverLetter({ sessions, now = Date.now(), force = false, chatImpl = chat } = {}) {
-  const settings = readAi(store()), key = keyState();
-  if (!aiReady(settings, key.stored)) return null;
-  const period = letterPeriod(now, settings.cadence);
-  let lastTry = null; try { lastTry = JSON.parse(store().getItem(TRY_KEY) || 'null'); } catch { /* ignore */ }
-  if (!force && !needsLetter(readLetters(store()), period, lastTry, now)) return null;
-  if (inflight) return inflight;
-  inflight = (async () => {
-    try { store().setItem(TRY_KEY, JSON.stringify({ id: period.id, at: now })); } catch { /* ignore */ }
-    const mood = (() => { try { return readCatMood(store(), period.from, period.to); } catch { return null; } })();
-    const summary = letterSummary(sessions, period, mood);
-    const result = await chatImpl(settings, letterMessages(summary, settings.tone));
-    const lines = result.ok ? cleanLetter(result.text) : [];
-    if (!lines.length) return null;
-    const letter = { id: period.id, cadence: settings.cadence, tone: settings.tone, period: period.label, lines, source: 'ai', at: now, read: false };
-    saveLetter(store(), letter); emit();
-    return letter;
-  })().finally(() => { inflight = null; });
-  return inflight;
-}
 // Mounted with the journal (always present while focus is on): checks on load, on settings
 // changes and every 30 minutes.
 export function useLetterDelivery(sessions) {

@@ -1,6 +1,10 @@
 // Pure focus statistics + weekly report. Every function takes `now`.
 // Sessions use the shape from session-source.mjs.
-const MINUTE = 60000, DAY = 86400000;
+import { dayKey, startOfDay, addDays, startOfWeek } from '../../lib/local-calendar.mjs';
+import { currentStreak, minutesByDay } from '../focus-model.mjs';
+export { minutesByDay } from '../focus-model.mjs';
+export { dayKey, startOfDay, startOfWeek, isMonday } from '../../lib/local-calendar.mjs';
+const MINUTE = 60000;
 export const FREE_FOCUS = '自由专注';
 export const TIME_SLOTS = Object.freeze([
   { id: 'night', label: '深夜', from: 0, to: 5 }, { id: 'dawn', label: '清晨', from: 5, to: 9 },
@@ -10,28 +14,16 @@ export const TIME_SLOTS = Object.freeze([
 ]);
 const WEEKDAYS = '日一二三四五六';
 
-export function dayKey(time) { const d = new Date(time); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
-export function startOfDay(time) { const d = new Date(time); d.setHours(0, 0, 0, 0); return d.getTime(); }
-const addDays = (time, n) => { const d = new Date(time); d.setDate(d.getDate() + n); return d.getTime(); };
-// Weeks start on Monday (中文习惯).
-export function startOfWeek(time) { const day = startOfDay(time), wd = (new Date(day).getDay() + 6) % 7; return addDays(day, -wd); }
-export const isMonday = (now) => new Date(now).getDay() === 1;
-
 // Calls fn(dayStart, ms) for each local-day slice, and fn per hour when byHour.
 function slices(session, fn, byHour = false) {
   let cursor = session.start;
   // Paused time: scale wall-clock span down to durationMs.
   const scale = session.durationMs / (session.end - session.start || 1);
   while (cursor < session.end) {
-    const d = new Date(cursor); if (byHour) d.setMinutes(60, 0, 0); else { d.setHours(24, 0, 0, 0); }
-    const until = Math.min(d.getTime(), session.end);
+    const d = new Date(cursor); if (byHour) d.setMinutes(60, 0, 0);
+    const until = Math.min(byHour ? d.getTime() : addDays(startOfDay(cursor), 1), session.end);
     fn(cursor, (until - cursor) * scale); cursor = until;
   }
-}
-export function minutesByDay(sessions) {
-  const days = new Map();
-  for (const s of sessions) slices(s, (t, ms) => { const k = dayKey(t); days.set(k, (days.get(k) || 0) + ms / MINUTE); });
-  return days;
 }
 const inRange = (sessions, from, to) => sessions.filter((s) => s.end > from && s.start < to).map((s) => {
   const start = Math.max(s.start, from), end = Math.min(s.end, to);
@@ -61,7 +53,7 @@ export function recentSummary(sessions, now, limit = 6) {
   return {
     todayMinutes: Math.round(days.get(today) || 0),
     todayPomodoros: todaySessions.filter((s) => s.completed).length,
-    streak: streak.days, forgiven: streak.forgiven,
+    streak: currentStreak(days, now), graceStreak: streak.days, forgiven: streak.forgiven,
     totalMinutes: Math.round(sumMinutes(sessions)),
     recent: sessions.slice().sort((a, b) => b.end - a.end).slice(0, limit)
   };
@@ -138,7 +130,7 @@ export function weeklyReport(sessions, tasks, now, weekOffset = -1) {
   const album = [...albums.values()].sort((a, b) => b.minutes - a.minutes)[0] || null;
   const topTasks = byTask(week, tasks).slice(0, 3), completed = tasks.filter((t) => t.done && t.doneAt >= from && t.doneAt < to);
   const report = {
-    from, to, label: `${md(from)} – ${md(to - DAY)}`, totalMinutes, previousMinutes, deltaMinutes: totalMinutes - previousMinutes,
+    from, to, label: `${md(from)} – ${md(addDays(to, -1))}`, totalMinutes, previousMinutes, deltaMinutes: totalMinutes - previousMinutes,
     pomodoros: week.filter((s) => s.completed).length, daily, bestDay: bestDay.minutes ? bestDay : null, bestSlot: timeOfDay(week).best,
     topTasks, completed: completed.map((t) => t.text), longestStreak: longestRun(days, from, 7),
     album: album && { title: album.title, artist: album.artist, cover: album.cover || '', minutes: Math.round(album.minutes) }
@@ -153,8 +145,8 @@ export function reportMarkdown(r) {
     `- **本周专注**：${formatMinutes(r.totalMinutes)}（${delta}），完成 ${r.pomodoros} 个番茄`,
     `- **状态最好的一天**：${r.bestDay ? `${r.bestDay.label}（${formatMinutes(r.bestDay.minutes)}）` : '—'}`,
     `- **最专注的时段**：${r.bestSlot ? `${r.bestSlot.label}（${r.bestSlot.from}:00–${r.bestSlot.to}:00）` : '—'}`,
-    `- **最长连续专注**：${r.longestStreak} 天`,
-    `- **最常听的专辑**：${r.album ? `《${r.album.title}》${r.album.artist ? ` · ${r.album.artist}` : ''}` : '—'}`, '',
+    `- **本周最长连续专注**：${r.longestStreak} 天（仅此周，每个本地日期至少 1 分钟，不含宽限）`,
+    `- **专注时放在唱机上的唱片**：${r.album ? `《${r.album.title}》${r.album.artist ? ` · ${r.album.artist}` : ''}` : '—'}`, '',
     '### 时间花在哪里', ...(r.topTasks.length ? r.topTasks.map((t, i) => `${i + 1}. ${t.name} · ${formatMinutes(t.minutes)} · ${t.pomodoros} 个番茄`) : ['（这周还没有专注记录）']), '',
     '### 完成的待办', ...(r.completed.length ? r.completed.map((t) => `- [x] ${t}`) : ['（这周没有勾掉待办，也没关系）'])];
   return lines.join('\n');

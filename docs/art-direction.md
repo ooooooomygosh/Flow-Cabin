@@ -17,6 +17,19 @@ nothing glossy or rounded. Owner of this document: art direction (beauty).
 
 ## Live layers on top of the art
 
+The benchmark Pixel Cabin now uses `public/room-scenes/amber-retreat.png`,
+generated for this project with the existing shelf/window geometry as its
+constraint. `pixel-cabin.png` remains its alpha mask, preserving the live sky.
+The reading lamp, window and hearth have matching interactive regions in
+`src/room/CabinDetails.jsx`; short windows expose the lamp switch below the
+title bar because the compact player covers the painted lamp. The transparent
+toolbar area passes pointer events through to the room.
+
+Room and desktop cats share `PixelCat` and `cat-sprites.mjs`. Every pose keeps
+the selected coat and accessory; keyboard/pointer activity, feeding and music
+resolve to one pose instead of stacking unrelated images. The sage bow is a
+starter accessory; the sprout hat joins the existing earned wardrobe.
+
 - **Turntable** — `src/scene/SceneDeck.jsx` + `deck-sprite.mjs`: a 56×22-cell sprite (1 cell = 4 art px) sitting on the shelf top, per-scene position in `scene-deck.css`. Record seats in 4 frames, sheen orbits in 8, tonearm swings in 4, LED + notes while playing, halo follows `cabin:playback` energy. The painted turntable was removed from the pixel/amber art so there is only one deck. Wood is graded per scene (`DECK_PALETTES`: walnut for Pixel/Amber, own-shelf tones for Forest/Seaside/Starry Night) through `--deck-N` CSS variables. The room cat stands on each scene's painted `floor` line (`scene-catalog.mjs`, art px) at 32 cells × 4 art px × k, snapped to a whole multiple of 32 CSS px; records without a cover get a generated 32×32 cabin-palette sleeve.
 - **Console** — `src/scene/room-console.css`: compact framed panel bottom-left; audio sliders stay pinned when the 待播 queue is open.
 - **Sky** — `src/CabinAtmosphereSky.jsx` for every scene's `windows` (`scene-catalog.mjs`, art px): a minute clock (`sky-clock.mjs`) takes the sun's altitude from vendored SunCalc for the chosen city (`sky-cities.mjs`, default from the time zone; 固定作息 = a fixed 6:30–18:30 curve) and picks colours from separate morning / evening keyframe sets in sun-altitude space (`sky-model.mjs`). They land as `--sky-*` variables registered with `@property`, eased by CSS in `steps(6)`; the bucket strings (`morning/day/dusk/night`) stay for older selectors. Behind the art: a hard-banded gradient plus a pixel canvas (stars, moon with its real phase, sun, clouds, distant fog, contained lightning). Over painted land / sea in the glass: a once-a-minute soft-light tint. Room: `.cabin-daylight` (glow) and `.cabin-nightshade` (multiply, with a hole around the scene's lamp).

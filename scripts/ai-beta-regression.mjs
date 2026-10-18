@@ -6,6 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
 import { hasViteLocalOrigin } from './vite-readiness.mjs';
+import { chatUrl } from '../src/ai/ai-model.mjs';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const output = process.env.AI_OUTPUT || path.join(root, 'desktop/test-results/ai-beta');
 const port = Number(process.env.AI_PORT || 4196), origin = `http://127.0.0.1:${port}`;
@@ -26,7 +27,7 @@ try {
   const run = async (name, test, { desktop = false, ai = null, mode = () => ({ status: 200 }) } = {}) => {
     if (process.env.AI_FILTER && !name.includes(process.env.AI_FILTER)) return;
     const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'zh-CN', reducedMotion: 'reduce' });
-    await context.addInitScript(({ FOCUS, desktop, ai, KEY, start }) => {
+    await context.addInitScript(({ FOCUS, desktop, ai, KEY, endpoint, start }) => {
       if (location.origin === 'null' || sessionStorage.getItem('seeded')) return;
       sessionStorage.setItem('seeded', '1');
       localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 1, status: 'done', step: 'done' }));
@@ -35,15 +36,15 @@ try {
       localStorage.setItem('flow-cabin-focus-sessions-v1', JSON.stringify(sessions));
       localStorage.setItem(FOCUS, JSON.stringify({ settings: { focusMin: 25, shortMin: 5, notify: false, chime: false } }));
       localStorage.setItem('flow-cabin-cat-mood-v1', JSON.stringify({ v: 1, mood: 80, tier: 'happy', updatedAt: Date.now(), feeds: [{ at: start + 3600000, fishLeft: 2 }], totalFeeds: 1, unlockedActions: [] }));
-      if (ai) { localStorage.setItem('flow-cabin-ai-v1', JSON.stringify({ v: 1, ...ai })); if (!desktop) localStorage.setItem('flow-cabin-ai-key-v1', KEY); }
+      if (ai) { localStorage.setItem('flow-cabin-ai-v1', JSON.stringify({ v: 1, ...ai })); if (!desktop) localStorage.setItem('flow-cabin-ai-key-v1', JSON.stringify({ v: 2, key: KEY, endpoint, revision: 'fixture:1' })); }
       window.__nativeCommands = [];
       if (desktop) {
-        window.cabinAiKey = { stored: true, secure: true };
+        window.cabinAiKey = { stored: true, secure: true, endpoint, revision: 1 };
         window.open = (url) => { window.__nativeCommands.push(String(url)); return null; };
         const init = () => { document.documentElement.dataset.desktopClient = 'true'; };
         if (document.documentElement) init(); else new MutationObserver((_, o) => { if (document.documentElement) { init(); o.disconnect(); } }).observe(document, { childList: true });
       }
-    }, { FOCUS, desktop, ai, KEY, start: lastWeek() });
+    }, { FOCUS, desktop, ai, KEY, endpoint: ai ? chatUrl(ai.baseUrl) : '', start: lastWeek() });
     await context.route('**/*', async (route) => {
       const req = route.request(), u = new URL(req.url()), p = u.pathname;
       if (u.origin === API) {
@@ -87,12 +88,18 @@ try {
     await region.getByLabel('API Key').fill(KEY);
     await region.getByLabel('模型').fill('deepseek-chat');
     await region.getByRole('radio', { name: '俏皮' }).click();
+    assert.equal(await page.evaluate(() => localStorage.getItem('flow-cabin-ai-key-v1')), null, 'blur does not save a key');
+    await region.getByRole('button', { name: '保存 Key', exact: true }).click();
+    await page.waitForFunction(() => document.querySelector('.ai-settings input[type="password"]')?.value === '');
     await region.getByRole('button', { name: '测试连接' }).click();
     await region.getByText('连接成功').waitFor();
     const req = report.aiRequests.filter((r) => r.name === 'settings-off-by-default-and-test-connection');
     assert.equal(req.length, 1); assert.equal(req[0].path, '/v1/chat/completions'); assert.ok(req[0].auth); assert.equal(req[0].body.model, 'deepseek-chat');
     const stored = await page.evaluate(() => ({ s: localStorage.getItem('flow-cabin-ai-v1'), k: localStorage.getItem('flow-cabin-ai-key-v1') }));
-    assert.ok(!stored.s.includes(KEY)); assert.equal(stored.k, KEY);
+    assert.ok(!stored.s.includes(KEY));
+    const credential = JSON.parse(stored.k);
+    assert.equal(credential.v, 2); assert.equal(credential.key, KEY);
+    assert.equal(credential.endpoint, `${API}/v1/chat/completions`); assert.ok(credential.revision);
     assert.equal(JSON.parse(stored.s).tone, 'playful');
     assert.equal(await region.getByLabel('API Key').inputValue(), '');
     await shot(page, 'ai-settings-test-ok');
@@ -155,7 +162,18 @@ try {
     await openAi(page);
     const region = page.getByRole('region', { name: 'AI（Beta）' });
     await region.getByLabel('API Key').fill('sk-new-desktop-key-999999'); await region.getByLabel('模型').click();
+    assert.equal(await page.evaluate(() => window.__nativeCommands.some((u) => u.includes('/ai-key'))), false, 'blur does not send a key to the shell');
+    await region.getByRole('button', { name: '保存 Key', exact: true }).click();
     await page.waitForFunction(() => window.__nativeCommands.some((u) => u.includes('/ai-key')));
+    const save = new URL(await page.evaluate(() => window.__nativeCommands.find((u) => u.includes('/ai-key'))));
+    assert.equal(save.searchParams.get('key'), 'sk-new-desktop-key-999999');
+    assert.equal(save.searchParams.get('endpoint'), `${API}/chat/completions`);
+    assert.equal(await region.getByLabel('API Key').inputValue(), 'sk-new-desktop-key-999999', 'keep the draft until the shell confirms saving');
+    await page.evaluate((endpoint) => {
+      window.cabinAiKey = { stored: true, secure: true, endpoint, revision: window.cabinAiKey.revision + 1 };
+      window.dispatchEvent(new CustomEvent('cabin:ai-key', { detail: window.cabinAiKey }));
+    }, save.searchParams.get('endpoint'));
+    await page.waitForFunction(() => document.querySelector('.ai-settings input[type="password"]')?.value === '');
     assert.equal(await page.evaluate(() => localStorage.getItem('flow-cabin-ai-key-v1')), null);
     await region.getByText('safeStorage').waitFor();
     await shot(page, 'ai-settings-desktop');

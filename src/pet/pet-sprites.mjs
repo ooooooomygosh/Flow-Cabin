@@ -70,6 +70,13 @@ function accessory(g, kind, x, y, pet) {
     oval(g, x, y - 5, pet === 'chick' ? 6 : 7, 4, 10);
     rect(g, x - 7, y - 4, 15, 2, 12); oval(g, x, y - 10, 1, 1, 7);
   }
+  if (kind === 'bow') {
+    rect(g, x - 5, y + 5, 11, 2, 10);
+    oval(g, x - 3, y + 6, 2, 2, 10); oval(g, x + 3, y + 6, 2, 2, 10); rect(g, x, y + 5, 2, 2, 12);
+  }
+  if (kind === 'sprout') {
+    rect(g, x, y - 10, 1, 5, 10); oval(g, x - 2, y - 10, 2, 1, 10); oval(g, x + 2, y - 12, 2, 1, 10); put(g, x + 2, y - 12, 12);
+  }
 }
 function effects(g, pose, i) {
   if (pose === 'celebrate') for (const [x, y] of [[3 + i, 9 - i], [27 - i, 5 + i * 2]]) { rect(g, x - 1, y, 3, 1, 13); rect(g, x, y - 1, 1, 3, 13); }

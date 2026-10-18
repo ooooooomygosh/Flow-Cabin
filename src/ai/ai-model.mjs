@@ -2,7 +2,7 @@
 // (base URL + key + model). Pure helpers only (no DOM, no network) — tested in ai.test.mjs.
 // The key never goes into logs, letters or prompts; in the desktop app it lives in the
 // shell (Electron safeStorage), in the web build only in this browser's localStorage.
-import { formatMinutes, startOfDay, startOfWeek, dayKey } from '../focus/stats/stats-model.mjs';
+import { startOfDay, startOfWeek, dayKey, addDays } from '../lib/local-calendar.mjs';
 
 export const AI_SETTINGS_KEY = 'flow-cabin-ai-v1', AI_KEY_KEY = 'flow-cabin-ai-key-v1', LETTERS_KEY = 'flow-cabin-letters-v1';
 export const AI_EVENT = 'cabin:ai-settings', LETTER_EVENT = 'cabin:letter';
@@ -14,7 +14,6 @@ export const TONES = Object.freeze([
 export const CADENCES = Object.freeze([{ id: 'daily', label: '每天' }, { id: 'weekly', label: '每周' }]);
 export const DEFAULT_AI = Object.freeze({ v: 1, enabled: false, baseUrl: '', model: '', cadence: 'weekly', tone: 'warm' });
 export const TIMEOUT_MS = 30000, MAX_LETTERS = 60;
-const DAY = 86400000;
 
 const pick = (v, list, fallback) => list.some((x) => x.id === v) ? v : fallback;
 export function normalizeAi(raw) {
@@ -28,7 +27,8 @@ export function writeAi(storage, value) { const v = normalizeAi(value); storage?
 // "https://api.deepseek.com" / ".../v1" / ".../v1/chat/completions" → the chat/completions URL.
 export function chatUrl(baseUrl) {
   let url; try { url = new URL(String(baseUrl || '').trim()); } catch { return null; }
-  if (!/^https?:$/.test(url.protocol) || url.username || url.password) return null;
+  const loopback = ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
+  if (!(url.protocol === 'https:' || (url.protocol === 'http:' && loopback)) || url.username || url.password || url.search || url.hash) return null;
   let p = url.pathname.replace(/\/+$/, '');
   if (!/\/chat\/completions$/.test(p)) p += '/chat/completions';
   url.pathname = p; url.hash = '';
@@ -62,8 +62,8 @@ export const redact = (text, key = '') => String(text || '').split(key && key.le
 
 // Letter periods: one letter per day or per Monday-started week.
 export function letterPeriod(now, cadence) {
-  if (cadence === 'daily') { const from = startOfDay(now) - DAY; return { id: `d:${dayKey(from)}`, from, to: from + DAY, label: '昨天' }; }
-  const thisWeek = startOfWeek(now), from = startOfWeek(thisWeek - DAY);
+  if (cadence === 'daily') { const to = startOfDay(now), from = addDays(to, -1); return { id: `d:${dayKey(from)}`, from, to, label: '昨天' }; }
+  const thisWeek = startOfWeek(now), from = addDays(thisWeek, -7);
   return { id: `w:${dayKey(from)}`, from, to: thisWeek, label: '上周' };
 }
 
@@ -73,16 +73,17 @@ export function letterSummary(sessions, period, mood = null) {
   const minutes = Math.round(inP.reduce((n, s) => n + (s.durationMs || 0), 0) / 60000);
   const albums = new Map();
   for (const s of inP) if (s.album?.title) { const k = s.album.key || s.album.title; const a = albums.get(k) || { title: s.album.title, artist: s.album.artist || '', minutes: 0 }; a.minutes += (s.durationMs || 0) / 60000; albums.set(k, a); }
-  const topAlbums = [...albums.values()].sort((a, b) => b.minutes - a.minutes).slice(0, 3).map((a) => ({ title: a.title.slice(0, 60), artist: a.artist.slice(0, 40), minutes: Math.round(a.minutes) }));
+  // Album metadata is a snapshot from focus records, not playback telemetry.
+  const topAlbums = [...albums.values()].sort((a, b) => b.minutes - a.minutes).slice(0, 3).map((a) => ({ title: a.title.slice(0, 60), artist: a.artist.slice(0, 40) }));
   const days = new Set(inP.map((s) => dayKey(s.start))).size;
-  return { period: period.label, focusMinutes: minutes, sessions: inP.length, completedSessions: inP.filter((s) => s.completed).length, activeDays: days, topAlbums,
+  return { period: period.label, focusMinutes: minutes, sessions: inP.length, completedSessions: inP.filter((s) => s.completed).length, activeDays: days, topAlbums, albumContext: '专注时放在唱机上的唱片',
     cat: mood ? { tier: mood.tier || null, mood: mood.mood ?? null, feeds: mood.feeds || 0 } : null };
 }
 
 const TONE_PROMPT = { warm: '语气温柔、像老朋友。', playful: '用小猫的口吻，俏皮、轻松，可以有一点点拟声词。', calm: '语气平静克制，给一点安静的鼓励，不说教。' };
 export function letterMessages(summary, tone) {
   return [
-    { role: 'system', content: `你是「心流小屋」里的小猫，每${summary.period === '昨天' ? '天' : '周'}给主人写一封简短的中文信。${TONE_PROMPT[tone] || TONE_PROMPT.warm}只根据给你的统计写，不编造没有的数据；专注少或为零时不要责备。120–220 字，3–5 段短句，不要标题，不要署名，不要 Markdown。` },
+    { role: 'system', content: `你是「心流小屋」里的小猫，每${summary.period === '昨天' ? '天' : '周'}给主人写一封简短的中文信。${TONE_PROMPT[tone] || TONE_PROMPT.warm}只根据给你的统计写，不编造没有的数据；专注少或为零时不要责备。topAlbums 仅表示“专注时放在唱机上的唱片”，不是播放记录；不得声称听过、最常听、播放了多久，也不得把专注时长写成听歌时长。120–220 字，3–5 段短句，不要标题，不要署名，不要 Markdown。` },
     { role: 'user', content: `这是${summary.period}的小屋统计（JSON）：\n${JSON.stringify(summary)}` }
   ];
 }

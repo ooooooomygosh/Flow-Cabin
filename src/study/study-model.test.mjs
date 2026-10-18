@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeStudy, addDeck, parseCards, addCards, studyQueue, review, previews, intervalLabel, daysUntil, addCountdown, nextCountdown, heatmap, removeDeck, cardStage, RATINGS } from './study-model.mjs';
+import { normalizeStudy, addDeck, parseCards, addCards, studyQueue, deckStatus, review, previews, intervalLabel, daysUntil, addCountdown, nextCountdown, heatmap, removeDeck, cardStage, RATINGS } from './study-model.mjs';
 
 const T0 = new Date('2026-10-10T09:00:00').getTime();
 
@@ -26,6 +26,35 @@ test('study: decks, de-duplicated cards and a daily queue of due + new cards', (
   assert.equal(queue.due, 1, 'a learning card comes back the same day');
   assert.equal(normalizeStudy(JSON.parse(JSON.stringify(state))).cards[0].memory.reps, 1, 'memory survives JSON');
   assert.equal(removeDeck(state, deck).cards.length, 0);
+});
+
+test('study: deck status separates empty, not started, daily quota and completed', () => {
+  let state = addDeck(normalizeStudy(), '空卡组', T0);
+  const deck = state.decks[0].id;
+  let status = deckStatus(state, deck, T0);
+  assert.equal(status.kind, 'empty'); assert.equal(status.label, '空词书'); assert.equal(status.action, 'edit');
+  assert.doesNotMatch(`${status.label} ${status.detail}`, /已完成/);
+
+  state = addCards(state, deck, parseCards('one - 一\ntwo - 二'), T0).state;
+  status = deckStatus(state, deck, T0);
+  assert.equal(status.kind, 'new'); assert.equal(status.label, '未开始'); assert.equal(status.fresh, 2); assert.equal(status.action, 'review');
+
+  state = { ...state, newPerDay: 1 };
+  state = review(state, studyQueue(state, deck, T0).cards[0].id, RATINGS[2].rating, T0);
+  status = deckStatus(state, deck, T0);
+  assert.equal(status.kind, 'paused'); assert.equal(status.label, '今日新词已学完');
+  assert.equal(status.learned, 1); assert.equal(status.unlearned, 1); assert.equal(status.fresh, 0);
+  assert.notEqual(status.label, '已完成');
+
+  status = deckStatus(state, deck, T0 + 60 * 60000);
+  assert.equal(status.kind, 'active'); assert.equal(status.due, 1); assert.equal(status.fresh, 0);
+
+  let finished = addDeck(normalizeStudy(), '完成', T0);
+  const finishedDeck = finished.decks[0].id;
+  finished = addCards(finished, finishedDeck, parseCards('word - 词'), T0).state;
+  finished = review(finished, finished.cards[0].id, RATINGS[2].rating, T0);
+  status = deckStatus(finished, finishedDeck, T0);
+  assert.equal(status.kind, 'done'); assert.equal(status.label, '已完成'); assert(status.upcoming > T0);
 });
 
 test('study: rating previews read like a scheduler, Easy waits longest', () => {
