@@ -41,10 +41,18 @@ export function createBeatTracker({ step = STEP_MS, history = HISTORY_MS } = {})
     // lags. Require the unweighted peak to clear a sample-size-aware noise floor
     // as well; the tempo prior ranks candidates, but is not rhythmic evidence.
     const noiseFloor = 4 / Math.sqrt(filled - bestLag);
+    // Sparse reads can move the correlation peak by a 20 ms bin. Across a
+    // four-second phase check that error accumulates, rejecting real kicks.
+    // Once acquired, refine the candidate with the existing onset grid before
+    // testing it. Acquisition, correlation and periodicity gates stay required.
+    const candidate = exactLag * step;
+    const fitted = bpm && bestLag ? fitGrid(period()) : null;
+    const candidateLength = fitted && Math.abs(fitted.length - candidate) / candidate < .05
+      ? fitted.length : candidate;
     confident = bestLag > 0 && variance > 1e-6 && best / variance > .12
-      && correlation(bestLag) / variance > noiseFloor && periodic(time, exactLag * step);
+      && correlation(bestLag) / variance > noiseFloor && periodic(time, candidateLength);
     if (!confident || !bestLag) return;
-    const found = 60000 / (exactLag * step);
+    const found = 60000 / candidateLength;
     // A new tempo is believed only when it shows up twice in a row.
     if (!bpm || Math.abs(found - bpm) / bpm < .04) { bpm = bpm ? bpm + (found - bpm) * .3 : found; pendingCount = 0; }
     else if (pending && Math.abs(found - pending) / pending < .04 && ++pendingCount >= 2) { bpm = found; pendingCount = 0; }

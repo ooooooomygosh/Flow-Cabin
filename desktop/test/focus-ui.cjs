@@ -61,7 +61,7 @@ let app, site, host;
   assert.equal(await site.evaluate(() => window.__phase.completed), true);
   await site.locator('.focus-phase', { hasText: '短休息' }).waitFor(); check('pomodoro-completes-and-break-starts');
   await site.getByRole('tab', { name: '统计' }).click();
-  assert.match(await site.locator('.focus-rewards header').innerText(), /🐟 1/); assert.match(await site.locator('.focus-stat-tiles').innerText(), /2 分钟/);
+  assert.match(await site.locator('.focus-cat-link').innerText(), /1 小鱼干/); assert.match(await site.locator('.focus-stat-tiles').innerText(), /2 分钟/);
   assert.equal(await site.locator('.focus-task-list').count(), 0); check('stats-and-reward-update');
   await site.screenshot({ path: path.join(output, 'focus-stats.png') });
 
@@ -76,7 +76,7 @@ let app, site, host;
   await site.locator('.focus-dock-close').click(); await site.keyboard.press('h');
   assert.equal(await site.evaluate(() => document.documentElement.classList.contains('room-zen')), true);
   assert.equal(await site.locator('.app .topbar').isVisible(), false);
-  assert.equal(await site.locator('.focus-badge').isVisible(), true); assert.equal(await site.getByRole('button', { name: /退出沉浸/ }).isVisible(), true); assert.equal(await site.locator('.app-titlebar').isVisible(), false);
+  assert.equal(await site.locator('.focus-badge').isVisible(), true); assert.equal(await site.getByRole('button', { name: '恢复工具', exact: true }).isVisible(), true); assert.equal(await site.locator('.app-titlebar').isVisible(), false);
   await site.screenshot({ path: path.join(output, 'focus-zen.png') });
   await site.keyboard.press('Escape'); assert.equal(await site.evaluate(() => document.documentElement.classList.contains('room-zen')), false); check('zen-mode-toggles');
   assert.deepEqual(report.pageErrors, []);

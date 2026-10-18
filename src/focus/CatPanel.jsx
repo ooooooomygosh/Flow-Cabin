@@ -1,6 +1,6 @@
 // 小猫: level, fish, fur and accessories, opened by tapping the cat (its 「打扮」 chip) or from
 // the 统计 tab. Lives with the cat instead of inside the stats table.
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useState } from 'react';
 import Dialog from '../Dialog';
 import { useFocus } from './useFocus';
 import { levelInfo, UNLOCKS, unlockedIds, unlockPrice } from './focus-model.mjs';
@@ -13,6 +13,7 @@ import { useRecordLibrary } from '../RecordLibrary';
 import { normalizePetId, getPet } from '../pet/pet-catalog.mjs';
 import { desktopCommand } from '../desktop/desktop-command.mjs';
 import PixelCat from '../pet/PixelCat';
+import Souvenirs, { useSouvenirs } from './Souvenirs.jsx';
 import '../room/benchmark-cabin.css';
 
 // While a 小鱼干 is dragged and the cat is out on the desktop, the shell lets the pet window take
@@ -20,8 +21,7 @@ import '../room/benchmark-cabin.css';
 const petOut = () => document.documentElement.dataset.desktopClient === 'true' && Boolean(window.albumPetState?.active);
 const petDrag = (active) => { if (petOut()) desktopCommand('pet-drag', { active }); };
 
-export const CAT_PANEL_EVENT = 'cabin-open-cat';
-function CatPanelBody({ close }) {
+function CatPanelBody({ close, souvenirs }) {
   const focus = useFocus(), { rewards } = focus.state, library = useRecordLibrary();
   const petId = normalizePetId(library?.data.rooms[library.roomId]?.petId), cat = petId === 'cat', pet = getPet(petId);
   const level = levelInfo(rewards.xp), unlocked = unlockedIds(rewards.xp, rewards.bought), mood = useCatCare(), [confirming, setConfirming] = useState('');
@@ -55,6 +55,7 @@ function CatPanelBody({ close }) {
         </fieldset>)}
       </div>
     </section>
+    <Souvenirs {...souvenirs}/>
   </Dialog>;
 }
 // Card sits beside the cat (right of it, else left, else above/below), clamped to the window
@@ -66,12 +67,12 @@ function placeNearCat() {
   const { x, y, maxH } = catPanelPlace(rect, { w, h: node?.scrollHeight || h }, { w: innerWidth, h: innerHeight });
   root.style.setProperty('--cat-panel-x', `${Math.round(x)}px`); root.style.setProperty('--cat-panel-y', `${Math.round(y)}px`); root.style.setProperty('--cat-panel-max-h', `${Math.floor(maxH)}px`);
 }
-export default function CatPanel() {
-  const [open, setOpen] = useState(false);
-  useEffect(() => { const show = () => { placeNearCat(); setOpen(true); }; window.addEventListener(CAT_PANEL_EVENT, show); return () => window.removeEventListener(CAT_PANEL_EVENT, show); }, []);
-  useEffect(() => {
+export default function CatPanel({ open, onClose }) {
+  const souvenirs = useSouvenirs();
+  useLayoutEffect(() => {
     document.querySelectorAll('.room-cat').forEach((node) => node.setAttribute('aria-expanded', String(open)));
     if (!open) return undefined;
+    placeNearCat();
     // The cat glides to its new spot after a resize, so follow it every frame for a while.
     const { track, stop } = createCatPanelTracker(placeNearCat);
     const onResize = () => track();
@@ -93,5 +94,5 @@ export default function CatPanel() {
     document.addEventListener('dragover', over); document.addEventListener('drop', drop); document.addEventListener('dragend', end);
     return () => { mark(false); document.removeEventListener('dragover', over); document.removeEventListener('drop', drop); document.removeEventListener('dragend', end); };
   }, [open]);
-  return open ? <CatPanelBody close={() => setOpen(false)}/> : null;
+  return open ? <CatPanelBody souvenirs={souvenirs} close={onClose}/> : null;
 }

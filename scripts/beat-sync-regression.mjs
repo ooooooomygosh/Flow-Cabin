@@ -10,6 +10,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
 import { hasViteLocalOrigin } from './vite-readiness.mjs';
+import { createBeatTracker } from '../src/player/beat-tracker.mjs';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const output = process.env.BEAT_OUTPUT || path.join(root, 'desktop/test-results/beat-sync');
 const port = Number(process.env.BEAT_PORT || 4197), origin = `http://127.0.0.1:${port}`;
@@ -28,10 +29,65 @@ const clicks = (bpm) => (t) => { const p = t % (60 / bpm); return p < .12 ? Math
 const FILES = { click120: wav(40, clicks(120)), click90: wav(40, clicks(90)), tone: wav(30, (t) => .25 * Math.sin(2 * Math.PI * 220 * t)) };
 const BPM = { click120: 120, click90: 90 };
 
+function verifySparseTracker(bpm, initialSeed) {
+  const tracker = createBeatTracker(), length = 60000 / bpm;
+  let seed = initialSeed, time = 0, lockedAt = null;
+  const random = () => (seed = seed * 16807 % 2147483647) / 2147483647;
+  // Deterministic delayed analyser reads: the old estimator loses an already
+  // accurate tempo at 8118.9 ms (120/seed 1) and 13228.5 ms (90/seed 9).
+  while (time < 20000) {
+    time += 17 + (random() < .08 ? random() * 80 : random() * 4);
+    const phase = (time + 250) % length;
+    tracker.push(time, phase < 160 ? .8 * Math.exp(-phase / 55) : 0);
+    const state = tracker.state();
+    if (state.confident && lockedAt === null) lockedAt = time;
+    if (lockedAt !== null) assert.equal(state.confident, true, `${bpm}/seed ${initialSeed}: lost lock at ${time}`);
+    if (time > 6000) assert.ok(Math.abs(state.bpm - bpm) < 1, `${bpm}: sparse-read tempo ${state.bpm}`);
+  }
+  assert.ok(lockedAt !== null && lockedAt < 4500, `${bpm}: acquired at ${lockedAt}`);
+  const end = time;
+  for (; time < end + 4000; time += 17) {
+    tracker.push(time, 0);
+    if (time >= end + 2000) assert.equal(tracker.state().confident, false, 'Silence must still lose lock within two seconds');
+  }
+  tracker.reset();
+  assert.equal(tracker.state().bpm, 0);
+  assert.equal(tracker.state().confident, false);
+  const name = `tracker-sparse-reads-${bpm}-seed-${initialSeed}`;
+  report.checks.push({ name, passed: true, lockedAt, durationMs: end });
+  console.log(`PASS ${name}`);
+}
+
 let browser, server;
 const run = async (name, test) => {
   if (process.env.BEAT_FILTER && !process.env.BEAT_FILTER.split(',').some((f) => name.includes(f))) return;
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'zh-CN', reducedMotion: 'no-preference' });
+  // Capture the exact production tracker inputs for deterministic replay. The
+  // wrapper delegates every call unchanged; it neither resamples nor retries.
+  await context.route(/\/src\/player\/beat-tracker\.mjs(?:\?|$)/, async route => {
+    const response = await route.fetch(), source = await response.text();
+    assert.ok(source.includes('function createBeatTracker('), 'Tracker factory must be available for trace capture');
+    const directExport = source.includes('export function createBeatTracker(');
+    const body = source.replace('function createBeatTracker(', 'function createTracedDelegate(') + `
+${directExport ? 'export ' : ''}function createBeatTracker(...args) {
+  const tracker = createTracedDelegate(...args);
+  const trace = { events: [] };
+  (window.__trackerTraces ||= []).push(trace);
+  return {
+    ...tracker,
+    push(time, bass) {
+      tracker.push(time, bass);
+      trace.events.push({ time, bass, state: tracker.state() });
+    },
+    reset() {
+      tracker.reset();
+      trace.events.push({ reset: true, time: performance.now() });
+    }
+  };
+}
+`;
+    await route.fulfill({ response, body });
+  });
   let items = [];
   await context.route('**/api/**', (route) => { const r = route.request(), u = new URL(r.url()), b = r.postDataJSON?.() || {};
     if (u.pathname === '/api/items') { if (r.method() === 'GET') return route.fulfill({ json: { items } }); if (r.method() === 'POST') { const it = { ...b, id: 'added-' + items.length, addedAt: new Date().toISOString() }; items.unshift(it); return route.fulfill({ json: { item: it } }); }
@@ -58,7 +114,11 @@ const run = async (name, test) => {
     await test(page); report.checks.push({ name, passed: true }); console.log(`PASS ${name}`); }
   catch (error) { const diagnostics = await page.evaluate(() => ({ failure: window.__beatFrameFailure, current: window.__beatSnapshot?.(), history: window.__beatHistory })).catch(() => null);
     report.checks.push({ name, passed: false, error: error.stack, diagnostics }); console.error(`FAIL ${name}: ${error.message}`, JSON.stringify(diagnostics?.failure || diagnostics?.current)); await page.screenshot({ path: path.join(output, `${name}-failure.png`) }).catch(() => {}); }
-  finally { await context.close(); }
+  finally {
+    const traces = await page.evaluate(() => window.__trackerTraces || []).catch(() => []);
+    await fs.writeFile(path.join(output, `${name}-tracker-trace.json`), JSON.stringify(traces));
+    await context.close();
+  }
 };
 async function play(page, names) {
   await page.getByRole('button', { name: '添加到唱片架', exact: true }).click(); await page.getByRole('tab', { name: '本地音乐', exact: true }).click();
@@ -158,6 +218,8 @@ const settled = (page, ms = 8000, expectedBpm = null) => page.waitForFunction((e
 const lockedWithin = (page, ms) => page.waitForFunction(() => document.querySelector('button.room-cat')?.dataset.music === 'beat', null, { timeout: ms });
 
 try {
+  verifySparseTracker(120, 1);
+  verifySparseTracker(90, 9);
   server = spawn(process.execPath, [path.join(root, 'node_modules/vite/bin/vite.js'), '--host', '127.0.0.1', '--port', String(port), '--strictPort'], { cwd: root, env: { ...process.env, FLOW_CABIN_VITE_CACHE_DIR: path.join(output, 'vite-cache') }, stdio: ['ignore', 'pipe', 'pipe'] });
   let log = ''; server.stdout.on('data', (b) => log += b); server.stderr.on('data', (b) => log += b);
   for (let i = 0; ; i++) { if (server.exitCode !== null || i > 150) throw new Error(log); if (hasViteLocalOrigin(log, origin) && await fetch(origin).then((r) => r.ok, () => false)) break; await new Promise((r) => setTimeout(r, 100)); }

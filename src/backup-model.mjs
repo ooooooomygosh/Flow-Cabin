@@ -7,6 +7,7 @@ import { LETTERS_KEY, LETTER_EVENT, normalizeLetter } from './ai/ai-model.mjs';
 import { normalizeMix, AMBIENCE_TRACKS } from './audio/ambience.mjs';
 import { PLAYBACK_LOG_KEY, readPlaybackSessions } from './player/playback-log.mjs';
 import { JOURNAL_KEY, JOURNAL_CHANGE, normalizeJournalRecord, readJournalRecords, mergeJournalRecord } from './focus/journal-entries.mjs';
+import { SOUVENIR_KEYS, SOUVENIR_PREFIX, SOUVENIR_CHANGE, normalizeSouvenirs, readSouvenirs, mergeSouvenirs } from './focus/souvenirs.mjs';
 
 // v3 adds the journal's independent stores. Credentials and AI connection settings are never read.
 export const BACKUP_KIND = 'FlowCabinBackup';
@@ -22,6 +23,7 @@ const object = (value, domain) => { if (!plain(value)) invalid(domain); return v
 const array = (value, domain) => { if (!Array.isArray(value)) invalid(domain); return value; };
 const finite = (value) => typeof value === 'number' && Number.isFinite(value) && value >= 0;
 const MEMORY_KEYS = Object.freeze({ focusSessions: SESSION_LOG_KEY, catMood: MOOD_KEY, catCare: META_KEY, letters: LETTERS_KEY, playbackSessions: PLAYBACK_LOG_KEY, journalEntries: JOURNAL_KEY });
+const hasMemoryDomain = (value) => Object.keys(MEMORY_KEYS).some((key) => own(value, key)) || own(value, 'souvenirs');
 const FOCUS_FIELDS = ['tasks', 'sessions', 'rewards', 'settings', 'notes'];
 
 function focusRecord(value) {
@@ -103,6 +105,7 @@ function normalizeMemory(value) {
   if (own(value, 'letters')) out.letters = array(value.letters, '小屋来信').map(letterRecord);
   if (own(value, 'playbackSessions')) out.playbackSessions = array(value.playbackSessions, '听歌记录').map(playbackRecord);
   if (own(value, 'journalEntries')) out.journalEntries = journalEntries(value.journalEntries);
+  if (own(value, 'souvenirs')) out.souvenirs = normalizeSouvenirs(value.souvenirs);
   return out;
 }
 
@@ -126,6 +129,7 @@ export function readBackupMemory(storage = localStorageOrNull()) {
       try { memory[domain] = JSON.parse(raw); } catch { invalid(domain); }
     }
   }
+  if (SOUVENIR_KEYS.some((key) => storage.getItem(key) != null)) memory.souvenirs = readSouvenirs(storage);
   return normalizeMemory(memory);
 }
 
@@ -205,7 +209,7 @@ export function backupReplacements(parsed, available = {}) {
   if (parsed.focus && available.focus) out.push({ id: 'focus', label: '专注记录、待办与随手记' });
   if (parsed.study && available.study) out.push({ id: 'study', label: `学习记录（${parsed.study.decks.length} 个卡组、${parsed.study.cards.length} 张闪卡、${parsed.study.countdowns.length} 个倒计时）` });
   if (parsed.sound && available.sound) out.push({ id: 'sound', label: '环境声音设置' });
-  if (available.memory && parsed.memory && Object.keys(parsed.memory).some((key) => own(MEMORY_KEYS, key))) out.push({ id: 'memory', label: '小屋手记、专注与听歌日志、小猫照顾与来信（合并保留本机记录）' });
+  if (available.memory && parsed.memory && hasMemoryDomain(parsed.memory)) out.push({ id: 'memory', label: '小屋手记、专注与听歌日志、小猫照顾、来信与纪念物（合并保留本机记录）' });
   return out;
 }
 
@@ -241,7 +245,7 @@ function mergeLetter(local, saved) {
 // All stores commit before any refresh; historical sessions must never emit a completion event.
 export function restoreBackupMemory(parsed, { storage = localStorageOrNull(), target = globalThis.window } = {}) {
   const incoming = normalizeMemory(parsed?.memory);
-  if (!incoming || !Object.keys(MEMORY_KEYS).some((key) => own(incoming, key))) return { changed: [] };
+  if (!incoming || !hasMemoryDomain(incoming)) return { changed: [] };
   if (!storage) throw new Error('无法保存小屋记忆，请检查存储空间。');
   const current = readBackupMemory(storage), next = { ...incoming };
   if (incoming.focusSessions) next.focusSessions = mergeRecords(current.focusSessions || [], incoming.focusSessions, (record) => record.id,
@@ -272,6 +276,13 @@ export function restoreBackupMemory(parsed, { storage = localStorageOrNull(), ta
     }
   }
   const writes = Object.entries(MEMORY_KEYS).filter(([domain]) => own(next, domain)).map(([domain, key]) => ({ key, oldValue: storage.getItem(key), newValue: JSON.stringify(next[domain]) })).filter((write) => write.oldValue !== write.newValue);
+  if (incoming.souvenirs) {
+    const merged = mergeSouvenirs(current.souvenirs || { version: 1, records: [] }, incoming.souvenirs);
+    for (const record of merged.records) {
+      const key = SOUVENIR_PREFIX + record.id, oldValue = storage.getItem(key), newValue = JSON.stringify(record);
+      if (oldValue !== newValue) writes.push({ key, oldValue, newValue });
+    }
+  }
   const committed = [];
   try {
     for (const write of writes) { storage.setItem(write.key, write.newValue); committed.push(write); }
@@ -293,6 +304,7 @@ export function restoreBackupMemory(parsed, { storage = localStorageOrNull(), ta
     if (writes.some(({ key }) => key === MOOD_KEY || key === META_KEY)) target.dispatchEvent(new CustomEventClass(MOOD_EVENT, { detail: getCatMoodNow(storage) }));
     if (writes.some(({ key }) => key === LETTERS_KEY)) target.dispatchEvent(new CustomEventClass(LETTER_EVENT));
     if (writes.some(({ key }) => key === JOURNAL_KEY)) target.dispatchEvent(new CustomEventClass(JOURNAL_CHANGE));
+    if (writes.some(({ key }) => SOUVENIR_KEYS.includes(key))) target.dispatchEvent(new CustomEventClass(SOUVENIR_CHANGE));
   }
   return { changed: writes.map(({ key }) => key) };
 }

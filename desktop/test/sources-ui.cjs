@@ -27,13 +27,13 @@ let app, site, host;
 
   await site.locator('.room-record').first().dblclick(); await chooseSource(site, 'local');
   await site.waitForFunction(() => document.querySelector('audio').currentTime > .2 && !document.querySelector('audio').paused);
-  assert.match(await site.locator('audio').getAttribute('src'), /\/desktop-music\/local\/audio\/[a-f\d]{16}$/);
+  assert.match(await site.locator('audio[data-deck="active"]').getAttribute('src'), /\/desktop-music\/local\/audio\/[a-f\d]{16}$/);
   assert.ok((await site.locator('.turntable-status').innerText()).includes('本地文件')); check('local-album-plays-the-exact-indexed-file');
   await site.getByRole('button', { name: '下一首展示曲目' }).click(); await site.waitForFunction((id) => document.querySelector('audio').getAttribute('src')?.endsWith(id), local.trackDetails[1].providerId); check('local-next-track-switches-file');
 
   await chooseSource(site, 'system');
   await site.locator('.turntable-track', { hasText: '晴天' }).waitFor(); await site.locator('.room-turntable[data-spinning="true"]').waitFor();
-  assert.equal(await site.locator('audio').getAttribute('src'), null); assert.ok((await site.locator('.turntable-status').innerText()).includes('Spotify · 正在播放'));
+  assert.equal(await site.locator('audio[data-deck="active"]').getAttribute('src'), null); assert.ok((await site.locator('.turntable-status').innerText()).includes('Spotify · 正在播放'));
   check('system-player-mirrors-onto-the-deck-without-local-audio');
   await site.getByRole('button', { name: '暂停系统播放器' }).click(); await site.locator('.room-turntable[data-spinning="false"]').waitFor();
   await site.getByRole('button', { name: '系统播放器下一首' }).click();

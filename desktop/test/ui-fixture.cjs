@@ -68,6 +68,13 @@ async function mountFixture(application, site, options = {}) {
     });
   }, { items, results: options.searchResults || [items[0]], slowCover: options.slowCover === true, music: options.music === true, coverResponse: options.coverResponse, autoMusic: options.autoMusic === true });
   await site.reload(); await site.locator('.app-titlebar').waitFor(); await site.locator('.cabin-room').waitFor();
+  // Interaction fixtures run against the cabin, not the first-run tutorial.
+  const onboarding = site.getByRole('dialog', { name: '新手引导', exact: true });
+  await onboarding.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {});
+  if (await onboarding.isVisible()) {
+    await onboarding.getByRole('button', { name: '跳过引导', exact: true }).click();
+    await onboarding.waitFor({ state: 'hidden' });
+  }
   return { items };
 }
 // Exercise the public picker, then verify the rendered scene rather than

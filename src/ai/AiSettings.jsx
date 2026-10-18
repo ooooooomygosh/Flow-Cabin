@@ -42,7 +42,7 @@ export default function AiSettings() {
       <label className="ai-row"><span>API Key</span><input type="password" autoComplete="off" spellCheck={false} placeholder={key.stored ? '已保存（输入新的可替换）' : 'sk-…'} value={keyDraft} onChange={(e) => { testVersion.current++; setKeyDraft(e.target.value); setTest({ state: 'idle', text: '' }); }}/>
         {keyDraft.trim() && <button type="button" className="pixel-button is-quiet" disabled={!urlOk} onClick={storeKey}>保存 Key</button>}
         {key.stored && <button type="button" className="pixel-button is-quiet" onClick={() => { testVersion.current++; saveKey(''); setTest({ state: 'idle', text: '' }); }}>清除</button>}</label>
-      <p className="ai-note">{desktop ? (key.secure ? 'Key 用系统加密（safeStorage）只存在这台电脑上，请求由桌面版发出。' : '这台电脑没有系统加密，Key 只在本次运行期间保存在内存里。') : 'Key 只存在这个浏览器里。网页版直接从浏览器请求，接口必须允许跨域（CORS）；不支持时请用桌面版。'}</p>
+      <p className="ai-note">{desktop ? (!key.stored ? '尚未保存 Key，保存时才尝试系统加密。' : key.secure ? 'Key 用系统加密，只存在这台电脑上，请求由桌面版发出。' : '当前 Key 仅保存在本次运行的内存中，退出后需重新填写。') : 'Key 只存在这个浏览器里。网页版直接从浏览器请求，接口必须允许跨域（CORS）；不支持时请用桌面版。'}</p>
       <label className="ai-row"><span>模型</span><input type="text" placeholder="deepseek-chat" value={settings.model} onChange={(e) => update({ model: e.target.value })}/></label>
       <div className="ai-row"><button type="button" className="pixel-button" disabled={test.state === 'busy' || !settings.baseUrl || !settings.model || !(key.stored || keyDraft.trim())} onClick={runTest}>测试连接</button>
         {test.text && <p className={`ai-note is-${test.state}`} role={test.state === 'error' ? 'alert' : 'status'}>{test.text}</p>}</div>

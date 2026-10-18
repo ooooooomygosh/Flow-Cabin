@@ -1,0 +1,17 @@
+@layer guards, reset, features, skin, overrides;
+@layer overrides {
+  .cabin-souvenirs { display: grid; gap: 10px; margin-top: 16px; padding-top: 12px; border-top: 2px solid var(--px-border-subtle); min-width: 0; color: var(--px-ink); }
+  .cabin-souvenirs > header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .cabin-souvenirs h3, .cabin-souvenirs h4 { margin: 0; font-family: var(--px-font-cn); font-size: 12px; line-height: 1.6; font-weight: 400; }
+  .cabin-souvenirs p, .cabin-souvenirs small, .cabin-souvenirs > header span { margin: 0; font-size: 12px; line-height: 1.65; overflow-wrap: anywhere; }
+  .cabin-souvenirs > p, .cabin-souvenirs > small { color: var(--px-ink-dim); }
+  .souvenir-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+  .souvenir-card { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px; border: 2px solid var(--px-border-subtle); background: var(--px-surface-inset); }
+  .souvenir-card[data-earned=true] { border-color: var(--px-accent); background: var(--px-surface-2); }
+  .souvenir-emblem { display: grid; place-items: center; width: 40px; height: 40px; border: 2px solid var(--px-border-subtle); color: var(--px-ink-dim); }
+  .souvenir-card[data-earned=true] .souvenir-emblem { color: var(--px-ink-on-accent); background: var(--px-accent); box-shadow: 2px 2px 0 var(--px-shadow); }
+  .souvenir-card .souvenir-date { color: var(--px-ink-dim); margin: 3px 0; }
+  .souvenir-error { padding: 10px; border: 2px solid var(--px-warn); display: grid; gap: 8px; }
+  .souvenir-error p { color: var(--px-warn); }
+  .souvenir-error button { justify-self: start; white-space: normal; }
+}

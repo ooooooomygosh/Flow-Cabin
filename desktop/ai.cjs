@@ -27,13 +27,16 @@ function createAi({ directory, safeStorage, fetch, publish, writeLog = () => {},
   const requests = new Set();
   const secure = () => { try { return Boolean(safeStorage?.isEncryptionAvailable()) && safeStorage.getSelectedStorageBackend?.() !== 'basic_text'; } catch { return false; } };
   const readCredential = () => {
-    if (memory) return memory;
+    if (memory) return { credential: memory, secure: false };
     try {
-      const value = secure() ? JSON.parse(safeStorage.decryptString(fs.readFileSync(file))) : null;
-      return value?.v === 2 && typeof value.key === 'string' && validUrl(value.endpoint) ? value : null;
-    } catch { return null; } // Legacy unbound keys must be saved again with their intended endpoint.
+      // Read first: an empty profile must never probe the OS keychain.
+      const encrypted = fs.readFileSync(file);
+      const value = secure() ? JSON.parse(safeStorage.decryptString(encrypted)) : null;
+      if (value?.v === 2 && typeof value.key === 'string' && value.key && validUrl(value.endpoint)) return { credential: value, secure: true };
+    } catch { /* Legacy unbound keys must be saved again with their intended endpoint. */ }
+    return { credential: null, secure: false };
   };
-  const state = () => { const credential = readCredential(); return { stored: Boolean(credential?.key), secure: secure(), endpoint: credential?.endpoint || '', revision }; };
+  const state = () => { const { credential, secure } = readCredential(); return { stored: Boolean(credential?.key), secure, endpoint: credential?.endpoint || '', revision }; };
   return {
     state,
     publishKey() { publish({ type: 'key', ...state() }); },
@@ -53,8 +56,10 @@ function createAi({ directory, safeStorage, fetch, publish, writeLog = () => {},
     },
     async chat(id, urlValue, bodyText) {
       const reply = (detail) => publish({ type: 'result', id: String(id).slice(0, 40), ...detail });
-      const url = validUrl(urlValue), body = validBody(bodyText), credential = readCredential(), key = credential?.key, started = revision;
-      if (!url || !body || !key || url !== credential.endpoint) return reply({ ok: false, kind: 'config' });
+      const url = validUrl(urlValue), body = validBody(bodyText);
+      if (!url || !body) return reply({ ok: false, kind: 'config' });
+      const { credential } = readCredential(), key = credential?.key, started = revision;
+      if (!key || url !== credential.endpoint) return reply({ ok: false, kind: 'config' });
       const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), timeout);
       requests.add(ctrl);
       try {

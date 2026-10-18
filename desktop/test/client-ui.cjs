@@ -4,7 +4,7 @@ const { _electron: electron } = require('playwright');
 const assert = require('node:assert/strict'), fs = require('node:fs'), os = require('node:os'), path = require('node:path');
 const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'album-client-ui-'));
 const output = path.join(__dirname, '../test-results/client'); fs.mkdirSync(output, { recursive: true });
-const report = { checks: [], pageErrors: [] }; let application, site;
+const report = { startedAt: new Date().toISOString(), checks: [], limitations: [], pageErrors: [] }; let application, site;
 async function launch() {
   const env = { ...process.env, ALBUM_DESKTOP_TEST_PROFILE: profile }; delete env.ELECTRON_RUN_AS_NODE;
   application = await electron.launch({ ...(process.env.ALBUM_QA_EXE ? { executablePath: path.resolve(process.env.ALBUM_QA_EXE), args: [] } : { args: [path.join(__dirname, '..')] }), env });
@@ -42,24 +42,36 @@ const check = (value) => report.checks.push(value);
   await card.getByRole('button', { name: '关闭唱片卡片' }).click(); check('record-card-notes');
   await site.getByRole('button', { name: '设置', exact: true }).click();
   await site.getByRole('tab', { name: '显示与桌面', exact: true }).click();
+  await application.evaluate(({ app }) => {
+    if (process.platform === 'darwin') { app.setActivationPolicy('regular'); app.focus({ steal: true }); }
+  });
   await site.getByRole('button', { name: '打开显示与字体', exact: true }).click();
   const shell = application.windows().find((page) => page.url().startsWith('album-desktop://shell'));
   await shell.locator('#zoom').fill('110'); await shell.locator('#zoom').dispatchEvent('change'); await shell.getByRole('button', { name: '完成', exact: true }).click();
-  await application.evaluate(async ({ webContents }) => {
+  report.nativeFocus = await application.evaluate(async ({ webContents }) => {
+    // Activate before opening settings; closing them must restore content focus.
     const started = Date.now();
     while (!webContents.getFocusedWebContents()?.getURL().startsWith('https://album-circle.vercel.app')) {
-      if (Date.now() - started > 15000) throw new Error('Keyboard focus did not return to content');
+      if (Date.now() - started > 15000) throw new Error(`Keyboard focus did not return to content (focused=${webContents.getFocusedWebContents()?.getURL() || 'none'})`);
       await new Promise(resolve => setTimeout(resolve, 25));
     }
+    return { passed: true, focusedURL: webContents.getFocusedWebContents().getURL() };
   });
   await site.getByRole('dialog', { name: '设置', exact: true }).waitFor();
-  await site.keyboard.press('Escape');
-  check('settings-open-and-save');
-  // Exercise the packaged native window and real renderer, without music accounts.
   const nativeKey = keyCode => application.evaluate(({ webContents }, keyCode) => {
     const contents = webContents.getAllWebContents().find(contents => contents.getURL().startsWith('https://album-circle.vercel.app'));
     contents.sendInputEvent({ type: 'keyDown', keyCode }); contents.sendInputEvent({ type: 'keyUp', keyCode });
   }, keyCode);
+  await application.evaluate(({ webContents }) => {
+    const focused = webContents.getFocusedWebContents();
+    if (!focused?.getURL().startsWith('https://album-circle.vercel.app')) throw new Error('Content lost native focus before Escape');
+    focused.sendInputEvent({ type: 'keyDown', keyCode: 'ESC' });
+    focused.sendInputEvent({ type: 'keyUp', keyCode: 'ESC' });
+  });
+  await site.getByRole('dialog', { name: '设置', exact: true }).waitFor({ state: 'hidden' });
+  check('native-content-focus-restored-and-focused-escape-closes-settings');
+  check('settings-open-and-save');
+  // Exercise the packaged native window and real renderer, without music accounts.
   await site.getByRole('button', { name: '进入全屏模式', exact:true }).click();
   await site.waitForFunction(() => document.documentElement.dataset.desktopFullscreen === 'true', null, { timeout: 20000 });
   assert.equal(await application.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find(window => window.webContents.getURL().startsWith('album-desktop://shell')).isFullScreen()), true);
@@ -104,7 +116,7 @@ const check = (value) => report.checks.push(value);
   await site.getByRole('button', { name: '沉入桌面', exact: true }).click();
   await site.getByRole('button', { name: '浮出桌面', exact: true }).waitFor({ timeout: 20000 });
   await site.getByRole('button', { name: '浮出桌面', exact: true }).click(); check('native-desktop-wallpaper');
-  } else check('desktop-wallpaper-not-tested-on-hosted-runner');
+  } else report.limitations.push('Native desktop wallpaper attachment skipped by ALBUM_QA_SKIP_WALLPAPER=1');
   await site.screenshot({ path: path.join(output, 'cabin.png') });
   await application.close(); application = null;
   await launch(); await site.locator('.cabin-pixel').waitFor(); await site.locator('.room-record').first().waitFor();
@@ -115,5 +127,6 @@ const check = (value) => report.checks.push(value);
   if (!report.passed && site && !site.isClosed()) await site.screenshot({ path: path.join(output, 'failure.png') }).catch(() => {});
   if (application) await application.close().catch(() => {});
   fs.rmSync(profile, { recursive: true, force: true });
+  report.finishedAt = new Date().toISOString();
   fs.writeFileSync(path.join(output, 'report.json'), JSON.stringify(report, null, 2)); console.log(JSON.stringify(report, null, 2));
 });

@@ -24,6 +24,36 @@ test('auto-match: ranking prefers album + duration, keeps order on ties', () => 
 const memoryStore = () => { const data = {}; return { getItem: (k) => data[k] ?? null, setItem: (k, v) => { data[k] = v; } }; };
 const record = { id: 'r1', type: 'album', title: '叶惠美', artist: 'Jay Chou', tracks: ['晴天', '以父之名'], trackDetails: [{ title: '晴天', lengthMillis: 269000, source: 'apple' }, { title: '以父之名', lengthMillis: 342000, source: 'apple' }] };
 
+test('explicit source selection takes priority over a playable cache from the other platform', async () => {
+  for (const provider of ['qq', 'netease']) {
+    const other = provider === 'qq' ? 'netease' : 'qq';
+    const memory = createMatchMemory(memoryStore()), requests = [];
+    memory.put(matchKey(record, 0), c('cached-other', { provider: other }));
+    const result = await findPlayableSource({ record, index: 0, provider, memory, play: async () => {},
+      request: async (path, candidate) => {
+        requests.push(candidate ? candidate.provider : new URL(path, 'http://fixture').searchParams.get('provider'));
+        return path === '/resolve' ? { audioPath: '/audio' } : { candidates: [c('selected', { provider })] };
+      } });
+    assert.equal(result.candidate.provider, provider);
+    assert.deepEqual(requests, [provider, provider]);
+    assert.equal(memory.get(matchKey(record, 0)).provider, provider);
+  }
+});
+
+test('a cached alternate remains available only after the selected source has no match', async () => {
+  const memory = createMatchMemory(memoryStore()), requests = [];
+  memory.put(matchKey(record, 0), c('cached-qq'));
+  const result = await findPlayableSource({ record, index: 0, provider: 'netease', memory, play: async () => {},
+    request: async (path, candidate) => {
+      requests.push(candidate ? `resolve:${candidate.provider}` : `search:${new URL(path, 'http://fixture').searchParams.get('provider')}`);
+      return path === '/resolve' ? { audioPath: '/audio' } : { candidates: [] };
+    } });
+  assert.equal(result.candidate.id, 'cached-qq');
+  assert.equal(requests[0], 'search:netease');
+  assert.equal(requests.at(-1), 'resolve:qq');
+  assert.ok(requests.slice(0, -1).every((call) => call === 'search:netease'));
+});
+
 test('fallback: the stored source fails → rematch → best candidate plays, then next candidate', async () => {
   const memory = createMatchMemory(memoryStore()), resolved = [];
   memory.put(matchKey(record, 0), { id: 'stale', provider: 'qq', title: '晴天' });
