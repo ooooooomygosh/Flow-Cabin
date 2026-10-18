@@ -73,7 +73,7 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
 
     // 2. 重新引导 from the hub, motion preferences.
     await button(page, '设置').click(); await hubOf(page).waitFor();
-    assert.deepEqual(await page.getByRole('tab').allInnerTexts(), ['音源', '房间与桌宠', '专注工具', '显示与桌面', '数据与备份', '关于']);
+    assert.deepEqual(await page.getByRole('tab').allInnerTexts(), ['音源', '房间与桌宠', '专注工具', '显示与桌面', '数据与备份', 'AI（Beta）', '关于']);
     await page.getByRole('tab', { name: '关于' }).click(); await button(page, '重新引导').click();
     await wizardOf(page).waitFor(); await heading(page).filter({ hasText: '欢迎来到心流小屋' }).waitFor();
     assert.equal(await hubOf(page).count(), 0);

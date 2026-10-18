@@ -119,7 +119,7 @@ try {
   // One fixed dialog size: switching sections never resizes 设置.
   for (const [width, height] of [[1440, 900], [960, 600]]) {
     await page.setViewportSize({ width, height }); const sizes = new Set();
-    for (const section of ['音源', '房间与桌宠', '专注工具', '显示与桌面', '数据与备份', '关于']) { await openSettingsSection(page, section); const box = await settingsDialog(page).boundingBox(); sizes.add(`${Math.round(box.width)}x${Math.round(box.height)}`); assert(box.y >= 0 && box.y + box.height <= height, `设置 fits ${width}x${height}`); }
+    for (const section of ['音源', '房间与桌宠', '专注工具', '显示与桌面', '数据与备份', 'AI（Beta）', '关于']) { await openSettingsSection(page, section); const box = await settingsDialog(page).boundingBox(); sizes.add(`${Math.round(box.width)}x${Math.round(box.height)}`); assert(box.y >= 0 && box.y + box.height <= height, `设置 fits ${width}x${height}`); }
     assert.equal(sizes.size, 1, `设置 keeps one size across sections at ${width}x${height}: ${[...sizes]}`);
   }
   await openRoomSettings(page); check('settings-dialog-has-one-fixed-size');
