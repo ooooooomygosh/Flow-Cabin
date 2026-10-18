@@ -533,6 +533,9 @@ try {
     // Deck audio that cannot be analysed (estimated energy, bpm 0): listen, nothing moves.
     await page.evaluate(()=>window.dispatchEvent(new CustomEvent('cabin:playback',{detail:{playing:true,energy:.4,estimated:true,bpm:0,beatAt:0}})));
     await page.waitForFunction(()=>document.querySelector('.room-cat').dataset.music==='free'&&!document.querySelector('.room-cat').dataset.beatMotion,null,{timeout:5000});
+    // Clicking the sound controls briefly gives 奶糖 a typing reaction; let that
+    // intentional input-feedback pose expire before checking the listening pose.
+    await page.waitForFunction(()=>!document.querySelector('.room-cat')?.dataset.typing,null,{timeout:5000});
     assert.equal(await cat.locator('.pixel-cat').getAttribute('data-pose'),'listen');
     // A detected beat: the shared cat sprite hops once per beat, phase-locked to beatAt.
     const beatAt=await page.evaluate(()=>{const at=Date.now()-130;window.dispatchEvent(new CustomEvent('cabin:playback',{detail:{playing:true,energy:.5,bpm:120,beatAt:at}}));return at;});
