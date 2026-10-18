@@ -398,7 +398,10 @@ try {
   {
     const shellCsp = (await fs.readFile(new URL('../desktop/shell-protocol.cjs', import.meta.url), 'utf8')).match(/'pet'[\s\S]*?'Content-Security-Policy': "([^"]+)"/)[1];
     const fresh = await context.newPage(); await fresh.emulateMedia({ reducedMotion: 'no-preference' }); await fresh.setViewportSize({ width: 420, height: 420 });
-    await fresh.route('**/pet.html', async (route) => { const response = await route.fetch(); await route.fulfill({ response, headers: { ...response.headers(), 'content-security-policy': shellCsp.split(';').map((d) => d.trim()).find((d) => d.startsWith('img-src')) } }); });
+    // A <meta> CSP added before the stylesheets load (a routed response would trip Chromium's local-network check on vite's socket).
+    const imgSrc = shellCsp.split(';').map((d) => d.trim()).find((d) => d.startsWith('img-src'));
+    await fresh.addInitScript((policy) => { const add = () => { const meta = document.createElement('meta'); meta.httpEquiv = 'Content-Security-Policy'; meta.content = policy; document.head.prepend(meta); };
+      if (document.head) add(); else new MutationObserver((_, o) => { if (document.head) { add(); o.disconnect(); } }).observe(document, { childList: true, subtree: true }); }, imgSrc);
     await fresh.addInitScript(() => { window.__cspViolations = []; document.addEventListener('securitypolicyviolation', (e) => window.__cspViolations.push(`${e.violatedDirective} ${e.blockedURI}`));
       const at = () => { const r = document.querySelector('.pet-cat')?.getBoundingClientRect(); return r ? { x: r.left + r.width / 2, y: r.top + r.height * .75 } : null; };
       const base = window.albumPet; window.albumPet = { ...base, cursor: () => new Promise((resolve) => { const wait = () => at() ? resolve(at()) : requestAnimationFrame(wait); wait(); }) }; });
