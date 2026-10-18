@@ -14,6 +14,7 @@ import { readCatMood, subscribeCatMood } from './cat-mood-source.mjs';
 import { useLetters, useLetterDelivery } from '../../ai/useCabinLetters.js';
 import { TONES } from '../../ai/ai-model.mjs';
 import Mailbox from './Mailbox.jsx';
+import JournalEntries, { useJournalDraftWarning } from './JournalEntries.jsx';
 
 const clock = (t) => { const d = new Date(t); return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
 const typing = (el) => el?.closest?.('input,textarea,select,[contenteditable="true"]');
@@ -36,6 +37,7 @@ export function Bars({ days, label, mini = false, set = 'records', best = null }
 // `cabin:open-journal` ({ detail: { tab } }).
 export default function CabinJournal() {
   const focus = useFocus();
+  useJournalDraftWarning();
   const [open, setOpen] = useState(false), [view, setView] = useState('overview'), ref = useRef(null), openRef = useRef(false), closingRef = useRef(false);
   openRef.current = open;
   useLetterDelivery(useFocusSessions(focus?.state?.sessions), focus?.state?.notes || '');
@@ -88,7 +90,7 @@ export function Strip({ name, w, h, frames = 1, frame = 0, scale = 1, className 
 // while any letter is unread.
 function LetterSpot({ template, reduced }) {
   const { list, unread, markRead } = useLetters();
-  const incoming = useMemo(() => list.filter((letter) => letter.direction === 'in' && !letter.replyTo && letter.status !== 'draft'), [list]);
+  const incoming = useMemo(() => list.filter((letter) => letter.direction === 'in' && !letter.replyTo && letter.status !== 'draft' && !letter.trashed), [list]);
   const [index, setIndex] = useState(0), ai = incoming[index] || null;
   const sealed = ai && !ai.read;
   const tone = ai && TONES.find((t) => t.id === ai.tone)?.label;
@@ -245,5 +247,6 @@ function JournalBook({ state, now, view, setView, close }) {
       <canvas ref={canvas} hidden/>
     </div></div>}
     {view === 'letters' && <Mailbox sessions={sessions} state={state} now={now} reduced={reduced}/>}
+    {view === 'entries' && <JournalEntries/>}
   </div>;
 }

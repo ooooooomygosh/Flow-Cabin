@@ -6,12 +6,63 @@ import {
   unreadCount, needsLetter, readAi, writeAi, LETTERS_KEY, AI_KEY_KEY, normalizeLetter,
   localLetterReply, templateLetter, summarizeListening, userLetterSubject, tryWriteLetters
 } from './ai-model.mjs';
-import { mailboxRows, pageSlice, readLetterDraft, saveLetterDraft, sendCabinLetter, clearLetterDraft, recoverCabinLetter, DRAFT_ID } from './letter-reply.mjs';
-import { buildLetterContext, hasLetterFacts, recentLetterPeriod } from './letter-context.mjs';
+import { mailboxRows, pageSlice, readLetterDraft, saveLetterDraft, sendCabinLetter, clearLetterDraft, recoverCabinLetter, organizeLetterThread, DRAFT_ID } from './letter-reply.mjs';
+import { buildLetterContext, hasLetterFacts, recentLetterPeriod, journalExcerpt, journalSelectionCurrent } from './letter-context.mjs';
 import { chat } from './ai-transport.mjs';
 
 const mem = () => { const m = new Map(); return { getItem: (k) => m.has(k) ? m.get(k) : null, setItem: (k, v) => m.set(k, String(v)), removeItem: (k) => m.delete(k), m }; };
 const KEY = 'sk-unit-SECRET-abcdef123456';
+
+test('selected journal excerpts are bounded, explicit, and invalidated by edits or removal', () => {
+  const entry = { id: 'private-id', version: 'v1', createdAt: 1000, body: '选中的记忆'.repeat(100), tags: ['不发送的标签'] };
+  const selected = journalExcerpt(entry);
+  assert.equal(selected.excerpt.length, 240);
+  assert.equal(journalExcerpt({ ...entry, deletedAt: 2000 }), null);
+  assert.equal(journalSelectionCurrent([selected], [entry]), true);
+  assert.equal(journalSelectionCurrent([selected], [{ ...entry, version: 'v2' }]), false);
+  assert.equal(journalSelectionCurrent([selected], [{ ...entry, deletedAt: 2000 }]), false);
+  assert.equal(journalSelectionCurrent([selected], []), false);
+  assert.equal(buildLetterContext({ shareContext: false, selectedJournal: [selected] }), null);
+  assert.equal(buildLetterContext({}).journal, undefined);
+  const summary = buildLetterContext({ selectedJournal: [selected] });
+  assert.deepEqual(summary.journal, [{ excerpt: selected.excerpt }]);
+  assert.equal(JSON.stringify(summary).includes('private-id'), false);
+  assert.equal(JSON.stringify(summary).includes('不发送的标签'), false);
+  assert.equal(buildLetterContext({ selectedJournal: Array(4).fill(selected) }).journal.length, 3);
+});
+
+test('mailbox searches reply text and keeps favorite/trash operations on the whole thread', async () => {
+  const storage = mem(), win = new EventTarget();
+  win.localStorage = storage;
+  const sent = await sendCabinLetter({ storage, text: '今天写完了一页。', win, replyDelayMs: 0 });
+  const id = sent.outgoing.id;
+  assert.equal(mailboxRows(readLetters(storage), 'all', sent.reply.lines.at(-1)).length, 1);
+  assert.equal(organizeLetterThread({ storage, id, action: 'favorite', now: 10, win }).ok, true);
+  assert.equal(mailboxRows(readLetters(storage), 'favorites').length, 1);
+  assert.equal(organizeLetterThread({ storage, id, action: 'trash', now: 10, win }).ok, true);
+  assert.equal(mailboxRows(readLetters(storage)).length, 0);
+  assert.equal(mailboxRows(readLetters(storage), 'trash').length, 1);
+  assert.equal(unreadCount(readLetters(storage)), 0);
+  assert.ok(readLetters(storage).every((letter) => letter.trashed && letter.favorite && letter.organizedAt === 11));
+  organizeLetterThread({ storage, id, action: 'restore', now: 10, win });
+  assert.equal(mailboxRows(readLetters(storage), 'favorites').length, 1);
+  const before = storage.getItem(LETTERS_KEY);
+  const blocked = { getItem: storage.getItem, setItem() { throw new Error('quota'); } };
+  assert.equal(organizeLetterThread({ storage: blocked, id, action: 'trash', win }).ok, false);
+  assert.equal(storage.getItem(LETTERS_KEY), before);
+});
+
+test('a delayed reply respects organization performed while the request is pending', async () => {
+  const storage = mem(), win = new EventTarget();
+  win.localStorage = storage;
+  const pending = sendCabinLetter({ storage, text: '稍后再读。', win, replyDelayMs: 20 });
+  const outgoing = readLetters(storage).find((letter) => letter.direction === 'out');
+  organizeLetterThread({ storage, id: outgoing.id, action: 'trash', win });
+  assert.equal((await pending).ok, true);
+  assert.equal(mailboxRows(readLetters(storage)).length, 0);
+  assert.ok(readLetters(storage).every((letter) => letter.trashed));
+  assert.equal(unreadCount(readLetters(storage)), 0);
+});
 
 test('settings default off and normalise', () => {
   assert.deepEqual(normalizeAi(null), { v: 1, enabled: false, baseUrl: '', model: '', cadence: 'weekly', tone: 'warm', shareNotes: false });

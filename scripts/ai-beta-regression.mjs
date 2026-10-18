@@ -236,6 +236,104 @@ try {
     await shot(page, 'letter-sent-with-local-reply');
   }, { ai: { enabled: false, baseUrl: API, model: 'm' } });
 
+  await run('journal-excerpts-require-per-letter-selection-and-never-send-unselected-pages', async (page) => {
+    const journalKey = 'flow-cabin-journal-v1', text = '只想聊聊主动附上的这一页。';
+    const body = '附上的一页\n' + '今天给自己留了一点安静的时间。'.repeat(30) + 'EXCLUDED_TAIL';
+    await page.evaluate(({ journalKey, body }) => {
+      localStorage.setItem(journalKey, JSON.stringify([
+        { id: 'selected-page', version: 'v1', createdAt: Date.now(), updatedAt: Date.now(), body, tags: [], revisions: [] },
+        { id: 'unselected-page', version: 'v1', createdAt: Date.now(), updatedAt: Date.now(), body: 'PRIVATE_UNSELECTED_PAGE', tags: [], revisions: [] }
+      ]));
+    }, { journalKey, body });
+    await openLetters(page);
+    const mailbox = page.getByRole('tabpanel', { name: '信箱' });
+    await mailbox.getByRole('button', { name: '写一封信', exact: true }).click();
+    await mailbox.getByLabel('写给小屋的信').fill(text);
+    const picker = mailbox.locator('.fs-mail-journal-picker');
+    await picker.locator('summary').click();
+    const choice = picker.getByRole('checkbox', { name: '附上的一页', exact: true });
+    assert.equal(await choice.isChecked(), false);
+    await choice.check();
+    assert.equal(await picker.getByRole('region', { name: '本次附上的手记摘录' }).locator('article p').innerText(), body.replace(/[\x00-\x1f\x7f]/g, ' ').trim().slice(0, 240));
+    await mailbox.getByRole('button', { name: '收进抽屉', exact: true }).click();
+    await mailbox.getByRole('button', { name: '写一封信', exact: true }).click();
+    await picker.locator('summary').click();
+    assert.equal(await choice.isChecked(), false, 'reopening a draft does not revive private attachments');
+    await choice.check();
+    await page.evaluate((journalKey) => {
+      const records = JSON.parse(localStorage.getItem(journalKey));
+      records[0].version = 'v2';
+      records[0].body += '\n后来修改过。';
+      localStorage.setItem(journalKey, JSON.stringify(records));
+      window.dispatchEvent(new Event('cabin:journal-entries'));
+    }, journalKey);
+    await mailbox.getByRole('button', { name: '寄给小屋', exact: true }).click();
+    await mailbox.locator('.fs-mail-toast.is-error', { hasText: '重新选择' }).waitFor();
+    assert.equal(report.aiRequests.some((request) => request.name.startsWith('journal-excerpts') && JSON.stringify(request.body.messages).includes(text)), false);
+    await choice.uncheck(); await choice.check();
+    await mailbox.getByRole('checkbox', { name: /让奶糖了解最近的小屋/ }).uncheck();
+    await mailbox.getByRole('checkbox', { name: /让奶糖了解最近的小屋/ }).check();
+    await picker.locator('summary').click();
+    assert.equal(await choice.isChecked(), false, 'turning context off clears selected excerpts');
+    await choice.check();
+    await page.setViewportSize({ width: 960, height: 600 });
+    await picker.getByRole('region', { name: '本次附上的手记摘录' }).scrollIntoViewIfNeeded();
+    await shot(page, 'selected-journal-excerpt-960');
+    await mailbox.getByRole('button', { name: '寄给小屋', exact: true }).click();
+    await mailbox.getByRole('region', { name: '小屋回信' }).waitFor();
+    const request = report.aiRequests.findLast((item) => item.name.startsWith('journal-excerpts') && JSON.stringify(item.body.messages).includes(text));
+    assert.ok(request);
+    const payload = JSON.stringify(request.body.messages);
+    assert.ok(payload.includes('附上的一页'));
+    assert.equal(payload.includes('PRIVATE_UNSELECTED_PAGE'), false);
+    assert.equal(payload.includes('EXCLUDED_TAIL'), false);
+    assert.equal(payload.includes('后来修改过'), false);
+    assert.equal(payload.includes('selected-page'), false, 'internal entry identifiers are not transmitted');
+  }, { ai: { enabled: true, baseUrl: API, model: 'm' } });
+
+  await run('mailbox-search-favorites-and-trash-survive-reload', async (page) => {
+    await openLetters(page);
+    let mailbox = page.getByRole('tabpanel', { name: '信箱' });
+    await mailbox.getByRole('button', { name: '写一封信' }).click();
+    await mailbox.getByLabel('写给小屋的信').fill('今天把窗边的绿植照顾好了。');
+    await mailbox.getByRole('button', { name: '寄给小屋' }).click();
+    await mailbox.getByRole('region', { name: '小屋回信' }).waitFor();
+    await mailbox.getByRole('button', { name: '收藏这封信', exact: true }).click();
+    await mailbox.getByRole('button', { name: '收藏', exact: true }).click();
+    assert.equal(await mailbox.locator('.fs-mail-list li').count(), 1);
+    await mailbox.getByLabel('搜索信件').fill('我把你的信读完了');
+    assert.equal(await mailbox.locator('.fs-mail-list li').count(), 1, 'reply text is searchable');
+    await mailbox.getByLabel('搜索信件').fill('不存在的信件词');
+    assert.equal(await mailbox.locator('.fs-mail-list li').count(), 0);
+    await mailbox.getByLabel('搜索信件').fill('');
+    await mailbox.getByRole('button', { name: '移到回收站', exact: true }).click();
+    assert.equal(await mailbox.locator('.fs-mail-list li').count(), 0);
+    await page.reload(); await page.locator('.focus-badge').waitFor(); await openLetters(page);
+    mailbox = page.getByRole('tabpanel', { name: '信箱' });
+    await mailbox.getByRole('button', { name: '回收站', exact: true }).click();
+    assert.equal(await mailbox.locator('.fs-mail-list li').count(), 1);
+    await mailbox.getByRole('region', { name: '小屋回信' }).waitFor();
+    assert.equal(await mailbox.getByRole('button', { name: '已收藏', exact: true }).getAttribute('aria-pressed'), 'true');
+    for (const viewport of [{ width: 1440, height: 900 }, { width: 960, height: 600 }]) {
+      await page.setViewportSize(viewport);
+      const restore = mailbox.getByRole('button', { name: '放回信箱', exact: true });
+      await restore.scrollIntoViewIfNeeded();
+      const box = await restore.boundingBox();
+      assert.ok(box.x >= 0 && box.y >= 0 && box.x + box.width <= viewport.width && box.y + box.height <= viewport.height);
+      await shot(page, `mailbox-organized-${viewport.width}`);
+    }
+    await mailbox.getByRole('button', { name: '放回信箱', exact: true }).click();
+    await mailbox.getByRole('button', { name: '收藏', exact: true }).click();
+    assert.equal(await mailbox.locator('.fs-mail-list li').count(), 1);
+    await mailbox.getByRole('button', { name: '已收藏', exact: true }).click();
+    assert.equal(await mailbox.locator('.fs-mail-list li').count(), 0);
+    await mailbox.getByRole('button', { name: '来信', exact: true }).click();
+    await mailbox.locator('.fs-mail-list li').first().waitFor();
+    await mailbox.getByRole('button', { name: '移到回收站', exact: true }).click();
+    await page.getByRole('tab', { name: '周报', exact: true }).click();
+    assert.equal(await page.locator('.fs-letter.is-ai').count(), 0, 'removed incoming letters also disappear from the weekly letter spot');
+  }, { ai: { enabled: false, baseUrl: API, model: 'm' } });
+
   await run('interrupted-ai-local-letter-reply-can-be-recovered', async (page) => {
     await openLetters(page);
     const journal = page.getByRole('dialog', { name: '小屋日记' });

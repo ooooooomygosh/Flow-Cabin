@@ -10,6 +10,7 @@ import { normalizeCare, feed, pet, focusDone, writeCare, readCare, MOOD_KEY, MET
 import { readCatMood, subscribeCatMood } from './focus/stats/cat-mood-source.mjs';
 import { saveLetter, readLetters, markRead, LETTERS_KEY, AI_KEY_KEY, AI_SETTINGS_KEY } from './ai/ai-model.mjs';
 import { PLAYBACK_LOG_KEY, createPlaybackLog, readPlaybackSessions } from './player/playback-log.mjs';
+import { JOURNAL_KEY, JOURNAL_CHANGE, readJournalRecords, saveJournalEntry, moveJournalEntry } from './focus/journal-entries.mjs';
 
 const memoryStorage = (entries = []) => {
   const data = new Map(entries), reads = [], writes = [];
@@ -18,6 +19,22 @@ const memoryStorage = (entries = []) => {
 };
 const at = Date.parse('2026-10-18T08:00:00Z');
 const letter = (id = 'w:2026-10-12', time = at) => ({ id, cadence: 'weekly', tone: 'warm', period: '上周', lines: ['今天也很努力。', '明天见。'], source: 'ai', at: time, read: false });
+test('letter organization survives backup restore without reviving an older trash or favorite state', () => {
+  const storage = memoryStorage();
+  const old = { ...letter(), organizedAt: at + 10, favorite: true, trashed: false };
+  const latest = { ...old, organizedAt: at + 20, favorite: false, trashed: true };
+  saveLetter(storage, latest);
+  restoreBackupMemory({ memory: { letters: [old] } }, { storage });
+  assert.equal(readLetters(storage)[0].trashed, true);
+  assert.equal(readLetters(storage)[0].favorite, false);
+  const fresh = memoryStorage();
+  restoreBackupMemory(parseBackup(JSON.stringify(buildBackup({ storage }))), { storage: fresh });
+  assert.deepEqual(readLetters(fresh), readLetters(storage));
+  restoreBackupMemory({ memory: { letters: [{ ...latest, organizedAt: at + 30, trashed: false }] } }, { storage });
+  assert.equal(readLetters(storage)[0].trashed, false);
+});
+const journalEntry = (id = 'journal', patch = {}) => ({ id, version: `v-${id}`, body: '一页手记', tags: ['夜晚', '复盘'],
+  createdAt: at, updatedAt: at + 10, revisions: [{ version: `old-${id}`, body: '旧稿', tags: ['旧'], at: at - 100 }], ...patch });
 function populateMemory(storage) {
   const record = sessionRecord({ start: at - 25 * 60000, end: at, completed: true, todo: { id: 'task', text: '读书' },
     album: { id: 'album', title: 'Night', artist: 'Artist', thumb: 'data:image/png;base64,AAAA' }, track: { title: 'Track', artist: 'Artist', album: 'Night' } });
@@ -99,6 +116,72 @@ test('v3 round-trip uses real session, care, letters and study writers/readers',
     assert.equal(event.newValue, destination.getItem(event.key));
   }
   unsubscribe();
+});
+
+test('v3 independently round-trips long journal entries, history and the trash', () => {
+  const source = memoryStorage(), destination = memoryStorage(), target = new EventTarget(), events = [];
+  let entry = saveJournalEntry({ storage: source, body: '第一稿。', tags: ['夜晚', '初稿'], now: at });
+  assert.equal(entry.ok, true);
+  const longBody = '长'.repeat(7900);
+  entry = saveJournalEntry({ storage: source, id: entry.entry.id, expectedVersion: entry.entry.version,
+    body: longBody, tags: ['夜晚', '长文', '复盘'], now: at });
+  assert.equal(entry.ok, true);
+  assert.equal(entry.entry.updatedAt, at + 1, 'same-millisecond edits still advance monotonically');
+  const trashed = moveJournalEntry({ storage: source, id: entry.entry.id, expectedVersion: entry.entry.version, trash: true, now: at + 1 });
+  assert.equal(trashed.ok, true);
+  assert.equal(trashed.entry.updatedAt, at + 2, 'same-millisecond moves still advance monotonically');
+  assert.equal(saveJournalEntry({ storage: source, body: '还留在今天的一页。', tags: ['今天'], now: at + 30 }).ok, true);
+
+  const records = readJournalRecords(source);
+  assert.equal(records.find((record) => record.id === trashed.entry.id).body.length, longBody.length);
+  assert.ok(records.find((record) => record.id === trashed.entry.id).revisions.some((revision) => revision.body === '第一稿。'));
+  assert.equal(records.find((record) => record.id === trashed.entry.id).deletedAt, at + 2);
+
+  const backup = buildBackup({ storage: source }), parsed = parseBackup(JSON.stringify(backup));
+  assert.equal(backup.version, BACKUP_VERSION);
+  assert.deepEqual(backup.memory.journalEntries, records);
+  assert.deepEqual(parsed.memory.journalEntries, records);
+  const replacement = backupReplacements(parsed, { memory: true })[0];
+  assert.equal(replacement.id, 'memory');
+  assert.match(replacement.label, /手记/);
+
+  target.addEventListener('storage', (event) => events.push(event));
+  target.addEventListener(JOURNAL_CHANGE, (event) => events.push(event));
+  assert.deepEqual(restoreBackupMemory(parsed, { storage: destination, target }).changed, [JOURNAL_KEY]);
+  assert.deepEqual(readJournalRecords(destination), records);
+  assert.ok(events.some((event) => event.type === 'storage' && event.key === JOURNAL_KEY && event.storageArea === destination));
+  assert.ok(events.some((event) => event.type === JOURNAL_CHANGE));
+});
+
+test('older backups without journalEntries leave this computer hand-written pages untouched', () => {
+  const destination = memoryStorage();
+  assert.equal(saveJournalEntry({ storage: destination, body: '只属于本机的一页。', tags: ['本机'], now: at }).ok, true);
+  const before = destination.getItem(JOURNAL_KEY), entries = readJournalRecords(destination);
+  const parsed = parseBackup(JSON.stringify({ kind: 'FlowCabinBackup', version: 2, items: [], memory: { version: 1, letters: [] } }));
+  const restored = restoreBackupMemory(parsed, { storage: destination, target: new EventTarget() });
+  assert.ok(!restored.changed.includes(JOURNAL_KEY));
+  assert.equal(destination.getItem(JOURNAL_KEY), before);
+  assert.deepEqual(readJournalRecords(destination), entries);
+});
+
+test('journal merge deduplicates history without reviving a deleted page at the same timestamp', () => {
+  const destination = memoryStorage();
+  const shared = { version: 'shared-v1', body: '共同初稿', tags: ['共同'], at: at + 1 };
+  const local = journalEntry('shared', { version: 'local-v3', body: '本地删除版本', tags: ['本机'], updatedAt: at + 300,
+    deletedAt: at + 300, revisions: [shared, { version: 'local-v2', body: '本地二稿', tags: ['本机'], at: at + 2 }] });
+  const incoming = journalEntry('shared', { version: 'zzzz-incoming-v9', body: '另一台电脑的未删除版本', tags: ['远端'], updatedAt: at + 300,
+    revisions: [shared, { version: 'remote-v1', body: '远端旧稿', tags: ['远端'], at: at + 3 }] });
+  destination.setItem(JOURNAL_KEY, JSON.stringify([local]));
+  const parsed = parseBackup(JSON.stringify(buildBackup({ storage: null, memory: { version: 1, journalEntries: [incoming] } })));
+  restoreBackupMemory(parsed, { storage: destination, target: new EventTarget() });
+  const merged = readJournalRecords(destination)[0];
+  assert.equal(merged.id, 'shared');
+  assert.equal(merged.version, 'local-v3');
+  assert.equal(merged.body, '本地删除版本');
+  assert.equal(merged.deletedAt, at + 300);
+  const versions = merged.revisions.map((revision) => revision.version);
+  assert.equal(new Set(versions).size, versions.length);
+  for (const version of ['shared-v1', 'local-v2', 'remote-v1', 'zzzz-incoming-v9']) assert.ok(versions.includes(version));
 });
 
 test('legacy letter records normalize as incoming delivered letters in every backup version', () => {
@@ -228,6 +311,9 @@ test('restore merges local history and is idempotent, including read and reward 
 
 test('backup reads only memory allowlist and drops arbitrary credential-bearing fields', () => {
   const storage = memoryStorage(); const { record } = populateMemory(storage);
+  let journal = saveJournalEntry({ storage, body: '只备份正文与历史。', tags: ['私密'], now: at });
+  journal = saveJournalEntry({ storage, id: journal.entry.id, expectedVersion: journal.entry.version, body: '第二稿。', tags: ['私密'], now: at + 1 });
+  assert.equal(journal.ok, true);
   storage.setItem(AI_KEY_KEY, 'DO_NOT_EXPORT_KEY');
   storage.setItem(AI_SETTINGS_KEY, JSON.stringify({ baseUrl: 'https://example.test?token=DO_NOT_EXPORT_KEY' }));
   storage.setItem('provider-login', 'DO_NOT_EXPORT_KEY');
@@ -235,15 +321,19 @@ test('backup reads only memory allowlist and drops arbitrary credential-bearing 
     const value = JSON.parse(storage.getItem(key));
     storage.setItem(key, JSON.stringify(Array.isArray(value) ? value.map((entry) => ({ ...entry, credentials: 'DO_NOT_EXPORT_KEY' })) : { ...value, apiKey: 'DO_NOT_EXPORT_KEY' }));
   };
-  for (const key of [SESSION_LOG_KEY, MOOD_KEY, META_KEY, LETTERS_KEY]) addSecret(key);
+  for (const key of [SESSION_LOG_KEY, MOOD_KEY, META_KEY, LETTERS_KEY, JOURNAL_KEY]) addSecret(key);
+  const journalRows = JSON.parse(storage.getItem(JOURNAL_KEY));
+  journalRows[0].revisions[0].connection = { accessToken: 'DO_NOT_EXPORT_KEY' };
+  storage.setItem(JOURNAL_KEY, JSON.stringify(journalRows));
   storage.reads.length = 0;
   const backup = buildBackup({ storage, apiKey: 'DO_NOT_EXPORT_KEY',
     focus: { sessions: [{ ...record, token: 'DO_NOT_EXPORT_KEY' }], settings: { apiKey: 'DO_NOT_EXPORT_KEY' } },
     study: { apiKey: 'DO_NOT_EXPORT_KEY' }, sound: { rain: .5, apiKey: 'DO_NOT_EXPORT_KEY' },
     items: [{ id: 'album', title: 'Night', artist: 'Artist', credential: 'DO_NOT_EXPORT_KEY', externalIds: { itunesTrackId: '123', apiKey: 'DO_NOT_EXPORT_KEY' },
       trackDetails: [{ title: 'Track', credential: 'DO_NOT_EXPORT_KEY' }] }] });
-  assert.deepEqual(storage.reads, [SESSION_LOG_KEY, MOOD_KEY, META_KEY, LETTERS_KEY, PLAYBACK_LOG_KEY]);
+  assert.deepEqual(storage.reads, [SESSION_LOG_KEY, MOOD_KEY, META_KEY, LETTERS_KEY, PLAYBACK_LOG_KEY, JOURNAL_KEY]);
   assert.ok(!JSON.stringify(backup).includes('DO_NOT_EXPORT_KEY'));
+  assert.equal(backup.memory.journalEntries[0].body, '第二稿。');
   assert.equal(backup.items[0].externalIds.itunesTrackId, '123');
   const destination = memoryStorage([[AI_KEY_KEY, 'LOCAL_KEY'], ['unrelated', 'keep']]);
   restoreBackupMemory(parseBackup(JSON.stringify(backup)), { storage: destination });
@@ -263,7 +353,10 @@ test('invalid versions, structures and records are rejected without storage chan
     { memory: { catMood: { mood: 101, updatedAt: at } } }, { memory: { catMood: { mood: 60, updatedAt: at, feeds: [null] } } },
     { memory: { catCare: { pets: { day: '2026-10-18', count: -1 } } } }, { memory: { catCare: { rewarded: {} } } },
     { memory: { letters: [{ ...letter(), lines: [{}] }] } }, { memory: { letters: [{ ...letter(), at: 'bad' }] } },
-    { memory: { playbackSessions: {} } }, { memory: { playbackSessions: [{ id: 'play', start: at, end: at + 1000, durationMs: 1001 }] } }
+    { memory: { playbackSessions: {} } }, { memory: { playbackSessions: [{ id: 'play', start: at, end: at + 1000, durationMs: 1001 }] } },
+    { memory: { journalEntries: {} } }, { memory: { journalEntries: [null] } },
+    { memory: { journalEntries: [journalEntry('too-long', { body: '长'.repeat(8001) })] } },
+    { memory: { journalEntries: [journalEntry('duplicate'), journalEntry('duplicate')] } }
   ];
   for (const patch of invalid) assert.throws(() => parseBackup(JSON.stringify({ ...base, ...patch })), /格式无效|版本/);
   assert.throws(() => restoreBackupMemory({ memory: { letters: [null] } }, { storage }), /格式无效/);
@@ -302,9 +395,34 @@ test('failed writes roll back every committed store and emit no refresh', () => 
   }
 });
 
+test('a journal write failure rolls back earlier stores and keeps the local page', () => {
+  const source = memoryStorage(); populateMemory(source);
+  assert.equal(saveJournalEntry({ storage: source, body: '备份里的新一页。', tags: ['备份'], now: at + 40 }).ok, true);
+  const parsed = parseBackup(JSON.stringify(buildBackup({ storage: source })));
+  const destination = memoryStorage([[AI_KEY_KEY, 'LOCAL_KEY']]);
+  const local = journalEntry('local', { body: '本机不能丢的一页', updatedAt: at + 50 });
+  destination.setItem(JOURNAL_KEY, JSON.stringify([local]));
+  const before = [...destination.data], write = destination.setItem, target = new EventTarget(), events = [];
+  target.addEventListener('storage', () => events.push('storage'));
+  target.addEventListener(JOURNAL_CHANGE, () => events.push(JOURNAL_CHANGE));
+  destination.setItem = (key, value) => {
+    if (key === JOURNAL_KEY) throw new Error('quota');
+    write(key, value);
+  };
+  assert.throws(() => restoreBackupMemory(parsed, { storage: destination, target }), /原有内容保持不变/);
+  assert.deepEqual([...destination.data], before);
+  assert.deepEqual(events, []);
+  assert.equal(readJournalRecords(destination)[0].body, '本机不能丢的一页');
+});
+
 test('unavailable or corrupt local storage fails visibly rather than claiming a complete backup', () => {
   assert.throws(() => buildBackup({ storage: { getItem() { throw new Error('blocked'); } } }), /blocked/);
   assert.throws(() => readBackupMemory(memoryStorage([[LETTERS_KEY, '{bad'] ])), /格式无效/);
+  const badJournal = memoryStorage([[JOURNAL_KEY, '{bad']]);
+  assert.throws(() => readBackupMemory(badJournal), /小屋手记格式异常/);
+  assert.throws(() => buildBackup({ storage: badJournal }), /小屋手记格式异常/);
+  assert.throws(() => restoreBackupMemory({ memory: { journalEntries: [journalEntry()] } }, { storage: badJournal }), /小屋手记格式异常/);
+  assert.equal(badJournal.getItem(JOURNAL_KEY), '{bad');
   assert.throws(() => restoreBackupMemory({ memory: { letters: [letter()] } }, { storage: null }), /无法保存/);
 });
 

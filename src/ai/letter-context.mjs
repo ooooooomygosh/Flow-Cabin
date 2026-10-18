@@ -2,6 +2,23 @@ import { addDays, startOfDay } from '../lib/local-calendar.mjs';
 import { letterSummary } from './ai-model.mjs';
 
 const DAY = 86400000;
+export const LETTER_JOURNAL_LIMIT = 3;
+export const LETTER_JOURNAL_CHARS = 240;
+
+export function journalExcerpt(entry) {
+  if (!entry || entry.deletedAt != null || typeof entry.body !== 'string' || !entry.body.trim()) return null;
+  return {
+    id: entry.id, version: entry.version, createdAt: entry.createdAt,
+    excerpt: entry.body.replace(/[\x00-\x1f\x7f]/g, ' ').trim().slice(0, LETTER_JOURNAL_CHARS)
+  };
+}
+
+export function journalSelectionCurrent(selected, entries) {
+  return selected.length <= LETTER_JOURNAL_LIMIT && selected.every((item) => {
+    const current = journalExcerpt(entries.find((entry) => entry.id === item.id));
+    return current && current.version === item.version && current.excerpt === item.excerpt;
+  });
+}
 
 // A quieter window for letters the user writes by hand. Automatic letters keep
 // their daily / weekly period; both feed the same evidence contract.
@@ -29,13 +46,21 @@ export function ambienceSnapshot(doc = globalThis.document, now = Date.now()) {
 
 export function buildLetterContext({
   sessions = [], playbackSessions = [], mood = null, notes = '',
-  includeNotes = false, shareContext = true, weather = null, now = Date.now(), days = 7
+  includeNotes = false, shareContext = true, weather = null, now = Date.now(), days = 7, selectedJournal = []
 } = {}) {
   if (!shareContext) return null;
-  return letterSummary(sessions, recentLetterPeriod(now, days), mood, {
+  const summary = letterSummary(sessions, recentLetterPeriod(now, days), mood, {
     playbackSessions, weather: weather || ambienceSnapshot(undefined, now),
     includeNotes, notes
   });
+  const excerpts = selectedJournal.slice(0, LETTER_JOURNAL_LIMIT)
+    .filter((item) => typeof item?.excerpt === 'string' && item.excerpt.trim())
+    .map((item) => ({ excerpt: item.excerpt.slice(0, LETTER_JOURNAL_CHARS) }));
+  if (excerpts.length) {
+    summary.journal = excerpts;
+    summary.evidence.push({ kind: 'note', text: `本次选择了 ${excerpts.length} 页手记摘录 · 共 ${excerpts.reduce((n, item) => n + item.excerpt.length, 0)} 字` });
+  }
+  return summary;
 }
 
 // Weather alone is not enough reason to put an unread letter in the inbox.

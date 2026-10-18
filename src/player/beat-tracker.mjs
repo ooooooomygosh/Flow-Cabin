@@ -15,7 +15,7 @@ export function createBeatTracker({ step = STEP_MS, history = HISTORY_MS } = {})
   const size = Math.round(history / step), curve = new Float32Array(size);
   let head = 0, filled = 0, slotAt = -Infinity, slotMax = 0, previous = null, lastEstimate = -Infinity;
   let bpm = 0, pending = 0, pendingCount = 0, beatAt = -Infinity, confident = false, mean = 0, spread = 0;
-  // Recent strong onsets (kick-like hits). A steady tone or noise has none, so it never counts as a beat.
+  // Recent strong onsets (kick-like hits). Noise can produce these too; periodic() rejects incoherent hits.
   let onsets = [], lastOnset = -Infinity;
   const period = () => 60000 / (bpm || DEFAULT_BPM);
   const at = (back) => curve[(head - 1 - back + size * 2) % size];
@@ -37,7 +37,12 @@ export function createBeatTracker({ step = STEP_MS, history = HISTORY_MS } = {})
     let variance = 0;
     for (let i = 0; i < filled; i++) variance += (at(i) - average) ** 2;
     variance /= filled;
-    confident = variance > 1e-6 && best / variance > .12 && periodic(time, exactLag * step);
+    // A short noise window can have a chance peak above .12 when we search many
+    // lags. Require the unweighted peak to clear a sample-size-aware noise floor
+    // as well; the tempo prior ranks candidates, but is not rhythmic evidence.
+    const noiseFloor = 4 / Math.sqrt(filled - bestLag);
+    confident = bestLag > 0 && variance > 1e-6 && best / variance > .12
+      && correlation(bestLag) / variance > noiseFloor && periodic(time, exactLag * step);
     if (!confident || !bestLag) return;
     const found = 60000 / (exactLag * step);
     // A new tempo is believed only when it shows up twice in a row.
@@ -83,7 +88,13 @@ export function createBeatTracker({ step = STEP_MS, history = HISTORY_MS } = {})
     if (recent.length < 4) return false;
     let fit = 0;
     for (let i = 1; i < recent.length; i++) { const half = length / 2, k = Math.max(1, Math.round((recent[i] - recent[i - 1]) / half)); if (k <= 8 && Math.abs(recent[i] - recent[i - 1] - k * half) < length * .12) fit++; }
-    return fit / (recent.length - 1) >= .6;
+    if (fit / (recent.length - 1) < .6) return false;
+    // Adjacent gaps can each resemble half beats while their errors accumulate into
+    // unrelated phases. Require the hits to share one half-beat grid across the window.
+    // The circular mean treats kicks and off-beats alike and allows missing beats.
+    let x = 0, y = 0;
+    for (const onset of recent) { const phase = (onset - recent[0]) / length * Math.PI * 4; x += Math.cos(phase); y += Math.sin(phase); }
+    return Math.hypot(x, y) / recent.length >= .75;
   }
   return {
     push(time, bass) {
@@ -92,6 +103,9 @@ export function createBeatTracker({ step = STEP_MS, history = HISTORY_MS } = {})
       previous = level;
       // Running statistics of the onset strength pick out the strong hits.
       mean += (flux - mean) * .02; spread += (Math.abs(flux - mean) - spread) * .02;
+      // Continuous noise has upper-tail excursions too. A percussive onset must
+      // stand above the ongoing flux floor, not just its local spread.
+      const strong = flux > .02 && flux > mean * 8 && flux > mean + spread * 2.5;
       // The curve is kept on a fixed 20 ms grid, whatever the frame rate.
       const slot = Math.floor(time / step);
       if (slotAt === -Infinity) slotAt = slot;
@@ -100,13 +114,13 @@ export function createBeatTracker({ step = STEP_MS, history = HISTORY_MS } = {})
         slotAt = slot; slotMax = 0;
       }
       slotMax = Math.max(slotMax, flux);
-      if (flux > .02 && flux > mean + spread * 2.5 && time - lastOnset > 80) { lastOnset = time; onsets.push(time); if (onsets.length > 32) onsets.shift(); }
+      if (strong && time - lastOnset > 80) { lastOnset = time; onsets.push(time); if (onsets.length > 32) onsets.shift(); }
       if (time - lastEstimate > 1000) { lastEstimate = time; estimate(time); }
       // Keep beatAt on the most recent predicted beat, then lean it towards a strong onset.
       const length = period();
       if (!Number.isFinite(beatAt)) beatAt = time;
       while (time - beatAt >= length) beatAt += length;
-      if (bpm && flux > mean + spread * 2.5 && flux > .02) {
+      if (bpm && strong) {
         const offset = time - beatAt, error = offset > length / 2 ? offset - length : offset;
         if (Math.abs(error) < length * .2) beatAt += error * .35;
       }

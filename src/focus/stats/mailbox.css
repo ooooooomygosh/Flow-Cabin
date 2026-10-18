@@ -106,6 +106,18 @@
   .fs-mail-sealing span:nth-child(3) { animation-delay: .32s; }
   @keyframes fs-sealing { 0%, 100% { opacity: .22; } 50% { opacity: 1; } }
   .fs-mail-main.is-reduced .fs-mail-sealing span { animation: none; }
+  .fs-mail-search input { box-sizing: border-box; width: 100%; min-width: 0; padding: 7px 9px; border: 1px solid var(--journal-rule); background: transparent; color: var(--journal-paper-ink); font: inherit; font-size: 12px; }
+  .fs-mail-filters { flex-wrap: wrap; }
+  .fs-mail-organize { display: flex; flex-wrap: wrap; gap: 8px; }
+  .fs-mail-organize [aria-pressed=true] { color: var(--journal-ink-hi); border-color: currentColor; }
+  .fs-mail-journal-picker { margin: 8px 0; font-size: 12px; line-height: 20px; color: var(--journal-paper-ink); }
+  .fs-mail-journal-picker summary { cursor: pointer; }
+  .fs-mail-journal-picker p { margin: 6px 0; overflow-wrap: anywhere; }
+  .fs-mail-journal-picker input[type=search] { display: block; width: 100%; min-width: 0; padding: 6px; font: inherit; color: var(--journal-paper-ink); background: #fff8e6; border: 1px solid var(--journal-rule); }
+  .fs-mail-journal-choices { max-height: 140px; overflow: auto; margin: 6px 0; }
+  .fs-mail-journal-choices label { display: flex; align-items: baseline; gap: 6px; overflow-wrap: anywhere; }
+  .fs-mail-journal-choices input { flex: 0 0 auto; }
+  .fs-mail-journal-picker article { padding: 6px; margin: 6px 0; border: 1px dashed var(--journal-rule); }
   @media (max-width: 1100px) {
     .fs-mail-spread { grid-template-columns: minmax(240px, .78fr) 12px minmax(0, 1.22fr); }
     .fs-mail-side { padding-right: 12px; }
