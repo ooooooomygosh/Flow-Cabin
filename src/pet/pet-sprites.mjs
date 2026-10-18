@@ -1,9 +1,11 @@
 // Original hand-built pixel silhouettes. No image assets or remote requests.
 // Shared palette semantics let every accessory work on every species.
-import { catFrame, SIZE, PALETTE, CAT_PALETTES, POSES, ACCESSORIES, LISTEN_POSE, LISTEN_FRAMES, TYPING_POSE, TYPING_FRAMES, EAT_POSE, EAT_FRAMES, HOP_POSE, HOP_FRAMES } from './cat-sprites.mjs';
-const CAT_ACTIONS = { [TYPING_POSE]: TYPING_FRAMES, [EAT_POSE]: EAT_FRAMES, [HOP_POSE]: HOP_FRAMES };
+import { catFrame, SIZE, PALETTE, CAT_PALETTES, POSES, ACCESSORIES, LISTEN_POSE, LISTEN_FRAMES, TYPING_POSE, TYPING_FRAMES, EAT_POSE, EAT_FRAMES, HOP_POSE, HOP_FRAMES, DELIVER_POSE, DELIVER_FRAMES } from './cat-sprites.mjs';
+const CAT_ACTIONS = { [TYPING_POSE]: TYPING_FRAMES, [EAT_POSE]: EAT_FRAMES, [HOP_POSE]: HOP_FRAMES, [DELIVER_POSE]: DELIVER_FRAMES };
+// beauty's cat-only poses (not in POSES): drawn with catFrame(pose, i, acc), never through normalizeFrame.
+export const CAT_ONLY_FRAMES = Object.freeze({ [LISTEN_POSE]: LISTEN_FRAMES, ...CAT_ACTIONS });
 // What other pets draw for the cat-only actions.
-const ACTION_FALLBACK = { [TYPING_POSE]: 'idle', [EAT_POSE]: 'celebrate', [HOP_POSE]: 'celebrate' };
+const ACTION_FALLBACK = { [TYPING_POSE]: 'idle', [EAT_POSE]: 'celebrate', [HOP_POSE]: 'celebrate', [DELIVER_POSE]: 'walk' };
 import { normalizePetId } from './pet-catalog.mjs';
 export { SIZE, POSES, ACCESSORIES };
 const palette = (fur, light, shade, blush = '#ed9c9c') => Object.freeze(PALETTE.map((c, i) => ({ 2: fur, 3: light, 4: shade, 5: blush }[i] || c)));
@@ -79,12 +81,9 @@ function effects(g, pose, i) {
   }
 }
 export function normalizeFrame(pose = 'idle', index = 0) {
-  // Cat-only poses (beauty's TYPING / EAT / HOP and listen) are not in POSES; they must survive
-  // normalisation or the cache and hit-test fall back to idle (bini: eat looked like sitting).
-  const counts = { ...POSES, ...CAT_ACTIONS, [LISTEN_POSE]: LISTEN_FRAMES };
-  const safePose = Object.hasOwn(counts, pose) ? pose : 'idle';
+  const safePose = Object.hasOwn(POSES, pose) ? pose : 'idle';
   const integer = Number.isFinite(index) ? Math.floor(index) : 0;
-  return { pose: safePose, index: ((integer % counts[safePose]) + counts[safePose]) % counts[safePose] };
+  return { pose: safePose, index: ((integer % POSES[safePose]) + POSES[safePose]) % POSES[safePose] };
 }
 export function petFrame(petId = 'cat', pose = 'idle', index = 0, acc = '') {
   const pet = normalizePetId(petId);
@@ -94,7 +93,7 @@ export function petFrame(petId = 'cat', pose = 'idle', index = 0, acc = '') {
     if (pet === 'cat') { const n = CAT_ACTIONS[pose], i = Number.isFinite(index) ? Math.floor(index) : 0; return catFrame(pose, ((i % n) + n) % n, ACCESSORIES.includes(acc) ? acc : ''); }
     pose = ACTION_FALLBACK[pose];
   }
-  const normalized = normalizeFrame(Object.hasOwn(POSES, pose) ? pose : 'idle', index);
+  const normalized = normalizeFrame(pose, index);
   pose = normalized.pose; index = normalized.index;
   acc = ACCESSORIES.includes(acc) ? acc : '';
   if (pet === 'cat') return catFrame(pose, index, acc);
@@ -124,7 +123,15 @@ export function petFrame(petId = 'cat', pose = 'idle', index = 0, acc = '') {
 }
 const cache = new Map();
 export function cachedPetFrame(petId, pose, index, acc) {
-  const pet = normalizePetId(petId), safe = normalizeFrame(pose, index), accessory = ACCESSORIES.includes(acc) ? acc : '';
+  const pet = normalizePetId(petId), accessory = ACCESSORIES.includes(acc) ? acc : '';
+  // bini v1.18: cat-only poses used to go through normalizeFrame (POSES only) and render as idle on
+  // the desk pet. They bypass it, cached per pose + frame.
+  if (pet === 'cat' && Object.hasOwn(CAT_ONLY_FRAMES, pose)) {
+    const n = CAT_ONLY_FRAMES[pose], i = Number.isFinite(index) ? Math.floor(index) : 0, frame = ((i % n) + n) % n, key = `cat:${pose}:${frame}:${accessory}`;
+    if (!cache.has(key)) cache.set(key, catFrame(pose, frame, accessory));
+    return cache.get(key);
+  }
+  const safe = normalizeFrame(Object.hasOwn(CAT_ACTIONS, pose) ? ACTION_FALLBACK[pose] : pose, index); // other pets: same fallback as petFrame
   const key = `${pet}:${safe.pose}:${safe.index}:${accessory}`;
   if (!cache.has(key)) cache.set(key, petFrame(pet, safe.pose, safe.index, accessory));
   return cache.get(key);
