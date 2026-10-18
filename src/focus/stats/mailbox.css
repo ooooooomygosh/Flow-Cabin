@@ -1,0 +1,132 @@
+@layer guards, reset, features, skin, overrides;
+@layer overrides {
+  .fs-tab-unread { display: inline-grid; place-items: center; min-width: 18px; height: 18px; margin-left: 5px; padding: 0 4px; color: #fff8e8; background: #a64032; box-shadow: 1px 1px 0 rgba(13, 8, 5, .35); font-size: 12px; line-height: 1; vertical-align: 1px; }
+  .fs-mail-spread { grid-template-columns: minmax(292px, .84fr) 16px minmax(0, 1.16fr); }
+  .fs-mail-side { align-content: start; gap: 10px; padding-right: 22px; overflow: hidden; }
+  .fs-mail-side-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .fs-mail-title { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .fs-mail-title h3 { margin: 0; color: var(--journal-paper-ink); font-size: var(--px-text-body); line-height: 24px; }
+  .fs-mail-title p { margin: 0; color: var(--journal-paper-faint); font-size: 12px; line-height: 16px; }
+  .fs-mail-art { display: grid; place-items: center; width: 44px; height: 44px; flex: none; background: color-mix(in srgb, var(--journal-paper-ink) 8%, transparent); box-shadow: 2px 2px 0 rgba(13, 8, 5, .12); }
+  .fs-mail-art > span { width: 32px; height: 32px; background-size: 64px 32px; background-repeat: no-repeat; image-rendering: pixelated; }
+  .fs-mail-envelope { display: inline-block; width: 32px; height: 21px; background-size: 64px 21px; background-repeat: no-repeat; image-rendering: pixelated; }
+  .fs-mail-write, .fs-mail-send { min-height: var(--px-hit); padding: 4px 12px; color: var(--px-ink-on-accent); background: var(--px-accent); border: 2px solid var(--px-accent-lo); box-shadow: 2px 2px 0 rgba(13, 8, 5, .24), inset 0 2px 0 var(--px-accent-hi); font: inherit; font-weight: 700; white-space: nowrap; cursor: pointer; }
+  .fs-mail-write:focus-visible, .fs-mail-send:focus-visible, .fs-mail-filters button:focus-visible, .fs-mail-list button:focus-visible, .fs-mail-pages button:focus-visible, .fs-mail-quiet:focus-visible, .fs-mail-draft:focus-visible { outline: 2px solid var(--px-focus); outline-offset: 2px; }
+  .fs-mail-send:disabled, .fs-mail-pages button:disabled { opacity: .45; cursor: default; }
+  .fs-mail-filters { display: flex; gap: 4px; }
+  .fs-mail-filters button { min-height: 28px; padding: 2px 10px; color: var(--journal-paper-faint); background: transparent; border: 1px solid var(--journal-rule); font: inherit; font-size: 12px; cursor: pointer; }
+  .fs-mail-filters button[aria-pressed='true'] { color: var(--journal-paper-ink); background: color-mix(in srgb, var(--journal-ink-hi) 16%, transparent); border-color: var(--journal-paper-faint); font-weight: 700; }
+  .fs-mail-draft { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; width: 100%; padding: 7px 9px; color: #574a32; background: #f3df9d; border: 1px dashed #9b7d43; box-shadow: 2px 2px 0 rgba(13, 8, 5, .12); font: inherit; text-align: left; cursor: pointer; }
+  .fs-mail-draft > span { padding: 1px 5px; color: #fff8e8; background: #8b6a3e; font-size: 12px; }
+  .fs-mail-draft strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+  .fs-mail-draft small { font-size: 12px; }
+  .fs-mail-list { list-style: none; display: grid; align-content: start; gap: 4px; min-height: 0; margin: 0; padding: 0; overflow: auto; scrollbar-width: thin; }
+  .fs-mail-list li { min-width: 0; }
+  .fs-mail-list button { position: relative; display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; gap: 7px; width: 100%; min-height: 52px; padding: 5px 8px 5px 6px; color: var(--journal-paper-ink); background: color-mix(in srgb, var(--px-paper) 45%, transparent); border: 1px solid transparent; font: inherit; text-align: left; cursor: pointer; }
+  .fs-mail-list button:hover { background: color-mix(in srgb, var(--journal-paper-ink) 6%, transparent); }
+  .fs-mail-list button.is-selected { background: color-mix(in srgb, var(--journal-ink-hi) 13%, transparent); border-color: color-mix(in srgb, var(--journal-paper-faint) 55%, transparent); box-shadow: inset 3px 0 0 var(--journal-ink-hi); }
+  .fs-mail-direction { display: grid; place-items: center; width: 26px; height: 30px; color: var(--journal-paper-faint); border: 1px solid currentColor; font-size: 12px; line-height: 1; }
+  .fs-mail-direction.is-out { color: var(--journal-ink-hi); }
+  .fs-mail-row-copy { display: grid; min-width: 0; gap: 1px; }
+  .fs-mail-row-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; line-height: 18px; }
+  .fs-mail-row-copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--journal-paper-faint); font-size: 12px; line-height: 16px; }
+  .fs-mail-list time { align-self: start; padding-top: 3px; color: var(--journal-paper-faint); font-size: 12px; white-space: nowrap; }
+  .fs-mail-unread-dot { position: absolute; top: 6px; right: 6px; width: 6px; height: 6px; background: #a64032; box-shadow: 0 0 0 1px color-mix(in srgb, #a64032 35%, transparent); }
+  .fs-mail-list button.is-unread .fs-mail-row-copy strong { font-weight: 700; }
+  .fs-mail-list-empty { display: grid; place-items: center; align-content: center; gap: 4px; min-height: 190px; padding: 16px; color: var(--journal-paper-faint); text-align: center; }
+  .fs-mail-list-empty img { margin-bottom: 2px; }
+  .fs-mail-list-empty p { margin: 0; color: var(--journal-paper-ink); font-size: 13px; }
+  .fs-mail-list-empty small { font-size: 12px; }
+  .fs-mail-pages { display: flex; align-items: center; justify-content: space-between; gap: 6px; color: var(--journal-paper-faint); font-size: 12px; }
+  .fs-mail-pages button { width: 28px; height: 26px; color: var(--journal-paper-ink); background: transparent; border: 1px solid var(--journal-rule); font: inherit; cursor: pointer; }
+  .fs-mail-draft-state { min-height: 16px; margin: 0; color: var(--journal-ink-hi); font-size: 12px; line-height: 16px; }
+  .fs-mail-main { position: relative; align-content: start; gap: 10px; padding-left: 24px; overflow: auto; }
+  .fs-mail-main.has-paper { background-image: var(--journal-paper-img), repeating-linear-gradient(to bottom, transparent 0 23px, var(--journal-rule) 23px 24px); background-size: auto, auto; background-position: 0 16px; }
+  .fs-mail-toast { position: sticky; z-index: 3; top: 0; margin: 0; padding: 4px 8px; color: #40633c; background: #edf3d9; border: 1px solid #9ba97d; font-size: 12px; line-height: 17px; }
+  .fs-mail-toast.is-error { color: #8d2f2a; background: #f7d7cd; border-color: #bc6a5d; }
+  .fs-mail-empty-detail { display: grid; place-items: center; align-content: center; gap: 8px; min-height: 420px; padding: 24px; text-align: center; }
+  .fs-mail-empty-detail img { opacity: .9; }
+  .fs-mail-empty-detail strong { color: var(--journal-paper-ink); font-size: 16px; }
+  .fs-mail-empty-detail p { max-width: 250px; margin: 0; color: var(--journal-paper-faint); font-size: 12px; line-height: 20px; }
+  .fs-mail-thread { display: grid; gap: 10px; padding-bottom: 8px; }
+  .fs-mail-thread-head, .fs-mail-composer-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .fs-mail-thread-head small, .fs-mail-composer-head small { color: var(--journal-paper-faint); font-size: 12px; line-height: 16px; }
+  .fs-mail-thread-head h3, .fs-mail-composer-head h3 { margin: 0; color: var(--journal-paper-ink); font-size: 16px; line-height: 24px; }
+  .fs-mail-status { flex: none; padding: 2px 7px; color: var(--journal-paper-faint); border: 1px solid var(--journal-rule); font-size: 12px; line-height: 16px; }
+  .fs-mail-status.is-sending { color: #8b6024; border-color: #b98b46; }
+  .fs-mail-status.is-failed { color: #a64032; border-color: #a64032; }
+  .fs-mail-paper { position: relative; padding: 13px 16px 11px; background-color: #fbf2d9; background-size: 32px 32px; background-repeat: repeat; border: 1px solid #cbbd9b; box-shadow: 3px 3px 0 rgba(13, 8, 5, .18), inset 0 0 0 2px rgba(255, 250, 236, .5); image-rendering: pixelated; color: #4d4433; }
+  .fs-mail-paper::before { content: ''; position: absolute; inset: 7px 8px; border: 1px solid rgba(126, 103, 69, .12); pointer-events: none; }
+  .fs-mail-paper header, .fs-mail-paper footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: #8a7456; font-size: 12px; line-height: 18px; }
+  .fs-mail-paper footer { margin-top: 6px; justify-content: flex-end; }
+  .fs-mail-paper.is-ai { background-color: #f7eedc; }
+  .fs-mail-lines { display: grid; gap: 7px; padding: 9px 2px 7px; }
+  .fs-mail-lines p { margin: 0; color: #4d4433; font-family: var(--px-font-body); font-size: 13px; line-height: 23px; }
+  .fs-mail-sign { font-family: var(--px-font-cn); font-size: 12px; }
+  .fs-mail-evidence { display: flex; flex-wrap: wrap; gap: 4px; list-style: none; margin: 0; padding: 0; }
+  .fs-mail-evidence li { display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px 2px 3px; color: #574a32; background: rgba(251, 239, 199, .72); border: 1px solid rgba(139, 106, 62, .22); font-size: 12px; line-height: 16px; }
+  .fs-mail-evidence li > span { padding: 0 4px; color: #fff8e8; background: #7f6848; }
+  .fs-mail-evidence li[data-kind='listening'] > span { background: #4e7566; }
+  .fs-mail-evidence li[data-kind='focus'] > span { background: #9b5d3d; }
+  .fs-mail-evidence li[data-kind='weather'] > span { background: #56687f; }
+  .fs-mail-evidence li[data-kind='cat'] > span { background: #9b733f; }
+  .fs-mail-evidence li[data-kind='note'] > span { background: #765b80; }
+  .fs-mail-pending { display: flex; align-items: center; gap: 9px; padding: 7px 10px; background: color-mix(in srgb, var(--journal-ink-hi) 10%, transparent); border: 1px dashed var(--journal-rule); }
+  .fs-mail-pending p { margin: 0; color: var(--journal-paper-faint); font-size: 12px; line-height: 18px; }
+  .fs-mail-pending-copy { margin: 0; color: var(--journal-paper-faint); font-size: 12px; line-height: 18px; }
+  .fs-mail-error { margin: 0; padding: 5px 8px; color: #8d2f2a; background: #f7d7cd; border: 1px solid #bc6a5d; font-size: 12px; }
+  .fs-mail-reply { display: grid; gap: 8px; padding-top: 8px; border-top: 1px dashed var(--journal-rule); }
+  .fs-mail-reply > header { display: flex; align-items: center; justify-content: space-between; color: var(--journal-paper-ink); font-size: 12px; }
+  .fs-mail-reply > header span { display: inline-flex; align-items: center; gap: 5px; }
+  .fs-mail-reply > header time { color: var(--journal-paper-faint); font-size: 12px; }
+  .fs-mail-composer { display: grid; gap: 8px; }
+  .fs-mail-quiet { min-height: 28px; padding: 2px 8px; color: var(--journal-paper-faint); background: transparent; border: 1px solid var(--journal-rule); font: inherit; font-size: 12px; cursor: pointer; }
+  .fs-mail-textarea-label { position: relative; display: block; }
+  .fs-mail-textarea-label > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .fs-mail-textarea-label textarea { width: 100%; min-height: 116px; resize: vertical; padding: 10px 12px; color: #473f30; background-color: #fff8e6; background-image: repeating-linear-gradient(to bottom, transparent 0 22px, rgba(122, 95, 56, .12) 22px 23px); border: 1px solid #b7a27a; box-shadow: inset 2px 2px 0 rgba(98, 74, 43, .08); font: 13px/23px var(--px-font-body); }
+  .fs-mail-textarea-label textarea:focus-visible { outline: 2px solid var(--px-focus); outline-offset: 1px; border-color: var(--px-accent); }
+  .fs-mail-textarea-label textarea::placeholder { color: #a08e72; }
+  .fs-mail-compose-meta { display: flex; justify-content: space-between; margin-top: -5px; color: var(--journal-paper-faint); font-size: 12px; }
+  .fs-mail-context { min-width: 0; margin: 0; padding: 7px 9px; border: 1px dashed var(--journal-rule); }
+  .fs-mail-context legend { padding: 0 4px; color: var(--journal-paper-ink); font-size: 12px; }
+  .fs-mail-context:disabled { opacity: .7; }
+  .fs-mail-check { display: grid; grid-template-columns: 18px minmax(0, 1fr); align-items: start; gap: 5px; padding: 3px 0; cursor: pointer; }
+  .fs-mail-check.is-disabled { opacity: .55; cursor: default; }
+  .fs-mail-check input { width: 14px; height: 14px; margin: 4px 0 0; accent-color: var(--px-accent); }
+  .fs-mail-check > span { display: grid; gap: 1px; }
+  .fs-mail-check strong { color: var(--journal-paper-ink); font-size: 12px; line-height: 17px; }
+  .fs-mail-check small, .fs-mail-context-note { color: var(--journal-paper-faint); font-size: 12px; line-height: 15px; }
+  .fs-mail-context .fs-mail-evidence { margin-top: 5px; }
+  .fs-mail-context-note { margin: 3px 0 0; }
+  .fs-mail-sendbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .fs-mail-sendbar p { margin: 0; color: var(--journal-paper-faint); font-size: 12px; line-height: 16px; }
+  .fs-mail-sealing { display: flex; gap: 5px; justify-content: flex-end; height: 4px; margin-top: -8px; }
+  .fs-mail-sealing span { width: 22px; height: 3px; background: var(--journal-ink-hi); animation: fs-sealing 1s steps(3) infinite; }
+  .fs-mail-sealing span:nth-child(2) { animation-delay: .16s; }
+  .fs-mail-sealing span:nth-child(3) { animation-delay: .32s; }
+  @keyframes fs-sealing { 0%, 100% { opacity: .22; } 50% { opacity: 1; } }
+  .fs-mail-main.is-reduced .fs-mail-sealing span { animation: none; }
+  @media (max-width: 1100px) {
+    .fs-mail-spread { grid-template-columns: minmax(240px, .78fr) 12px minmax(0, 1.22fr); }
+    .fs-mail-side { padding-right: 12px; }
+    .fs-mail-main { padding-left: 15px; }
+    .fs-mail-list button { min-height: 48px; }
+  }
+  @media (max-height: 760px) {
+    .fs-mail-side, .fs-mail-main { gap: 6px; padding-top: 10px; padding-bottom: 10px; }
+    .fs-mail-textarea-label textarea { min-height: 84px; }
+    .fs-mail-paper { padding: 9px 12px 8px; }
+    .fs-mail-lines { gap: 4px; padding: 6px 2px 4px; }
+    .fs-mail-lines p { line-height: 20px; }
+    .fs-mail-context { padding: 5px 7px; }
+  }
+  @media (max-width: 760px) {
+    .fs-mail-spread { grid-template-columns: minmax(160px, .65fr) 10px minmax(0, 1.35fr); }
+    .fs-mail-side-head { flex-wrap: wrap; }
+    .fs-mail-side { padding-right: 8px; }
+    .fs-mail-title p { font-size: 12px; }
+    .fs-mail-side .fs-mail-write { width: 100%; }
+  }
+  @media (prefers-reduced-motion: reduce) { .fs-mail-sealing span { animation: none; } }
+  html[data-desktop-reduce-motion=true] .fs-mail-sealing span { animation: none; }
+}

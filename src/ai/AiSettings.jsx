@@ -33,7 +33,7 @@ export default function AiSettings() {
   };
   const urlOk = !settings.baseUrl || chatUrl(settings.baseUrl);
   return <div className="hub-rows ai-settings" role="region" aria-label="AI（Beta）">
-    <p className="personalization-intro">测试版。接入你自己的 AI（任何 OpenAI 兼容接口，比如 DeepSeek），让小猫根据你的专注统计给你写信。只发送汇总信息（专注分钟、次数、专注时的唱片名称与音乐人、小猫心情），不发送待办内容、随手记和逐条历史记录。</p>
+    <p className="personalization-intro">测试版。接入你自己的 AI（任何 OpenAI 兼容接口，比如 DeepSeek），让小猫回信时更懂你。默认只发送汇总信息：专注分钟、真实播放时长、窗外天气、小猫心情，不发送待办内容或逐条历史。</p>
     <label className="ai-row ai-toggle"><input type="checkbox" checked={settings.enabled} onChange={(e) => update({ enabled: e.target.checked })}/> 启用 AI（Beta）</label>
     <fieldset className="ai-fields" disabled={!settings.enabled}>
       <label className="ai-row"><span>接口地址</span><input type="url" inputMode="url" placeholder="https://api.deepseek.com/v1" value={settings.baseUrl} onChange={(e) => update({ baseUrl: e.target.value })} aria-invalid={!urlOk}/></label>
@@ -49,7 +49,9 @@ export default function AiSettings() {
       <h4 className="ai-sub">小屋来信</h4>
       <div className="ai-row"><span>多久一封</span><Segmented label="来信频率" items={CADENCES} value={settings.cadence} onChange={(cadence) => update({ cadence })}/></div>
       <div className="ai-row"><span>语气</span><Segmented label="来信语气" items={TONES} value={settings.tone} onChange={(tone) => update({ tone })}/></div>
-      <p className="ai-note">每{settings.cadence === 'daily' ? '天' : '周'}只写一封，放在小屋日记 › 周报的「小屋来信」里，信箱会立起小旗子。AI 关闭或失败时，那里仍是小屋自己写的信。</p>
+      <label className="ai-row ai-toggle"><input type="checkbox" checked={settings.shareNotes} onChange={(event) => update({ shareNotes: event.target.checked })}/> 允许自动来信参考我的随手记</label>
+      <p className="ai-note">默认关闭。打开后，最近一段随手记摘录会随统计发给你配置的 AI 服务；信箱只保存“参考了随手记”的事实标记，不保存原文。关闭 AI 或请求失败时，小屋会用本机数据写一封不联网的信。</p>
+      <p className="ai-note">来信都收在「小屋日记 › 信箱」。每{settings.cadence === 'daily' ? '天' : '周'}只写一封，新来信会立起小旗子；你也可以随时主动写信，失败时原稿和本地回信都会保留。</p>
     </fieldset>
   </div>;
 }

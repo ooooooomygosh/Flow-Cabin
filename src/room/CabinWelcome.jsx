@@ -10,6 +10,6 @@ export default function CabinWelcome({ petName, onNotes }) {
   return <aside className="cabin-welcome" aria-label="回家小笺">
     <small>{now.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' })}<span>{now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })}</span></small>
     <p>{greeting}</p>
-    <div><span>{petName}陪你，把节奏放慢一点。</span><button type="button" onClick={onNotes}>写两句</button><button type="button" aria-label={unread ? `信箱 · ${unread} 封未读` : '打开小屋日记'} onClick={() => window.dispatchEvent(new CustomEvent(JOURNAL_EVENT, { detail: { tab: 'weekly' } }))}>{unread ? `来信 ${unread}` : '日记'}</button></div>
+    <div><span>{petName}陪你，把节奏放慢一点。</span><button type="button" onClick={onNotes}>写两句</button><button type="button" aria-label={unread ? `信箱 · ${unread} 封未读` : '打开小屋信箱'} onClick={() => window.dispatchEvent(new CustomEvent(JOURNAL_EVENT, { detail: { tab: 'letters' } }))}>{unread ? `来信 ${unread}` : '信箱'}</button><button type="button" onClick={() => window.dispatchEvent(new CustomEvent(JOURNAL_EVENT, { detail: { tab: 'weekly' } }))}>日记</button></div>
   </aside>;
 }

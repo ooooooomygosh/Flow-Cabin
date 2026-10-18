@@ -208,6 +208,25 @@ try {
     await page.screenshot({path:path.join(output,'journal-overview-1024x768.png'),animations:'disabled'});
     await journal.getByRole('tab',{name:'周报'}).click();await page.waitForTimeout(400);await page.screenshot({path:path.join(output,'journal-weekly-1024x768.png'),animations:'disabled'});
   },{motion:true});
+  await run('typing-shortcuts-stay-in-the-input',async page=>{
+    await openFocus(page,'随手记');
+    const notes=page.getByLabel('随手记内容');
+    await notes.fill('输入框里的字符：');
+    await notes.focus();
+    await page.keyboard.type(' l z h t f m ');
+    assert.equal(await notes.inputValue(),'输入框里的字符： l z h t f m ');
+    assert.equal(await page.getByRole('dialog',{name:'小屋日记'}).count(),0,'L while typing must not open the journal');
+    assert.equal(await page.locator('.focus-display').count(),0,'Z / F while typing must not open 沉浸');
+    assert.equal(await page.evaluate(()=>document.documentElement.classList.contains('room-zen')),false,'H while typing must not hide the tools');
+    assert.equal(await page.evaluate(()=>document.documentElement.classList.contains('room-corner-open')),false,'T while typing must not open 唱机特写');
+    assert.equal(await page.locator('.listening-corner').count(),0);
+    await page.evaluate(()=>document.activeElement?.blur());
+    await page.keyboard.press('l');
+    const journal=page.getByRole('dialog',{name:'小屋日记'});
+    await journal.waitFor();
+    await page.keyboard.press('Escape');await journal.waitFor({state:'hidden'});
+    await screenshot(page,'typing-shortcuts-stay-in-input');
+  });
   await run('timer-pause-reload-resume-keeps-remaining-work',async page=>{
     await openFocus(page);await page.getByRole('button',{name:'开始专注',exact:true}).click();await page.getByRole('button',{name:'暂停',exact:true}).click();const paused=await focusState(page);assert.equal(paused.timer.paused,true);
     await page.reload();await openFocus(page);assert.equal((await focusState(page)).timer.remaining,paused.timer.remaining);await page.getByRole('button',{name:'继续',exact:true}).click();const resumed=await focusState(page);assert.equal(resumed.timer.paused,false);assert.equal(resumed.timer.duration,paused.timer.duration);assert.equal(resumed.sessions.length,0);await screenshot(page,'timer-reloaded-resumed');

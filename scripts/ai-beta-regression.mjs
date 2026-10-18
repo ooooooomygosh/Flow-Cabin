@@ -17,8 +17,6 @@ const report = { checks: [], pageErrors: [], unexpectedRequests: [], aiRequests:
 await fs.mkdir(output, { recursive: true });
 let browser, server;
 const shot = (page, name) => page.screenshot({ path: path.join(output, `${name}.png`), animations: 'disabled' });
-// Sessions in last week, so the weekly letter has data.
-const lastWeek = () => { const d = new Date(); d.setHours(10, 0, 0, 0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7) - 3); return d.getTime(); };
 try {
   server = spawn(process.execPath, [path.join(root, 'node_modules/vite/bin/vite.js'), '--host', '127.0.0.1', '--port', String(port), '--strictPort'], { cwd: root, env: { ...process.env, FLOW_CABIN_VITE_CACHE_DIR: path.join(output, 'vite-cache') }, stdio: ['ignore', 'pipe', 'pipe'] });
   let log = ''; server.stdout.on('data', (b) => log += b); server.stderr.on('data', (b) => log += b);
@@ -26,16 +24,27 @@ try {
   browser = await launchChromium();
   const run = async (name, test, { desktop = false, ai = null, mode = () => ({ status: 200 }) } = {}) => {
     if (process.env.AI_FILTER && !name.includes(process.env.AI_FILTER)) return;
-    const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'zh-CN', reducedMotion: 'reduce' });
-    await context.addInitScript(({ FOCUS, desktop, ai, KEY, endpoint, start }) => {
+    const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'zh-CN', reducedMotion: 'reduce', ...(process.env.AI_TIMEZONE ? { timezoneId: process.env.AI_TIMEZONE } : {}) });
+    await context.addInitScript(({ FOCUS, desktop, ai, KEY, endpoint }) => {
       if (location.origin === 'null' || sessionStorage.getItem('seeded')) return;
       sessionStorage.setItem('seeded', '1');
       localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 1, status: 'done', step: 'done' }));
       localStorage.setItem('album-circle-focus-display-v1', JSON.stringify({ autoEnter: false }));
-      const sessions = [0, 1, 2].map((i) => ({ id: `s${i}`, start: start + i * 86400000, end: start + i * 86400000 + 75 * 60000, durationMs: 75 * 60000, completed: true, taskText: '秘密待办内容', album: { key: 'a1', title: '测试唱片', artist: '离线测试' } }));
+      // Seed the browser's actual reporting period. Daily letters need yesterday,
+      // not last week's weekend (those coincide only on Monday).
+      const daily = ai?.cadence === 'daily', base = new Date();
+      base.setHours(10, 0, 0, 0);
+      base.setDate(base.getDate() - (daily ? 1 : (base.getDay() + 6) % 7 + 3));
+      const sessions = [0, 1, 2].map((i) => {
+        const date = new Date(base);
+        if (daily) date.setHours(10 + i * 2);
+        else date.setDate(date.getDate() + i);
+        const start = date.getTime();
+        return { id: `s${i}`, start, end: start + 75 * 60000, durationMs: 75 * 60000, completed: true, taskText: '秘密待办内容', album: { key: 'a1', title: '测试唱片', artist: '离线测试' } };
+      });
       localStorage.setItem('flow-cabin-focus-sessions-v1', JSON.stringify(sessions));
       localStorage.setItem(FOCUS, JSON.stringify({ settings: { focusMin: 25, shortMin: 5, notify: false, chime: false } }));
-      localStorage.setItem('flow-cabin-cat-mood-v1', JSON.stringify({ v: 1, mood: 80, tier: 'happy', updatedAt: Date.now(), feeds: [{ at: start + 3600000, fishLeft: 2 }], totalFeeds: 1, unlockedActions: [] }));
+      localStorage.setItem('flow-cabin-cat-mood-v1', JSON.stringify({ v: 1, mood: 80, tier: 'happy', updatedAt: Date.now(), feeds: [{ at: sessions[0].start + 3600000, fishLeft: 2 }], totalFeeds: 1, unlockedActions: [] }));
       if (ai) { localStorage.setItem('flow-cabin-ai-v1', JSON.stringify({ v: 1, ...ai })); if (!desktop) localStorage.setItem('flow-cabin-ai-key-v1', JSON.stringify({ v: 2, key: KEY, endpoint, revision: 'fixture:1' })); }
       window.__nativeCommands = [];
       if (desktop) {
@@ -44,7 +53,7 @@ try {
         const init = () => { document.documentElement.dataset.desktopClient = 'true'; };
         if (document.documentElement) init(); else new MutationObserver((_, o) => { if (document.documentElement) { init(); o.disconnect(); } }).observe(document, { childList: true });
       }
-    }, { FOCUS, desktop, ai, KEY, endpoint: ai ? chatUrl(ai.baseUrl) : '', start: lastWeek() });
+    }, { FOCUS, desktop, ai, KEY, endpoint: ai ? chatUrl(ai.baseUrl) : '' });
     await context.route('**/*', async (route) => {
       const req = route.request(), u = new URL(req.url()), p = u.pathname;
       if (u.origin === API) {
@@ -75,6 +84,7 @@ try {
   };
   const openAi = async (page) => { await page.evaluate(() => window.dispatchEvent(new CustomEvent('cabin-open-settings', { detail: { section: 'ai' } }))); await page.getByRole('region', { name: 'AI（Beta）' }).waitFor(); };
   const openWeekly = (page) => page.evaluate(() => window.dispatchEvent(new CustomEvent('cabin:open-journal', { detail: { tab: 'weekly' } })));
+  const openLetters = (page) => page.evaluate(() => window.dispatchEvent(new CustomEvent('cabin:open-journal', { detail: { tab: 'letters' } })));
   const letterSpot = (page) => page.locator('.cabin-journal .fs-letter');
 
   await run('settings-off-by-default-and-test-connection', async (page) => {
@@ -133,23 +143,135 @@ try {
     assert.equal(report.aiRequests.filter((r) => r.name === 'weekly-letter-delivered-once-with-mailbox-flag').length, 1, 'one letter per period');
   }, { ai: { enabled: true, baseUrl: API, model: 'm', cadence: 'weekly', tone: 'calm' } });
 
-  await run('failure-falls-back-to-template-letter', async (page) => {
-    await page.waitForFunction(() => localStorage.getItem('flow-cabin-letter-try-v1'), null, { timeout: 15000 });
-    await page.waitForTimeout(500);
-    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('flow-cabin-letters-v1') || '[]').length), 0);
+  await run('failure-still-delivers-a-local-letter', async (page) => {
+    await page.waitForFunction(() => {
+      const list = JSON.parse(localStorage.getItem('flow-cabin-letters-v1') || '[]');
+      return list.length === 1 && list[0].source === 'template';
+    }, null, { timeout: 15000 });
+    assert.ok(await page.evaluate(() => localStorage.getItem('flow-cabin-letter-try-v1')), 'the failed AI try is recorded');
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('flow-cabin-letters-v1')));
+    assert.equal(saved[0].direction, 'in'); assert.equal(saved[0].status, 'delivered');
+    assert.equal(saved[0].source, 'template'); assert.equal(saved[0].read, false);
+    assert.ok(saved[0].evidence.some((item) => item.kind === 'focus'));
     await openWeekly(page);
     const spot = letterSpot(page); await spot.waitFor();
-    assert.equal(await spot.getAttribute('class').then((c) => c.includes('is-template')), true);
+    assert.equal(await spot.locator('.fs-mailbox').getAttribute('data-unread'), '1');
+    assert.doesNotMatch(await spot.locator('.fs-letter-head').innerText(), /AI/);
+    await spot.getByRole('button', { name: /拆开看看/ }).click();
+    await spot.getByText(/这一段时间，你在小屋里专注了 225 分钟/).waitFor();
     assert.equal(await spot.locator('.fs-mailbox').getAttribute('data-unread'), '0');
-    await shot(page, 'letter-fallback-template');
+    await shot(page, 'letter-fallback-local');
   }, { ai: { enabled: true, baseUrl: API, model: 'm' }, mode: () => ({ status: 500 }) });
 
-  await run('ai-off-sends-nothing', async (page) => {
-    await page.waitForTimeout(2500);
-    assert.equal(report.aiRequests.filter((r) => r.name === 'ai-off-sends-nothing').length, 0);
-    await openWeekly(page); await letterSpot(page).waitFor();
-    assert.ok((await letterSpot(page).getAttribute('class')).includes('is-template'));
+  await run('ai-off-still-delivers-a-local-letter', async (page) => {
+    await page.waitForFunction(() => {
+      const list = JSON.parse(localStorage.getItem('flow-cabin-letters-v1') || '[]');
+      return list.length === 1 && list[0].source === 'template';
+    }, null, { timeout: 15000 });
+    assert.equal(report.aiRequests.filter((r) => r.name === 'ai-off-still-delivers-a-local-letter').length, 0);
+    assert.equal(await page.evaluate(() => localStorage.getItem('flow-cabin-letter-try-v1')), null, 'AI off is not treated as a failed request');
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('flow-cabin-letters-v1')));
+    assert.equal(saved[0].direction, 'in'); assert.equal(saved[0].source, 'template');
+    assert.equal(saved[0].read, false); assert.ok(saved[0].evidence.length > 0);
+    await openWeekly(page);
+    const spot = letterSpot(page); await spot.waitFor();
+    assert.equal(await spot.locator('.fs-mailbox').getAttribute('data-unread'), '1');
+    assert.doesNotMatch(await spot.locator('.fs-letter-head').innerText(), /AI/);
+    await page.getByRole('tab', { name: /信箱/ }).click();
+    const mailbox = page.getByRole('tabpanel', { name: '信箱' }); await mailbox.waitFor();
+    await mailbox.getByText('小屋亲笔').waitFor();
+    assert.equal(await mailbox.locator('.fs-mail-paper.is-ai').count(), 0);
+    await shot(page, 'letter-ai-off-local-mailbox');
   }, { ai: { enabled: false, baseUrl: API, model: 'm' } });
+
+  await run('letter-draft-survives-immediate-close-and-sends-local-reply', async (page) => {
+    await page.waitForFunction(() => JSON.parse(localStorage.getItem('flow-cabin-letters-v1') || '[]').length === 1, null, { timeout: 15000 });
+    await openLetters(page);
+    const journal = page.getByRole('dialog', { name: '小屋日记' });
+    const mailbox = journal.getByRole('tabpanel', { name: '信箱' });
+    await mailbox.getByRole('button', { name: '写一封信' }).click();
+    const editor = mailbox.getByLabel('写给小屋的信');
+    const body = ['第一行先不急着寄。', '第二行留到回来。', ...Array.from({ length: 12 }, (_, index) => `第 ${index + 3} 行也留着。`)].join('\n');
+    await editor.fill(body);
+    assert.equal(await editor.getAttribute('maxlength'), '2880');
+    const paint = await editor.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return { background: style.backgroundColor, color: style.color, fontSize: parseFloat(style.fontSize) };
+    });
+    const channels = (value) => (value.match(/\d+(?:\.\d+)?/g) || []).slice(0, 3).map(Number);
+    assert.ok(Math.min(...channels(paint.background)) >= 180, `textarea remains light: ${paint.background}`);
+    assert.ok(Math.max(...channels(paint.color)) <= 100, `textarea ink remains dark: ${paint.color}`);
+    assert.ok(paint.fontSize >= 12, `textarea text is at least 12px: ${paint.fontSize}`);
+    const context = mailbox.getByRole('checkbox', { name: /让奶糖了解最近的小屋/ });
+    assert.equal(await context.isChecked(), true);
+    await context.uncheck();
+    // Close the composer and the whole book immediately: the draft must already be on disk.
+    await mailbox.getByRole('button', { name: '收进抽屉' }).click();
+    const savedDraft = await page.evaluate(() => JSON.parse(localStorage.getItem('flow-cabin-letters-v1')).find((letter) => letter.status === 'draft'));
+    assert.equal(savedDraft.lines.length, 14, 'the draft keeps more than twelve user-authored lines');
+    assert.equal(savedDraft.lines.join('\n'), body); assert.equal(savedDraft.shareContext, false);
+    await journal.getByRole('button', { name: '返回小屋' }).click();
+    await journal.waitFor({ state: 'hidden' });
+    await openLetters(page);
+    await journal.waitFor();
+    const restored = journal.getByRole('tabpanel', { name: '信箱' });
+    await restored.getByLabel('写给小屋的信').waitFor();
+    assert.equal(await restored.getByLabel('写给小屋的信').inputValue(), body);
+    assert.equal(await restored.getByRole('checkbox', { name: /让奶糖了解最近的小屋/ }).isChecked(), false, 'shareContext stays off after reopening');
+    assert.match(await restored.innerText(), /草稿已从抽屉里接上|接着上次没写完的话/);
+    await restored.getByRole('button', { name: '寄给小屋' }).click();
+    const reply = restored.getByRole('region', { name: '小屋回信' });
+    await reply.waitFor({ timeout: 10000 });
+    assert.match(await restored.locator('.fs-mail-thread-head').innerText(), /我寄出的信|已寄出/);
+    assert.match(await restored.locator('.fs-mail-thread > .fs-mail-paper').first().innerText(), /第一行先不急着寄/);
+    assert.match(await reply.innerText(), /我把你的信读完了/);
+    assert.match(await reply.innerText(), /第一行先不急着寄/);
+    assert.equal(await restored.locator('.fs-mail-toast.is-error').count(), 0, 'a normal local reply is not an error state');
+    assert.equal(await restored.locator('.fs-mail-error').count(), 0);
+    const final = await page.evaluate(() => JSON.parse(localStorage.getItem('flow-cabin-letters-v1')));
+    const outgoing = final.find((letter) => letter.direction === 'out' && letter.status === 'sent');
+    const localReply = final.find((letter) => letter.replyTo === outgoing?.id);
+    assert.equal(outgoing.lines.length, 14); assert.equal(outgoing.shareContext, false); assert.equal(localReply.source, 'template');
+    assert.equal(final.some((letter) => letter.status === 'draft'), false, 'sending clears only the saved draft after success');
+    await shot(page, 'letter-sent-with-local-reply');
+  }, { ai: { enabled: false, baseUrl: API, model: 'm' } });
+
+  await run('interrupted-ai-local-letter-reply-can-be-recovered', async (page) => {
+    await openLetters(page);
+    const journal = page.getByRole('dialog', { name: '小屋日记' });
+    const mailbox = journal.getByRole('tabpanel', { name: '信箱' });
+    await mailbox.getByRole('button', { name: '写一封信' }).click();
+    const body = '网络断开时也要留住这封信。';
+    await mailbox.getByLabel('写给小屋的信').fill(body);
+    await mailbox.getByRole('button', { name: '寄给小屋' }).click();
+    await page.waitForFunction((text) => {
+      const list = JSON.parse(localStorage.getItem('flow-cabin-letters-v1') || '[]');
+      return list.some((letter) => letter.direction === 'out' && letter.status === 'sending' && letter.lines.join('\n') === text);
+    }, body);
+    const requestCount = () => report.aiRequests.filter((r) => r.name === 'interrupted-ai-local-letter-reply-can-be-recovered' && JSON.stringify(r.body.messages).includes(body)).length;
+    for (let i = 0; i < 20 && requestCount() === 0; i++) await new Promise((resolve) => setTimeout(resolve, 50));
+    assert.equal(requestCount(), 1);
+    await page.reload(); await page.locator('.focus-badge').waitFor({ timeout: 30000 });
+    await openLetters(page);
+    const restored = page.getByRole('dialog', { name: '小屋日记' }).getByRole('tabpanel', { name: '信箱' });
+    await restored.getByLabel('写给小屋的信').waitFor();
+    await restored.getByRole('button', { name: '收进抽屉' }).click();
+    await restored.getByRole('button', { name: '用本地回信接上' }).waitFor();
+    await restored.getByRole('button', { name: '用本地回信接上' }).click();
+    const reply = restored.getByRole('region', { name: '小屋回信' });
+    await reply.waitFor();
+    assert.match(await reply.innerText(), /我把你的信读完了/);
+    assert.match(await restored.locator('.fs-mail-toast').innerText(), /小屋已接上这封回信/);
+    assert.equal(await restored.locator('.fs-mail-toast.is-error').count(), 0);
+    assert.equal(requestCount(), 1, 'local recovery never resends the private letter');
+    const final = await page.evaluate(() => JSON.parse(localStorage.getItem('flow-cabin-letters-v1')));
+    const outgoing = final.filter((letter) => letter.direction === 'out' && letter.status === 'sent' && letter.lines.join('\n') === body);
+    assert.equal(outgoing.length, 1); assert.equal(outgoing[0].status, 'sent');
+    assert.equal(final.filter((letter) => letter.replyTo === outgoing[0].id).length, 1);
+    assert.equal(final.some((letter) => letter.status === 'draft'), false, 'local recovery clears the matching saved draft');
+    assert.equal(await restored.locator('.fs-mail-draft').count(), 0, 'recovered letter no longer appears as an unfinished draft');
+    await shot(page, 'letter-interrupted-local-recovery');
+  }, { ai: { enabled: true, baseUrl: API, model: 'm' }, mode: () => ({ hang: true }) });
 
   await run('desktop-routes-through-shell-and-keeps-no-key', async (page) => {
     await page.waitForFunction(() => window.__nativeCommands.some((u) => u.includes('/ai-chat')), null, { timeout: 15000 });
