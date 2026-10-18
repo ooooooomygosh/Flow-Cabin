@@ -272,6 +272,11 @@ try {
     assert.equal(await mailbox.locator('.fs-mail-list li').count(), 1);
     await mailbox.getByRole('button', { name: '已收藏', exact: true }).click();
     assert.equal(await mailbox.locator('.fs-mail-list li').count(), 0);
+    await mailbox.getByRole('button', { name: '来信', exact: true }).click();
+    await mailbox.locator('.fs-mail-list li').first().waitFor();
+    await mailbox.getByRole('button', { name: '移到回收站', exact: true }).click();
+    await page.getByRole('tab', { name: '周报', exact: true }).click();
+    assert.equal(await page.locator('.fs-letter.is-ai').count(), 0, 'removed incoming letters also disappear from the weekly letter spot');
   }, { ai: { enabled: false, baseUrl: API, model: 'm' } });
 
   await run('interrupted-ai-local-letter-reply-can-be-recovered', async (page) => {

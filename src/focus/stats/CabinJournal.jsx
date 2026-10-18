@@ -90,7 +90,7 @@ export function Strip({ name, w, h, frames = 1, frame = 0, scale = 1, className 
 // while any letter is unread.
 function LetterSpot({ template, reduced }) {
   const { list, unread, markRead } = useLetters();
-  const incoming = useMemo(() => list.filter((letter) => letter.direction === 'in' && !letter.replyTo && letter.status !== 'draft'), [list]);
+  const incoming = useMemo(() => list.filter((letter) => letter.direction === 'in' && !letter.replyTo && letter.status !== 'draft' && !letter.trashed), [list]);
   const [index, setIndex] = useState(0), ai = incoming[index] || null;
   const sealed = ai && !ai.read;
   const tone = ai && TONES.find((t) => t.id === ai.tone)?.label;
