@@ -28,7 +28,7 @@ function registerShellProtocol(targetProtocol = protocol) {
       if (!file || !fs.existsSync(file)) return new Response('Not found', { status: 404 });
       const body = request.method === 'HEAD' ? null : readAsset(file);
       if (body === undefined) return new Response('Asset unavailable', { status: 404 });
-      return new Response(body, { headers: { 'Content-Type': mime[path.extname(file)], 'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https:; font-src 'self'; connect-src 'none'; media-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'none'" } });
+      return new Response(body, { headers: { 'Content-Type': mime[path.extname(file)], 'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; font-src 'self'; connect-src 'none'; media-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'none'" } });
     }
     const entry = url.hostname === 'shell' && !url.username && !url.password && !url.port && ['GET', 'HEAD'].includes(request.method) ? assets[url.pathname] : null;
     if (!entry) return new Response('Not found', { status: 404 });
