@@ -56,6 +56,8 @@ jobs:
         run: npm run test:journal
       - name: Run wordbook provenance and flip clock regressions
         run: npm run test:study-ui
+      - name: Run earned souvenir persistence and recovery regressions
+        run: npm run test:souvenirs
       - name: Save browser test evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -70,5 +72,6 @@ jobs:
             desktop/test-results/ai-beta/
             desktop/test-results/journal-entries/
             desktop/test-results/study-ui/
+            desktop/test-results/souvenirs/
           if-no-files-found: warn
           retention-days: 14

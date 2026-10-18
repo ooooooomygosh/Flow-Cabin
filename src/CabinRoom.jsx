@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { reportTrayPet } from './desktop/desktop-sink-client.mjs';
 import { getRoomScene } from './scene-catalog.mjs';
 import { normalizePetId, getPet } from './pet/pet-catalog.mjs';
@@ -64,6 +64,13 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
   const { record, provider, playback, player, deckItem, effectiveSpin } = deck;
   const focus = useFocusState(), sound = useSoundscape();
   useCatCareHost();
+  const [catPanelOpen, setCatPanelOpen] = useState(false);
+  // Capture the first interaction before the lazy panel's module is available.
+  useLayoutEffect(() => {
+    const open = () => setCatPanelOpen(true);
+    window.addEventListener('cabin-open-cat', open);
+    return () => window.removeEventListener('cabin-open-cat', open);
+  }, []);
   const [pet, setPet] = useState(() => window.albumPetState || {});
   const [wallpaperError, setWallpaperError] = useState(() => window.albumRoomWallpaperState?.error || '');
   useEffect(() => { const receive = (event) => { window.albumPetState = event.detail; setPet(event.detail || {}); }; window.addEventListener('album-pet-state', receive); return () => window.removeEventListener('album-pet-state', receive); }, []);
@@ -147,7 +154,7 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
     {desktopMode ? <DesktopWidgets mode="desktop" exit={chrome.toggleDesktopMode} item={deckItem} provider={provider} playback={playback} player={player} spinning={effectiveSpin} toggleVisual={deck.toggleVisual} trackIndex={deck.shownTrackIndex}/> : zen && !chrome.zenTools && <DesktopWidgets mode="zen"/>}
     {!desktopMode && <ImmersiveChrome zen={zen} fullscreen={fullscreen} exitFullscreen={chrome.exitFullscreen} toggleZen={chrome.toggleZen} tools={chrome.zenTools} setTools={chrome.setZenTools} />}
     <Suspense fallback={null}>
-      <Suspense fallback={null}><CatPanel/></Suspense>
+      <Suspense fallback={null}><CatPanel open={catPanelOpen} onClose={() => setCatPanelOpen(false)}/></Suspense>
       {corner && <ListeningCorner item={deckItem} items={visible} vinyl={recordStyle} provider={provider} spinning={effectiveSpin} trackIndex={deck.shownTrackIndex} setTrackIndex={deck.setTrackIndex} playback={playback} player={player} toggleVisual={deck.toggleVisual} load={deck.load} close={() => chrome.setCorner(false)} reduceMotion={reduced}/>}
       {flow.hub && <SettingsHub section={flow.hub} setSection={flow.setHub} close={() => flow.setHub('')} env={flow.env} player={flow.playerAdapter} provider={provider} useSource={deck.chooseProvider} look={look} petId={petId} onRoomChange={personalizeRoom} reduceMotion={appearance.reduceMotion} error={library?.error} desktop={chrome.desktop} openBackup={() => { flow.setHub(''); openBackup?.(); }} restartOnboarding={flow.restartOnboarding}/>}
       {flow.wizard && <OnboardingWizard state={flow.onboarding} update={flow.saveOnboarding} env={flow.env} player={flow.playerAdapter} look={look} petId={petId} onRoomChange={personalizeRoom} useSource={deck.chooseProvider} openMusicSettings={flow.openMusicSettings} openAdd={() => { flow.closeWizard('later'); openAdd(); }} close={flow.closeWizard} reduceMotion={appearance.reduceMotion} error={library?.error}/>}

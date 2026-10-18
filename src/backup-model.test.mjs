@@ -11,6 +11,7 @@ import { readCatMood, subscribeCatMood } from './focus/stats/cat-mood-source.mjs
 import { saveLetter, readLetters, markRead, LETTERS_KEY, AI_KEY_KEY, AI_SETTINGS_KEY } from './ai/ai-model.mjs';
 import { PLAYBACK_LOG_KEY, createPlaybackLog, readPlaybackSessions } from './player/playback-log.mjs';
 import { JOURNAL_KEY, JOURNAL_CHANGE, readJournalRecords, saveJournalEntry, moveJournalEntry } from './focus/journal-entries.mjs';
+import { SOUVENIR_PREFIX, SOUVENIR_KEYS, SOUVENIR_CHANGE, readSouvenirs, saveSouvenirs } from './focus/souvenirs.mjs';
 
 const memoryStorage = (entries = []) => {
   const data = new Map(entries), reads = [], writes = [];
@@ -18,6 +19,63 @@ const memoryStorage = (entries = []) => {
     setItem(key, value) { writes.push(key); data.set(key, String(value)); }, removeItem(key) { data.delete(key); } };
 };
 const at = Date.parse('2026-10-18T08:00:00Z');
+const souvenirState = (records) => ({ version: 1, records });
+const focusSouvenir = (time = at) => ({ id: 'first-focus', earnedAt: time, earnedOn: '2026-10-18', evidence: { sessionId: 'completed-session', durationMs: 1500000 } });
+const letterSouvenir = { id: 'first-letter', earnedAt: at, earnedOn: '2026-10-18', evidence: { letterId: 'outgoing-letter' } };
+
+test('souvenirs export and merge all independent keys before announcing restoration', () => {
+  const source = memoryStorage(), destination = memoryStorage(), target = new EventTarget();
+  assert.equal(saveSouvenirs({ storage: source, state: souvenirState([focusSouvenir()]) }).ok, true);
+  assert.equal(saveSouvenirs({ storage: destination, state: souvenirState([focusSouvenir(at + 10), letterSouvenir]) }).ok, true);
+  const parsed = parseBackup(JSON.stringify(buildBackup({ storage: source })));
+  assert.deepEqual(parsed.memory.souvenirs, readSouvenirs(source));
+  assert.match(backupReplacements(parsed, { memory: true })[0].label, /纪念物/);
+  let announced = 0;
+  target.addEventListener(SOUVENIR_CHANGE, () => {
+    announced++;
+    assert.deepEqual(readSouvenirs(destination).records, [focusSouvenir(), letterSouvenir]);
+  });
+  const restored = restoreBackupMemory(parsed, { storage: destination, target });
+  assert.deepEqual(restored.changed, [SOUVENIR_PREFIX + 'first-focus']);
+  assert.equal(announced, 1);
+  assert.deepEqual(restoreBackupMemory(parsed, { storage: destination, target }).changed, []);
+  assert.equal(announced, 1, 'identical restore is silent');
+});
+
+test('legacy backups and an empty souvenir domain cannot remove earned objects', () => {
+  const storage = memoryStorage();
+  saveSouvenirs({ storage, state: souvenirState([letterSouvenir]) });
+  const before = [...storage.data];
+  for (const memory of [{ version: 1 }, { version: 1, souvenirs: souvenirState([]) }]) {
+    restoreBackupMemory(parseBackup(JSON.stringify({ kind: 'FlowCabinBackup', version: 2, items: [], memory })), { storage });
+    assert.deepEqual([...storage.data], before);
+  }
+});
+
+test('invalid souvenir data rejects the whole import before writing other domains', () => {
+  const storage = memoryStorage();
+  assert.throws(() => restoreBackupMemory({ memory: { journalEntries: [], souvenirs: souvenirState([{ ...letterSouvenir, earnedOn: '2026-02-30' }]) } }, { storage }), /纪念物/);
+  assert.equal(storage.writes.length, 0);
+  storage.setItem(SOUVENIR_PREFIX + 'first-focus', '{corrupt');
+  assert.throws(() => buildBackup({ storage }), /纪念物/);
+});
+
+test('failure on a souvenir key rolls back both earlier domains and earlier souvenirs', () => {
+  const storage = memoryStorage([[JOURNAL_KEY, '[]']]), before = [...storage.data];
+  const write = storage.setItem.bind(storage);
+  storage.setItem = (key, value) => {
+    if (key === SOUVENIR_PREFIX + 'first-letter') throw new Error('disk full');
+    write(key, value);
+  };
+  const target = new EventTarget(), events = [];
+  for (const type of ['storage', SOUVENIR_CHANGE, JOURNAL_CHANGE]) target.addEventListener(type, () => events.push(type));
+  assert.throws(() => restoreBackupMemory({ memory: {
+    journalEntries: [{ id: 'page', version: 'v1', body: '保留这一天', tags: [], createdAt: at, updatedAt: at, revisions: [] }],
+    souvenirs: souvenirState([focusSouvenir(), letterSouvenir])
+  } }, { storage, target }), /原有内容保持不变/);
+  assert.deepEqual([...storage.data], before);
+  assert.deepEqual(events, [], 'observers never see a partial import');
+});
 const letter = (id = 'w:2026-10-12', time = at) => ({ id, cadence: 'weekly', tone: 'warm', period: '上周', lines: ['今天也很努力。', '明天见。'], source: 'ai', at: time, read: false });
 test('letter organization survives backup restore without reviving an older trash or favorite state', () => {
   const storage = memoryStorage();
@@ -331,7 +389,7 @@ test('backup reads only memory allowlist and drops arbitrary credential-bearing 
     study: { apiKey: 'DO_NOT_EXPORT_KEY' }, sound: { rain: .5, apiKey: 'DO_NOT_EXPORT_KEY' },
     items: [{ id: 'album', title: 'Night', artist: 'Artist', credential: 'DO_NOT_EXPORT_KEY', externalIds: { itunesTrackId: '123', apiKey: 'DO_NOT_EXPORT_KEY' },
       trackDetails: [{ title: 'Track', credential: 'DO_NOT_EXPORT_KEY' }] }] });
-  assert.deepEqual(storage.reads, [SESSION_LOG_KEY, MOOD_KEY, META_KEY, LETTERS_KEY, PLAYBACK_LOG_KEY, JOURNAL_KEY]);
+  assert.deepEqual(storage.reads, [SESSION_LOG_KEY, MOOD_KEY, META_KEY, LETTERS_KEY, PLAYBACK_LOG_KEY, JOURNAL_KEY, ...SOUVENIR_KEYS]);
   assert.ok(!JSON.stringify(backup).includes('DO_NOT_EXPORT_KEY'));
   assert.equal(backup.memory.journalEntries[0].body, '第二稿。');
   assert.equal(backup.items[0].externalIds.itunesTrackId, '123');

@@ -12,7 +12,9 @@ fs.mkdirSync(output, { recursive: true });
 fs.mkdirSync(path.join(desktop, 'test-results'), { recursive: true });
 const profiles = fs.mkdtempSync(path.join(desktop, 'test-results/backup-profiles-'));
 const sourceProfile = path.join(profiles, 'source'), targetProfile = path.join(profiles, 'target');
+const packagedExecutable = process.env.ALBUM_QA_EXE ? path.resolve(process.env.ALBUM_QA_EXE) : '';
 const report = { startedAt: new Date().toISOString(), desktop, sourceProfile, targetProfile,
+  packagedExecutable: packagedExecutable || null, launchMode: packagedExecutable ? 'packaged' : 'electron-entry',
   syntheticSourceData: true, realBackupUI: true, realCollectionStore: true, checks: [], comparisons: [], pageErrors: [] };
 let app, site;
 const save = (name, value) => fs.writeFileSync(path.join(output, name), JSON.stringify(value, null, 2));
@@ -22,9 +24,16 @@ let keys;
 async function launch(profile) {
   const env = { ...process.env, ALBUM_DESKTOP_TEST_PROFILE: profile, PORT: '0', HOST: '127.0.0.1' };
   delete env.ELECTRON_RUN_AS_NODE; delete env.ALBUM_QA_EXE;
-  app = await _electron.launch({ executablePath: require('electron'), args: [desktop], env });
+  app = packagedExecutable
+    ? await _electron.launch({ executablePath: packagedExecutable, args: [], env })
+    : await _electron.launch({ executablePath: require('electron'), args: [desktop], env });
   app.context().setDefaultTimeout(20000);
   await app.firstWindow();
+  report.runtime = await app.evaluate(({ app, screen }) => ({
+    packaged: app.isPackaged, version: app.getVersion(), arch: process.arch, electron: process.versions.electron,
+    displays: screen.getAllDisplays().map(({ size, workAreaSize, scaleFactor }) => ({ size, workAreaSize, scaleFactor }))
+  }));
+  if (packagedExecutable) assert.equal(report.runtime.packaged, true, 'package acceptance must run the packaged application');
   await app.evaluate(async ({ webContents }) => {
     for (let i = 0; i < 300; i++) {
       if (webContents.getAllWebContents().some(c => c.getURL().startsWith('https://album-circle.vercel.app'))) return;
@@ -101,15 +110,19 @@ function compareStores(stage, expected, actual) {
   }
 }
 (async () => {
-  const [focus, study, care, letters, sessions, journal, library, playback] = await Promise.all([
+  const [focus, study, care, letters, sessions, journal, library, playback, souvenirs] = await Promise.all([
     moduleAt('focus/focus-model.mjs'), moduleAt('study/study-model.mjs'), moduleAt('cat/cat-care.mjs'),
     moduleAt('ai/ai-model.mjs'), moduleAt('focus/session-log.mjs'), moduleAt('focus/journal-entries.mjs'),
-    moduleAt('record-library.mjs'), moduleAt('player/playback-log.mjs')
+    moduleAt('record-library.mjs'), moduleAt('player/playback-log.mjs'), moduleAt('focus/souvenirs.mjs')
   ]);
+  const souvenirDomains = Object.fromEntries(souvenirs.SOUVENIRS.map(({ id }) =>
+    ['souvenir:' + id, souvenirs.SOUVENIR_PREFIX + id]));
   keys = { focus: focus.FOCUS_PREFIX + 'local-owner', study: study.STUDY_PREFIX + 'local-owner',
     library: library.LIBRARY_PREFIX + 'local-owner', focusSessions: sessions.SESSION_LOG_KEY,
     catMood: care.MOOD_KEY, catCare: care.META_KEY, letters: letters.LETTERS_KEY,
-    journalEntries: journal.JOURNAL_KEY, playbackSessions: playback.PLAYBACK_LOG_KEY };
+    journalEntries: journal.JOURNAL_KEY, playbackSessions: playback.PLAYBACK_LOG_KEY, ...souvenirDomains };
+  assert.equal(Object.keys(souvenirDomains).length, 4);
+  assert.equal(new Set(Object.values(souvenirDomains)).size, 4);
   assert.equal(fs.existsSync(sourceProfile), false); assert.equal(fs.existsSync(targetProfile), false);
   await launch(sourceProfile);
   const add = await openAddToShelf(site, '手动填写');
@@ -138,11 +151,35 @@ function compareStores(stage, expected, actual) {
     { id: 'qa-reply', direction: 'in', status: 'delivered', at: at + 10, lines: ['QA offline reply'], replyTo: 'qa-sent', read: true, readAt: at + 11, organizedAt: at + 30, favorite: true, trashed: true },
     { id: 'qa-sent', direction: 'out', status: 'sent', at, lines: ['QA sent letter'], shareContext: false, organizedAt: at + 30, favorite: true, trashed: true }
   ].map(letters.normalizeLetter);
+  const day = 24 * 60 * 60 * 1000;
   const journalRows = [
+    { id: 'qa-first-page', version: 'page-v2', body: 'QA first writing day', tags: ['memory'],
+      createdAt: at - 2 * day, updatedAt: at - 2 * day, revisions: [] },
+    { id: 'qa-second-page', version: 'page-v2', body: 'QA second writing day', tags: ['memory'],
+      createdAt: at - day, updatedAt: at - day, revisions: [] },
     { id: 'qa-trash', version: 'trash-v2', body: 'QA recycled page', tags: ['trash'], createdAt: at - 100, updatedAt: at + 30, deletedAt: at + 30, revisions: [] },
     { id: 'qa-page', version: 'page-v2', body: 'QA revised page', tags: ['test', 'memory'], createdAt: at - 100, updatedAt: at + 10,
       revisions: [{ version: 'page-v1', body: 'QA first draft', tags: ['test'], at: at - 100 }] }
   ];
+  const playbackRows = [
+    { id: 'qa-listen-a', start: at - 700000, end: at - 370000, durationMs: 330000, reason: 'pause',
+      album: { id: album.id, title: album.title, artist: album.artist }, track: { index: 0, title: 'First song', artist: album.artist, album: album.title } },
+    { id: 'qa-listen-b', start: at - 360000, end: at - 30000, durationMs: 330000, reason: 'pause',
+      album: { id: album.id, title: album.title, artist: album.artist }, track: { index: 0, title: 'First song', artist: album.artist, album: album.title } },
+    { id: 'qa-listen', start: at - 10000, end: at, durationMs: 9000, reason: 'pause',
+      album: { id: album.id, title: album.title, artist: album.artist }, track: { index: 0, title: 'First song', artist: album.artist } }
+  ];
+  // Generate all four awards from the same legal logs that the app will export.
+  // This checks the evidence shape instead of hand-writing decorative records.
+  const souvenirState = souvenirs.eligibleSouvenirs({ focus: [record], playback: playbackRows, letters: sourceLetters, journal: journalRows }, Date.now());
+  assert.deepEqual(souvenirState.records.map(({ id }) => id).sort(), souvenirs.SOUVENIRS.map(({ id }) => id).sort());
+  assert.deepEqual(souvenirs.normalizeSouvenirs(souvenirState), souvenirState);
+  const souvenirSeed = Object.fromEntries(souvenirState.records.map((record) => ['souvenir:' + record.id, record]));
+  assert.deepEqual(Object.keys(souvenirSeed).sort(), Object.keys(souvenirDomains).sort());
+  assert.deepEqual(souvenirSeed['souvenir:first-focus'].evidence, { sessionId: record.id, durationMs: record.durationMs });
+  assert.ok(souvenirSeed['souvenir:listening-ten'].evidence.verifiedMs >= 10 * 60 * 1000);
+  assert.equal(souvenirSeed['souvenir:first-letter'].evidence.letterId, 'qa-sent');
+  assert.equal(souvenirSeed['souvenir:journal-three-days'].evidence.days.length, 3);
   const seed = { focus: state, study: studyState,
     library: library.normalizeLibrary({ styles: { ['item:' + album.id]: { base: '#aabbcc' } },
       genres: { ['item:' + album.id]: ['Jazz'] }, rooms: { 'local-room': { look: 'warm', petId: 'cat',
@@ -151,16 +188,21 @@ function compareStores(stage, expected, actual) {
       feeds: [{ at: at - 100, fishLeft: 7 }], totalFeeds: 3 }, at)),
     catCare: { pets: { day: care.dayKey(at), count: 2 }, rewarded: [record.id] }, letters: sourceLetters,
     journalEntries: journalRows,
-    playbackSessions: [{ id: 'qa-listen', start: at - 10000, end: at, durationMs: 9000, reason: 'pause',
-      album: { id: album.id, title: album.title, artist: album.artist }, track: { index: 0, title: 'First song', artist: album.artist } }] };
+    playbackSessions: playbackRows, ...souvenirSeed };
   assert.equal(studyState.cards[0].memory.reps, 1);
   await site.evaluate(({ keys, seed }) => {
     for (const [domain, value] of Object.entries(seed)) localStorage.setItem(keys[domain], JSON.stringify(value));
   }, { keys, seed });
   save('source-seed.json', seed);
+  save('souvenir-fixture.json', { keys: souvenirDomains, records: souvenirState.records,
+    sourceEvidence: { focusSession: record.id, playbackSessions: playbackRows.map(({ id }) => id),
+      sentLetter: 'qa-sent', journalEntries: journalRows.map(({ id }) => id) } });
   await site.reload(); await site.locator('.room-record').first().waitFor();
   const before = await snapshot('source-before-export', sourceProfile);
   for (const domain of Object.keys(seed)) compare('seed-loaded:' + domain, seed[domain], before.stores[domain]);
+  const sourceSouvenirs = souvenirs.normalizeSouvenirs({ version: 1,
+    records: Object.keys(souvenirDomains).map((domain) => before.stores[domain]) });
+  compare('seed:souvenirs', souvenirState, sourceSouvenirs);
   await openBackup();
   const exported = await exportBackup('source-export.json');
   assert.equal(exported.version, 3);
@@ -168,6 +210,11 @@ function compareStores(stage, expected, actual) {
   for (const domain of ['library', 'study']) compare('export:' + domain, before.stores[domain], exported[domain]);
   for (const domain of ['focusSessions', 'catMood', 'catCare', 'letters', 'journalEntries', 'playbackSessions'])
     compare('export:' + domain, before.stores[domain], exported.memory?.[domain]);
+  compare('export:souvenirs', sourceSouvenirs, exported.memory?.souvenirs);
+  for (const record of souvenirState.records) {
+    compare('export:souvenir:' + record.id, record,
+      exported.memory?.souvenirs?.records?.find(({ id }) => id === record.id));
+  }
   assert.equal(exported.focus.timer, undefined);
   await site.screenshot({ path: path.join(output, 'source-export.png') });
   check('source-profile-exports-through-real-electron-download');
@@ -177,6 +224,8 @@ function compareStores(stage, expected, actual) {
   assert.deepEqual(fresh.items, []);
   for (const domain of ['focusSessions', 'catMood', 'catCare', 'letters', 'journalEntries', 'playbackSessions'])
     assert.ok(fresh.stores[domain] == null || (Array.isArray(fresh.stores[domain]) && fresh.stores[domain].length === 0), domain + ' must start empty');
+  for (const domain of Object.keys(souvenirDomains))
+    assert.equal(fresh.stores[domain], null, domain + ' must start empty');
   assert.equal(fresh.stores.study?.cards?.length || 0, 0);
   assert.equal(fresh.stores.focus?.sessions?.length || 0, 0);
   check('target-profile-is-new-and-domains-start-empty');
@@ -192,9 +241,17 @@ function compareStores(stage, expected, actual) {
   const restoredExport = await exportBackup('target-reexport.json');
   for (const domain of ['items', 'library', 'focus', 'study', 'sound', 'memory'])
     compare('reexport:' + domain, exported[domain], restoredExport[domain]);
+  compare('reexport:souvenirs', exported.memory?.souvenirs, restoredExport.memory?.souvenirs);
+  for (const record of souvenirState.records) {
+    compare('reexport:souvenir:' + record.id, record,
+      restoredExport.memory?.souvenirs?.records?.find(({ id }) => id === record.id));
+  }
   check('target-profile-imports-and-reexports-through-backup-ui');
   await close(); await launch(targetProfile);
-  compareStores('after-restart', before, await snapshot('target-after-restart', targetProfile));
+  const restarted = await snapshot('target-after-restart', targetProfile);
+  compareStores('after-restart', before, restarted);
+  compare('after-restart:souvenirs', sourceSouvenirs, souvenirs.normalizeSouvenirs({ version: 1,
+    records: Object.keys(souvenirDomains).map((domain) => restarted.stores[domain]) }));
   await site.locator('.room-record').first().waitFor();
   assert.match(await site.locator('.app-brand small').innerText(), /1 张唱片/);
   await site.screenshot({ path: path.join(output, 'target-restarted-room.png') });
