@@ -3,6 +3,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 const COMMANDS = new Set(['focus-start', 'focus-pause', 'focus-toggle', 'focus-skip', 'sound-toggle', 'cat-feed']);
 contextBridge.exposeInMainWorld('albumPet', Object.freeze({
   getSnapshot: () => ipcRenderer.invoke('pet:snapshot'),
+  cursor: () => ipcRenderer.invoke('pet:cursor'),
   onSnapshot: (callback) => {
     const listener = (_event, value) => callback(value);
     ipcRenderer.on('pet:update', listener);
