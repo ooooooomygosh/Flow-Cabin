@@ -160,6 +160,67 @@ test('beat tracker: noise and silence give no beat', () => {
   assert.equal(flat.state().confident, false);
   assert.equal(bassLevel(new Uint8Array(1024).fill(255), 48000, 2048), 1); assert.equal(bassLevel(new Uint8Array(0)), 0);
 });
+test('beat tracker: seeded noise never locks, including transient estimates', () => {
+  // 171: final-state CI failure; 15: transient lock; 2786/4787: accidental phase alignment.
+  const seeds = new Set([171, 15, 2786, 4787, ...Array.from({ length: 1000 }, (_, i) => i + 1)]);
+  for (const seed of seeds) {
+    const tracker = createBeatTracker(); let random = seed;
+    for (let time = 0; time < 10000; time += 1000 / 60) {
+      random = random * 16807 % 2147483647;
+      tracker.push(time, random / 2147483647 * .3);
+      assert.equal(tracker.state().confident, false, `noise seed ${seed} at ${time} ms`);
+    }
+    assert.equal(tracker.state().bpm, 0, `noise seed ${seed} never acquired a tempo`);
+  }
+});
+test('beat tracker: click precision and fast locking survive track resets', () => {
+  const tracker = createBeatTracker();
+  for (const [index, bpm] of [120, 90, 120].entries()) {
+    tracker.reset();
+    assert.equal(tracker.state().confident, false);
+    assert.equal(tracker.state().bpm, 0, 'reset drops the previous track tempo');
+    const start = index * 10000, length = 60000 / bpm;
+    let locked = null;
+    for (let elapsed = 0; elapsed < 10000; elapsed += 1000 / 60) {
+      const phase = elapsed % length;
+      tracker.push(start + elapsed, phase < 60 ? .8 * Math.exp(-phase / 25) : .1);
+      if (locked === null && tracker.state().confident) locked = elapsed;
+    }
+    const state = tracker.state();
+    assert.equal(state.confident, true, `${bpm}: re-locked`);
+    assert.ok(locked !== null && locked < 4500, `${bpm}: locked at ${locked}`);
+    assert.ok(Math.abs(state.bpm - bpm) < .6, `${bpm}: found ${state.bpm}`);
+    let error = ((state.beatAt - start) % length + length) % length;
+    if (error > length / 2) error -= length;
+    assert.ok(Math.abs(error) < 12, `${bpm}: phase ${error} ms`);
+  }
+});
+test('beat tracker: long noise passages and slower sampling do not acquire a beat', () => {
+  for (const initial of [182, 265, 643]) {
+    const tracker = createBeatTracker(); let seed = initial;
+    // Mulberry32 exercises a different noise sequence from the Park-Miller fixtures.
+    const random = () => {
+      seed = (seed + 0x6D2B79F5) | 0;
+      let value = Math.imul(seed ^ seed >>> 15, 1 | seed);
+      value ^= value + Math.imul(value ^ value >>> 7, 61 | value);
+      return ((value ^ value >>> 14) >>> 0) / 4294967296;
+    };
+    for (let time = 0; time < 60000; time += 1000 / 60) {
+      tracker.push(time, random() * .3);
+      assert.equal(tracker.state().confident, false, `long noise seed ${initial} at ${time}`);
+    }
+    assert.equal(tracker.state().bpm, 0);
+  }
+  for (const fps of [30, 60, 120]) for (const amplitude of [.05, .3, 1]) {
+    const tracker = createBeatTracker(); let seed = 34;
+    for (let time = 0; time < 10000; time += 1000 / fps) {
+      seed = seed * 16807 % 2147483647;
+      tracker.push(time, seed / 2147483647 * amplitude);
+      assert.equal(tracker.state().confident, false, `noise at ${fps} Hz, amplitude ${amplitude}, time ${time}`);
+    }
+    assert.equal(tracker.state().bpm, 0);
+  }
+});
 test('beat clock and playback signal: a beat is sent when the tempo or phase changes, not every beat', () => {
   setBeat({ bpm: 120, beatAt: 1000 }); assert.equal(sinceBeat(1600), 100); assert.equal(currentBeat().detected, true);
   setBeat({ bpm: 0 }); assert.equal(currentBeat().bpm, 96, 'no beat: calm default tempo');
