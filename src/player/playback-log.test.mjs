@@ -278,6 +278,7 @@ test('browser: central hook logs native lifecycle and verifies remote playback w
   const { tmpdir } = await import('node:os');
   const { fileURLToPath } = await import('node:url');
   const { launchChromium } = await import('../../scripts/launch-browser.mjs');
+  const { hasViteLocalOrigin } = await import('../../scripts/vite-readiness.mjs');
   const root = fileURLToPath(new URL('../../', import.meta.url));
   const cache = await mkdtemp(`${tmpdir()}/playback-log-`);
   const port = process.env.PLAYBACK_LOG_PORT || '4197', origin = `http://127.0.0.1:${port}`;
@@ -289,7 +290,7 @@ test('browser: central hook logs native lifecycle and verifies remote playback w
   try {
     for (let i = 0; ; i++) {
       if (server.exitCode !== null || i > 100) throw new Error(output || 'Fixture server did not start');
-      if (output.includes(origin) && await fetch(origin).then((r) => r.ok, () => false)) break;
+      if (hasViteLocalOrigin(output, origin) && await fetch(origin).then((r) => r.ok, () => false)) break;
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
     browser = await launchChromium();
