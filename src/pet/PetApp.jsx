@@ -40,7 +40,8 @@ function PetApp() {
   useEffect(() => { document.documentElement.style.setProperty('--pet-size', size + 'px'); }, [size]);
   // The shell moves the window when the pet falls or strolls along the screen.
   const travelling = motion.mode === 'walk', airborne = motion.mode === 'fall';
-  const acting = action && !cat.reduced ? action.pose : '', pose = acting || (travelling ? 'walk' : cat.pose), accessory = snapshot?.focus?.accessory || '';
+  // Reduced motion still shows the action, as a held frame (PixelCat does not animate then).
+  const acting = action ? action.pose : '', pose = acting || (travelling ? 'walk' : cat.pose), accessory = snapshot?.focus?.accessory || '';
   const overCat = (event) => {
     const rect = box.current?.getBoundingClientRect(); if (!rect) return false;
     return opaqueAt(pose, frame.current, accessory, (event.clientX - rect.left) / rect.width, (event.clientY - rect.top) / rect.height, petId);

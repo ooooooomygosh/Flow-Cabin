@@ -41,7 +41,8 @@ test('new desktop pet starts on the main cabin display, not always the primary d
 });
 test('removing the display cancels the flight before repositioning onto the remaining display', async () => {
   const f = fixture(); await f.pet.start();
-  f.event('pet:move', 30, -200); f.event('pet:drag-end'); assert([...f.jobs.values()].some(job => job.delay === 16));
+  // A throw (quick moves): a slow placement just stays put since v1.18.
+  for (let i = 0; i < 3; i++) f.event('pet:move', 30, -200); f.event('pet:drag-end'); assert([...f.jobs.values()].some(job => job.delay === 16));
   f.removeDisplay(); f.pet.reposition(); const bounds = f.pet.window.getBounds(); assert(bounds.x < 1920);
   assert(![...f.jobs.values()].some(job => job.delay === 16), 'no old flight can move the pet back to the unplugged screen');
   f.pet.stop();
@@ -50,7 +51,7 @@ test('reduced motion drag release never schedules a throw; enabling it cancels a
   const f = fixture(); await f.pet.start(); f.push({ reduceMotion: true });
   f.event('pet:move', 30, -200); const placed = f.pet.window.getBounds(); f.event('pet:drag-end');
   assert.deepEqual(f.pet.window.getBounds(), placed); assert(![...f.jobs.values()].some(job => job.delay === 16));
-  f.push({ reduceMotion: false }); f.event('pet:move', 30, -20); f.event('pet:drag-end');
+  f.push({ reduceMotion: false }); for (let i = 0; i < 3; i++) f.event('pet:move', 30, -20); f.event('pet:drag-end');
   const frame = [...f.jobs.entries()].find(([, job]) => job.delay === 16); assert(frame);
   f.jobs.delete(frame[0]); f.push({ reduceMotion: true }); frame[1].fn();
   assert(![...f.jobs.values()].some(job => job.delay === 16)); f.pet.stop();
