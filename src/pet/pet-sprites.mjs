@@ -79,9 +79,12 @@ function effects(g, pose, i) {
   }
 }
 export function normalizeFrame(pose = 'idle', index = 0) {
-  const safePose = Object.hasOwn(POSES, pose) ? pose : 'idle';
+  // Cat-only poses (beauty's TYPING / EAT / HOP and listen) are not in POSES; they must survive
+  // normalisation or the cache and hit-test fall back to idle (bini: eat looked like sitting).
+  const counts = { ...POSES, ...CAT_ACTIONS, [LISTEN_POSE]: LISTEN_FRAMES };
+  const safePose = Object.hasOwn(counts, pose) ? pose : 'idle';
   const integer = Number.isFinite(index) ? Math.floor(index) : 0;
-  return { pose: safePose, index: ((integer % POSES[safePose]) + POSES[safePose]) % POSES[safePose] };
+  return { pose: safePose, index: ((integer % counts[safePose]) + counts[safePose]) % counts[safePose] };
 }
 export function petFrame(petId = 'cat', pose = 'idle', index = 0, acc = '') {
   const pet = normalizePetId(petId);
@@ -91,7 +94,7 @@ export function petFrame(petId = 'cat', pose = 'idle', index = 0, acc = '') {
     if (pet === 'cat') { const n = CAT_ACTIONS[pose], i = Number.isFinite(index) ? Math.floor(index) : 0; return catFrame(pose, ((i % n) + n) % n, ACCESSORIES.includes(acc) ? acc : ''); }
     pose = ACTION_FALLBACK[pose];
   }
-  const normalized = normalizeFrame(pose, index);
+  const normalized = normalizeFrame(Object.hasOwn(POSES, pose) ? pose : 'idle', index);
   pose = normalized.pose; index = normalized.index;
   acc = ACCESSORIES.includes(acc) ? acc : '';
   if (pet === 'cat') return catFrame(pose, index, acc);
