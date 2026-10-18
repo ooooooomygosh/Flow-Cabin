@@ -218,7 +218,7 @@ test('journal events', async () => {
   t.addEventListener(JOURNAL_EVENT, (e) => seen.push(e.detail.tab));
   openJournal('weekly', t); openJournal('letters', t); openJournal('bogus', t); openJournal(undefined, t);
   assert.deepEqual(seen, ['weekly', 'letters', 'overview', undefined]);
-  assert.deepEqual(JOURNAL_TABS.map(([id]) => id), ['overview', 'tasks', 'weekly', 'letters']);
+  assert.deepEqual(JOURNAL_TABS.map(([id]) => id), ['overview', 'entries', 'tasks', 'weekly', 'letters']);
   assert.equal(journalTab('tasks'), 'tasks'); assert.equal(journalTab('letters'), 'letters');
   assert(isJournalKey({ key: 'l' })); assert(!isJournalKey({ key: 'L', ctrlKey: true })); assert(!isJournalKey({ key: 'k' }));
 });

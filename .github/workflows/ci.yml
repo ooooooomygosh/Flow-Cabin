@@ -52,6 +52,8 @@ jobs:
         run: npm run test:shelf-ui
       - name: Run AI settings and letter regressions
         run: npm run test:ai
+      - name: Run journal entry and recovery regressions
+        run: npm run test:journal
       - name: Save browser test evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -64,5 +66,6 @@ jobs:
             desktop/test-results/shelf-ui/
             desktop/test-results/beat-sync/
             desktop/test-results/ai-beta/
+            desktop/test-results/journal-entries/
           if-no-files-found: warn
           retention-days: 14

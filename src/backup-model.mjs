@@ -6,6 +6,7 @@ import { MOOD_KEY, META_KEY, MOOD_EVENT, normalizeCare, storedCare, getCatMoodNo
 import { LETTERS_KEY, LETTER_EVENT, normalizeLetter } from './ai/ai-model.mjs';
 import { normalizeMix, AMBIENCE_TRACKS } from './audio/ambience.mjs';
 import { PLAYBACK_LOG_KEY, readPlaybackSessions } from './player/playback-log.mjs';
+import { JOURNAL_KEY, JOURNAL_CHANGE, normalizeJournalRecord, readJournalRecords, mergeJournalRecord } from './focus/journal-entries.mjs';
 
 // v3 adds the journal's independent stores. Credentials and AI connection settings are never read.
 export const BACKUP_KIND = 'FlowCabinBackup';
@@ -20,7 +21,7 @@ const invalid = (domain) => { throw new Error(`备份中的${domain}格式无效
 const object = (value, domain) => { if (!plain(value)) invalid(domain); return value; };
 const array = (value, domain) => { if (!Array.isArray(value)) invalid(domain); return value; };
 const finite = (value) => typeof value === 'number' && Number.isFinite(value) && value >= 0;
-const MEMORY_KEYS = Object.freeze({ focusSessions: SESSION_LOG_KEY, catMood: MOOD_KEY, catCare: META_KEY, letters: LETTERS_KEY, playbackSessions: PLAYBACK_LOG_KEY });
+const MEMORY_KEYS = Object.freeze({ focusSessions: SESSION_LOG_KEY, catMood: MOOD_KEY, catCare: META_KEY, letters: LETTERS_KEY, playbackSessions: PLAYBACK_LOG_KEY, journalEntries: JOURNAL_KEY });
 const FOCUS_FIELDS = ['tasks', 'sessions', 'rewards', 'settings', 'notes'];
 
 function focusRecord(value) {
@@ -58,6 +59,16 @@ function playbackRecord(value) {
   return record;
 }
 
+function journalEntries(value) {
+  const entries = array(value, '小屋手记').map((entry) => {
+    const record = normalizeJournalRecord(entry);
+    if (!record) invalid('小屋手记');
+    return record;
+  });
+  if (new Set(entries.map((entry) => entry.id)).size !== entries.length) invalid('小屋手记');
+  return entries;
+}
+
 function normalizeMemory(value) {
   if (value == null) return null;
   object(value, '小屋记忆');
@@ -91,6 +102,7 @@ function normalizeMemory(value) {
   }
   if (own(value, 'letters')) out.letters = array(value.letters, '小屋来信').map(letterRecord);
   if (own(value, 'playbackSessions')) out.playbackSessions = array(value.playbackSessions, '听歌记录').map(playbackRecord);
+  if (own(value, 'journalEntries')) out.journalEntries = journalEntries(value.journalEntries);
   return out;
 }
 
@@ -102,6 +114,15 @@ export function readBackupMemory(storage = localStorageOrNull()) {
   for (const [domain, key] of Object.entries(MEMORY_KEYS)) {
     const raw = storage.getItem(key);
     if (raw != null) {
+      if (domain === 'journalEntries') {
+        try {
+          if (!raw) throw new Error('手记存储为空');
+          memory[domain] = readJournalRecords({ getItem: () => raw });
+        } catch (error) {
+          throw new Error(`小屋手记格式异常，原有内容保持不变：${error?.message || '无法读取'}`);
+        }
+        continue;
+      }
       try { memory[domain] = JSON.parse(raw); } catch { invalid(domain); }
     }
   }
@@ -184,7 +205,7 @@ export function backupReplacements(parsed, available = {}) {
   if (parsed.focus && available.focus) out.push({ id: 'focus', label: '专注记录、待办与随手记' });
   if (parsed.study && available.study) out.push({ id: 'study', label: `学习记录（${parsed.study.decks.length} 个卡组、${parsed.study.cards.length} 张闪卡、${parsed.study.countdowns.length} 个倒计时）` });
   if (parsed.sound && available.sound) out.push({ id: 'sound', label: '环境声音设置' });
-  if (available.memory && parsed.memory && Object.keys(parsed.memory).some((key) => own(MEMORY_KEYS, key))) out.push({ id: 'memory', label: '小屋日记、专注与听歌日志、小猫照顾与来信（合并保留本机记录）' });
+  if (available.memory && parsed.memory && Object.keys(parsed.memory).some((key) => own(MEMORY_KEYS, key))) out.push({ id: 'memory', label: '小屋手记、专注与听歌日志、小猫照顾与来信（合并保留本机记录）' });
   return out;
 }
 
@@ -227,6 +248,10 @@ export function restoreBackupMemory(parsed, { storage = localStorageOrNull(), ta
     next.letters = mergeRecords(current.letters || [], incoming.letters, (record) => record.id, mergeLetter)
       .sort((a, b) => b.at - a.at);
   }
+  if (incoming.journalEntries) {
+    next.journalEntries = mergeRecords(current.journalEntries || [], incoming.journalEntries, (record) => record.id, mergeJournalRecord)
+      .sort((a, b) => b.updatedAt - a.updatedAt || a.id.localeCompare(b.id));
+  }
   if (incoming.catMood && current.catMood) {
     const feeds = mergeRecords(current.catMood.feeds, incoming.catMood.feeds, (feed) => feed.at).sort((a, b) => a.at - b.at);
     const latest = current.catMood.updatedAt > incoming.catMood.updatedAt ? current.catMood : incoming.catMood;
@@ -262,6 +287,7 @@ export function restoreBackupMemory(parsed, { storage = localStorageOrNull(), ta
   if (target?.dispatchEvent && CustomEventClass) {
     if (writes.some(({ key }) => key === MOOD_KEY || key === META_KEY)) target.dispatchEvent(new CustomEventClass(MOOD_EVENT, { detail: getCatMoodNow(storage) }));
     if (writes.some(({ key }) => key === LETTERS_KEY)) target.dispatchEvent(new CustomEventClass(LETTER_EVENT));
+    if (writes.some(({ key }) => key === JOURNAL_KEY)) target.dispatchEvent(new CustomEventClass(JOURNAL_CHANGE));
   }
   return { changed: writes.map(({ key }) => key) };
 }
