@@ -116,9 +116,9 @@ try {
     assert.equal(await page.getByRole('button', { name: `选择场景 ${scene.label}`, exact: true }).getAttribute('aria-pressed'), 'true');
   }
   for (const pet of PETS) { await page.getByRole('button', { name: `选择桌宠 ${pet.name || pet.label}`, exact: true }).click(); assert.equal(await page.locator('.room-cat .pixel-cat').getAttribute('data-pet-id'), pet.id); }
-  // Picker cards load the small thumbnails, never the full scene art.
-  assert.deepEqual(await page.locator('.scene-choice img').evaluateAll(images => images.map(image => image.getAttribute('src'))), ROOM_SCENES.map(scene => `/room-scenes/thumbs/${scene.id}.png`));
-  await page.waitForFunction(() => [...document.querySelectorAll('.scene-choice img')].every(image => image.complete && image.naturalWidth === 362), null, { timeout: 5000 });
+  // Pixel uses its dedicated picker art; the other cards load small thumbnails.
+  assert.deepEqual(await page.locator('.scene-choice img').evaluateAll(images => images.map(image => image.getAttribute('src'))), ROOM_SCENES.map(scene => scene.id === 'pixel' ? '/room-scenes/amber-retreat.png' : `/room-scenes/thumbs/${scene.id}.png`));
+  await page.waitForFunction(() => [...document.querySelectorAll('.scene-choice img')].every(image => image.complete && image.naturalWidth === (image.getAttribute('src') === '/room-scenes/amber-retreat.png' ? 1448 : 362)), null, { timeout: 5000 });
   await screenshot('room-personalization');
   // One fixed dialog size: switching sections never resizes 设置.
   for (const [width, height] of [[1440, 900], [960, 600]]) {

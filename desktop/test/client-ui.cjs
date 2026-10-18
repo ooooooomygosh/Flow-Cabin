@@ -72,7 +72,10 @@ const check = (value) => report.checks.push(value);
   await site.getByRole('tab', { name:'学习', exact:true }).click(); await site.getByLabel('入门词书', { exact:true }).waitFor();
   await site.screenshot({ path:path.join(output, 'native-fullscreen-study.png') });
   await site.getByLabel('新卡组名称').fill('模板验收'); await site.getByRole('button',{name:'新建',exact:true}).click();
-  await site.locator('.study-decks li',{hasText:'模板验收'}).getByRole('button',{name:'编辑',exact:true}).click();
+  const templateDeck = site.locator('.study-decks li',{hasText:'模板验收'});
+  await templateDeck.getByText('0 张 · 空词书 · 添加或导入词条后开始',{exact:true}).waitFor();
+  assert.doesNotMatch(await templateDeck.innerText(), /已完成/);
+  await templateDeck.getByRole('button',{name:'添加词条',exact:true}).click();
   await site.getByText('导入本地词书',{exact:true}).click();
   const templatePath = path.join(profile,'word-template.tsv');
   await application.evaluate(({webContents}, savePath) => {
