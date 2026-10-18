@@ -7,6 +7,9 @@ import { getPet } from './pet-catalog.mjs';
 // hop (double-click). Other pets draw them as idle / celebrate (pet-sprites.mjs).
 export const FPS = Object.freeze({ idle: 2, groove: 4, [LISTEN_POSE]: .5, celebrate: 6, walk: 4, sleep: 1, focus: 1.5, [TYPING_POSE]: 8, [EAT_POSE]: 6, [HOP_POSE]: 10 });
 export { LISTEN_POSE, TYPING_POSE, EAT_POSE, HOP_POSE };
+// 打字跟随: the cat keeps typing this long after the last key activity (global hook or in-cabin).
+export const TYPING_HOLD_MS = 900;
+export const typingUntil = (...times) => Math.max(0, ...times.map(Number).filter(Number.isFinite)) + TYPING_HOLD_MS;
 const EXTRA_COUNTS = { [LISTEN_POSE]: LISTEN_FRAMES, [TYPING_POSE]: TYPING_FRAMES, [EAT_POSE]: EAT_FRAMES, [HOP_POSE]: HOP_FRAMES };
 const frameCount = (pose) => EXTRA_COUNTS[pose] || POSES[pose] || 1;
 // One-shot actions on the desktop pet: eat plays its 6 frames twice, hop once.

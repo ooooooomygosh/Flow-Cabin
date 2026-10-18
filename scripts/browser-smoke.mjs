@@ -390,7 +390,15 @@ try {
   await page.mouse.click(opaque.x, opaque.y); await page.waitForTimeout(80); await page.mouse.click(opaque.x, opaque.y);
   await page.locator('.pet-stage[data-action="hop"]').waitFor(); await screenshot('desktop-pet-hop');
   await page.mouse.click(opaque.x, opaque.y, { button: 'right' }); assert.ok((await calls()).includes('menu'), 'right-click opens the pet menu');
-  check('desktop-pet-feed-drop-eat-refusal-double-click-hop'); await page.close(); page = mainPage;
+  check('desktop-pet-feed-drop-eat-refusal-double-click-hop');
+  // 打字跟随: a key-activity time from the shell hook, or the cabin's own keydown time, shows TYPING_POSE, then it settles.
+  await page.waitForTimeout(700);
+  await page.evaluate(({ companion }) => window.__pushPet({ companion: { ...companion, petId: 'cat' }, size: 192, typingAt: Date.now() }), { companion });
+  await page.locator('.pet-stage[data-typing="true"]').waitFor(); await screenshot('desktop-pet-typing');
+  await page.locator('.pet-stage:not([data-typing])').waitFor({ timeout: 3000 });
+  await page.evaluate(({ companion }) => window.__pushPet({ companion: { ...companion, petId: 'cat', typingAt: Date.now() }, size: 192 }), { companion });
+  await page.locator('.pet-stage[data-typing="true"]').waitFor();
+  check('desktop-pet-typing-follow-hook-and-in-cabin-fallback'); await page.close(); page = mainPage;
   page = await context.newPage(); page.setDefaultTimeout(12000); await page.setViewportSize({ width: 1280, height: 800 }); await page.goto(origin); await page.locator('.room-record').nth(5).waitFor();
   const stage = () => page.evaluate(() => { const box = s => { const r = document.querySelector(s)?.getBoundingClientRect(); return r && [r.x, r.y, r.width, r.height].map(Math.round).join(','); }; const scrolled = [...document.querySelectorAll('*')].filter(el => el.scrollTop || el.scrollLeft).map(el => el.className); return { scrollY, scrolled, canvas: box('.cabin-scene-canvas'), rack: box('.room-rack') }; });
   await page.waitForTimeout(400); const stageBefore = await stage();

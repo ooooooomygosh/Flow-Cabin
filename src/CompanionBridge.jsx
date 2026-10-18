@@ -18,6 +18,13 @@ export default function CompanionBridge() {
     const receive = (event) => { const d = event.detail || {}, energy = Number(d.energy); music.current = { playing: d.playing === true, energy: d.playing === true && Number.isFinite(energy) ? Math.round(Math.max(0, Math.min(1, energy)) / ENERGY_STEP) * ENERGY_STEP : 0, estimated: d.estimated === true, bpm: d.playing === true ? Number(d.bpm) || 0 : 0, beatAt: d.playing === true ? Number(d.beatAt) || 0 : 0 }; };
     window.addEventListener(PLAYBACK_EVENT, receive); return () => window.removeEventListener(PLAYBACK_EVENT, receive);
   }, []);
+  // 打字跟随 fallback (no global hook / no permission): typing inside the cabin. Only the time
+  // of the last keydown is kept — never which key — and only real typing keys count.
+  const typedAt = useRef(0);
+  useEffect(() => {
+    const key = (event) => { if (!event.repeat && !event.metaKey && !event.ctrlKey && !event.altKey) typedAt.current = Date.now(); };
+    window.addEventListener('keydown', key, true); return () => window.removeEventListener('keydown', key, true);
+  }, []);
   latest.current = { focus, sound };
   useEffect(() => {
     const getter = () => {
@@ -38,6 +45,7 @@ export default function CompanionBridge() {
         // Lo-fi has a section tempo, but no shared beat-phase anchor.
         // The desktop pet eats on a new fedAt (fed from its own menu or the cabin), or says `note`.
         care: careForCompanion(),
+        typingAt: typedAt.current,
         lofiBpm: !music.current.playing && s?.lofiState === 'playing' ? Number(s.section?.bpm) || 0 : 0
       };
     };

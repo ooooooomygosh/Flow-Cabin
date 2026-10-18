@@ -9,8 +9,22 @@ for (const [id, command] of Object.entries(actionMap)) $(id).addEventListener('c
 let panelOpen = false;
 function showSettings(settings) {
   $('font').value = settings.font; $('weight').value = String(settings.weight); $('zoom').value = String(settings.zoom);
-  $('reduce-motion').checked = settings.reduceMotion; updatePreview();
+  $('reduce-motion').checked = settings.reduceMotion; $('typing-follow').checked = settings.typingFollow === true; updatePreview();
 }
+const TYPING_TEXT = {
+  off: '', active: '已开启：小猫正在跟着你打字。',
+  'waiting-pet': '已开启：让伙伴出门（桌宠）后生效。',
+  'needs-permission': '需要在「系统设置 › 隐私与安全性」里允许心流小屋使用「辅助功能」和「输入监控」。授权前，小猫只跟随你在小屋里的打字。',
+  unavailable: '这台电脑暂时无法使用全局打字检测，小猫只跟随你在小屋里的打字。'
+};
+function showTyping(typing) {
+  if (!typing) return;
+  $('typing-status').textContent = TYPING_TEXT[typing.status] || '';
+  $('typing-permission').hidden = typing.status !== 'needs-permission';
+}
+$('typing-permission').addEventListener('click', async () => {
+  try { const data = await window.albumDesktop.settings('typing-permission'); showTyping(data.typing); } catch { /* the hint stays */ }
+});
 function showDisplay(display) { if (display) $('display-info').textContent = `${display.name} · ${display.width} × ${display.height} · 缩放 ${display.scale}% · ${Math.round(display.refreshRate)} Hz`; }
 function updatePreview() {
   $('zoom-value').textContent = `${$('zoom').value}%`;
@@ -26,16 +40,16 @@ async function loadSettings() {
     for (const font of data.fonts) { const option = document.createElement('option'); option.value = font; option.textContent = font; group.append(option); }
     $('font').querySelector('optgroup')?.remove(); $('font').append(group);
     $('font-hint').textContent = data.fonts.length ? `也可以选用本机的 ${data.fonts.length} 种字体。` : '本机字体列表读取失败，仍可使用内置字体。';
-    $('font').value = pendingFont; updatePreview(); showDisplay(data.display);
+    $('font').value = pendingFont; updatePreview(); showDisplay(data.display); showTyping(data.typing);
   } catch { $('settings-notice').textContent = '无法读取设置，请关闭后重试。'; }
 }
 for (const id of ['font', 'weight', 'zoom']) $(id).addEventListener('input', updatePreview);
 let saveQueue = Promise.resolve();
 function saveDraft() {
-  const draft = { font: $('font').value || 'bundled', weight: Number($('weight').value), zoom: Number($('zoom').value), reduceMotion: $('reduce-motion').checked };
+  const draft = { font: $('font').value || 'bundled', weight: Number($('weight').value), zoom: Number($('zoom').value), reduceMotion: $('reduce-motion').checked, typingFollow: $('typing-follow').checked };
   $('settings-notice').textContent = '正在应用…';
   saveQueue = saveQueue.catch(() => {}).then(async () => {
-    await window.albumDesktop.settings('apply', draft);
+    const saved = await window.albumDesktop.settings('apply', draft); showTyping(saved?.typing);
     $('settings-notice').textContent = '已保存。';
   });
   return saveQueue;
@@ -47,7 +61,7 @@ $('settings-close').addEventListener('click', async () => {
   try { await saveDraft(); await window.albumDesktop.command('settings-close'); } catch (error) { showSaveError(error); }
 });
 $('settings-reset').addEventListener('click', async () => {
-  try { const data = await window.albumDesktop.settings('reset'); showSettings(data.settings); $('settings-notice').textContent = '已恢复默认设置。'; }
+  try { const data = await window.albumDesktop.settings('reset'); showSettings(data.settings); showTyping(data.typing); $('settings-notice').textContent = '已恢复默认设置。'; }
   catch { $('settings-notice').textContent = '恢复失败，请重试。'; }
 });
 $('font-license').addEventListener('click', () => {

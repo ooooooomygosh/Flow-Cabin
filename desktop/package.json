@@ -45,6 +45,9 @@
     "appId": "com.albumcircle.desktop",
     "productName": "心流小屋",
     "asar": true,
+    "asarUnpack": [
+      "node_modules/uiohook-napi/**"
+    ],
     "directories": {
       "output": "release"
     },
@@ -68,6 +71,7 @@
       "mini-player.cjs",
       "mini-preload.cjs",
       "tray-icons.cjs",
+      "typing-hook.cjs",
       "shell-protocol.cjs",
       "wallpaper-model.cjs",
       "wallpaper-preload.cjs",
@@ -168,6 +172,7 @@
   "dependencies": {
     "electron-updater": "6.8.9",
     "music-metadata": "11.15.0",
-    "NeteaseCloudMusicApi": "4.32.0"
+    "NeteaseCloudMusicApi": "4.32.0",
+    "uiohook-napi": "1.5.5"
   }
 }
