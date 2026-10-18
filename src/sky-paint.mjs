@@ -113,11 +113,12 @@ function paintSun(data, mask, pal, sun) {
 // Clouds: each is a few overlapping puffs (after Skycons, CC0) drifting with the wind; lit on
 // top, shaded underneath, dissolved by Bayer threshold while the layer fades in or out.
 const CLOUDS = Array.from({ length: 6 }, (_, c) => ({ x0: hash(c * 9.1 + 3), y: .1 + hash(c * 4.7 + 1) * .34, scale: .7 + hash(c * 2.3 + 5) * .6, speed: .6 + hash(c * 6.1 + 2) * .8, puffs: Array.from({ length: 5 }, (_, p) => [(p - 2) * .62 + (hash(c * 11 + p) - .5) * .3, -Math.sin((p + .5) / 5 * Math.PI) * .45 + (hash(c * 13 + p) - .5) * .2, .55 + hash(c * 17 + p) * .45]) }));
-function paintClouds(data, mask, pal, amount, wind, seconds) {
+// `drift`: wind-seconds (sky-weather windTime), so a changing wind never makes clouds jump.
+function paintClouds(data, mask, pal, amount, drift, seconds) {
   const { width, height, back } = mask, count = Math.min(CLOUDS.length, Math.ceil(amount * CLOUDS.length)), unit = Math.max(3, Math.min(width, height) / 9);
   for (let c = 0; c < count; c++) {
-    const cloud = CLOUDS[c], weight = Math.min(1, amount * CLOUDS.length - c), r0 = unit * cloud.scale * (.8 + amount * .5), spanX = width + r0 * 4;
-    const cx = Math.round(fract(cloud.x0 + seconds * (.15 + wind) * cloud.speed / spanX * .25) * spanX - r0 * 2), cy = Math.round(height * cloud.y);
+    const cloud = CLOUDS[c], weight = Math.min(1, amount * CLOUDS.length - c), r0 = unit * cloud.scale * (.8 + amount * .5), spanX = width + unit * cloud.scale * 1.3 * 4; // span fixed: not by the fading size, or time / span jumps
+    const cx = Math.round(fract(cloud.x0 + (seconds * .15 + drift) * cloud.speed / spanX * .25) * spanX - r0 * 2), cy = Math.round(height * cloud.y);
     const left = Math.max(0, Math.floor(cx - r0 * 2.2)), right = Math.min(width - 1, Math.ceil(cx + r0 * 2.2)), top = Math.max(0, Math.floor(cy - r0 * 1.3)), bottom = Math.min(height - 1, Math.ceil(cy + r0 * .7));
     for (let y = top; y <= bottom; y++) for (let x = left; x <= right; x++) {
       const i = y * width + x; if (!back[i] || bayer(x, y) >= weight) continue;
@@ -154,14 +155,14 @@ function paintBolt(data, mask, pal, seed) {
 // Paints the sky window (under the art). Returns true when something there moves.
 export function paintSky(data, mask, frame) {
   data.fill(0);
-  const { layers, pal, sky, seconds = 0, reduced = false, bodies: b } = frame, overcast = Math.max(layers.clouds, layers.storm);
+  const { layers, pal, sky, seconds = 0, drift = seconds * layers.wind, reduced = false, bodies: b } = frame, overcast = Math.max(layers.clouds, layers.storm);
   const starLevel = Math.max(sky.stars ?? 0, layers.starry) * (1 - Math.min(1, overcast * 1.2));
   if (starLevel > .02) paintStars(data, mask, pal, starLevel, seconds, layers.starry > .5 && !reduced);
   if (b.moon.visible || layers.starry > .5) { const moon = b.moon.visible ? b.moon : { ...b.moon, y: Math.round(mask.height * .22) }; if (overcast < .85) paintMoon(data, mask, pal, moon, sky.moon?.phase ?? .5); }
   if (b.sun.visible && layers.starry <= .5 && overcast < .9) paintSun(data, mask, pal, b.sun);
   paintVeil(data, mask, pal, overcast);
   if (layers.fog > .02) { const { back } = mask; for (let i = 0; i < back.length; i++) if (back[i]) put(data, i, pal.fog, layers.fog * .5); } // distant haze
-  if (layers.clouds > .02) paintClouds(data, mask, pal, layers.clouds, layers.wind, reduced ? 0 : seconds);
+  if (layers.clouds > .02) paintClouds(data, mask, pal, layers.clouds, reduced ? 0 : drift, reduced ? 0 : seconds);
   if (!reduced) {
     const { flash, seed } = lightningAt(seconds, layers.storm);
     if (flash) { const { back } = mask; for (let i = 0; i < back.length; i++) if (back[i]) put(data, i, pal.flash, flash === 2 ? .62 : .3); if (flash === 2) paintBolt(data, mask, pal, seed); }
@@ -175,7 +176,7 @@ const BEADS = Array.from({ length: 12 }, (_, i) => ({ x: hash(i + 800), y: hash(
 // Paints the weather in the glass (over the art). Returns true when something moves.
 export function paintWeather(data, mask, frame) {
   data.fill(0);
-  const { width, height, front } = mask, { layers, pal, seconds: s = 0, reduced = false } = frame, wind = layers.wind;
+  const { width, height, front } = mask, { layers, pal, seconds: s = 0, reduced = false } = frame, wind = layers.wind, drift = frame.drift ?? s * wind;
   if (layers.fog > .02) {
     // Three drifting banks with wavy tops: a translucent core and a dithered fringe, 1 px per 3 s.
     const drift = reduced ? 0 : Math.floor(s / 3);
@@ -195,7 +196,7 @@ export function paintWeather(data, mask, frame) {
   const rainCount = Math.round(DROPS.length * Math.min(1, layers.rain));
   for (let d = 0; d < rainCount; d++) {
     const drop = DROPS[d], span = height + drop.len + 4, y = Math.floor(fract(drop.y0 + s * drop.speed * 1.4) * span) - drop.len;
-    const x0 = Math.floor(fract(drop.x0 + (y / height) * slant * .25 + s * wind * .02) * (width + 4)) - 2;
+    const x0 = Math.floor(fract(drop.x0 + (y / height) * slant * .25 + drift * .02) * (width + 4)) - 2;
     for (let k = 0; k < drop.len; k++) {
       const yy = y - k, xx = Math.round(x0 - k * slant); if (yy < 0 || yy >= height || xx < 0 || xx >= width) continue;
       const i = yy * width + xx; if (front[i]) put(data, i, pal.rain, k ? .3 + drop.tone * .25 - k * .04 : .78);
@@ -203,7 +204,7 @@ export function paintWeather(data, mask, frame) {
   }
   const snowCount = Math.round(FLAKES.length * Math.min(1, layers.snow));
   for (let f = 0; f < snowCount; f++) {
-    const flake = FLAKES[f], x = Math.floor(fract(flake.x0 + Math.sin(s * .21 + f) * .035 + s * (.003 + flake.depth * .002 + wind * .004)) * width);
+    const flake = FLAKES[f], x = Math.floor(fract(flake.x0 + Math.sin(s * .21 + f) * .035 + s * (.003 + flake.depth * .002) + drift * .004) * width);
     const y = Math.floor(((flake.y0 * height * CELL + s * flake.speed) % (height * CELL)) / CELL), i = y * width + x;
     if (front[i]) put(data, i, pal.snow, flake.alpha);
     if (flake.depth > .82 && x + 1 < width && front[i + 1]) put(data, i + 1, pal.snow, flake.alpha * .7);

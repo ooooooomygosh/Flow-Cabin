@@ -2,7 +2,7 @@ import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { subscribeSky } from './sky-clock.mjs';
 import { landTint, skyColors, skyVariables } from './sky-model.mjs';
 import { timeOfDay } from './room-ambience.mjs';
-import { createTimeline, effectiveWeather, layersAt, overcastOf, retarget, settled, weatherLayers } from './sky-weather.mjs';
+import { createTimeline, effectiveWeather, layersAt, windTime, overcastOf, retarget, settled, weatherLayers } from './sky-weather.mjs';
 import { CELL, bodies, paintSky, paintWeather, skyPalette, weatherFps, windowMasks } from './sky-paint.mjs';
 import { createAtmosphereLoop } from './cabin-atmosphere.mjs';
 import { frameClock, onBackgroundChange, onOcclusionChange } from './frame-clock.mjs';
@@ -88,13 +88,13 @@ function CabinAtmosphereSky({ windows, art, weather, state, colors, instant = fa
     const draw = () => {
       if (disposed || !timeline) return;
       const { state, colors } = live.current; if (!state || !colors) return;
-      const at = Date.now(), layers = layersAt(timeline, at), seconds = reduced ? 0 : at / 1000;
+      const at = Date.now(), layers = layersAt(timeline, at), seconds = reduced ? 0 : at / 1000, drift = reduced ? 0 : windTime(timeline, at);
       const sky = layers.starry > .5 ? { ...state, ...NIGHT_SKY, moon: { ...state.moon, altitude: 40 }, stars: 1 } : { ...state, stars: colors.stars };
       const pal = skyPalette(layers.starry > .5 ? { ...colors, top: '#0b1030', horizon: '#1a2244', light: 0 } : colors, layers);
       panes.forEach(({ win, mask }, i) => {
         const { back, front } = contexts[i], image = images[i];
-        if (back && image.back) { paintSky(image.back.data, mask, { layers, pal, sky, seconds, reduced, bodies: win.sun ? bodies(sky, mask, win.horizon) : NO_BODIES }); back.putImageData(image.back, 0, 0); }
-        if (front && image.front) { paintWeather(image.front.data, mask, { layers, pal, seconds, reduced }); front.putImageData(image.front, 0, 0); }
+        if (back && image.back) { paintSky(image.back.data, mask, { layers, pal, sky, seconds, drift, reduced, bodies: win.sun ? bodies(sky, mask, win.horizon) : NO_BODIES }); back.putImageData(image.back, 0, 0); }
+        if (front && image.front) { paintWeather(image.front.data, mask, { layers, pal, seconds, drift, reduced }); front.putImageData(image.front, 0, 0); }
       });
       // Faster while a change cross-fades in; nothing at all once a still sky has settled.
       const need = reduced ? 0 : Math.max(weatherFps(layers, performanceLevel() === 'low'), settled(timeline, at) ? 0 : 4);
