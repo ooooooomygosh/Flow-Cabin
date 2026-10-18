@@ -35,12 +35,25 @@ export function layersAt(timeline, now, duration = CROSSFADE_MS) {
   return out;
 }
 export const settled = (timeline, now, duration = CROSSFADE_MS) => now - timeline.at >= duration;
-export const createTimeline = (weather, now = 0) => { const layers = weatherLayers(weather); return { from: layers, to: layers, at: now - CROSSFADE_MS }; };
+export const createTimeline = (weather, now = 0) => { const layers = weatherLayers(weather); return { from: layers, to: layers, at: now - CROSSFADE_MS, windBase: 0 }; };
+// ∫₀ᵁ (1 − ease(u)) du for the smoothstep ease: how much of the old wind is still in the blend.
+const easeRest = (u) => u - u * u * u + u * u * u * u / 2;
+// Wind-seconds: the integral of the blended wind over time. Painters move clouds, rain and snow
+// sideways by this, NOT by seconds × wind: with seconds ≈ 1.7e9 (absolute time), any change of
+// wind during a cross-fade would otherwise jump every cloud by seconds × Δwind on every frame —
+// the window "flipping back and forth" after each 窗景 / real-weather change until the fade ends.
+export function windTime(timeline, now, duration = CROSSFADE_MS) {
+  const u = clamp01((now - timeline.at) / duration);
+  return (timeline.windBase || 0) + timeline.to.wind * now / 1000 + (timeline.from.wind - timeline.to.wind) * duration / 1000 * easeRest(u);
+}
 // A new target starts from whatever is on screen now, so rapid changes never jump.
 export function retarget(timeline, weather, now, duration = CROSSFADE_MS) {
   const to = weatherLayers(weather);
   if (LAYERS.every((name) => Math.abs(timeline.to[name] - to[name]) < 1e-6)) return timeline;
-  return { from: layersAt(timeline, now, duration), to, at: now };
+  const next = { from: layersAt(timeline, now, duration), to, at: now, windBase: 0 };
+  // Continuous drift: the new timeline starts where the old one's wind-seconds are now.
+  next.windBase = windTime(timeline, now, duration) - windTime(next, now, duration);
+  return next;
 }
 
 const fract = (v) => v - Math.floor(v);
