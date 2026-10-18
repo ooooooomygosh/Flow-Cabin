@@ -9,7 +9,7 @@ import { downloadBlob } from './lib/download.mjs';
 import { importItems } from './collection-api.mjs';
 import { SOUND_KEY } from './audio/ambience.mjs';
 import { useSoundscape } from './audio/useSoundscape';
-import { MAX_BACKUP_BYTES, backupFileName, backupReplacements, buildBackup, mergeBackupLibrary, parseBackup, restoreFocus } from './backup-model.mjs';
+import { MAX_BACKUP_BYTES, backupFileName, backupReplacements, buildBackup, mergeBackupLibrary, parseBackup, restoreBackupMemory, restoreFocus } from './backup-model.mjs';
 
 const savedSound = () => { try { return JSON.parse(localStorage.getItem(SOUND_KEY)); } catch { return null; } };
 
@@ -19,10 +19,14 @@ export default function BackupDialog({ items, close, reload }) {
   const library = useRecordLibrary(), focus = useFocus(), study = useStudy(), soundscape = useSoundscape();
   const [busy, setBusy] = useState(false), [notice, setNotice] = useState(''), [problems, setProblems] = useState([]), [pending, setPending] = useState(null), picker = useRef(null);
   const stats = focus ? focusStats(focus.state.sessions, Date.now()) : null;
+  const mergesMemory = pending?.replacements.some(({ id }) => id === 'memory');
   const exportBackup = () => {
-    const backup = buildBackup({ items, library: library.data, focus: focus?.state, study: study?.state, sound: savedSound() });
-    downloadBlob(new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' }), backupFileName());
-    setProblems([]); setNotice('备份文件已生成。');
+    setProblems([]); setNotice('');
+    try {
+      const backup = buildBackup({ items, library: library.data, roomId: library.roomId, focus: focus?.state, study: study?.state, sound: savedSound() });
+      downloadBlob(new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' }), backupFileName());
+      setNotice('备份文件已生成。');
+    } catch (error) { setProblems([error?.message || '备份导出失败，请重试。']); }
   };
   const importBackup = async (event) => {
     const file = event.target.files?.[0]; event.target.value = ''; if (!file) return;
@@ -33,23 +37,26 @@ export default function BackupDialog({ items, close, reload }) {
       if (!library.update((old) => mergeBackupLibrary(old, parsed, library.roomId, result.ids))) warnings.push('唱片已导入，但小屋设置保存失败，请检查存储空间');
       await reload();
       const summary = `导入完成：新增 ${result.added} 张唱片，唱片架现在共有 ${result.total} 张。`;
-      const replacements = backupReplacements(parsed, { focus: Boolean(focus), study: Boolean(study), sound: Boolean(soundscape?.replaceMix) });
+      const replacements = backupReplacements(parsed, { focus: Boolean(focus), study: Boolean(study), sound: Boolean(soundscape?.replaceMix), memory: true });
       setNotice(summary); setProblems(warnings);
       if (replacements.length) setPending({ parsed, replacements, summary, warnings });
-    } catch (error) { setProblems([error.message || '导入失败，请重试。']); }
+    } catch (error) { setProblems([error?.message || '导入失败，请重试。']); }
     finally { setBusy(false); }
   };
   const replace = () => {
-    const { parsed, replacements, summary } = pending, warnings = [...pending.warnings], done = [];
+    const { parsed, replacements, summary } = pending, warnings = [...pending.warnings], done = [], merged = [];
     for (const entry of replacements) {
-      const { id } = entry, before = warnings.length;
-      if (id === 'focus' && !focus.replace(restoreFocus(parsed.focus, focus.state))) warnings.push('专注记录、待办与随手记未能保存，原有内容保持不变');
-      if (id === 'study' && !study.replace(parsed.study)) warnings.push('学习记录未能保存');
-      if (id === 'sound') { try { soundscape.replaceMix(parsed.sound); } catch { warnings.push('声音设置未能保存'); } }
-      if (warnings.length === before) done.push(entry.label.replace(/（.*）$/, ''));
+      const { id } = entry, before = warnings.length, label = entry.label.replace(/（.*）$/, '');
+      try {
+        if (id === 'focus' && !focus.replace(restoreFocus(parsed.focus, focus.state))) warnings.push('专注记录、待办与随手记未能保存，原有内容保持不变');
+        if (id === 'study' && !study.replace(parsed.study)) warnings.push('学习记录未能保存');
+        if (id === 'sound') soundscape.replaceMix(parsed.sound);
+        if (id === 'memory') restoreBackupMemory(parsed);
+        if (warnings.length === before) (id === 'memory' ? merged : done).push(label);
+      } catch (error) { warnings.push(error?.message || `${label}未能保存，请重试。`); }
     }
-    // Only what was actually written is reported as replaced.
-    setPending(null); setNotice(done.length ? `${summary} 已用备份替换${done.join('、')}。` : summary); setProblems(warnings);
+    // Report replacements and non-destructive merges separately, after successful writes.
+    setPending(null); setNotice(`${summary}${done.length ? ` 已用备份替换${done.join('、')}。` : ''}${merged.length ? ` 已合并${merged.join('、')}，本机已有记忆已保留。` : ''}`); setProblems(warnings);
   };
   const keep = () => { setNotice(`${pending.summary} 这台电脑上的其他记录保持不变。`); setProblems(pending.warnings); setPending(null); };
   return <Dialog title="收藏与备份" icon={<Library size={20}/>} close={close} className="backup-dialog">
@@ -59,7 +66,7 @@ export default function BackupDialog({ items, close, reload }) {
       <div><dt>专注</dt><dd>{stats ? `${Math.round(stats.totalMinutes / 60 * 10) / 10} 小时` : '—'}</dd></div>
       <div><dt>小鱼干</dt><dd>{focus?.state.rewards.fish ?? '—'}</dd></div>
     </dl>
-    <p className="add-intro">唱片、黑胶外观、唱片盒、专注记录、待办和随手记都只保存在这台电脑上，不需要注册。换电脑时导出备份，在新电脑上导入即可。</p>
+    <p className="add-intro">唱片、小屋外观、专注与听歌记录、待办、随手记、学习记录、小猫照顾和来信都只保存在这台电脑上。换电脑时导出备份，在新电脑上导入即可。备份不包含 API Key 或账户凭据。</p>
     <div className="backup-actions">
       <button type="button" className="pixel-button is-primary" disabled={busy} onClick={exportBackup}><Download size={16}/>导出备份</button>
       <button type="button" className="pixel-button" disabled={busy} onClick={() => picker.current?.click()}><FolderOpen size={16}/>导入备份</button>
@@ -67,10 +74,12 @@ export default function BackupDialog({ items, close, reload }) {
     </div>
     {notice && <p className="add-status" role="status">{notice}</p>}
     {problems.length > 0 && <ul className="status is-error" role="alert">{problems.map((text) => <li key={text}>{text}</li>)}</ul>}
-    {pending && <div className="backup-replace" role="group" aria-label="替换本机记录">
-      <p className="add-intro">备份里还有{pending.replacements.map((entry) => entry.label).join('、')}。要用备份替换这台电脑上的这些内容吗？</p>
+    {pending && <div className="backup-replace" role="group" aria-label={mergesMemory ? '恢复本机记录' : '替换本机记录'}>
+      <p className="add-intro">备份里还有{pending.replacements.map((entry) => entry.label).join('、')}。{mergesMemory
+        ? `小屋记忆会合并并保留本机记录${pending.replacements.some(({ id }) => id !== 'memory') ? '，其他列出的内容会被备份替换' : ''}。要继续恢复吗？`
+        : '要用备份替换这台电脑上的这些内容吗？'}</p>
       <div className="backup-actions">
-        <button type="button" className="pixel-button is-primary" onClick={replace}>替换这些内容</button>
+        <button type="button" className="pixel-button is-primary" onClick={replace}>{mergesMemory ? '恢复这些内容' : '替换这些内容'}</button>
         <button type="button" className="pixel-button" onClick={keep}>保留现有</button>
       </div>
     </div>}

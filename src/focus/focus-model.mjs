@@ -1,5 +1,7 @@
 // Pomodoro, tasks, statistics and rewards. Pure functions only: every
 // transition receives `now`, so hidden or throttled windows stay accurate.
+import { dayKey, startOfDay, addDays } from '../lib/local-calendar.mjs';
+export { dayKey } from '../lib/local-calendar.mjs';
 export const FOCUS_PREFIX = 'album-circle-focus-v1:';
 export const MAX_FOCUS_BYTES = 512000;
 export const MAX_NOTE_LENGTH = 8000;
@@ -48,6 +50,8 @@ export const UNLOCKS = Object.freeze([
   { id: 'rain', kind: 'weather', level: 2, name: '雨天窗景' },
   { id: 'scarf', kind: 'accessory', level: 3, name: '红色围巾' },
   { id: 'beanie', kind: 'accessory', level: 4, name: '毛线帽' },
+  { id: 'bow', kind: 'accessory', level: 1, name: '鼠尾草领结' },
+  { id: 'sprout', kind: 'accessory', level: 3, name: '小芽帽' },
   { id: 'starry', kind: 'weather', level: 5, name: '星空窗景' }
 ]);
 
@@ -209,35 +213,35 @@ export function clearDone(state) {
   return { ...state, tasks, timer: tasks.some((task) => task.id === state.timer.taskId) ? state.timer : { ...state.timer, taskId: '' } };
 }
 
-export function dayKey(time) {
-  const date = new Date(time);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-}
-function startOfDay(time) { const date = new Date(time); date.setHours(0, 0, 0, 0); return date.getTime(); }
 // Minutes are split at local midnight so a late session counts on both days.
 export function minutesByDay(sessions) {
   const days = new Map();
   for (const session of sessions) {
     let cursor = session.start;
+    const scale = (session.durationMs ?? (session.end - session.start)) / (session.end - session.start || 1);
     while (cursor < session.end) {
-      const tomorrow = new Date(startOfDay(cursor)); tomorrow.setDate(tomorrow.getDate() + 1);
-      const until = Math.min(tomorrow.getTime(), session.end), key = dayKey(cursor);
-      days.set(key, (days.get(key) || 0) + (until - cursor) / MINUTE);
+      const until = Math.min(addDays(startOfDay(cursor), 1), session.end), key = dayKey(cursor);
+      days.set(key, (days.get(key) || 0) + (until - cursor) * scale / MINUTE);
       cursor = until;
     }
   }
   return days;
 }
+export const STREAK_HINT = '按本地日期，每天累计专注至少 1 分钟；今天未满 1 分钟时从昨天算起，中间缺一天即中断。';
+export function currentStreak(days, now) {
+  let cursor = startOfDay(now), count = 0;
+  if (!(days.get(dayKey(cursor)) >= 1)) cursor = addDays(cursor, -1);
+  while (days.get(dayKey(cursor)) >= 1) { count++; cursor = addDays(cursor, -1); }
+  return count;
+}
 export function focusStats(sessions, now) {
   const days = minutesByDay(sessions), today = startOfDay(now), week = [];
   for (let i = 6; i >= 0; i--) {
-    const time = new Date(today); time.setDate(time.getDate() - i);
+    const time = new Date(addDays(today, -i));
     const key = dayKey(time.getTime());
     week.push({ key, label: i === 0 ? '今天' : '日一二三四五六'[time.getDay()], minutes: Math.round(days.get(key) || 0) });
   }
-  let streak = 0; const cursor = new Date(today);
-  if (!days.get(dayKey(cursor.getTime()))) cursor.setDate(cursor.getDate() - 1); // Today may still be empty.
-  while ((days.get(dayKey(cursor.getTime())) || 0) >= 1) { streak++; cursor.setDate(cursor.getDate() - 1); }
+  const streak = currentStreak(days, now);
   const total = [...days.values()].reduce((sum, value) => sum + value, 0);
   return { today: week[6].minutes, week, streak, totalMinutes: Math.round(total), sessions: sessions.filter((s) => s.completed).length, todaySessions: sessions.filter((s) => s.completed && dayKey(s.end) === dayKey(now)).length };
 }

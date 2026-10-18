@@ -117,19 +117,31 @@ try {
     await failStorage(page,false);await page.getByRole('button',{name:'重试保存',exact:true}).click();const after=await focusState(page);assert.equal(after.sessions.length,1);assert.equal(after.rewards.fish,1);assert.equal(after.timer.phase,'shortBreak');assert.equal(await page.evaluate(()=>window.__phaseEvents.length),1);
   });
   await run('stats-card-and-cabin-journal',async page=>{
-    // Seeded demo data: legacy pomodoro sessions + the assumed focus-session log.
-    await page.evaluate(({key})=>{
-      const day=86400000,start=new Date();start.setHours(0,0,0,0);const base=start.getTime();
-      const tasks=[{id:'t-ch3',text:'写第三章',done:true,doneAt:base-3*day+18*3600e3},{id:'t-rev',text:'复习线代',done:false},{id:'t-mail',text:'回邮件',done:true,doneAt:base-9*day+11*3600e3}];
+    // Focus album snapshots and verified playback are separate fixtures, with different albums.
+    const fixture=await page.evaluate(async ({key})=>{
+      const {addDays,startOfDay,startOfWeek}=await import('/src/lib/local-calendar.mjs');
+      const {SESSION_LOG_KEY}=await import('/src/focus/stats/session-source.mjs');
+      const {PLAYBACK_LOG_KEY,readPlaybackSessions}=await import('/src/player/playback-log.mjs');
+      const base=startOfDay(Date.now()),week=startOfWeek(base);
+      const at=(daysAgo,hour,minute=0)=>{const d=new Date(addDays(base,-daysAgo));d.setHours(hour,minute,0,0);return d.getTime();};
+      const tasks=[{id:'t-ch3',text:'写第三章',done:true,doneAt:at(3,18)},{id:'t-rev',text:'复习线代',done:false},{id:'t-mail',text:'回邮件',done:true,doneAt:at(9,11)}];
       const albums=[{id:'a1',title:'夜航星',artist:'林间'},{id:'a2',title:'晨光练习曲',artist:'小屋乐队'},{id:'a3',title:'雨天唱片',artist:'Lo-fi Cat'}],covers={a1:'/missing-cover.png',a3:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAIAAABLbSncAAAAH0lEQVR4nGOw0ZADohMVNkCEzGbAKYEpBGHjlqCDHQD+cD/BDLcnygAAAABJRU5ErkJggg=='};
       const sessions=[],log=[];
-      for(let d=1;d<200;d++){ if(d%9===4||(d>60&&d%3===0)) continue; const n=1+(d*7)%3; for(let i=0;i<n;i++){ const h=[9,14,21][(d+i)%3],s=base-d*day+h*3600e3+i*40*60e3,len=25+((d+i)%3)*12; const taskId=['t-ch3','t-rev','','t-mail'][(d+i)%4]; sessions.push({start:s,end:s+len*60e3,taskId,completed:(d+i)%5!==0}); if(d<21) log.push({start:s,end:s+len*60e3,durationMs:len*60e3,completed:(d+i)%5!==0,taskId,album:albums[(d+i)%3],cover:covers[albums[(d+i)%3].id]}); } }
-      sessions.push({start:base+9*3600e3,end:base+9*3600e3+25*60e3,taskId:'t-ch3',completed:true});
+      for(let d=1;d<200;d++){ if(d%9===4||(d>60&&d%3===0)) continue; const n=1+(d*7)%3; for(let i=0;i<n;i++){ const h=[9,14,21][(d+i)%3],s=at(d,h,i*40),len=25+((d+i)%3)*12; const taskId=['t-ch3','t-rev','','t-mail'][(d+i)%4],album=s>=week?albums[2]:albums[(d+i)%3]; sessions.push({start:s,end:s+len*60e3,taskId,completed:(d+i)%5!==0}); if(d<21) log.push({start:s,end:s+len*60e3,durationMs:len*60e3,completed:(d+i)%5!==0,taskId,album,cover:covers[album.id]}); } }
+      const today={start:at(0,9),end:at(0,9,25),taskId:'t-ch3',completed:true};sessions.push(today);
+      // Monday must also have a current-week album and a valid pixel cover.
+      log.push({...today,durationMs:25*60e3,album:albums[2],cover:covers.a3});
       const old=JSON.parse(localStorage.getItem(key)||'{}');localStorage.setItem(key,JSON.stringify({...old,tasks,sessions:sessions.sort((a,b)=>a.start-b.start),settings:{...old.settings,dailyGoal:90}}));
-      localStorage.setItem('flow-cabin-focus-sessions-v1',JSON.stringify(log));
+      localStorage.setItem(SESSION_LOG_KEY,JSON.stringify(log));
+      localStorage.setItem(PLAYBACK_LOG_KEY,JSON.stringify([{id:'p-journal-fixture',start:at(0,10),end:at(0,10,5),durationMs:90000,reason:'pause',
+        track:{index:0,title:'独立播放曲目',artist:'播放日志测试'},album:{id:'playback-only',title:'只在播放日志里的唱片',artist:'播放日志测试'}}]));
+      return {focusAlbum:albums[2].title,focusLogKey:SESSION_LOG_KEY,focusLog:JSON.stringify(log),playback:readPlaybackSessions()};
     },{key:KEY});
+    assert.equal(fixture.playback.length,1,'the independent PlaybackSession fixture passes the real model reader');
+    assert.equal(fixture.playback[0].durationMs,90000,'verified listening is 90 seconds, not the five-minute wall span');
     await page.reload();await openFocus(page,'统计');
     const card=page.locator('.fs-compact');await card.waitFor();
+    assert.equal(await card.locator('.focus-stat-tiles > div').filter({hasText:'今日专注'}).locator('dd').innerText(),'25 分钟','playback does not add to focus minutes; the legacy/log pair is deduplicated');
     assert.equal(await card.getByRole('progressbar',{name:'每日目标进度'}).count(),1);assert.equal(await card.locator('.fs-bar').count(),7);
     assert.equal(await page.locator('.focus-dock').getByLabel('每日专注目标分钟').count(),0,'goal is edited in Settings only');
     const scrolls=await page.locator('.focus-dock').evaluate(dock=>[...dock.querySelectorAll('*')].filter(el=>['auto','scroll'].includes(getComputedStyle(el).overflowY)&&el.scrollHeight>el.clientHeight+1).map(el=>el.className));
@@ -151,9 +163,24 @@ try {
     // Close and reopen in the same task: the queued close event of the old close() must not shut the new one.
     await page.evaluate(()=>new Promise(done=>{const d=document.querySelector('dialog.cabin-journal');const mo=new MutationObserver(()=>{if(!d.open){mo.disconnect();window.dispatchEvent(new CustomEvent('cabin:open-journal',{detail:{tab:'weekly'}}));done();}});mo.observe(d,{attributes:true,attributeFilter:['open']});d.dispatchEvent(new Event('cancel',{cancelable:true}));}));await journal.waitFor();await page.waitForTimeout(300);assert.equal(await journal.isVisible(),true,'reopened journal stays open');
     assert.equal(await journal.getByRole('tab',{name:'周报'}).getAttribute('aria-selected'),'true');assert.match(await journal.locator('.fs-weekpick strong').innerText(),/本周/,'周报 opens on the current week when it has data');assert.equal(await journal.locator('.fs-stamp').count(),1,'stamp rendered once');
-    assert.match(await journal.locator('.fs-polaroid').innerText(),/《/,'most played album comes from the session log');const cover=journal.locator('.fs-card-cover');await cover.waitFor();assert.equal(await cover.evaluate(img=>img.complete&&img.naturalWidth===8&&getComputedStyle(img).imageRendering),'pixelated','cover thumbnail renders pixelated');
+    const polaroid=journal.locator('.fs-polaroid'),playbackAlbum=fixture.playback[0].album.title;
+    assert.match(await polaroid.innerText(),/专注时放在唱机上的唱片/,'the journal labels focus metadata as an album snapshot');
+    assert((await polaroid.innerText()).includes(`《${fixture.focusAlbum}》`),'the current-week snapshot comes from the focus log, including on Monday');
+    assert(!(await polaroid.innerText()).includes(playbackAlbum),'the separate playback album is not a focus snapshot');
+    // Leave legacy focus and real playback intact: neither may invent missing focus album metadata.
+    await page.evaluate(key=>{localStorage.removeItem(key);window.dispatchEvent(new StorageEvent('storage',{key,storageArea:localStorage}));},fixture.focusLogKey);
+    await polaroid.filter({hasText:'这周没有唱片记录'}).waitFor();
+    assert(!(await polaroid.innerText()).includes(playbackAlbum),'playback-only records never fill the focus-album slot');
+    await page.evaluate(({key,value})=>{localStorage.setItem(key,value);window.dispatchEvent(new StorageEvent('storage',{key,newValue:value,storageArea:localStorage}));},{key:fixture.focusLogKey,value:fixture.focusLog});
+    await polaroid.filter({hasText:`《${fixture.focusAlbum}》`}).waitFor();
+    const cover=journal.locator('.fs-card-cover');await cover.waitFor();await cover.evaluate(img=>img.decode());assert.equal(await cover.evaluate(img=>img.complete&&img.naturalWidth===8&&getComputedStyle(img).imageRendering),'pixelated','cover thumbnail renders pixelated');
     await page.context().grantPermissions(['clipboard-read','clipboard-write'],{origin});await journal.getByRole('button',{name:'复制文字'}).click();
-    assert.match(await page.evaluate(()=>navigator.clipboard.readText()),/^## 心流小屋周报 · /);
+    const markdown=await page.evaluate(()=>navigator.clipboard.readText());
+    assert.match(markdown,/^## 心流小屋周报 · /);assert.match(markdown,/专注时放在唱机上的唱片/);
+    assert(markdown.includes(`《${fixture.focusAlbum}》`));assert(!markdown.includes(playbackAlbum));
+    assert.doesNotMatch(markdown,/最常听|听歌时长|唱针转了/,'focus minutes are never presented as listening duration');
+    assert.deepEqual(await page.evaluate(async ()=>(await import('/src/player/playback-log.mjs')).readPlaybackSessions()),fixture.playback,'opening and exporting focus stats never adds listening history');
+    report.statsJournal={focusAlbum:fixture.focusAlbum,todayFocusMinutes:25,playbackAlbum,verifiedPlaybackMs:90000,playbackWallSpanMs:300000,missingFocusAlbumDoesNotFallBackToPlayback:true};
     const [download]=await Promise.all([page.waitForEvent('download'),journal.getByRole('button',{name:'导出图片'}).click()]);assert.match(download.suggestedFilename(),/^心流小屋周报-.*\.png$/);await download.saveAs(path.join(output,'weekly-card-export.png'));
     for(const [w,h] of [[1280,800],[1440,900],[1920,1080]]){await page.setViewportSize({width:w,height:h});
       // Right page is balanced: summary, facts, week strip and actions fill most of it, nothing overflows.
@@ -193,6 +220,153 @@ try {
     assert.match(await page.locator('.backup-dialog').innerText(),/专注.*未能保存|专注.*保存失败/,'backup must not report a successful focus restore');
     await screenshot(page,'backup-storage-error');await page.keyboard.press('Escape');await openFocus(page,'随手记');assert.equal(await page.getByLabel('随手记内容').inputValue(),'原有随手记');
     assert.equal((await focusState(page)).notes,'原有随手记');
+  });
+  const backupKeys = {
+    focusSessions: 'flow-cabin-focus-sessions-v1', catMood: 'flow-cabin-cat-mood-v1',
+    catCare: 'flow-cabin-cat-care-meta-v1', letters: 'flow-cabin-letters-v1', playbackSessions: 'flow-cabin-playback-sessions-v1'
+  };
+  const backupMemory = (id, at = Date.now(), mood = 85) => ({
+    version: 1,
+    focusSessions: [{ id, start: at - 60000, end: at, durationMs: 60000, completed: true, taskId: '', taskText: id, album: null, track: null, cover: '' }],
+    catMood: { v: 1, mood, updatedAt: at, feeds: [{ at, fishLeft: 3 }], totalFeeds: 1 },
+    catCare: { pets: { day: '2026-10-19', count: 1 }, rewarded: [id] },
+    letters: [{ id, cadence: 'weekly', tone: 'warm', lines: [id + ' 来信'], source: 'ai', at, read: false }],
+    playbackSessions: [{ id: 'p-' + id, start: at - 30000, end: at, durationMs: 1000, reason: 'pause',
+      track: { index: 0, title: id, artist: 'Fixture' }, album: { id: 'album', title: 'Night', artist: 'Fixture' } }]
+  });
+  const seedBackupMemory = (page, memory) => page.evaluate(({ keys, memory }) => {
+    for (const [domain, key] of Object.entries(keys)) {
+      localStorage.setItem(key, JSON.stringify(memory[domain]));
+      window.dispatchEvent(new StorageEvent('storage', { key, storageArea: localStorage }));
+    }
+    localStorage.setItem('flow-cabin-ai-key-v1', 'UI_SECRET_NEVER_EXPORT');
+    localStorage.setItem('backup-unrelated', 'keep');
+  }, { keys: backupKeys, memory });
+  const backupStorage = page => page.evaluate(keys => Object.fromEntries(Object.entries(keys).map(([domain, key]) => [domain, localStorage.getItem(key)])), backupKeys);
+  const openBackup = async page => {
+    await page.getByRole('button', { name: '设置', exact: true }).click();
+    await page.getByRole('tab', { name: '数据与备份', exact: true }).click();
+    await page.getByRole('button', { name: '收藏与备份', exact: true }).click();
+    await page.locator('.backup-dialog').waitFor();
+  };
+  const uploadBackup = (page, value) => page.getByLabel('导入备份文件').setInputFiles({
+    name: 'memory-backup.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(value))
+  });
+  const downloadBackup = async page => {
+    const downloading = page.waitForEvent('download');
+    await page.getByRole('button', { name: '导出备份', exact: true }).click();
+    const download = await downloading, chunks = [];
+    for await (const chunk of await download.createReadStream()) chunks.push(chunk);
+    assert.match(download.suggestedFilename(), /^FlowCabin-backup-\d{8}\.json$/);
+    return JSON.parse(Buffer.concat(chunks).toString('utf8'));
+  };
+  await run('backup-ui-export-room-memory-and-visible-errors', async page => {
+    const memory = backupMemory('export');
+    await seedBackupMemory(page, memory); await openBackup(page);
+    const exported = await downloadBackup(page);
+    assert.equal(exported.version, 3); assert.equal(exported.roomId, 'local-room');
+    assert.equal(exported.items.length, items.length); assert.equal(exported.focus.notes, '原有随手记');
+    for (const domain of Object.keys(backupKeys)) assert.ok(exported.memory[domain], domain + ' exported');
+    assert.equal(exported.memory.playbackSessions[0].durationMs, 1000);
+    assert(!JSON.stringify(exported).includes('UI_SECRET_NEVER_EXPORT'));
+    const dialog = page.locator('.backup-dialog');
+    await page.evaluate(key => localStorage.setItem(key, '{broken'), backupKeys.letters);
+    await dialog.getByRole('button', { name: '导出备份', exact: true }).click();
+    await dialog.getByRole('alert').filter({ hasText: '格式无效' }).waitFor();
+    assert.equal(await dialog.getByRole('status').count(), 0, 'export failure clears the previous success');
+    await seedBackupMemory(page, memory);
+    await page.evaluate(() => { window.__backupCreateURL = URL.createObjectURL; URL.createObjectURL = () => { throw new Error('测试：无法生成下载'); }; });
+    await dialog.getByRole('button', { name: '导出备份', exact: true }).click();
+    await dialog.getByRole('alert').filter({ hasText: '无法生成下载' }).waitFor();
+    assert.equal(await dialog.getByRole('status').count(), 0);
+    await page.evaluate(() => { URL.createObjectURL = window.__backupCreateURL; });
+    assert.equal((await downloadBackup(page)).roomId, 'local-room');
+    assert.equal(await dialog.getByRole('alert').count(), 0, 'successful retry clears errors');
+  });
+  await run('backup-ui-keep-confirm-merge-and-live-refresh', async page => {
+    await seedBackupMemory(page, backupMemory('local', Date.now() - 600000, 35));
+    const before = await backupStorage(page), memory = backupMemory('imported');
+    await page.evaluate(() => {
+      window.__backupRefreshes = []; window.__backupCompletions = 0;
+      window.addEventListener('storage', event => window.__backupRefreshes.push(event.key));
+      window.addEventListener('cabin:focus-session', () => window.__backupCompletions++);
+    });
+    await openBackup(page);
+    const payload = { kind: 'FlowCabinBackup', version: 3, items: [], memory, focus: { notes: '恢复的随手记' } };
+    await uploadBackup(page, payload);
+    const dialog = page.locator('.backup-dialog'), confirm = dialog.getByRole('group', { name: '恢复本机记录' });
+    await confirm.waitFor(); assert.match(await confirm.innerText(), /合并并保留本机记录/);
+    assert.deepEqual(await backupStorage(page), before);
+    assert.equal((await focusState(page)).notes, '原有随手记');
+    await confirm.getByRole('button', { name: '保留现有', exact: true }).click();
+    assert.deepEqual(await backupStorage(page), before);
+    assert.equal((await focusState(page)).notes, '原有随手记');
+    await uploadBackup(page, payload); await confirm.getByRole('button', { name: '恢复这些内容', exact: true }).click();
+    await dialog.getByRole('status').filter({ hasText: '已合并' }).waitFor();
+    assert.match(await dialog.getByRole('status').innerText(), /已用备份替换专注/);
+    assert.equal((await focusState(page)).notes, '恢复的随手记');
+    const merged = Object.fromEntries(Object.entries(await backupStorage(page)).map(([key, value]) => [key, JSON.parse(value)]));
+    for (const domain of ['focusSessions', 'letters', 'playbackSessions']) assert.equal(merged[domain].length, 2, domain + ' retains local history');
+    assert.deepEqual(merged.catCare.rewarded, ['local', 'imported']); assert.equal(merged.catMood.feeds.length, 2);
+    await page.waitForFunction(() => document.querySelector('.room-cat')?.dataset.mood === 'happy');
+    const events = await page.evaluate(() => ({ keys: window.__backupRefreshes, completions: window.__backupCompletions }));
+    for (const key of Object.values(backupKeys)) assert(events.keys.includes(key), key + ' refresh');
+    assert.equal(events.completions, 0);
+    assert.equal(await page.evaluate(() => localStorage.getItem('flow-cabin-ai-key-v1')), 'UI_SECRET_NEVER_EXPORT');
+    assert.equal(await page.evaluate(() => localStorage.getItem('backup-unrelated')), 'keep');
+    const saved = await backupStorage(page);
+    await uploadBackup(page, payload); await confirm.getByRole('button', { name: '恢复这些内容', exact: true }).click();
+    await dialog.getByRole('status').filter({ hasText: '已合并' }).waitFor();
+    assert.deepEqual(await backupStorage(page), saved, 'repeated UI imports are idempotent');
+    await uploadBackup(page, { kind: 'AlbumCircleCollection', version: 2, items: [], focus: { notes: '旧版随手记' } });
+    await dialog.getByRole('button', { name: '替换这些内容', exact: true }).click();
+    await dialog.getByRole('status').filter({ hasText: '已用备份替换' }).waitFor();
+    assert.deepEqual(await backupStorage(page), saved, 'legacy imports leave newer memories alone');
+  });
+  await run('backup-ui-memory-failure-rolls-back-and-retry-recovers', async page => {
+    await seedBackupMemory(page, backupMemory('local', Date.now() - 600000, 35));
+    const before = await backupStorage(page);
+    await page.evaluate(key => {
+      const original = Storage.prototype.setItem;
+      window.__backupFailWrites = true;
+      Storage.prototype.setItem = function (name, value) {
+        if (window.__backupFailWrites && name === key) throw new DOMException('Synthetic quota failure', 'QuotaExceededError');
+        return original.call(this, name, value);
+      };
+      window.__backupRefreshes = [];
+      window.addEventListener('storage', event => window.__backupRefreshes.push(event.key));
+    }, backupKeys.letters);
+    await openBackup(page);
+    const payload = { kind: 'FlowCabinBackup', version: 3, items: [], memory: backupMemory('imported'), focus: { notes: '成功恢复的随手记' } };
+    await uploadBackup(page, payload);
+    const dialog = page.locator('.backup-dialog');
+    await dialog.getByRole('button', { name: '恢复这些内容', exact: true }).click();
+    await dialog.getByRole('alert').filter({ hasText: '小屋记忆未能保存' }).waitFor();
+    assert.deepEqual(await backupStorage(page), before);
+    assert.deepEqual(await page.evaluate(() => window.__backupRefreshes), []);
+    assert.equal((await focusState(page)).notes, '成功恢复的随手记', 'successful independent domains are reported separately');
+    assert(!/已合并/.test(await dialog.getByRole('status').innerText()));
+    await page.evaluate(() => { window.__backupFailWrites = false; });
+    await uploadBackup(page, payload);
+    await dialog.getByRole('button', { name: '恢复这些内容', exact: true }).click();
+    await dialog.getByRole('status').filter({ hasText: '已合并' }).waitFor();
+    assert.equal(await dialog.getByRole('alert').count(), 0);
+    assert.equal(JSON.parse((await backupStorage(page)).letters).length, 2);
+  });
+  await run('backup-ui-invalid-payload-stops-before-import', async page => {
+    await seedBackupMemory(page, backupMemory('local'));
+    const before = await backupStorage(page); let imports = 0;
+    page.on('request', request => { if (new URL(request.url()).pathname === '/api/items/import') imports++; });
+    await openBackup(page);
+    for (const patch of [{ version: 99 }, { memory: { letters: 'bad' } }, { memory: { playbackSessions: [{ id: 'bad', start: 1, end: 2, durationMs: 10 }] } }]) {
+      await uploadBackup(page, { kind: 'FlowCabinBackup', version: 3, items: [], ...patch });
+      const dialog = page.locator('.backup-dialog');
+      await dialog.getByRole('alert').waitFor();
+      assert.match(await dialog.getByRole('alert').innerText(), /版本|格式无效/);
+      assert.equal(await dialog.locator('.backup-replace').count(), 0);
+      assert.deepEqual(await backupStorage(page), before);
+    }
+    assert.equal(imports, 0, 'invalid backups never reach the collection API');
   });
   await run('expired-reset-settles-one-completed-round',async page=>{
     await openFocus(page);await page.getByRole('button',{name:'开始专注',exact:true}).click();const before=await focusState(page);
@@ -327,7 +501,7 @@ try {
   });
   await run('productivity-settings-sections-and-shortcut-return',async page=>{
     await openFocus(page,'随手记');await page.getByLabel('随手记内容').fill('设置面板往返保留');await page.getByRole('button',{name:'设置',exact:true}).click();
-    for(const [index,name] of ['音源','房间与桌宠','专注工具','显示与桌面','数据与备份','关于'].entries()) { await page.getByRole('tablist',{name:'设置分区',exact:true}).getByRole('tab',{name,exact:true}).click();await screenshot(page,`settings-section-${index}`);if(name==='显示与桌面')assert.equal(await page.locator('.hub-row-actions .segmented button').evaluateAll(buttons=>buttons.every(button=>{const range=document.createRange();range.selectNodeContents(button);return range.getClientRects().length===1;})),true,'performance option labels stay on one line'); }
+    for(const [index,name] of ['音源','房间与桌宠','专注工具','显示与桌面','数据与备份','AI（Beta）','关于'].entries()) { await page.getByRole('tablist',{name:'设置分区',exact:true}).getByRole('tab',{name,exact:true}).click();await screenshot(page,`settings-section-${index}`);if(name==='显示与桌面')assert.equal(await page.locator('.hub-row-actions .segmented button').evaluateAll(buttons=>buttons.every(button=>{const range=document.createRange();range.selectNodeContents(button);return range.getClientRects().length===1;})),true,'performance option labels stay on one line'); }
     // 专注工具 holds the timer preferences (the dock's own form), not shortcuts into the dock.
     const hub=page.getByRole('dialog',{name:'设置',exact:true});await page.getByRole('tablist',{name:'设置分区',exact:true}).getByRole('tab',{name:'专注工具',exact:true}).click();assert.equal(await hub.getByRole('button',{name:/打开学习|打开番茄钟|查看统计|随手记/}).count(),0,'no action rows');
     await hub.getByLabel('专注（分）').fill('31');await hub.getByLabel('专注（分）').press('Enter');await page.keyboard.press('Escape');assert.equal(await hub.count(),0);
@@ -359,12 +533,15 @@ try {
     // Deck audio that cannot be analysed (estimated energy, bpm 0): listen, nothing moves.
     await page.evaluate(()=>window.dispatchEvent(new CustomEvent('cabin:playback',{detail:{playing:true,energy:.4,estimated:true,bpm:0,beatAt:0}})));
     await page.waitForFunction(()=>document.querySelector('.room-cat').dataset.music==='free'&&!document.querySelector('.room-cat').dataset.beatMotion,null,{timeout:5000});
-    assert.equal(await cat.getAttribute('data-art'),'cat-listen');
-    // A detected beat: the cat-groove strip (4 frames, 2 per beat) runs on it, phase-locked to beatAt.
+    // Clicking the sound controls briefly gives 奶糖 a typing reaction; let that
+    // intentional input-feedback pose expire before checking the listening pose.
+    await page.waitForFunction(()=>!document.querySelector('.room-cat')?.dataset.typing,null,{timeout:5000});
+    assert.equal(await cat.locator('.pixel-cat').getAttribute('data-pose'),'listen');
+    // A detected beat: the shared cat sprite hops once per beat, phase-locked to beatAt.
     const beatAt=await page.evaluate(()=>{const at=Date.now()-130;window.dispatchEvent(new CustomEvent('cabin:playback',{detail:{playing:true,energy:.5,bpm:120,beatAt:at}}));return at;});
-    await page.waitForFunction(()=>document.querySelector('.room-cat').dataset.beatMotion==='groove',null,{timeout:5000});
-    const lock=await page.evaluate(beatAt=>{const a=document.querySelector('.room-cat .cat-art.is-groove').getAnimations().find(x=>x.effect.getKeyframes().some(k=>k.backgroundPosition));const d=a.effect.getTiming().duration;const want=((Date.now()-beatAt)%d+d)%d,at=a.currentTime%d;return {d,off:Math.min(Math.abs(at-want),d-Math.abs(at-want))};},beatAt);
-    assert.equal(lock.d,1000);assert.ok(lock.off<40,`groove is ${Math.round(lock.off)} ms off the beat`);
+    await page.waitForFunction(()=>document.querySelector('.room-cat .pixel-cat')?.dataset.pose==='groove',null,{timeout:5000});
+    const lock=await page.evaluate(beatAt=>{const a=document.querySelector('.room-cat .pixel-cat').getAnimations().find(x=>x.effect.getKeyframes().some(k=>k.translate));const d=a.effect.getTiming().duration;const want=((Date.now()-beatAt)%d+d)%d,at=a.currentTime%d;return {d,off:Math.min(Math.abs(at-want),d-Math.abs(at-want))};},beatAt);
+    assert.equal(lock.d,500);assert.ok(lock.off<40,`groove is ${Math.round(lock.off)} ms off the beat`);
     await screenshot(page,'cat-on-the-beat');
   },{motion:true});
   await run('companion-generated-lofi-tempo-reaches-pet',async page=>{

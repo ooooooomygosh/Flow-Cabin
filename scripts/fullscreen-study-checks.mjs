@@ -80,7 +80,10 @@ export async function verifyFullscreenStudy({ browser, origin, output, check }) 
     assert.deepEqual((await studyState()).cards.find(card => card.id === saved.id), saved);
     await page.keyboard.press('Escape');
     await page.getByLabel('新卡组名称').fill('导入练习'); await page.getByRole('button', { name: '新建', exact: true }).click();
-    await page.locator('.study-decks li', { hasText: '导入练习' }).getByRole('button', { name: '编辑', exact: true }).click();
+    const importDeck = page.locator('.study-decks li', { hasText: '导入练习' });
+    await importDeck.getByText('0 张 · 空词书 · 添加或导入词条后开始', { exact: true }).waitFor();
+    assert.doesNotMatch(await importDeck.innerText(), /已完成/);
+    await importDeck.getByRole('button', { name: '添加词条', exact: true }).click();
     await page.getByText('导入本地词书', { exact: true }).click();
     const templateDownload = page.waitForEvent('download'); await page.getByRole('button',{name:'下载两列模板',exact:true}).click();
     const template = await templateDownload; assert.equal(template.suggestedFilename(),'小屋词书模板.tsv');
@@ -91,6 +94,8 @@ export async function verifyFullscreenStudy({ browser, origin, output, check }) 
     await page.getByText('已追加 2 张卡片；旧进度保持不变。', { exact: true }).waitFor();
     assert.deepEqual((await studyState()).cards.find(card => card.id === saved.id), saved);
     await page.reload(); await openStudy();
+    await importDeck.getByText('2 张 · 未开始', { exact: true }).waitFor();
+    await importDeck.getByRole('button', { name: '编辑', exact: true }).waitFor();
     assert.deepEqual((await studyState()).cards.find(card => card.id === saved.id), saved); check('wordbook-preview-review-switch-import-and-reload-preserve-progress');
     for (const size of [{width:960,height:600},{width:1280,height:800}]) { await page.setViewportSize(size); await state(true); await shot(`fullscreen-study-${size.width}x${size.height}`); assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)); }
     check('fullscreen-study-small-screen-layout');

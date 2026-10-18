@@ -3,13 +3,16 @@ import { useFocus } from '../useFocus';
 import useReducedMotion from '../../useReducedMotion';
 import useFocusSessions from './useFocusSessions.js';
 import { recentSummary, dailySeries, yearHeatmap, byTask, timeOfDay, weeklyReport, reportMarkdown, formatMinutes, dayKey } from './stats-model.mjs';
+import { STREAK_HINT } from '../focus-model.mjs';
 import { drawWeekCard, canDrawCover, CARD_W, CARD_H } from './week-card.mjs';
 import { JOURNAL_EVENT, JOURNAL_TABS, journalTab, isJournalKey } from './journal-events.mjs';
 import './focus-stats.css';
 import './journal-art.css';
-import { journalArtStyle, hasArt, JOURNAL_ART, CARD_EXPORT_SLOTS, cardArt, sprite } from './journal-art.mjs';
+import { journalArtStyle, hasArt, JOURNAL_ART, CARD_EXPORT_SLOTS, cardArt, sprite, LETTER_PLACEHOLDER } from './journal-art.mjs';
 import { defaultWeekOffset, weekName, catPose, CAT_POSE_CAPTION, barUnits, cabinLetter } from './journal-layout.mjs';
 import { readCatMood, subscribeCatMood } from './cat-mood-source.mjs';
+import { useLetters, useLetterDelivery } from '../../ai/useCabinLetters.js';
+import { TONES } from '../../ai/ai-model.mjs';
 
 const clock = (t) => { const d = new Date(t); return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
 const typing = (el) => el?.closest?.('input,textarea,select,[contenteditable="true"]');
@@ -34,6 +37,7 @@ export default function CabinJournal() {
   const focus = useFocus();
   const [open, setOpen] = useState(false), [view, setView] = useState('overview'), ref = useRef(null), openRef = useRef(false), closingRef = useRef(false);
   openRef.current = open;
+  useLetterDelivery(useFocusSessions(focus?.state?.sessions));
   // Close synchronously so an L pressed in the same frame as Esc (before React re-renders) reopens.
   const shut = () => { openRef.current = false; setOpen(false); };
   const show = (tab) => { openRef.current = true; setView(tab); setOpen(true); };
@@ -68,6 +72,38 @@ function Empty({ pose = 'cat-wait', title, children, action }) {
   return <div className="fs-empty-state"><Sprite name={pose} scale={2}/><p className="fs-empty-title">{title}</p><p className="fs-empty">{children}</p>{action}</div>;
 }
 const Tape = ({ className = '' }) => <span className={`fs-tape ${className}`} aria-hidden="true"/>;
+
+// One frame of a horizontal sprite strip (or the whole strip, animated by CSS), falling back
+// to the placeholder in public/letters/ when the art file is missing.
+export function Strip({ name, w, h, frames = 1, frame = 0, scale = 1, className = '', alt = '' }) {
+  return <span className={`fs-strip ${className}`} role={alt ? 'img' : undefined} aria-label={alt || undefined} aria-hidden={alt ? undefined : true}
+    style={{ width: w * scale, height: h * scale, '--frames': frames, '--fw': `${w * scale}px` }}>
+    <img src={sprite(name)} alt="" width={w * frames * scale} height={h * scale} draggable={false} style={{ transform: `translateX(${-frame * w * scale}px)` }}
+      onError={(e) => { const to = LETTER_PLACEHOLDER[name]; if (to && !e.currentTarget.src.endsWith(to)) e.currentTarget.src = to; }}/></span>;
+}
+
+// 小屋来信 spot: the newest AI letter when there is one (sealed until opened; the cat walks
+// it in once), else the template letter built from this week's data. The 信箱 flag is up
+// while any letter is unread.
+function LetterSpot({ template, reduced }) {
+  const { list, unread, markRead } = useLetters();
+  const [index, setIndex] = useState(0), ai = list[index] || null;
+  const sealed = ai && !ai.read;
+  const tone = ai && TONES.find((t) => t.id === ai.tone)?.label;
+  return <section className={`fs-letter ${ai ? 'is-ai' : 'is-template'}`} aria-label="小屋来信">
+    <div className="fs-letter-head"><h3 className="fs-title">小屋来信{ai ? <small> · {ai.period}{tone ? ` · ${tone}` : ''} · AI</small> : null}</h3>
+      <span className={`fs-mailbox ${unread ? 'has-flag' : ''}`} data-unread={unread} title={unread ? `${unread} 封未读` : '信箱'}><Strip name="mailbox" w={32} h={32} frames={2} frame={unread ? 1 : 0} alt={unread ? `信箱：${unread} 封未读` : '信箱'}/></span>
+      {list.length > 1 && <span className="fs-letter-nav"><button type="button" aria-label="更早的信" disabled={index >= list.length - 1} onClick={() => setIndex((i) => i + 1)}>‹</button><button type="button" aria-label="更新的信" disabled={index === 0} onClick={() => setIndex((i) => i - 1)}>›</button></span>}
+    </div>
+    {sealed ? <div className="fs-envelope">
+      <Strip name="cat-deliver" w={64} h={64} frames={8} frame={reduced ? 7 : 0} className={`fs-deliver ${reduced ? '' : 'is-playing'}`}/>
+      <span className="fs-envelope-art"><Strip name="letter-envelope" w={48} h={32} frames={2} frame={0} scale={2}/><Strip name="letter-seal" w={16} h={16} className="fs-seal"/></span>
+      <button type="button" className="fs-cta" onClick={() => markRead(ai.id)}>小猫送来一封信 · 拆开看看</button>
+    </div> : <div className={`fs-hand ${ai ? 'fs-letter-paper' : ''}`} style={ai ? { backgroundImage: `url(${sprite('letter-paper')}), url(${LETTER_PLACEHOLDER['letter-paper']})` } : undefined}>
+      {ai && <Strip name="letter-envelope" w={48} h={32} frames={2} frame={1} className="fs-envelope-open"/>}
+      {(ai ? ai.lines : template).map((l, i) => <p key={i}>{l}</p>)}<p className="fs-sign">—— 小屋里的猫{ai && <Strip name="letter-seal" w={16} h={16} className="fs-sign-seal"/>}</p></div>}
+  </section>;
+}
 
 function useCatMood(from, to) {
   const read = () => { try { return readCatMood(globalThis.localStorage, from, to); } catch { return null; } };
@@ -129,7 +165,7 @@ function JournalBook({ state, now, view, setView, close }) {
         <section className="fs-today" aria-label="今天">
           <div className="fs-today-num"><small>今天</small><strong>{formatMinutes(recent.todayMinutes)}</strong>{goal ? <small>目标 {goal} 分钟{recent.todayMinutes >= goal ? ' · 达成 ✓' : ''}</small> : null}</div>
           <div className="fs-today-num"><small>番茄</small><strong>{recent.todayPomodoros} 个</strong></div>
-          <div className="fs-today-num fs-today-streak">{recent.streak >= 2 && <img className="fs-sticker" src={sprite('sticker-streak')} alt="" width={32} height={32}/>}<small>连续</small><strong>{recent.streak} 天</strong>{recent.forgiven ? <small>有 {recent.forgiven} 天被原谅了</small> : null}</div>
+          <div className="fs-today-num fs-today-streak" title={STREAK_HINT}>{recent.streak >= 2 && <img className="fs-sticker" src={sprite('sticker-streak')} alt="" width={32} height={32}/>}<small>当前连续</small><strong>{recent.streak} 天</strong>{recent.forgiven ? <small title="每个周一开始的自然周可宽限一天；宽限日不计入坚持天数。">坚持 {recent.graceStreak} 天（含宽限；休息 {recent.forgiven} 天）</small> : null}</div>
         </section>
         <div className="fs-section-head"><h3 className="fs-title">每天</h3><div className="fs-seg" role="group" aria-label="时间范围">{[7, 30].map((n) => <button key={n} type="button" aria-pressed={range === n} onClick={() => setRange(n)}>近 {n} 天</button>)}</div></div>
         <Bars days={daily} label={`最近 ${range} 天 · 分钟`} set="records"/>
@@ -188,12 +224,11 @@ function JournalBook({ state, now, view, setView, close }) {
         <strong>{weekName(weekOffset)} · {report.label}</strong>
         <button type="button" aria-label="下一周" disabled={weekOffset >= 0} onClick={() => setWeekOffset((w) => Math.min(0, w + 1))}>›</button>
       </div>
-      <section className="fs-letter" aria-label="小屋来信"><h3 className="fs-title">小屋来信</h3>
-        <div className="fs-hand">{letter.map((l, i) => <p key={i}>{l}</p>)}<p className="fs-sign">—— 小屋里的猫</p></div></section>
+      <LetterSpot template={letter} reduced={reduced}/>
       <div className="fs-board">
         <figure className="fs-polaroid" style={{ '--tilt': '-3deg' }}><Tape className="is-polaroid"/>
           {report.album ? (showCover ? <img className="fs-card-cover" src={report.album.cover} alt="" width={96} height={96} onError={() => setCoverFailed(report.album.cover)}/> : <span className="fs-cover-ph" aria-hidden="true"/>) : <span className="fs-cover-ph is-empty" aria-hidden="true"/>}
-          <figcaption className="fs-hand">{report.album ? `《${report.album.title}》` : '这周还没放唱片'}{report.album?.artist ? <small>{report.album.artist}</small> : null}</figcaption></figure>
+          <figcaption className="fs-hand"><small>专注时放在唱机上的唱片</small>{report.album ? `《${report.album.title}》` : '这周没有唱片记录'}{report.album?.artist ? <small>{report.album.artist}</small> : null}</figcaption></figure>
         <ul className="fs-notes is-mini" aria-label="这周做完的事">{weekDone.length ? weekDone.slice(0, 3).map((t, i) => <li key={t.id} className="fs-note" style={{ '--tilt': `${[2, -1.5, 1][i]}deg` }}><span className="fs-note-check" aria-hidden="true">✓</span><span className="fs-note-text">{t.text}</span></li>)
           : <li className="fs-note is-blank" style={{ '--tilt': '1.5deg' }}><span className="fs-note-text">这周还没勾掉待办，也没关系。</span></li>}
           {weekDone.length > 3 && <li className="fs-note-more">还有 {weekDone.length - 3} 件</li>}</ul>

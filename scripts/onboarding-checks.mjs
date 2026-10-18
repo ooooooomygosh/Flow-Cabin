@@ -1,6 +1,7 @@
 import { openRoomSettings, closeSettings } from './settings-actions.mjs';
 import assert from 'node:assert/strict';
 import path from 'node:path';
+import { getRoomScene } from '../src/scene-catalog.mjs';
 
 // First-run wizard + settings hub checks, sharing the screenshot suite's
 // isolated, offline routes. The web build has no desktop shell, so every
@@ -51,8 +52,8 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
     await heading(page).filter({ hasText: '只开需要的权限' }).waitFor();
     await button(page, '跳过 系统通知').click(); await wizard.getByText('已跳过').waitFor();
     await button(page, '下一步').click();
-    // The 房间 step is the same picker as 设置 › 房间与桌宠, on small thumbnails.
-    assert.equal(await wizard.locator('.room-pickers.is-compact .scene-choice img').first().getAttribute('src'), '/room-scenes/thumbs/pixel.png');
+    // The compact 房间 picker uses the current Pixel Cabin artwork from the catalog.
+    assert.equal(await wizard.locator('.room-pickers.is-compact').getByRole('button', { name: '选择场景 像素小屋', exact: true }).locator('img').getAttribute('src'), getRoomScene('pixel').view);
     await button(page, '选择场景 林间书屋').click(); await button(page, '选择桌宠 枫糖').click();
     assert.equal(await button(page, '选择场景 林间书屋').getAttribute('aria-pressed'), 'true');
     assert.equal(await page.locator('.cabin-scene').getAttribute('data-room-look'), 'forest');
@@ -73,7 +74,7 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
 
     // 2. 重新引导 from the hub, motion preferences.
     await button(page, '设置').click(); await hubOf(page).waitFor();
-    assert.deepEqual(await page.getByRole('tab').allInnerTexts(), ['音源', '房间与桌宠', '专注工具', '显示与桌面', '数据与备份', '关于']);
+    assert.deepEqual(await page.getByRole('tab').allInnerTexts(), ['音源', '房间与桌宠', '专注工具', '显示与桌面', '数据与备份', 'AI（Beta）', '关于']);
     await page.getByRole('tab', { name: '关于' }).click(); await button(page, '重新引导').click();
     await wizardOf(page).waitFor(); await heading(page).filter({ hasText: '欢迎来到心流小屋' }).waitFor();
     assert.equal(await hubOf(page).count(), 0);

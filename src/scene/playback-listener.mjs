@@ -8,6 +8,7 @@ import { setBeat } from '../player/beat-clock.mjs';
 // working (idle) when the event never fires.
 const listeners = new Set();
 let latest = { playing: false, energy: 0, bpm: 0, beatAt: 0 }, frame = 0, attached = false;
+export const currentCabinPlayback = () => latest;
 const flush = () => { frame = 0; for (const fn of listeners) fn(latest); };
 const receive = (event) => {
   const d = event?.detail || {};

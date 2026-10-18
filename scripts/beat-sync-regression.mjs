@@ -1,7 +1,8 @@
 /** Beat sync of the room cat against real audio: generated click tracks (120 / 90 BPM), a steady
- * tone, a seek and a track skip. Measures when the PNG cat's groove frames and the canvas cat's
- * frames change versus the beats as HEARD (the element's currentTime grid + output latency).
- * Gates: mean < 20 ms, p95 < 50 ms on both cats; no dance on a tone; listen → re-lock after seek/skip. */
+ * tone, a seek and a track skip. Reads the room PixelCat's actual RGBA frames against the shared
+ * desktop/preview sprite renderer, then measures changes versus the beats as HEARD
+ * (the element's currentTime grid + output latency).
+ * Gates: mean < 20 ms, p95 < 50 ms; no dance on a tone; listen → re-lock after seek/skip. */
 import assert from 'node:assert/strict';
 import { launchChromium } from './launch-browser.mjs';
 import fs from 'node:fs/promises';
@@ -12,7 +13,7 @@ import { hasViteLocalOrigin } from './vite-readiness.mjs';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const output = process.env.BEAT_OUTPUT || path.join(root, 'desktop/test-results/beat-sync');
 const port = Number(process.env.BEAT_PORT || 4197), origin = `http://127.0.0.1:${port}`;
-const report = { checks: [], pageErrors: [] };
+const report = { runtime: { node: process.version, browserExecutable: process.env.BROWSER_EXECUTABLE || 'default' }, checks: [], pageErrors: [] };
 await fs.mkdir(output, { recursive: true });
 
 // 44.1 kHz mono 16-bit WAV. Clicks: a short decaying 60 Hz thump + a tick, on every beat from t = 0.
@@ -41,8 +42,22 @@ const run = async (name, test) => {
     localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 1, status: 'done', step: 'done' }));
     localStorage.setItem('flow-cabin-cat-mood-v1', JSON.stringify({ v: 1, mood: 90, tier: 'happy', updatedAt: Date.now(), feeds: [], totalFeeds: 0, unlockedActions: [] })); });
   const page = await context.newPage(); page.on('pageerror', (e) => report.pageErrors.push(`${name}: ${e.message}`));
-  try { await page.goto(origin, { waitUntil: 'domcontentloaded', timeout: 30000 }); await page.locator('button.room-cat').waitFor({ timeout: 30000 }); await test(page); report.checks.push({ name, passed: true }); console.log(`PASS ${name}`); }
-  catch (error) { report.checks.push({ name, passed: false, error: error.stack }); console.error(`FAIL ${name}: ${error.message}`); await page.screenshot({ path: path.join(output, `${name}-failure.png`) }).catch(() => {}); }
+  try { await page.goto(origin, { waitUntil: 'domcontentloaded', timeout: 30000 }); await page.locator('button.room-cat').waitFor({ timeout: 30000 });
+    await page.evaluate(async () => {
+      const { currentBeat } = await import('/src/player/beat-clock.mjs');
+      const history = [];
+      window.__beatSnapshot = () => {
+        const audio = document.querySelector('audio[data-deck="active"]');
+        return { at: performance.now(), canvas: { ...document.querySelector('button.room-cat canvas')?.dataset }, room: { ...document.querySelector('button.room-cat')?.dataset },
+          beat: { ...currentBeat() }, visibility: document.visibilityState,
+          audio: audio && { paused: audio.paused, currentTime: audio.currentTime, playbackRate: audio.playbackRate, readyState: audio.readyState, seeking: audio.seeking, ended: audio.ended, error: audio.error?.message || null } };
+      };
+      window.__beatHistory = history;
+      window.addEventListener('cabin:playback', (event) => { history.push({ ...window.__beatSnapshot(), signal: event.detail }); if (history.length > 120) history.shift(); });
+    });
+    await test(page); report.checks.push({ name, passed: true }); console.log(`PASS ${name}`); }
+  catch (error) { const diagnostics = await page.evaluate(() => ({ failure: window.__beatFrameFailure, current: window.__beatSnapshot?.(), history: window.__beatHistory })).catch(() => null);
+    report.checks.push({ name, passed: false, error: error.stack, diagnostics }); console.error(`FAIL ${name}: ${error.message}`, JSON.stringify(diagnostics?.failure || diagnostics?.current)); await page.screenshot({ path: path.join(output, `${name}-failure.png`) }).catch(() => {}); }
   finally { await context.close(); }
 };
 async function play(page, names) {
@@ -53,35 +68,79 @@ async function play(page, names) {
   await page.locator('.room-record').first().dblclick();
   await page.waitForFunction(() => { const a = document.querySelector('audio[data-deck="active"]'); return a && !a.paused && a.currentTime > .3; }, null, { timeout: 20000 });
 }
-const music = (page) => page.evaluate(() => { const r = document.querySelector('button.room-cat'); return { music: r.dataset.music || '', motion: r.dataset.beatMotion || '', art: r.dataset.art }; });
-// Samples both cats each frame and returns frame-change offsets from the nearest heard half beat.
-async function measure(page, bpm, ms = 8000) {
-  const { rows, latency } = await page.evaluate(async (ms) => {
+const music = (page) => page.evaluate(() => document.querySelector('button.room-cat')?.dataset.music || '');
+// Decode every visible canvas sample by full RGBA equality, not a pose attribute or a PNG suffix.
+// The reference renderer is also used by the real desktop pet and focus accessory previews.
+async function sampleFrames(page, ms, poses, startupTimeoutMs = 0) {
+  await page.locator('button.room-cat canvas.pixel-cat').waitFor({ state: 'visible' });
+  return page.evaluate(async ({ ms, poses, startupTimeoutMs }) => {
+    const { cachedPetFrame, drawPetFrame, SIZE, POSES, CAT_ONLY_FRAMES } = await import('/src/pet/pet-sprites.mjs');
+    const canvas = document.querySelector('button.room-cat canvas.pixel-cat'), context = canvas.getContext('2d');
+    if (!context || canvas.width !== SIZE || canvas.height !== SIZE) throw new Error('Room PixelCat must have a readable native-size canvas');
+    const reference = document.createElement('canvas'); reference.width = reference.height = SIZE;
+    const referenceContext = reference.getContext('2d'), frames = [];
+    // These attributes select the reference's cosmetics only; the pose and frame come from pixels.
+    const { petId = 'cat', skin = 'orange', accessory = '' } = canvas.dataset;
+    if (petId !== 'cat') throw new Error(`Expected the fixture's cat, got ${petId}`);
+    for (const pose of new Set([...Object.keys(POSES), ...Object.keys(CAT_ONLY_FRAMES)])) {
+      const count = CAT_ONLY_FRAMES[pose] || POSES[pose];
+      if (!count) throw new Error(`Unknown reference pose: ${pose}`);
+      for (let index = 0; index < count; index++) {
+        drawPetFrame(referenceContext, cachedPetFrame(petId, pose, index, accessory), petId, 1, skin);
+        frames.push({ id: `${pose}:${index}`, pose, pixels: referenceContext.getImageData(0, 0, SIZE, SIZE).data });
+      }
+    }
     const audio = document.querySelector('audio[data-deck="active"]'), graph = (await import('/src/player/audio-graph.mjs')).analyserFor(audio);
-    const latency = graph?.latency?.() || 0, rows = [], t0 = performance.now();
-    await new Promise((done) => { const step = () => { const n = performance.now(), r = document.querySelector('button.room-cat'), art = r?.querySelector('.cat-art'), cv = r?.querySelector('canvas.pixel-cat');
-      let pixels = ''; try { pixels = cv ? cv.toDataURL().slice(-80) : ''; } catch {}
-      rows.push([n, Date.now() - n, audio.currentTime, art ? getComputedStyle(art).backgroundPosition : '', pixels]); if (n - t0 < ms) requestAnimationFrame(step); else done(); }; requestAnimationFrame(step); });
-    return { rows, latency };
-  }, ms);
+    if (!audio || !graph) throw new Error('The WAV must be routed through the real audio analyser');
+    const latency = graph.latency(), rows = [], started = performance.now();
+    const startup = { timeoutMs: startupTimeoutMs, waitMs: 0, unmatchedSamples: 0 };
+    let t0 = startupTimeoutMs ? null : started;
+    await new Promise((done, reject) => {
+      let frameRequest, startupTimer;
+      const fail = (error) => { clearTimeout(startupTimer); cancelAnimationFrame(frameRequest); reject(error); };
+      const timeoutError = () => new Error(`Room canvas did not paint a valid ${poses.join('/')} frame within ${startupTimeoutMs} ms (${startup.unmatchedSamples} unmatched startup samples)`);
+      // Bound startup even when animation frames stop. Never restart this wait inside the sample window.
+      if (startupTimeoutMs) startupTimer = setTimeout(() => fail(timeoutError()), startupTimeoutMs);
+      const step = () => {
+        try {
+          const n = performance.now();
+          if (t0 === null && n - started >= startupTimeoutMs) throw timeoutError();
+          if (!canvas.isConnected) throw new Error('Room canvas disappeared during sampling');
+          const pixels = context.getImageData(0, 0, SIZE, SIZE).data;
+          const matches = frames.filter((candidate) => candidate.pixels.every((value, i) => value === pixels[i]));
+          const frame = matches.find((candidate) => poses.includes(candidate.pose));
+          const snapshot = () => ({ ...window.__beatSnapshot(), matches: matches.map((candidate) => candidate.id), expected: poses, samples: rows.length, elapsedMs: t0 === null ? null : Math.round(n - t0) });
+          if (!frame && t0 === null) { window.__beatFrameFailure = snapshot(); startup.unmatchedSamples++; frameRequest = requestAnimationFrame(step); return; }
+          if (!frame) { window.__beatFrameFailure = snapshot(); throw new Error(`Room canvas matched ${matches.map((candidate) => candidate.id).join('/') || 'no known pose'}, expected ${poses.join('/')} after ${rows.length} samples (${Math.round(n - t0)} ms into measurement)`); }
+          window.__beatFrameFailure = null;
+          if (t0 === null) { clearTimeout(startupTimer); t0 = n; startup.waitMs = +(n - started).toFixed(1); }
+          rows.push([n, audio.currentTime, frame.id]);
+          if (n - t0 < ms) frameRequest = requestAnimationFrame(step); else done();
+        } catch (error) { fail(error); }
+      };
+      frameRequest = requestAnimationFrame(step);
+    });
+    return { rows, latency, startup, frames: [...new Set(rows.map((row) => row[2]))] };
+  }, { ms, poses, startupTimeoutMs });
+}
+// Sample the real room canvas, then find its frame-change offsets from the nearest heard half beat.
+async function measure(page, bpm, ms = 8000) {
+  const { rows, latency, frames, startup } = await sampleFrames(page, ms, ['groove'], 1000);
   // currentTime is coarse: fit media = a + b·perf over the window, then heard beat k sits at perf (k·B − a)/b + latency.
-  const n = rows.length; let sx = 0, sy = 0, sxx = 0, sxy = 0; for (const [x, , y] of rows) { sx += x; sy += y * 1000; sxx += x * x; sxy += x * y * 1000; }
+  const n = rows.length; let sx = 0, sy = 0, sxx = 0, sxy = 0; for (const [x, y] of rows) { sx += x; sy += y * 1000; sxx += x * x; sxy += x * y * 1000; }
   const b = (n * sxy - sx * sy) / (n * sxx - sx * sx), a = (sy - b * sx) / n, half = 30000 / bpm;
+  assert.ok(Number.isFinite(b) && Math.abs(b - 1) < .05, `audio advances at normal speed during measurement (${b})`);
   const offset = (perf) => { const media = a + b * (perf - latency); let o = ((media % half) + half) % half; if (o > half / 2) o -= half; return o / b; };
-  const result = { latency: Math.round(latency) };
-  for (const [key, col] of [['png', 3], ['canvas', 4]]) {
-    const changes = []; for (let i = 1; i < n; i++) if (rows[i][col] !== rows[i - 1][col]) changes.push((rows[i][0] + rows[i - 1][0]) / 2);
-    const abs = changes.map((t) => Math.abs(offset(t))).sort((x, y) => x - y), intervals = changes.slice(1).map((t, i) => t - changes[i]);
-    const signed = changes.map((t) => offset(t)); result[key] = { vsCurrentTime: +(signed.reduce((s, v) => s + v, 0) / (signed.length || 1) + latency).toFixed(1), bias: +(signed.reduce((s, v) => s + v, 0) / (signed.length || 1)).toFixed(1), changes: changes.length, mean: +(abs.reduce((s, v) => s + v, 0) / (abs.length || 1)).toFixed(1), p95: +(abs[Math.floor(abs.length * .95)] || 0).toFixed(1), max: +(abs.at(-1) || 0).toFixed(1), interval: +(intervals.reduce((s, v) => s + v, 0) / (intervals.length || 1)).toFixed(1) };
-  }
-  return result;
+  const changes = []; for (let i = 1; i < n; i++) if (rows[i][2] !== rows[i - 1][2]) changes.push((rows[i][0] + rows[i - 1][0]) / 2);
+  const abs = changes.map((t) => Math.abs(offset(t))).sort((x, y) => x - y), intervals = changes.slice(1).map((t, i) => t - changes[i]);
+  const signed = changes.map((t) => offset(t));
+  return { latency: Math.round(latency), samples: n, frames, startup, canvas: { vsCurrentTime: +(signed.reduce((s, v) => s + v, 0) / (signed.length || 1) + latency).toFixed(1), bias: +(signed.reduce((s, v) => s + v, 0) / (signed.length || 1)).toFixed(1), changes: changes.length, mean: +(abs.reduce((s, v) => s + v, 0) / (abs.length || 1)).toFixed(1), p95: +(abs[Math.floor(abs.length * .95)] || 0).toFixed(1), max: +(abs.at(-1) || 0).toFixed(1), interval: +(intervals.reduce((s, v) => s + v, 0) / (intervals.length || 1)).toFixed(1) } };
 }
 const gate = (name, m, bpm) => {
-  for (const key of ['png', 'canvas']) {
-    const v = m[key]; assert.ok(v.changes >= 8, `${name} ${key}: frames change (${v.changes})`);
-    assert.ok(Math.abs(v.interval - 30000 / bpm) < 30000 / bpm * .08, `${name} ${key}: one frame per half beat (${v.interval} ms)`);
-    assert.ok(v.mean < 20, `${name} ${key}: mean ${v.mean} ms`); assert.ok(Math.abs(v.bias) < 20, `${name} ${key}: frames sit ${v.bias} ms off the heard click (click media time + output latency ${m.latency} ms)`); assert.ok(v.p95 < 50, `${name} ${key}: p95 ${v.p95} ms`);
-  }
+  const v = m.canvas; assert.ok(v.changes >= 8, `${name} canvas: frames change (${v.changes})`);
+  assert.equal(m.frames.length, 4, `${name} canvas: all four groove frames are painted`);
+  assert.ok(Math.abs(v.interval - 30000 / bpm) < 30000 / bpm * .08, `${name} canvas: one frame per half beat (${v.interval} ms)`);
+  assert.ok(v.mean < 20, `${name} canvas: mean ${v.mean} ms`); assert.ok(Math.abs(v.bias) < 20, `${name} canvas: frames sit ${v.bias} ms off the heard click (click media time + output latency ${m.latency} ms)`); assert.ok(v.p95 < 50, `${name} canvas: p95 ${v.p95} ms`);
 };
 // After a (re-)lock, wait until the clock's anchor stops moving (phase steady to < 3 ms for 1.5 s), so the
 // gate measures the settled lock, not the slew-in right after it. Limits are unchanged.
@@ -99,15 +158,21 @@ try {
   let log = ''; server.stdout.on('data', (b) => log += b); server.stderr.on('data', (b) => log += b);
   for (let i = 0; ; i++) { if (server.exitCode !== null || i > 150) throw new Error(log); if (hasViteLocalOrigin(log, origin) && await fetch(origin).then((r) => r.ok, () => false)) break; await new Promise((r) => setTimeout(r, 100)); }
   browser = await launchChromium({ args: ['--autoplay-policy=no-user-gesture-required'] }).catch(() => launchChromium());
+  report.runtime.browserVersion = browser.version();
   for (const file of ['click120', 'click90']) await run(`cat-frames-on-heard-beats-${file}`, async (page) => {
     await play(page, [file]); await lockedWithin(page, 9000); await page.waitForTimeout(2500);
     const m = await measure(page, BPM[file]); report[file] = m; console.log(file, JSON.stringify(m)); gate(file, m, BPM[file]);
     await page.locator('audio[data-deck="active"]').evaluate((a) => a.pause()); await page.waitForTimeout(2500);
-    assert.deepEqual(await music(page), { music: '', motion: '', art: (await music(page)).art }, 'paused: no music pose');
+    assert.equal(await music(page), '', 'paused: no music pose');
+    const paused = await sampleFrames(page, 1200, ['idle', 'sleep', 'walk']);
+    report[`${file}Paused`] = { samples: paused.rows.length, frames: paused.frames };
   });
   await run('steady-tone-is-not-a-beat', async (page) => {
     await play(page, ['tone']); await page.waitForTimeout(8000);
-    const s = await music(page); report.tone = s; assert.equal(s.music, 'free'); assert.equal(s.motion, ''); assert.equal(s.art, 'cat-listen');
+    const s = await music(page); assert.equal(s, 'free');
+    const listening = await sampleFrames(page, 4500, ['listen']);
+    report.tone = { music: s, samples: listening.rows.length, frames: listening.frames };
+    assert.ok(listening.frames.length >= 2, 'steady tone: actual listening frames animate without groove frames');
     assert.equal(await page.evaluate(async () => (await import('/src/player/beat-clock.mjs')).currentBeat().known), false);
   });
   await run('seek-resets-and-relocks', async (page) => {
@@ -115,6 +180,7 @@ try {
     // 3.25 s = 6.5 beats: the beats now fall half a beat away from where they were.
     const t0 = Date.now(); await page.locator('audio[data-deck="active"]').evaluate((a) => { a.currentTime += 3.25; });
     await page.waitForFunction(() => document.querySelector('button.room-cat').dataset.music === 'free', null, { timeout: 2000 });
+    const listening = await sampleFrames(page, 100, ['listen']); report.seekListeningFrames = listening.frames;
     await lockedWithin(page, 7000); report.seekRelockMs = Date.now() - t0; await page.waitForTimeout(1500); await settled(page);
     const m = await measure(page, 120, 6000); report.seek = m; console.log('seek', report.seekRelockMs, JSON.stringify(m)); gate('after seek', m, 120);
   });
@@ -122,6 +188,8 @@ try {
     await play(page, ['click120', 'click90']); await lockedWithin(page, 9000);
     const t0 = Date.now(); await page.evaluate(() => window.dispatchEvent(new CustomEvent('cabin:player-command', { detail: { action: 'next' } })));
     await page.waitForFunction(() => document.querySelector('button.room-cat').dataset.music !== 'beat', null, { timeout: 3000 });
+    await page.waitForFunction(() => document.querySelector('button.room-cat').dataset.music === 'free', null, { timeout: 2000 });
+    const listening = await sampleFrames(page, 100, ['listen']); report.skipListeningFrames = listening.frames;
     await lockedWithin(page, 9000); report.skipRelockMs = Date.now() - t0; await page.waitForTimeout(1500); await settled(page);
     const bpm = await page.evaluate(async () => (await import('/src/player/beat-clock.mjs')).currentBeat().bpm); assert.ok(Math.abs(bpm - 90) < 1, `new track tempo ${bpm}`);
     const m = await measure(page, 90, 6000); report.skip = m; console.log('skip', report.skipRelockMs, JSON.stringify(m)); gate('after skip', m, 90);

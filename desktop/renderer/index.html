@@ -31,7 +31,7 @@
         <fieldset><legend>显示</legend>
           <div class="setting-row"><label for="zoom">界面缩放<small>调整按钮与文字的大小。</small></label><div class="zoom-control"><input id="zoom" type="range" min="75" max="150" step="5"><output id="zoom-value" for="zoom">100%</output></div></div>
           <label class="toggle-row"><span>减少动效<small>停止唱片旋转、天气和小猫动画。</small></span><input id="reduce-motion" type="checkbox"></label>
-          <label class="toggle-row"><span>桌宠跟随打字<small>伙伴出门时，你在任何应用里打字，小猫都会跟着敲键盘。只检测“有按键”这件事，不记录、不保存、也不发送按了哪个键。默认关闭。</small></span><input id="typing-follow" type="checkbox"></label>
+          <label class="toggle-row"><span>键鼠跟随<small>伙伴出门且全局检测可用时，桌宠会跟随其他应用中的键盘按下和鼠标点击。仅在内存中保留并向桌宠传递节流后的活动时间戳，不读取、保存或发送按键内容、鼠标按钮或坐标。默认关闭全局检测；全局检测未开启或不可用时，仅跟随小屋内的键盘和点击活动。</small></span><input id="typing-follow" type="checkbox"></label>
           <p id="typing-status" class="hint" role="status"></p><button type="button" id="typing-permission" class="secondary-button" hidden>去授权</button>
           <p id="display-info" class="hint"></p><button type="button" id="fit-display" class="secondary-button">适配当前显示器</button><p class="hint">F11 进入全屏，Esc 退出；在小屋里按 Z 进入沉浸模式。</p>
         </fieldset>

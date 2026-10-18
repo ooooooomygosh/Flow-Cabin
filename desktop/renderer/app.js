@@ -12,10 +12,10 @@ function showSettings(settings) {
   $('reduce-motion').checked = settings.reduceMotion; $('typing-follow').checked = settings.typingFollow === true; updatePreview();
 }
 const TYPING_TEXT = {
-  off: '', active: '已开启：小猫正在跟着你打字。',
+  off: '全局键鼠跟随已关闭，仅跟随小屋内的键盘和点击活动。', active: '键鼠跟随已开启：桌宠会响应键盘按下和鼠标点击。',
   'waiting-pet': '已开启：让伙伴出门（桌宠）后生效。',
-  'needs-permission': '需要在「系统设置 › 隐私与安全性」里允许心流小屋使用「辅助功能」和「输入监控」。授权前，小猫只跟随你在小屋里的打字。',
-  unavailable: '这台电脑暂时无法使用全局打字检测，小猫只跟随你在小屋里的打字。'
+  'needs-permission': '需要在「系统设置 › 隐私与安全性」里允许心流小屋使用「辅助功能」和「输入监控」。授权前，键鼠跟随仅响应小屋内的键盘和点击活动。',
+  unavailable: '这台电脑暂时无法使用全局键鼠检测，键鼠跟随仅响应小屋内的键盘和点击活动。'
 };
 function showTyping(typing) {
   if (!typing) return;

@@ -102,6 +102,23 @@ export function studyQueue(state, deckId, now = Date.now()) {
   const fresh = pool.filter((card) => !card.memory).sort((a, b) => a.createdAt - b.createdAt).slice(0, Math.max(0, state.newPerDay - learnedToday));
   return { cards: [...due, ...fresh], due: due.length, fresh: fresh.length, total: pool.length, upcoming: pool.filter((card) => card.memory && card.memory.due > now).sort((a, b) => a.memory.due - b.memory.due)[0]?.memory.due || 0 };
 }
+// A deck with no cards is empty, not finished. Keep empty, unstarted,
+// in-progress and completed distinct so the shelf can offer the right action.
+export function deckStatus(state, deckId, now = Date.now()) {
+  const cards = state.cards.filter((card) => card.deckId === deckId);
+  const learned = cards.filter((card) => card.memory).length;
+  const unlearned = cards.length - learned;
+  const queue = studyQueue(state, deckId, now);
+  const base = { total: cards.length, learned, unlearned, due: queue.due, fresh: queue.fresh, upcoming: queue.upcoming };
+  if (!cards.length) return { ...base, kind: 'empty', label: '空词书', detail: '添加或导入词条后开始', action: 'edit' };
+  if (!learned) return { ...base, kind: 'new', label: '未开始', detail: queue.cards.length ? '' : '今日新词额度已用完', action: 'review' };
+  if (queue.cards.length) {
+    const label = [queue.due ? `待复习 ${queue.due}` : '', queue.fresh ? `新 ${queue.fresh}` : ''].filter(Boolean).join(' · ');
+    return { ...base, kind: 'active', label, detail: unlearned > queue.fresh ? `还剩 ${unlearned} 张新词` : '', action: 'review' };
+  }
+  if (unlearned) return { ...base, kind: 'paused', label: '今日新词已学完', detail: `还剩 ${unlearned} 张新词`, action: 'review' };
+  return { ...base, kind: 'done', label: '已完成', detail: '', action: 'review' };
+}
 export function review(state, cardId, rating, now = Date.now()) {
   const card = state.cards.find((entry) => entry.id === cardId); if (!card) return state;
   const result = scheduler.next(toFsrs(card.memory, now), new Date(now), rating);

@@ -12,6 +12,8 @@ import { readSkySettings, writeSkySettings } from '../sky-clock.mjs';
 import { useRecordLibrary } from '../RecordLibrary';
 import { normalizePetId, getPet } from '../pet/pet-catalog.mjs';
 import { desktopCommand } from '../desktop/desktop-command.mjs';
+import PixelCat from '../pet/PixelCat';
+import '../room/benchmark-cabin.css';
 
 // While a 小鱼干 is dragged and the cat is out on the desktop, the shell lets the pet window take
 // the drop (it normally lets clicks pass through everywhere but the cat's pixels).
@@ -25,6 +27,10 @@ function CatPanelBody({ close }) {
   const level = levelInfo(rewards.xp), unlocked = unlockedIds(rewards.xp, rewards.bought), mood = useCatCare(), [confirming, setConfirming] = useState('');
   const full = mood.feedsToday >= mood.dailyFeeds;
   return <Dialog size="sm" title={cat ? '小猫' : pet.name} close={close} className="cat-panel">
+    <div className="cat-portrait">
+      <PixelCat petId={petId} skin={focus.state.settings.catSkin} accessory={rewards.equipped.accessory || ''} pose="idle" label={`${pet.name}的当前装扮`}/>
+      <div><strong>{pet.name}</strong><p>你做你的事，我在这里陪你。<br/>偶尔摸摸头，就很好。</p><small>打字或点鼠标，我会跟着敲敲。</small></div>
+    </div>
     <section className="focus-rewards" aria-label="小屋奖励">
       <header><strong>Lv.{level.level} 小屋主人</strong><span><FishPixel size={12}/>{rewards.fish} 小鱼干</span></header>
       <div className="focus-xp" role="progressbar" aria-label="升级进度" aria-valuemin={0} aria-valuemax={level.need} aria-valuenow={level.into}><span style={{ width: `${level.into / level.need * 100}%` }}/></div>
@@ -45,7 +51,7 @@ function CatPanelBody({ close }) {
           {kind === 'accessory' && <button type="button" aria-pressed={!rewards.equipped.accessory} onClick={() => focus.equip('accessory', '')}>不戴</button>}
           {UNLOCKS.filter((item) => item.kind === kind).map((item) => <button type="button" key={item.id} disabled={!unlocked.has(item.id) && rewards.fish < unlockPrice(item)} aria-pressed={rewards.equipped[kind] === item.id} title={unlocked.has(item.id) ? item.name : `Lv.${item.level} 解锁，或用 ${unlockPrice(item)} 条小鱼干提前兑换`} onClick={() => {
             if (!unlocked.has(item.id)) { if (confirming !== item.id) { setConfirming(item.id); return; } setConfirming(''); focus.buyUnlock(item.id); return; }
-            focus.equip(kind, item.id); if (kind === 'weather' && readSkySettings().realWeather) writeSkySettings({ realWeather: false }); }}>{!unlocked.has(item.id) && <span className="focus-lock" aria-hidden="true"/>}{item.name}{!unlocked.has(item.id) && <small> · {confirming === item.id ? `再点一次，用 ${unlockPrice(item)} 条兑换` : `Lv.${item.level} 或 ${unlockPrice(item)} 条`}</small>}</button>)}
+            focus.equip(kind, item.id); if (kind === 'weather' && readSkySettings().realWeather) writeSkySettings({ realWeather: false }); }}>{kind === 'accessory' && <PixelCat className="cat-accessory-preview" petId={petId} skin={focus.state.settings.catSkin} accessory={item.id} reduceMotion aria-hidden="true"/>}{!unlocked.has(item.id) && <span className="focus-lock" aria-hidden="true"/>}{item.name}{!unlocked.has(item.id) && <small> · {confirming === item.id ? `再点一次，用 ${unlockPrice(item)} 条兑换` : `Lv.${item.level} 或 ${unlockPrice(item)} 条`}</small>}</button>)}
         </fieldset>)}
       </div>
     </section>

@@ -12,6 +12,7 @@ import { seekWhenReady } from './player/media-position.mjs';
 import { createPositionStore } from './deck/position-store.mjs';
 import { onBackgroundChange } from './frame-clock.mjs';
 import { readVolume, writeVolume, clampVolume, mediaErrorMessage, deckStatusText, accountChangeEffect } from './deck/deck-status.mjs';
+import { createPlaybackLog, createRemotePlaybackPoller } from './player/playback-log.mjs';
 
 const FADE_IN_MS = 420, FADE_OUT_MS = 220, PREFETCH_DELAY_MS = 1500;
 // The next song is buffered on the idle deck; a failed attempt marks that track
@@ -31,6 +32,10 @@ const matches = createMatchMemory(typeof localStorage === 'undefined' ? null : l
 // With 歌曲过渡 on, the idle deck starts early and the two overlap, the old
 // one fading out. `audio.current` is always the live deck.
 export default function useRoomPlayback(record, trackIndex, provider, onNext, options = {}) {
+  const playbackLog = useRef(null), remotePoller = useRef(null);
+  playbackLog.current ||= createPlaybackLog();
+  const logTrack = (title) => record ? { id: record.id, index: trackIndex, title: title || trackNames(record)[trackIndex] || record.title, artist: record.artist, album: record.title } : null;
+  useEffect(() => playbackLog.current.listen(window), []);
   const decks = useRef([null, null]), live = useRef(0), standby = useRef(null), handover = useRef(0), releasing = useRef(Promise.resolve()), releaseTokens = useRef([null, null]);
   const audio = useMemo(() => ({ get current() { return decks.current[live.current]; } }), []);
   const markDecks = () => decks.current.forEach((element, index) => { if (element) element.dataset.deck = index === live.current ? 'active' : 'standby'; });
@@ -39,7 +44,8 @@ export default function useRoomPlayback(record, trackIndex, provider, onNext, op
   const appleHandoff = useRef(null);
   const commandRemote = (source, action, handoff = appleHandoff.current) => {
     if (source === 'appleMusic' && handoff && !handoff.bound) return Promise.resolve();
-    return musicRequest(remoteControlPath(source), { action, ...(source === 'appleMusic' && handoff ? { expectedTrack: handoff.bound } : {}) });
+    return musicRequest(remoteControlPath(source), { action, ...(source === 'appleMusic' && handoff ? { expectedTrack: handoff.bound } : {}) })
+      .then((result) => { remotePoller.current?.wake(); return result; });
   };
   const opts = useRef(options); opts.current = options;
   const canNext = () => Boolean(typeof opts.current.canNext === 'function' ? opts.current.canNext() : opts.current.canNext);
@@ -91,6 +97,7 @@ export default function useRoomPlayback(record, trackIndex, provider, onNext, op
   const silenceOutgoing = () => decks.current.forEach((element, index) => { if (element && index !== live.current && releaseTokens.current[index]) resetAudio(element); });
   const dropStandby = () => { const ready = standby.current; standby.current = null; if (ready && ready.deck !== live.current && !releaseTokens.current[ready.deck]) resetAudio(decks.current[ready.deck]); };
   useEffect(() => {
+    playbackLog.current.flush('track');
     const current = ++sequence.current, controller = new AbortController();
     // A second navigation interrupts any earlier crossfade immediately. Eject
     // and visual/system sources must never leave the old deck playing.
@@ -116,6 +123,7 @@ export default function useRoomPlayback(record, trackIndex, provider, onNext, op
         appleHandoff.current = candidate.provider === 'appleMusic' && result.catalog ? { target: candidate, bound: null } : null;
         if (element.getAttribute('src')) resetAudio(element);
         clock.reset(); update({ status: appleHandoff.current ? 'handoff' : 'loading', handoff: Boolean(appleHandoff.current), playing: false, actualTrack: '', remote: true, resolvedProvider: candidate.provider, notice: result.notice || '' });
+        remotePoller.current?.wake();
       }
       else {
         remote.current = false;
@@ -271,10 +279,10 @@ export default function useRoomPlayback(record, trackIndex, provider, onNext, op
   }, []);
   useEffect(() => {
     if (!REMOTE_PROVIDERS.has(provider) || !record) return;
-    let disposed = false, busy = false;
+    let disposed = false;
     const current = sequence.current;
     const poll = async () => {
-      if (!remote.current || busy) return; busy = true;
+      if (!remote.current) return false;
       try {
         const result = await musicRequest(provider === 'appleMusic' ? '/apple/state' : '/ma/state');
         if (!disposed && sequence.current === current) {
@@ -282,24 +290,27 @@ export default function useRoomPlayback(record, trackIndex, provider, onNext, op
           if (provider === 'appleMusic' && handoff) {
             handoff.bound = bindAppleHandoff(handoff.target, result, handoff.identity);
             if (handoff.bound) handoff.identity ||= handoff.bound;
-            if (!handoff.bound) { clock.reset(); update({ playing: false, status: 'handoff', handoff: true, actualTrack: '', error: '' }); return; }
+            if (!handoff.bound) { playbackLog.current.flush('waiting'); clock.reset(); update({ playing: false, status: 'handoff', handoff: true, actualTrack: '', error: '' }); return false; }
           }
+          playbackLog.current.remoteSample({ playing: result.state === 'playing', position: result.elapsed, track: logTrack(result.title) });
           clock.set(result.elapsed, result.duration);
           const next = { handoff: false, playing: result.state === 'playing', status: result.state === 'playing' ? 'playing' : result.state === 'paused' ? 'paused' : 'waiting', actualTrack: result.title }, old = live$.current;
-          // The server answers every 1.5 s; most answers change nothing the room shows.
+          // Most polls change nothing the room shows.
           if (Object.keys(next).some((key) => old[key] !== next[key])) update(next);
+          return result.state === 'playing' && Number.isFinite(result.elapsed);
         }
       }
       catch (error) { if (!disposed && sequence.current === current) {
+        playbackLog.current.flush('error');
         if (appleHandoff.current) { appleHandoff.current.bound = null; clock.reset(); update({ status: 'handoff', handoff: true, playing: false, actualTrack: '', error: '', notice: error.message }); }
         else update({ status: 'error', error: error.message, playing: false });
       } }
-      finally { busy = false; }
+      return false;
     };
-    // Paused while the window is hidden / minimised; one poll at once on return.
-    let timer = 0, resumed = false;
-    const off = onBackgroundChange((background) => { clearInterval(timer); timer = 0; if (!background) { if (resumed) poll(); timer = setInterval(poll, 1500); } resumed = true; });
-    return () => { disposed = true; off(); clearInterval(timer); };
+    const observer = createRemotePlaybackPoller({ poll, isActive: () => Boolean(remote.current) && sequence.current === current });
+    remotePoller.current = observer;
+    const off = onBackgroundChange(observer.setBackground);
+    return () => { disposed = true; off(); observer.dispose(); if (remotePoller.current === observer) remotePoller.current = null; };
   }, [provider, record?.id, trackIndex, accountEpoch]);
   useEffect(() => { decks.current.forEach((element, index) => { if (element) { element.volume = clampVolume(volume * faders.current[index].gain); element.muted = muted; } }); }, [volume, muted]);
   useEffect(() => () => { if (remote.current) commandRemote(remote.current, remote.current === 'appleMusic' ? 'pause' : 'stop').catch(() => {}); }, []);
@@ -325,8 +336,16 @@ export default function useRoomPlayback(record, trackIndex, provider, onNext, op
     finally { controlling.current = false; }
   };
   // Both decks share these handlers; only the live deck's events count.
-  const own = (handler) => (event) => { if (event.currentTarget === audio.current) handler(event); };
+  const own = (handler) => (event) => {
+    if (event.currentTarget !== audio.current) return;
+    playbackLog.current.mediaEvent(event.type, { media: event.currentTarget, track: logTrack() });
+    handler(event);
+  };
   const events = {
+    onSeeking: own(() => {}),
+    onSeeked: own(() => {}),
+    onRateChange: own(() => {}),
+    onEmptied: own(() => {}),
     onPlay: own(() => { if (audio.current?.getAttribute('src')) update({ playing: false, status: 'loading', error: '' }); }),
     onPlaying: own(() => { if (audio.current?.getAttribute('src')) update({ playing: true, status: 'playing', error: '' }); }),
     onWaiting: own(() => { if (audio.current?.getAttribute('src') && !audio.current.paused) update({ playing: false, status: 'buffering' }); }),

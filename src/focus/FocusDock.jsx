@@ -5,7 +5,8 @@ import { ConfirmButton } from '../ui/Confirm';
 import { useFocus, useFocusState } from './useFocus';
 import { useSoundscape } from '../audio/useSoundscape';
 import { AMBIENCE_TRACKS } from '../audio/ambience.mjs';
-import { activePreset, dayKey, focusStats, formatClock, FOCUS_PRESETS, PHASE_LABELS } from './focus-model.mjs';
+import { activePreset, dayKey, focusStats, formatClock, FOCUS_PRESETS, PHASE_LABELS, STREAK_HINT } from './focus-model.mjs';
+import useFocusSessions from './stats/useFocusSessions.js';
 import FocusFace, { faceFocus } from './FocusFace';
 import FocusDisplayStage, { FaceSwitch } from './FocusDisplay';
 import { useFocusDisplay, useSceneLook } from './useFocusDisplay';
@@ -34,7 +35,8 @@ const TABS = BUILTIN_FOCUS_TOOLS, TAB_ITEMS = TABS.map(([id, label, Icon]) => ({
 export function FocusTimer() {
   const focus = useFocusState(), { timer, settings, tasks } = focus.state, [editing, setEditing] = useState(false);
   const look = useSceneLook(), [display] = useFocusDisplay(), idle = timer.phase === 'idle';
-  const now = Date.now(), day = dayKey(now), today = useMemo(() => focusStats(focus.state.sessions, now), [focus.state.sessions, day]), preset = activePreset(settings);
+  const sessions = useFocusSessions(focus.state.sessions);
+  const now = Date.now(), day = dayKey(now), today = useMemo(() => focusStats(sessions, now), [sessions, day]), preset = activePreset(settings);
   const task = tasks.find((item) => item.id === timer.taskId);
   return <div className={`focus-timer phase-${timer.phase} ${timer.paused ? 'is-paused' : ''}`}>
     <p className="focus-phase" role="status">{PHASE_LABELS[timer.phase]}{timer.paused ? ' · 已暂停' : ''}</p>
@@ -50,7 +52,7 @@ export function FocusTimer() {
       <button type="button" aria-label="计时设置" aria-expanded={editing} onClick={() => setEditing(!editing)}><Settings size={18}/></button>
     </div>
     {idle && <Segmented className="focus-presets" label="专注节奏" value={preset} onChange={focus.preset} items={FOCUS_PRESETS.map((item) => ({ id: item.id, title: `专注 ${item.focusMin} 分钟，短休 ${item.shortMin} 分钟，长休 ${item.longMin} 分钟`, label: <><strong>{item.label}</strong><small>{item.hint}</small></> }))}/>}
-    <p className="focus-today" aria-label={`今天完成 ${today.todaySessions} 轮，专注 ${today.today} 分钟`}><span>今日</span><b>{today.todaySessions}</b> 轮<span aria-hidden="true">·</span><b>{today.today}</b> 分钟{today.streak > 1 && <><span aria-hidden="true">·</span>连续 <b>{today.streak}</b> 天</>}</p>
+    <p className="focus-today" title={STREAK_HINT} aria-label={`今天完成 ${today.todaySessions} 轮，专注 ${today.today} 分钟，当前连续 ${today.streak} 天。${STREAK_HINT}`}><span>今日</span><b>{today.todaySessions}</b> 轮<span aria-hidden="true">·</span><b>{today.today}</b> 分钟{today.streak > 1 && <><span aria-hidden="true">·</span>当前连续 <b>{today.streak}</b> 天</>}</p>
     <label className="focus-current-task">当前任务<select aria-label="当前专注任务" value={timer.taskId} onChange={(event) => focus.selectTask(event.target.value)}><option value="">自由专注</option>{tasks.filter((item) => !item.done || item.id === timer.taskId).map((item) => <option key={item.id} value={item.id}>{item.text}</option>)}</select></label>
     {task && <p className="focus-task-now" title={task.text}>正在：{task.text}</p>}
     {editing && <FocusSettingsForm running={!idle} faces={false}/>}
