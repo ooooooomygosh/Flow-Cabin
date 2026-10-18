@@ -530,6 +530,105 @@ def cat_listen():
     g = sit_cat(0, 2, eyes='closed', mouth='w', tail_up=2)
     note8(g, 48, 4); return g
 
+# ---------------------------------------------------------------- v1.18 (mirrors TYPING/HOP/DELIVER in src/pet/cat-sprites.mjs)
+def paw(g, x, y):
+    g.ell(x, y, 3.5, 2.4, 'l', shade='C', sk=.6); g.put(x - 1, y + 1, 'C'); g.put(x + 1, y + 1, 'C')
+
+TYPING = [(1, 0, -1), (0, 0, 0), (0, 1, 1), (0, 0, 0)]  # left down, up, right down, up (+ head lean)
+def typing_frame(i):
+    l, r, lean = TYPING[i]
+    g = G(); c = G()
+    tail(c, [(44, 50), (50, 47), (53 + lean, 41), (51 + lean * 2, 36)])
+    c.ell(32, 48, 14, 9, 'f', shade='F', lit='L', sk=.5)
+    for dx in (-7, -2, 3, 8): c.rect(32 + dx, 39, 33 + dx, 42, 'F')
+    c.ell(32, 48, 6, 5, 'l', shade='C', sk=.7)
+    head(c, 32 + lean, 31, eyes='open', mouth='w', ear='up', look=(0, 1))
+    phones(c, 32 + lean, 31)
+    c.outline(); g.paste(c)
+    d = G(); d.rect(0, 55, 63, 63, 'm'); d.rect(0, 55, 63, 55, 'a'); d.rect(0, 56, 63, 56, 'b')
+    for x in (6, 40): d.rect(x, 60, x + 9, 60, 'n')
+    d.outline(); g.paste(d)
+    kb = G(); kb.rect(14, 49, 49, 55, 'q'); kb.rect(14, 54, 49, 55, 'Q')
+    for row, y in enumerate((50, 52)):
+        for x in range(16 + row, 48, 4): kb.rect(x, y, x + 2, y, 'c')
+    kb.rect(24, 54, 39, 54, 'c'); kb.outline(); g.paste(kb)
+    for sgn, down in ((-1, l), (1, r)):
+        x = 32 + sgn * 9 + lean; y = 50 if down else 45
+        p = G(); paw(p, x, y); p.outline(); g.paste(p)
+        if down:
+            for dx in (-6, 6): g.put(x + dx, 47, 'z')
+            g.put(x - 5, 45, 'z'); g.put(x + 5, 45, 'z')
+    return g
+
+HOP = [  # body lift, squash, eyes, mouth, tail up, swing, effect
+    dict(dy=0, h=12, eyes='half', mouth='w', up=0, sw=0),
+    dict(dy=2, h=10, eyes='big', mouth='open', up=0, sw=0, fx='!'),
+    dict(dy=-9, h=13, eyes='big', mouth='open', up=6, sw=4, fx='!'),
+    dict(dy=-13, h=13, eyes='happy', mouth='open', up=7, sw=-4, fx='lines'),
+    dict(dy=2, h=10, eyes='happy', mouth='w', up=1, sw=0, fx='dust'),
+    dict(dy=0, h=12, eyes='happy', mouth='w', up=3, sw=2, fx='spark'),
+]
+def hop_frame(i):
+    f = HOP[i]; g = G(); c = G(); dy = f['dy']; s = f['sw']; u = f['up']
+    tail(c, [(44, 56 + dy), (50, 53 + dy), (53 + s * .3, 47 - u + dy), (54 + s * .7, 41 - u + dy), (52 + s, 36 - u + dy)])
+    loaf(c, 32, 60 + dy, w=15 + (12 - f['h']) // 2, h=f['h'], paws=dy >= 0)
+    if dy < 0:
+        for sgn in (-1, 1): c.ell(32 + sgn * 6, 60 + dy, 3, 2.5, 'l', shade='C', sk=.6)
+    hy = 33 + dy + (12 - f['h'])
+    head(c, 32, hy, eyes=f['eyes'], mouth=f['mouth'], ear='up')
+    phones(c, 32, hy)
+    c.outline(); g.paste(c)
+    shadow(g, 32, 61, 17 if dy >= 0 else 11)
+    fx = f.get('fx')
+    if fx == '!':
+        g.rect(52, 6 + max(dy, -6), 54, 13 + max(dy, -6), 'z'); g.rect(52, 16 + max(dy, -6), 54, 18 + max(dy, -6), 'z')
+    if fx == 'lines':
+        for x in (14, 50): g.rect(x, 54, x, 59, 'C'); g.rect(x + 3, 56, x + 3, 60, 'C')
+    if fx == 'dust':
+        for x in (10, 13, 51, 54): g.put(x, 59, 'C'); g.put(x + 1, 58, 'C')
+    if fx == 'spark': sparkle(g, 10, 20); sparkle(g, 54, 14)
+    return g
+
+def envelope(g, x, y, open_=False):
+    e = G(16, 12)
+    e.rect(0, 2, 13, 10, 'c'); e.rect(0, 9, 13, 10, 'C')
+    for i in range(7): e.put(i, 2 + i // 1.2, 'C'); e.put(13 - i, 2 + i // 1.2, 'C')
+    e.ell(6.5, 7, 1.5, 1.5, 'r'); e.put(6, 6, 'A')
+    e.outline(); g.paste(e, x, y)
+
+def side_cat(g, x, step, eyes='open', head_dy=0, mouth='w', tail_up=0):
+    """Walking side view facing left (like cat_rub); step alternates the legs."""
+    c = G()
+    tail(c, [(x + 26, 40), (x + 31, 33 - tail_up), (x + 33, 26 - tail_up), (x + 31, 21 - tail_up)], r=2.3)
+    c.ell(x + 15, 43, 13, 7.5, 'f', shade='F', lit='L', sk=.45)
+    for dx in (-1, 5, 11): c.rect(x + 15 + dx, 36, x + 16 + dx, 39, 'F')
+    legs = [(4, 0), (9, 1), (20, 0), (25, 1)]
+    for k, (lx, back) in enumerate(legs):
+        sw = (step if k % 2 == 0 else -step)
+        c.rect(x + lx + sw, 48, x + lx + 3 + sw, 57 - back, 'f' if not back else 'F'); c.rect(x + lx + sw, 56 - back, x + lx + 3 + sw, 57 - back, 'l')
+    c.ell(x + 6, 45, 5, 4, 'l', shade='C', sk=.6)
+    head(c, x + 2, 33 + head_dy, eyes=eyes, mouth=mouth, ear='up')
+    phones(c, x + 2, 33 + head_dy)
+    c.outline(); g.paste(c)
+    shadow(g, x + 15, 59, 14)
+
+DELIVER = [  # x of cat, leg step, letter state
+    dict(x=46, step=2, mail='mouth'), dict(x=38, step=-2, mail='mouth'), dict(x=30, step=2, mail='mouth'),
+    dict(x=24, step=-2, mail='mouth'), dict(x=22, step=0, mail='mouth'), dict(x=22, step=0, mail='drop', hd=4),
+    dict(x=22, step=0, mail='floor', eyes='happy', tu=4), dict(x=22, step=0, mail='floor', eyes='happy', tu=6, heart=True),
+]
+def deliver_frame(i):
+    f = DELIVER[i]; g = G()
+    side_cat(g, f['x'], f['step'], eyes=f.get('eyes', 'open'), head_dy=f.get('hd', 0), mouth='w' if f['mail'] != 'floor' else 'open', tail_up=f.get('tu', 0))
+    hx = f['x'] + 2
+    if f['mail'] == 'mouth': envelope(g, hx - 9, 36 + f.get('hd', 0))
+    elif f['mail'] == 'drop': envelope(g, hx - 10, 46)
+    else: envelope(g, hx - 15, 49)
+    if f.get('heart'): heart(g, 6, 14); sparkle(g, 20, 8)
+    if i < 4:  # motion puffs behind the walking cat
+        for k in range(2): g.put(f['x'] + 34 + k * 3, 57 - k, 'C')
+    return g
+
 def save(g, name):
     os.makedirs(OUT, exist_ok=True); im = g.img(); im.save(f'{OUT}/{name}.png', optimize=True); return im
 
@@ -585,4 +684,8 @@ if __name__ == '__main__':
     for f in groove:
         b = Image.new('RGBA', (64, 64), rgba('c')); b.alpha_composite(f); gif.append(b.convert('RGB').resize((256, 256), Image.NEAREST))
     gif[0].save('docs/media/cat-groove.gif', save_all=True, append_images=gif[1:], duration=250, loop=0, disposal=2)  # 2 frames/beat at 120 BPM
+    for name, fn, n in [('cat-typing', typing_frame, 4), ('cat-hop', hop_frame, 6), ('cat-deliver', deliver_frame, 8)]:
+        sh = Image.new('RGBA', (64 * n, 64), (0, 0, 0, 0))
+        for i in range(n): sh.paste(fn(i).img(), (64 * i, 0))
+        sh.save(f'{OUT}/{name}.png', optimize=True)
     print('ok')
