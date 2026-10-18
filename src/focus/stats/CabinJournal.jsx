@@ -10,6 +10,8 @@ import './journal-art.css';
 import { journalArtStyle, hasArt, JOURNAL_ART, CARD_EXPORT_SLOTS, cardArt, sprite } from './journal-art.mjs';
 import { defaultWeekOffset, weekName, catPose, CAT_POSE_CAPTION, barUnits, cabinLetter } from './journal-layout.mjs';
 import { readCatMood, subscribeCatMood } from './cat-mood-source.mjs';
+import { useLetters, useLetterDelivery } from '../../ai/useCabinLetters.js';
+import { TONES } from '../../ai/ai-model.mjs';
 
 const clock = (t) => { const d = new Date(t); return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
 const typing = (el) => el?.closest?.('input,textarea,select,[contenteditable="true"]');
@@ -34,6 +36,7 @@ export default function CabinJournal() {
   const focus = useFocus();
   const [open, setOpen] = useState(false), [view, setView] = useState('overview'), ref = useRef(null), openRef = useRef(false), closingRef = useRef(false);
   openRef.current = open;
+  useLetterDelivery(useFocusSessions(focus?.state?.sessions));
   // Close synchronously so an L pressed in the same frame as Esc (before React re-renders) reopens.
   const shut = () => { openRef.current = false; setOpen(false); };
   const show = (tab) => { openRef.current = true; setView(tab); setOpen(true); };
@@ -68,6 +71,26 @@ function Empty({ pose = 'cat-wait', title, children, action }) {
   return <div className="fs-empty-state"><Sprite name={pose} scale={2}/><p className="fs-empty-title">{title}</p><p className="fs-empty">{children}</p>{action}</div>;
 }
 const Tape = ({ className = '' }) => <span className={`fs-tape ${className}`} aria-hidden="true"/>;
+
+// 小屋来信 spot: the newest AI letter when there is one (sealed until opened), else the
+// template letter built from this week's data. The 信箱 flag is up while a letter is unread.
+function LetterSpot({ template, reduced }) {
+  const { list, unread, markRead } = useLetters();
+  const [index, setIndex] = useState(0), ai = list[index] || null;
+  const sealed = ai && !ai.read;
+  const tone = ai && TONES.find((t) => t.id === ai.tone)?.label;
+  return <section className={`fs-letter ${ai ? 'is-ai' : 'is-template'}`} aria-label="小屋来信">
+    <div className="fs-letter-head"><h3 className="fs-title">小屋来信{ai ? <small> · {ai.period}{tone ? ` · ${tone}` : ''} · AI</small> : null}</h3>
+      <span className={`fs-mailbox ${unread ? 'has-flag' : ''}`} data-unread={unread} title={unread ? `${unread} 封未读` : '信箱'}><img src={sprite(unread ? 'mailbox-flag' : 'mailbox-down')} alt={unread ? `信箱：${unread} 封未读` : '信箱'} width={32} height={32} draggable={false}/></span>
+      {list.length > 1 && <span className="fs-letter-nav"><button type="button" aria-label="更早的信" disabled={index >= list.length - 1} onClick={() => setIndex((i) => i + 1)}>‹</button><button type="button" aria-label="更新的信" disabled={index === 0} onClick={() => setIndex((i) => i - 1)}>›</button></span>}
+    </div>
+    {sealed ? <div className="fs-envelope">
+      <span className={`fs-deliver ${reduced ? '' : 'is-walking'}`} aria-hidden="true" style={{ backgroundImage: `url(${sprite('cat-deliver')})` }}/>
+      <span className="fs-envelope-art" aria-hidden="true"><img src={sprite('letter-envelope')} alt="" width={96} height={72}/><img className="fs-seal" src={sprite('letter-seal')} alt="" width={32} height={32}/></span>
+      <button type="button" className="fs-cta" onClick={() => markRead(ai.id)}>小猫送来一封信 · 拆开看看</button>
+    </div> : <div className="fs-hand">{(ai ? ai.lines : template).map((l, i) => <p key={i}>{l}</p>)}<p className="fs-sign">—— 小屋里的猫</p></div>}
+  </section>;
+}
 
 function useCatMood(from, to) {
   const read = () => { try { return readCatMood(globalThis.localStorage, from, to); } catch { return null; } };
@@ -188,8 +211,7 @@ function JournalBook({ state, now, view, setView, close }) {
         <strong>{weekName(weekOffset)} · {report.label}</strong>
         <button type="button" aria-label="下一周" disabled={weekOffset >= 0} onClick={() => setWeekOffset((w) => Math.min(0, w + 1))}>›</button>
       </div>
-      <section className="fs-letter" aria-label="小屋来信"><h3 className="fs-title">小屋来信</h3>
-        <div className="fs-hand">{letter.map((l, i) => <p key={i}>{l}</p>)}<p className="fs-sign">—— 小屋里的猫</p></div></section>
+      <LetterSpot template={letter} reduced={reduced}/>
       <div className="fs-board">
         <figure className="fs-polaroid" style={{ '--tilt': '-3deg' }}><Tape className="is-polaroid"/>
           {report.album ? (showCover ? <img className="fs-card-cover" src={report.album.cover} alt="" width={96} height={96} onError={() => setCoverFailed(report.album.cover)}/> : <span className="fs-cover-ph" aria-hidden="true"/>) : <span className="fs-cover-ph is-empty" aria-hidden="true"/>}

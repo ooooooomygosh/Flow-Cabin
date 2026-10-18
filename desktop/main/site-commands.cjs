@@ -39,6 +39,9 @@ function createSiteCommands(ctx) {
     // 开机时打开小屋 (desktop/main/autostart.cjs).
     '/autostart': ({ searchParams }) => { const enabled = flag(searchParams, 'enabled'); if (enabled !== null) ctx.autostart.set(enabled); else ctx.autostart.publish(); },
     // 跟随真实天气 (desktop/weather.cjs): off by default; the page sends the chosen city's coordinates.
+    // AI（Beta）(desktop/ai.cjs): the key goes to safeStorage, chat requests are relayed by main.
+    '/ai-key': ({ searchParams }) => { if (searchParams.has('key')) ctx.ai.setKey(searchParams.get('key')); else ctx.ai.publishKey(); },
+    '/ai-chat': ({ searchParams }) => { ctx.ai.chat(searchParams.get('id') || '', searchParams.get('url'), searchParams.get('body')).catch(() => {}); },
     '/weather': ({ searchParams }) => { const enabled = flag(searchParams, 'enabled'); if (enabled === null) ctx.weather.publish(); else ctx.weather.set({ enabled, lat: searchParams.get('lat'), lng: searchParams.get('lng') }).catch(() => {}); }
   };
   return {

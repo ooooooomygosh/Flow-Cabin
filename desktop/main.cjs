@@ -28,6 +28,7 @@ const { createUpdates } = require('./main/updates.cjs');
 const { appMenuTemplate, trayMenuTemplate, ABOUT_DETAIL, SINK_HOTKEY } = require('./main/menus.cjs');
 const { createAutostart, autostartScript } = require('./main/autostart.cjs');
 const { createWeather, weatherScript } = require('./weather.cjs');
+const { createAi, aiScript } = require('./ai.cjs');
 
 protocol.registerSchemesAsPrivileged([{ scheme: 'album-desktop', privileges: { standard: true, secure: true, supportFetchAPI: true } }]);
 app.setName('心流小屋');
@@ -271,7 +272,7 @@ async function wireRemoteView() {
     wallpaperStatus(wallpaperState); petStatus(petState);
     if (desktopMode) notifySite(`document.documentElement.dataset.desktopMode = '${desktopMode.active}'; window.dispatchEvent(new CustomEvent('album-desktop-mode', {detail: {active: ${Boolean(desktopMode.active)}}}));`);
     if (desktopSink) notifySinkStatus(desktopSink.status());
-    updates.push(); autostart.publish(); weather.publish();
+    updates.push(); autostart.publish(); weather.publish(); ai().publishKey();
     siteView.setVisible(!settingsOpen);
     if (mainWindow && !mainWindow.isDestroyed() && !contents.isDestroyed() && (!mainWindow.isVisible() || mainWindow.isMinimized())) await contents.executeJavaScript("window.dispatchEvent(new Event('blur'));").catch(() => {});
     sendState();
@@ -307,7 +308,8 @@ const siteCommands = createSiteCommands({
   toggleSettings, toggleFullscreen, setFullscreen, isFullscreen, chooseMusicFolder, notifyMusic, saveAppearance, writeLog,
   handleUpdateCommand: (pathname, params) => updates.handle(pathname, params),
   get autostart() { return autostart; },
-  get weather() { return weather; }
+  get weather() { return weather; },
+  get ai() { return ai(); }
 });
 const handleSiteCommand = (value) => siteCommands.handle(value);
 async function chooseMusicFolder() {
@@ -327,6 +329,9 @@ const updates = createUpdates({ app, net, shell, writeLog, notifySite: (script) 
   pageReady: () => startupComplete && !loading && !currentError && !documentHttpFailed && isSiteUrl(siteView?.webContents.getURL()),
   openAbout: () => { restoreMainWindow(); sendCompanionCommand(siteView?.webContents, 'open-about'); } });
 const autostart = createAutostart({ app, publish: (state) => notifySite(autostartScript(state)) });
+let aiRelay = null;
+// Created lazily: userData is only final once the app is ready.
+const ai = () => aiRelay || (aiRelay = createAi({ directory: app.getPath('userData'), safeStorage, fetch: (url, options) => net.fetch(url, options), publish: (detail) => notifySite(aiScript(detail)), writeLog }));
 const weather = createWeather({ fetch: (url, options) => net.fetch(url, options), publish: (state) => notifySite(weatherScript(state)), writeLog });
 function notifySite(script) {
   if (siteView && !siteView.webContents.isDestroyed()) siteView.webContents.executeJavaScript(script).catch(() => {});

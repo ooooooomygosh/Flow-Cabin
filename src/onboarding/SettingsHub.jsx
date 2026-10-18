@@ -18,10 +18,11 @@ import UpdatePanel from '../desktop/UpdatePanel';
 import './onboarding.css';
 import { CROSSFADE_OPTIONS, crossfadeSeconds, setCrossfadeSeconds, onCrossfadeChange } from '../player/crossfade.mjs';
 import { SHORTCUTS } from '../shortcuts.mjs';
+import AiSettings from '../ai/AiSettings.jsx';
 
 export const HUB_SECTIONS = Object.freeze([
   { id: 'music', label: '音源' }, { id: 'room', label: '房间与桌宠' }, { id: 'focus', label: '专注工具' },
-  { id: 'desktop', label: '显示与桌面' }, { id: 'data', label: '数据与备份' }, { id: 'about', label: '关于' }
+  { id: 'desktop', label: '显示与桌面' }, { id: 'data', label: '数据与备份' }, { id: 'ai', label: 'AI（Beta）' }, { id: 'about', label: '关于' }
 ]);
 // A section may open on a sub-page: 'music/accounts' is 音源 › 账户与文件夹.
 export const hubTab = (section = '') => String(section).split('/')[0] || 'music';
@@ -53,6 +54,7 @@ export default function SettingsHub({ section = 'music', setSection, close, env,
           <Row title="收藏与备份" hint="导出 / 导入唱片、歌单、专注记录。备份文件只保存在你选的位置。"><button type="button" className="pixel-button" onClick={openBackup}>收藏与备份</button></Row>
           {env.desktop && <Row title="本地音乐文件夹" hint="添加或移除扫描的文件夹。"><button type="button" className="pixel-button" onClick={() => setSection('music/accounts')}>管理文件夹<ChevronRight size={14}/></button></Row>}
         </div>}
+        {tab === 'ai' && <AiSettings/>}
         {tab === 'about' && <div className="hub-rows">
           <UpdatePanel version={version} desktop={Boolean(env.desktop)}/>
           <Row title="重新引导" hint="再走一遍新手引导，之前的选择会保留。"><button type="button" className="pixel-button" onClick={restartOnboarding}>重新引导</button></Row>

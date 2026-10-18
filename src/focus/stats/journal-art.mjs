@@ -31,6 +31,10 @@ export const JOURNAL_SPRITES = Object.freeze({
   'todo-empty': '/cat/todo-empty.png',                                           // 64×64, falls back to cat-wait until it lands
   'sticker-best-day-sm': '/cat/sticker-best-day-sm.png', 'sticker-streak-sm': '/cat/sticker-streak-sm.png', 'sticker-fed-sm': '/cat/sticker-fed-sm.png', // 16×16, narrow screens; fall back to the 32×32 at 16 px
   'bar-books': '/cat/bar-book.png', 'bar-books-cap': '/cat/bar-book-cap.png',          // 16×6 unit + 16×4 cap
-  'bar-records': '/cat/bar-record.png', 'bar-records-cap': '/cat/bar-record-cap.png'
+  'bar-records': '/cat/bar-record.png', 'bar-records-cap': '/cat/bar-record-cap.png',
+  // 小屋来信 (AI Beta). Placeholders under public/letters/ until beauty's art lands; same names.
+  'letter-envelope': '/letters/envelope.png', 'letter-seal': '/letters/seal.png',              // 32×24, 16×16
+  'mailbox-flag': '/letters/mailbox-flag.png', 'mailbox-down': '/letters/mailbox-down.png',    // 32×32 each
+  'cat-deliver': '/letters/cat-deliver.png'                                                   // 48×48 × 4 frames, horizontal, 140 ms/frame
 });
 export const sprite = (name) => JOURNAL_SPRITES[name];

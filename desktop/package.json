@@ -56,6 +56,7 @@
       "main/menus.cjs",
       "main/autostart.cjs",
       "weather.cjs",
+      "ai.cjs",
       "policy.cjs",
       "settings.cjs",
       "qq-music.cjs",
