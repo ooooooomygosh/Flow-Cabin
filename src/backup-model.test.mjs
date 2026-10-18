@@ -101,6 +101,68 @@ test('v3 round-trip uses real session, care, letters and study writers/readers',
   unsubscribe();
 });
 
+test('legacy letter records normalize as incoming delivered letters in every backup version', () => {
+  for (const version of [1, 2, 3]) {
+    const parsed = parseBackup(JSON.stringify({ kind: 'FlowCabinBackup', version, items: [], memory: { version: 1, letters: [letter()] } }));
+    const expected = { ...letter(), direction: 'in', status: 'delivered' };
+    assert.deepEqual(parsed.memory.letters, [expected]);
+    const destination = memoryStorage();
+    restoreBackupMemory(parsed, { storage: destination });
+    assert.deepEqual(readLetters(destination), [expected], `v${version} letters keep their original fields`);
+  }
+});
+
+test('outbound drafts and sent reply threads round-trip with subject, evidence and read timestamps', () => {
+  const source = memoryStorage(), destination = memoryStorage();
+  const draft = { id: 'draft:my-letter', direction: 'out', status: 'draft', source: 'user', subject: '还没寄出的信',
+    lines: ['今天想慢一点。'], at: at + 1, read: true };
+  const sent = { id: 'my:thread', direction: 'out', status: 'sent', source: 'user', subject: '想和你说一件事',
+    lines: ['今天完成了一件小事。'], at: at + 2, read: true,
+    evidence: [{ kind: 'focus', text: '专注 25 分钟' }, { kind: 'private', text: '不应保存' }] };
+  const failed = { id: 'my:failed', direction: 'out', status: 'failed', source: 'user', subject: '没有寄出的第二封',
+    lines: ['网络断开了。'], at: at + 2.5, read: true, error: '网络暂时不可用' };
+  const reply = { id: 'reply:my:thread', direction: 'in', status: 'delivered', cadence: 'weekly', tone: 'calm',
+    period: '刚刚', subject: '小屋回信', replyTo: sent.id, lines: ['我收到了。', '慢一点也很好。'], source: 'template',
+    at: at + 3, read: true, readAt: at + 4, evidence: [{ kind: 'note', text: '参考了随手记 · 仅本次' }] };
+  for (const value of [draft, sent, failed, reply]) saveLetter(source, value);
+  const parsed = parseBackup(JSON.stringify(buildBackup({ storage: source })));
+  restoreBackupMemory(parsed, { storage: destination });
+  const byId = new Map(readLetters(destination).map((value) => [value.id, value]));
+  assert.equal(byId.get(draft.id).status, 'draft');
+  assert.equal(byId.get(draft.id).direction, 'out');
+  assert.equal(byId.get(sent.id).status, 'sent');
+  assert.equal(byId.get(sent.id).source, 'user');
+  assert.equal(byId.get(sent.id).subject, '想和你说一件事');
+  assert.deepEqual(byId.get(sent.id).evidence, [{ kind: 'focus', text: '专注 25 分钟' }]);
+  assert.equal(byId.get(failed.id).status, 'failed');
+  assert.equal(byId.get(failed.id).error, '网络暂时不可用');
+  assert.equal(byId.get(reply.id).replyTo, sent.id);
+  assert.equal(byId.get(reply.id).subject, '小屋回信');
+  assert.equal(byId.get(reply.id).readAt, at + 4);
+  assert.deepEqual(byId.get(reply.id).evidence, [{ kind: 'note', text: '参考了随手记 · 仅本次' }]);
+});
+
+test('letter merge keeps newer outbound fields and preserves an incoming read receipt', () => {
+  const destination = memoryStorage();
+  saveLetter(destination, { id: 'my:merge', direction: 'out', status: 'sent', source: 'user', subject: '已经寄出',
+    lines: ['新版本'], at: at + 100, read: true });
+  saveLetter(destination, { id: 'w:read', direction: 'in', status: 'delivered', lines: ['旧的一页'],
+    at: at, read: true, readAt: at + 50 });
+  restoreBackupMemory({ memory: { version: 1, letters: [
+    { id: 'my:merge', direction: 'out', status: 'draft', source: 'user', subject: '旧草稿', lines: ['旧版本'], at, read: true },
+    { id: 'my:merge', direction: 'in', status: 'delivered', lines: ['错误方向'], at: at + 300, read: false },
+    { id: 'w:read', direction: 'in', status: 'delivered', lines: ['新的一页'], at: at + 200, read: false }
+  ] } }, { storage: destination });
+  const byId = new Map(readLetters(destination).map((value) => [value.id, value]));
+  assert.equal(byId.get('my:merge').direction, 'out', 'an outbound letter is never converted into an incoming letter');
+  assert.equal(byId.get('my:merge').status, 'sent');
+  assert.equal(byId.get('my:merge').subject, '已经寄出');
+  assert.deepEqual(byId.get('my:merge').lines, ['新版本']);
+  assert.deepEqual(byId.get('w:read').lines, ['新的一页']);
+  assert.equal(byId.get('w:read').read, true);
+  assert.equal(byId.get('w:read').readAt, at + 50);
+});
+
 test('v1/v2 and unversioned files preserve absent domains and newer focus fields', () => {
   const storage = memoryStorage(); populateMemory(storage);
   const before = [...storage.data], current = normalizeFocus({ notes: '保留', tasks: [{ id: 'local', text: '本机任务' }], rewards: { fish: 12 } });
@@ -219,7 +281,7 @@ test('preview and parsing never write, and memory replacement requires an availa
 
 test('UTF-8 byte limits apply to parsing and the actual formatted export', () => {
   assert.throws(() => parseBackup(`{"kind":"FlowCabinBackup","items":[],"padding":"${'猫'.repeat(Math.ceil(MAX_BACKUP_BYTES / 3))}"}`), /8 MB/);
-  assert.throws(() => buildBackup({ storage: null, memory: { letters: [{ ...letter(), lines: ['猫'.repeat(Math.ceil(MAX_BACKUP_BYTES / 3))] }] } }), /8 MB/);
+  assert.throws(() => buildBackup({ storage: null, items: [{ id: 'oversize', title: '猫'.repeat(Math.ceil(MAX_BACKUP_BYTES / 3)) }] }), /8 MB/);
 });
 
 test('failed writes roll back every committed store and emit no refresh', () => {

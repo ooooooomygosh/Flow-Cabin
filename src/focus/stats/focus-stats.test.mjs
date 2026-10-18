@@ -213,11 +213,13 @@ test('week card draws within the canvas', () => {
 });
 
 test('journal events', async () => {
-  const { openJournal, journalTab, isJournalKey, JOURNAL_EVENT } = await import('./journal-events.mjs');
+  const { openJournal, journalTab, isJournalKey, JOURNAL_EVENT, JOURNAL_TABS } = await import('./journal-events.mjs');
   const t = new EventTarget(), seen = [];
   t.addEventListener(JOURNAL_EVENT, (e) => seen.push(e.detail.tab));
-  openJournal('weekly', t); openJournal('bogus', t); openJournal(undefined, t);
-  assert.deepEqual(seen, ['weekly', 'overview', undefined]); assert.equal(journalTab('tasks'), 'tasks');
+  openJournal('weekly', t); openJournal('letters', t); openJournal('bogus', t); openJournal(undefined, t);
+  assert.deepEqual(seen, ['weekly', 'letters', 'overview', undefined]);
+  assert.deepEqual(JOURNAL_TABS.map(([id]) => id), ['overview', 'tasks', 'weekly', 'letters']);
+  assert.equal(journalTab('tasks'), 'tasks'); assert.equal(journalTab('letters'), 'letters');
   assert(isJournalKey({ key: 'l' })); assert(!isJournalKey({ key: 'L', ctrlKey: true })); assert(!isJournalKey({ key: 'k' }));
 });
 

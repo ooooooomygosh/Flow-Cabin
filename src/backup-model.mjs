@@ -3,7 +3,7 @@ import { normalizeStudy } from './study/study-model.mjs';
 import { normalizeFocus } from './focus/focus-model.mjs';
 import { SESSION_LOG_KEY, normalizeSessionRecord, normalizeCover } from './focus/stats/session-source.mjs';
 import { MOOD_KEY, META_KEY, MOOD_EVENT, normalizeCare, storedCare, getCatMoodNow } from './cat/cat-care.mjs';
-import { LETTERS_KEY, LETTER_EVENT } from './ai/ai-model.mjs';
+import { LETTERS_KEY, LETTER_EVENT, normalizeLetter } from './ai/ai-model.mjs';
 import { normalizeMix, AMBIENCE_TRACKS } from './audio/ambience.mjs';
 import { PLAYBACK_LOG_KEY, readPlaybackSessions } from './player/playback-log.mjs';
 
@@ -46,10 +46,9 @@ function sessionRecord(value) {
 function letterRecord(value) {
   if (!plain(value) || typeof value.id !== 'string' || !value.id || !finite(value.at)
     || !Array.isArray(value.lines) || value.lines.some((line) => typeof line !== 'string')) invalid('小屋来信');
-  return { id: value.id, cadence: value.cadence === 'daily' ? 'daily' : 'weekly',
-    tone: ['warm', 'playful', 'calm'].includes(value.tone) ? value.tone : 'warm',
-    ...(typeof value.period === 'string' ? { period: value.period } : {}),
-    lines: [...value.lines], source: value.source === 'ai' ? 'ai' : 'template', at: value.at, read: value.read === true };
+  const letter = normalizeLetter(value);
+  if (!letter) invalid('小屋来信');
+  return letter;
 }
 
 function playbackRecord(value) {
@@ -195,6 +194,23 @@ const mergeRecords = (local, incoming, key, combine = (previous, record) => reco
   return [...records.values()];
 };
 
+const LETTER_STATUS_ORDER = Object.freeze({ draft: 0, sending: 1, failed: 2, sent: 3, delivered: 3 });
+function mergeLetter(local, saved) {
+  // A user letter and an incoming letter are different sides of a thread. If
+  // legacy data ever collides on an id, keep the outbound side instead of
+  // silently turning the user's own words into a letter from the cabin.
+  const candidates = local.direction === saved.direction ? [local, saved] : local.direction === 'out' ? [local] : [saved];
+  const latest = candidates.reduce((best, record) => record.at > best.at
+    || (record.at === best.at && (LETTER_STATUS_ORDER[record.status] || 0) > (LETTER_STATUS_ORDER[best.status] || 0))
+    ? record : best);
+  const read = latest.direction === 'out' || local.read || saved.read;
+  const readTimes = read ? candidates.map((record) => record.readAt).filter(finite) : [];
+  const readAt = readTimes.length ? Math.max(...readTimes) : null;
+  const merged = { ...latest, read };
+  if (readAt == null) delete merged.readAt; else merged.readAt = readAt;
+  return normalizeLetter(merged);
+}
+
 // Call only after the user accepts the import. Parsing and previewing never write.
 // All stores commit before any refresh; historical sessions must never emit a completion event.
 export function restoreBackupMemory(parsed, { storage = localStorageOrNull(), target = globalThis.window } = {}) {
@@ -208,8 +224,7 @@ export function restoreBackupMemory(parsed, { storage = localStorageOrNull(), ta
     (local, saved) => local.durationMs > saved.durationMs || (local.durationMs === saved.durationMs
       && (local.end > saved.end || (local.reason !== 'checkpoint' && saved.reason === 'checkpoint'))) ? local : saved).sort((a, b) => a.start - b.start);
   if (incoming.letters) {
-    next.letters = mergeRecords(current.letters || [], incoming.letters, (record) => record.id,
-      (local, saved) => ({ ...(local.at > saved.at ? local : saved), read: local.read || saved.read }))
+    next.letters = mergeRecords(current.letters || [], incoming.letters, (record) => record.id, mergeLetter)
       .sort((a, b) => b.at - a.at);
   }
   if (incoming.catMood && current.catMood) {

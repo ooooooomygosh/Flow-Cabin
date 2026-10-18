@@ -13,6 +13,7 @@ import { defaultWeekOffset, weekName, catPose, CAT_POSE_CAPTION, barUnits, cabin
 import { readCatMood, subscribeCatMood } from './cat-mood-source.mjs';
 import { useLetters, useLetterDelivery } from '../../ai/useCabinLetters.js';
 import { TONES } from '../../ai/ai-model.mjs';
+import Mailbox from './Mailbox.jsx';
 
 const clock = (t) => { const d = new Date(t); return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
 const typing = (el) => el?.closest?.('input,textarea,select,[contenteditable="true"]');
@@ -37,7 +38,7 @@ export default function CabinJournal() {
   const focus = useFocus();
   const [open, setOpen] = useState(false), [view, setView] = useState('overview'), ref = useRef(null), openRef = useRef(false), closingRef = useRef(false);
   openRef.current = open;
-  useLetterDelivery(useFocusSessions(focus?.state?.sessions));
+  useLetterDelivery(useFocusSessions(focus?.state?.sessions), focus?.state?.notes || '');
   // Close synchronously so an L pressed in the same frame as Esc (before React re-renders) reopens.
   const shut = () => { openRef.current = false; setOpen(false); };
   const show = (tab) => { openRef.current = true; setView(tab); setOpen(true); };
@@ -87,13 +88,14 @@ export function Strip({ name, w, h, frames = 1, frame = 0, scale = 1, className 
 // while any letter is unread.
 function LetterSpot({ template, reduced }) {
   const { list, unread, markRead } = useLetters();
-  const [index, setIndex] = useState(0), ai = list[index] || null;
+  const incoming = useMemo(() => list.filter((letter) => letter.direction === 'in' && !letter.replyTo && letter.status !== 'draft'), [list]);
+  const [index, setIndex] = useState(0), ai = incoming[index] || null;
   const sealed = ai && !ai.read;
   const tone = ai && TONES.find((t) => t.id === ai.tone)?.label;
   return <section className={`fs-letter ${ai ? 'is-ai' : 'is-template'}`} aria-label="小屋来信">
-    <div className="fs-letter-head"><h3 className="fs-title">小屋来信{ai ? <small> · {ai.period}{tone ? ` · ${tone}` : ''} · AI</small> : null}</h3>
+    <div className="fs-letter-head"><h3 className="fs-title">小屋来信{ai ? <small> · {ai.period}{tone ? ` · ${tone}` : ''}{ai.source === 'ai' ? ' · AI' : ''}</small> : null}</h3>
       <span className={`fs-mailbox ${unread ? 'has-flag' : ''}`} data-unread={unread} title={unread ? `${unread} 封未读` : '信箱'}><Strip name="mailbox" w={32} h={32} frames={2} frame={unread ? 1 : 0} alt={unread ? `信箱：${unread} 封未读` : '信箱'}/></span>
-      {list.length > 1 && <span className="fs-letter-nav"><button type="button" aria-label="更早的信" disabled={index >= list.length - 1} onClick={() => setIndex((i) => i + 1)}>‹</button><button type="button" aria-label="更新的信" disabled={index === 0} onClick={() => setIndex((i) => i - 1)}>›</button></span>}
+      {incoming.length > 1 && <span className="fs-letter-nav"><button type="button" aria-label="更早的信" disabled={index >= incoming.length - 1} onClick={() => setIndex((i) => i + 1)}>‹</button><button type="button" aria-label="更新的信" disabled={index === 0} onClick={() => setIndex((i) => i - 1)}>›</button></span>}
     </div>
     {sealed ? <div className="fs-envelope">
       <Strip name="cat-deliver" w={64} h={64} frames={8} frame={reduced ? 7 : 0} className={`fs-deliver ${reduced ? '' : 'is-playing'}`}/>
@@ -114,6 +116,7 @@ function useCatMood(from, to) {
 
 function JournalBook({ state, now, view, setView, close }) {
   const sessions = useFocusSessions(state.sessions), tasks = state.tasks, reduced = useReducedMotion();
+  const { unread } = useLetters();
   const [range, setRange] = useState(7), [weekOffset, setWeekOffset] = useState(() => defaultWeekOffset(sessions, tasks, now)), [note, setNote] = useState('');
   const today = dayKey(now), canvas = useRef(null);
   const recent = useMemo(() => recentSummary(sessions, now, 4), [sessions, today]);
@@ -157,7 +160,7 @@ function JournalBook({ state, now, view, setView, close }) {
   return <div className={`fs-book ${reduced ? 'is-reduced' : ''}`}>
     <header className="fs-book-head">
       <h2>小屋日记</h2>
-      <div className="fs-ribbons" role="tablist" aria-label="日记分区">{JOURNAL_TABS.map(([id, name]) => <button key={id} type="button" role="tab" aria-selected={view === id} onClick={() => setView(id)}>{name}</button>)}</div>
+      <div className="fs-ribbons" role="tablist" aria-label="日记分区">{JOURNAL_TABS.map(([id, name]) => <button key={id} type="button" role="tab" aria-selected={view === id} onClick={() => setView(id)}>{name}{id === 'letters' && unread > 0 ? <b className="fs-tab-unread" aria-label={`${unread} 封未读`}>{unread}</b> : null}</button>)}</div>
       <button type="button" className="fs-back" aria-keyshortcuts="Escape" onClick={close}>返回小屋</button>
     </header>
     {view === 'overview' && <div className="fs-spread" key="overview" role="tabpanel" aria-label="概览">
@@ -241,5 +244,6 @@ function JournalBook({ state, now, view, setView, close }) {
       <div className="fs-actions"><button type="button" onClick={copy}>复制文字</button><button type="button" onClick={exportPng}>导出图片</button><span role="status" aria-live="polite">{note}</span></div>
       <canvas ref={canvas} hidden/>
     </div></div>}
+    {view === 'letters' && <Mailbox sessions={sessions} state={state} now={now} reduced={reduced}/>}
   </div>;
 }
