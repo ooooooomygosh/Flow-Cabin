@@ -6,14 +6,16 @@ const { BrowserWindow, ipcMain, Menu, screen } = require('electron');
 const fs = require('node:fs'), path = require('node:path');
 const { cleanCompanion } = require('./wallpaper-model.cjs');
 const { createCompanionPoller, sendCompanionCommand } = require('./companion-sync.cjs');
-const { createPetPhysics } = require('./pet-physics.cjs');
+const { createPetPhysics, floorOf, ceilingOf } = require('./pet-physics.cjs');
 const URL = 'album-desktop://pet/pet.html';
 const SIZES = { S: 128, M: 192, L: 256 };
 const windowSize = (size) => ({ width: Math.max(240, Math.round(size * 1.5)), height: size + 64 });
 
+// Keeps the pet on the display it is over (or the nearest one after a display was unplugged), with
+// the cat itself inside that display's work area: under the menu bar, above the Dock / taskbar.
 function clampToWorkArea(bounds) {
   const area = screen.getDisplayMatching(bounds).workArea;
-  return { ...bounds, x: Math.max(area.x - Math.round(bounds.width / 3), Math.min(area.x + area.width - Math.round(bounds.width * 2 / 3), bounds.x)), y: Math.max(area.y - 40, Math.min(area.y + area.height - bounds.height + 10, bounds.y)) };
+  return { ...bounds, x: Math.max(area.x - Math.round(bounds.width / 3), Math.min(area.x + area.width - Math.round(bounds.width * 2 / 3), bounds.x)), y: Math.max(ceilingOf(area), Math.min(floorOf(bounds, area), bounds.y)) };
 }
 
 function createPet({ directory, getSite, getFocus, status, registerProtocol, restoreMain, log = () => {} }) {
@@ -39,6 +41,9 @@ function createPet({ directory, getSite, getFocus, status, registerProtocol, res
   async function start() {
     if (window) { window.showInactive(); return; }
     const created = new BrowserWindow({ ...defaultBounds(), title: '心流小屋 · 桌宠伙伴', frame: false, transparent: true, backgroundColor: '#00000000', hasShadow: false, resizable: false, maximizable: false, minimizable: false, fullscreenable: false, skipTaskbar: true, alwaysOnTop: true, show: false,
+      // The pet is shown inactive: without this macOS swallows the first click (it only activates the
+      // window), so a double-click right after the pet appears arrived as one click and never hopped.
+      acceptFirstMouse: true,
       webPreferences: { preload: path.join(__dirname, 'pet-preload.cjs'), partition: 'album-circle-pet', sandbox: true, contextIsolation: true, nodeIntegration: false, webSecurity: true, backgroundThrottling: false, spellcheck: false } });
     window = created;
     try {
@@ -95,6 +100,9 @@ function createPet({ directory, getSite, getFocus, status, registerProtocol, res
   function menu() {
     const focus = getFocus?.() || latest?.focus, running = focus && focus.phase !== 'idle' && !focus.paused;
     Menu.buildFromTemplate([
+      // Same as the cat panel's 「喂一条」: 1 条小鱼干, the pet plays its eating frames.
+      { label: '喂一条', click: () => sendCompanionCommand(getSite(), 'cat-feed') },
+      { type: 'separator' },
       { label: running ? '暂停专注' : focus?.phase && focus.phase !== 'idle' ? '继续专注' : '开始专注', click: () => sendCompanionCommand(getSite(), running ? 'focus-pause' : 'focus-start') },
       ...(focus && focus.phase !== 'idle' ? [{ label: focus.phase === 'focus' ? '提前结束本轮' : '跳过休息', click: () => sendCompanionCommand(getSite(), 'focus-skip') }] : []),
       { label: '开关小屋声音', click: () => sendCompanionCommand(getSite(), 'sound-toggle') },
@@ -105,6 +113,9 @@ function createPet({ directory, getSite, getFocus, status, registerProtocol, res
     ]).popup({ window });
   }
   ipcMain.handle('pet:snapshot', (event) => { if (!validSender(event)) throw new Error('Unknown pet sender'); return payload(); });
+  // Where the pointer is, relative to the pet window: lets a freshly loaded pet take clicks before
+  // the first forwarded mousemove (a pointer already resting on the cat).
+  ipcMain.handle('pet:cursor', (event) => { if (!validSender(event)) throw new Error('Unknown pet sender'); const p = screen.getCursorScreenPoint(), b = window.getBounds(); return { x: p.x - b.x, y: p.y - b.y }; });
   ipcMain.on('pet:hit', (event, value) => { if (validSender(event)) window.setIgnoreMouseEvents(!value, { forward: true }); });
   ipcMain.on('pet:move', (event, dx, dy) => {
     if (!validSender(event) || !Number.isFinite(dx) || !Number.isFinite(dy) || Math.abs(dx) > 2000 || Math.abs(dy) > 2000) return;
@@ -120,6 +131,8 @@ function createPet({ directory, getSite, getFocus, status, registerProtocol, res
   ipcMain.on('pet:menu', (event) => { if (validSender(event)) menu(); });
   ipcMain.on('pet:open', (event) => { if (validSender(event)) restoreMain(); });
   ipcMain.on('pet:command', (event, command) => { if (validSender(event)) sendCompanionCommand(getSite(), command); });
-  return { start, stop, resize, get active() { return Boolean(window); }, get window() { return window; }, get size() { return prefs.size; }, reposition() { if (window) { const bounds = clampToWorkArea(window.getBounds()); resetMotion(bounds); window.setBounds(bounds); prefs = { ...prefs, x: bounds.x, y: bounds.y }; save(); } } };
+  // A 小鱼干 is being dragged in the cabin: let the pet window take the drop (it plays the eat frames).
+  function acceptDrops(on) { if (window && !window.isDestroyed()) window.setIgnoreMouseEvents(!on, { forward: true }); }
+  return { start, stop, resize, acceptDrops, get active() { return Boolean(window); }, get window() { return window; }, get size() { return prefs.size; }, reposition() { if (window) { const bounds = clampToWorkArea(window.getBounds()); resetMotion(bounds); window.setBounds(bounds); prefs = { ...prefs, x: bounds.x, y: bounds.y }; save(); } } };
 }
 module.exports = { createPet, SIZES, windowSize, clampToWorkArea };

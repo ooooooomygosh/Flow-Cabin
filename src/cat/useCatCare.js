@@ -21,6 +21,10 @@ const publish = (c, message, { announceMood = true, force = false } = {}) => {
 const update = (change, message) => { const next = change(care.readCare()); if (next) { care.writeCare(next); publish(next, message); } return next; };
 
 export const requestFeed = () => window.dispatchEvent(new CustomEvent(care.FEED_REQUEST_EVENT));
+// The last feed attempt, for the desktop pet (CompanionBridge → companion snapshot `care`): it plays
+// its eating frames on a new `fedAt`, or shows `note` when the feed was refused (no fish / full).
+let lastFeed = { fedAt: 0, ok: false, note: '' };
+export const careForCompanion = () => ({ ...lastFeed, tier: snapshot?.tier || '' });
 export function useCatCare() { return useSyncExternalStore(subscribe, current, current); }
 
 export function useCatCareHost() {
@@ -35,16 +39,19 @@ export function useCatCareHost() {
     const onFeed = () => {
       const focus = live.current; if (!focus) return;
       const fish = focus.state.rewards.fish, c = care.readCare(), result = care.feed(c, fish);
-      if (!result.ok) { publish(c, result.message, { announceMood: false }); return; }
+      if (!result.ok) { lastFeed = { fedAt: Date.now(), ok: false, note: result.message || '' }; publish(c, result.message, { announceMood: false }); return; }
       focus.spendFish(1);
       care.writeCare(result.care); publish(result.care, result.message);
-      const last = result.care.feeds.at(-1);
+      const last = result.care.feeds.at(-1); lastFeed = { fedAt: last.at, ok: true, note: '' };
       window.dispatchEvent(new CustomEvent(care.FED_EVENT, { detail: { at: last.at, mood: snapshot.mood, tier: snapshot.tier, fishLeft: last.fishLeft, totalFeeds: result.care.totalFeeds } }));
     };
+    // 「喂一条」 from the desktop pet (right-click menu, or a 小鱼干 dropped on it) arrives through the shell.
+    const onCommand = (event) => { if (event.detail?.command === 'cat-feed') onFeed(); };
+    window.addEventListener('album-companion-command', onCommand);
     const onStorage = (event) => { if (event.key === care.MOOD_KEY || event.key === care.META_KEY) publish(care.readCare(), ''); };
     const clock = setInterval(() => refresh(snapshot?.message || ''), 10 * 60000);
     window.addEventListener('cabin:focus-session', onSession); window.addEventListener('cabin:cat-petted', onPet);
     window.addEventListener(care.FEED_REQUEST_EVENT, onFeed); window.addEventListener('storage', onStorage);
-    return () => { clearInterval(clock); window.removeEventListener('cabin:focus-session', onSession); window.removeEventListener('cabin:cat-petted', onPet); window.removeEventListener(care.FEED_REQUEST_EVENT, onFeed); window.removeEventListener('storage', onStorage); };
+    return () => { window.removeEventListener('album-companion-command', onCommand); clearInterval(clock); window.removeEventListener('cabin:focus-session', onSession); window.removeEventListener('cabin:cat-petted', onPet); window.removeEventListener(care.FEED_REQUEST_EVENT, onFeed); window.removeEventListener('storage', onStorage); };
   }, []);
 }

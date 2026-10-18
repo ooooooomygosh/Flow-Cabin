@@ -4,6 +4,7 @@ import { useSoundscape } from './audio/useSoundscape';
 import { focusSnapshot } from './focus/focus-model.mjs';
 import { PLAYBACK_EVENT } from './player/playback-signal.mjs';
 import { currentFocusDisplay } from './focus/useFocusDisplay';
+import { careForCompanion } from './cat/useCatCare';
 
 // Energy is quantised so the desktop shell's change detection only relays
 // visible differences to the pet window.
@@ -35,6 +36,8 @@ export default function CompanionBridge() {
         // The detected beat (tempo + one beat's wall-clock time): the pet window keeps its own beat clock.
         bpm: music.current.bpm, beatAt: music.current.beatAt,
         // Lo-fi has a section tempo, but no shared beat-phase anchor.
+        // The desktop pet eats on a new fedAt (fed from its own menu or the cabin), or says `note`.
+        care: careForCompanion(),
         lofiBpm: !music.current.playing && s?.lofiState === 'playing' ? Number(s.section?.bpm) || 0 : 0
       };
     };

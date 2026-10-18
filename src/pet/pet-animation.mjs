@@ -11,6 +11,8 @@ export function startPetAnimation({
   beat = currentBeat, wallClock = () => Date.now(),
   // onFrame → React → canvas paint lands about one display frame later, so pick the frame one frame ahead.
   beatLead = 16,
+  // One-shot actions (eat, hop) start on their first frame: frames count from `origin` (same clock as `now`).
+  origin = 0,
 }) {
   if (!enabled) return () => {};
   const safePose = Object.hasOwn(FPS, pose) ? pose : 'idle', fps = FPS[safePose];
@@ -23,12 +25,12 @@ export function startPetAnimation({
       timer = setTimer(draw, Math.max(16, Math.ceil(wait)));
       return;
     }
-    const time = now(), index = reduceMotion ? 0 : frameAt(safePose, time);
+    const time = now() - origin, index = reduceMotion ? 0 : frameAt(safePose, time);
     if (index !== last) { last = index; onFrame(index); }
     if (!reduceMotion && !stopped) {
       // Recompute against the clock each time: delayed background timers skip
       // missed frames rather than queueing a burst or accumulating drift.
-      const current = now(), nextBoundary = (Math.floor(current / 1000 * fps) + 1) * 1000 / fps;
+      const current = now() - origin, nextBoundary = (Math.floor(current / 1000 * fps) + 1) * 1000 / fps;
       timer = setTimer(draw, Math.max(1, Math.ceil(nextBoundary - current)));
     }
   };

@@ -18,3 +18,5 @@ body{font-family:var(--desktop-font,'HarmonyOS Sans SC Bundled','PingFang SC','M
 @keyframes pet-land{0%{transform:scale(1.14,.84)}55%{transform:scale(.96,1.05)}100%{transform:none}}
 .pet-stage[data-reduce-motion="true"] .pet-cat .pixel-cat{animation:none!important;transform:none!important}
 }
+/* A 小鱼干 dragged over the desktop pet: a warm glow says "drop it here". */
+.pet-stage.is-drop-target .pet-cat .pixel-cat{filter:drop-shadow(0 0 6px rgba(255,196,92,.9))}
