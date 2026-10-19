@@ -173,7 +173,7 @@ function setCat(action, { pinned = false } = {}) {
   state.catChoice = action;
   if (pinned) state.catPinned = action;
   $$('[data-cat-action]').forEach((sprite) => {
-    sprite.dataset.action = action;
+    sprite.dataset.catAction = action;
     const label = action === 'typing' ? '奶糖正在跟着你敲字' : action === 'groove' ? '奶糖在跟着音乐摇摆' : '奶糖正趴在小屋里等你';
     sprite.setAttribute('aria-label', label);
   });

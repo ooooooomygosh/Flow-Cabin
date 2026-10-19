@@ -92,6 +92,13 @@ try {
   await page.evaluate(() => document.fonts.ready);
   await page.getByRole('button', { name: /夜深/ }).click();
   await page.locator('.site[data-time="night"]').waitFor();
+  const initialCats = await page.evaluate(() => [...document.querySelectorAll('[data-cat-action]')].map((sprite) => {
+    const style = getComputedStyle(sprite);
+    const rect = sprite.getBoundingClientRect();
+    return { background: style.backgroundImage, opacity: style.opacity, width: rect.width, height: rect.height };
+  }));
+  assert.equal(initialCats.length, 2, 'both promo cat sprites must mount');
+  assert(initialCats.every((cat) => cat.background !== 'none' && cat.opacity !== '0' && cat.width > 0 && cat.height > 0), 'cat sprites must render before interaction');
   check('promo-mounts-with-brand-and-interactive-scene');
   assert.equal(await page.locator('h1').count(), 1);
   assert.equal(await page.locator('.room-card').count(), 6);
@@ -114,10 +121,10 @@ try {
   const pet = page.locator('#pet-typing');
   await pet.scrollIntoViewIfNeeded();
   await pet.fill('今天也慢慢来');
-  await page.waitForFunction(() => document.querySelector('#naitang [data-cat-action]')?.dataset.action === 'typing');
+  await page.waitForFunction(() => document.querySelector('#naitang [data-cat-action]')?.dataset.catAction === 'typing');
   assert.match(await page.locator('#typing-count').innerText(), /[1-9]\d* 次陪伴/);
   await page.getByRole('button', { name: '一起听歌', exact: true }).click();
-  assert.equal(await page.locator('#naitang [data-cat-action]').getAttribute('data-action'), 'groove');
+  assert.equal(await page.locator('#naitang [data-cat-action]').getAttribute('data-cat-action'), 'groove');
   await page.getByRole('button', { name: '摸摸奶糖', exact: true }).click();
   check('pet-typing-groove-and-poke-demos-respond');
 
@@ -171,6 +178,18 @@ try {
   await page.evaluate(() => scrollTo(0, 0));
   await page.waitForTimeout(300);
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'mobile must not overflow horizontally');
+  const mobileHero = await page.evaluate(() => {
+    const rect = (selector) => document.querySelector(selector).getBoundingClientRect();
+    const bubble = rect('.hero-cat .cat-bubble');
+    const actions = rect('.hero-actions');
+    const consoleBox = rect('.scene-console');
+    return {
+      bubbleActionsOverlap: !(bubble.right <= actions.left || bubble.left >= actions.right || bubble.bottom <= actions.top || bubble.top >= actions.bottom),
+      bubbleAboveConsole: bubble.bottom <= consoleBox.top
+    };
+  });
+  assert.equal(mobileHero.bubbleActionsOverlap, false, 'mobile cat bubble must not cover hero actions');
+  assert.equal(mobileHero.bubbleAboveConsole, true, 'mobile cat bubble must stay above the scene console');
   await screenshot('promo-mobile');
   await page.locator('#naitang').scrollIntoViewIfNeeded();
   await screenshot('promo-mobile-naitang');

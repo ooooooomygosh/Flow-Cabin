@@ -683,17 +683,17 @@ figure {
   filter: drop-shadow(0 6px 0 rgba(36, 24, 17, .18));
 }
 
-.cat-sprite[data-action="wait"] {
+.cat-sprite[data-cat-action="wait"] {
   background-image: url("/cat/cat-wait.png");
 }
 
-.cat-sprite[data-action="typing"] {
+.cat-sprite[data-cat-action="typing"] {
   background-image: url("/cat/cat-typing.png");
   background-size: 400% 100%;
   animation: cat-sheet .72s steps(1, end) infinite;
 }
 
-.cat-sprite[data-action="groove"] {
+.cat-sprite[data-cat-action="groove"] {
   background-image: url("/cat/cat-groove.png");
   background-size: 400% 100%;
   animation: cat-sheet .94s steps(1, end) infinite;
@@ -2994,8 +2994,13 @@ figure {
   }
 
   .hero h1 {
-    font-size: clamp(39px, 12vw, 55px);
-    line-height: 1.16;
+    font-size: clamp(34px, 10.35vw, 44px);
+    line-height: 1.18;
+    letter-spacing: -.05em;
+  }
+
+  .hero h1 br {
+    display: none;
   }
 
   .lead {
@@ -3019,6 +3024,26 @@ figure {
     bottom: 264px;
     transform: scale(.88);
     transform-origin: bottom right;
+  }
+
+  .hero-cat .cat-bubble {
+    top: calc(100% + 5px);
+    bottom: auto;
+    left: 50%;
+    width: max-content;
+    min-width: 0;
+    max-width: min(176px, calc(100vw - 40px));
+    transform: translateX(-50%);
+  }
+
+  .hero-cat .cat-bubble::after {
+    top: auto;
+    bottom: 100%;
+    border-right: 0;
+    border-bottom: 0;
+    border-top: 2px solid #39291e;
+    border-left: 2px solid #39291e;
+    transform: translate(-50%, 4px) rotate(45deg);
   }
 
   .scene-console {
