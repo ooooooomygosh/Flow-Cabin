@@ -1,16 +1,28 @@
 // What the cat is doing, derived from the room's state. Pure and testable.
-import { POSES, LISTEN_POSE, LISTEN_FRAMES, TYPING_POSE, TYPING_FRAMES, EAT_POSE, EAT_FRAMES, HOP_POSE, HOP_FRAMES } from './cat-sprites.mjs';
+import { POSES, LISTEN_POSE, LISTEN_FRAMES, TYPING_POSE, TYPING_FRAMES, CLICK_POSE, CLICK_FRAMES, EAT_POSE, EAT_FRAMES, HOP_POSE, HOP_FRAMES } from './cat-sprites.mjs';
 import { getPet } from './pet-catalog.mjs';
 
 // `listen` (eyes closed, music on but no beat to follow): beauty's cat-only pose, outside POSES.
 // Cat-only action poses from beauty's sprites (#59): typing (key taps), eat (desk-pet feeding) and
 // hop (double-click). Other pets draw them as idle / celebrate (pet-sprites.mjs).
-export const FPS = Object.freeze({ idle: 2, groove: 4, [LISTEN_POSE]: .5, celebrate: 6, walk: 4, sleep: 1, focus: 1.5, [TYPING_POSE]: 8, [EAT_POSE]: 6, [HOP_POSE]: 10 });
-export { LISTEN_POSE, TYPING_POSE, EAT_POSE, HOP_POSE };
+export const FPS = Object.freeze({ idle: 2, groove: 4, [LISTEN_POSE]: .5, celebrate: 6, walk: 4, sleep: 1, focus: 1.5, [TYPING_POSE]: 8, [CLICK_POSE]: 10, [EAT_POSE]: 6, [HOP_POSE]: 10 });
+export { LISTEN_POSE, TYPING_POSE, CLICK_POSE, EAT_POSE, HOP_POSE };
 // 打字跟随: the cat keeps typing this long after the last key activity (global hook or in-cabin).
 export const TYPING_HOLD_MS = 900;
+export const CLICK_HOLD_MS = 520;
 export const typingUntil = (...times) => Math.max(0, ...times.map(Number).filter(Number.isFinite)) + TYPING_HOLD_MS;
-const EXTRA_COUNTS = { [LISTEN_POSE]: LISTEN_FRAMES, [TYPING_POSE]: TYPING_FRAMES, [EAT_POSE]: EAT_FRAMES, [HOP_POSE]: HOP_FRAMES };
+// A click and a key can overlap. The most recent input wins; when its short
+// reaction ends, still-fresh typing resumes instead of dropping straight to idle.
+export function activeInputPose({ typingAt = 0, clickAt = 0, now = Date.now() } = {}) {
+  const typed = Number(typingAt) || 0, clicked = Number(clickAt) || 0;
+  const typingEnds = typed > 0 ? typed + TYPING_HOLD_MS : 0;
+  const clickEnds = clicked > 0 ? clicked + CLICK_HOLD_MS : 0;
+  if (clickEnds > now && clicked >= typed) return { pose: CLICK_POSE, until: clickEnds };
+  if (typingEnds > now) return { pose: TYPING_POSE, until: typingEnds };
+  if (clickEnds > now) return { pose: CLICK_POSE, until: clickEnds };
+  return { pose: '', until: 0 };
+}
+const EXTRA_COUNTS = { [LISTEN_POSE]: LISTEN_FRAMES, [TYPING_POSE]: TYPING_FRAMES, [CLICK_POSE]: CLICK_FRAMES, [EAT_POSE]: EAT_FRAMES, [HOP_POSE]: HOP_FRAMES };
 const frameCount = (pose) => EXTRA_COUNTS[pose] || POSES[pose] || 1;
 // One-shot actions on the desktop pet: eat plays its 6 frames twice, hop once.
 export const ACTION_MS = Object.freeze({ [EAT_POSE]: Math.round(EAT_FRAMES * 2 * 1000 / 6), [HOP_POSE]: Math.round(HOP_FRAMES * 1000 / 10) });

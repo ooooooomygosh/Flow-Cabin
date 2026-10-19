@@ -693,6 +693,12 @@ figure {
   animation: cat-sheet .72s steps(1, end) infinite;
 }
 
+.cat-sprite[data-cat-action="click"] {
+  background-image: url("/cat/cat-click.png");
+  background-size: 400% 100%;
+  animation: cat-sheet .42s steps(1, end) infinite;
+}
+
 .cat-sprite[data-cat-action="groove"] {
   background-image: url("/cat/cat-groove.png");
   background-size: 400% 100%;
@@ -1368,6 +1374,49 @@ figure {
   flex: 0 0 auto;
   color: var(--amber);
   font: 400 12px/1 var(--pixel-en);
+}
+
+.input-click-demo {
+  flex: 0 0 auto;
+  min-height: 42px;
+  padding: 0 13px;
+  color: var(--cream);
+  border-color: rgba(216, 166, 108, .5);
+  background: rgba(216, 166, 108, .09);
+}
+
+.input-counters {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  margin-top: 9px;
+  background: rgba(255, 248, 233, .12);
+}
+
+.input-counters span {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  min-width: 0;
+  padding: 8px 9px;
+  background: rgba(2, 7, 4, .34);
+}
+
+.input-counters small {
+  color: rgba(255, 248, 233, .42);
+  font: 400 12px/1 var(--pixel-cn);
+}
+
+.input-counters b {
+  margin-left: auto;
+  color: var(--amber);
+  font: 400 17px/1 var(--pixel-en);
+  font-variant-numeric: tabular-nums;
+}
+
+.input-counters em {
+  color: rgba(255, 248, 233, .3);
+  font: normal 12px/1 var(--pixel-cn);
 }
 
 .typing-demo > p {
@@ -3151,6 +3200,14 @@ figure {
 
   .typing-line span {
     text-align: right;
+  }
+
+  .input-click-demo {
+    min-height: 38px;
+  }
+
+  .input-counters {
+    grid-template-columns: 1fr;
   }
 
   .cat-actions {

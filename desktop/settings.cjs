@@ -1,6 +1,8 @@
 'use strict';
 const { execFile } = require('node:child_process');
-const DEFAULT_SETTINGS = Object.freeze({ font: 'bundled', weight: 400, zoom: 100, reduceMotion: false, typingFollow: false });
+// Input companionship is on by default, but macOS still requires an explicit
+// system-level Accessibility / Input Monitoring grant before the native hook loads.
+const DEFAULT_SETTINGS = Object.freeze({ font: 'bundled', weight: 400, zoom: 100, reduceMotion: false, typingFollow: true });
 const WEIGHTS = [250, 300, 400, 500, 700, 900];
 function normalizeSettings(value = {}) {
   const font = typeof value.font === 'string' && value.font.length <= 160 && !/[\x00-\x1f\x7f"'\\;{}<>]/.test(value.font) ? value.font : 'bundled';
@@ -9,7 +11,9 @@ function normalizeSettings(value = {}) {
     weight: WEIGHTS.includes(Number(value.weight)) ? Number(value.weight) : 400,
     zoom: Number.isFinite(Number(value.zoom)) ? Math.max(75, Math.min(150, Math.round(Number(value.zoom) / 5) * 5)) : 100,
     reduceMotion: value.reduceMotion === true,
-    typingFollow: value.typingFollow === true
+    // Missing means an older settings file: adopt the new default. An explicit
+    // false (or an invalid value) keeps global detection off.
+    typingFollow: value.typingFollow === undefined ? DEFAULT_SETTINGS.typingFollow : value.typingFollow === true
   };
 }
 function appearanceScript(value, extra = {}) {

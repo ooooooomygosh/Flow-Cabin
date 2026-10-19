@@ -157,6 +157,7 @@ export const POSES = Object.freeze(Object.fromEntries(Object.entries(FRAMES).map
 // beat is missing or estimated. Kept out of POSES so other pet species need not draw it.
 // v1.18 cat-only extras (art only; pet logic decides when to play them):
 //  typing  – paw-tap loop at a little keyboard: left down, up, right down, up.
+//  click   – one paw taps a small mouse; a click spark answers every press.
 //  eat     – desktop-pet eating: big blue fish on the floor, head down picks it up, chews it
 //            shorter, only the bone is left, licks lips, happy. 6 frames.
 //  hop     – double-click reaction: crouch, surprised hop with "!", land, settle.
@@ -164,6 +165,12 @@ export const POSES = Object.freeze(Object.fromEntries(Object.entries(FRAMES).map
 const EXTRA_FRAMES = {
   listen: [{ eyes: 'calm', hdy: 1, tailUp: 1, note: [25, 1] }, { eyes: 'calm', hdy: 1, tailUp: 1, note: [25, 0] }],
   typing: [{ tap: [1, 0], hdx: -1 }, { tap: [0, 0] }, { tap: [0, 1], hdx: 1 }, { tap: [0, 0] }].map((f) => ({ dy: -3, eyes: 'open', ...f })),
+  click: [
+    { eyes: 'open', pawX: 13, pawY: 20, tailUp: 1, hdx: -1 },
+    { eyes: 'open', pawX: 20, pawY: 24, tailUp: 1, hdx: 0, press: true },
+    { eyes: 'happy', pawX: 20, pawY: 24, tailUp: 2, hdx: 1, press: true, sparkles: [[9, 17], [27, 12]] },
+    { eyes: 'open', pawX: 13, pawY: 20, tailUp: 1, hdx: 0 }
+  ],
   eat: [{ eyes: 'open', fish: 'floor', sparkles: [[4, 17]] }, { hdy: 4, eyes: 'open', fish: 12 }, { hdy: 3, eyes: 'happy', fish: 9 }, { hdy: 2, eyes: 'happy', fish: 5 }, { hdy: 1, eyes: 'happy', bone: true }, { eyes: 'happy', tailUp: 2, lick: true, sparkles: [[5, 6], [27, 4]] }],
   hop: [{ dy: 1, paws: [0, 0], tailUp: 0 }, { dy: -4, eyes: 'open', tailUp: 3, paws: [-1, -1], bang: [27, 1] }, { dy: -5, eyes: 'open', tailUp: 3, swing: 3, paws: [-1, -1], bang: [27, 0] }, { dy: -2, eyes: 'happy', tailUp: 2, swing: -2 }, { dy: 1, eyes: 'happy', tailUp: 0 }, { dy: 0, eyes: 'happy', tailUp: 1, sparkles: [[4, 8], [27, 6]] }],
   deliver: [{ dx: 14, paws: [-1, 0] }, { dx: 10, paws: [0, -1] }, { dx: 6, paws: [-1, 0] }, { dx: 2, paws: [0, -1] }, { dx: 0 }, { dx: 0, hdy: 3, drop: 'mid' }, { dx: 0, eyes: 'happy', tailUp: 2, drop: 'floor' }, { dx: 0, eyes: 'happy', tailUp: 3, drop: 'floor', sparkles: [[5, 6]] }].map((f) => ({ tailUp: 1, eyes: 'open', letter: !f.drop, ...f }))
@@ -172,6 +179,8 @@ export const LISTEN_POSE = 'listen';
 export const LISTEN_FRAMES = EXTRA_FRAMES.listen.length;
 export const TYPING_POSE = 'typing';
 export const TYPING_FRAMES = EXTRA_FRAMES.typing.length;
+export const CLICK_POSE = 'click';
+export const CLICK_FRAMES = EXTRA_FRAMES.click.length;
 export const EAT_POSE = 'eat';
 export const EAT_FRAMES = EXTRA_FRAMES.eat.length;
 export const HOP_POSE = 'hop';
@@ -200,6 +209,17 @@ export function catFrame(pose, index = 0, acc = '') {
     for (const [px, down] of [[11 + (frame.hdx || 0), l], [19 + (frame.hdx || 0), r]]) {
       const py = down ? 23 : Math.max(19, sittingHead.hy + 7); rect(g, px - 3, py - 2, px + 2, py + 2, 1); rect(g, px - 2, py - 1, px + 1, py + 1, 3); put(g, px - 1, py + 1, 5); if (down) { put(g, px - 3, 23, EFFECT); put(g, px + 3, 23, EFFECT); }
     }
+  }
+  if (pose === 'click') { // A low desk edge, a small mouse and one paw tapping it.
+    rect(g, 0, 28, 31, 31, 11); rect(g, 0, 28, 31, 28, 13);
+    rect(g, 18, 25, 27, 30, 1); rect(g, 19, 26, 26, 29, 9);
+    rect(g, 20, 26, 24, 27, 7); put(g, 22, 28, 8); put(g, 23, 28, 8);
+    // The mouse cable curls toward the back of the desk.
+    [[27, 25], [28, 24], [29, 24], [30, 23]].forEach(([x, y]) => put(g, x, y, 1));
+    const px = frame.pawX, py = frame.pawY;
+    rect(g, px - 3, py - 2, px + 2, py + 2, 1); rect(g, px - 2, py - 1, px + 1, py + 1, 3);
+    put(g, px - 1, py + 1, 5);
+    if (frame.press) { put(g, px + 3, py, EFFECT); put(g, px + 4, py + 1, EFFECT); }
   }
   if (pose === 'eat') { // Props after the outline so the fish / bone always read on top of the fur.
     const hy = sittingHead.hy, my = hy + 3;

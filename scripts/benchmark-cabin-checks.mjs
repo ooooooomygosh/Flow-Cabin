@@ -183,8 +183,11 @@ export async function verifyBenchmarkCabin(browser, origin, { output, check = ()
         await page.getByRole('tab', { name: '随手记', exact: true }).click();
         const notes = page.getByRole('textbox', { name: '随手记内容', exact: true });
         await notes.click();
-        await page.waitForFunction(() => document.querySelector('.room-cat')?.dataset.typing === 'true');
-        await page.waitForFunction(() => !document.querySelector('.room-cat')?.dataset.typing);
+        await page.waitForFunction(() => {
+          const cat = document.querySelector('.room-cat');
+          return cat?.dataset.clicking === 'true' && cat.dataset.pose === 'click';
+        });
+        await page.waitForFunction(() => !document.querySelector('.room-cat')?.dataset.clicking && document.querySelector('.room-cat')?.dataset.pose !== 'click');
         await notes.pressSequentially('The cat is typing with me.', { delay: 35 });
         await page.waitForFunction(() => {
           const cat = document.querySelector('.room-cat');

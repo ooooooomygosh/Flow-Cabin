@@ -2,8 +2,9 @@
 // 键鼠跟随: tells the desktop pet when keyboard or mouse activity happens.
 //
 // Privacy contract (tested): event objects are never read, stored, logged or sent.
-// Keydown and mousedown share a timestamp-only throttle; no coordinates or key/button
-// details are inspected. 「键鼠跟随」 uses the existing switch (default off).
+// Keydown and mousedown are reported as two fixed event kinds. No coordinates or
+// key/button details are inspected. The consumer may count every input while the
+// pet renderer applies its own pulse throttle (input volume must not reduce counts).
 //
 // macOS needs Accessibility (and, on newer systems, Input Monitoring) permission for a global
 // hook. Without it we never load the native module and fall back to activity inside the cabin
@@ -11,34 +12,35 @@
 //
 // uiohook-napi (MIT, N-API prebuilds) is required lazily so a missing or broken native module
 // only disables this feature.
-const THROTTLE_MS = 120;
-
 function createTypingHook({ platform = process.platform, systemPreferences, load = () => require('uiohook-napi'), onActivity, now = Date.now, log = () => {} }) {
-  let hook = null, listener = null, active = false, wanted = false, failed = '', last = -Infinity;
+  let hook = null, keyListener = null, clickListener = null, active = false, wanted = false, failed = '', generation = 0;
   const trusted = (prompt = false) => platform !== 'darwin' || Boolean(systemPreferences?.isTrustedAccessibilityClient?.(prompt));
   function start() {
     if (hook || !wanted || !trusted(false)) return false;
     try {
       const { uIOhook } = load();
       hook = uIOhook;
-      // Ignore all event arguments, including mouse buttons and coordinates.
-      const receive = () => { if (!active || listener !== receive) return; const at = now(); if (at - last >= THROTTLE_MS) { last = at; onActivity(at); } };
-      listener = receive;
-      uIOhook.on('keydown', listener); uIOhook.on('mousedown', listener);
+      // Ignore all event arguments, including mouse buttons and coordinates. The
+      // two listeners differ only by the fixed kind they report.
+      const token = ++generation;
+      const receive = (type) => { if (active && token === generation) onActivity({ type, at: now() }); };
+      keyListener = () => receive('keyboard');
+      clickListener = () => receive('click');
+      uIOhook.on('keydown', keyListener); uIOhook.on('mousedown', clickListener);
       uIOhook.start(); active = true; failed = '';
       return true;
     } catch (error) { stop(); failed = 'unavailable'; log('typing-hook-error', String(error?.message || error).slice(0, 200)); return false; }
   }
   function stop() {
-    const previous = hook, previousListener = listener;
-    active = false; hook = null; listener = null; last = -Infinity;
+    const previous = hook, previousKey = keyListener, previousClick = clickListener;
+    active = false; generation++; hook = null; keyListener = null; clickListener = null;
     if (!previous) return;
-    for (const name of ['keydown', 'mousedown']) {
+    for (const [name, listener] of [['keydown', previousKey], ['mousedown', previousClick]]) {
       try {
-        if (previous.off) previous.off(name, previousListener);
-        else previous.removeListener?.(name, previousListener);
+        if (previous.off) previous.off(name, listener);
+        else previous.removeListener?.(name, listener);
       } catch {
-        try { previous.removeListener?.(name, previousListener); } catch { /* continue cleaning up */ }
+        try { previous.removeListener?.(name, listener); } catch { /* continue cleaning up */ }
       }
     }
     try { previous.stop(); } catch { /* already stopped */ }
@@ -53,4 +55,4 @@ function createTypingHook({ platform = process.platform, systemPreferences, load
     stop() { wanted = false; stop(); }
   };
 }
-module.exports = { createTypingHook, THROTTLE_MS };
+module.exports = { createTypingHook };

@@ -1,11 +1,11 @@
 // Original hand-built pixel silhouettes. No image assets or remote requests.
 // Shared palette semantics let every accessory work on every species.
-import { catFrame, SIZE, PALETTE, CAT_PALETTES, POSES, ACCESSORIES, LISTEN_POSE, LISTEN_FRAMES, TYPING_POSE, TYPING_FRAMES, EAT_POSE, EAT_FRAMES, HOP_POSE, HOP_FRAMES, DELIVER_POSE, DELIVER_FRAMES } from './cat-sprites.mjs';
-const CAT_ACTIONS = { [TYPING_POSE]: TYPING_FRAMES, [EAT_POSE]: EAT_FRAMES, [HOP_POSE]: HOP_FRAMES, [DELIVER_POSE]: DELIVER_FRAMES };
+import { catFrame, SIZE, PALETTE, CAT_PALETTES, POSES, ACCESSORIES, LISTEN_POSE, LISTEN_FRAMES, TYPING_POSE, TYPING_FRAMES, CLICK_POSE, CLICK_FRAMES, EAT_POSE, EAT_FRAMES, HOP_POSE, HOP_FRAMES, DELIVER_POSE, DELIVER_FRAMES } from './cat-sprites.mjs';
+const CAT_ACTIONS = { [TYPING_POSE]: TYPING_FRAMES, [CLICK_POSE]: CLICK_FRAMES, [EAT_POSE]: EAT_FRAMES, [HOP_POSE]: HOP_FRAMES, [DELIVER_POSE]: DELIVER_FRAMES };
 // beauty's cat-only poses (not in POSES): drawn with catFrame(pose, i, acc), never through normalizeFrame.
 export const CAT_ONLY_FRAMES = Object.freeze({ [LISTEN_POSE]: LISTEN_FRAMES, ...CAT_ACTIONS });
 // What other pets draw for the cat-only actions.
-const ACTION_FALLBACK = { [TYPING_POSE]: 'idle', [EAT_POSE]: 'celebrate', [HOP_POSE]: 'celebrate', [DELIVER_POSE]: 'walk' };
+const ACTION_FALLBACK = { [TYPING_POSE]: 'idle', [CLICK_POSE]: 'idle', [EAT_POSE]: 'celebrate', [HOP_POSE]: 'celebrate', [DELIVER_POSE]: 'walk' };
 import { normalizePetId } from './pet-catalog.mjs';
 export { SIZE, POSES, ACCESSORIES };
 const palette = (fur, light, shade, blush = '#ed9c9c') => Object.freeze(PALETTE.map((c, i) => ({ 2: fur, 3: light, 4: shade, 5: blush }[i] || c)));

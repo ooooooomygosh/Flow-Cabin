@@ -14,23 +14,70 @@ import { normalizePetId, getPet } from '../pet/pet-catalog.mjs';
 import { desktopCommand } from '../desktop/desktop-command.mjs';
 import PixelCat from '../pet/PixelCat';
 import Souvenirs, { useSouvenirs } from './Souvenirs.jsx';
+import useInputStats from '../pet/useInputStats';
 import '../room/benchmark-cabin.css';
 
 // While a 小鱼干 is dragged and the cat is out on the desktop, the shell lets the pet window take
 // the drop (it normally lets clicks pass through everywhere but the cat's pixels).
 const petOut = () => document.documentElement.dataset.desktopClient === 'true' && Boolean(window.albumPetState?.active);
 const petDrag = (active) => { if (petOut()) desktopCommand('pet-drag', { active }); };
+const displayCount = (value) => Math.max(0, Number(value) || 0).toLocaleString('zh-CN');
+const weekday = (key) => ['日', '一', '二', '三', '四', '五', '六'][new Date(`${key}T00:00:00`).getDay()] || '';
+const INPUT_STATUS = {
+  active: '跨窗口陪伴中 · 只在这台电脑按天计数',
+  'waiting-pet': '让伙伴出门后，开始跨窗口陪伴',
+  'needs-permission': '等待 macOS 辅助功能 / 输入监控授权',
+  off: '全局统计已关闭 · 仍会响应小屋内的键鼠',
+  unavailable: '这台电脑暂不支持全局检测 · 仅响应小屋内'
+};
+
+function InputCompanion({ stats, petName }) {
+  if (!stats) return null;
+  const week = Array.isArray(stats.week) ? stats.week.slice(-7) : [];
+  const max = Math.max(1, ...week.map((day) => Math.max(0, Number(day.total) || 0)));
+  const weekTotal = week.reduce((sum, day) => sum + Math.max(0, Number(day.total) || 0), 0);
+  const streak = Math.max(0, Number(stats.streak) || 0);
+  const allTime = Math.max(0, Number(stats.total?.total) || 0);
+  const desktop = document.documentElement.dataset.desktopClient === 'true';
+  const action = stats.status === 'waiting-pet'
+    ? { command: 'pet-start', label: `叫${petName}出门，开始记录 →` }
+    : ['off', 'needs-permission'].includes(stats.status)
+      ? { command: 'settings', label: '去设置里开启全局键鼠陪伴 →' }
+      : null;
+  return <section className="cat-input-companion" aria-label={`${petName}的键鼠陪伴统计`}>
+    <header><strong>今天一起敲</strong><small>{INPUT_STATUS[stats.status] || INPUT_STATUS.off}</small></header>
+    <div className="cat-input-tiles">
+      <div><span>键盘</span><strong>{displayCount(stats.today.keyboard)}</strong><small>下</small></div>
+      <div><span>点击</span><strong>{displayCount(stats.today.click)}</strong><small>下</small></div>
+      <div><span>连续</span><strong>{displayCount(streak)}</strong><small>天</small></div>
+    </div>
+    <div className="cat-input-week" role="img" aria-label={`最近 7 天共 ${weekTotal} 次键鼠活动，蓝色是键盘，琥珀色是点击`}>
+      {week.map((day) => <span className="cat-input-day" key={day.key} title={`${day.key} · 键盘 ${day.keyboard} 下 · 点击 ${day.click} 下`}>
+        <span className="cat-input-stack">
+          <i className="is-keyboard" style={{ height: `${day.keyboard / max * 100}%` }}/>
+          <i className="is-click" style={{ height: `${day.click / max * 100}%` }}/>
+        </span>
+        <small>{weekday(day.key)}</small>
+      </span>)}
+    </div>
+    {week.length === 7 && <p className="cat-input-total">最近 7 天 {displayCount(weekTotal)} 次 · 累计 {displayCount(allTime)} 次</p>}
+    <p className="cat-input-privacy">只记录键盘按下和点击的次数，不记录按键内容、坐标或你正在用的程序。</p>
+    {action && desktop && <button type="button" className="inline-button" onClick={() => desktopCommand(action.command)}>{action.label}</button>}
+  </section>;
+}
 
 function CatPanelBody({ close, souvenirs }) {
   const focus = useFocus(), { rewards } = focus.state, library = useRecordLibrary();
   const petId = normalizePetId(library?.data.rooms[library.roomId]?.petId), cat = petId === 'cat', pet = getPet(petId);
   const level = levelInfo(rewards.xp), unlocked = unlockedIds(rewards.xp, rewards.bought), mood = useCatCare(), [confirming, setConfirming] = useState('');
+  const input = useInputStats();
   const full = mood.feedsToday >= mood.dailyFeeds;
   return <Dialog size="sm" title={cat ? '小猫' : pet.name} close={close} className="cat-panel">
     <div className="cat-portrait">
       <PixelCat petId={petId} skin={focus.state.settings.catSkin} accessory={rewards.equipped.accessory || ''} pose="idle" label={`${pet.name}的当前装扮`}/>
       <div><strong>{pet.name}</strong><p>你做你的事，我在这里陪你。<br/>偶尔摸摸头，就很好。</p><small>打字或点鼠标，我会跟着敲敲。</small></div>
     </div>
+    <InputCompanion stats={input} petName={pet.name}/>
     <section className="focus-rewards" aria-label="小屋奖励">
       <header><strong>Lv.{level.level} 小屋主人</strong><span><FishPixel size={12}/>{rewards.fish} 小鱼干</span></header>
       <div className="focus-xp" role="progressbar" aria-label="升级进度" aria-valuemin={0} aria-valuemax={level.need} aria-valuenow={level.into}><span style={{ width: `${level.into / level.need * 100}%` }}/></div>

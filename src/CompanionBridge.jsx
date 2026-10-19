@@ -19,16 +19,24 @@ export default function CompanionBridge() {
     window.addEventListener(PLAYBACK_EVENT, receive); return () => window.removeEventListener(PLAYBACK_EVENT, receive);
   }, []);
   // 键鼠跟随 fallback: keyboard and pointer activity inside the cabin.
-  // Ignore event objects entirely; both sources share a timestamp-only throttle.
-  const typedAt = useRef(0);
+  // Ignore event objects entirely. Keyboard and click are independent so a click
+  // can interrupt typing immediately instead of sharing one timestamp.
+  const typedAt = useRef(0), clickedAt = useRef(0);
   useEffect(() => {
-    let last = -Infinity;
-    const activity = () => { const at = Date.now(); if (at - last >= 120) { last = at; typedAt.current = at; } };
-    window.addEventListener('keydown', activity, true);
-    window.addEventListener('pointerdown', activity, true);
+    const last = { keyboard: -Infinity, click: -Infinity };
+    const activity = (type) => {
+      const at = Date.now();
+      if (at - last[type] < 120) return;
+      last[type] = at;
+      if (type === 'click') clickedAt.current = at;
+      else typedAt.current = at;
+    };
+    const keydown = () => activity('keyboard'), pointerdown = () => activity('click');
+    window.addEventListener('keydown', keydown, true);
+    window.addEventListener('pointerdown', pointerdown, true);
     return () => {
-      window.removeEventListener('keydown', activity, true);
-      window.removeEventListener('pointerdown', activity, true);
+      window.removeEventListener('keydown', keydown, true);
+      window.removeEventListener('pointerdown', pointerdown, true);
     };
   }, []);
   latest.current = { focus, sound };
@@ -52,6 +60,7 @@ export default function CompanionBridge() {
         // The desktop pet eats on a new fedAt (fed from its own menu or the cabin), or says `note`.
         care: careForCompanion(),
         typingAt: typedAt.current,
+        clickAt: clickedAt.current,
         lofiBpm: !music.current.playing && s?.lofiState === 'playing' ? Number(s.section?.bpm) || 0 : 0
       };
     };

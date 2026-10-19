@@ -6,7 +6,7 @@
 
 **听一张喜欢的唱片，安心做完这一轮。**<br>
 <sub>A cozy pixel-art desktop cabin for your favourite albums, focus sessions and a tiny companion.</sub><br>
-<sub><strong>2026 秋季版 · v1.19.0</strong> · 六间会变天的房，一只会陪你敲字的猫。</sub>
+<sub><strong>2026 秋季版 · v1.20.0</strong> · 六间会变天的房，一只会陪你敲字、点鼠标的猫。</sub>
 
 <p>
 <a href="https://github.com/ooooooomygosh/album-web/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/ooooooomygosh/album-web?style=flat-square&color=e0ad69&labelColor=2e1d12&label=release"></a>
@@ -23,11 +23,15 @@
 <img alt="Node 24" src="https://img.shields.io/badge/Node.js-24.x-5fa04e?style=flat-square&logo=node.js&logoColor=white&labelColor=2e1d12">
 </p>
 
-[**⬇ 下载 v1.19.0**](https://github.com/ooooooomygosh/album-web/releases/tag/v1.19.0) · [**走进小屋的一天 ↗**](https://album-circle.vercel.app/promo.html) · [第一次使用](docs/getting-started.md) · [功能一览](#-功能一览) · [截图](#-截图) · [快速开始](#-快速开始) · [English](#english)
+[**⬇ 下载 v1.20.0**](https://github.com/ooooooomygosh/album-web/releases/tag/v1.20.0) · [**🌐 宣传网站**](https://album-circle.vercel.app/promo.html) · [第一次使用](docs/getting-started.md) · [功能一览](#-功能一览) · [截图](#-截图) · [快速开始](#-快速开始) · [English](#english)
 
-<img src="docs/assets/screenshots/cabin.jpg" width="100%" alt="实际运行的心流小屋：雪窗、十二格唱片架、架顶的像素唱机与像素小猫">
+<a href="https://album-circle.vercel.app/promo.html">
+  <img src="docs/assets/screenshots/promo-hero-v120.jpg" width="100%" alt="心流小屋宣传页：可切换昼夜、天气与六间房的像素小屋">
+</a>
 
-> **这一版最有感觉的四件事：** 琥珀、林间、海边、星夜阁楼各有了一件能伸手碰的小物；奶糖有了 11 种动作 × 6 种装扮；手记与来信可以搜索、收藏、告别；专注、翻页钟、词书和统计终于像同一张书桌上的东西。
+<sub><a href="https://album-circle.vercel.app/promo.html">打开「小屋年鉴」 →</a> 可切换晨光、午后、黄昏、夜深与雨雪，逛六间房；还能在页面里试玩奶糖打字、鼠标回应、唱机、翻页钟和来信。</sub>
+
+> **v1.20.0：奶糖真的在桌边陪你上班。** 即使焦点不在心流小屋，打字和点击鼠标也会让它抬手回应；桌宠面板把今天的键盘、点击、连续使用天数与最近 7 天画成一页小小的陪伴记录，全部只留在本机。
 
 <img src="docs/assets/covers/313404785.jpg" width="64" height="64" alt="橙月 — Khalil Fong" title="橙月 · Khalil Fong">
 <img src="docs/assets/covers/966489223.jpg" width="64" height="64" alt="寓言 — Faye Wong" title="寓言 · Faye Wong">
@@ -47,6 +51,35 @@
 </div>
 
 ---
+
+## 🪵 为什么是心流小屋
+
+不是又一个番茄钟，也不是一张会动的壁纸。它把每天都会发生的三件小事，放进同一间会亮灯、会下雪、会等你的屋里。
+
+<table>
+<tr>
+<td width="33%" valign="top">
+
+### 🎧 听
+唱片架、唱机、特写与我的歌单，把「认真听完一张专辑」重新变成一件有仪式感的事。唱片落座、唱臂摆入，音符真的会跟着节奏飘出来。
+
+</td>
+<td width="33%" valign="top">
+
+### 🍅 专注
+番茄钟、待办、统计、翻页钟和词书不是彼此割裂的工具：待办能绑到这一轮专注，专注会留下热力图与周报，小鱼干再换成奶糖的配饰。
+
+</td>
+<td width="33%" valign="top">
+
+### 🕯 记得
+手记、随手记、小屋来信和每日统计慢慢攒成一本属于你的年鉴。不是社交 feed，没有已读压力，只有一间替你把日子收好的屋子。
+
+</td>
+</tr>
+</table>
+
+> 你不需要「维护」它。几天不打开，奶糖也不会生病、掉级或离开；它只是把灯留着，等你回来。
 
 ## ✨ 功能一览
 
@@ -87,7 +120,7 @@
 <td valign="top">
 
 ### 🐱 伙伴、桌宠与动态桌面
-六个统一像素风的场景（像素小屋 / 琥珀小屋 / 月夜书桌 / 林间书屋 / 海边慢屋 / 星夜阁楼），默认是像素小屋；再配五位像素伙伴。伙伴会呼吸、被戳会冒爱心、跟着音乐摇摆，还可以出门成为桌宠。奶糖现有 11 种动作 × 6 种装扮、258 帧：待机、律动、庆祝、走路、睡眠、专注、聆听、打字、进食、跳跃、送信；应用内键盘与鼠标输入能触发打字，桌面版开启「跟随打字」并授权后可跨窗口响应，只判断有没有输入，不保存按键内容。琥珀、林间、海边、星夜各有一件可触摸的小物：泡茶、浇花与转盆、开合海风窗、连一张想象星图。茶、植物和星图的到访状态会在离开场景后复原；海风窗复用并更新现有声音混音，不新增备份键。所有动效都支持「减少动态效果」。
+六个统一像素风的场景（像素小屋 / 琥珀小屋 / 月夜书桌 / 林间书屋 / 海边慢屋 / 星夜阁楼），默认是像素小屋；再配五位像素伙伴。伙伴会呼吸、被戳会冒爱心、跟着音乐摇摆，还可以出门成为桌宠。奶糖现有 12 种动作 × 6 种装扮、282 帧：待机、律动、庆祝、走路、睡眠、专注、聆听、打字、点击鼠标、进食、跳跃、送信。桌面版默认开启「键鼠跟随」，焦点在其他应用时仍会回应你的键盘按下和鼠标点击；macOS 首次使用需授予辅助功能 / 输入监控权限，应用每次回到前台都会重新检查。输入桥只合并“发生过输入”的时间戳，不读取按键内容、鼠标按钮、坐标或窗口标题。琥珀、林间、海边、星夜各有一件可触摸的小物：泡茶、浇花与转盆、开合海风窗、连一张想象星图。茶、植物和星图的到访状态会在离开场景后复原；海风窗复用并更新现有声音混音，不新增备份键。所有动效都支持「减少动态效果」。
 
 </td>
 </tr>
@@ -133,7 +166,25 @@
 </tr>
 </table>
 
+## 🐾 键鼠陪伴，不只是窗内动画
+
+<div align="center">
+  <img src="docs/assets/screenshots/naitang-input-v120.jpg" width="100%" alt="奶糖键鼠陪伴：打字与点击都有独立动作，并显示本地统计">
+</div>
+
+当心流小屋在后台、你正在写文档或浏览网页，奶糖仍会在桌角跟着键盘轻轻落爪；点击鼠标时，它会拍拍小鼠标回应。小猫面板记录今天的键盘与点击次数、连续使用天数、最近 7 天和累计次数，让“它一直陪着我”变成看得见的一件小事。
+
+- **两种动作**：`typing` 左右爪交替落键，`click` 抬爪按鼠标；打字和点击同时发生时，按最近一次输入切换，短暂点击后仍会回到打字节奏。
+- **本机、按天、最少信息**：只保存事件次数和日期，不保存按键、按钮、坐标、应用名或窗口标题；关闭「键鼠跟随」即停止监听。
+- **授权可恢复**：macOS 在系统设置授权后，不必反复切换开关或重启，应用下次获得焦点会自动重新检测。
+- **奖励仍然算数**：完成专注得到小鱼干，升级解锁毛色、耳机、围巾、毛线帽与更多动作；奶糖不会因为几天没打开就生病或离开。
+
 ## 📸 截图
+
+<div align="center">
+<img src="docs/assets/screenshots/cabin.jpg" width="100%" alt="实际运行的心流小屋：雪窗、十二格唱片架、架顶的像素唱机与壁炉边的奶糖">
+<sub>真实运行界面：雪窗、十二格唱片架、架顶唱机、壁炉，以及等在屋里的奶糖。</sub>
+</div>
 
 <div align="center">
 <img src="docs/assets/cabin-tour.gif" width="100%" alt="小屋实录：入门指南、开始专注、切换场景与伙伴、进入沉浸模式">
@@ -152,23 +203,32 @@
 | :---: | :---: | :---: |
 | <img src="docs/assets/screenshots/focus.jpg" alt="专注计时运行中，小猫冒泡提示剩余时间"> | <img src="docs/assets/screenshots/personalization.jpg" alt="六个场景与五位像素伙伴的选择器"> | <img src="docs/assets/screenshots/onboarding.png" alt="新手引导：选择音源"> |
 
-<sub>截图来自 v1.19.0 的真实渲染层，使用隔离收藏与固定演示数据；不含账号、Cookie、个人备份或音频。重现方法见 <a href="#-截图是怎么来的">截图是怎么来的</a>。</sub>
+<sub>截图来自 v1.20.0 的真实渲染层，使用隔离收藏与固定演示数据；不含账号、Cookie、个人备份或音频。重现方法见 <a href="#-截图是怎么来的">截图是怎么来的</a>。</sub>
+
+## 🌐 宣传网站
+
+[**album-circle.vercel.app/promo.html**](https://album-circle.vercel.app/promo.html) 是为这间小屋单独做的一页「小屋年鉴」：不是功能列表，而是让你先走进来坐一会儿。桌面端与手机端都可以直接打开，不需要安装，也不需要账号。
 
 <a href="https://album-circle.vercel.app/promo.html">
-  <img src="docs/assets/screenshots/promo-hero.jpg" width="100%" alt="心流小屋独立宣传页：会随时间、天气与房间切换的像素小屋">
+  <img src="docs/assets/screenshots/promo-rooms-v120.jpg" width="100%" alt="宣传网站的房间章节：六间像素小屋在晨光、黄昏与夜色里的不同样子">
 </a>
 
-<sub><a href="https://album-circle.vercel.app/promo.html">打开会呼吸的「小屋年鉴」 →</a> 可切换昼夜、雨雪和六间房，试玩奶糖打字、唱机、翻页钟、词卡与来信。</sub>
+- **时间与天气**：晨光、午后、黄昏、夜深四段时间，晴、雨、雪三种天气，窗光、壁炉与整间屋子的配色会一起变化。
+- **六间小屋**：像素小屋、琥珀小屋、月夜书桌、林间书屋、海边慢屋、星夜阁楼，各有自己的窗、光和一两个可以伸手碰一碰的小东西。
+- **奶糖现场互动**：在页面里敲字、点鼠标，它会用对应的动作回应；旁边还能看到当天的键盘 / 点击计数。
+- **可以玩的物件**：唱机与唱片、专注翻页钟、词卡、来信和壁炉，都能在宣传页里直接试。
+
+网页版应用仍可通过 [album-circle.vercel.app](https://album-circle.vercel.app/) 试用；宣传页的交互、图片、响应式与桌面 / 移动截图由 `npm run test:promo` 覆盖。
 
 ## ⬇ 下载
 
 | 你的电脑 | 下载 | 怎么打开 |
 | --- | --- | --- |
-| Mac · Apple Silicon（M 系列） | [DMG · arm64](https://github.com/ooooooomygosh/album-web/releases/download/v1.19.0/FlowCabin-1.19.0-mac-arm64.dmg) | 打开 DMG，把小屋拖进「应用程序」 |
-| Mac · Intel | [DMG · x64](https://github.com/ooooooomygosh/album-web/releases/download/v1.19.0/FlowCabin-1.19.0-mac-x64.dmg) | 打开 DMG，把小屋拖进「应用程序」 |
-| Windows · x64 | [安装版](https://github.com/ooooooomygosh/album-web/releases/download/v1.19.0/FlowCabin-1.19.0-x64-setup.exe) · [便携版](https://github.com/ooooooomygosh/album-web/releases/download/v1.19.0/FlowCabin-1.19.0-x64-portable.exe) | 安装版按提示安装；便携版直接运行 |
+| Mac · Apple Silicon（M 系列） | [DMG · arm64](https://github.com/ooooooomygosh/album-web/releases/download/v1.20.0/FlowCabin-1.20.0-mac-arm64.dmg) | 打开 DMG，把小屋拖进「应用程序」 |
+| Mac · Intel | [DMG · x64](https://github.com/ooooooomygosh/album-web/releases/download/v1.20.0/FlowCabin-1.20.0-mac-x64.dmg) | 打开 DMG，把小屋拖进「应用程序」 |
+| Windows · x64 | [安装版](https://github.com/ooooooomygosh/album-web/releases/download/v1.20.0/FlowCabin-1.20.0-x64-setup.exe) · [便携版](https://github.com/ooooooomygosh/album-web/releases/download/v1.20.0/FlowCabin-1.20.0-x64-portable.exe) | 安装版按提示安装；便携版直接运行 |
 
-以上文件对应 **v1.19.0**，完整改动见 [Release Notes](desktop/RELEASE-NOTES.md)。macOS 尚未完成开发者签名与公证，Windows 可能提示未知发布者，请先核对下载来源，再看[安装说明](docs/getting-started.md#安装与首次打开)。使用小屋不需要注册账号。
+以上文件对应 **v1.20.0**，完整改动见 [Release Notes](desktop/RELEASE-NOTES.md)。macOS 尚未完成开发者签名与公证，Windows 可能提示未知发布者，请先核对下载来源，再看[安装说明](docs/getting-started.md#安装与首次打开)。使用小屋不需要注册账号。
 
 ## 🎧 音源支持
 
@@ -259,10 +319,11 @@ album-web/
 - [x] 手记、整组来信与 v4 备份删除标记；纪念物独立保存
 - [x] 15 本、258 词的内置学习目录与原创中英对照内容
 - [x] 独立「小屋年鉴」宣传页，覆盖昼夜天气、六房间、奶糖、唱机、专注、词卡与来信
+- [x] 跨窗口键盘 / 鼠标点击陪伴、独立动作与本地每日统计
 - [x] 根项目与桌面生产依赖在本轮锁文件下报告 0 个已知 npm 公告
 - [ ] macOS 签名与公证、Windows 代码签名
 - [ ] v1.17.0 到当前版本的同路径安装器升级、重启与逐域数据恢复验收
-- [ ] 真实键鼠与原生焦点、全天办公，以及 Windows / Intel Mac 真机验收
+- [ ] 真实物理键鼠、系统授权、原生焦点与全天办公，以及 Windows / Intel Mac 真机验收
 - [ ] 真实音乐账号、全局输入权限与系统壁纸挂载验收
 - [ ] 官方 Spotify / Apple Music SDK 接入（需单独评估授权与订阅限制）
 - [ ] 根项目许可证与 GPL 模块分发义务澄清
@@ -294,7 +355,7 @@ npm run check && npm run test:browser
 <details>
 <summary>致谢与来源</summary>
 
-产品灵感：[Chill Pulse](https://store.steampowered.com/app/2826180/Chill_Pulse/)、[lofi-engine](https://github.com/meel-hd/lofi-engine)、[next-beats](https://github.com/btahir/next-beats)、[Study Saga](https://github.com/AchilleasMakris/Study-Saga-Releases)。仅作方向参考，不使用这些项目的角色素材。
+产品灵感：[Chill Pulse](https://store.steampowered.com/app/2826180/Chill_Pulse/)、[Bongo Cat](https://github.com/ayangweb/BongoCat) 的跨应用键鼠陪伴思路、[lofi-engine](https://github.com/meel-hd/lofi-engine)、[next-beats](https://github.com/btahir/next-beats)、[Study Saga](https://github.com/AchilleasMakris/Study-Saga-Releases)。仅作方向参考，不使用这些项目的角色素材。
 
 依赖与接口：[Simple Music](https://github.com/Yyyangshenghao/simple-music)（GPL-3.0-only）、[Music Assistant](https://github.com/music-assistant/server)、[Tone.js](https://tonejs.github.io/)、[music-metadata](https://github.com/Borewit/music-metadata)、[Heroicons](https://heroicons.com/)、HarmonyOS Sans SC；像素字体 [Fusion Pixel](https://github.com/TakWolf/fusion-pixel-font) 与 [Silkscreen](https://github.com/google/fonts/tree/main/ofl/silkscreen)（SIL OFL 1.1，子集见 [public/fonts/pixel](public/fonts/pixel/README.md)）。曲库资料来自 iTunes Search、MusicBrainz 与 Cover Art Archive。字体与素材许可见 [public/licenses](public/licenses)，GPL 模块来源见 [SOURCE.txt](desktop/vendor/simple-music/SOURCE.txt)。
 
@@ -313,9 +374,9 @@ npm run check && npm run test:browser
 - **Scenes** — six pixel-art rooms: 像素小屋 Pixel Cabin (default), 琥珀小屋 Amber Cabin, 月夜书桌 Moonlit Study, 林间书屋 Forest Glade, 海边慢屋 Seaside and 星夜阁楼 Starry Night. In 月夜书桌 a girl at a moonlit window writes, lifts her pen and spins it, beside a nine-slot shelf whose covers are shaded by the desk lamp.
 - **Small rituals** — Amber Cabin, Forest Glade, Seaside and Starry Night each add one visit-local interaction: tea, plant care, a sea-wind window tied to the existing sound mix, and an imaginary constellation. Tea, plant and constellation state resets when you leave; none adds a new saved interaction key.
 - **Desktop** — set the room as a live wallpaper behind your desktop icons (it keeps running after the main window closes), or press F11 for native fullscreen. Fullscreen and immersive mode are independent; records, playlists and study tools remain interactive. Use “Show tools” in immersive mode. Esc closes the active dialog/tool before leaving immersive mode and fullscreen; F11 toggles fullscreen directly.
-- **Companions** — five pixel pals that breathe, react to pokes and bop to the music, a desktop pet and a live wallpaper. Reduced motion is respected.
+- **Companions** — five pixel pals that breathe, react to pokes and bop to the music, a desktop pet and a live wallpaper. The desktop cat responds to keyboard and mouse activity even when Flow Cabin is in the background, with separate typing/click poses, local daily counts, a seven-day view and a streak. It receives event timestamps only: no key values, mouse buttons, coordinates, app names or window titles are stored. macOS asks for Accessibility / Input Monitoring permission, and the app rechecks it after regaining focus. Reduced motion is respected.
 - **Look & feel** — one pixel style throughout: Fusion Pixel / Silkscreen fonts, notched pixel frames, `steps()` motion, dust motes and a time-of-day window light.
-- **Local-first** — collection, notes and focus data stay on your machine, with export/import backups.
+- **Local-first** — collection, notes, focus data and keyboard/click counts stay on your machine, with export/import backups.
 - **Study** — FSRS review with 15 built-in books and 258 words: twelve original everyday themes of 20 words, plus three six-word compatibility books. New cards include Chinese meaning, an original English example and a Chinese translation; this is not an exam syllabus or official graded lexicon.
 - **First run** — a skippable, resumable onboarding wizard sets up a music source, permissions, room and companion, and plays a test sound. Everything else lives in one **Settings** hub (Sources · Room & companion · Focus · Desktop · Data & backup · About → re-run onboarding). See [docs/onboarding.md](docs/onboarding.md).
 

@@ -122,11 +122,15 @@ try {
   await pet.scrollIntoViewIfNeeded();
   await pet.fill('今天也慢慢来');
   await page.waitForFunction(() => document.querySelector('#naitang [data-cat-action]')?.dataset.catAction === 'typing');
-  assert.match(await page.locator('#typing-count').innerText(), /[1-9]\d* 次陪伴/);
+  assert.match(await page.locator('#typing-count').innerText(), /[1-9]\d*/);
+  assert.match(await page.locator('#keyboard-count').innerText(), /[1-9]\d*/);
+  await page.getByRole('button', { name: '点一下鼠标', exact: true }).click();
+  await page.waitForFunction(() => document.querySelector('#naitang [data-cat-action]')?.dataset.catAction === 'click');
+  assert.match(await page.locator('#click-count').innerText(), /^1$/);
   await page.getByRole('button', { name: '一起听歌', exact: true }).click();
   assert.equal(await page.locator('#naitang [data-cat-action]').getAttribute('data-cat-action'), 'groove');
   await page.getByRole('button', { name: '摸摸奶糖', exact: true }).click();
-  check('pet-typing-groove-and-poke-demos-respond');
+  check('pet-typing-click-groove-and-poke-demos-respond');
 
   await page.locator('.transport').click();
   await page.locator('.turntable-demo[data-playing="true"]').waitFor();

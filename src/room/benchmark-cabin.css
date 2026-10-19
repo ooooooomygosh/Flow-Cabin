@@ -61,6 +61,26 @@
 .cat-portrait strong { display: block; color: #f1dfb9; font-size: 20px; }
 .cat-portrait p { margin: 6px 0; color: #cbb28e; font-size: 12px; line-height: 1.7; }
 .cat-portrait small { color: #a9bd95; }
+.cat-input-companion { display: grid; gap: 8px; margin: -2px 0 12px; padding: 12px 14px; background: linear-gradient(180deg, #241d17 0%, #1b1713 100%); border: 1px solid #9a78464d; box-shadow: inset 0 2px 0 #f1c77d12; }
+.cat-input-companion header { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.cat-input-companion header strong { color: #f1dfb9; font-size: 14px; letter-spacing: .04em; }
+.cat-input-companion header small { max-width: 68%; color: #a9bd95; font-size: 12px; line-height: 1.45; text-align: right; }
+.cat-input-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.cat-input-tiles > div { display: flex; align-items: baseline; gap: 4px; min-width: 0; padding: 7px 8px; background: #17130f; border: 1px solid #6c523433; }
+.cat-input-tiles span { color: #a99270; font-size: 12px; }
+.cat-input-tiles strong { margin-left: auto; color: #f6d598; font-size: 19px; line-height: 1; font-variant-numeric: tabular-nums; }
+.cat-input-tiles small { color: #8f7b5d; font-size: 12px; }
+.cat-input-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; height: 58px; padding: 4px 2px 0; border-bottom: 1px solid #6c523444; }
+.cat-input-day { display: grid; grid-template-rows: 1fr 16px; justify-items: stretch; min-width: 0; }
+.cat-input-stack { display: flex; flex-direction: column; justify-content: flex-end; min-height: 0; background: #0f0d0b; box-shadow: inset 0 0 0 1px #ffffff08; }
+.cat-input-stack i { display: block; min-height: 0; transition: height .2s steps(4); }
+.cat-input-stack .is-keyboard { background: #7fa8c9; }
+.cat-input-stack .is-click { background: #d9a556; box-shadow: inset 0 2px 0 #f4d28e55; }
+.cat-input-day small { align-self: end; color: #8f7b5d; font-size: 12px; line-height: 16px; text-align: center; }
+.cat-input-companion p { margin: 0; color: #8f7b5d; font-size: 12px; line-height: 1.5; }
+.cat-input-companion .cat-input-total { color: #d6bc8e; font-variant-numeric: tabular-nums; }
+.cat-input-companion .cat-input-privacy { color: #7f6d54; }
+.cat-input-companion .inline-button { justify-self: start; min-height: 28px; padding: 2px 8px; font-size: 12px; }
 .cat-panel .focus-unlocks fieldset > button { min-height: 38px; }
 .cat-accessory-preview { display: inline-block; width: 32px; height: 32px; vertical-align: middle; margin-right: 6px; image-rendering: pixelated; }
 @media (max-width: 1100px) { .cabin-welcome { top: 120px; max-width: 220px; left: 18px; } .cabin-welcome p { font-size: 24px; } .cabin-welcome > div > span { display: none; } }

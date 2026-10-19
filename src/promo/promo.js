@@ -101,6 +101,8 @@ const state = {
   catReturnTimer: 0,
   catPinned: 'wait',
   typingCount: 0,
+  keyboardCount: 0,
+  clickCount: 0,
   playing: false,
   progress: 18,
   track: 0,
@@ -174,7 +176,13 @@ function setCat(action, { pinned = false } = {}) {
   if (pinned) state.catPinned = action;
   $$('[data-cat-action]').forEach((sprite) => {
     sprite.dataset.catAction = action;
-    const label = action === 'typing' ? '奶糖正在跟着你敲字' : action === 'groove' ? '奶糖在跟着音乐摇摆' : '奶糖正趴在小屋里等你';
+    const label = action === 'typing'
+      ? '奶糖正在跟着你敲字'
+      : action === 'click'
+        ? '奶糖正伸爪拍着桌上的小老鼠'
+        : action === 'groove'
+          ? '奶糖在跟着音乐摇摆'
+          : '奶糖正趴在小屋里等你';
     sprite.setAttribute('aria-label', label);
   });
   $$('[data-cat-choice]').forEach((button) => {
@@ -192,10 +200,18 @@ function temporaryCat(action, message, duration = 950) {
   }, duration);
 }
 
-function registerCompanionMoment() {
+function renderCompanionCounts() {
+  $('#keyboard-count').textContent = state.keyboardCount.toLocaleString('zh-CN');
+  $('#click-count').textContent = state.clickCount.toLocaleString('zh-CN');
+  $('#typing-count').textContent = state.typingCount.toLocaleString('zh-CN');
+}
+
+function registerCompanionMoment(type = 'keyboard') {
+  if (type === 'click') state.clickCount += 1;
+  else state.keyboardCount += 1;
   state.typingCount += 1;
-  $('#typing-count').textContent = `${state.typingCount} 次陪伴`;
-  if (state.typingCount === 8) toast('奶糖攒到一条小鱼干。');
+  renderCompanionCounts();
+  if (state.typingCount === 8) toast('奶糖已经陪你敲了一会儿，记得喝水。');
 }
 
 function updateTrack() {
@@ -406,7 +422,8 @@ $$('[data-cat-choice]').forEach((button) => {
     setCat(action, { pinned: true });
     if (action === 'typing') {
       setCatBubble('你敲哪里，我就敲哪里。');
-      registerCompanionMoment();
+    } else if (action === 'click') {
+      setCatBubble('你点一下，我也拍一下。');
     } else if (action === 'groove') {
       setCatBubble('这首歌我也喜欢。');
     } else {
@@ -429,11 +446,22 @@ let typingTimer = 0;
 $('#pet-typing').addEventListener('input', () => {
   clearTimeout(typingTimer);
   temporaryCat('typing', '你敲哪里，我就敲哪里。', 1100);
-  registerCompanionMoment();
+  registerCompanionMoment('keyboard');
   typingTimer = setTimeout(() => {
     setCat(state.catPinned);
     setCatBubble(times[state.time].bubble);
   }, 1100);
+});
+
+$('[data-promo-click]').addEventListener('click', () => {
+  clearTimeout(state.catReturnTimer);
+  setCat('click', { pinned: true });
+  setCatBubble('你点一下，我也拍一下。');
+  registerCompanionMoment('click');
+  state.catReturnTimer = setTimeout(() => {
+    setCat(state.catPinned);
+    setCatBubble(times[state.time].bubble);
+  }, 720);
 });
 
 document.addEventListener('keydown', (event) => {
@@ -442,6 +470,7 @@ document.addEventListener('keydown', (event) => {
   if (event.metaKey || event.ctrlKey || event.altKey) return;
   if (event.key.length === 1 || ['Backspace', 'Enter', 'Delete'].includes(event.key)) {
     temporaryCat('typing', null, 620);
+    registerCompanionMoment('keyboard');
   }
 });
 
@@ -449,8 +478,11 @@ document.addEventListener('pointerdown', (event) => {
   const target = event.target;
   if (!(target instanceof Element)) return;
   if (target.closest('button, a, input, textarea, select, [role="tab"]')) return;
-  temporaryCat('typing', '看见你点这里啦。', 560);
+  temporaryCat('click', '看见你点这里啦。', 560);
+  registerCompanionMoment('click');
 });
+
+renderCompanionCounts();
 
 $$('[data-vinyl-toggle]').forEach((button) => {
   button.addEventListener('click', toggleVinyl);

@@ -13,6 +13,7 @@ const { createDesktopSink, migrateDesktopPreferences } = require('./desktop-sink
 const { createMiniPlayer } = require('./mini-player.cjs');
 const { trayIconPath, createTrayPet } = require('./tray-icons.cjs');
 const { createTypingHook } = require('./typing-hook.cjs');
+const { createInputStats } = require('./input-stats.cjs');
 const { createCollectionStore } = require('./collection-store.cjs');
 const { createMusicService } = require('./music-service.cjs');
 const { openQQLogin, openNeteaseLogin, clearQQLogin, clearNeteaseLogin } = require('./music-login.cjs');
@@ -118,9 +119,33 @@ const statusPoller = createCompanionPoller({ getSite: () => siteView?.webContent
     const key = [trayStatus.statusLine, trayStatus.playing, trayStatus.phase, trayStatus.paused, trayWanted()].join('|');
     if (key !== trayMenuKey || !companionTray) { trayMenuKey = key; refreshTray(); } else statusBar.apply(trayStatus);
   } });
-// 打字跟随: the global key-activity hook runs only while the setting is on AND the pet is out.
-const typingHook = createTypingHook({ systemPreferences, onActivity: (at) => pet?.typing(at), log: (...args) => writeLog(...args) });
-function syncTyping() { return typingHook.setEnabled(Boolean(appearance.typingFollow && petState.active)); }
+// 键鼠跟随: the global hook runs while the setting is on AND the pet is out.
+// It reports only a fixed kind and a timestamp. Counts are stored per local day;
+// the pet window gets a throttled pulse for animation.
+const inputStats = createInputStats({ directory: app.getPath('userData') });
+let inputStatsTimer = null, lastInputStatsPayload = '';
+const typingHook = createTypingHook({
+  systemPreferences,
+  onActivity: ({ type, at } = {}) => {
+    if (!['keyboard', 'click'].includes(type) || !Number.isFinite(at)) return;
+    inputStats.record(type, at);
+    pet?.input(type, at);
+    if (!inputStatsTimer) inputStatsTimer = setTimeout(() => { inputStatsTimer = null; publishInputStats(); }, 700);
+  },
+  log: (...args) => writeLog(...args)
+});
+function inputStatsPayload() {
+  return { ...inputStats.snapshot(), status: typingInfo().status, tracking: typingHook.status() === 'active', platform: process.platform };
+}
+function publishInputStats(force = false) {
+  if (!siteView || siteView.webContents.isDestroyed() || !isSiteUrl(siteView.webContents.getURL())) return false;
+  const payload = inputStatsPayload(), json = JSON.stringify(payload);
+  if (!force && json === lastInputStatsPayload) return false;
+  lastInputStatsPayload = json;
+  siteView.webContents.executeJavaScript(`window.albumInputStats = ${json}; window.dispatchEvent(new CustomEvent('album-input-stats', { detail: window.albumInputStats }));`).catch(() => {});
+  return true;
+}
+function syncTyping() { const status = typingHook.setEnabled(Boolean(appearance.typingFollow && petState.active)); publishInputStats(true); return status; }
 function typingInfo() { return { status: appearance.typingFollow && !petState.active ? 'waiting-pet' : typingHook.status(), platform: process.platform }; }
 function petStatus(state) {
   petState = state; syncTyping(); refreshTray();
@@ -294,6 +319,7 @@ async function wireRemoteView() {
     if (isSiteUrl(contents.getURL())) lastGoodUrl = contents.getURL();
     await applyAppearance();
     syncFullscreen();
+    publishInputStats(true);
     wallpaperStatus(wallpaperState); petStatus(petState);
     if (desktopMode) notifySite(`document.documentElement.dataset.desktopMode = '${desktopMode.active}'; window.dispatchEvent(new CustomEvent('album-desktop-mode', {detail: {active: ${Boolean(desktopMode.active)}}}));`);
     if (desktopSink) notifySinkStatus(desktopSink.status());
@@ -406,8 +432,12 @@ function registerIpc() {
   });
   ipcMain.handle('desktop:settings', async (event, operation, value) => {
     if (event.sender !== mainWindow?.webContents || event.senderFrame !== mainWindow.webContents.mainFrame || !isShellUrl(event.senderFrame.url)) throw new Error('Unknown sender');
-    if (operation === 'get') { typingHook.retry(); return { settings: appearance, fonts: await listSystemFonts(), display: currentDisplay(), typing: typingInfo() }; }
+    if (operation === 'get') { typingHook.retry(); publishInputStats(true); return { settings: appearance, fonts: await listSystemFonts(), display: currentDisplay(), typing: typingInfo() }; }
     if (operation === 'typing-permission') { typingHook.requestPermission(); return { typing: typingInfo() }; }
+    if (operation === 'typing-input-permission') {
+      if (process.platform === 'darwin') shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent').catch(() => {});
+      return { typing: typingInfo() };
+    }
     if (operation === 'apply') return saveAppearance(value);
     if (operation === 'reset') return saveAppearance(DEFAULT_SETTINGS);
     throw new Error('Unknown settings operation');
@@ -523,7 +553,13 @@ else {
   });
   app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
   // Coming back from System Settings after granting permission starts the hook without a restart.
-  app.on('browser-window-focus', () => { if (typingHook.status() === 'needs-permission') typingHook.retry(); });
+  app.on('browser-window-focus', () => {
+    // Permission changes happen in System Settings, outside this app. `retry()`
+    // is cheap and idempotent: after a grant it starts the hook without asking
+    // the user to toggle the setting or restart.
+    typingHook.retry();
+    publishInputStats(true);
+  });
   app.on('activate', () => {
     if (updates.newerCopyInstalled()) {
       if (!mainWindow || mainWindow.isDestroyed() || !mainWindow.isVisible()) { writeLog('relaunch-installed', updates.installedVersion()); updates.relaunchInstalledCopy(); return; }
@@ -531,5 +567,5 @@ else {
     }
     if (mainWindow) restoreMainWindow(); else createWindow().catch((error) => writeLog('startup-error', error.message));
   });
-  app.on('before-quit', () => { quitting = true; statusPoller.stop(); typingHook.stop(); if (awakeBlocker !== null) { powerSaveBlocker.stop(awakeBlocker); awakeBlocker = null; } globalShortcut.unregisterAll(); desktopSink?.stop(); miniPlayer?.hide(); wallpaper?.stop(); pet?.stop(); weather.dispose(); music?.stop(); companionTray?.destroy(); companionTray = null; if (startupComplete) writeLog('closed'); });
+  app.on('before-quit', () => { quitting = true; statusPoller.stop(); typingHook.stop(); clearTimeout(inputStatsTimer); inputStatsTimer = null; inputStats.dispose(); if (awakeBlocker !== null) { powerSaveBlocker.stop(awakeBlocker); awakeBlocker = null; } globalShortcut.unregisterAll(); desktopSink?.stop(); miniPlayer?.hide(); wallpaper?.stop(); pet?.stop(); weather.dispose(); music?.stop(); companionTray?.destroy(); companionTray = null; if (startupComplete) writeLog('closed'); });
 }

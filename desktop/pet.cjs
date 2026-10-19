@@ -25,10 +25,10 @@ function createPet({ directory, getSite, getFocus, status, registerProtocol, res
   try { prefs = { ...prefs, ...JSON.parse(fs.readFileSync(prefsPath, 'utf8')) }; } catch {}
   if (!SIZES[prefs.size]) prefs.size = 'M';
   const save = () => { clearTimeout(saveTimer); saveTimer = setTimeout(() => { try { fs.mkdirSync(directory, { recursive: true }); fs.writeFileSync(prefsPath, JSON.stringify(prefs)); } catch {} }, 300); };
-  let typingAt = 0;
-  const payload = () => ({ companion: latest, size: SIZES[prefs.size], motion, typingAt });
+  let typingAt = 0, clickAt = 0, pulseTimer = null, lastPulse = -Infinity;
+  const payload = () => ({ companion: latest, size: SIZES[prefs.size], motion, typingAt, clickAt });
   // ~8 Hz while music plays so the pet can sway with it; 750 ms otherwise.
-  const poller = createCompanionPoller({ getSite, interval: (value) => value?.musicPlaying || Date.now() - (value?.typingAt || 0) < 3000 ? 125 : 750, clean: (value) => cleanCompanion(value?.companion), onValue: (value) => { latest = value; window?.webContents.send('pet:update', payload()); } });
+  const poller = createCompanionPoller({ getSite, interval: (value) => value?.musicPlaying || Date.now() - Math.max(value?.typingAt || 0, value?.clickAt || 0) < 3000 ? 125 : 750, clean: (value) => cleanCompanion(value?.companion), onValue: (value) => { latest = value; window?.webContents.send('pet:update', payload()); } });
   const announce = () => status({ active: Boolean(window), size: prefs.size });
   const validSender = (event) => window && !window.isDestroyed() && event.sender === window.webContents && event.senderFrame === window.webContents.mainFrame && event.senderFrame.url === URL;
 
@@ -56,7 +56,7 @@ function createPet({ directory, getSite, getFocus, status, registerProtocol, res
       created.webContents.on('will-frame-navigate', (event) => event.preventDefault());
       created.webContents.session.setPermissionRequestHandler((_wc, _permission, callback) => callback(false));
       created.webContents.session.setPermissionCheckHandler(() => false);
-      created.on('closed', () => { if (window === created) { window = null; clearTimeout(loop); loop = null; clearInterval(idleTimer); idleTimer = null; poller.stop(); announce(); } });
+      created.on('closed', () => { if (window === created) { window = null; clearTimeout(loop); loop = null; clearInterval(idleTimer); idleTimer = null; clearTimeout(pulseTimer); pulseTimer = null; poller.stop(); announce(); } });
       created.setIgnoreMouseEvents(true, { forward: true });
       await created.loadURL(URL);
       if (window !== created) return;
@@ -92,7 +92,7 @@ function createPet({ directory, getSite, getFocus, status, registerProtocol, res
   }
   const animate = () => { if (!loop && window) { lastStep = 0; loop = setTimeout(tick, 16); } };
   function wander() { if (!window || physics.moving || physics.mode === 'drag') return; physics.step(window.getBounds(), area(), 0, { allowWalk: allowWalk() }); if (physics.moving) animate(); }
-  function stop() { if (window && !window.isDestroyed()) resetMotion(window.getBounds()); clearTimeout(loop); loop = null; clearInterval(idleTimer); idleTimer = null; const old = window; window = null; poller.stop(); if (old && !old.isDestroyed()) old.destroy(); announce(); }
+  function stop() { if (window && !window.isDestroyed()) resetMotion(window.getBounds()); clearTimeout(loop); loop = null; clearInterval(idleTimer); idleTimer = null; clearTimeout(pulseTimer); pulseTimer = null; const old = window; window = null; poller.stop(); if (old && !old.isDestroyed()) old.destroy(); announce(); }
   function resize(size) {
     if (!SIZES[size]) return; prefs.size = size; save();
     if (window) { const bounds = window.getBounds(), next = windowSize(SIZES[size]); window.setBounds(clampToWorkArea({ x: bounds.x + Math.round((bounds.width - next.width) / 2), y: bounds.y + bounds.height - next.height, ...next })); resetMotion(window.getBounds()); window.webContents.send('pet:update', payload()); }
@@ -134,8 +134,23 @@ function createPet({ directory, getSite, getFocus, status, registerProtocol, res
   ipcMain.on('pet:command', (event, command) => { if (validSender(event)) sendCompanionCommand(getSite(), command); });
   // A 小鱼干 is being dragged in the cabin: let the pet window take the drop (it plays the eat frames).
   function acceptDrops(on) { if (window && !window.isDestroyed()) window.setIgnoreMouseEvents(!on, { forward: true }); }
-  // 打字跟随 (typing-hook.cjs): only a timestamp, already throttled.
-  function typing(at) { typingAt = at; window?.webContents.send('pet:update', payload()); }
-  return { start, stop, resize, acceptDrops, typing, get active() { return Boolean(window); }, get window() { return window; }, get size() { return prefs.size; }, reposition() { if (window) { const bounds = clampToWorkArea(window.getBounds()); resetMotion(bounds); window.setBounds(bounds); prefs = { ...prefs, x: bounds.x, y: bounds.y }; save(); } } };
+  // 键鼠跟随 (typing-hook.cjs): timestamps only. Counts happen in input-stats.cjs
+  // before this point; the pet updates at most every 100 ms with a trailing pulse
+  // so a single click is never lost inside a burst of typing.
+  function pulse() {
+    pulseTimer = null; lastPulse = Date.now(); window?.webContents.send('pet:update', payload());
+  }
+  function input(type, at = Date.now()) {
+    const time = Number(at);
+    if (!Number.isFinite(time) || time <= 0) return;
+    if (type === 'click') clickAt = time;
+    else if (type === 'keyboard') typingAt = time;
+    else return;
+    const wait = 100 - (Date.now() - lastPulse);
+    if (wait <= 0) pulse();
+    else if (!pulseTimer) pulseTimer = setTimeout(pulse, wait);
+  }
+  function typing(at) { input('keyboard', at); }
+  return { start, stop, resize, acceptDrops, input, typing, get active() { return Boolean(window); }, get window() { return window; }, get size() { return prefs.size; }, reposition() { if (window) { const bounds = clampToWorkArea(window.getBounds()); resetMotion(bounds); window.setBounds(bounds); prefs = { ...prefs, x: bounds.x, y: bounds.y }; save(); } } };
 }
 module.exports = { createPet, SIZES, windowSize, clampToWorkArea };
