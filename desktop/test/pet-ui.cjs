@@ -32,6 +32,15 @@ let app, site, host;
   await catPanel.getByRole('button', { name: '关闭小猫', exact: true }).click(); await catPanel.waitFor({ state: 'hidden' });
   await site.evaluate(() => { delete window.albumInputStats; });
 
+  // A level-3 cabin unlocks 领结 / 耳机 / 围巾 / 小芽, but not the level-4 毛线帽.
+  // Six fish make both feeding and accessory changes observable end to end.
+  await site.evaluate(() => {
+    localStorage.setItem('album-circle-focus-v1:local-owner', JSON.stringify({
+      version: 1, settings: {}, timer: { phase: 'idle' }, tasks: [], sessions: [],
+      rewards: { fish: 6, xp: 130, bought: [], equipped: { accessory: '', weather: 'snow' } }
+    }));
+  });
+  await site.reload(); await site.locator('.cabin-room').waitFor(); await site.locator('.room-cat').waitFor();
   const opened = app.waitForEvent('window', (page) => page.url() === 'album-desktop://pet/pet.html');
   assert.equal(await site.getByRole('button', { name: '伙伴出门', exact: true }).getAttribute('title'), '奶糖出门：到桌面上散步');
   await site.getByRole('button', { name: '伙伴出门', exact: true }).click();
@@ -58,8 +67,44 @@ let app, site, host;
   await site.getByRole('button', { name: '让伙伴回家', exact: true }).waitFor(); assert.equal(await site.getByRole('button', { name: '让伙伴回家', exact: true }).getAttribute('title'), '让奶糖回家'); assert.equal(await site.locator('.room-cat').count(), 0);
   check('pet-window-opens-on-top-and-room-cat-leaves', info);
   assert.equal(await pet.evaluate(() => typeof window.require), 'undefined');
-  assert.deepEqual(Object.keys(await pet.evaluate(() => window.albumPet)).sort(), ['command', 'cursor', 'dragEnd', 'getSnapshot', 'menu', 'moveBy', 'onSnapshot', 'open', 'setHit']);
+  assert.deepEqual(Object.keys(await pet.evaluate(() => window.albumPet)).sort(), ['command', 'cursor', 'dragEnd', 'equipAccessory', 'focusDisplay', 'getSnapshot', 'menu', 'moveBy', 'onSnapshot', 'open', 'panel', 'resize', 'setHit']);
   check('pet-is-sandboxed-with-a-narrow-bridge');
+
+  await site.evaluate(() => {
+    window.__petEvents = { equip: [], commands: [] };
+    window.addEventListener('cabin:equip-accessory', (event) => window.__petEvents.equip.push(event.detail?.accessory));
+    window.addEventListener('album-companion-command', (event) => window.__petEvents.commands.push(event.detail?.command));
+  });
+  const compactBounds = await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find((candidate) => candidate.webContents.getURL().includes('pet.html')).getBounds());
+  const catBox = await pet.locator('.pet-cat').boundingBox();
+  await pet.mouse.click(catBox.x + catBox.width / 2, catBox.y + catBox.height * .72);
+  await pet.locator('.pet-panel').waitFor({ timeout: 3000 });
+  const panelText = (await pet.locator('.pet-panel').innerText()).replace(/\s+/g, ' ');
+  assert.match(panelText, /Lv\.3/); assert.match(panelText, /鱼干 6/);
+  const keyboardCount = Number((panelText.match(/键盘 ([\d,]+) 今天/) || [])[1]?.replace(/,/g, ''));
+  const clickCount = Number((panelText.match(/点击 ([\d,]+) 今天/) || [])[1]?.replace(/,/g, ''));
+  assert.ok(Number.isFinite(keyboardCount) && keyboardCount >= 0, 'the panel renders the shell keyboard count');
+  assert.ok(Number.isFinite(clickCount) && clickCount >= 0, 'the panel renders the shell click count');
+  assert.match(panelText, /连续 \d+ 天/);
+  assert.equal(await pet.locator('.pet-panel-week > span').count(), 7);
+  assert.equal(await pet.getByRole('button', { name: '戴毛线帽' }).count(), 0);
+  assert.equal(await pet.getByRole('button', { name: '戴围巾' }).count(), 1);
+  const expandedBounds = await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find((candidate) => candidate.webContents.getURL().includes('pet.html')).getBounds());
+  assert.ok(expandedBounds.width > compactBounds.width, 'opening the panel widens the transparent shell');
+  await pet.getByRole('button', { name: '戴围巾' }).click();
+  await site.waitForFunction(() => window.albumCompanionSnapshot().focus.accessory === 'scarf');
+  await pet.getByRole('button', { name: '戴围巾' }).waitFor();
+  await pet.waitForFunction(() => document.querySelector('[aria-label="戴围巾"]')?.getAttribute('aria-pressed') === 'true');
+  await pet.getByRole('button', { name: '喂一条小鱼干' }).click();
+  await site.waitForFunction(() => window.__petEvents.equip.includes('scarf') && window.__petEvents.commands.includes('cat-feed'));
+  await pet.waitForFunction(() => document.querySelector('.pet-panel')?.innerText.includes('鱼干 5'));
+  check('pet-panel-shows-counts-only-unlocked-accessories-and-sends-whitelisted-actions', { text: panelText.slice(0, 160) });
+  await pet.screenshot({ path: path.join(output, 'pet-panel.png') });
+  await pet.getByRole('button', { name: '收起陪伴面板' }).click();
+  await pet.locator('.pet-panel').waitFor({ state: 'detached' });
+  const restoredBounds = await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find((candidate) => candidate.webContents.getURL().includes('pet.html')).getBounds());
+  assert.equal(restoredBounds.width, compactBounds.width);
+  check('pet-panel-restores-the-compact-window', { compact: compactBounds.width, expanded: expandedBounds.width });
 
   await pet.evaluate(() => window.albumPet.command('focus-start'));
   await site.locator('.focus-badge.is-running').waitFor();

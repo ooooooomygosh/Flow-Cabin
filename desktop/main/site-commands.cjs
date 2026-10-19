@@ -31,6 +31,16 @@ function createSiteCommands(ctx) {
     '/pet-stop': () => ctx.pet().stop(),
     // A 小鱼干 drag in the cabin: the desktop pet accepts the drop while it lasts.
     '/pet-drag': ({ searchParams }) => { const active = flag(searchParams, 'active'); if (active !== null) ctx.pet()?.acceptDrops?.(active); },
+    // 键鼠陪伴: setting changes use the same persisted appearance file as the
+    // shell settings page. Permission commands only open the system prompt /
+    // pane; the page confirms success by watching the local input counters.
+    '/typing-follow': ({ searchParams }) => {
+      const enabled = flag(searchParams, 'enabled');
+      if (enabled !== null) ctx.saveAppearance({ ...ctx.appearance(), typingFollow: enabled }).catch((error) => ctx.writeLog('typing-settings-error', error.message));
+    },
+    '/typing-check': () => ctx.typing.check(),
+    '/typing-permission': () => ctx.typing.accessibility(),
+    '/typing-input-permission': () => ctx.typing.inputMonitoring(),
     '/local-music-folder': () => ctx.chooseMusicFolder(),
     '/music-login': ({ searchParams }) => { const provider = searchParams.get('provider'); if (ACCOUNT_PROVIDERS.includes(provider)) ctx.music().login(provider).then((result) => ctx.notifyMusic(result)).catch((error) => ctx.notifyMusic({ error: error.message })); },
     '/music-logout': ({ searchParams }) => { const provider = searchParams.get('provider'); if (ACCOUNT_PROVIDERS.includes(provider)) ctx.music().logout(provider).then(() => ctx.notifyMusic({ ok: true })).catch((error) => ctx.notifyMusic({ error: error.message })); },

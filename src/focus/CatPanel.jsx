@@ -14,7 +14,7 @@ import { normalizePetId, getPet } from '../pet/pet-catalog.mjs';
 import { desktopCommand } from '../desktop/desktop-command.mjs';
 import PixelCat from '../pet/PixelCat';
 import Souvenirs, { useSouvenirs } from './Souvenirs.jsx';
-import useInputStats from '../pet/useInputStats';
+import useInputStats from '../desktop/useInputStats';
 import '../room/benchmark-cabin.css';
 
 // While a 小鱼干 is dragged and the cat is out on the desktop, the shell lets the pet window take
@@ -25,8 +25,8 @@ const displayCount = (value) => Math.max(0, Number(value) || 0).toLocaleString('
 const weekday = (key) => ['日', '一', '二', '三', '四', '五', '六'][new Date(`${key}T00:00:00`).getDay()] || '';
 const INPUT_STATUS = {
   active: '跨窗口陪伴中 · 只在这台电脑按天计数',
-  'waiting-pet': '让伙伴出门后，开始跨窗口陪伴',
-  'needs-permission': '等待 macOS 辅助功能 / 输入监控授权',
+  pending: '正在启动跨窗口陪伴',
+  'needs-permission': '等待 macOS 辅助功能授权',
   off: '全局统计已关闭 · 仍会响应小屋内的键鼠',
   unavailable: '这台电脑暂不支持全局检测 · 仅响应小屋内'
 };
@@ -39,11 +39,7 @@ function InputCompanion({ stats, petName }) {
   const streak = Math.max(0, Number(stats.streak) || 0);
   const allTime = Math.max(0, Number(stats.total?.total) || 0);
   const desktop = document.documentElement.dataset.desktopClient === 'true';
-  const action = stats.status === 'waiting-pet'
-    ? { command: 'pet-start', label: `叫${petName}出门，开始记录 →` }
-    : ['off', 'needs-permission'].includes(stats.status)
-      ? { command: 'settings', label: '去设置里开启全局键鼠陪伴 →' }
-      : null;
+  const openSettings = () => window.dispatchEvent(new CustomEvent('cabin-open-settings', { detail: { section: 'companion' } }));
   return <section className="cat-input-companion" aria-label={`${petName}的键鼠陪伴统计`}>
     <header><strong>今天一起敲</strong><small>{INPUT_STATUS[stats.status] || INPUT_STATUS.off}</small></header>
     <div className="cat-input-tiles">
@@ -62,7 +58,7 @@ function InputCompanion({ stats, petName }) {
     </div>
     {week.length === 7 && <p className="cat-input-total">最近 7 天 {displayCount(weekTotal)} 次 · 累计 {displayCount(allTime)} 次</p>}
     <p className="cat-input-privacy">只记录键盘按下和点击的次数，不记录按键内容、坐标或你正在用的程序。</p>
-    {action && desktop && <button type="button" className="inline-button" onClick={() => desktopCommand(action.command)}>{action.label}</button>}
+    {stats.status !== 'active' && desktop && <button type="button" className="inline-button" onClick={openSettings}>打开「设置 › 键鼠陪伴」→</button>}
   </section>;
 }
 

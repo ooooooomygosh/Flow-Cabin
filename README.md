@@ -7,86 +7,49 @@
 **听一张喜欢的唱片，安心做完这一轮，再把日子轻轻收好。**
 
 一间会下雪、会亮灯、会等你回来的像素小屋。<br>
-<sub>A local-first pixel cabin for records, focus, and a tiny companion.</sub>
+本地优先 · macOS / Windows · 无需注册账号
 
 <p>
-<a href="https://album-circle.vercel.app/promo.html"><b>走进宣传网站 →</b></a>
-&nbsp;&nbsp;·&nbsp;&nbsp;
-<a href="https://github.com/ooooooomygosh/album-web/releases/latest"><b>下载桌面版 ↓</b></a>
-&nbsp;&nbsp;·&nbsp;&nbsp;
+<a href="https://album-circle.vercel.app/promo.html"><b>宣传网站 →</b></a>
+&nbsp;·&nbsp;
+<a href="https://github.com/ooooooomygosh/album-web/releases/latest"><b>下载最新版 ↓</b></a>
+&nbsp;·&nbsp;
 <a href="docs/getting-started.md">第一次使用</a>
+&nbsp;·&nbsp;
+<a href="https://album-circle.vercel.app/">网页版</a>
 </p>
 
 <a href="https://album-circle.vercel.app/promo.html">
   <img src="docs/assets/screenshots/cabin.jpg" width="100%" alt="心流小屋：雪夜木屋、唱片架、唱机与壁炉">
 </a>
 
-<sub>真实运行界面 · macOS / Windows · 无需注册账号</sub>
-
 </div>
-
-## 一间小屋，三件日常
-
-<table>
-<tr>
-<td width="33%" valign="top">
-
-### 听
-
-**把专辑放回生活里。** 唱片架、落针的唱机、曲目笔记和专辑墙。不是永远播不完的背景音，而是一次认真听完一张唱片。
-
-</td>
-<td width="33%" valign="top">
-
-### 专注
-
-**让注意力回到今天。** 番茄钟、待办、翻页钟、统计和词书放在同一张桌上。完成一轮，就留下一点看得见的进展。
-
-</td>
-<td width="33%" valign="top">
-
-### 记得
-
-**给日子一个安静的位置。** 随手记、手记和小屋来信慢慢收成一本年鉴。没有社交 feed，也没有已读压力。
-
-</td>
-</tr>
-</table>
 
 ## 小屋里有什么
 
-- **唱片与唱机**：十二格唱片架、黑胶特写、可拖动唱臂、曲目笔记、唱片盒和专辑墙；支持本地音乐、QQ 音乐 / 网易云、系统正在播放与 Music Assistant。
-- **专注与记录**：四档番茄节奏、待办、每日目标、连续天数、7 天趋势与一年热力图；手记和整组来信都可以慢慢回看。
-- **学习与词书**：FSRS 闪卡、内置主题词书、考试倒计时和专注热力图，把学习也放进同一间屋。
-- **声音与房间**：程序实时合成雨、火、风、白噪与黑胶底噪；Lo-fi 电台会为唱机让路，窗光和房间配色随时间变化。
+- **唱片与唱机**：十二格唱片架、黑胶特写、可拖动唱臂、曲目笔记、唱片盒与专辑墙；支持本地音乐、QQ 音乐 / 网易云、系统正在播放与 Music Assistant。
+- **智能唱片机**：说一句「学习 50 分钟，帮我搭配音乐」，它会从唱片架按推荐顺序选 1–3 张并说明理由；确认后开始专注，把第一张放上唱机，可立即播放，也可先放上稍后自己按播放。AI 不可用时回退到本机推荐。
+- **专注与学习**：四档番茄节奏、待办、每日目标、连续天数、7 天趋势与一年热力图；FSRS 闪卡、15 本内置词书和考试倒计时都在同一张桌上。
+- **六间房与奶糖**：像素小屋、琥珀小屋、月夜书桌、林间书屋、海边慢屋、星夜阁楼，各有窗光、天气和可以碰一碰的小物；奶糖会在你打字、点击时回应。
+- **来信与手记**：随手记、手记和小屋来信慢慢收成一本年鉴；没有社交 feed，也没有已读压力。
+- **每次升级都重新确认**：更新向导从上一次完成引导的版本开始，累计列出变化，并重新检查音源、权限、房间与伙伴；中途关掉可以接着走完。
+- **本地优先**：收藏、笔记、专注记录、待办、手记和陪伴统计都保存在本机，可随时导出 / 导入；平台凭据通过 Electron safeStorage 加密保存。
 
-> **本地优先。** 收藏、笔记、专注记录、待办、手记和伴读统计都保存在本机，可随时导出 / 导入；平台凭据通过 Electron safeStorage 加密保存。
+<div align="center">
+  <img src="docs/assets/screenshots/smart-turntable.jpg" width="100%" alt="智能唱片机根据学习 50 分钟的计划，从唱片架按顺序挑出唱片，并显示开始即播放">
+</div>
 
 ## 奶糖会陪你用电脑
 
 <div align="center">
-  <img src="docs/assets/screenshots/naitang.jpg" width="100%" alt="奶糖在桌边回应键盘与鼠标，并显示本地陪伴记录">
+  <img src="docs/assets/screenshots/pet-panel.png" width="360" alt="奶糖的桌面陪伴面板：今日键盘与点击次数、连续陪伴天数、喂食、配饰与专注入口">
 </div>
 
-不止是窗内的动画。桌面版开启「键鼠跟随」后，即使心流小屋在后台，你打字时它也会轮流落爪，点击鼠标时它会伸手回应。
+桌面版在「设置 › 键鼠陪伴」打开跨应用陪伴后，即使心流小屋在后台，你打字时它也会轮流落爪，点击鼠标时它会伸手回应。统计、日记、来信和桌宠小面板会记录今天的键盘 / 点击次数、连续陪伴天数与最近 7 天；完成专注赚到的小鱼干可以换配饰。
 
-- **有回应，也有分寸。** 记录今天的键盘 / 点击次数、连续陪伴天数与最近 7 天；完成专注赚到的小鱼干可以换配饰。
-- **只看动作，不看内容。** 只处理事件类型与时间戳，不保存按键、鼠标按钮、坐标、应用名或窗口标题。
-- **不会用愧疚留住你。** 几天不开门，奶糖也不会生病、掉级或离开；它只是把灯留着。
+只处理事件类型与时间戳，不保存按键、鼠标按钮、坐标、应用名或窗口标题。几天不开门，奶糖也不会生病、掉级或离开；它只是把灯留着。
 
 <sub>macOS 首次使用需授予辅助功能 / 输入监控权限；应用回到前台时会重新检查授权状态。</sub>
-
-## 六间房，一页可以走进去的小屋年鉴
-
-<a href="https://album-circle.vercel.app/promo.html">
-  <img src="docs/assets/screenshots/rooms.jpg" width="100%" alt="六间像素小屋在晨光、黄昏与夜色里的不同样子">
-</a>
-
-**像素小屋 · 琥珀小屋 · 月夜书桌 · 林间书屋 · 海边慢屋 · 星夜阁楼**
-
-六间房有自己的窗光、天气与可以伸手碰一碰的小物。在[「小屋年鉴」](https://album-circle.vercel.app/promo.html)里切换晨光、午后、黄昏和夜深，看看晴、雨、雪落在窗前，也可以试玩唱机、翻页钟、词卡、来信，以及奶糖如何回应你的键鼠。
-
-[**打开宣传网站 →**](https://album-circle.vercel.app/promo.html) · [直接试用网页版 →](https://album-circle.vercel.app/)
 
 ## 下载
 
@@ -115,15 +78,13 @@ npm run dev           # 只启动浏览器渲染层
 
 提交前运行 `npm run check`，它会执行测试与生产构建。更多命令见 [desktop/README.md](desktop/README.md)。
 
-## 技术栈与文档
+## 文档与贡献
 
 React 19 · Vite 8 · Electron 44 · Tone.js · Web Audio · FSRS · `node:test` · Playwright
 
-[架构说明](docs/architecture.md) · [桌面开发](desktop/README.md) · [美术规范](docs/art-direction.md) · [播放器与音源](docs/player.md) · [使用边界](docs/limitations.md)
+[架构说明](docs/architecture.md) · [桌面开发](desktop/README.md) · [美术规范](docs/art-direction.md) · [播放器与音源](docs/player.md) · [发布说明](desktop/RELEASE-NOTES.md) · [使用边界](docs/limitations.md)
 
-## 参与贡献
-
-欢迎提交 Issue、修复 Bug 或补充真实设备验证。开始前请阅读[贡献指南](CONTRIBUTING.md)与[使用边界](docs/limitations.md)。
+欢迎提交 Issue、修复 Bug 或补充真实设备验证。开始前请阅读[贡献指南](CONTRIBUTING.md)。
 
 ## 许可与致谢
 

@@ -38,29 +38,51 @@ export function saveKeyConfirmed(key, { win = globalThis, command = desktopComma
 
 let seq = 0;
 // Resolves { ok: true, text } or { ok: false, error } — never throws, never includes the key.
-export async function chat(settings, messages, { win = globalThis, fetchImpl = globalThis.fetch, command = desktopCommand, timeoutMs = TIMEOUT_MS, maxTokens = 600 } = {}) {
+export async function chat(settings, messages, { win = globalThis, fetchImpl = globalThis.fetch, command = desktopCommand, timeoutMs = TIMEOUT_MS, maxTokens = 600, json = false, temperature } = {}) {
   const url = chatUrl(settings.baseUrl);
   if (!url || !settings.model) return { ok: false, error: explainError({ kind: 'config' }) };
-  const body = chatBody(settings.model, messages, maxTokens);
+  const body = chatBody(settings.model, messages, maxTokens, { json, temperature });
   if (isDesktopShell(win)) {
-    const id = `ai${Date.now().toString(36)}${++seq}`;
-    return new Promise((resolve) => {
+    const send = (payload) => new Promise((resolve) => {
+      const id = `ai${Date.now().toString(36)}${++seq}`;
       const done = (v) => { clearTimeout(timer); win.removeEventListener(AI_RESULT_EVENT, on); resolve(v); };
-      const on = (e) => { if (e.detail?.id !== id) return; const d = e.detail; done(d.ok ? { ok: true, text: d.text } : { ok: false, error: explainError(d) }); };
+      const on = (e) => {
+        if (e.detail?.id !== id) return;
+        const d = e.detail;
+        done(d.ok ? { ok: true, text: d.text } : { ok: false, error: explainError(d), status: d.status });
+      };
       const timer = setTimeout(() => done({ ok: false, error: explainError({ kind: 'timeout' }) }), timeoutMs + 2000);
       win.addEventListener(AI_RESULT_EVENT, on);
-      command('ai-chat', { id, url, body: JSON.stringify(body) });
+      command('ai-chat', { id, url, body: JSON.stringify(payload) });
     });
+    let result = await send(body);
+    // Some otherwise compatible providers reject response_format. A
+    // structured prompt is still validated locally, so retry once without it.
+    if (!result.ok && json && [400, 422].includes(result.status)) {
+      const retry = { ...body };
+      delete retry.response_format;
+      result = await send(retry);
+    }
+    return result;
   }
   const credential = webCredential(win), key = credential?.key;
   if (!key || credential.endpoint !== url) return { ok: false, error: explainError({ kind: 'config' }) };
   const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
-    const res = await fetchImpl(url, { method: 'POST', redirect: 'error', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` }, body: JSON.stringify(body), signal: ctrl.signal });
-    let json = null; try { json = await res.json(); } catch { /* not JSON */ }
+    const send = async (payload) => {
+      const res = await fetchImpl(url, { method: 'POST', redirect: 'error', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` }, body: JSON.stringify(payload), signal: ctrl.signal });
+      let data = null; try { data = await res.json(); } catch { /* not JSON */ }
+      return { res, data };
+    };
+    let { res, data } = await send(body);
+    if (!res.ok && json && [400, 422].includes(res.status)) {
+      const retry = { ...body };
+      delete retry.response_format;
+      ({ res, data } = await send(retry));
+    }
     if (webCredential(win)?.revision !== credential.revision) return { ok: false, error: explainError({ kind: 'config' }) };
-    if (!res.ok) return { ok: false, error: redact(explainError({ status: res.status, body: json }), key) };
-    const text = chatText(json);
+    if (!res.ok) return { ok: false, error: redact(explainError({ status: res.status, body: data }), key), status: res.status };
+    const text = chatText(data);
     return text ? { ok: true, text: redact(text, key) } : { ok: false, error: explainError({ kind: 'format' }) };
   } catch (error) {
     return { ok: false, error: explainError({ kind: error?.name === 'AbortError' ? 'timeout' : 'network' }) };

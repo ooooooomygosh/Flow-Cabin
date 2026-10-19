@@ -2,7 +2,7 @@ import { readAi, readLetters, readLetterRecords, trySaveLetter, needsLetter, let
 import { chat, keyState, AI_KEY_EVENT } from './ai-transport.mjs';
 import { readCatMood } from '../focus/stats/cat-mood-source.mjs';
 import { readPlaybackSessions } from '../player/playback-log.mjs';
-import { ambienceSnapshot, hasLetterFacts } from './letter-context.mjs';
+import { ambienceSnapshot, hasLetterFacts, inputCompanionSnapshot } from './letter-context.mjs';
 
 let inflight = null;
 // Writes this period's letter once. AI is tried first when connected; an
@@ -29,6 +29,7 @@ export async function deliverLetter({ sessions, notes = '', now = Date.now(), fo
     const summary = letterSummary(sessions, period, mood, {
       playbackSessions: readPlaybackSessions(win.localStorage),
       weather: ambienceSnapshot(win.document, now),
+      input: inputCompanionSnapshot(win),
       includeNotes: settings.shareNotes && Boolean(notes),
       notes
     });

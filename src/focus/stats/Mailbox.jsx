@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLetters, useAiSettings } from '../../ai/useCabinLetters.js';
 import { aiReady, chatUrl, cleanUserLetter, readLetterRecords } from '../../ai/ai-model.mjs';
-import { buildLetterContext, recentLetterPeriod, ambienceSnapshot, journalSelectionCurrent } from '../../ai/letter-context.mjs';
+import { buildLetterContext, recentLetterPeriod, ambienceSnapshot, inputCompanionSnapshot, journalSelectionCurrent } from '../../ai/letter-context.mjs';
 import { readJournalRecords } from '../journal-entries.mjs';
 import LetterJournalPicker from './LetterJournalPicker.jsx';
 import { readPlaybackSessions } from '../../player/playback-log.mjs';
@@ -14,7 +14,7 @@ const clock = (time) => {
   const date = new Date(time);
   return `${date.getMonth() + 1}月${date.getDate()}日 ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 };
-const EVIDENCE_LABEL = { focus: '专注', listening: '真实播放', weather: '窗外', time: '时段', note: '随手记', cat: '奶糖' };
+const EVIDENCE_LABEL = { focus: '专注', listening: '真实播放', weather: '窗外', time: '时段', note: '随手记', cat: '奶糖', input: '键鼠陪伴' };
 const SOURCE_LABEL = { ai: 'AI 回信', template: '小屋亲笔', user: '我写的信' };
 const STATUS_LABEL = { draft: '草稿', sending: '正在读', sent: '已寄出', failed: '未寄出' };
 
@@ -99,7 +99,7 @@ function Composer({ sessions, state, now, reduced, draft, shareContext, setShare
   const playback = useMemo(() => readPlaybackSessions(globalThis.localStorage), [minute]);
   const summary = useMemo(() => buildLetterContext({
     sessions, playbackSessions: playback, mood, notes: state?.notes || '',
-    includeNotes, shareContext, selectedJournal, weather: ambience, now
+    includeNotes, shareContext, selectedJournal, weather: ambience, input: inputCompanionSnapshot(), now
   }), [sessions, playback, mood, state?.notes, includeNotes, shareContext, selectedJournal, ambience, minute]);
   const evidence = summary?.evidence || [];
   const hasNotes = Boolean(state?.notes?.trim());
@@ -216,7 +216,7 @@ export default function Mailbox({ sessions, state, now, reduced = false }) {
     const mood = (() => { try { return readCatMood(globalThis.localStorage, period.from, period.to); } catch { return null; } })();
     const summary = buildLetterContext({
       sessions, playbackSessions: readPlaybackSessions(globalThis.localStorage), mood,
-      notes: state?.notes || '', includeNotes, shareContext, selectedJournal, weather: ambienceSnapshot(), now: Date.now()
+      notes: state?.notes || '', includeNotes, shareContext, selectedJournal, weather: ambienceSnapshot(), input: inputCompanionSnapshot(), now: Date.now()
     });
     const result = await letters.send({ text, summary, now: Date.now(), draftId: draftId.current });
     setSending(false);

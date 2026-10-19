@@ -1,11 +1,11 @@
-import React, { Suspense, lazy, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, lazy, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { reportTrayPet } from './desktop/desktop-sink-client.mjs';
 import { getRoomScene } from './scene-catalog.mjs';
 import { normalizePetId, getPet } from './pet/pet-catalog.mjs';
 import { setBeat } from './player/beat-clock.mjs';
 import { currentCabinPlayback, onCabinPlayback } from './scene/playback-listener.mjs';
 import CabinWelcome from './room/CabinWelcome';
-import { Up, Down, ArrowUpRight, Wand2, EyeSlash, Heart, Plus, ListBullet, Check, Computer, Play, SpeakerWave, SpeakerOff, Grid3X3, Refresh, Expand } from './icons';
+import { Up, Down, ArrowUpRight, Wand2, Sparkles, EyeSlash, Heart, Plus, ListBullet, Check, Computer, Play, SpeakerWave, SpeakerOff, Grid3X3, Refresh, Expand } from './icons';
 import { RecordBoxControls, useRecordLibrary, useRecordStyle } from './RecordLibrary';
 import { desktopCommand, useDesktopAppearance } from './desktop-client';
 import useReducedMotion from './useReducedMotion';
@@ -25,6 +25,9 @@ import useDeck from './room/useDeck';
 import useRoomChrome from './room/useRoomChrome';
 import useOnboardingFlow from './room/useOnboardingFlow';
 import useCompanionSnapshot from './room/useCompanionSnapshot';
+import { suggestProvider } from './player/usePlayer';
+import { providerLabel } from './player/providers.mjs';
+import { queueId } from './player/player-queue.mjs';
 import { useCatCareHost } from './cat/useCatCare';
 import { coverThumb } from './focus/session-log.mjs';
 import './companion-room.css';
@@ -32,9 +35,10 @@ import './companion-room.css';
 // Opened on demand: Settings (with 音源 › 账户与文件夹), the first-run guide and
 // 唱机特写 load on first use (prefetched once the room is idle).
 const loaders = { hub: () => import('./onboarding/SettingsHub'), wizard: () => import('./onboarding/OnboardingWizard'), corner: () => import('./turntable/ListeningCorner') };
-const prefetch = { ...loaders, study: loadStudy };
+const prefetch = { ...loaders, study: loadStudy, smart: () => import('./ai/SmartTurntable') };
 const CatPanel = lazy(() => import('./focus/CatPanel'));
 const SettingsHub = lazy(loaders.hub), OnboardingWizard = lazy(loaders.wizard), ListeningCorner = lazy(loaders.corner);
+const SmartTurntable = lazy(() => import('./ai/SmartTurntable'));
 function usePrefetch() {
   useEffect(() => {
     const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 2500)), cancel = window.cancelIdleCallback || clearTimeout;
@@ -65,6 +69,22 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
   const focus = useFocusState(), sound = useSoundscape();
   useCatCareHost();
   const [catPanelOpen, setCatPanelOpen] = useState(false);
+  const [smartOpen, setSmartOpen] = useState(false);
+  // SmartTurntable calls close() right after onStart(). A failed focus write
+  // consumes that one close call so the panel stays open for a retry.
+  const smartCloseBlocked = useRef(false);
+  const closeSmart = useCallback(() => {
+    if (smartCloseBlocked.current) { smartCloseBlocked.current = false; return; }
+    setSmartOpen(false);
+  }, []);
+  const openSmart = useCallback(() => { smartCloseBlocked.current = false; setSmartOpen(true); }, []);
+  // SmartTurntable currently closes immediately after onStart(), ignoring its
+  // return value. Failures suppress only that synchronous close; the flag
+  // clears on the next tick so the user can still dismiss the panel.
+  const blockSmartClose = () => {
+    smartCloseBlocked.current = true;
+    setTimeout(() => { smartCloseBlocked.current = false; }, 0);
+  };
   // Capture the first interaction before the lazy panel's module is available.
   useLayoutEffect(() => {
     const open = () => setCatPanelOpen(true);
@@ -97,12 +117,89 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
   }, [lofiBpm]);
   useCompanionSnapshot({ look, petId, petOut: Boolean(pet.active), weather, accessory: catFocus.accessory || '', grooving, track: deck.nowTrack, startRow: view.startRow, items: view.items, selectedId: selected?.id || '', record: deckItem, recordStyle, spinning: effectiveSpin, trackIndex: deck.shownTrackIndex, reduceMotion: appearance.reduceMotion, statusText: deck.statusText, actualTrack: deck.actualTrack, provider }, buildSnapshot, (state) => setWallpaperError(state.error || ''));
   const personalizeRoom = (patch) => library?.update((old) => ({ ...old, rooms: { ...old.rooms, [library.roomId]: { ...(old.rooms[library.roomId] || {}), ...patch } } }));
+  // The smart turntable only suggests records already on this shelf. Starting
+  // is explicit: persist the focus settings and timer first, then put the
+  // first album on the deck and replace 待播 with the rest of the picks.
+  const startSmartSession = (plan) => {
+    if (!focus) {
+      blockSmartClose();
+      notify?.('专注记录还没有准备好，智能专注没有开始。', { tone: 'error' });
+      return false;
+    }
+    const shelf = Array.isArray(items) ? items : [], picked = [], seen = new Set();
+    const rawItems = Array.isArray(plan?.items) && plan.items.length ? plan.items : Array.isArray(plan?.albums) ? plan.albums : [];
+    for (const item of rawItems) {
+      const rawId = item && typeof item === 'object' ? item.id ?? item.albumId ?? item.recordId ?? item.item?.id : item;
+      const id = queueId(rawId);
+      if (!id || seen.has(id)) continue;
+      const shelfItem = shelf.find((entry) => queueId(entry?.id) === id);
+      if (!shelfItem) continue;
+      seen.add(id);
+      picked.push(shelfItem);
+    }
+    if (!picked.length) {
+      blockSmartClose();
+      notify?.('推荐的唱片已经不在唱片架里，智能专注没有开始。', { tone: 'error' });
+      return false;
+    }
+    const minutes = Math.max(1, Math.min(180, Math.round(Number(plan?.minutes) || 50)));
+    const activity = typeof plan?.activity === 'string' ? plan.activity : plan?.activity?.label || plan?.activity?.name || '专注';
+    // Older callers omitted autoplay; they always expected the record to play.
+    const autoplay = plan?.autoplay === undefined ? true : Boolean(plan.autoplay);
+    if (Number(focus.state?.settings?.focusMin) !== minutes) {
+      const saved = focus.settings({ focusMin: minutes });
+      if (saved === false) {
+        blockSmartClose();
+        notify?.('无法保存专注设置，智能专注没有开始。请检查存储空间后重试。', { tone: 'error' });
+        return false;
+      }
+    }
+    if (focus.start('focus') === false) {
+      focus.reset?.();
+      blockSmartClose();
+      notify?.('专注计时保存失败，智能专注没有开始。请检查存储空间后重试。', { tone: 'error' });
+      return false;
+    }
+    // visual / system cannot make the cabin audible. When autoplay is on,
+    // switch to a source the record can verify (local files or a platform
+    // match) when possible. Without autoplay, only leave the honest visual.
+    const switched = autoplay && (provider === 'visual' || provider === 'system') ? suggestProvider(picked[0]) : '';
+    if (switched) deck.chooseProvider(switched);
+    // Following the system player would show another app's song, not this
+    // recommendation. With no verifiable source, show the record honestly.
+    else if (provider === 'system') deck.chooseProvider('visual');
+    const source = switched || (provider === 'system' ? 'visual' : provider);
+    const audible = source !== 'visual' && source !== 'system';
+    const queued = deck.replaceQueue(picked.slice(1), picked[0].id);
+    deck.load(picked[0], 0, { autoplay });
+    setSmartOpen(false);
+    const first = `《${picked[0].title}》`;
+    const queueFailure = !queued
+      ? picked.length > 1 ? ' 其余推荐未能写入待播，请检查存储空间。' : ' 待播未能更新，请检查存储空间。'
+      : '';
+    const queueNote = queued && picked.length > 1 ? `，后面待播 ${picked.length - 1} 张` : '';
+    if (!autoplay) {
+      const sourceNote = source !== provider ? `已切到「${providerLabel(source)}」` : `当前音源「${providerLabel(source)}」`;
+      notify?.(audible
+        ? `已开始 ${minutes} 分钟「${activity}」，${first}已放上唱机但未自动播放${queueNote}；按播放键开始。${queueFailure}`
+        : `已开始 ${minutes} 分钟「${activity}」，${sourceNote}，不会从小屋出声；${first}已放上唱机但未自动播放。${queueFailure}`, audible && !queueFailure ? undefined : { tone: 'error' });
+    } else if (!audible) {
+      const sourceNote = source !== provider ? `已切到「${providerLabel(source)}」` : `当前音源「${providerLabel(source)}」`;
+      notify?.(`已开始 ${minutes} 分钟「${activity}」，${sourceNote}，不会从小屋出声；${first}已放上唱机，可在唱机面板切换音源。${queueFailure}`, { tone: 'error' });
+    } else if (!queued) {
+      notify?.(`已开始 ${minutes} 分钟「${activity}」，${first}已放上唱机；${picked.length > 1 ? '其余推荐未能写入待播' : '待播未能更新'}，请检查存储空间。`, { tone: 'error' });
+    } else {
+      const sourceNote = switched ? `已切到「${providerLabel(source)}」` : `音源：${providerLabel(source)}`;
+      notify?.(`已开始 ${minutes} 分钟「${activity}」，${sourceNote}，${first}已放上唱机${queueNote}。`);
+    }
+    return true;
+  };
   const { zen, corner, dock, saveDock, filtersOpen, setFiltersOpen, fullscreen, desktopMode, sink } = chrome;
   // Not memoised on purpose: the cat's placement re-measures the console and
   // footer after every room commit (useCatPlacement), which room renders now are rare.
   const cat = <RoomCat petId={petId} focus={catFocus} playing={grooving} track={deck.nowTrack} reduceMotion={reduced} hidden={Boolean(pet.active)}/>;
   const petLabel = pet.active ? '让伙伴回家' : '伙伴出门', petName = getPet(petId).name;
-  const queued = player.queue.ids.includes(selected?.id);
+  const queued = deck.isQueued(selected?.id);
   return <div className={`listening-room cabin-room cabin-${look}`} style={{ '--scene-accent': getRoomScene(look).style.accent }}>
     {look === 'pixel' && <CabinWelcome petName={petName} onNotes={() => saveDock({ open: true, tab: 'notes' })}/>}
     {/* One row of room actions, right-aligned: focus · sound · companion · 沉入桌面 · 沉浸.
@@ -132,6 +229,7 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
     <div ref={stage} className="cabin-stage-wrap"><RoomScene look={look} items={view.items} selectedId={selected?.id} select={setSelectedId} load={deck.place} startRow={view.startRow} weather={weather} cat={cat}>
       <RoomTurntable item={deckItem} spinning={effectiveSpin} system={deck.system} trackIndex={deck.shownTrackIndex} style={recordStyle} items={items} load={deck.load} toggle={deck.toggleVisual} track={deck.setTrackIndex} eject={deck.eject} provider={provider} setProvider={deck.chooseProvider} playback={playback} player={player} tools={<nav className="turntable-room-tools" aria-label="唱片架">
         <button type="button" aria-label="整理唱片架" title="排序、筛选、唱片盒与专辑墙" aria-controls="cabin-shelf-filters" aria-expanded={filtersOpen} className={filtered ? 'is-active' : ''} onClick={() => setFiltersOpen(!filtersOpen)}><Wand2 size={17}/><span>整理唱片架{filtered ? ` · ${visible.length}` : ''}</span></button>
+        <button type="button" aria-label="智能唱片机" title="说出计划，让小屋从唱片架里搭配音乐" onClick={openSmart}><Sparkles size={17}/><span>智能唱片机</span></button>
       </nav>}/>
       {!visible.length && <div className="room-empty">
         {/* A failed read is explained once, in the titlebar alert; the shelf offers the way back. */}
@@ -148,13 +246,14 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
       {/* An empty deck: the visible keyboard / pointer path to play. With a record
           already on, 加入待播 leads (and Enter / double-click still load). */}
       {!record && <button type="button" className="room-load-record is-primary" aria-keyshortcuts="Enter" title="放到唱机上播放 · 双击封面或按回车也可以" onClick={() => placeRecord(selected, document.querySelector('.room-record.is-selected') || stage.current, deck.place)}><Play size={16}/><span>放到唱机</span></button>}
-      {record && record.id !== selected.id && <button type="button" className="room-queue-add" aria-label={queued ? '已在待播' : '加入待播'} aria-pressed={queued} title="当前唱片放完后接着放" onClick={(event) => { if (queued) { player.remove(selected.id); return; } if (!player.enqueue(selected.id)) return; const queueButton = document.querySelector('.room-turntable .player-mode[aria-label^="待播唱片"]'); flyRecord({ from: document.querySelector('.room-record.is-selected') || event.currentTarget, to: queueButton, target: queueButton, cover: selected.cover, mode: 'queue' }); }}>{queued ? <><Check size={16}/><span>已在待播</span></> : <><ListBullet size={16}/><span>加入待播</span></>}</button>}<button type="button" className="room-open-album" aria-label="唱片卡片" title="唱片卡片：曲目、笔记、自定义唱片与 Discogs" onClick={() => openRecord(selected.id)}><span>唱片卡片</span><ArrowUpRight size={18}/></button></div></div>}
+      {record && queueId(record.id) !== queueId(selected.id) && <button type="button" className="room-queue-add" aria-label={queued ? '已在待播' : '加入待播'} aria-pressed={queued} title="当前唱片放完后接着放" onClick={(event) => { if (queued) { player.remove(selected.id); return; } if (!player.enqueue(selected.id)) return; const queueButton = document.querySelector('.room-turntable .player-mode[aria-label^="待播唱片"]'); flyRecord({ from: document.querySelector('.room-record.is-selected') || event.currentTarget, to: queueButton, target: queueButton, cover: selected.cover, mode: 'queue' }); }}>{queued ? <><Check size={16}/><span>已在待播</span></> : <><ListBullet size={16}/><span>加入待播</span></>}</button>}<button type="button" className="room-open-album" aria-label="唱片卡片" title="唱片卡片：曲目、笔记、自定义唱片与 Discogs" onClick={() => openRecord(selected.id)}><span>唱片卡片</span><ArrowUpRight size={18}/></button></div></div>}
     {focus && <CabinJournal/>}
-    {focus && <FocusDock open={dock.open} tab={dock.tab} setTab={(tab) => saveDock({ tab })} close={() => saveDock({ open: false })}/>}
+    {focus && <FocusDock open={dock.open} tab={dock.tab} setTab={(tab) => saveDock({ tab })} close={() => saveDock({ open: false })} onOpenSmart={openSmart}/>}
     {desktopMode ? <DesktopWidgets mode="desktop" exit={chrome.toggleDesktopMode} item={deckItem} provider={provider} playback={playback} player={player} spinning={effectiveSpin} toggleVisual={deck.toggleVisual} trackIndex={deck.shownTrackIndex}/> : zen && !chrome.zenTools && <DesktopWidgets mode="zen"/>}
     {!desktopMode && <ImmersiveChrome zen={zen} fullscreen={fullscreen} exitFullscreen={chrome.exitFullscreen} toggleZen={chrome.toggleZen} tools={chrome.zenTools} setTools={chrome.setZenTools} />}
     <Suspense fallback={null}>
       <Suspense fallback={null}><CatPanel open={catPanelOpen} onClose={() => setCatPanelOpen(false)}/></Suspense>
+      <SmartTurntable open={smartOpen} close={closeSmart} items={items} onStart={startSmartSession} onNeedAiSettings={() => { setSmartOpen(false); flow.setHub('ai'); }}/>
       {corner && <ListeningCorner item={deckItem} items={visible} vinyl={recordStyle} provider={provider} spinning={effectiveSpin} trackIndex={deck.shownTrackIndex} setTrackIndex={deck.setTrackIndex} playback={playback} player={player} toggleVisual={deck.toggleVisual} load={deck.load} close={() => chrome.setCorner(false)} reduceMotion={reduced}/>}
       {flow.hub && <SettingsHub section={flow.hub} setSection={flow.setHub} close={() => flow.setHub('')} env={flow.env} player={flow.playerAdapter} provider={provider} useSource={deck.chooseProvider} look={look} petId={petId} onRoomChange={personalizeRoom} reduceMotion={appearance.reduceMotion} error={library?.error} desktop={chrome.desktop} openBackup={() => { flow.setHub(''); openBackup?.(); }} restartOnboarding={flow.restartOnboarding}/>}
       {flow.wizard && <OnboardingWizard state={flow.onboarding} update={flow.saveOnboarding} env={flow.env} player={flow.playerAdapter} look={look} petId={petId} onRoomChange={personalizeRoom} useSource={deck.chooseProvider} openMusicSettings={flow.openMusicSettings} openAdd={() => { flow.closeWizard('later'); openAdd(); }} close={flow.closeWizard} reduceMotion={appearance.reduceMotion} error={library?.error}/>}

@@ -5,7 +5,7 @@ export async function verifyQQRegression({ browser, origin, check }) {
   const errors = []; let mode = 'expired';
   await context.addInitScript(() => {
     if (location.origin === 'null') return;
-    localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 1, status: 'done', step: 'done' }));
+    localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.0' }));
     localStorage.setItem('album-circle-playlist-tab-v1', 'qq');
     window.albumDesktopAppearance = { client: true, reduceMotion: true };
     window.__commands = []; window.open = url => { window.__commands.push(String(url)); return null; };

@@ -174,6 +174,9 @@ test('refuses bad URLs, bodies and missing keys without fetching', async () => {
   assert.equal(validUrl('https://user:pw@x.com/v1/chat/completions'), null);
   assert.equal(validUrl('https://x.com/v1/models'), null);
   assert.ok(validBody(body));
+  const structured = validBody(JSON.stringify({ model: 'm', messages: [{ role: 'user', content: 'json' }], response_format: { type: 'json_object' }, temperature: 0.2 }));
+  assert.deepEqual(structured.response_format, { type: 'json_object' });
+  assert.equal(structured.temperature, 0.2);
   assert.equal(validBody(JSON.stringify({ model: 'm', messages: [{ role: 'tool', content: 'x' }] })), null);
 });
 

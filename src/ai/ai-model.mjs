@@ -41,8 +41,18 @@ export function chatUrl(baseUrl) {
 }
 export const aiReady = (s, hasKey) => Boolean(s.enabled && chatUrl(s.baseUrl) && s.model && hasKey);
 
-export function chatBody(model, messages, maxTokens = 600) {
-  return { model, messages, temperature: 0.8, max_tokens: maxTokens, stream: false };
+export function chatBody(model, messages, maxTokens = 600, options = {}) {
+  const body = {
+    model,
+    messages,
+    temperature: Number.isFinite(options.temperature) ? options.temperature : 0.8,
+    max_tokens: maxTokens,
+    stream: false
+  };
+  // OpenAI-compatible endpoints that support JSON mode get an extra guard.
+  // The transport retries without this field for older compatible endpoints.
+  if (options.json === true) body.response_format = { type: 'json_object' };
+  return body;
 }
 export const TEST_MESSAGES = Object.freeze([{ role: 'user', content: '回复「好」一个字。' }]);
 export function chatText(json) {
@@ -97,6 +107,17 @@ export function summarizeListening(sessions, period) {
 
 const WEATHER_LABELS = { snow: '雪', clear: '晴', rain: '雨', starry: '星空', cloudy: '多云', fog: '雾', storm: '雷雨' };
 const TIME_LABELS = { morning: '清晨', day: '白天', dusk: '傍晚', night: '夜里' };
+const inputCount = (value) => Number.isFinite(Number(value)) ? Math.max(0, Math.min(1e9, Math.round(Number(value)))) : 0;
+const displayCount = (value) => inputCount(value).toLocaleString('zh-CN');
+
+// The companion only ever exposes aggregate counts. Keep the letter contract
+// intentionally narrow so a malformed or newer store cannot leak raw events.
+export function normalizeLetterInput(value) {
+  if (!value || typeof value !== 'object') return null;
+  const keyboard = inputCount(value.keyboard), click = inputCount(value.click);
+  if (!keyboard && !click) return null;
+  return { keyboard, click, streak: Math.max(0, Math.min(36500, inputCount(value.streak))) };
+}
 
 export function letterEvidence(summary) {
   const out = [];
@@ -106,6 +127,12 @@ export function letterEvidence(summary) {
     out.push({ kind: 'listening', text: `实际播放 ${summary.listening.minutes} 分钟${work ? ` · 最常放《${work}》` : ''}` });
   }
   if (summary.cat?.feeds > 0) out.push({ kind: 'cat', text: `喂了奶糖 ${summary.cat.feeds} 次` });
+  if (summary.input?.keyboard > 0 || summary.input?.click > 0) {
+    const parts = [];
+    if (summary.input.keyboard > 0) parts.push(`键盘 ${displayCount(summary.input.keyboard)} 次`);
+    if (summary.input.click > 0) parts.push(`点击 ${displayCount(summary.input.click)} 次`);
+    out.push({ kind: 'input', text: `今天的陪伴 · ${parts.join(' · ')}${summary.input.streak > 1 ? ` · 连续 ${summary.input.streak} 天` : ''}` });
+  }
   if (summary.weather?.kind) out.push({ kind: 'weather', text: `写信时窗外 · ${summary.weather.bucket ? `${TIME_LABELS[summary.weather.bucket] || summary.weather.bucket} · ` : ''}${WEATHER_LABELS[summary.weather.kind] || summary.weather.kind}` });
   if (summary.note?.chars > 0) out.push({ kind: 'note', text: `参考了随手记 · ${summary.note.chars} 字（仅本次）` });
   return out.slice(0, 8);
@@ -125,6 +152,8 @@ export function letterSummary(sessions, period, mood = null, extra = {}) {
     cat: mood ? { tier: mood.tier || null, mood: mood.mood ?? null, feeds: mood.feeds || 0 } : null };
   const listening = summarizeListening(extra.playbackSessions, period);
   if (listening) summary.listening = listening;
+  const input = normalizeLetterInput(extra.input);
+  if (input) summary.input = input;
   if (extra.weather?.kind) summary.weather = { kind: extra.weather.kind, bucket: extra.weather.bucket || '', source: extra.weather.source === 'real' ? 'real' : 'manual' };
   if (extra.includeNotes && typeof extra.notes === 'string' && extra.notes.trim()) {
     const note = extra.notes.replace(/\s+/g, ' ').trim();
@@ -144,7 +173,7 @@ const statusOf = (direction, value) => direction === 'out' && ['draft', 'sending
 
 export function normalizeEvidence(value) {
   if (!Array.isArray(value)) return [];
-  const kinds = new Set(['focus', 'listening', 'weather', 'time', 'note', 'cat']);
+  const kinds = new Set(['focus', 'listening', 'weather', 'time', 'note', 'cat', 'input']);
   return value.flatMap((item) => {
     if (!item || typeof item !== 'object' || !kinds.has(item.kind) || typeof item.text !== 'string') return [];
     const text = item.text.replace(/[\x00-\x1f\x7f]/g, ' ').trim().slice(0, 120);
@@ -181,7 +210,7 @@ export function normalizeLetter(value) {
 const TONE_PROMPT = { warm: '语气温柔、像老朋友。', playful: '用小猫的口吻，俏皮、轻松，可以有一点点拟声词。', calm: '语气平静克制，给一点安静的鼓励，不说教。' };
 export function letterMessages(summary, tone) {
   return [
-    { role: 'system', content: `你是「心流小屋」里的小猫，每${summary.period === '昨天' ? '天' : '周'}给主人写一封简短的中文信。${TONE_PROMPT[tone] || TONE_PROMPT.warm}只根据给你的数据写，不编造没有的事实；专注少或为零时不要责备。focusMinutes 是专注时间，listening.minutes 才是实际播放时间，两者不能相加或互相冒充；topAlbums 仅表示“专注时放在唱机上的唱片”，不得说成听歌记录。只有 summary.note.excerpt 存在时才可以引用随手记，且不要逐字大段复述。weather 只描述写信时的窗外，不能写成整周天气。120–220 字，3–5 段短句，不要标题，不要署名，不要 Markdown。` },
+    { role: 'system', content: `你是「心流小屋」里的小猫，每${summary.period === '昨天' ? '天' : '周'}给主人写一封简短的中文信。${TONE_PROMPT[tone] || TONE_PROMPT.warm}只根据给你的数据写，不编造没有的事实；专注少或为零时不要责备。focusMinutes 是专注时间，listening.minutes 才是实际播放时间，两者不能相加或互相冒充；topAlbums 仅表示“专注时放在唱机上的唱片”，不得说成听歌记录。input 是今天本机键鼠陪伴的汇总次数，只能写成“陪着你/敲了多少次”这类陪伴事实，不能推断主人输入了什么、用了哪个应用或由此判断情绪。只有 summary.note.excerpt 存在时才可以引用随手记，且不要逐字大段复述。weather 只描述写信时的窗外，不能写成整周天气。120–220 字，3–5 段短句，不要标题，不要署名，不要 Markdown。` },
     { role: 'user', content: `这是${summary.period}的小屋统计（JSON）：\n${JSON.stringify(summary)}` }
   ];
 }
@@ -220,7 +249,7 @@ export function userLetterSubject(text) { return emailSubject(cleanUserLetter(te
 
 export function userLetterMessages(text, summary, tone) {
   return [
-    { role: 'system', content: `你是「心流小屋」里的小猫，正在给主人回信。${TONE_PROMPT[tone] || TONE_PROMPT.warm}先把主人信里真正说过的内容放在心上，再只在相关时参考附带的小屋数据。不要编造主人没有说过的事，不要把专注时长说成听歌时长，不要诊断情绪，不要说教，也不要假装自己是人类。回信 100–220 字，2–4 段短句，不要标题、署名或 Markdown。` },
+    { role: 'system', content: `你是「心流小屋」里的小猫，正在给主人回信。${TONE_PROMPT[tone] || TONE_PROMPT.warm}先把主人信里真正说过的内容放在心上，再只在相关时参考附带的小屋数据。input 只是今天本机键鼠陪伴的汇总次数，不能推断输入内容、应用或情绪。不要编造主人没有说过的事，不要把专注时长说成听歌时长，不要诊断情绪，不要说教，也不要假装自己是人类。回信 100–220 字，2–4 段短句，不要标题、署名或 Markdown。` },
     { role: 'user', content: `主人写来的信：\n${text}\n\n${summary ? `这封信允许参考的小屋近况（JSON）：\n${JSON.stringify(summary)}` : '主人这次没有附上小屋近况。'}` }
   ];
 }
@@ -239,6 +268,12 @@ export function templateLetter(summary = null) {
   }
   if (s.topAlbums?.[0] && s.focusMinutes > 0) out.push(`专注的时候，唱机上放着《${s.topAlbums[0].title}》。`);
   if (s.cat?.feeds > 0) out.push(`这段时间，你给奶糖喂了 ${s.cat.feeds} 次小鱼干。谢谢你记得这只小猫。`);
+  if (s.input?.keyboard > 0 || s.input?.click > 0) {
+    const parts = [];
+    if (s.input.keyboard > 0) parts.push(`敲了 ${displayCount(s.input.keyboard)} 次键盘`);
+    if (s.input.click > 0) parts.push(`点了 ${displayCount(s.input.click)} 次鼠标`);
+    out.push(`今天你${parts.join('、')}，奶糖都在旁边。`);
+  }
   if (s.weather?.kind) out.push(`写信的时候，窗外是${WEATHER_LABELS[s.weather.kind] || s.weather.kind}${s.weather.bucket ? `，已经是${TIME_LABELS[s.weather.bucket] || s.weather.bucket}了` : ''}。`);
   if (s.note?.chars > 0) out.push('你写下的那些话，我也认真读过了。它们只留在这次回信里。');
   if (!s.focusMinutes && !s.listening?.minutes) out.push('这一页没写满也没关系。你可以从下一件小事开始，或者安静坐一会儿。');

@@ -17,7 +17,8 @@ function validBody(text) {
   let body; try { body = JSON.parse(text); } catch { return null; }
   if (!body || typeof body.model !== 'string' || !Array.isArray(body.messages) || body.messages.length > 8) return null;
   if (!body.messages.every((m) => m && ['system', 'user', 'assistant'].includes(m.role) && typeof m.content === 'string')) return null;
-  return { model: body.model.slice(0, 120), messages: body.messages, temperature: Number(body.temperature) || 0.8, max_tokens: Math.min(1200, Number(body.max_tokens) || 600), stream: false };
+  const structured = body.response_format?.type === 'json_object' ? { response_format: { type: 'json_object' } } : {};
+  return { model: body.model.slice(0, 120), messages: body.messages, temperature: Number(body.temperature) || 0.8, max_tokens: Math.min(1200, Number(body.max_tokens) || 600), stream: false, ...structured };
 }
 const redact = (text, key) => { let s = String(text || ''); if (key && key.length > 6) s = s.split(key).join('••••'); return s.replace(/\b(sk|Bearer)[-_ ][A-Za-z0-9_\-]{8,}/g, '$1-••••'); };
 

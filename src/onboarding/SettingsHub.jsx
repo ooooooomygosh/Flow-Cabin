@@ -19,9 +19,10 @@ import './onboarding.css';
 import { CROSSFADE_OPTIONS, crossfadeSeconds, setCrossfadeSeconds, onCrossfadeChange } from '../player/crossfade.mjs';
 import { SHORTCUTS } from '../shortcuts.mjs';
 import AiSettings from '../ai/AiSettings.jsx';
+import InputCompanionSettings from './InputCompanionSettings';
 
 export const HUB_SECTIONS = Object.freeze([
-  { id: 'music', label: '音源' }, { id: 'room', label: '房间与桌宠' }, { id: 'focus', label: '专注工具' },
+  { id: 'music', label: '音源' }, { id: 'room', label: '房间与桌宠' }, { id: 'companion', label: '键鼠陪伴' }, { id: 'focus', label: '专注工具' },
   { id: 'desktop', label: '显示与桌面' }, { id: 'data', label: '数据与备份' }, { id: 'ai', label: 'AI（Beta）' }, { id: 'about', label: '关于' }
 ]);
 // A section may open on a sub-page: 'music/accounts' is 音源 › 账户与文件夹.
@@ -48,6 +49,7 @@ export default function SettingsHub({ section = 'music', setSection, close, env,
           <MusicAccounts/>
         </div>}
         {tab === 'room' && <><p className="personalization-intro">选一个今天想待着的地方，再找一位安静的伙伴。换装不会打断音乐和专注。</p><RoomPickers look={look} petId={petId} onChange={onRoomChange} reduceMotion={reduceMotion}/><SkySettings/>{error && <p role="alert" className="record-error">{error}</p>}</>}
+        {tab === 'companion' && <CompanionSection env={env} player={player}/>}
         {tab === 'focus' && <><p className="personalization-intro">番茄钟的时长和提醒。计时、待办、学习和声音在右上角「专注」里。</p><FocusSettingsForm className="hub-focus-settings"/><DailyGoalField/></>}
         {tab === 'desktop' && <DisplaySection env={env} desktop={desktop}/>}
         {tab === 'data' && <div className="hub-rows">
@@ -65,6 +67,16 @@ export default function SettingsHub({ section = 'music', setSection, close, env,
 }
 
 const Row = ({ title, hint, led, children }) => <div className="hub-row"><span><strong>{led !== undefined && <i className={`hub-led ${led ? 'is-on' : ''}`} aria-hidden="true"/>}{title}</strong>{hint && <small>{hint}</small>}</span>{children && <span className="hub-row-actions">{children}</span>}</div>;
+
+function CompanionSection({ env, player }) {
+  return <>
+    <p className="personalization-intro">奶糖会在你使用其他应用时，陪着你打字和点鼠标。这里可以直接开关、检查授权，并确认今天的记录是否真的在增加。</p>
+    {env.desktop
+      ? <InputCompanionSettings player={player} env={env}/>
+      : <div className="onboarding-hint">跨应用键鼠陪伴需要心流小屋桌面版。网页版仍会在小屋窗口内回应键盘和鼠标。</div>}
+    {env.desktop && <Row title="统计位置" hint="今天的键盘、点击、连续天数与最近 7 天，也在奶糖的小猫面板、右上角「专注 › 统计」和「小屋日记」里。"/>}
+  </>;
+}
 
 // What the deck plays from: one radio list. Each source row shows whether it is
 // connected; logins, folders and Music Assistant live one page deeper.

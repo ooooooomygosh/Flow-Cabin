@@ -94,11 +94,24 @@ test('macOS: no native load without Accessibility permission; prompt, then start
   const native = fakeHook(); let trusted = false, loads = 0; const prompts = [];
   const systemPreferences = { isTrustedAccessibilityClient: (prompt) => { prompts.push(prompt); return trusted; } };
   const hook = createTypingHook({ platform: 'darwin', systemPreferences, load: () => { loads++; return native; }, onActivity: () => {} });
+  assert.equal(hook.permission(), 'needs-permission');
   assert.equal(hook.setEnabled(true), 'needs-permission'); assert.equal(loads, 0);
   assert.equal(hook.requestPermission(), 'needs-permission'); assert.ok(prompts.includes(true), 'the system prompt is shown on request only');
   assert.ok(prompts.filter((p) => p === true).length === 1);
-  trusted = true; assert.equal(hook.retry(), 'active'); assert.equal(loads, 1);
+  trusted = true; assert.equal(hook.permission(), 'granted'); assert.equal(hook.retry(), 'active'); assert.equal(loads, 1);
   hook.stop(); assert.equal(hook.status(), 'off'); assert.equal(native.stopped, 1);
+});
+
+test('returning from Input Monitoring rebuilds an already running hook', () => {
+  const native = fakeHook();
+  const hook = createTypingHook({ platform: 'darwin', systemPreferences: { isTrustedAccessibilityClient: () => true }, load: () => native, onActivity: () => {} });
+  assert.equal(hook.setEnabled(true), 'active');
+  assert.equal(native.started, 1);
+  assert.equal(hook.restart(), 'active');
+  assert.equal(native.stopped, 1);
+  assert.equal(native.started, 2);
+  for (const name of ['keydown', 'mousedown']) assert.equal(native.listeners[name].length, 1, 'restart never duplicates listeners');
+  hook.stop();
 });
 
 test('a broken native module only disables the feature', () => {

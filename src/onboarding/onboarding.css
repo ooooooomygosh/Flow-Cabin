@@ -25,6 +25,15 @@
 .onboarding-list{list-style:none;padding:0;margin:0 0 14px;display:grid;gap:10px;font-size:13px}
 /* One numbered chip for step tabs and list items. */
 .onboarding-list b{display:inline-grid;place-items:center;width:20px;height:20px;margin-right:10px;border:2px solid var(--ob-edge);color:var(--ob-accent);font:400 12px/1 var(--px-font-cn);-webkit-font-smoothing:none}
+.onboarding-releases{display:grid;gap:8px;max-height:300px;overflow:auto;padding:1px 8px 1px 1px;scrollbar-gutter:stable}
+.onboarding-release{padding:10px 12px 9px;background:var(--ob-well);border:2px solid var(--ob-edge);border-left:5px solid var(--ob-accent)}
+.onboarding-release header{display:flex;align-items:baseline;gap:9px;margin-bottom:7px}
+.onboarding-release header span{flex:none;padding:1px 6px;color:var(--px-bg);background:var(--ob-accent);font:400 12px/18px var(--px-font-cn);-webkit-font-smoothing:none}
+.onboarding-release header strong{font-family:var(--px-font-cn);font-weight:400;font-size:12px;line-height:1.5}
+.onboarding-release ul{display:grid;gap:5px;margin:0;padding:0 0 0 16px;color:var(--ob-dim);font-size:12px;line-height:1.65}
+.onboarding-release li::marker{color:var(--ob-accent)}
+.onboarding-update-next{display:grid;gap:3px;margin-top:12px;padding:9px 11px;background:#0003;border:2px dashed var(--ob-edge);font-size:12px}
+.onboarding-update-next strong{color:var(--ob-ink)}.onboarding-update-next span{color:var(--ob-dim);line-height:1.6}
 .onboarding-sources{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:12px}
 .onboarding-sources button{position:relative;display:grid;gap:4px;text-align:left;padding:10px;min-width:0;background:var(--ob-well);color:var(--ob-ink);border:2px solid var(--ob-edge);border-radius:0;cursor:pointer;transition:border-color var(--px-dur-fast) steps(2,end)}
 .onboarding-sources button:disabled{opacity:.5;cursor:not-allowed}
@@ -46,11 +55,31 @@
 .onboarding-permissions em{font-style:normal;font-size:12px;margin-left:8px;padding:1px 5px;border:1px solid var(--ob-edge);color:var(--ob-dim)}
 .onboarding-test{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px}.onboarding-test>span{display:flex;gap:8px}
 .onboarding-summary{display:grid;grid-template-columns:auto 1fr;gap:8px 16px;margin:0 0 14px;padding:12px;background:var(--ob-well);border:2px solid var(--ob-edge);font-size:13px}.onboarding-summary dt{color:var(--ob-dim)}.onboarding-summary dd{margin:0}
+/* 键鼠陪伴: shared by the update guide and 设置 › 键鼠陪伴. */
+.typing-companion{margin:0 0 12px;padding:12px;background:var(--ob-well);border:2px solid var(--ob-edge)}
+.typing-companion.is-compact{padding:10px}
+.typing-companion-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:10px}
+.typing-companion-head>span{display:grid;gap:3px;min-width:0}
+.typing-companion-head strong{font:400 12px/1.4 var(--px-font-cn);-webkit-font-smoothing:none}
+.typing-companion-head small,.typing-companion-privacy{color:var(--ob-dim);font-size:12px;line-height:1.55}
+.typing-companion-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:9px}
+.typing-companion-stats>div{display:grid;grid-template-columns:1fr auto;align-items:baseline;gap:1px 5px;padding:7px 9px;background:var(--px-surface);border:1px solid var(--ob-edge)}
+.typing-companion-stats span{grid-column:1/-1;color:var(--ob-dim);font-size:12px}
+.typing-companion-stats strong{font:400 24px/1.2 var(--px-font-cn);-webkit-font-smoothing:none}
+.typing-companion-stats small{color:var(--ob-dim);font-size:12px}
+.typing-companion-week{margin:0 0 9px;color:var(--ob-dim);font-size:12px;line-height:1.5}
+.typing-companion-actions{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin:2px 0 9px}
+.typing-companion-steps{margin:0 0 9px;padding:7px 9px;color:var(--ob-dim);background:#0003;border-left:4px solid var(--ob-accent);font-size:12px;line-height:1.6}
+.typing-companion-steps b{display:inline-grid;place-items:center;width:16px;height:16px;margin:0 2px;border:1px solid var(--ob-edge);color:var(--ob-ink);font:400 12px/1 var(--px-font-cn);-webkit-font-smoothing:none}
+.typing-companion-proof{padding:7px 9px;color:var(--ob-dim);background:#0003;border-left:4px solid var(--ob-accent);font-size:12px;line-height:1.55}
+.typing-companion-proof.is-heard{color:var(--ob-good);border-left-color:var(--ob-good)}
+.typing-companion-privacy{margin:8px 0 0}
+.typing-companion-warning{margin:8px 0 0;color:var(--ob-warn);font-size:12px;line-height:1.55}
 .onboarding-footer{display:flex;align-items:center;gap:14px;margin-top:calc(var(--ob-u)*5);padding-top:calc(var(--ob-u)*4);border-top:2px solid var(--ob-edge)}
 .onboarding-footer>small{font-size:12px;color:var(--ob-dim)}.onboarding-footer>div{margin-left:auto;display:flex;gap:8px}
 @keyframes onboarding-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 @media(max-height:700px){.onboarding-layout{min-height:0}.onboarding-step h3{font-size:20px}.onboarding-progress{padding:10px 0}.onboarding-footer{margin-top:12px;padding-top:10px}}
-@media(max-width:760px){.onboarding-layout{grid-template-columns:1fr}.onboarding-scene{display:none}.onboarding-footer{flex-wrap:wrap}.onboarding-footer>small{display:none}}
+@media(max-width:760px){.onboarding-layout{grid-template-columns:1fr}.onboarding-scene{display:none}.onboarding-footer{flex-wrap:wrap}.onboarding-footer>small{display:none}.typing-companion-stats{grid-template-columns:1fr 1fr}.typing-companion-head{flex-wrap:wrap}}
 
 /* settings hub: one fixed size, so switching tabs never resizes the dialog; the panel scrolls. */
 .settings-hub.cabin-dialog.is-lg{width:min(920px,calc(100vw - 32px));height:min(640px,calc(100dvh - 32px));max-height:none}

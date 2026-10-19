@@ -19,8 +19,35 @@ const call = async (api, name, ...args) => {
   try { return { value: await api[name](...args) }; } catch (error) { return { error: error?.message || String(error) }; }
 };
 
-export function createPlayerAdapter({ api = playerSources, env = {}, request, win = globalThis, autostart = setAutostart } = {}) {
+export function createPlayerAdapter({ api = playerSources, env = {}, request, win = globalThis, autostart = setAutostart, command } = {}) {
   const options = request ? { request } : {};
+  const typingStatus = () => {
+    const value = win.albumInputStats;
+    if (!value || typeof value !== 'object') return null;
+    return {
+      ...value,
+      enabled: value.enabled === true,
+      status: ['active', 'off', 'needs-permission', 'unavailable', 'unsupported', 'pending'].includes(value.status) ? value.status : 'pending',
+      permission: ['granted', 'needs-permission'].includes(value.permission) ? value.permission : 'unknown'
+    };
+  };
+  const snapshotKey = (value) => value ? [value.enabled, value.status, value.permission, value.today?.total].join('|') : '';
+  const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  const waitForTyping = (predicate, timeoutMs = 2200) => new Promise((resolve) => {
+    const started = Date.now();
+    const tick = () => {
+      const value = typingStatus();
+      if (value && (!predicate || predicate(value))) return resolve(value);
+      if (Date.now() - started >= timeoutMs) return resolve(value);
+      setTimeout(tick, 120);
+    };
+    tick();
+  });
+  const sendTyping = (name, params) => {
+    if (!env.desktop || typeof command !== 'function') return false;
+    command(name, params);
+    return true;
+  };
   return {
     async listSources() {
       const local = sourceOptions(env);
@@ -64,6 +91,17 @@ export function createPlayerAdapter({ api = playerSources, env = {}, request, wi
         const state = await autostart(true, { win });
         return !state.supported ? 'unsupported' : state.enabled ? 'granted' : 'denied';
       }
+      if (id === 'typing') {
+        if (!env.desktop) return 'unsupported';
+        if (!env.mac) {
+          const value = await this.setTypingFollow(true);
+          if (!value) return 'unsupported';
+          return value.status === 'active' ? 'granted' : value.status === 'unavailable' || value.status === 'unsupported' ? 'unsupported' : 'pending';
+        }
+        if (!sendTyping('typing-permission')) return 'unsupported';
+        const value = await waitForTyping((next) => next.permission === 'granted' || next.status === 'active', 1800);
+        return value?.permission === 'granted' || value?.status === 'active' ? 'granted' : 'pending';
+      }
       if (id !== 'appleMusic') return 'unsupported';
       const result = await call(api, 'requestPermission', id, options);
       if (result.error) return 'denied';
@@ -71,6 +109,23 @@ export function createPlayerAdapter({ api = playerSources, env = {}, request, wi
       if (!value) return 'unsupported';
       if (typeof value === 'string') return ['granted', 'denied', 'unsupported', 'skipped'].includes(value) ? value : 'denied';
       return value.granted ? 'granted' : value.available === false ? 'unsupported' : 'denied';
+    },
+    typingStatus,
+    async setTypingFollow(enabled) {
+      if (!sendTyping('typing-follow', { enabled: Boolean(enabled) })) return null;
+      return waitForTyping((next) => next.enabled === Boolean(enabled), 1800);
+    },
+    async checkTypingPermission() {
+      if (!sendTyping('typing-check')) return null;
+      // Wait for the shell's fresh answer instead of returning the snapshot
+      // that was already on screen (the command itself is asynchronous).
+      const before = snapshotKey(typingStatus());
+      return waitForTyping((next) => snapshotKey(next) !== before, 900);
+    },
+    async openTypingInputMonitoring() {
+      if (!env.mac || !sendTyping('typing-input-permission')) return null;
+      await wait(400);
+      return typingStatus();
     },
     async testPlayback(provider = 'auto') {
       const result = await call(api, 'testPlayback', { provider, ...options });

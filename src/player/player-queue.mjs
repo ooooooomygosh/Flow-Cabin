@@ -4,24 +4,70 @@ export const QUEUE_KEY = 'album-circle-player-queue-v1';
 export const QUEUE_LIMIT = 50;
 export const REPEAT_MODES = ['off', 'all', 'one'];
 
+// Records in the collection normally carry string ids, but imported / older
+// feeds can expose numbers. Queue identity is always the string form so 7 and
+// "7" are the same record instead of two queue entries.
+export const queueId = (value) => {
+  if (typeof value === 'number') return Number.isFinite(value) ? String(value) : '';
+  if (typeof value !== 'string') return '';
+  return value.trim();
+};
+
 export function normalizeQueue(value) {
   const raw = value && typeof value === 'object' ? value : {};
-  const ids = Array.isArray(raw.ids) ? [...new Set(raw.ids.filter((id) => typeof id === 'string' && id && id.length <= 80))].slice(0, QUEUE_LIMIT) : [];
+  const ids = [];
+  if (Array.isArray(raw.ids)) {
+    const seen = new Set();
+    for (const entry of raw.ids) {
+      const id = queueId(entry);
+      if (!id || id.length > 80 || seen.has(id)) continue;
+      seen.add(id);
+      ids.push(id);
+      if (ids.length >= QUEUE_LIMIT) break;
+    }
+  }
   return { ids, repeat: REPEAT_MODES.includes(raw.repeat) ? raw.repeat : 'off', shuffle: Boolean(raw.shuffle) };
 }
-export const enqueue = (queue, id) => normalizeQueue({ ...queue, ids: [...queue.ids.filter((entry) => entry !== id), id] });
-export const playNext = (queue, id) => normalizeQueue({ ...queue, ids: [id, ...queue.ids.filter((entry) => entry !== id)] });
+const normalized = (queue) => normalizeQueue(queue);
+export const enqueue = (queue, id) => {
+  const current = normalized(queue), value = queueId(id);
+  if (!value || value.length > 80) return current;
+  return normalizeQueue({ ...current, ids: [...current.ids.filter((entry) => entry !== value), value] });
+};
+export const playNext = (queue, id) => {
+  const current = normalized(queue), value = queueId(id);
+  if (!value || value.length > 80) return current;
+  return normalizeQueue({ ...current, ids: [value, ...current.ids.filter((entry) => entry !== value)] });
+};
 // UI additions must report a full queue instead of silently dropping a record.
 export function queueAddition(queue, id, first = false) {
-  const current = normalizeQueue(queue);
-  if (typeof id !== 'string' || !id || id.length > 80) return { error: '这张唱片无法加入待播。' };
-  if (!current.ids.includes(id) && current.ids.length >= QUEUE_LIMIT) return { error: `待播已满（${QUEUE_LIMIT} 张），请先移除一张。` };
-  return { queue: first ? playNext(current, id) : enqueue(current, id) };
+  const current = normalizeQueue(queue), value = queueId(id);
+  if (!value || value.length > 80) return { error: '这张唱片无法加入待播。' };
+  if (!current.ids.includes(value) && current.ids.length >= QUEUE_LIMIT) return { error: `待播已满（${QUEUE_LIMIT} 张），请先移除一张。` };
+  return { queue: first ? playNext(current, value) : enqueue(current, value) };
 }
 
-export const dequeue = (queue, id) => normalizeQueue({ ...queue, ids: queue.ids.filter((entry) => entry !== id) });
-export const pruneQueue = (queue, existingIds) => { const set = new Set(existingIds); return normalizeQueue({ ...queue, ids: queue.ids.filter((id) => set.has(id)) }); };
+export const dequeue = (queue, id) => { const current = normalizeQueue(queue), value = queueId(id); return value && value.length <= 80 ? normalizeQueue({ ...current, ids: current.ids.filter((entry) => entry !== value) }) : current; };
+export const pruneQueue = (queue, existingIds) => {
+  const set = new Set((Array.isArray(existingIds) ? existingIds : []).map(queueId).filter((id) => id && id.length <= 80));
+  const current = normalizeQueue(queue);
+  return normalizeQueue({ ...current, ids: current.ids.filter((id) => set.has(id)) });
+};
 export const cycleRepeat = (queue) => normalizeQueue({ ...queue, repeat: REPEAT_MODES[(REPEAT_MODES.indexOf(queue.repeat) + 1) % REPEAT_MODES.length] });
+
+// A recommendation starts a fresh session queue: the record already on the
+// deck is never repeated in 待播, old queued records do not push the new picks
+// to the end, and numeric / string forms of one id collapse together.
+export function sessionQueue(queue, ids, currentId) {
+  const current = normalizeQueue(queue), skip = queueId(currentId), next = [];
+  for (const raw of Array.isArray(ids) ? ids : []) {
+    const id = queueId(raw);
+    if (!id || id.length > 80 || id === skip || next.includes(id)) continue;
+    next.push(id);
+    if (next.length >= QUEUE_LIMIT) break;
+  }
+  return normalizeQueue({ ...current, ids: next });
+}
 
 // Shuffle is a bag per record: `played` lists the tracks heard since the record
 // started (or since the bag last emptied); `playedBag` keeps it.

@@ -1,13 +1,15 @@
 const site = document.querySelector('.site');
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+const latestReleaseEndpoint = 'https://api.github.com/repos/ooooooomygosh/album-web/releases/latest';
+const fallbackLatestVersion = 'v1.21.0';
 
 const rooms = {
   pixel: {
     name: '像素小屋',
-    copy: '雪窗、木架与暖暖的壁炉',
+    copy: '木架、壁炉和一扇会变的窗',
     image: '/promo/rooms/pixel.webp',
     accent: '#d8a66c',
-    note: '雪落在窗外，壁炉把地板照成蜂蜜色。'
+    note: '壁炉把地板照成蜂蜜色，木架上的唱片安静地排着。'
   },
   warm: {
     name: '琥珀小屋',
@@ -28,11 +30,11 @@ const rooms = {
     copy: '浇浇窗边的植物，转半圈花盆再读几页',
     image: '/promo/rooms/forest.webp',
     accent: '#b7c59a',
-    note: '叶子把下午的光筛得很细，风从拱形窗里进来。'
+    note: '叶子把窗外的光筛得很细，风从拱形窗里进来。'
   },
   seaside: {
     name: '海边慢屋',
-    copy: '推开圆窗，让海风陪午后的唱片',
+    copy: '推开圆窗，让海风陪一张慢慢转的唱片',
     image: '/promo/rooms/seaside.webp',
     accent: '#bcd4c3',
     note: '圆窗外有潮声，窗内的唱片也慢半拍。'
@@ -77,13 +79,69 @@ const times = {
   }
 };
 
-const weatherNames = { clear: '晴', rain: '雨', snow: '雪' };
+const weatherNames = { clear: '晴天', rain: '雨天', snow: '雪天' };
+const weatherMoments = {
+  clear: {
+    morning: '薄雾刚刚散开，晨光落在窗沿上。',
+    day: '阳光停在窗边，木头的纹路被照得很清楚。',
+    dusk: '晚霞没有急着退，给屋里留下一层薄金。',
+    night: '晴夜很安静，几颗星停在窗外。'
+  },
+  rain: {
+    morning: '细小的雨点敲着玻璃，屋里比平时更安静。',
+    day: '阵雨落下来，窗外的颜色被洗得发亮。',
+    dusk: '雨还没停，路灯在水汽里晕开。',
+    night: '夜雨轻轻敲窗，适合把声音调低一点。'
+  },
+  snow: {
+    morning: '薄雪落在窗台，天光像一张没有写字的纸。',
+    day: '雪把外面变得很慢，屋里的灯显得更暖。',
+    dusk: '细雪飘进暮色，窗边已经亮起了灯。',
+    night: '雪落在窗外，壁炉把地板照成蜂蜜色。'
+  }
+};
 const tracks = [
   { title: 'Dreamer', artist: 'Laufey · Bewitched', cover: '/promo/covers/bewitched.jpg', duration: '3:29' },
   { title: 'While You Were Sleeping', artist: 'Laufey · Bewitched', cover: '/promo/covers/bewitched.jpg', duration: '2:58' },
   { title: 'Lovesick', artist: 'Laufey · Bewitched', cover: '/promo/covers/bewitched.jpg', duration: '3:45' },
   { title: 'California and Me', artist: 'Laufey · Bewitched', cover: '/promo/covers/bewitched.jpg', duration: '3:36' }
 ];
+
+const smartPicks = {
+  study: {
+    ask: '学习 50 分钟，帮我搭配音乐',
+    intent: '学习 · 50 分钟',
+    albums: [
+      { id: 'bewitched', title: 'Bewitched', artist: 'Laufey', cover: '/promo/covers/bewitched.jpg' },
+      { id: 'orange-moon', title: '橙月', artist: 'Khalil Fong', cover: '/promo/covers/orange-moon.jpg' },
+      { id: 'fable', title: '寓言', artist: 'Faye Wong', cover: '/promo/covers/fable.jpg' }
+    ],
+    reason: '安静、节奏稳定；钢琴和弦乐留出空间，适合把注意力放在这一轮。',
+    minutes: 50,
+    focusName: '深度'
+  },
+  write: {
+    ask: '写作 45 分钟，帮我搭配音乐',
+    intent: '写作 · 45 分钟',
+    albums: [
+      { id: 'bewitched', title: 'Bewitched', artist: 'Laufey', cover: '/promo/covers/bewitched.jpg' },
+      { id: 'orange-moon', title: '橙月', artist: 'Khalil Fong', cover: '/promo/covers/orange-moon.jpg' }
+    ],
+    reason: '温暖、不催促；旋律有呼吸感，适合写到一半停下来想一想。',
+    minutes: 45,
+    focusName: '写作'
+  },
+  sleep: {
+    ask: '睡前 30 分钟，来点轻的',
+    intent: '睡前 · 30 分钟',
+    albums: [
+      { id: 'bewitched', title: 'Bewitched', artist: 'Laufey', cover: '/promo/covers/bewitched.jpg' }
+    ],
+    reason: '慢下来、留白多；不把音量推高，也不急着把这一晚结束。',
+    minutes: 30,
+    focusName: '睡前'
+  }
+};
 
 function inferTime() {
   const hour = new Date().getHours();
@@ -106,6 +164,8 @@ const state = {
   playing: false,
   progress: 18,
   track: 0,
+  smartPick: 'study',
+  smartAutoplay: true,
   focusPreset: 50,
   focusName: '深度',
   focusRemaining: 50 * 60,
@@ -117,6 +177,33 @@ const state = {
 
 const $ = (selector, scope = document) => scope.querySelector(selector);
 const $$ = (selector, scope = document) => [...scope.querySelectorAll(selector)];
+
+function applyLatestVersion(tagName) {
+  const tag = typeof tagName === 'string' ? tagName.trim() : '';
+  if (!tag || tag.length > 32) return;
+  const label = /^v/i.test(tag) ? tag : `v${tag}`;
+  $$('[data-latest-version]').forEach((node) => {
+    node.textContent = label;
+  });
+}
+
+async function syncLatestVersion() {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000);
+  try {
+    const response = await fetch(latestReleaseEndpoint, {
+      headers: { Accept: 'application/vnd.github+json' },
+      signal: controller.signal
+    });
+    if (!response.ok) return;
+    const release = await response.json();
+    applyLatestVersion(release?.tag_name);
+  } catch {
+    // The static v1.21.0 copy keeps the page useful when GitHub is unreachable.
+  } finally {
+    clearTimeout(timeout);
+  }
+}
 
 function toast(message) {
   const node = $('[data-toast]');
@@ -141,7 +228,7 @@ function updateRoom() {
   $$('[data-room-choice]').forEach((button) => {
     button.setAttribute('aria-pressed', String(button.dataset.roomChoice === state.room));
   });
-  if (state.letterTab === 'cabin') updateLetter();
+  updateLetter();
 }
 
 function updateTime() {
@@ -152,8 +239,10 @@ function updateTime() {
   $$('[data-time-choice]').forEach((button) => {
     button.setAttribute('aria-pressed', String(button.dataset.timeChoice === state.time));
   });
+  $$('[data-day-time]').forEach((button) => {
+    button.setAttribute('aria-pressed', String(button.dataset.dayTime === state.time));
+  });
   setCatBubble(time.bubble);
-  if (state.letterTab === 'cabin') updateLetter();
 }
 
 function updateWeather() {
@@ -162,6 +251,7 @@ function updateWeather() {
   $$('[data-weather-choice]').forEach((button) => {
     button.setAttribute('aria-pressed', String(button.dataset.weatherChoice === state.weather));
   });
+  updateLetter();
 }
 
 function setCatBubble(message) {
@@ -227,6 +317,88 @@ function updateTrack() {
     if (index === state.track) button.setAttribute('aria-current', 'true');
     else button.removeAttribute('aria-current');
   });
+}
+
+function renderSmartAlbumList(pick) {
+  const list = $('#smart-picks');
+  const fragment = document.createDocumentFragment();
+  pick.albums.forEach((album, index) => {
+    const item = document.createElement('li');
+    item.className = 'smart-pick';
+    item.dataset.albumId = album.id;
+
+    const order = document.createElement('span');
+    order.className = 'smart-order';
+    order.setAttribute('aria-hidden', 'true');
+    order.textContent = String(index + 1).padStart(2, '0');
+
+    const cover = document.createElement('img');
+    cover.src = album.cover;
+    cover.alt = `${album.title} 专辑封面`;
+
+    const copy = document.createElement('div');
+    const title = document.createElement('strong');
+    title.textContent = album.title;
+    const artist = document.createElement('small');
+    artist.textContent = album.artist;
+    copy.append(title, artist);
+
+    const tag = document.createElement('span');
+    tag.className = 'smart-tag';
+    tag.textContent = index === 0 ? '第一张 · 放上唱机' : '待播';
+
+    item.append(order, cover, copy, tag);
+    fragment.append(item);
+  });
+  list.replaceChildren(fragment);
+}
+
+function renderSmartAutoplay() {
+  $$('[data-smart-autoplay]').forEach((button) => {
+    const active = (button.dataset.smartAutoplay === 'true') === state.smartAutoplay;
+    button.setAttribute('aria-pressed', String(active));
+  });
+  const start = $('[data-smart-start]');
+  start.textContent = state.smartAutoplay ? '确认并开始这一轮' : '开始专注，放上唱片';
+  $('#smart-start-hint').textContent = state.smartAutoplay
+    ? '同时开始专注与播放'
+    : '只开始专注，唱片保持暂停';
+}
+
+function renderSmartPick(id) {
+  const pick = smartPicks[id];
+  if (!pick) return;
+  state.smartPick = id;
+  $('#smart-ask-text').textContent = pick.ask;
+  $('#smart-intent').textContent = pick.intent;
+  $('#smart-count').textContent = `按推荐顺序 · ${pick.albums.length} 张`;
+  renderSmartAlbumList(pick);
+  $('#smart-reason').textContent = pick.reason;
+  $('#smart-status').textContent = `演示 · 已校验 ${pick.albums.length} 张`;
+  renderSmartAutoplay();
+  $$('[data-smart-request]').forEach((button) => {
+    button.setAttribute('aria-pressed', String(button.dataset.smartRequest === id));
+  });
+}
+
+function startSmartPick() {
+  const pick = smartPicks[state.smartPick];
+  const first = pick?.albums?.[0];
+  if (!first) return;
+  setFocusPreset(pick.minutes, pick.focusName);
+  state.track = 0;
+  updateTrack();
+  state.playing = state.smartAutoplay;
+  renderPlaying();
+  toggleFocus();
+  setCat(state.smartAutoplay ? 'groove' : 'wait', { pinned: true });
+  setCatBubble(state.smartAutoplay ? '第一张已经转起来了。' : '唱片放好了，等你按播放。');
+  $('#smart-status').textContent = state.smartAutoplay ? '演示 · 正在播放' : '演示 · 等待播放';
+  const playback = state.smartAutoplay
+    ? '第一张唱片开始转'
+    : `《${first.title}》已放上唱机，保持暂停`;
+  toast(`已开始 ${pick.minutes} 分钟专注，${playback}。`);
+  $('#focus').scrollIntoView({ behavior: reduceMotion.matches ? 'auto' : 'smooth' });
 }
 
 function renderPlaying() {
@@ -332,10 +504,10 @@ const letterCopy = {
       title: `小屋来信 · ${times[state.time].label}`,
       body: [
         '这一周，你在小屋里专注了 <b>225 分钟</b>，完成 <b>3 轮</b>。',
-        `现在是 ${times[state.time].clock}，${room.name}的灯还亮着。${room.note}`,
+        `现在是 ${times[state.time].clock}，${room.name}外面是${weatherNames[state.weather]}。${weatherMoments[state.weather][state.time]}${room.note}`,
         '不用把所有事都做完。回来坐一会儿，灯和唱片都还在。'
       ],
-      tags: ['专注 225 分钟', '完成 3 轮', `${times[state.time].label} · ${times[state.time].clock}`]
+      tags: ['专注 225 分钟', '完成 3 轮', `${weatherNames[state.weather]} · ${times[state.time].clock}`]
     };
   },
   journal() {
@@ -409,6 +581,14 @@ $$('[data-weather-choice]').forEach((button) => {
 
 $$('[data-room-choice]').forEach((button) => {
   button.addEventListener('click', () => chooseRoom(button.dataset.roomChoice));
+});
+
+$$('[data-day-time]').forEach((button) => {
+  button.addEventListener('click', () => {
+    chooseTime(button.dataset.dayTime);
+    toast(`把同一间房切到${times[button.dataset.dayTime].label}。`);
+    $('#top').scrollIntoView({ behavior: reduceMotion.matches ? 'auto' : 'smooth' });
+  });
 });
 
 $$('[data-gallery-room]').forEach((card) => {
@@ -509,6 +689,20 @@ $$('[data-focus-preset]').forEach((button) => {
   });
 });
 
+$$('[data-smart-request]').forEach((button) => {
+  button.addEventListener('click', () => renderSmartPick(button.dataset.smartRequest));
+});
+
+$$('[data-smart-autoplay]').forEach((button) => {
+  button.addEventListener('click', () => {
+    state.smartAutoplay = button.dataset.smartAutoplay === 'true';
+    renderSmartAutoplay();
+    $('#smart-status').textContent = state.smartAutoplay ? '演示 · 确认后播放' : '演示 · 确认后暂停';
+  });
+});
+
+$('[data-smart-start]').addEventListener('click', startSmartPick);
+
 $('[data-focus-toggle]').addEventListener('click', toggleFocus);
 $('[data-focus-reset]').addEventListener('click', () => {
   clearInterval(state.focusTimer);
@@ -566,6 +760,8 @@ updateTime();
 updateTrack();
 renderPlaying();
 renderFocus();
-updateLetter();
+renderSmartPick(state.smartPick);
 updateScrollMeter();
 setCatBubble(times[state.time].bubble);
+applyLatestVersion(fallbackLatestVersion);
+void syncLatestVersion();

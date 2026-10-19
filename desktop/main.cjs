@@ -119,11 +119,11 @@ const statusPoller = createCompanionPoller({ getSite: () => siteView?.webContent
     const key = [trayStatus.statusLine, trayStatus.playing, trayStatus.phase, trayStatus.paused, trayWanted()].join('|');
     if (key !== trayMenuKey || !companionTray) { trayMenuKey = key; refreshTray(); } else statusBar.apply(trayStatus);
   } });
-// 键鼠跟随: the global hook runs while the setting is on AND the pet is out.
-// It reports only a fixed kind and a timestamp. Counts are stored per local day;
-// the pet window gets a throttled pulse for animation.
+// 键鼠跟随: the global hook runs whenever the setting is on, independently of
+// whether the pet is out. It reports only a fixed kind and a timestamp. Counts
+// are stored per local day; the pet window gets a throttled pulse for animation.
 const inputStats = createInputStats({ directory: app.getPath('userData') });
-let inputStatsTimer = null, lastInputStatsPayload = '';
+let inputStatsTimer = null, lastInputStatsPayload = '', restartTypingOnFocus = false;
 const typingHook = createTypingHook({
   systemPreferences,
   onActivity: ({ type, at } = {}) => {
@@ -135,7 +135,8 @@ const typingHook = createTypingHook({
   log: (...args) => writeLog(...args)
 });
 function inputStatsPayload() {
-  return { ...inputStats.snapshot(), status: typingInfo().status, tracking: typingHook.status() === 'active', platform: process.platform };
+  const typing = typingInfo();
+  return { ...inputStats.snapshot(), ...typing, tracking: typing.status === 'active', platform: process.platform };
 }
 function publishInputStats(force = false) {
   if (!siteView || siteView.webContents.isDestroyed() || !isSiteUrl(siteView.webContents.getURL())) return false;
@@ -145,10 +146,24 @@ function publishInputStats(force = false) {
   siteView.webContents.executeJavaScript(`window.albumInputStats = ${json}; window.dispatchEvent(new CustomEvent('album-input-stats', { detail: window.albumInputStats }));`).catch(() => {});
   return true;
 }
-function syncTyping() { const status = typingHook.setEnabled(Boolean(appearance.typingFollow && petState.active)); publishInputStats(true); return status; }
-function typingInfo() { return { status: appearance.typingFollow && !petState.active ? 'waiting-pet' : typingHook.status(), platform: process.platform }; }
+function syncTyping() { const status = typingHook.setEnabled(Boolean(appearance.typingFollow)); publishInputStats(true); return status; }
+function typingInfo() {
+  return {
+    enabled: Boolean(appearance.typingFollow),
+    status: typingHook.status(),
+    permission: typingHook.permission(),
+    platform: process.platform
+  };
+}
+function openInputMonitoringSetting() {
+  if (process.platform === 'darwin') {
+    restartTypingOnFocus = true;
+    shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent').catch(() => {});
+  }
+  publishInputStats(true);
+}
 function petStatus(state) {
-  petState = state; syncTyping(); refreshTray();
+  petState = state; refreshTray();
   if (siteView && !siteView.webContents.isDestroyed()) siteView.webContents.executeJavaScript(`window.albumPetState = ${JSON.stringify(state)}; window.dispatchEvent(new CustomEvent('album-pet-state', {detail: window.albumPetState}));`).catch(() => {});
 }
 function wallpaperStatus(state) {
@@ -357,6 +372,11 @@ async function wireRemoteView() {
 const siteCommands = createSiteCommands({
   isSitePage: () => isSiteUrl(siteView?.webContents.getURL()), mainWindow: () => mainWindow, desktopSink: () => desktopSink, pet: () => pet, music: () => music, appearance: () => appearance, trayPet,
   toggleSettings, toggleFullscreen, setFullscreen, isFullscreen, chooseMusicFolder, notifyMusic, saveAppearance, writeLog,
+  typing: {
+    check: () => { typingHook.retry(); publishInputStats(true); },
+    accessibility: () => { typingHook.requestPermission(); publishInputStats(true); },
+    inputMonitoring: openInputMonitoringSetting
+  },
   handleUpdateCommand: (pathname, params) => updates.handle(pathname, params),
   get autostart() { return autostart; },
   get weather() { return weather; },
@@ -434,10 +454,7 @@ function registerIpc() {
     if (event.sender !== mainWindow?.webContents || event.senderFrame !== mainWindow.webContents.mainFrame || !isShellUrl(event.senderFrame.url)) throw new Error('Unknown sender');
     if (operation === 'get') { typingHook.retry(); publishInputStats(true); return { settings: appearance, fonts: await listSystemFonts(), display: currentDisplay(), typing: typingInfo() }; }
     if (operation === 'typing-permission') { typingHook.requestPermission(); return { typing: typingInfo() }; }
-    if (operation === 'typing-input-permission') {
-      if (process.platform === 'darwin') shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent').catch(() => {});
-      return { typing: typingInfo() };
-    }
+    if (operation === 'typing-input-permission') { openInputMonitoringSetting(); return { typing: typingInfo() }; }
     if (operation === 'apply') return saveAppearance(value);
     if (operation === 'reset') return saveAppearance(DEFAULT_SETTINGS);
     throw new Error('Unknown settings operation');
@@ -449,6 +466,10 @@ async function createWindow() {
   preferences = migrateDesktopPreferences(preferences);
   try { appearance = normalizeSettings(JSON.parse(fs.readFileSync(settingsPath(), 'utf8'))); } catch { appearance = { ...DEFAULT_SETTINGS }; }
   if (appearance.font !== 'bundled' && !(await listSystemFonts()).includes(appearance.font)) appearance.font = 'bundled';
+  // Start global counting as soon as the saved preference is known. It must
+  // not wait for the pet to go out: the counters are useful even when the
+  // desktop companion is hidden, and the pet only controls how it reacts.
+  syncTyping();
   const display = Number.isFinite(preferences.x) && Number.isFinite(preferences.y) ? screen.getDisplayMatching(preferences) : screen.getPrimaryDisplay();
   mainWindow = new BrowserWindow({
     ...safeSavedWindow(preferences, display.workArea), minWidth: Math.min(900, display.workArea.width), minHeight: Math.min(600, display.workArea.height),
@@ -525,7 +546,7 @@ else {
     wallpaper = createWallpaper({ app, getMain: () => mainWindow, getSite: () => siteView?.webContents, status: wallpaperStatus, appearanceScript, getAppearance: () => appearance, log: writeLog, registerProtocol: registerShellProtocol });
     desktopMode = createDesktopMode({ getWindow: () => mainWindow, screen, leaveFullscreen: () => setFullscreen(false), helperPath: desktopHelperPath(), log: writeLog,
       onChange: (state) => { refreshTray(); notifySite(`document.documentElement.dataset.desktopMode = '${state.active}'; window.dispatchEvent(new CustomEvent('album-desktop-mode', {detail: ${JSON.stringify(state)}}));`); } });
-    pet = createPet({ directory: app.getPath('userData'), getSite: () => siteView?.webContents, status: petStatus, registerProtocol: registerShellProtocol, restoreMain: restoreMainWindow, log: writeLog });
+    pet = createPet({ directory: app.getPath('userData'), getSite: () => siteView?.webContents, getInputStats: () => ({ ...inputStats.snapshot(), ...typingInfo() }), status: petStatus, registerProtocol: registerShellProtocol, restoreMain: restoreMainWindow, log: writeLog });
     miniPlayer = createMiniPlayer({ getSite: () => siteView?.webContents, getAnchor: () => mainWindow?.getBounds(), registerProtocol: registerShellProtocol, helperPath: desktopHelperPath(), onExit: () => desktopSink.exit(), log: writeLog });
     desktopSink = createDesktopSink({ wallpaper, legacy: desktopMode, pet, mini: miniPlayer, log: writeLog,
       hideMain: () => { if (mainWindow && !mainWindow.isDestroyed()) { setFullscreen(false); mainWindow.hide(); } },
@@ -557,7 +578,8 @@ else {
     // Permission changes happen in System Settings, outside this app. `retry()`
     // is cheap and idempotent: after a grant it starts the hook without asking
     // the user to toggle the setting or restart.
-    typingHook.retry();
+    if (restartTypingOnFocus) { typingHook.restart(); restartTypingOnFocus = false; }
+    else typingHook.retry();
     publishInputStats(true);
   });
   app.on('activate', () => {

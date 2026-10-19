@@ -3,14 +3,21 @@
 // wizard calls the adapters in onboarding-adapter.mjs for that.
 
 import { providerLabel } from '../player/providers.mjs';
+import { compareVersions, parseVersion, releasesBetween } from './releases.mjs';
 
 export const ONBOARDING_KEY = 'flow-cabin-onboarding-v1';
 // v1.9 "入门指南" marker. A cabin that already saw it is not interrupted again.
 export const LEGACY_WELCOME_KEY = 'flow-cabin-welcome-v1';
-export const STEPS = Object.freeze(['welcome', 'source', 'permissions', 'room', 'test', 'done']);
-export const STEP_LABELS = Object.freeze({ welcome: '欢迎', source: '音源', permissions: '权限', room: '房间', test: '试听', done: '完成' });
+// Cabins created before version-aware updates are treated as having seen the
+// last release before the companion work started. The first version-aware
+// guide then explains the whole 1.18–1.21 arc, including the earlier hidden
+// typing-follow entry that existing users never saw in a guided flow.
+export const LEGACY_SEEN_VERSION = '1.17.0';
+export const STEPS = Object.freeze(['welcome', 'updates', 'source', 'permissions', 'room', 'test', 'done']);
+export const STEP_LABELS = Object.freeze({ welcome: '欢迎', updates: '更新', source: '音源', permissions: '权限', room: '房间', test: '试听', done: '完成' });
 const STATUSES = ['new', 'active', 'skipped', 'done'];
-const PERMISSION_VALUES = ['', 'granted', 'denied', 'skipped', 'unsupported'];
+const PERMISSION_VALUES = ['', 'granted', 'pending', 'denied', 'skipped', 'unsupported'];
+const versionString = (value) => parseVersion(value) ? String(value).trim().replace(/^v/i, '') : '';
 
 export function detectEnv(win = globalThis) {
   const root = win.document?.documentElement?.dataset || {};
@@ -41,6 +48,7 @@ export const providerFor = (id) => SOURCE_TABLE.find((source) => source.id === i
 
 export function permissionItems(env = {}, source = '') {
   const items = [];
+  if (env.desktop && env.mac) items.push({ id: 'typing', label: '跨应用键鼠陪伴', hint: '允许「辅助功能」和「输入监控」后，在其他应用里打字、点鼠标时奶糖也会回应。', optional: false });
   if (env.notifications) items.push({ id: 'notifications', label: '系统通知', hint: '专注结束和休息结束时提醒你。', optional: true });
   if (env.desktop && env.mac && (source === 'appleMusic' || source === 'system')) items.push({ id: 'appleMusic', label: '控制「音乐」App', hint: 'macOS 会询问是否允许心流小屋使用自动化控制「音乐」。', optional: false });
   if (env.desktop) items.push({ id: 'autostart', label: '开机时打开小屋', hint: '可选。登录电脑后自动点亮小屋。', optional: true });
@@ -48,7 +56,7 @@ export function permissionItems(env = {}, source = '') {
 }
 
 export function initialState() {
-  return { version: 1, status: 'new', step: 'welcome', source: '', quality: '', permissions: {}, tested: '', updatedAt: 0 };
+  return { version: 2, status: 'new', step: 'welcome', source: '', quality: '', permissions: {}, tested: '', seenVersion: '', fromVersion: '', updatedAt: 0 };
 }
 
 export function normalizeState(value) {
@@ -56,14 +64,19 @@ export function normalizeState(value) {
   if (!value || typeof value !== 'object') return base;
   const permissions = {};
   for (const [key, result] of Object.entries(value.permissions || {})) if (typeof key === 'string' && key.length < 40 && PERMISSION_VALUES.includes(result)) permissions[key] = result;
+  const status = STATUSES.includes(value.status) ? value.status : base.status;
+  const seenVersion = versionString(value.seenVersion)
+    || (status === 'done' || status === 'skipped' ? LEGACY_SEEN_VERSION : '');
   return {
     ...base,
-    status: STATUSES.includes(value.status) ? value.status : base.status,
+    status,
     step: STEPS.includes(value.step) ? value.step : base.step,
     source: SOURCE_TABLE.some((source) => source.id === value.source) ? value.source : '',
     quality: typeof value.quality === 'string' ? value.quality.slice(0, 24) : '',
     permissions,
     tested: ['ok', 'silent', 'skipped', 'failed'].includes(value.tested) ? value.tested : '',
+    seenVersion,
+    fromVersion: versionString(value.fromVersion),
     updatedAt: Number.isFinite(value.updatedAt) ? value.updatedAt : 0
   };
 }
@@ -77,7 +90,7 @@ export function readOnboarding(storage) {
   const { legacy, raw, failed } = legacyOrEmpty(storage);
   if (failed) return { ...initialState(), status: 'skipped' };
   if (raw) { try { return normalizeState(JSON.parse(raw)); } catch { /* corrupt: fall through */ } }
-  return legacy ? { ...initialState(), status: 'done', step: 'done' } : initialState();
+  return legacy ? { ...initialState(), status: 'done', step: 'done', seenVersion: LEGACY_SEEN_VERSION } : initialState();
 }
 
 export function writeOnboarding(storage, state, now = Date.now()) {
@@ -93,24 +106,52 @@ export function isNewCabin(storage) {
   } catch { return false; }
 }
 
-// Auto-open on a brand-new cabin, and resume a wizard closed half-way
-// (window closed, app quit). Skipped or finished never auto-opens.
-export function shouldAutoOpen(state, { isNew = false } = {}) {
-  return state.status === 'active' || (state.status === 'new' && isNew);
+// Decide what the launch guide should do. A version comparison opens the guide
+// even when onboarding was completed on an earlier release.
+export function launchPlan(state, { isNew = false, currentVersion = '' } = {}) {
+  if (state.status === 'active') return { open: true, mode: state.fromVersion ? 'update' : 'resume' };
+  if (state.status === 'new' && isNew) return { open: true, mode: 'first-run' };
+  if (state.status === 'new') return { open: false, mode: '' };
+  if (parseVersion(currentVersion) && parseVersion(state.seenVersion) && compareVersions(state.seenVersion, currentVersion) < 0) return { open: true, mode: 'update' };
+  return { open: false, mode: '' };
+}
+export function shouldAutoOpen(state, options = {}) { return launchPlan(state, options).open; }
+
+// Apply a launch plan without restarting a guide that was closed half-way.
+// `plan.mode === 'update'` covers both a fresh version gap and a resumed
+// update; only the former may reset the step to the release list.
+export function applyLaunchPlan(state, plan, currentVersion = '') {
+  if (!plan?.open) return state;
+  if (plan.mode === 'first-run') return start(state);
+  if (plan.mode === 'update' && state.status !== 'active') return startUpdate(state, currentVersion);
+  return state;
 }
 
 export const stepIndex = (step) => Math.max(0, STEPS.indexOf(step));
 export function goTo(state, step) { return STEPS.includes(step) ? { ...state, status: step === 'done' ? state.status : 'active', step } : state; }
 export function next(state) { return goTo(state, STEPS[Math.min(STEPS.length - 1, stepIndex(state.step) + 1)]); }
 export function back(state) { return goTo(state, STEPS[Math.max(0, stepIndex(state.step) - 1)]); }
-export function start(state) { return { ...state, status: 'active' }; }
-export function skip(state) { return { ...state, status: 'skipped' }; }
-export function complete(state) { return { ...state, status: 'done', step: 'done' }; }
+export function start(state) { return { ...state, status: 'active', step: 'welcome', fromVersion: '' }; }
+export function startUpdate(state, currentVersion, fallbackFrom = LEGACY_SEEN_VERSION) {
+  const fromVersion = versionString(state.seenVersion) || versionString(fallbackFrom) || LEGACY_SEEN_VERSION;
+  return { ...state, status: 'active', step: 'updates', fromVersion, seenVersion: fromVersion };
+}
+export function skip(state, currentVersion = '') {
+  return { ...state, status: 'skipped', seenVersion: versionString(currentVersion) || versionString(state.seenVersion) || LEGACY_SEEN_VERSION };
+}
+export function complete(state, currentVersion = '') {
+  return { ...state, status: 'done', step: 'done', seenVersion: versionString(currentVersion) || versionString(state.seenVersion) || LEGACY_SEEN_VERSION };
+}
 // 重新引导 always starts from the top but keeps what was chosen last time.
-export function reopen(state) { return { ...state, status: 'active', step: 'welcome' }; }
+export function reopen(state) { return { ...state, status: 'active', step: 'welcome', fromVersion: '' }; }
 export function chooseSource(state, id) { return SOURCE_TABLE.some((source) => source.id === id) ? { ...state, source: id } : state; }
 export function setPermission(state, id, result) { return PERMISSION_VALUES.includes(result) ? { ...state, permissions: { ...state.permissions, [id]: result } } : state; }
 export function setTested(state, result) { return { ...state, tested: result }; }
+export function updateContext(state, currentVersion) {
+  const toVersion = versionString(currentVersion);
+  const fromVersion = versionString(state.fromVersion) || versionString(state.seenVersion) || LEGACY_SEEN_VERSION;
+  return { fromVersion, toVersion, releases: releasesBetween(fromVersion, toVersion) };
+}
 
 // Short summary for the 完成 step and the settings hub.
 export function summary(state, env = {}) {
@@ -118,6 +159,7 @@ export function summary(state, env = {}) {
   return {
     source: source ? source.label : '还没有选',
     permissions: Object.entries(state.permissions).filter(([, value]) => value === 'granted').map(([key]) => key),
+    pending: Object.entries(state.permissions).filter(([, value]) => value === 'pending').map(([key]) => key),
     tested: state.tested === 'ok' ? '听到了声音' : state.tested === 'silent' ? '没有听到声音' : state.tested === 'failed' ? '试听失败' : '跳过了试听'
   };
 }

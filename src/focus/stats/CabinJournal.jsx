@@ -15,9 +15,67 @@ import { useLetters, useLetterDelivery } from '../../ai/useCabinLetters.js';
 import { TONES } from '../../ai/ai-model.mjs';
 import Mailbox from './Mailbox.jsx';
 import JournalEntries, { useJournalDraftWarning } from './JournalEntries.jsx';
+import useInputStats from '../../desktop/useInputStats';
 
 const clock = (t) => { const d = new Date(t); return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
 const typing = (el) => el?.closest?.('input,textarea,select,[contenteditable="true"]');
+const count = (value) => Number.isFinite(Number(value)) ? Math.max(0, Math.round(Number(value))) : 0;
+const countText = (value) => count(value).toLocaleString('zh-CN');
+const hasInput = (input) => Boolean(input && (
+  count(input.today?.keyboard) || count(input.today?.click) || count(input.streak)
+  || (Array.isArray(input.week) && input.week.some((day) => count(day?.keyboard) || count(day?.click)))
+));
+const inputLine = (input) => {
+  const keyboard = count(input?.today?.keyboard), click = count(input?.today?.click);
+  if (!keyboard && !click) return '';
+  const parts = [];
+  if (keyboard) parts.push(`敲了 ${countText(keyboard)} 次键盘`);
+  if (click) parts.push(`点了 ${countText(click)} 次鼠标`);
+  return `今天你${parts.join('、')}，奶糖都在旁边。`;
+};
+
+const WEEKDAY = ['日', '一', '二', '三', '四', '五', '六'];
+const dayLabel = (key) => {
+  const date = new Date(`${key}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? key.slice(-2) : WEEKDAY[date.getDay()];
+};
+
+export function InputWeekChart({ week = [] }) {
+  const days = (Array.isArray(week) ? week : []).slice(-7);
+  if (!days.length) return null;
+  const peak = Math.max(1, ...days.flatMap((day) => [count(day?.keyboard), count(day?.click)]));
+  const height = (value) => value ? Math.max(4, Math.round(Math.sqrt(value / peak) * 100)) : 0;
+  return <figure className="fs-input-week" aria-label="最近 7 天键盘与点击次数">
+    <div className="fs-input-week-row">{days.map((day, index) => {
+      const keyboard = count(day?.keyboard), click = count(day?.click);
+      return <div key={`${day?.key || index}`} className="fs-input-day" title={`${day?.key || '今天'} · 键盘 ${countText(keyboard)} 次 · 点击 ${countText(click)} 次`}>
+        <span className="fs-input-day-bars" aria-hidden="true">
+          <i className="is-keyboard" style={{ height: `${height(keyboard)}%` }}/>
+          <i className="is-click" style={{ height: `${height(click)}%` }}/>
+        </span>
+        <small>{day?.key ? dayLabel(day.key) : ''}</small>
+      </div>;
+    })}</div>
+    <figcaption><span><i className="is-keyboard"/>键盘</span><span><i className="is-click"/>点击</span><span className="fs-input-week-caption">最近 7 天</span></figcaption>
+  </figure>;
+}
+
+export function InputCompanion({ input, title = '今天的陪伴' }) {
+  const ready = hasInput(input);
+  const keyboard = count(input?.today?.keyboard), click = count(input?.today?.click);
+  return <section className={`fs-input-companion ${ready ? '' : 'is-empty'}`} aria-label={title}>
+    <header className="fs-input-head"><strong>{title}</strong><small>{ready && input?.streak ? `连续 ${countText(input.streak)} 天` : '本地统计'}</small></header>
+    {ready ? <>
+      <dl className="fs-input-today">
+        <div><dt>键盘</dt><dd>{countText(keyboard)}<small> 次</small></dd></div>
+        <div><dt>点击</dt><dd>{countText(click)}<small> 次</small></dd></div>
+        <div><dt>连续</dt><dd>{countText(input?.streak)}<small> 天</small></dd></div>
+      </dl>
+      <InputWeekChart week={input?.week}/>
+    </> : <p className="fs-input-empty">开启键鼠陪伴后，这里会亮起来。</p>}
+    <p className="fs-input-privacy">只统计次数，不记录内容。</p>
+  </section>;
+}
 
 export function Bars({ days, label, mini = false, set = 'records', best = null }) {
   const peak = Math.max(30, ...days.map((d) => d.minutes)), dense = days.length > 7, max = mini ? 5 : 10;
@@ -88,17 +146,19 @@ export function Strip({ name, w, h, frames = 1, frame = 0, scale = 1, className 
 // 小屋来信 spot: the newest AI letter when there is one (sealed until opened; the cat walks
 // it in once), else the template letter built from this week's data. The 信箱 flag is up
 // while any letter is unread.
-function LetterSpot({ template, reduced }) {
+function LetterSpot({ template, reduced, input }) {
   const { list, unread, markRead } = useLetters();
   const incoming = useMemo(() => list.filter((letter) => letter.direction === 'in' && !letter.replyTo && letter.status !== 'draft' && !letter.trashed), [list]);
   const [index, setIndex] = useState(0), ai = incoming[index] || null;
   const sealed = ai && !ai.read;
   const tone = ai && TONES.find((t) => t.id === ai.tone)?.label;
+  const companionLine = ai?.evidence?.find((item) => item.kind === 'input')?.text || inputLine(input);
   return <section className={`fs-letter ${ai ? 'is-ai' : 'is-template'}`} aria-label="小屋来信">
     <div className="fs-letter-head"><h3 className="fs-title">小屋来信{ai ? <small> · {ai.period}{tone ? ` · ${tone}` : ''}{ai.source === 'ai' ? ' · AI' : ''}</small> : null}</h3>
       <span className={`fs-mailbox ${unread ? 'has-flag' : ''}`} data-unread={unread} title={unread ? `${unread} 封未读` : '信箱'}><Strip name="mailbox" w={32} h={32} frames={2} frame={unread ? 1 : 0} alt={unread ? `信箱：${unread} 封未读` : '信箱'}/></span>
       {incoming.length > 1 && <span className="fs-letter-nav"><button type="button" aria-label="更早的信" disabled={index >= incoming.length - 1} onClick={() => setIndex((i) => i + 1)}>‹</button><button type="button" aria-label="更新的信" disabled={index === 0} onClick={() => setIndex((i) => i - 1)}>›</button></span>}
     </div>
+    {companionLine && <p className="fs-input-letter-line"><span>键鼠陪伴</span>{companionLine}</p>}
     {sealed ? <div className="fs-envelope">
       <Strip name="cat-deliver" w={64} h={64} frames={8} frame={reduced ? 7 : 0} className={`fs-deliver ${reduced ? '' : 'is-playing'}`}/>
       <span className="fs-envelope-art"><Strip name="letter-envelope" w={48} h={32} frames={2} frame={0} scale={2}/><Strip name="letter-seal" w={16} h={16} className="fs-seal"/></span>
@@ -119,6 +179,7 @@ function useCatMood(from, to) {
 function JournalBook({ state, now, view, setView, close }) {
   const sessions = useFocusSessions(state.sessions), tasks = state.tasks, reduced = useReducedMotion();
   const { unread } = useLetters();
+  const input = useInputStats();
   const [range, setRange] = useState(7), [weekOffset, setWeekOffset] = useState(() => defaultWeekOffset(sessions, tasks, now)), [note, setNote] = useState('');
   const today = dayKey(now), canvas = useRef(null);
   const recent = useMemo(() => recentSummary(sessions, now, 4), [sessions, today]);
@@ -172,6 +233,7 @@ function JournalBook({ state, now, view, setView, close }) {
           <div className="fs-today-num"><small>番茄</small><strong>{recent.todayPomodoros} 个</strong></div>
           <div className="fs-today-num fs-today-streak" title={STREAK_HINT}>{recent.streak >= 2 && <img className="fs-sticker" src={sprite('sticker-streak')} alt="" width={32} height={32}/>}<small>当前连续</small><strong>{recent.streak} 天</strong>{recent.forgiven ? <small title="每个周一开始的自然周可宽限一天；宽限日不计入坚持天数。">坚持 {recent.graceStreak} 天（含宽限；休息 {recent.forgiven} 天）</small> : null}</div>
         </section>
+        <InputCompanion input={input} title="今天的陪伴"/>
         <div className="fs-section-head"><h3 className="fs-title">每天</h3><div className="fs-seg" role="group" aria-label="时间范围">{[7, 30].map((n) => <button key={n} type="button" aria-pressed={range === n} onClick={() => setRange(n)}>近 {n} 天</button>)}</div></div>
         <Bars days={daily} label={`最近 ${range} 天 · 分钟`} set="records"/>
         <figure className="fs-year stats-chart-well" aria-label={`过去一年专注热力图，有 ${activeDays} 天专注`}>
@@ -229,7 +291,7 @@ function JournalBook({ state, now, view, setView, close }) {
         <strong>{weekName(weekOffset)} · {report.label}</strong>
         <button type="button" aria-label="下一周" disabled={weekOffset >= 0} onClick={() => setWeekOffset((w) => Math.min(0, w + 1))}>›</button>
       </div>
-      <LetterSpot template={letter} reduced={reduced}/>
+      <LetterSpot template={letter} reduced={reduced} input={weekOffset === 0 ? input : null}/>
       <div className="fs-board">
         <figure className="fs-polaroid" style={{ '--tilt': '-3deg' }}><Tape className="is-polaroid"/>
           {report.album ? (showCover ? <img className="fs-card-cover" src={report.album.cover} alt="" width={96} height={96} onError={() => setCoverFailed(report.album.cover)}/> : <span className="fs-cover-ph" aria-hidden="true"/>) : <span className="fs-cover-ph is-empty" aria-hidden="true"/>}

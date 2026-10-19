@@ -17,7 +17,7 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
     return { context, page, failures };
   };
   const button = (page, name) => page.getByRole('button', { name, exact: true });
-  const wizardOf = (page) => page.getByRole('dialog', { name: '新手引导' });
+  const wizardOf = (page, title = '新手引导') => page.getByRole('dialog', { name: title, exact: true });
   const hubOf = (page) => page.getByRole('dialog', { name: '设置', exact: true });
   const heading = (page) => page.locator('#onboarding-heading');
   const inViewport = async (page, locator) => {
@@ -74,7 +74,7 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
 
     // 2. 重新引导 from the hub, motion preferences.
     await button(page, '设置').click(); await hubOf(page).waitFor();
-    assert.deepEqual(await page.getByRole('tab').allInnerTexts(), ['音源', '房间与桌宠', '专注工具', '显示与桌面', '数据与备份', 'AI（Beta）', '关于']);
+    assert.deepEqual(await hubOf(page).getByRole('tab').allInnerTexts(), ['音源', '房间与桌宠', '键鼠陪伴', '专注工具', '显示与桌面', '数据与备份', 'AI（Beta）', '关于']);
     await page.getByRole('tab', { name: '关于' }).click(); await button(page, '重新引导').click();
     await wizardOf(page).waitFor(); await heading(page).filter({ hasText: '欢迎来到心流小屋' }).waitFor();
     assert.equal(await hubOf(page).count(), 0);
@@ -114,6 +114,8 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
     assert.equal(await hubOf(page).getByRole('button', { name: '账户与文件夹' }).count(), 0, 'web has no accounts page');
     assert.equal(await hubOf(page).getByLabel('音质').count(), 0, 'web has no quality choice');
     await page.screenshot({ path: path.join(evidence, 'settings-hub-music.png'), animations: 'disabled' });
+    await hubOf(page).getByRole('tab', { name: '键鼠陪伴' }).click();
+    await hubOf(page).getByText('跨应用键鼠陪伴需要心流小屋桌面版。网页版仍会在小屋窗口内回应键盘和鼠标。', { exact: true }).waitFor();
     await page.getByRole('tab', { name: '显示与桌面' }).click();
     await hubOf(page).getByRole('checkbox', { name: '沉入桌面' }).waitFor();
     assert.equal(await hubOf(page).getByRole('checkbox', { name: '沉入桌面' }).isDisabled(), true, 'browser preview: #14 reports 沉入桌面 as desktop-client only');
@@ -124,7 +126,12 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
   } finally { await context.close(); }
 
   // 6. 沉入桌面 API says unsupported: toggle disabled, reason shown.
-  ({ context, page, failures } = await fresh(() => { if (location.origin === 'null') return; window.cabinDesktop = { getDesktopModeStatus: () => ({ active: false, supported: false, reason: '当前系统不支持沉入桌面' }), enterDesktopMode() {}, exitDesktopMode() {} }; localStorage.setItem('flow-cabin-welcome-v1', 'seen'); }));
+  ({ context, page, failures } = await fresh(() => {
+    if (location.origin === 'null') return;
+    window.cabinDesktop = { getDesktopModeStatus: () => ({ active: false, supported: false, reason: '当前系统不支持沉入桌面' }), enterDesktopMode() {}, exitDesktopMode() {} };
+    localStorage.setItem('flow-cabin-welcome-v1', 'seen');
+    localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.0', source: 'local', permissions: {}, tested: 'skipped' }));
+  }));
   try {
     await page.goto(origin); await button(page, '设置').click(); await page.getByRole('tab', { name: '显示与桌面' }).click();
     await hubOf(page).getByText(/当前系统不支持沉入桌面|沉入桌面需要在心流小屋桌面客户端里使用/).first().waitFor(); // #14's installDesktopApi owns window.cabinDesktop in the page
@@ -133,7 +140,38 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
     assert.deepEqual(failures, []);
   } finally { await context.close(); }
 
-  // 7. Storage failure keeps the choice visible and still allows exit.
+  // 7. A cabin that only saw the old welcome marker gets the v1.21 update guide.
+  ({ context, page, failures } = await fresh(() => {
+    if (location.origin === 'null') return;
+    localStorage.setItem('flow-cabin-welcome-v1', 'seen');
+  }));
+  try {
+    await page.goto(origin);
+    const updateWizard = wizardOf(page, '版本更新'); await updateWizard.waitFor();
+    await heading(page).filter({ hasText: '你离开的这段时间，小屋更新了 4 个版本' }).waitFor();
+    assert.deepEqual(await updateWizard.locator('.onboarding-progress li').allInnerTexts(), ['1\n更新', '2\n音源', '3\n权限', '4\n房间', '5\n试听', '6\n完成']);
+    assert.deepEqual(await updateWizard.locator('.onboarding-release header span').allInnerTexts(), ['v1.21.0', 'v1.20.0', 'v1.19.0', 'v1.18.0']);
+    await updateWizard.getByText('「键鼠陪伴」进入「设置」一级入口', { exact: false }).waitFor();
+    await button(page, '稍后继续').waitFor();
+    assert.equal(await button(page, '开始设置').count(), 0);
+    await button(page, '开始检查设置').click();
+    await heading(page).filter({ hasText: '想从哪里听歌？' }).waitFor();
+    assert.equal(await page.evaluate(() => document.activeElement.id), 'onboarding-heading');
+    await page.getByRole('radio', { name: '音源 本地音乐' }).click();
+    await button(page, '下一步').click(); await heading(page).filter({ hasText: '只开需要的权限' }).waitFor();
+    await button(page, '跳过 系统通知').click();
+    await button(page, '下一步').click(); await heading(page).filter({ hasText: '选一个房间，再挑个伙伴' }).waitFor();
+    await button(page, '下一步').click(); await heading(page).filter({ hasText: '放一段声音试试' }).waitFor();
+    await button(page, '播放测试').click(); await button(page, '听到了').click();
+    await button(page, '下一步').click(); await heading(page).filter({ hasText: '这次更新已经逐项确认' }).waitFor();
+    await button(page, '进入小屋').click(); await updateWizard.waitFor({ state: 'hidden' });
+    await page.reload(); await page.getByRole('button', { name: '添加第一张专辑' }).waitFor();
+    assert.equal(await wizardOf(page, '版本更新').count(), 0);
+    check('legacy-welcome-cabin-sees-and-completes-v1.21-update-guide');
+    assert.deepEqual(failures, []);
+  } finally { await context.close(); }
+
+  // 8. Storage failure keeps the choice visible and still allows exit.
   ({ context, page, failures } = await fresh());
   try {
     await page.goto(origin); await wizardOf(page).waitFor();
@@ -145,7 +183,7 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
     check('wizard-storage-failure-is-shown-and-allows-exit');
   } finally { await context.close(); }
 
-  // 8. A returning cabin (any earlier data) is never interrupted.
+  // 9. A returning cabin (any earlier data) is never interrupted.
   const returning = await browser.newContext();
   try {
     await returning.route('**/*', routeHandler);

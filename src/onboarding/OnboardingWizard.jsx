@@ -1,43 +1,60 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { version as buildVersion } from '../../package.json';
 import Dialog from '../Dialog';
 import PixelCat from '../pet/PixelCat';
 import { getRoomScene } from '../scene-catalog.mjs';
 import RoomPickers, { sceneThumb } from '../RoomPickers';
 import { Check, Music2 } from '../icons';
 import * as model from './onboarding-model.mjs';
+import InputCompanionSettings from './InputCompanionSettings';
 import useSourceStatus from './useSourceStatus';
 import './onboarding.css';
 
-const PERMISSION_TEXT = { granted: '已允许', denied: '未允许 · 可在系统设置里修改', skipped: '已跳过', unsupported: '会在第一次用到时由系统询问' };
+const PERMISSION_TEXT = { granted: '已允许', pending: '已开启，等待系统授权或一次输入确认', denied: '未允许 · 可在系统设置里修改', skipped: '已跳过', unsupported: '会在第一次用到时由系统询问' };
+const PERMISSION_LABELS = { typing: '跨应用键鼠陪伴', notifications: '通知', appleMusic: '音乐 App', autostart: '开机启动' };
 
 // First-run wizard. Each step only changes what the user explicitly picks:
 // it never starts a timer, and sound plays only after 「播放测试」 is pressed.
-export default function OnboardingWizard({ state, update, env, player, look, petId, onRoomChange, useSource, openMusicSettings, openAdd, close, reduceMotion, error }) {
+export default function OnboardingWizard({ state, update, mode = '', currentVersion = buildVersion, env, player, look, petId, onRoomChange, useSource, openMusicSettings, openAdd, close, reduceMotion, error }) {
   const heading = useRef(null), first = useRef(true);
-  const step = state.step, index = model.stepIndex(step);
+  // `fromVersion` is set only while a version update is active. Keeping the
+  // mode derivable from state means the room does not need another prop (and
+  // an interrupted update still reopens as an update).
+  const effectiveMode = mode === 'update' || (!mode && state.fromVersion) ? 'update' : 'first-run';
+  const updateCopy = model.updateContext(state, currentVersion);
+  // An update is a check of the whole product, not a welcome tour: it starts
+  // with the complete change list. First-run and 重新引导 never show release
+  // history, because there is no earlier confirmed version to compare against.
+  const steps = effectiveMode === 'update' ? model.STEPS.filter((id) => id !== 'welcome') : model.STEPS.filter((id) => id !== 'updates');
+  const step = steps.includes(state.step) ? state.step : effectiveMode === 'update' ? steps[0] : 'source';
+  const index = Math.max(0, steps.indexOf(step));
   useEffect(() => { if (first.current) { first.current = false; return; } heading.current?.focus({ preventScroll: true }); }, [step]);
-  const go = (fn) => update(fn(state));
+  // Move only across the steps this mode actually shows, so a hidden step can
+  // never become the saved step from 上一步 / 下一步.
+  const move = (offset) => update(model.goTo(state, steps[Math.min(steps.length - 1, Math.max(0, index + offset))]));
   const scene = getRoomScene(look);
-  return <Dialog title="新手引导" label="新手引导" close={() => close('later')} className="onboarding" size="lg">
-    <ol className="onboarding-progress" aria-label="引导进度">{model.STEPS.map((id, i) => <li key={id} aria-current={id === step ? 'step' : undefined} className={i < index ? 'is-done' : ''}><span aria-hidden="true">{i < index ? <Check size={12}/> : i + 1}</span>{model.STEP_LABELS[id]}</li>)}</ol>
+  const title = effectiveMode === 'update' ? '版本更新' : '新手引导';
+  return <Dialog title={title} label={title} close={() => close('later')} className="onboarding" size="lg">
+    <ol className="onboarding-progress" aria-label="引导进度">{steps.map((id, i) => <li key={id} aria-current={id === step ? 'step' : undefined} className={i < index ? 'is-done' : ''}><span aria-hidden="true">{i < index ? <Check size={12}/> : i + 1}</span>{model.STEP_LABELS[id]}</li>)}</ol>
     <div className="onboarding-layout">
       <aside className="onboarding-scene" aria-hidden="true"><img src={sceneThumb(scene)} alt="" width="362" height="272"/><PixelCat petId={petId} pose={step === 'test' || step === 'done' ? 'groove' : 'idle'} reduceMotion={reduceMotion}/><span>{scene.label}</span></aside>
       <section className="onboarding-step" key={step} aria-labelledby="onboarding-heading">
         {step === 'welcome' && <Welcome heading={heading} env={env}/>}
+        {step === 'updates' && <UpdatesStep heading={heading} mode={effectiveMode} currentVersion={currentVersion} copy={updateCopy}/>}
         {step === 'source' && <SourceStep heading={heading} state={state} update={update} env={env} player={player} useSource={useSource} openMusicSettings={openMusicSettings} openAdd={openAdd}/>}
         {step === 'permissions' && <PermissionStep heading={heading} state={state} update={update} env={env} player={player}/>}
         {step === 'room' && <RoomStep heading={heading} look={look} petId={petId} onRoomChange={onRoomChange} reduceMotion={reduceMotion} error={error}/>}
         {step === 'test' && <TestStep heading={heading} state={state} update={update} player={player} openMusicSettings={openMusicSettings}/>}
-        {step === 'done' && <DoneStep heading={heading} state={state} env={env}/>}
+        {step === 'done' && <DoneStep heading={heading} state={state} env={env} mode={effectiveMode}/>}
       </section>
     </div>
     <footer className="onboarding-footer">
-      {step !== 'done' ? <button type="button" className="onboarding-text" onClick={() => close('skip')}>跳过引导</button> : <span/>}
-      <small>{step === 'done' ? '以后可以在「设置 › 关于」里重新引导。' : '关掉窗口也没关系，下次打开会从这一步继续。'}</small>
+      {step !== 'done' ? <button type="button" className="onboarding-text" onClick={() => close(effectiveMode === 'update' ? 'later' : 'skip')}>{effectiveMode === 'update' ? '稍后继续' : '跳过引导'}</button> : <span/>}
+      <small>{step === 'done' ? '以后可以在「设置 › 关于」里重新引导。' : effectiveMode === 'update' ? '版本更新需要完整走一遍；关掉后下次打开会从这一步继续。' : '关掉窗口也没关系，下次打开会从这一步继续。'}</small>
       <div>
-        {index > 0 && step !== 'done' && <button type="button" className="pixel-button" onClick={() => go(model.back)}>上一步</button>}
-        {step === 'welcome' && <button type="button" className="pixel-button is-primary" onClick={() => go(model.next)}>开始设置</button>}
-        {step !== 'welcome' && step !== 'done' && <button type="button" className="pixel-button is-primary" onClick={() => go(model.next)}>下一步</button>}
+        {index > 0 && step !== 'done' && <button type="button" className="pixel-button" onClick={() => move(-1)}>上一步</button>}
+        {step === 'welcome' && <button type="button" className="pixel-button is-primary" onClick={() => move(1)}>开始设置</button>}
+        {step !== 'welcome' && step !== 'done' && <button type="button" className="pixel-button is-primary" onClick={() => move(1)}>{step === 'updates' ? '开始检查设置' : '下一步'}</button>}
         {step === 'done' && <button type="button" className="pixel-button is-primary" onClick={() => close('done')}>进入小屋</button>}
       </div>
     </footer>
@@ -51,9 +68,28 @@ function Welcome({ heading, env }) {
     <Heading heading={heading} eyebrow="第一次来">欢迎来到心流小屋</Heading>
     <p>花一分钟把小屋调好，之后打开就能直接听歌、专注。每一步都可以跳过，以后在「设置」里随时改。</p>
     <ul className="onboarding-list">
-      <li><b>1</b>选一个音乐来源并连接</li><li><b>2</b>打开需要的权限（通知{env.desktop ? '、开机启动' : ''}）</li><li><b>3</b>挑房间和陪你的小伙伴</li><li><b>4</b>放一段声音，确认能听到</li>
+      <li><b>1</b>选一个音乐来源并连接</li><li><b>2</b>打开需要的权限（通知{env.desktop ? '、键鼠陪伴、开机启动' : ''}）</li><li><b>3</b>挑房间和陪你的小伙伴</li><li><b>4</b>放一段声音，确认能听到</li>
     </ul>
     {!env.desktop && <p className="onboarding-hint">你在用网页版：QQ 音乐 / 网易云登录、系统播放器和开机启动需要桌面版。</p>}
+  </>;
+}
+
+function UpdatesStep({ heading, mode, currentVersion, copy }) {
+  const count = copy.releases.length;
+  const toVersion = copy.toVersion || currentVersion;
+  return <>
+    <Heading heading={heading} eyebrow={mode === 'update' ? `版本更新 · ${copy.fromVersion} → ${toVersion}` : '最近更新'}>
+      {mode === 'update' ? count ? `你离开的这段时间，小屋更新了 ${count} 个版本` : `小屋已经更新到 ${toVersion}` : `欢迎来到心流小屋 ${toVersion}`}
+    </Heading>
+    <p>{mode === 'update' ? '下面是从你上次确认的版本到现在的全部变化。接下来会把音源、键鼠陪伴、房间伙伴和试听重新检查一遍，避免升级后某个开关悄悄失效。' : '先把最近加入的功能放在这里，之后每一步只需要确认自己的选择。'}</p>
+    <div className="onboarding-releases">
+      {copy.releases.map((release) => <article key={release.version} className="onboarding-release">
+        <header><span>v{release.version}</span><strong>{release.title}</strong></header>
+        <ul>{release.items.map((item) => <li key={item}>{item}</li>)}</ul>
+      </article>)}
+      {!count && <p className="onboarding-hint">这个版本没有单独的用户更新摘要。接下来仍会检查所有关键设置。</p>}
+    </div>
+    <div className="onboarding-update-next"><strong>接下来会逐项确认</strong><span>音源连接 · 跨应用键鼠陪伴与系统权限 · 房间和伙伴 · 实际试听</span></div>
   </>;
 }
 
@@ -92,12 +128,16 @@ function SourceStep({ heading, state, update, env, player, useSource, openMusicS
 }
 
 function PermissionStep({ heading, state, update, env, player }) {
-  const items = model.permissionItems(env, state.source);
+  const items = model.permissionItems(env, state.source).filter((item) => item.id !== 'typing');
   const [busy, setBusy] = useState('');
   const ask = async (item) => { setBusy(item.id); const result = await player.requestPermission(item.id); setBusy(''); update(model.setPermission(state, item.id, result)); };
+  const rememberTyping = (verdict) => {
+    if (verdict && state.permissions.typing !== verdict) update(model.setPermission(state, 'typing', verdict));
+  };
   return <>
     <Heading heading={heading} eyebrow="权限">只开需要的权限</Heading>
-    <p>每一项都会弹出系统询问，拒绝也能正常使用小屋。</p>
+    <p>{env.desktop ? '跨应用键鼠陪伴需要确认一次；macOS 的辅助功能和输入监控是两项独立授权。之后可随时在「设置 › 键鼠陪伴」里改。拒绝也不会影响小屋、音乐和专注。' : '每一项都会弹出系统询问，拒绝也能正常使用小屋。'}</p>
+    {env.desktop && <InputCompanionSettings player={player} env={env} compact onPermission={rememberTyping}/>}
     {items.length ? <ul className="onboarding-permissions">{items.map((item) => { const result = state.permissions[item.id]; return <li key={item.id}>
       <span><strong>{item.label}{item.optional ? <em>可选</em> : null}</strong><small>{result ? PERMISSION_TEXT[result] : item.hint}</small></span>
       {result === 'granted' ? <span className="onboarding-ok"><Check size={14}/>已允许</span> : <>
@@ -132,11 +172,13 @@ function TestStep({ heading, state, update, player, openMusicSettings }) {
   </>;
 }
 
-function DoneStep({ heading, state, env }) {
+function DoneStep({ heading, state, env, mode }) {
   const s = model.summary(state, env);
+  const permissionLabel = (id) => PERMISSION_LABELS[id] || id;
+  const permissions = [...s.permissions.map(permissionLabel), ...s.pending.map((id) => `${permissionLabel(id)}（待系统确认）`)];
   return <>
-    <Heading heading={heading} eyebrow="都好了">小屋准备好了</Heading>
-    <dl className="onboarding-summary"><dt>音源</dt><dd>{s.source}</dd><dt>权限</dt><dd>{s.permissions.length ? s.permissions.map((id) => ({ notifications: '通知', appleMusic: '音乐 App', autostart: '开机启动' }[id] || id)).join('、') : '未开启'}</dd><dt>试听</dt><dd>{s.tested}</dd></dl>
-    <p>双击唱片架上的封面放盘，点右上角的「专注」开始一轮。偏好都收在标题栏的「设置」里；想让小屋沉入桌面，点右上角「沉入桌面」，按 Ctrl/⌘+Alt+D 退出。</p>
+    <Heading heading={heading} eyebrow={mode === 'update' ? '更新完成' : '都好了'}>{mode === 'update' ? '这次更新已经逐项确认' : '小屋准备好了'}</Heading>
+    <dl className="onboarding-summary"><dt>音源</dt><dd>{s.source}</dd><dt>权限</dt><dd>{permissions.length ? permissions.join('、') : '未开启'}</dd><dt>试听</dt><dd>{s.tested}</dd></dl>
+    <p>双击唱片架上的封面放盘，点右上角的「专注」开始一轮。键鼠陪伴的开关、授权和今天记录都在「设置 › 键鼠陪伴」里；想让小屋沉入桌面，点右上角「沉入桌面」，按 Ctrl/⌘+Alt+D 退出。</p>
   </>;
 }

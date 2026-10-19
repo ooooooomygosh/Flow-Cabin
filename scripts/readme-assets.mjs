@@ -13,6 +13,7 @@ import { showcaseAlbums } from './showcase-albums.mjs';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const output = path.resolve(process.env.README_ASSETS || path.join(root, 'docs/assets/screenshots'));
 const port = Number(process.env.README_PORT || 4185), origin = `http://127.0.0.1:${port}`;
+const aiOrigin = 'https://api.mock-ai.test';
 await fs.mkdir(output, { recursive: true });
 const items = await showcaseAlbums(), day = 86400000, now = Date.now();
 const task = (id, text, extra = {}) => ({ id, text, done: false, pomodoros: 0, createdAt: now - day, doneAt: 0, ...extra });
@@ -32,9 +33,19 @@ try {
     window.albumDesktopAppearance = { client: true, reduceMotion: true };
     localStorage.setItem('album-circle-focus-v1:local-owner', JSON.stringify(fixture));
     localStorage.setItem('album-circle-focus-dock-v1', JSON.stringify({ open: true, tab: 'timer' }));
+    localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.0' }));
+    localStorage.setItem('flow-cabin-ai-v1', JSON.stringify({ v: 1, enabled: true, baseUrl: 'https://api.mock-ai.test/v1', model: 'mock-model', cadence: 'weekly', tone: 'warm', shareNotes: false }));
+    localStorage.setItem('flow-cabin-ai-key-v1', JSON.stringify({ v: 2, key: 'sk-readme-demo', endpoint: 'https://api.mock-ai.test/v1/chat/completions', revision: 'readme-demo' }));
   }, focusFixture);
   await context.route('**/*', (route) => {
     const url = new URL(route.request().url());
+    if (url.origin === aiOrigin) {
+      return route.fulfill({
+        status: 200,
+        headers: { 'access-control-allow-origin': origin, 'access-control-allow-headers': 'authorization, content-type', 'access-control-allow-methods': 'POST' },
+        json: { choices: [{ message: { role: 'assistant', content: JSON.stringify({ minutes: 50, activity: 'study', albumIds: ['showcase-5', 'showcase-8'], autoplay: true, reason: '两张安静而有呼吸感的唱片，先由爵士把人安顿下来。' }) } }] }
+      });
+    }
     if (url.origin !== origin) return route.abort();
     if (url.pathname === '/api/items') return route.fulfill({ json: { items } });
     if (url.pathname === '/desktop-music/config') return route.fulfill({ json: { qqLoggedIn: false, neteaseLoggedIn: false } });
@@ -49,7 +60,14 @@ try {
   await dock.screenshot({ path: path.join(output, 'focus-timer.png'), animations: 'disabled' });
   await page.getByRole('tab', { name: '待办' }).click(); await page.locator('.focus-task-meter').waitFor();
   await dock.screenshot({ path: path.join(output, 'focus-tasks.png'), animations: 'disabled' });
-  await page.getByRole('tab', { name: '统计' }).click(); await page.locator('.fs-board').waitFor();
+  await page.getByRole('tab', { name: '统计' }).click(); await page.locator('.focus-stats').waitFor();
   await dock.screenshot({ path: path.join(output, 'focus-stats.png'), animations: 'disabled' });
+  await page.getByRole('button', { name: '收起专注工具' }).click();
+  await page.getByRole('button', { name: '智能唱片机', exact: true }).click();
+  const smart = page.getByRole('dialog', { name: '智能唱片机', exact: true });
+  await smart.getByLabel('告诉小屋你的计划').fill('我要学习五十分钟，帮我搭配音乐');
+  await smart.getByRole('button', { name: '让小屋推荐唱片', exact: true }).click();
+  await smart.locator('.st-result').waitFor();
+  await page.screenshot({ path: path.join(output, 'smart-turntable.jpg'), type: 'jpeg', quality: 90, animations: 'disabled' });
   console.log('README focus screenshots written to ' + output);
 } finally { await browser?.close(); server?.kill(); }

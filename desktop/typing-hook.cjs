@@ -48,10 +48,16 @@ function createTypingHook({ platform = process.platform, systemPreferences, load
   return {
     // 'off' | 'active' | 'needs-permission' (macOS, not trusted yet) | 'unavailable' (native module failed)
     status() { if (!wanted) return 'off'; if (hook) return 'active'; if (failed) return failed; return trusted(false) ? 'unavailable' : 'needs-permission'; },
+    // Permission is independent of whether the pet is out or the hook has started.
+    permission() { return platform !== 'darwin' || trusted(false) ? 'granted' : 'needs-permission'; },
     setEnabled(on) { wanted = Boolean(on); if (wanted) start(); else stop(); return this.status(); },
     // Opens the macOS prompt / System Settings. Permission is granted asynchronously, so callers retry().
     requestPermission() { if (platform === 'darwin') trusted(true); return this.retry(); },
     retry() { if (wanted && !hook) { failed = ''; start(); } return this.status(); },
+    // Input Monitoring can be granted while the native hook is already loaded.
+    // Rebuild it when returning from System Settings so events start flowing
+    // without asking the user to toggle the switch or restart the app.
+    restart() { if (!wanted) return this.status(); if (hook) stop(); failed = ''; start(); return this.status(); },
     stop() { wanted = false; stop(); }
   };
 }

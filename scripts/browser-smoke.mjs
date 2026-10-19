@@ -123,7 +123,7 @@ try {
   // One fixed dialog size: switching sections never resizes 设置.
   for (const [width, height] of [[1440, 900], [960, 600]]) {
     await page.setViewportSize({ width, height }); const sizes = new Set();
-    for (const section of ['音源', '房间与桌宠', '专注工具', '显示与桌面', '数据与备份', 'AI（Beta）', '关于']) { await openSettingsSection(page, section); const box = await settingsDialog(page).boundingBox(); sizes.add(`${Math.round(box.width)}x${Math.round(box.height)}`); assert(box.y >= 0 && box.y + box.height <= height, `设置 fits ${width}x${height}`); }
+    for (const section of ['音源', '房间与桌宠', '键鼠陪伴', '专注工具', '显示与桌面', '数据与备份', 'AI（Beta）', '关于']) { await openSettingsSection(page, section); const box = await settingsDialog(page).boundingBox(); sizes.add(`${Math.round(box.width)}x${Math.round(box.height)}`); assert(box.y >= 0 && box.y + box.height <= height, `设置 fits ${width}x${height}`); }
     assert.equal(sizes.size, 1, `设置 keeps one size across sections at ${width}x${height}: ${[...sizes]}`);
   }
   await openRoomSettings(page); check('settings-dialog-has-one-fixed-size');
@@ -158,7 +158,7 @@ try {
   // Player: cabin:playback signal (analyser energy), keyboard shortcuts, 待播 queue.
   await page.waitForFunction(() => window.__cabinPlayback?.some(d => d.playing && !d.estimated && d.energy > .02 && d.track?.index === 1));
   const signal = await page.evaluate(() => window.__cabinPlayback);
-  assert(signal.some(d => d.reason === 'track' && d.track.index === 1)); assert(signal.every(d => d.energy >= 0 && d.energy <= 1 && typeof d.playing === 'boolean'));
+  assert(signal.some(d => d.reason === 'track' && d.track?.index === 1)); assert(signal.every(d => d.energy >= 0 && d.energy <= 1 && typeof d.playing === 'boolean'));
   const ticks = signal.filter(d => d.reason === 'energy').map(d => d.at); if (ticks.length > 3) { const gaps = ticks.slice(1).map((t, i) => t - ticks[i]); assert(Math.min(...gaps) >= 50, 'energy ticks are throttled to ~15fps'); }
   check('cabin-playback-event-carries-real-analyser-energy');
   await page.evaluate(() => document.activeElement?.blur()); await page.keyboard.press('Space'); await page.waitForFunction(() => document.querySelector('audio[data-deck="active"]').paused && window.__cabinPlayback.at(-1).playing === false);

@@ -7,7 +7,7 @@ import {
   localLetterReply, templateLetter, summarizeListening, userLetterSubject, tryWriteLetters
 } from './ai-model.mjs';
 import { mailboxRows, pageSlice, readLetterDraft, saveLetterDraft, sendCabinLetter, clearLetterDraft, recoverCabinLetter, organizeLetterThread, DRAFT_ID } from './letter-reply.mjs';
-import { buildLetterContext, hasLetterFacts, recentLetterPeriod, journalExcerpt, journalSelectionCurrent } from './letter-context.mjs';
+import { buildLetterContext, hasLetterFacts, recentLetterPeriod, journalExcerpt, journalSelectionCurrent, inputCompanionSnapshot } from './letter-context.mjs';
 import { chat } from './ai-transport.mjs';
 
 const mem = () => { const m = new Map(); return { getItem: (k) => m.has(k) ? m.get(k) : null, setItem: (k, v) => m.set(k, String(v)), removeItem: (k) => m.delete(k), m }; };
@@ -154,6 +154,36 @@ test('real listening, focus and evidence stay separate', () => {
   const hidden = JSON.stringify(letterMessages(letterSummary(sessions, period, null, { includeNotes: false, notes: '不要发送这句' }), 'warm'));
   assert.ok(!hidden.includes('不要发送这句'));
   assert.ok(JSON.stringify(letterMessages(withNote, 'warm')).includes('今天有点累'));
+});
+
+test('input companionship reaches new letters as aggregate evidence only', () => {
+  const period = { from: 0, to: 1e12, label: '最近 7 天' };
+  const summary = letterSummary([], period, null, { input: { keyboard: 1240, click: 86, streak: 4, secret: '不要发送' } });
+  assert.deepEqual(summary.input, { keyboard: 1240, click: 86, streak: 4 });
+  assert.ok(summary.evidence.some((item) => item.kind === 'input' && item.text.includes('键盘 1,240')));
+  const prompt = JSON.stringify(letterMessages(summary, 'warm'));
+  assert.match(prompt, /input/);
+  assert.match(prompt, /keyboard/);
+  assert.match(prompt, /不能推断主人输入了什么/);
+  assert.ok(!prompt.includes('不要发送'));
+  const template = templateLetter(summary).join('\n');
+  assert.match(template, /今天你敲了 1,240 次键盘、点了 86 次鼠标，奶糖都在旁边/);
+  const saved = normalizeLetter({ id: 'input-evidence', lines: ['今天的信。'], at: 1, evidence: summary.evidence });
+  assert.ok(saved.evidence.some((item) => item.kind === 'input'));
+  const quiet = letterSummary([], period, null, { input: { keyboard: 0, click: 0, streak: 4 } });
+  assert.equal(quiet.input, undefined);
+  assert.doesNotMatch(templateLetter(quiet).join('\n'), /敲了|点了/);
+});
+
+test('letters read today counts from the shell snapshot and drop every other field', () => {
+  const win = { albumInputStats: {
+    status: 'active', streak: 5,
+    today: { keyboard: 12, click: 3, total: 15, lastKey: 'a', app: 'private-app' },
+    webhook: 'https://example.invalid/leak'
+  } };
+  assert.deepEqual(inputCompanionSnapshot(win), { keyboard: 12, click: 3, streak: 5 });
+  assert.equal(inputCompanionSnapshot({ albumInputStats: { today: { keyboard: 0, click: 0 }, streak: 5 } }), null);
+  assert.equal(inputCompanionSnapshot(null), null);
 });
 
 test('user letters normalize, cap and derive a stable subject', () => {
@@ -336,6 +366,40 @@ test('web transport: mocked endpoint, auth header, errors, timeout', async () =>
   assert.match(cors.error, /CORS/);
   const slow = await chat(settings, [], { win, timeoutMs: 20, fetchImpl: (_u, o) => new Promise((_, rej) => o.signal.addEventListener('abort', () => rej(Object.assign(new Error('x'), { name: 'AbortError' })))) });
   assert.match(slow.error, /超时/);
+});
+
+test('structured chat requests ask for JSON mode and retry without it for older endpoints', async () => {
+  const win = { localStorage: mem(), document: { documentElement: { dataset: {} } }, addEventListener() {}, removeEventListener() {} };
+  win.localStorage.setItem(AI_KEY_KEY, JSON.stringify({ v: 2, key: KEY, endpoint: 'https://api.mock/v1/chat/completions', revision: 1 }));
+  const settings = { baseUrl: 'https://api.mock/v1', model: 'm' };
+  const bodies = [];
+  const ok = await chat(settings, [{ role: 'user', content: 'hi' }], {
+    win,
+    json: true,
+    temperature: 0.2,
+    fetchImpl: async (_url, options) => {
+      bodies.push(JSON.parse(options.body));
+      return { ok: true, json: async () => ({ choices: [{ message: { content: '{"ok":true}' } }] }) };
+    }
+  });
+  assert.equal(ok.ok, true);
+  assert.deepEqual(bodies[0].response_format, { type: 'json_object' });
+  assert.equal(bodies[0].temperature, 0.2);
+
+  let calls = 0;
+  const retry = await chat(settings, [{ role: 'user', content: 'hi' }], {
+    win,
+    json: true,
+    fetchImpl: async (_url, options) => {
+      calls++;
+      const body = JSON.parse(options.body);
+      if (calls === 1) return { ok: false, status: 400, json: async () => ({ error: { message: 'response_format unsupported' } }) };
+      assert.equal('response_format' in body, false);
+      return { ok: true, json: async () => ({ choices: [{ message: { content: '{"ok":true}' } }] }) };
+    }
+  });
+  assert.equal(retry.ok, true);
+  assert.equal(calls, 2);
 });
 
 test('desktop transport goes through the shell command and result event', async () => {

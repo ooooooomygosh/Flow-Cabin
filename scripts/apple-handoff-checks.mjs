@@ -13,7 +13,7 @@ export async function verifyAppleHandoff({ browser, origin, output, check }) {
     await context.addInitScript(() => {
       Object.defineProperty(navigator, 'platform', { value: 'MacIntel' });
       Object.defineProperty(navigator, 'userAgentData', { value: { platform: 'macOS' } });
-      localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 1, status: 'done', step: 'done' }));
+      localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.0' }));
       window.albumDesktopAppearance = { client: true, reduceMotion: true };
       const init = () => { document.documentElement.dataset.desktopClient = 'true'; document.documentElement.dataset.desktopReduceMotion = 'true'; };
       if (document.documentElement) init(); else new MutationObserver((_, observer) => { if (document.documentElement) { init(); observer.disconnect(); } }).observe(document, { childList: true });

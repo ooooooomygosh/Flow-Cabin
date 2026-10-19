@@ -100,6 +100,16 @@ export function FocusProvider({ userId, children }) {
     window.addEventListener('album-companion-command', receive);
     return () => window.removeEventListener('album-companion-command', receive);
   }, []);
+  useEffect(() => {
+    // The desktop pet's accessory chips are a fixed whitelist in the native
+    // shell. Equip still checks level / bought unlocks in the focus model.
+    const equipAccessory = (event) => {
+      const value = event.detail?.accessory;
+      if (typeof value === 'string' && ['', 'headphones', 'scarf', 'beanie', 'bow', 'sprout'].includes(value)) apply((s) => model.equip(s, 'accessory', value));
+    };
+    window.addEventListener('cabin:equip-accessory', equipAccessory);
+    return () => window.removeEventListener('cabin:equip-accessory', equipAccessory);
+  }, []);
   // Actions only use refs and state setters: built once per storage key.
   const actions = useMemo(() => ({
     toggle: () => { if (current.current.settings.notify && 'Notification' in window && Notification.permission === 'default') Notification.requestPermission().catch?.(() => {}); return applyTimer(model.toggle); },

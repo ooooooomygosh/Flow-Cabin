@@ -13,6 +13,10 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const output = path.resolve(process.env.PROMO_OUTPUT || path.join(root, 'desktop/test-results/promo'));
 const port = Number(process.env.PROMO_PORT || 4217);
 const origin = `http://127.0.0.1:${port}`;
+const latestReleaseUrl = 'https://api.github.com/repos/ooooooomygosh/album-web/releases/latest';
+const latestReleaseTag = 'v9.99.0';
+const packageVersion = JSON.parse(await fs.readFile(path.join(root, 'package.json'), 'utf8')).version;
+const fallbackLatestVersion = `v${packageVersion}`;
 await fs.mkdir(output, { recursive: true });
 
 const report = {
@@ -24,7 +28,8 @@ const report = {
   pageErrors: [],
   consoleErrors: [],
   failedRequests: [],
-  unexpectedRequests: []
+  unexpectedRequests: [],
+  latestReleaseRequests: []
 };
 
 let server;
@@ -68,9 +73,18 @@ try {
       report.failedRequests.push({ url: request.url(), error: request.failure()?.errorText });
     }
   });
-  await context.route('**/*', (route) => {
+  await context.route('**/*', async (route) => {
     const url = new URL(route.request().url());
     if (url.origin !== origin) {
+      if (url.href === latestReleaseUrl) {
+        report.latestReleaseRequests.push(url.href);
+        await new Promise((resolve) => setTimeout(resolve, 350));
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ tag_name: latestReleaseTag })
+        });
+      }
       report.unexpectedRequests.push(url.href);
       return route.abort('blockedbyclient');
     }
@@ -87,11 +101,20 @@ try {
     report.screenshots.push(`${name}.png`);
   };
 
-  await page.goto(`${origin}/promo.html`, { waitUntil: 'networkidle' });
+  await page.goto(`${origin}/promo.html`, { waitUntil: 'domcontentloaded' });
   await page.locator('.hero h1').waitFor();
+  await page.locator('[data-latest-version]').first().waitFor();
+  const fallbackLabels = await page.locator('[data-latest-version]').allTextContents();
+  assert(fallbackLabels.length >= 3);
+  assert(fallbackLabels.every((label) => label.trim() === fallbackLatestVersion), 'the static version must work before GitHub responds');
+  check('static-version-fallback-is-available-offline');
   await page.evaluate(() => document.fonts.ready);
   await page.getByRole('button', { name: /夜深/ }).click();
   await page.locator('.site[data-time="night"]').waitFor();
+  const defaultLetter = await page.locator('#letter-body').innerText();
+  assert.match(defaultLetter, /晴天/);
+  assert.match(defaultLetter, /晴夜很安静/);
+  assert.doesNotMatch(defaultLetter, /雪落在窗外/);
   const initialCats = await page.evaluate(() => [...document.querySelectorAll('[data-cat-action]')].map((sprite) => {
     const style = getComputedStyle(sprite);
     const rect = sprite.getBoundingClientRect();
@@ -104,13 +127,23 @@ try {
   assert.equal(await page.locator('.room-card').count(), 6);
   assert.equal(await page.locator('[data-room-choice]').count(), 6);
   check('all-six-rooms-are-present-in-switcher-and-gallery');
+  const downloadLinks = await page.locator('a[href="https://github.com/ooooooomygosh/album-web/releases/latest"]').evaluateAll((links) => links.map((link) => link.href));
+  assert(downloadLinks.length >= 3, 'header, hero and bottom download actions must use the latest release URL');
+  await page.waitForFunction((version) => [...document.querySelectorAll('[data-latest-version]')].every((node) => node.textContent === version), latestReleaseTag);
+  check('download-actions-use-latest-release-and-show-live-version');
 
   await page.locator('[data-time-choice="day"]').click();
   assert.equal(await page.locator('.site').getAttribute('data-time'), 'day');
   await expectText(page.locator('#hero-time'), '14:40');
   await page.getByRole('button', { name: '雪', exact: true }).click();
   assert.equal(await page.locator('.site').getAttribute('data-weather'), 'snow');
+  await page.waitForFunction(() => document.querySelector('#letter-body')?.innerText.includes('雪把外面变得很慢'));
+  const snowLetter = await page.locator('#letter-body').innerText();
+  assert.match(snowLetter, /14:40/);
+  assert.match(snowLetter, /雪天/);
+  assert.doesNotMatch(snowLetter, /晴夜很安静/);
   check('time-and-weather-controls-update-the-room');
+  check('cabin-letter-uses-current-time-and-weather');
 
   await page.locator('[data-gallery-room="starlight"]').click();
   await page.locator('.site[data-room="starlight"]').waitFor();
@@ -137,6 +170,27 @@ try {
   await page.locator('.tracklist button[data-track="2"]').click();
   await expectText(page.locator('#track-title'), 'Lovesick');
   check('turntable-play-state-and-track-selection-work');
+
+  await page.locator('[data-smart-request="study"]').click();
+  const smartAlbumIds = await page.locator('#smart-picks .smart-pick').evaluateAll((items) => items.map((item) => item.dataset.albumId));
+  assert.deepEqual(smartAlbumIds, ['bewitched', 'orange-moon', 'fable']);
+  await expectText(page.locator('#smart-count'), '3 张');
+  await page.locator('[data-smart-autoplay="false"]').click();
+  assert.equal(await page.locator('[data-smart-autoplay="false"]').getAttribute('aria-pressed'), 'true');
+  assert.equal(await page.locator('#smart-start-hint').innerText(), '只开始专注，唱片保持暂停');
+  await page.locator('[data-smart-start]').click();
+  await page.waitForFunction(() => document.querySelector('#smart-status')?.textContent.includes('等待播放'));
+  assert.equal(await page.locator('.turntable-demo').getAttribute('data-playing'), 'false');
+  assert.equal(await page.locator('#deck-state').innerText(), '播放已暂停');
+  assert.equal(await page.locator('#focus-status').innerText(), '专注进行中');
+  check('smart-turntable-shows-ordered-picks-and-paused-start');
+
+  await page.locator('[data-smart-autoplay="true"]').click();
+  assert.equal(await page.locator('#smart-start-hint').innerText(), '同时开始专注与播放');
+  await page.locator('[data-smart-start]').click();
+  await page.waitForFunction(() => document.querySelector('.turntable-demo')?.dataset.playing === 'true');
+  await expectText(page.locator('#smart-status'), '正在播放');
+  check('smart-turntable-autoplay-choice-is-visible');
 
   await page.locator('[data-focus-preset="25"]').scrollIntoViewIfNeeded();
   await page.locator('[data-focus-preset="25"]').click();
@@ -194,6 +248,20 @@ try {
   });
   assert.equal(mobileHero.bubbleActionsOverlap, false, 'mobile cat bubble must not cover hero actions');
   assert.equal(mobileHero.bubbleAboveConsole, true, 'mobile cat bubble must stay above the scene console');
+  const mobileNav = page.locator('.site-header nav');
+  assert.equal(await mobileNav.isVisible(), true, 'mobile chapter navigation must stay visible');
+  assert.equal(await mobileNav.locator('a').count(), 5);
+  const navBox = await mobileNav.boundingBox();
+  const viewport = page.viewportSize();
+  assert(navBox && viewport && navBox.width <= viewport.width && navBox.y >= 0 && navBox.y + navBox.height <= viewport.height);
+  assert(navBox.y > viewport.height * 0.8, 'mobile chapter navigation must sit at the bottom of the viewport');
+  const consoleBox = await page.locator('.scene-console').boundingBox();
+  assert(consoleBox && consoleBox.y + consoleBox.height <= navBox.y, 'mobile scene controls must stay above the bottom navigation');
+  await mobileNav.getByRole('link', { name: '来信' }).click();
+  await page.waitForFunction(() => location.hash === '#letters');
+  check('mobile-chapter-navigation-is-compact-and-reachable');
+  await page.evaluate(() => scrollTo(0, 0));
+  await page.waitForTimeout(250);
   await screenshot('promo-mobile');
   await page.locator('#naitang').scrollIntoViewIfNeeded();
   await screenshot('promo-mobile-naitang');
@@ -203,6 +271,7 @@ try {
   assert.deepEqual(report.consoleErrors, []);
   assert.deepEqual(report.failedRequests, []);
   assert.deepEqual(report.unexpectedRequests, []);
+  assert.equal(report.latestReleaseRequests.length, 1);
   check('page-errors-console-errors-failed-and-external-requests-are-zero');
 
   report.finishedAt = new Date().toISOString();

@@ -1,5 +1,5 @@
 import { addDays, startOfDay } from '../lib/local-calendar.mjs';
-import { letterSummary } from './ai-model.mjs';
+import { letterSummary, normalizeLetterInput } from './ai-model.mjs';
 
 const DAY = 86400000;
 export const LETTER_JOURNAL_LIMIT = 3;
@@ -44,14 +44,22 @@ export function ambienceSnapshot(doc = globalThis.document, now = Date.now()) {
   };
 }
 
+// The shell publishes aggregate counts only. Read a fresh, deliberately narrow
+// snapshot so page state cannot add raw events to a letter.
+export function inputCompanionSnapshot(win = globalThis.window) {
+  const value = win?.albumInputStats;
+  if (!value || typeof value !== 'object' || !value.today) return null;
+  return normalizeLetterInput({ ...value.today, streak: value.streak });
+}
+
 export function buildLetterContext({
   sessions = [], playbackSessions = [], mood = null, notes = '',
-  includeNotes = false, shareContext = true, weather = null, now = Date.now(), days = 7, selectedJournal = []
+  includeNotes = false, shareContext = true, weather = null, input = inputCompanionSnapshot(), now = Date.now(), days = 7, selectedJournal = []
 } = {}) {
   if (!shareContext) return null;
   const summary = letterSummary(sessions, recentLetterPeriod(now, days), mood, {
     playbackSessions, weather: weather || ambienceSnapshot(undefined, now),
-    includeNotes, notes
+    includeNotes, notes, input
   });
   const excerpts = selectedJournal.slice(0, LETTER_JOURNAL_LIMIT)
     .filter((item) => typeof item?.excerpt === 'string' && item.excerpt.trim())
@@ -70,5 +78,7 @@ export function hasLetterFacts(summary) {
     || summary.listening?.minutes > 0
     || summary.cat?.feeds > 0
     || summary.note?.chars > 0
+    || summary.input?.keyboard > 0
+    || summary.input?.click > 0
   ));
 }

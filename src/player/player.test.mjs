@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { rmsEnergy, smoothEnergy, createPlaybackBroadcaster, PLAYBACK_EVENT, estimatedEnergy } from './playback-signal.mjs';
-import { normalizeQueue, enqueue, playNext, dequeue, pruneQueue, cycleRepeat, nextStep, nextPlayableStep, previousStep, queueAddition, playedBag, QUEUE_LIMIT } from './player-queue.mjs';
+import { normalizeQueue, enqueue, playNext, dequeue, pruneQueue, cycleRepeat, nextStep, nextPlayableStep, previousStep, queueAddition, playedBag, sessionQueue, queueId, QUEUE_LIMIT } from './player-queue.mjs';
 import { proceduralGrid, quantize, readPalette, nearestIndex, gridToRgba, hexToRgb, GRID, PALETTE_TOKENS, SCENES, sleeveTone } from './pixel-cover.mjs';
 import { createBeatTracker, bassLevel } from './beat-tracker.mjs';
 import { setBeat, currentBeat, sinceBeat } from './beat-clock.mjs';
@@ -43,6 +43,29 @@ test('queue: dedupes, caps, prunes and cycles repeat', () => {
   for (let i = 0; i < 80; i++) q = enqueue(q, 'x' + i); assert.equal(q.ids.length, QUEUE_LIMIT);
   assert.equal(cycleRepeat(q).repeat, 'all'); assert.equal(cycleRepeat(cycleRepeat(q)).repeat, 'one'); assert.equal(cycleRepeat(cycleRepeat(cycleRepeat(q))).repeat, 'off');
   assert.equal(normalizeQueue({ ids: [1, '', 'ok'], repeat: 'bogus' }).repeat, 'off');
+});
+
+test('queue: numeric and string ids share one record identity', () => {
+  assert.equal(queueId(7), '7');
+  assert.equal(queueId(' 7 '), '7');
+  assert.equal(queueId(Number.NaN), '');
+  assert.deepEqual(normalizeQueue({ ids: [7, '7', 7, ' blue ', '', null, 8] }).ids, ['7', 'blue', '8']);
+  let q = enqueue(normalizeQueue({ ids: ['old'] }), 7);
+  q = enqueue(q, '7');
+  assert.deepEqual(q.ids, ['old', '7']);
+  assert.deepEqual(dequeue(q, 7).ids, ['old']);
+  assert.deepEqual(pruneQueue(normalizeQueue({ ids: ['7', '8'] }), [7]).ids, ['7']);
+  assert.deepEqual(queueAddition(normalizeQueue(), 7).queue.ids, ['7']);
+});
+
+test('queue: a recommendation session replaces old 待播 and drops the current record', () => {
+  const old = { ids: ['old-a', '7', 'old-b'], repeat: 'one', shuffle: true };
+  const next = sessionQueue(old, [7, '7', 8, '8', 9], 7);
+  assert.deepEqual(next.ids, ['8', '9'], 'old queue is gone, current record is not duplicated, first pick is on deck');
+  assert.equal(next.repeat, 'one');
+  assert.equal(next.shuffle, true);
+  assert.deepEqual(sessionQueue(next, [], 8).ids, []);
+  assert.deepEqual(sessionQueue(next, [8, 8, 9, 10], '8').ids, ['9', '10']);
 });
 
 test('queue: next/previous follow album order, queue, repeat and shuffle', () => {

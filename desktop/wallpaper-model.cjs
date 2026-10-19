@@ -19,7 +19,9 @@ function cleanFocus(value) {
   if (!value || typeof value !== 'object') return null;
   return { phase: PHASES.includes(value.phase) ? value.phase : 'idle', paused: value.paused === true, remaining: bounded(value.remaining, 4 * 3600000), endsAt: bounded(value.endsAt, 9e15),
     round: bounded(value.round, 1e6), duration: bounded(value.duration, 3 * 3600000), longEvery: Math.max(2, Math.min(8, bounded(value.longEvery, 8) || 4)), task: string(value.task, 120), fish: bounded(value.fish, 1e9), level: bounded(value.level, 1e4),
-    hideSeconds: value.hideSeconds === true, catSkin: value.catSkin === 'black' ? 'black' : 'orange', accessory: ACCESSORIES.includes(value.accessory) ? value.accessory : '', weather: WEATHERS.includes(value.weather) ? value.weather : 'snow' };
+    hideSeconds: value.hideSeconds === true, catSkin: value.catSkin === 'black' ? 'black' : 'orange', accessory: ACCESSORIES.includes(value.accessory) ? value.accessory : '',
+    unlockedAccessories: [...new Set((Array.isArray(value.unlockedAccessories) ? value.unlockedAccessories : []).filter((id) => ACCESSORIES.includes(id) && id))],
+    weather: WEATHERS.includes(value.weather) ? value.weather : 'snow' };
 }
 // The 专注画面 choice (album-circle-focus-display-v1): '' follows the scene's default face.
 function cleanFocusDisplay(value) {

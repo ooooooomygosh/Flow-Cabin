@@ -111,6 +111,11 @@
 .focus-presets button:hover{translate:0 -2px;box-shadow:2px 4px 0 var(--focus-shadow)}
 .focus-presets button[aria-checked=true]{color:var(--focus-ink);background:var(--focus-accent);border-color:var(--focus-cream)}
 .focus-presets strong{font-size:12px}.focus-presets small{font-size:12px;opacity:.8;font-variant-numeric:tabular-nums}
+.smart-turntable-entry{display:flex;align-items:center;gap:9px;width:100%;margin:0 0 10px;padding:8px 9px;text-align:left;color:var(--focus-cream);background:linear-gradient(90deg,color-mix(in srgb,var(--focus-accent) 22%,var(--focus-well)),var(--focus-well));border:2px solid var(--focus-edge);box-shadow:2px 2px 0 var(--focus-shadow);transition:translate var(--focus-fast) steps(2),border-color var(--focus-fast)}
+.smart-turntable-entry:hover{translate:0 -2px;border-color:var(--focus-accent)}
+.smart-turntable-entry-icon{display:grid;place-items:center;flex:none;width:30px;height:30px;color:var(--focus-ink);background:var(--focus-accent);border:2px solid var(--focus-cream)}
+.smart-turntable-entry-copy{display:grid;gap:1px;min-width:0;flex:1}
+.smart-turntable-entry-copy strong{font-size:13px}.smart-turntable-entry-copy small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--focus-muted);font-size:12px}
 .focus-today{display:flex;align-items:baseline;gap:5px;margin:0;font-size:12px;color:var(--focus-muted)}
 .focus-today b{color:var(--focus-cream);font-size:14px;font-variant-numeric:tabular-nums}
 .focus-today span:first-child{padding:1px 5px;color:var(--focus-ink);background:var(--focus-accent);font-size:12px}

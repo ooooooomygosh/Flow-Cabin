@@ -1,32 +1,100 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import * as m from './onboarding-model.mjs';
 import { createPlayerAdapter } from './onboarding-adapter.mjs';
+import { RELEASES, compareVersions, releasesBetween } from './releases.mjs';
+import { inputTotal, typingPermissionVerdict } from './input-companion.mjs';
+import { normalizeInputStats } from '../desktop/useInputStats.js';
 
 const memory = (seed = {}) => { const data = { ...seed }; return { getItem: (k) => (k in data ? data[k] : null), setItem: (k, v) => { data[k] = String(v); }, data, get length() { return Object.keys(data).length; }, ...Object.fromEntries(Object.entries(data)) }; };
 
-test('brand-new cabin opens the wizard; legacy or returning cabins do not', () => {
+test('brand-new cabin opens the full guide; same-version cabins stay closed', () => {
   assert.equal(m.isNewCabin(memory()), true);
   assert.equal(m.isNewCabin(memory({ 'flow-cabin-welcome-v1': 'seen' })), false);
   const legacy = m.readOnboarding(memory({ 'flow-cabin-welcome-v1': 'seen' }));
   assert.equal(legacy.status, 'done');
-  assert.equal(m.shouldAutoOpen(legacy, { isNew: true }), false);
-  assert.equal(m.shouldAutoOpen(m.initialState(), { isNew: true }), true);
-  assert.equal(m.shouldAutoOpen(m.initialState(), { isNew: false }), false);
+  assert.equal(m.launchPlan(legacy, { isNew: true, currentVersion: '1.17.0' }).open, false);
+  assert.equal(m.launchPlan(legacy, { isNew: true, currentVersion: '1.20.0' }).open, true);
+  assert.equal(m.launchPlan(m.initialState(), { isNew: true, currentVersion: '1.21.0' }).mode, 'first-run');
+  assert.equal(m.launchPlan(m.initialState(), { isNew: false, currentVersion: '1.21.0' }).open, false);
+  const seen = { ...m.initialState(), status: 'done', step: 'done', seenVersion: '1.21.0' };
+  assert.equal(m.launchPlan(seen, { currentVersion: '1.21.0' }).open, false);
+  assert.equal(m.launchPlan(seen, { currentVersion: '1.22.0' }).mode, 'update');
 });
 
 test('progress persists and resumes; skip and done never auto-open', () => {
   const store = memory();
-  let s = m.next(m.start(m.initialState()));
+  let s = m.next(m.next(m.start(m.initialState())));
   s = m.chooseSource(s, 'qq');
   m.writeOnboarding(store, s, 5);
   const back = m.readOnboarding(store);
   assert.deepEqual([back.status, back.step, back.source, back.updatedAt], ['active', 'source', 'qq', 5]);
   assert.equal(m.shouldAutoOpen(back), true);
-  assert.equal(m.shouldAutoOpen(m.skip(back)), false);
-  assert.equal(m.shouldAutoOpen(m.complete(back)), false);
-  const again = m.reopen(m.complete(back));
+  assert.equal(m.shouldAutoOpen(m.skip(back, '1.21.0'), { currentVersion: '1.21.0' }), false);
+  assert.equal(m.shouldAutoOpen(m.complete(back, '1.21.0'), { currentVersion: '1.21.0' }), false);
+  const again = m.reopen(m.complete(back, '1.21.0'));
   assert.deepEqual([again.status, again.step, again.source], ['active', 'welcome', 'qq']);
+});
+
+test('a version gap opens an update guide and lists every skipped release', () => {
+  const old = { ...m.initialState(), status: 'done', step: 'done', seenVersion: '1.18.0' };
+  const plan = m.launchPlan(old, { currentVersion: '1.21.0' });
+  assert.deepEqual(plan, { open: true, mode: 'update' });
+  let state = m.startUpdate(old, '1.21.0');
+  assert.deepEqual([state.status, state.step, state.fromVersion, state.seenVersion], ['active', 'updates', '1.18.0', '1.18.0']);
+  assert.deepEqual(m.updateContext(state, '1.21.0').releases.map((release) => release.version), ['1.21.0', '1.20.0', '1.19.0']);
+  assert.deepEqual(m.launchPlan(state, { currentVersion: '1.21.0' }), { open: true, mode: 'update' }, 'closing a version guide resumes it on the next launch');
+  state = m.complete(state, '1.21.0');
+  assert.equal(state.seenVersion, '1.21.0');
+  assert.equal(m.launchPlan(state, { currentVersion: '1.21.0' }).open, false);
+
+  const skipped = m.skip(m.startUpdate(old, '1.21.0'), '1.22.0');
+  assert.equal(skipped.seenVersion, '1.22.0');
+  assert.deepEqual(m.updateContext({ ...old, seenVersion: '1.17.0' }, '1.21.0').releases.map((release) => release.version), ['1.21.0', '1.20.0', '1.19.0', '1.18.0']);
+});
+
+test('an interrupted update resumes at its saved step instead of the release list', () => {
+  const old = { ...m.initialState(), status: 'done', step: 'done', seenVersion: '1.18.0' };
+  const plan = m.launchPlan(old, { currentVersion: '1.21.0' });
+  let state = m.applyLaunchPlan(old, plan, '1.21.0');
+  assert.deepEqual([state.status, state.step, state.fromVersion], ['active', 'updates', '1.18.0']);
+  state = m.next(m.next(state)); // updates → source → permissions
+  const resumedPlan = m.launchPlan(state, { currentVersion: '1.21.0' });
+  assert.deepEqual(resumedPlan, { open: true, mode: 'update' });
+  const resumed = m.applyLaunchPlan(state, resumedPlan, '1.21.0');
+  assert.equal(resumed, state, 'a resumed update keeps the same state object');
+  assert.equal(resumed.step, 'permissions', 'the user returns to the step they closed');
+  assert.equal(m.applyLaunchPlan(old, plan, '1.21.0').step, 'updates', 'a fresh update still starts at the release list');
+});
+
+test('one completed version never auto-opens again; the next version opens once', () => {
+  let state = m.complete({ ...m.initialState(), status: 'active', step: 'done', seenVersion: '1.18.0' }, '1.21.0');
+  for (let launch = 0; launch < 3; launch++) assert.equal(m.launchPlan(state, { currentVersion: '1.21.0' }).open, false);
+  const plan = m.launchPlan(state, { currentVersion: '9.9.9' });
+  assert.deepEqual(plan, { open: true, mode: 'update' });
+  const opened = m.applyLaunchPlan(state, plan, '9.9.9');
+  assert.deepEqual([opened.status, opened.step, opened.fromVersion, opened.seenVersion], ['active', 'updates', '1.21.0', '1.21.0']);
+  assert.equal(m.updateContext(opened, '9.9.9').releases.length, 0, 'no release card exists yet for an unreleased version');
+  assert.equal(m.complete(opened, 'v9.9.9').seenVersion, '9.9.9', 'stored versions drop the leading v');
+});
+
+test('a completed pre-versioning cabin sees the full companion arc from 1.18', () => {
+  const legacy = m.readOnboarding(memory({ 'flow-cabin-welcome-v1': 'seen' }));
+  assert.equal(legacy.seenVersion, '1.17.0');
+  const plan = m.launchPlan(legacy, { currentVersion: '1.21.0' });
+  assert.equal(plan.mode, 'update');
+  const state = m.startUpdate(legacy, '1.21.0');
+  assert.deepEqual(m.updateContext(state, '1.21.0').releases.map((release) => release.version), ['1.21.0', '1.20.0', '1.19.0', '1.18.0']);
+});
+
+test('release notes are ordered, unique, and cover the build version', () => {
+  const pkg = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'));
+  assert.equal(RELEASES[0].version, pkg.version, 'the newest release card matches the app version');
+  assert.equal(new Set(RELEASES.map((release) => release.version)).size, RELEASES.length);
+  for (let i = 1; i < RELEASES.length; i++) assert.ok(compareVersions(RELEASES[i - 1].version, RELEASES[i].version) > 0);
+  assert.deepEqual(releasesBetween('1.21.0', '1.21.0'), []);
+  assert.deepEqual(releasesBetween('1.22.0', '1.21.0'), []);
 });
 
 test('step navigation is clamped and visits every step in order', () => {
@@ -53,7 +121,7 @@ test('sources and permissions follow web / desktop / mac', () => {
   assert.equal(m.sourceOptions({ desktop: true, mac: false }).some((s) => s.id === 'appleMusic'), false);
   assert.equal(m.sourceOptions({ desktop: true, mac: true }).find((s) => s.id === 'appleMusic').available, true);
   assert.deepEqual(m.permissionItems({ notifications: true }).map((p) => p.id), ['notifications']);
-  assert.deepEqual(m.permissionItems({ notifications: true, desktop: true, mac: true }, 'appleMusic').map((p) => p.id), ['notifications', 'appleMusic', 'autostart']);
+  assert.deepEqual(m.permissionItems({ notifications: true, desktop: true, mac: true }, 'appleMusic').map((p) => p.id), ['typing', 'notifications', 'appleMusic', 'autostart']);
   assert.equal(m.providerFor('appleMusic'), 'appleMusic', 'Apple Music switches the deck to its own provider');
   assert.equal(m.sourceOptions({ desktop: true, mac: true }).find((s) => s.id === 'netease').label, '网易云音乐', 'names come from the provider table');
 });
@@ -123,6 +191,82 @@ test('notification permission maps browser answers', async () => {
   const ask = (answer, permission = 'default') => createPlayerAdapter({ win: { Notification: { permission, requestPermission: async () => answer } } }).requestPermission('notifications');
   assert.equal(await ask('granted'), 'granted'); assert.equal(await ask('default'), 'skipped'); assert.equal(await ask('x', 'denied'), 'denied');
   assert.equal(await createPlayerAdapter({ win: {} }).requestPermission('notifications'), 'unsupported');
+});
+
+test('typing companion talks to the shell and reads only the published counters', async () => {
+  const win = new EventTarget(), sent = [];
+  win.albumInputStats = { enabled: false, status: 'off', permission: 'needs-permission', today: { keyboard: 0, click: 0, total: 0 } };
+  const command = (name, params) => {
+    sent.push([name, params]);
+    setTimeout(() => {
+      if (name === 'typing-follow') win.albumInputStats = { ...win.albumInputStats, enabled: params.enabled, status: params.enabled ? 'needs-permission' : 'off' };
+      if (name === 'typing-permission') win.albumInputStats = { ...win.albumInputStats, enabled: true, status: 'active', permission: 'granted', today: { keyboard: 1, click: 0, total: 1 } };
+    }, 0);
+  };
+  const mac = createPlayerAdapter({ api: {}, env: { desktop: true, mac: true }, win, command });
+  assert.equal(mac.typingStatus().enabled, false);
+  assert.equal((await mac.setTypingFollow(true)).enabled, true);
+  assert.equal(await mac.requestPermission('typing'), 'granted');
+  assert.deepEqual(sent, [['typing-follow', { enabled: true }], ['typing-permission', undefined]]);
+  assert.equal(mac.typingStatus().today.keyboard, 1);
+
+  const web = createPlayerAdapter({ api: {}, env: { desktop: false }, win, command: (name) => sent.push([name]) });
+  assert.equal(await web.requestPermission('typing'), 'unsupported');
+  assert.equal(await web.setTypingFollow(true), null);
+});
+
+test('published keyboard and click counters normalize into the shape the UI reads', () => {
+  const stats = normalizeInputStats({
+    enabled: true, status: 'active', permission: 'granted', platform: 'darwin',
+    today: { keyboard: 123, click: '45' },
+    total: { keyboard: 1234, click: 456, total: 1690 },
+    week: [
+      { key: '2026-10-12', keyboard: 1, click: 2 },
+      { key: '2026-10-13', keyboard: 3, click: 4 },
+      { key: '2026-10-14', keyboard: 5, click: 6 },
+      { key: '2026-10-15', keyboard: 7, click: 8 },
+      { key: '2026-10-16', keyboard: 9, click: 10 },
+      { key: '2026-10-17', keyboard: 11, click: 12 },
+      { key: '2026-10-18', keyboard: 13, click: 14 },
+      { key: '2026-10-19', keyboard: 15, click: 16 }
+    ],
+    activeDays: 7, streak: 4
+  });
+  assert.deepEqual(stats.today, { keyboard: 123, click: 45, total: 168 });
+  assert.deepEqual(stats.total, { keyboard: 1234, click: 456, total: 1690 });
+  assert.equal(stats.week.length, 7, 'the chart keeps the latest seven days');
+  assert.deepEqual(stats.week.at(-1), { key: '2026-10-19', keyboard: 15, click: 16, total: 31 });
+  assert.deepEqual([stats.activeDays, stats.streak, stats.status, stats.permission], [7, 4, 'active', 'granted']);
+  assert.equal(normalizeInputStats(null), null);
+  assert.equal(normalizeInputStats({ status: 'off' }), null);
+  assert.deepEqual(normalizeInputStats({ today: { keyboard: -1, click: 2.6 } }).today, { keyboard: 0, click: 3, total: 3 });
+});
+
+test('macOS permission confirmation stays pending until an input is actually heard', () => {
+  const mac = { mac: true }, win = { mac: false };
+  assert.equal(typingPermissionVerdict({ status: 'needs-permission', today: { keyboard: 0, click: 0 } }, { enabled: true, env: mac }), 'pending');
+  assert.equal(typingPermissionVerdict({ status: 'active', today: { keyboard: 0, click: 0 } }, { enabled: true, env: mac }), 'pending');
+  assert.equal(typingPermissionVerdict({ status: 'active', today: { keyboard: 1, click: 0 } }, { enabled: true, env: mac }), 'granted');
+  assert.equal(typingPermissionVerdict({ status: 'active', today: { keyboard: 0, click: 0 } }, { enabled: true, env: mac, heard: 2 }), 'granted');
+  assert.equal(typingPermissionVerdict({ status: 'active', today: { keyboard: 0, click: 0 } }, { enabled: true, env: win }), 'granted');
+  assert.equal(typingPermissionVerdict(null, { enabled: false, env: mac }), 'skipped');
+  assert.equal(inputTotal({ today: { keyboard: 2, click: 3 } }), 5, 'a missing total falls back to keyboard + click');
+  assert.equal(inputTotal({ today: { keyboard: 2, click: 3, total: 0 } }), 5, 'a zero stale total does not hide real counts');
+});
+
+test('重新检测 waits for the shell\'s fresh permission answer', async () => {
+  const win = new EventTarget();
+  win.albumInputStats = { enabled: true, status: 'needs-permission', permission: 'needs-permission', today: { keyboard: 0, click: 0, total: 0 } };
+  const adapter = createPlayerAdapter({
+    api: {}, env: { desktop: true, mac: true }, win,
+    command: (name) => {
+      if (name !== 'typing-check') return;
+      setTimeout(() => { win.albumInputStats = { ...win.albumInputStats, status: 'active', permission: 'granted' }; }, 120);
+    }
+  });
+  const value = await adapter.checkTypingPermission();
+  assert.equal(value.status, 'active');
+  assert.equal(value.permission, 'granted');
 });
 
 // Settings › 显示与桌面 drives 沉入桌面 with the room's own sink state; there is no adapter for it any more.

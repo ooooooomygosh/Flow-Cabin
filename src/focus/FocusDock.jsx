@@ -1,5 +1,5 @@
 import React, { useEffect, useId, useMemo, useState } from 'react';
-import { Clock, ListBullet, ChartBar, SpeakerWave, SpeakerOff, Play, Pause, PausePixel, Forward, Reset, X, Settings, Shuffle, BookOpen, Study } from '../icons';
+import { Clock, ListBullet, ChartBar, SpeakerWave, SpeakerOff, Play, Pause, PausePixel, Forward, Reset, X, Settings, Shuffle, BookOpen, Study, Sparkles, ChevronRight } from '../icons';
 import { Tabs, Segmented, tabPanelProps } from '../ui/Roving';
 import { ConfirmButton } from '../ui/Confirm';
 import { useFocus, useFocusState } from './useFocus';
@@ -86,7 +86,7 @@ export function FocusBadge({ onClick, open = false }) {
   return <button type="button" className={`focus-badge is-running phase-${timer.phase}${timer.paused ? ' is-paused' : ''}${open ? ' is-open' : ''}`} aria-expanded={open} title="打开专注工具" onClick={onClick} aria-label={`${PHASE_LABELS[timer.phase]}，剩余 ${clock}`}><Clock size={17}/><span className="focus-badge-time">{clock}{timer.paused && <PausePixel size={12} className="focus-badge-paused"/>}</span>{open && <span>收起</span>}</button>;
 }
 
-export default function FocusDock({ open, close, tab, setTab }) {
+export default function FocusDock({ open, close, tab, setTab, onOpenSmart }) {
   const tabId = useId(), focus = useFocusState(), study = useStudy();
   useEffect(() => {
     if (!open) return;
@@ -104,6 +104,11 @@ export default function FocusDock({ open, close, tab, setTab }) {
     </header>
     {focus.error && <div className="focus-save-error" role="alert">{focus.error}{focus.hasUnsavedChanges ? <>{tab === 'notes' && ' 请先复制内容，避免丢失。'} <button type="button" className="pixel-button" onClick={focus.retrySave}>重试保存</button></> : ' 请在原控件重试刚才的操作。'}</div>}
     {tab === 'study' && study?.error && <div className="focus-save-error" role="alert">{study.error} 本次操作未保存，请在原控件重试。</div>}
+    {tab === 'timer' && onOpenSmart && <button type="button" className="smart-turntable-entry" onClick={onOpenSmart}>
+      <span className="smart-turntable-entry-icon" aria-hidden="true"><Sparkles size={17}/></span>
+      <span className="smart-turntable-entry-copy"><strong>智能唱片机</strong><small>说出计划，让小屋从唱片架里搭配音乐</small></span>
+      <ChevronRight size={15}/>
+    </button>}
     <div className="focus-dock-body" {...tabPanelProps(tabId, tab)}>
       <Panel/>
     </div>
