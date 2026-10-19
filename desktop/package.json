@@ -77,7 +77,7 @@
       "status-bar.cjs",
       "typing-hook.cjs",
       "input-stats.cjs",
-      "native/mac-input.node",
+      "native/*.node",
       "shell-protocol.cjs",
       "wallpaper-model.cjs",
       "wallpaper-preload.cjs",

@@ -151,7 +151,7 @@ test('the source never logs or forwards key or mouse details', () => {
   assert.ok(pkg.build.asarUnpack.some((glob) => glob.includes('mac-input.node')), 'the macOS tap stays outside the asar');
   assert.ok(pkg.build.files.includes('typing-hook.cjs'));
   assert.ok(pkg.build.files.includes('input-stats.cjs'));
-  assert.ok(pkg.build.files.includes('native/mac-input.node'));
+  assert.ok(pkg.build.files.includes('native/*.node'), 'each platform packages only the native modules it ships');
 });
 
 test('CompanionBridge fallback keeps keyboard and click separate, ignores Proxy content and cleans up', () => {
