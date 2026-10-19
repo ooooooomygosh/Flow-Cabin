@@ -197,15 +197,24 @@ test('runCodex handles stdin EPIPE and can cancel the active process', async () 
       setImmediate(() => this.emit('error', Object.assign(new Error('EPIPE'), { code: 'EPIPE' })));
     });
     assert.deepEqual(
-      await runCodex({ prompt: 'x', codexPath: '/fake/codex', spawnImpl: () => epipe, tempRoot, timeout: 1000 }),
+      await runCodex({ prompt: 'x', codexPath: '/fake/codex', spawnImpl: () => epipe, platform: 'darwin', tempRoot, timeout: 1000 }),
       { ok: false, kind: 'cli-failed' }
     );
 
     const hanging = childFor();
-    const pending = runCodex({ prompt: 'x', codexPath: '/fake/codex', spawnImpl: () => hanging, tempRoot, timeout: 10000 });
+    const pending = runCodex({ prompt: 'x', codexPath: '/fake/codex', spawnImpl: () => hanging, platform: 'darwin', tempRoot, timeout: 10000 });
     pending.cancel();
     assert.deepEqual(await pending, { ok: false, kind: 'cli-cancelled' });
     assert.deepEqual(hanging.killed, ['SIGINT', 'SIGTERM']);
+
+    const winFallback = childFor();
+    const winPending = runCodex({
+      prompt: 'x', codexPath: 'C:\\fake\\codex.cmd',
+      spawnImpl: () => winFallback, platform: 'win32', tempRoot, timeout: 10000
+    });
+    winPending.cancel();
+    assert.deepEqual(await winPending, { ok: false, kind: 'cli-cancelled' });
+    assert.deepEqual(winFallback.killed, ['SIGINT', 'SIGTERM']);
 
     const tree = childFor();
     tree.pid = 4321;

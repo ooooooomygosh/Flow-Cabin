@@ -169,12 +169,12 @@ function runCodex({
           try {
             const taskkill = path.win32.join(childEnv?.SystemRoot || process.env.SystemRoot || 'C:\\Windows', 'System32', 'taskkill.exe');
             const killer = killImpl(taskkill, ['/PID', String(child.pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' });
-            killer?.once?.('error', () => { try { child.kill?.(); } catch { /* already gone */ } });
-            killer?.once?.('exit', (code) => { if (code !== 0) { try { child.kill?.(); } catch { /* already gone */ } } });
+            killer?.once?.('error', () => { try { child.kill?.(name); } catch { /* already gone */ } });
+            killer?.once?.('exit', (code) => { if (code !== 0) { try { child.kill?.(name); } catch { /* already gone */ } } });
             return;
           } catch { /* fall back to the direct child */ }
         }
-        try { child.kill?.(); } catch { /* already gone */ }
+        try { child.kill?.(name); } catch { /* already gone */ }
         return;
       }
       try {
