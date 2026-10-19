@@ -5,7 +5,8 @@
 # 心流小屋 · Flow Cabin
 
 **听一张喜欢的唱片，安心做完这一轮。**<br>
-<sub>A cozy pixel-art desktop cabin for your favourite albums, focus sessions and a tiny companion.</sub>
+<sub>A cozy pixel-art desktop cabin for your favourite albums, focus sessions and a tiny companion.</sub><br>
+<sub><strong>2026 秋季版 · v1.19.0</strong> · 六间会变天的房，一只会陪你敲字的猫。</sub>
 
 <p>
 <a href="https://github.com/ooooooomygosh/album-web/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/ooooooomygosh/album-web?style=flat-square&color=e0ad69&labelColor=2e1d12&label=release"></a>
@@ -22,9 +23,11 @@
 <img alt="Node 24" src="https://img.shields.io/badge/Node.js-24.x-5fa04e?style=flat-square&logo=node.js&logoColor=white&labelColor=2e1d12">
 </p>
 
-[**⬇ 下载最新版**](https://github.com/ooooooomygosh/album-web/releases/latest) · [第一次使用](docs/getting-started.md) · [功能一览](#-功能一览) · [截图](#-截图) · [快速开始](#-快速开始) · [English](#english)
+[**⬇ 下载 v1.19.0**](https://github.com/ooooooomygosh/album-web/releases/tag/v1.19.0) · [**走进小屋的一天 ↗**](https://album-circle.vercel.app/promo.html) · [第一次使用](docs/getting-started.md) · [功能一览](#-功能一览) · [截图](#-截图) · [快速开始](#-快速开始) · [English](#english)
 
 <img src="docs/assets/screenshots/cabin.jpg" width="100%" alt="实际运行的心流小屋：雪窗、十二格唱片架、架顶的像素唱机与像素小猫">
+
+> **这一版最有感觉的四件事：** 琥珀、林间、海边、星夜阁楼各有了一件能伸手碰的小物；奶糖有了 11 种动作 × 6 种装扮；手记与来信可以搜索、收藏、告别；专注、翻页钟、词书和统计终于像同一张书桌上的东西。
 
 <img src="docs/assets/covers/313404785.jpg" width="64" height="64" alt="橙月 — Khalil Fong" title="橙月 · Khalil Fong">
 <img src="docs/assets/covers/966489223.jpg" width="64" height="64" alt="寓言 — Faye Wong" title="寓言 · Faye Wong">
@@ -84,7 +87,7 @@
 <td valign="top">
 
 ### 🐱 伙伴、桌宠与动态桌面
-六个统一像素风的场景（像素小屋 / 琥珀小屋 / 月夜书桌 / 林间书屋 / 海边慢屋 / 星夜阁楼），默认是像素小屋；再配五位像素伙伴。伙伴会呼吸、被戳会冒爱心、跟着音乐摇摆，还可以出门成为桌宠。琥珀、林间、海边、星夜各有一件可触摸的小物：泡茶、浇花与转盆、开合海风窗、连一张想象星图。茶、植物和星图的到访状态会在离开场景后复原；海风窗复用并更新现有声音混音，不新增备份键。所有动效都支持「减少动态效果」。
+六个统一像素风的场景（像素小屋 / 琥珀小屋 / 月夜书桌 / 林间书屋 / 海边慢屋 / 星夜阁楼），默认是像素小屋；再配五位像素伙伴。伙伴会呼吸、被戳会冒爱心、跟着音乐摇摆，还可以出门成为桌宠。奶糖现有 11 种动作 × 6 种装扮、258 帧：待机、律动、庆祝、走路、睡眠、专注、聆听、打字、进食、跳跃、送信；应用内键盘与鼠标输入能触发打字，桌面版开启「跟随打字」并授权后可跨窗口响应，只判断有没有输入，不保存按键内容。琥珀、林间、海边、星夜各有一件可触摸的小物：泡茶、浇花与转盆、开合海风窗、连一张想象星图。茶、植物和星图的到访状态会在离开场景后复原；海风窗复用并更新现有声音混音，不新增备份键。所有动效都支持「减少动态效果」。
 
 </td>
 </tr>
@@ -149,17 +152,23 @@
 | :---: | :---: | :---: |
 | <img src="docs/assets/screenshots/focus.jpg" alt="专注计时运行中，小猫冒泡提示剩余时间"> | <img src="docs/assets/screenshots/personalization.jpg" alt="六个场景与五位像素伙伴的选择器"> | <img src="docs/assets/screenshots/onboarding.png" alt="新手引导：选择音源"> |
 
-<sub>截图展示 v1.18.0 稳定版界面；v1.19.0 开发预览中的新增内容可能尚未出现在这组截图中。重现方法见 <a href="#-截图是怎么来的">截图是怎么来的</a>。</sub>
+<sub>截图来自 v1.19.0 的真实渲染层，使用隔离收藏与固定演示数据；不含账号、Cookie、个人备份或音频。重现方法见 <a href="#-截图是怎么来的">截图是怎么来的</a>。</sub>
+
+<a href="https://album-circle.vercel.app/promo.html">
+  <img src="docs/assets/screenshots/promo-hero.jpg" width="100%" alt="心流小屋独立宣传页：会随时间、天气与房间切换的像素小屋">
+</a>
+
+<sub><a href="https://album-circle.vercel.app/promo.html">打开会呼吸的「小屋年鉴」 →</a> 可切换昼夜、雨雪和六间房，试玩奶糖打字、唱机、翻页钟、词卡与来信。</sub>
 
 ## ⬇ 下载
 
 | 你的电脑 | 下载 | 怎么打开 |
 | --- | --- | --- |
-| Mac · Apple Silicon（M 系列） | [DMG · arm64](https://github.com/ooooooomygosh/album-web/releases/download/v1.18.0/FlowCabin-1.18.0-mac-arm64.dmg) | 打开 DMG，把小屋拖进「应用程序」 |
-| Mac · Intel | [DMG · x64](https://github.com/ooooooomygosh/album-web/releases/download/v1.18.0/FlowCabin-1.18.0-mac-x64.dmg) | 打开 DMG，把小屋拖进「应用程序」 |
-| Windows · x64 | [安装版](https://github.com/ooooooomygosh/album-web/releases/download/v1.18.0/FlowCabin-1.18.0-x64-setup.exe) · [便携版](https://github.com/ooooooomygosh/album-web/releases/download/v1.18.0/FlowCabin-1.18.0-x64-portable.exe) | 安装版按提示安装；便携版直接运行 |
+| Mac · Apple Silicon（M 系列） | [DMG · arm64](https://github.com/ooooooomygosh/album-web/releases/download/v1.19.0/FlowCabin-1.19.0-mac-arm64.dmg) | 打开 DMG，把小屋拖进「应用程序」 |
+| Mac · Intel | [DMG · x64](https://github.com/ooooooomygosh/album-web/releases/download/v1.19.0/FlowCabin-1.19.0-mac-x64.dmg) | 打开 DMG，把小屋拖进「应用程序」 |
+| Windows · x64 | [安装版](https://github.com/ooooooomygosh/album-web/releases/download/v1.19.0/FlowCabin-1.19.0-x64-setup.exe) · [便携版](https://github.com/ooooooomygosh/album-web/releases/download/v1.19.0/FlowCabin-1.19.0-x64-portable.exe) | 安装版按提示安装；便携版直接运行 |
 
-以上文件对应当前稳定版 **v1.18.0**，新版本请到 [Release 页面](https://github.com/ooooooomygosh/album-web/releases/latest)。macOS 尚未完成开发者签名与公证，Windows 可能提示未知发布者，请先核对下载来源，再看[安装说明](docs/getting-started.md#安装与首次打开)。使用小屋不需要注册账号。
+以上文件对应 **v1.19.0**，完整改动见 [Release Notes](desktop/RELEASE-NOTES.md)。macOS 尚未完成开发者签名与公证，Windows 可能提示未知发布者，请先核对下载来源，再看[安装说明](docs/getting-started.md#安装与首次打开)。使用小屋不需要注册账号。
 
 ## 🎧 音源支持
 
@@ -198,6 +207,7 @@ npm run desktop:dev       # 构建并启动完整 Electron 客户端
 | `npm test` | 桌面端 Node 测试 + 音频生命周期 + 专注模型单测 |
 | `npm run check` | `npm test` + 前端生产构建（CI 同款） |
 | `npm run test:browser` | 隔离浏览器冒烟回归（需要 Chromium：`cd desktop && npx playwright install chromium`） |
+| `npm run test:promo` | 宣传页交互、图片、响应式与桌面 / 移动截图验收 |
 | `npm run desktop:dist` | 打包 Windows 安装版与便携版；macOS 见 [desktop/README](desktop/README.md) |
 | `npm run screenshots:product` | 重新生成主界面截图与录屏（`SHOWCASE_TOUR=1` 时额外录 MP4） |
 | `npm run screenshots:readme` | 重新生成 README 中的专注工具特写 |
@@ -227,6 +237,7 @@ album-web/
 │   ├── focus/               番茄钟 · 待办 · 统计 · 声音 · 随手记（纯函数模型 + 单测）
 │   ├── audio/               环境音合成与 Lo-fi 引擎
 │   ├── pet/                 像素伙伴、桌宠窗口与动作
+│   ├── promo/               独立宣传页：昼夜天气、房间切换与交互演示
 │   └── styles/              像素设计令牌（tokens.css / tokens.ts）与像素 UI
 ├── desktop/                 Electron 主进程、音乐服务、桌宠 / 壁纸窗口、打包配置与测试
 ├── public/                  字体、图标、场景图与第三方许可
@@ -247,6 +258,7 @@ album-web/
 - [x] 收藏与专注数据本机备份、导入
 - [x] 手记、整组来信与 v4 备份删除标记；纪念物独立保存
 - [x] 15 本、258 词的内置学习目录与原创中英对照内容
+- [x] 独立「小屋年鉴」宣传页，覆盖昼夜天气、六房间、奶糖、唱机、专注、词卡与来信
 - [x] 根项目与桌面生产依赖在本轮锁文件下报告 0 个已知 npm 公告
 - [ ] macOS 签名与公证、Windows 代码签名
 - [ ] v1.17.0 到当前版本的同路径安装器升级、重启与逐域数据恢复验收

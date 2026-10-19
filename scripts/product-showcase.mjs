@@ -46,6 +46,7 @@ try {
     if (url.origin !== origin) { report.unexpectedRequests.push(url.origin); return route.abort(); }
     if (url.pathname === '/api/items') return route.fulfill({ json: { items } });
     if (url.pathname === '/desktop-music/config') return route.fulfill({ json: { qqLoggedIn: false, neteaseLoggedIn: false } });
+    if (url.pathname === '/desktop-music/apple/permission') return route.fulfill({ json: { available: false, granted: false, needsPermission: false } });
     if (url.pathname === '/desktop-music/local/summary') return route.fulfill({ json: { folders: [], albumCount: 0, trackCount: 0 } });
     if (url.pathname === '/desktop-music/now-playing') return route.fulfill({ json: { available: true, active: false } }); // Settings › 音源 lights each source's lamp, 系统正在播放 included
     if (url.pathname === '/desktop-music/local/albums') return route.fulfill({ json: { albums: [] } }); // empty library: 播放测试 plays the chime
@@ -70,13 +71,15 @@ try {
   items = albums; await page.setViewportSize({ width: 1440, height: 900 }); await page.reload(); await page.locator('.room-record').first().waitFor();
   await page.waitForFunction(() => document.querySelectorAll('.pixel-artwork canvas.is-painted').length >= 12);
   await page.locator('.room-record').nth(5).dblclick(); await page.locator('.room-turntable[data-loaded-id="showcase-5"]').waitFor();
-  await page.locator('.turntable-status', { hasText: '无音频' }).waitFor(); // the quick-source row is gone; visual mode says so in the status await page.waitForTimeout(400); await shot('cabin', true);
+  await page.locator('.turntable-status', { hasText: '无音频' }).waitFor(); // visual mode says so in the status
+  await page.waitForTimeout(400); await shot('cabin', true);
   assert.equal(await page.locator('.room-shelf-navigation').count(), 0); check('twelve-albums-no-redundant-paging-and-visual-audio-hint');
   // Poke before focus: while the partner speaks (and a paused timer keeps 专注暂停中 up) it lets clicks
   // through to the scene (companion-room.css), so the poke is checked while it is quiet.
   await page.locator('.room-cat').click(); await page.locator('.room-cat-bubble').waitFor(); check('partner-poke-shows-response');
   await page.locator('.room-cat-bubble').waitFor({ state: 'detached', timeout: 20000 });
   await page.locator('.focus-badge').click(); await page.getByRole('button', { name: '开始专注', exact: true }).click(); await page.locator('.focus-badge.is-running').waitFor(); await page.locator('.room-cat-bubble', { hasText: '还剩 25 分钟' }).waitFor(); await shot('focus', true);
+  await page.keyboard.press('Escape'); await page.locator('.focus-display').waitFor({ state: 'detached' });
   await page.getByRole('button', { name: '暂停', exact: true }).click(); check('focus-start-and-pause-from-visible-tool'); await page.getByRole('button', { name: '收起专注工具' }).click();
   await openRoomSettings(page);
   await page.locator('.scene-choice img').evaluateAll(images => Promise.all(images.map(image => image.decode())));
