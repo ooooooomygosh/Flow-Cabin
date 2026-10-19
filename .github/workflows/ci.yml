@@ -38,6 +38,8 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Run browser smoke tests
         run: npm run test:browser
+      - name: Run promotional page interaction tests
+        run: npm run test:promo
       - name: Run silent playback regressions
         run: npm run test:playback
       - name: Verify actual playback history
@@ -69,6 +71,7 @@ jobs:
           name: browser-smoke
           path: |
             desktop/test-results/browser/
+            desktop/test-results/promo/
             desktop/test-results/playback/
             desktop/test-results/focus-ui/
             desktop/test-results/shelf-ui/
