@@ -80,6 +80,9 @@ test('provider templates are fixed, infer legacy endpoints, and keep local provi
   assert.equal(inferAiProvider('https://api.deepseek.com/v1', 'anything'), 'deepseek');
   assert.equal(inferAiProvider('http://127.0.0.1:11434/v1', 'qwen3:8b'), 'ollama');
   assert.equal(inferAiProvider('https://example.com/v1', 'm'), 'custom');
+  const reasoner = mem();
+  writeAi(reasoner, { baseUrl: 'https://api.deepseek.com/v1', model: 'deepseek-reasoner' });
+  assert.equal(readAi(reasoner).model, 'deepseek-flash');
   const ollama = applyAiProvider({ cadence: 'daily', tone: 'calm' }, 'ollama');
   assert.equal(ollama.provider, 'ollama');
   assert.equal(ollama.baseUrl, 'http://127.0.0.1:11434/v1');
@@ -518,6 +521,41 @@ test('desktop transport routes the Codex CLI template without a key', async () =
   assert.equal(cmds[0][0], 'ai-chat-cli');
   assert.equal(cmds[0][1].url, undefined);
   assert.match(cmds[0][1].body, /hi/);
+});
+
+test('aborting a chat cancels the desktop task and resolves a cancelled result', async () => {
+  const listeners = new Set(), cmds = [];
+  const win = { document: { documentElement: { dataset: { desktopClient: 'true' } } }, addEventListener: (_n, f) => listeners.add(f), removeEventListener: (_n, f) => listeners.delete(f) };
+  const command = (name, params) => {
+    cmds.push([name, params]);
+    if (name === 'ai-chat-cli') setTimeout(() => controller.abort(), 5);
+  };
+  const controller = new AbortController();
+  const result = await chat({ provider: 'codex', baseUrl: '', model: '' }, [{ role: 'user', content: 'hi' }], {
+    win, command, signal: controller.signal
+  });
+  assert.equal(result.ok, false);
+  assert.equal(result.kind, 'cli-cancelled');
+  assert.deepEqual(cmds.map(([name]) => name), ['ai-chat-cli', 'ai-cancel']);
+  assert.equal(cmds[1][1].id, cmds[0][1].id);
+});
+
+test('aborting a web request uses the fetch signal and reports cancellation', async () => {
+  const win = { localStorage: mem(), document: { documentElement: { dataset: {} } }, addEventListener() {}, removeEventListener() {} };
+  win.localStorage.setItem(AI_KEY_KEY, JSON.stringify({ v: 2, key: KEY, endpoint: 'https://api.mock/v1/chat/completions', revision: 1 }));
+  const controller = new AbortController();
+  const pending = chat({ baseUrl: 'https://api.mock/v1', model: 'm' }, [], {
+    win,
+    signal: controller.signal,
+    fetchImpl: (_url, options) => new Promise((_, reject) => {
+      options.signal.addEventListener('abort', () => reject(Object.assign(new Error('cancelled'), { name: 'AbortError' })));
+    })
+  });
+  setTimeout(() => controller.abort(), 5);
+  const result = await pending;
+  assert.equal(result.ok, false);
+  assert.equal(result.kind, 'cancelled');
+  assert.match(result.error, /取消/);
 });
 
 

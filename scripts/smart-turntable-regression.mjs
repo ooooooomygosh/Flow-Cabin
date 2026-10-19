@@ -28,7 +28,11 @@ const items = [
 
 const requestedTracks = [
   { title: 'Says', artist: 'Nils Frahm', album: 'Spaces' },
-  { title: 'Near Light', artist: 'Ólafur Arnalds', album: 'Living Room Songs' }
+  { title: 'Near Light', artist: 'Ólafur Arnalds', album: 'Living Room Songs' },
+  { title: 'A Walk', artist: 'Tycho', album: 'Dive' },
+  { title: 'Experience', artist: 'Ludovico Einaudi', album: 'In a Time Lapse' },
+  { title: 'Nuvole Bianche', artist: 'Ludovico Einaudi', album: 'Una Mattina' },
+  { title: 'Cornfield Chase', artist: 'Hans Zimmer', album: 'Interstellar' }
 ];
 const searchCandidates = [
   { provider: 'qq', id: 'a1111111111111', title: 'Says', artist: 'Nils Frahm', album: 'Spaces', duration: 248000, cover: '' },
@@ -82,7 +86,7 @@ try {
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
       const day = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
-      localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.3' }));
+      localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.4' }));
       localStorage.setItem('album-circle-focus-display-v1', JSON.stringify({ autoEnter: false }));
       localStorage.setItem('album-circle-room-player-v1', 'auto');
       localStorage.setItem(queueKey, JSON.stringify({ ids: ['old-queued'], repeat: 'one', shuffle: true }));
@@ -209,13 +213,13 @@ try {
     assert.deepEqual(userPayload.shelf.map((album) => album.id), items.map((album) => album.id));
     assert.ok(Array.isArray(userPayload.outputSchema.tracks));
 
-    assert.deepEqual(await dialog.locator('.st-track-title').allInnerTexts(), ['Says', 'Near Light']);
+    assert.deepEqual(await dialog.locator('.st-track-title').allInnerTexts(), requestedTracks.map((track) => track.title));
     assert.match(await dialog.locator('.st-track').first().innerText(), /Nils Frahm/);
     assert.match(await dialog.locator('.st-track').first().innerText(), /Spaces/);
     const summary = await dialog.locator('.st-summary').innerText();
     assert.match(summary, /50 分钟/);
     assert.match(summary, /学习/);
-    assert.match(summary, /2 首/);
+    assert.match(summary, /6 首/);
     assert.match(summary, /AI 歌单/);
     await dialog.getByText('歌单已经排好，可以直接收进唱片架，或开始这一轮。', { exact: true }).waitFor();
     assert.equal(report.searchRequests.length, 0, '编排和保存前不逐首核对平台');
@@ -229,8 +233,8 @@ try {
     assert.equal(playlist.type, 'playlist');
     assert.equal(playlist.title, '纸上散步');
     assert.equal(playlist.artist, '智能唱片机');
-    assert.deepEqual(playlist.tracks, ['Says', 'Near Light']);
-    assert.deepEqual(playlist.trackDetails.map((track) => track.artist), ['Nils Frahm', 'Ólafur Arnalds']);
+    assert.deepEqual(playlist.tracks, requestedTracks.map((track) => track.title));
+    assert.deepEqual(playlist.trackDetails.map((track) => track.artist), requestedTracks.map((track) => track.artist));
     assert.ok(playlist.trackDetails.every((track) => track.source === 'ai' && track.providerId === ''));
     assert.match(playlist.externalIds.playlist, /^ai:/);
     assert.equal(await page.locator('.room-turntable').getAttribute('data-provider'), 'auto');
@@ -258,7 +262,7 @@ try {
     const playlist = saved();
     assert.equal(playlist.type, 'playlist');
     assert.equal(playlist.title, '纸上散步');
-    assert.equal(playlist.tracks.length, 2);
+    assert.equal(playlist.tracks.length, 6);
     assert.equal(await dialog.getByRole('button', { name: '已收进唱片架', exact: true }).count(), 1);
     const focus = await page.evaluate((storageKey) => JSON.parse(localStorage.getItem(storageKey) || '{}'), focusKey);
     assert.notEqual(focus.timer?.phase, 'focus');

@@ -26,12 +26,15 @@ export default function SmartTurntable({ open, close, items = [], onStart, onSav
   const [starting, setStarting] = useState(false);
   const [result, setResult] = useState(null);
   const [note, setNote] = useState('');
-  const panel = useRef(null), input = useRef(null), previousFocus = useRef(null), sequence = useRef(0);
+  const panel = useRef(null), input = useRef(null), previousFocus = useRef(null), sequence = useRef(0), request = useRef(null);
   const shelf = Array.isArray(items) ? items.filter((item) => item && typeof item === 'object') : [];
   const configured = aiConnectionReady(settings, key, { desktop: isDesktopShell() });
+  const abortRequest = () => { request.current?.abort(); request.current = null; };
+  const dismiss = () => { abortRequest(); close?.(); };
 
   useEffect(() => {
     if (!open) {
+      abortRequest();
       sequence.current++;
       setBusy(false);
       setSaving(false);
@@ -45,6 +48,7 @@ export default function SmartTurntable({ open, close, items = [], onStart, onSav
     const timer = window.setTimeout(() => input.current?.focus({ preventScroll: true }), 0);
     return () => {
       window.clearTimeout(timer);
+      abortRequest();
       sequence.current++;
       previousFocus.current?.focus?.({ preventScroll: true });
     };
@@ -73,12 +77,15 @@ export default function SmartTurntable({ open, close, items = [], onStart, onSav
       return;
     }
 
+    const controller = new AbortController();
+    request.current = controller;
     try {
       const reply = await chat(settings, buildAiMessages(text, intent, shelf), {
         maxTokens: 1200,
         timeoutMs: 30000,
         json: true,
-        temperature: 0.35
+        temperature: 0.35,
+        signal: controller.signal
       });
       if (requestId !== sequence.current) return;
       const selection = reply.ok ? parseAiPlaylist(reply.text, intent) : null;
@@ -95,6 +102,7 @@ export default function SmartTurntable({ open, close, items = [], onStart, onSav
       if (requestId !== sequence.current) return;
       fallback('AI 这次没有接上，已先用唱片架做本机推荐。');
     } finally {
+      if (request.current === controller) request.current = null;
       if (requestId === sequence.current) setBusy(false);
     }
   };
@@ -151,7 +159,7 @@ export default function SmartTurntable({ open, close, items = [], onStart, onSav
         setNote('这一轮没有开始，请检查专注记录或存储空间后重试。');
         return;
       }
-      close?.();
+      dismiss();
     } catch (error) {
       setNote(error.message || '这一轮没有开始，请稍后重试。');
     } finally {
@@ -162,7 +170,7 @@ export default function SmartTurntable({ open, close, items = [], onStart, onSav
   const onKeyDown = (event) => {
     if (event.key === 'Escape') {
       event.preventDefault();
-      if (!event.repeat) close?.();
+      if (!event.repeat) dismiss();
       return;
     }
     if (event.key !== 'Tab') return;
@@ -190,7 +198,7 @@ export default function SmartTurntable({ open, close, items = [], onStart, onSav
           : '等小屋排好歌单';
 
   return createPortal(
-    <div className="st-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget) close?.(); }}>
+    <div className="st-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget) dismiss(); }}>
       <section ref={panel} className={`st-panel${busy ? ' is-busy' : ''}`} role="dialog" aria-modal="true" aria-labelledby="smart-turntable-title" aria-describedby="smart-turntable-intro" onKeyDown={onKeyDown}>
         <header className="st-header">
           <span className="st-dial" aria-hidden="true"><i/></span>
@@ -198,7 +206,7 @@ export default function SmartTurntable({ open, close, items = [], onStart, onSav
             <span className="st-eyebrow">AI 编一张能播放的歌单</span>
             <h2 id="smart-turntable-title" className="st-title">智能唱片机</h2>
           </div>
-          <button type="button" className="st-close" aria-label="关闭智能唱片机" onClick={() => close?.()}><X size={18}/></button>
+          <button type="button" className="st-close" aria-label="关闭智能唱片机" onClick={dismiss}><X size={18}/></button>
         </header>
 
         <div className="st-body">

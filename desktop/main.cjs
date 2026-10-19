@@ -624,5 +624,5 @@ else {
     }
     if (mainWindow) restoreMainWindow(); else createWindow().catch((error) => writeLog('startup-error', error.message));
   });
-  app.on('before-quit', () => { quitting = true; statusPoller.stop(); typingHook.stop(); clearTimeout(inputStatsTimer); inputStatsTimer = null; inputStats.dispose(); if (awakeBlocker !== null) { powerSaveBlocker.stop(awakeBlocker); awakeBlocker = null; } globalShortcut.unregisterAll(); desktopSink?.stop(); miniPlayer?.hide(); wallpaper?.stop(); pet?.stop(); weather.dispose(); music?.stop(); companionTray?.destroy(); companionTray = null; if (startupComplete) writeLog('closed'); });
+  app.on('before-quit', () => { quitting = true; aiRelay?.dispose(); aiRelay = null; statusPoller.stop(); typingHook.stop(); clearTimeout(inputStatsTimer); inputStatsTimer = null; inputStats.dispose(); if (awakeBlocker !== null) { powerSaveBlocker.stop(awakeBlocker); awakeBlocker = null; } globalShortcut.unregisterAll(); desktopSink?.stop(); miniPlayer?.hide(); wallpaper?.stop(); pet?.stop(); weather.dispose(); music?.stop(); companionTray?.destroy(); companionTray = null; if (startupComplete) writeLog('closed'); });
 }

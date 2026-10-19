@@ -159,7 +159,8 @@ test('CLI relay returns only the final text and never reasoning', async () => {
   const prompts = [];
   const { out, ai } = setup({ runCodex: async ({ prompt }) => { prompts.push(prompt); return { ok: true, text: '最终回答', reasoning: '不该出现' }; }, resolveCodexPath: () => '/fake/codex' });
   await ai.chatCli('cli1', JSON.stringify({ messages: [{ role: 'system', content: '只输出 JSON' }, { role: 'user', content: '排歌' }], max_tokens: 1200 }));
-  assert.match(prompts[0], /<system>/);
+  assert.match(prompts[0], /"role":"system","content":"只输出 JSON"/);
+  assert.match(prompts[0], /"role":"user","content":"排歌"/);
   assert.match(prompts[0], /Return only the final answer/);
   assert.deepEqual(out.at(-1), { type: 'result', id: 'cli1', ok: true, text: '最终回答' });
   assert.ok(!JSON.stringify(out).includes('不该出现'));
@@ -174,6 +175,26 @@ test('CLI relay reports missing/timeout/failure without exposing process output'
   const failure = setup({ runCodex: async () => ({ ok: false, kind: 'cli-failed' }), resolveCodexPath: () => '/fake/codex' });
   await failure.ai.chatCli('f', JSON.stringify({ messages: [{ role: 'user', content: 'hi' }] }));
   assert.deepEqual(failure.out.at(-1), { type: 'result', id: 'f', ok: false, kind: 'cli-failed' });
+});
+
+test('CLI relay can cancel its active task and dispose cleanly', async () => {
+  let cancelCalls = 0;
+  const { ai, out } = setup({
+    resolveCodexPath: () => '/fake/codex',
+    runCodex: () => {
+      let resolve;
+      const task = new Promise((done) => { resolve = done; });
+      task.cancel = () => { cancelCalls++; resolve({ ok: false, kind: 'cli-cancelled' }); };
+      return task;
+    }
+  });
+  const pending = ai.chatCli('c1', JSON.stringify({ messages: [{ role: 'user', content: 'hi' }] }));
+  await new Promise((resolve) => setImmediate(resolve));
+  ai.cancel('c1');
+  await pending;
+  assert.equal(cancelCalls, 1);
+  assert.deepEqual(out.at(-1), { type: 'result', id: 'c1', ok: false, kind: 'cli-cancelled' });
+  ai.dispose();
 });
 
 test('thinking controls are allowlisted and empty OpenAI-shaped replies are distinguished', async () => {
@@ -249,13 +270,14 @@ test('refuses bad URLs, bodies and missing keys without fetching', async () => {
 
 test('site commands route /ai-key and /ai-chat', () => {
   const calls = [];
-  const cmds = createSiteCommands({ isSitePage: () => true, ai: { setKey: (k, endpoint) => calls.push(['key', k, endpoint]), publishKey: () => calls.push(['publish']), chat: async (...a) => calls.push(['chat', ...a]), chatCli: async (...a) => calls.push(['cli', ...a]) } });
-  assert.ok(cmds.commands.includes('/ai-key') && cmds.commands.includes('/ai-chat') && cmds.commands.includes('/ai-chat-cli'));
+  const cmds = createSiteCommands({ isSitePage: () => true, ai: { setKey: (k, endpoint) => calls.push(['key', k, endpoint]), publishKey: () => calls.push(['publish']), chat: async (...a) => calls.push(['chat', ...a]), chatCli: async (...a) => calls.push(['cli', ...a]), cancel: (id) => calls.push(['cancel', id]) } });
+  assert.ok(cmds.commands.includes('/ai-key') && cmds.commands.includes('/ai-chat') && cmds.commands.includes('/ai-chat-cli') && cmds.commands.includes('/ai-cancel'));
   cmds.handle(`album-desktop://action/ai-key?key=${encodeURIComponent(KEY)}&endpoint=${encodeURIComponent(URL_OK)}`);
   cmds.handle('album-desktop://action/ai-key');
   cmds.handle(`album-desktop://action/ai-chat?id=x&url=${encodeURIComponent(URL_OK)}&body=${encodeURIComponent(body)}&keyless=true`);
   cmds.handle(`album-desktop://action/ai-chat-cli?id=y&body=${encodeURIComponent(body)}`);
-  assert.deepEqual(calls, [['key', KEY, URL_OK], ['publish'], ['chat', 'x', URL_OK, body, { keyless: true }], ['cli', 'y', body]]);
+  cmds.handle('album-desktop://action/ai-cancel?id=y');
+  assert.deepEqual(calls, [['key', KEY, URL_OK], ['publish'], ['chat', 'x', URL_OK, body, { keyless: true }], ['cli', 'y', body], ['cancel', 'y']]);
 });
 
 

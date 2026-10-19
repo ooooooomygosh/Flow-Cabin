@@ -38,7 +38,7 @@ const redact = (text, key) => { let s = String(text || ''); if (key && key.lengt
 function createAi({ directory, safeStorage, fetch, publish, writeLog = () => {}, timeout = TIMEOUT, resolveCodexPath = resolveCodex, runCodex = defaultRunCodex }) {
   const file = path.join(directory, 'ai-key.bin');
   let memory = null, revision = 0;
-  const requests = new Set();
+  const requests = new Map(), cliTasks = new Map();
   const secure = () => { try { return Boolean(safeStorage?.isEncryptionAvailable()) && safeStorage.getSelectedStorageBackend?.() !== 'basic_text'; } catch { return false; } };
   const readCredential = () => {
     if (memory) return { credential: memory, secure: false };
@@ -58,7 +58,8 @@ function createAi({ directory, safeStorage, fetch, publish, writeLog = () => {},
       const key = String(value || '').trim().slice(0, 400);
       if (key && !validUrl(endpoint)) { publish({ type: 'key', ...state() }); return; }
       revision++;
-      for (const controller of requests) controller.abort();
+      for (const controller of requests.values()) controller.abort();
+      for (const task of cliTasks.values()) task.cancel?.();
       memory = null;
       try { fs.rmSync(file, { force: true }); } catch { /* ignore */ }
       if (key) {
@@ -76,7 +77,8 @@ function createAi({ directory, safeStorage, fetch, publish, writeLog = () => {},
       const keyless = options?.keyless === true;
       if (keyless ? !loopbackUrl(url) : (!key || url !== credential.endpoint)) return reply({ ok: false, kind: 'config' });
       const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), timeout);
-      requests.add(ctrl);
+      const requestId = String(id).slice(0, 40);
+      requests.set(requestId, ctrl);
       try {
         const headers = { 'Content-Type': 'application/json' };
         if (!keyless) headers.Authorization = `Bearer ${key}`;
@@ -95,7 +97,10 @@ function createAi({ directory, safeStorage, fetch, publish, writeLog = () => {},
       } catch (error) {
         writeLog('ai-error', error?.name === 'AbortError' ? 'timeout' : 'network');
         reply({ ok: false, kind: error?.name === 'AbortError' ? 'timeout' : 'network' });
-      } finally { clearTimeout(timer); requests.delete(ctrl); }
+      } finally {
+        clearTimeout(timer);
+        if (requests.get(requestId) === ctrl) requests.delete(requestId);
+      }
     },
     async chatCli(id, bodyText) {
       const reply = (detail) => publish({ type: 'result', id: String(id).slice(0, 40), ...detail });
@@ -103,9 +108,27 @@ function createAi({ directory, safeStorage, fetch, publish, writeLog = () => {},
       if (!body || !prompt) return reply({ ok: false, kind: 'config' });
       const codexPath = resolveCodexPath();
       if (!codexPath) return reply({ ok: false, kind: 'cli-missing' });
-      const result = await runCodex({ prompt, codexPath, timeout: Math.max(timeout, 90000) });
-      if (result.ok) return reply({ ok: true, text: redact(result.text, '').slice(0, 4000) });
-      reply({ ok: false, kind: result.kind || 'cli-failed' });
+      const requestId = String(id).slice(0, 40), task = runCodex({ prompt, codexPath, timeout: Math.max(timeout, 90000) });
+      cliTasks.set(requestId, task);
+      try {
+        const result = await task;
+        if (result.ok) return reply({ ok: true, text: redact(result.text, '').slice(0, 4000) });
+        reply({ ok: false, kind: result.kind || 'cli-failed' });
+      } finally {
+        if (cliTasks.get(requestId) === task) cliTasks.delete(requestId);
+      }
+    },
+    cancel(id) {
+      const requestId = String(id || '').slice(0, 40);
+      if (!requestId) return;
+      requests.get(requestId)?.abort();
+      cliTasks.get(requestId)?.cancel?.();
+    },
+    dispose() {
+      for (const controller of requests.values()) controller.abort();
+      for (const task of cliTasks.values()) task.cancel?.();
+      requests.clear();
+      cliTasks.clear();
     }
   };
 }

@@ -142,7 +142,7 @@ try {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'zh-CN', reducedMotion: 'reduce' });
   await context.addInitScript(({ focusKey, displayKey }) => {
     if (location.origin === 'null') return;
-    if (!localStorage.getItem('flow-cabin-onboarding-v1')) localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.3' }));
+    if (!localStorage.getItem('flow-cabin-onboarding-v1')) localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.4' }));
     if (!localStorage.getItem(focusKey)) localStorage.setItem(focusKey, JSON.stringify({ notes: '', settings: { focusMin: 25, shortMin: 5, notify: false, chime: false } }));
     if (!localStorage.getItem(displayKey)) localStorage.setItem(displayKey, JSON.stringify({ mode: 'ring', show: 'clock', seconds: true, autoEnter: false }));
     window.__nativeCommands = [];

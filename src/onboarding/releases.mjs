@@ -2,6 +2,16 @@
 // product-facing; technical verification notes belong in RELEASE-NOTES.md.
 export const RELEASES = Object.freeze([
   {
+    version: '1.21.4',
+    title: '本机 Codex 真正接上了，歌单也更完整',
+    items: [
+      '本机 Codex CLI 现在保留你自己的登录、服务商与模型配置，同时关闭通知钩子、MCP、插件和规则文件；小屋仍然只读取最后一条回答，不展示或保存思考过程与工具输出。',
+      '切换 Key、清空配置、关闭智能唱片机、请求超时或退出小屋时，会取消正在运行的本机 Codex 任务；Windows 会结束整棵进程树，.cmd 启动器也能正确处理含空格路径，stdin 断开不会再让请求卡住或让主进程崩溃。',
+      'AI 歌单统一要求 6–14 首；少于 6 首、格式不合格或连接失败时，会明确说明并回退本机唱片架推荐，不再把两三首当成完整歌单。',
+      'DeepSeek、OpenAI、OpenRouter、Ollama、LM Studio、本机 Codex CLI 和自定义接口继续使用固定模板；DeepSeek 官方接口默认关闭思考模式。'
+    ]
+  },
+  {
     version: '1.21.3',
     title: 'AI 用固定模板，桌面版可接本机 Codex',
     items: [

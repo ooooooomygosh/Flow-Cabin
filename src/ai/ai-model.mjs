@@ -158,14 +158,16 @@ export function chatText(json) {
 // Human, key-free error text for 测试连接 and letter failures.
 export function explainError({ status = 0, body = null, kind = '' } = {}) {
   const msg = typeof body?.error?.message === 'string' ? body.error.message.slice(0, 160) : '';
-  if (kind === 'timeout') return '连接超时：服务器 30 秒内没有回应。';
-  if (kind === 'config') return '请先填好接口地址、API Key 和模型名。';
+  if (kind === 'timeout') return '连接超时：服务器没有及时回应，请稍后重试。';
+  if (kind === 'cancelled') return '请求已取消。';
+  if (kind === 'config') return '请先选好模板、模型和必要凭据，再试一次。';
   if (kind === 'network') return '连不上这个地址。网页版需要接口允许跨域（CORS），可以改用桌面版，或换一个支持 CORS 的地址。';
   if (kind === 'format') return '服务器有回应，但不是 OpenAI 格式的 chat/completions 结果。请检查接口地址。';
   if (kind === 'empty') return '模型返回了空内容。这个模型可能默认开启思考模式，思考 token 占满了输出上限；请关闭思考模式或调大 max_tokens。';
   if (kind === 'desktop') return '本机 Codex CLI 只能在心流小屋桌面版里使用。';
   if (kind === 'cli-missing') return '找不到本机的 Codex CLI。请先在终端安装并登录 codex，再重新打开小屋。';
   if (kind === 'cli-timeout') return '本机 Codex 超时了，没有返回最终回答。请稍后重试，或在终端检查 codex 是否正常。';
+  if (kind === 'cli-cancelled') return '本机 Codex 请求已取消。';
   if (kind === 'cli-empty') return '本机 Codex 完成了，但没有写出最终回答。';
   if (kind === 'cli-failed') return '本机 Codex 没有完成这次请求。请确认终端里的 codex 已登录，再试一次。';
   if (status === 401 || status === 403) return `API Key 无效或没有权限（${status}）。${msg}`;

@@ -7,6 +7,7 @@ export const MIN_TURNTABLE_MINUTES = 15;
 export const MAX_TURNTABLE_MINUTES = 180;
 export const DEFAULT_TURNTABLE_MINUTES = 50;
 export const AI_ALBUM_LIMIT = 40;
+export const AI_PLAYLIST_TRACK_MIN = 6;
 export const AI_PLAYLIST_TRACK_LIMIT = 14;
 export const PICK_LIMIT = 3;
 export const DEFAULT_AUTOPLAY = true;
@@ -447,7 +448,7 @@ export function parseAiPlaylist(text, fallbackIntentOrText = '') {
   const value = parseJsonObject(text);
   if (!value) return null;
   const tracks = normalizeRequestedTracks(value.tracks);
-  if (!tracks.length) return null;
+  if (tracks.length < AI_PLAYLIST_TRACK_MIN) return null;
   const fallback = normalizeIntent(fallbackIntentOrText);
   const minutes = isValidMinutes(value.minutes) && (!fallback.durationExplicit || value.minutes === fallback.minutes)
     ? value.minutes

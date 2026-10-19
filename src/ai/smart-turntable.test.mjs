@@ -4,7 +4,7 @@ import {
   parseDuration, parseIntent, localRecommendation, aiShelfSummary,
   buildAiMessages, parseAiSelection, normalizePlaybackPlan, parseAiPlaylist, smartPlaylistItem,
   normalizePlaylistPlaybackPlan,
-  AI_ALBUM_LIMIT, AI_PLAYLIST_TRACK_LIMIT, ACTIVITY_IDS, DEFAULT_AUTOPLAY
+  AI_ALBUM_LIMIT, AI_PLAYLIST_TRACK_MIN, AI_PLAYLIST_TRACK_LIMIT, ACTIVITY_IDS, DEFAULT_AUTOPLAY
 } from './smart-turntable.mjs';
 
 const minutes = (value) => Array.from({ length: value }, (_, index) => ({
@@ -309,7 +309,11 @@ test('AI playlists accept songs outside the shelf and keep only safe track field
     tracks: [
       { title: 'Near Light', artist: 'Ólafur Arnalds', album: 'Living Room Songs', providerId: 'must-not-survive' },
       { title: 'Near Light', artist: 'Ólafur Arnalds', album: 'duplicate' },
-      { title: 'A Walk', artist: 'Tycho', album: 'Dive' }
+      { title: 'A Walk', artist: 'Tycho', album: 'Dive' },
+      { title: 'Says', artist: 'Nils Frahm', album: 'Spaces' },
+      { title: 'Experience', artist: 'Ludovico Einaudi', album: 'In a Time Lapse' },
+      { title: 'Nuvole Bianche', artist: 'Ludovico Einaudi', album: 'Una Mattina' },
+      { title: 'Cornfield Chase', artist: 'Hans Zimmer', album: 'Interstellar' }
     ]
   }), '写论文五十分钟');
 
@@ -317,7 +321,7 @@ test('AI playlists accept songs outside the shelf and keep only safe track field
   assert.equal(playlist.title, '纸上散步');
   assert.equal(playlist.minutes, 50);
   assert.equal(playlist.activity.id, 'writing');
-  assert.equal(playlist.tracks.length, 2);
+  assert.equal(playlist.tracks.length, AI_PLAYLIST_TRACK_MIN);
   assert.deepEqual(Object.keys(playlist.tracks[0]).sort(), ['album', 'artist', 'title']);
   assert.equal(JSON.stringify(playlist).includes('must-not-survive'), false);
 });
@@ -326,6 +330,8 @@ test('AI playlist parsing rejects empty or malformed track lists and caps output
   assert.equal(parseAiPlaylist('{"tracks":[]}'), null);
   assert.equal(parseAiPlaylist('{"tracks":[{"title":"only a title"}]}'), null);
   assert.equal(parseAiPlaylist('not json'), null);
+  const short = Array.from({ length: AI_PLAYLIST_TRACK_MIN - 1 }, (_, index) => ({ title: `Short ${index}`, artist: 'Artist' }));
+  assert.equal(parseAiPlaylist(JSON.stringify({ tracks: short })), null, 'a short model answer falls back instead of becoming a thin playlist');
   const many = Array.from({ length: AI_PLAYLIST_TRACK_LIMIT + 8 }, (_, index) => ({ title: `Song ${index}`, artist: 'Artist' }));
   assert.equal(parseAiPlaylist(JSON.stringify({ tracks: many })).tracks.length, AI_PLAYLIST_TRACK_LIMIT);
 });
@@ -339,14 +345,19 @@ test('a parsed AI playlist becomes an ordinary shelf playlist with automatic pla
     autoplay: true,
     tracks: [
       { title: 'Says', artist: 'Nils Frahm', album: 'Spaces' },
-      { title: 'Says', artist: 'Nils Frahm', album: 'Spaces' }
+      { title: 'Says', artist: 'Nils Frahm', album: 'Spaces' },
+      { title: 'Near Light', artist: 'Ólafur Arnalds', album: 'Living Room Songs' },
+      { title: 'A Walk', artist: 'Tycho', album: 'Dive' },
+      { title: 'Experience', artist: 'Ludovico Einaudi', album: 'In a Time Lapse' },
+      { title: 'Nuvole Bianche', artist: 'Ludovico Einaudi', album: 'Una Mattina' },
+      { title: 'Cornfield Chase', artist: 'Hans Zimmer', album: 'Interstellar' }
     ]
   }), '阅读五十分钟');
   const item = smartPlaylistItem(parsed, parsed.tracks, { id: 'fixed-playlist' });
   assert.equal(item.type, 'playlist');
   assert.equal(item.artist, '智能唱片机');
   assert.equal(item.externalIds.playlist, 'ai:fixed-playlist');
-  assert.deepEqual(item.tracks, ['Says']);
+  assert.deepEqual(item.tracks, ['Says', 'Near Light', 'A Walk', 'Experience', 'Nuvole Bianche', 'Cornfield Chase']);
   assert.equal(item.trackDetails[0].source, 'ai');
   assert.equal(item.trackDetails[0].providerId, '');
   assert.equal(item.trackDetails[0].artist, 'Nils Frahm');
@@ -355,7 +366,7 @@ test('a parsed AI playlist becomes an ordinary shelf playlist with automatic pla
   assert.equal(plan.kind, 'playlist');
   assert.equal(plan.persisted, true);
   assert.equal(plan.items[0], plan.item);
-  assert.equal(plan.item.tracks.length, 1);
+  assert.equal(plan.item.tracks.length, AI_PLAYLIST_TRACK_MIN);
   assert.equal(plan.item.trackDetails[0].source, 'ai');
   assert.equal(plan.autoplay, true);
 });

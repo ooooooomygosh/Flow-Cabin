@@ -28,7 +28,7 @@ try {
     await context.addInitScript(({ FOCUS, desktop, ai, KEY, endpoint }) => {
       if (location.origin === 'null' || sessionStorage.getItem('seeded')) return;
       sessionStorage.setItem('seeded', '1');
-      localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.3' }));
+      localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.4' }));
       localStorage.setItem('album-circle-focus-display-v1', JSON.stringify({ autoEnter: false }));
       // Seed the browser's actual reporting period. Daily letters need yesterday,
       // not last week's weekend (those coincide only on Monday).

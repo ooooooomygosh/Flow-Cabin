@@ -42,7 +42,7 @@ async function freshPage() {
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, locale: 'zh-CN', reducedMotion: 'reduce', acceptDownloads: true });
   await context.addInitScript(() => {
     if (!localStorage.getItem('flow-cabin-onboarding-v1')) {
-      localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.3' }));
+      localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.4' }));
     }
   });
   await context.route('**/*', route => {

@@ -1,6 +1,6 @@
 # 新手引导、版本更新与设置入口
 
-本文对应当前 `v1.21.3` 行为。代码在 `src/onboarding/`：`onboarding-model.mjs` 保存纯状态，`onboarding-adapter.mjs` 连接播放器与桌面命令，`OnboardingWizard.jsx`、`InputCompanionSettings.jsx` 和 `SettingsHub.jsx` 负责界面。版本变化摘要来自 `releases.mjs`。
+本文对应当前 `v1.21.4` 行为。代码在 `src/onboarding/`：`onboarding-model.mjs` 保存纯状态，`onboarding-adapter.mjs` 连接播放器与桌面命令，`OnboardingWizard.jsx`、`InputCompanionSettings.jsx` 和 `SettingsHub.jsx` 负责界面。版本变化摘要来自 `releases.mjs`。
 
 相关验证：`src/onboarding/onboarding.test.mjs`（状态与适配层单测）、`scripts/onboarding-checks.mjs`（浏览器冒烟）、`src/ai/smart-turntable.test.mjs` 与 `scripts/smart-turntable-regression.mjs`（智能唱片机）。
 
@@ -16,7 +16,7 @@
 
 版本更新不是欢迎导览：它没有欢迎页，先展示从 `seenVersion` 到当前版本的累计变化，再重新确认音源、权限、房间伙伴与试听。中途关闭或点「稍后继续」时，状态保持 `active`，下次启动回到保存的步骤；更新向导不提供一键跳过。完成向导，或首次 / 重新引导中的明确跳过，会推进 `seenVersion`；更新向导的「稍后继续」不会。
 
-对于升级用户：在版本感知引导加入前已经完成 v1.9 入门指南的 profile，会以 `1.17.0` 作为已确认基线，因此第一次打开 v1.21.3 时能看到 `1.18.0` 到 `1.21.3` 的完整变化，而不是只看到最后一张更新卡。
+对于升级用户：在版本感知引导加入前已经完成 v1.9 入门指南的 profile，会以 `1.17.0` 作为已确认基线，因此第一次打开 v1.21.4 时能看到 `1.18.0` 到 `1.21.4` 的完整变化，而不是只看到最后一张更新卡。
 
 ## 2. 状态与恢复
 
@@ -87,7 +87,7 @@ macOS 只需要「输入监控」一项授权。设置页提供：
 
 入口在唱机旁的「智能唱片机」，以及「专注 › 番茄钟」的同一入口。用户说一句计划（如「我要学习五十分钟，帮我搭配音乐」）后，界面先解析时长、活动类型和是否播放，再把这句话、本机约束和唱片架摘要发给可选 AI。AI 按计划编排一张完整歌单，可以包含唱片架之外的歌曲，不再只从唱片架选 1–3 张。
 
-AI 连接采用固定供应商模板：DeepSeek（默认 `deepseek-flash`，官方接口关闭思考）、OpenAI、OpenRouter、Ollama、LM Studio、桌面版本机 Codex CLI 和自定义接口。预设模板填写地址与默认模型，只有自定义模板允许改地址。Ollama 与 LM Studio 使用 keyless loopback；桌面版 Codex 通过 `codex exec` 调用本机已登录 CLI，只读取 `--output-last-message` 的最终回答，丢弃 reasoning、工具事件和临时会话。网页版不提供 Codex 模板。
+AI 连接采用固定供应商模板：DeepSeek（默认 `deepseek-flash`，官方接口关闭思考）、OpenAI、OpenRouter、Ollama、LM Studio、桌面版本机 Codex CLI 和自定义接口。预设模板填写地址与默认模型，只有自定义模板允许改地址。Ollama 与 LM Studio 使用 keyless loopback；桌面版 Codex 通过 `codex exec` 调用本机已登录 CLI，保留用户的登录与服务商配置，但关闭通知钩子、MCP、插件与 execpolicy 规则，只读取 `--output-last-message` 的最终回答，丢弃 reasoning、工具事件和临时会话。网页版不提供 Codex 模板。
 
 生成后有两个动作：
 

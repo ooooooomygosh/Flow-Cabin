@@ -1,7 +1,7 @@
 const site = document.querySelector('.site');
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
 const latestReleaseEndpoint = 'https://api.github.com/repos/ooooooomygosh/album-web/releases/latest';
-const fallbackLatestVersion = 'v1.21.3';
+const fallbackLatestVersion = 'v1.21.4';
 
 const rooms = {
   pixel: {
@@ -218,7 +218,7 @@ async function syncLatestVersion() {
     const release = await response.json();
     applyLatestVersion(release?.tag_name);
   } catch {
-    // The static v1.21.3 copy keeps the page useful when GitHub is unreachable.
+    // The static v1.21.4 copy keeps the page useful when GitHub is unreachable.
   } finally {
     clearTimeout(timeout);
   }

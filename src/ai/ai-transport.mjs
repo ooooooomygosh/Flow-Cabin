@@ -38,21 +38,37 @@ export function saveKeyConfirmed(key, { win = globalThis, command = desktopComma
 
 let seq = 0;
 // Resolves { ok: true, text } or { ok: false, error } — never throws, never includes the key.
-export async function chat(settings, messages, { win = globalThis, fetchImpl = globalThis.fetch, command = desktopCommand, timeoutMs = TIMEOUT_MS, maxTokens = 600, json = false, temperature } = {}) {
+export async function chat(settings, messages, { win = globalThis, fetchImpl = globalThis.fetch, command = desktopCommand, timeoutMs = TIMEOUT_MS, maxTokens = 600, json = false, temperature, signal } = {}) {
   const provider = aiProvider(settings), desktop = isDesktopShell(win);
   if (provider.mode === 'codex') {
     if (!desktop) return { ok: false, error: explainError({ kind: 'desktop' }) };
+    if (signal?.aborted) return { ok: false, error: explainError({ kind: 'cancelled' }), kind: 'cli-cancelled' };
     const cliTimeout = Math.max(timeoutMs, 90000);
     return await new Promise((resolve) => {
       const id = `aicli${Date.now().toString(36)}${++seq}`;
-      const done = (value) => { clearTimeout(timer); win.removeEventListener(AI_RESULT_EVENT, on); resolve(value); };
+      let timer = null;
+      const done = (value) => {
+        if (timer) clearTimeout(timer);
+        win.removeEventListener(AI_RESULT_EVENT, on);
+        signal?.removeEventListener('abort', abort);
+        resolve(value);
+      };
+      const abort = () => {
+        try { command('ai-cancel', { id }); } catch { /* the shell may already be closing */ }
+        done({ ok: false, error: explainError({ kind: 'cancelled' }), kind: 'cli-cancelled' });
+      };
       const on = (event) => {
         if (event.detail?.id !== id) return;
         const detail = event.detail;
         done(detail.ok ? { ok: true, text: detail.text } : { ok: false, error: explainError(detail), status: detail.status, kind: detail.kind });
       };
-      const timer = setTimeout(() => done({ ok: false, error: explainError({ kind: 'cli-timeout' }) }), cliTimeout + 3000);
+      timer = setTimeout(() => {
+        try { command('ai-cancel', { id }); } catch { /* the shell may already be closing */ }
+        done({ ok: false, error: explainError({ kind: 'cli-timeout' }) });
+      }, cliTimeout + 3000);
       win.addEventListener(AI_RESULT_EVENT, on);
+      signal?.addEventListener('abort', abort, { once: true });
+      if (signal?.aborted) return abort();
       command('ai-chat-cli', { id, body: JSON.stringify({ messages, max_tokens: maxTokens, temperature }) });
     });
   }
@@ -64,16 +80,32 @@ export async function chat(settings, messages, { win = globalThis, fetchImpl = g
     ...(provider.thinking === 'disabled' || isDeepseekEndpoint(url) ? { thinking: 'disabled' } : {})
   });
   if (desktop) {
+    if (signal?.aborted) return { ok: false, error: explainError({ kind: 'cancelled' }), kind: 'cancelled' };
     const send = (payload) => new Promise((resolve) => {
       const id = `ai${Date.now().toString(36)}${++seq}`;
-      const done = (v) => { clearTimeout(timer); win.removeEventListener(AI_RESULT_EVENT, on); resolve(v); };
+      let timer = null;
+      const done = (v) => {
+        if (timer) clearTimeout(timer);
+        win.removeEventListener(AI_RESULT_EVENT, on);
+        signal?.removeEventListener('abort', abort);
+        resolve(v);
+      };
+      const abort = () => {
+        try { command('ai-cancel', { id }); } catch { /* the shell may already be closing */ }
+        done({ ok: false, error: explainError({ kind: 'cancelled' }), kind: 'cancelled' });
+      };
       const on = (e) => {
         if (e.detail?.id !== id) return;
         const d = e.detail;
         done(d.ok ? { ok: true, text: d.text } : { ok: false, error: explainError(d), status: d.status });
       };
-      const timer = setTimeout(() => done({ ok: false, error: explainError({ kind: 'timeout' }) }), timeoutMs + 2000);
+      timer = setTimeout(() => {
+        try { command('ai-cancel', { id }); } catch { /* the shell may already be closing */ }
+        done({ ok: false, error: explainError({ kind: 'timeout' }) });
+      }, timeoutMs + 2000);
       win.addEventListener(AI_RESULT_EVENT, on);
+      signal?.addEventListener('abort', abort, { once: true });
+      if (signal?.aborted) return abort();
       command('ai-chat', { id, url, body: JSON.stringify(payload), ...(provider.requiresKey ? {} : { keyless: true }) });
     });
     let result = await send(body);
@@ -88,7 +120,12 @@ export async function chat(settings, messages, { win = globalThis, fetchImpl = g
   }
   const credential = provider.requiresKey ? webCredential(win) : null, key = credential?.key;
   if (provider.requiresKey && (!key || credential.endpoint !== url)) return { ok: false, error: explainError({ kind: 'config' }) };
-  const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  const ctrl = new AbortController();
+  let timedOut = false;
+  const abort = () => ctrl.abort();
+  const timer = setTimeout(() => { timedOut = true; ctrl.abort(); }, timeoutMs);
+  signal?.addEventListener('abort', abort, { once: true });
+  if (signal?.aborted) ctrl.abort();
   try {
     const send = async (payload) => {
       const headers = { 'Content-Type': 'application/json' };
@@ -110,6 +147,10 @@ export async function chat(settings, messages, { win = globalThis, fetchImpl = g
     const kind = Array.isArray(data?.choices) && data.choices.length ? 'empty' : 'format';
     return { ok: false, error: explainError({ kind }), status: res.status };
   } catch (error) {
-    return { ok: false, error: explainError({ kind: error?.name === 'AbortError' ? 'timeout' : 'network' }) };
-  } finally { clearTimeout(timer); }
+    const kind = signal?.aborted && !timedOut ? 'cancelled' : error?.name === 'AbortError' ? 'timeout' : 'network';
+    return { ok: false, error: explainError({ kind }), kind };
+  } finally {
+    clearTimeout(timer);
+    signal?.removeEventListener('abort', abort);
+  }
 }
