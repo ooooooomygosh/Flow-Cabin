@@ -1,7 +1,37 @@
 'use strict';
 const { execFileSync } = require('node:child_process');
 const fs = require('node:fs'), path = require('node:path');
-if (process.platform !== 'win32') { console.log('Native Windows helpers are not required on this platform.'); process.exit(0); }
+
+function buildMacInput() {
+  const candidates = [
+    process.env.NODE_INCLUDE_DIR,
+    path.join(path.dirname(process.execPath), '..', 'include', 'node'),
+    '/usr/local/include/node',
+    '/opt/homebrew/include/node'
+  ].filter(Boolean);
+  const include = candidates.find((directory) => fs.existsSync(path.join(directory, 'node_api.h')));
+  if (!include) throw new Error('Node.js headers (node_api.h) were not found; set NODE_INCLUDE_DIR.');
+  const source = path.join(__dirname, 'native', 'mac-input.mm');
+  const output = path.join(__dirname, 'native', 'mac-input.node');
+  // A Command Line Tools-only install can expose an SDK newer than its default
+  // libc++ include directory. Prefer the SDK's own headers when present.
+  const sdk = execFileSync('xcrun', ['--show-sdk-path'], { encoding: 'utf8' }).trim();
+  const sdkCxx = path.join(sdk, 'usr', 'include', 'c++', 'v1');
+  execFileSync('clang++', [
+    '-std=c++17', '-O2', '-fPIC', '-bundle', '-undefined', 'dynamic_lookup',
+    '-mmacosx-version-min=11.0', '-I', include,
+    ...(fs.existsSync(path.join(sdkCxx, 'atomic')) ? ['-isystem', sdkCxx] : []),
+    '-framework', 'ApplicationServices',
+    '-o', output, source
+  ], { stdio: 'inherit' });
+  console.log('Built native/mac-input.node');
+}
+
+if (process.platform === 'darwin') {
+  buildMacInput();
+  process.exit(0);
+}
+if (process.platform !== 'win32') { console.log('Native desktop helpers are not required on this platform.'); process.exit(0); }
 const directory = path.join(__dirname, 'native', 'bin'); fs.mkdirSync(directory, { recursive: true });
 const framework = path.join(process.env.WINDIR || 'C:\\Windows', 'Microsoft.NET', 'Framework64', 'v4.0.30319');
 const compiler = path.join(framework, 'csc.exe');

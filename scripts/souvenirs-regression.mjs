@@ -99,7 +99,7 @@ async function run(name, test, { open = true, prepare } = {}) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'zh-CN', reducedMotion: 'reduce' });
   await context.addInitScript(focusKey => {
     if (location.origin === 'null') return;
-    if (!localStorage.getItem('flow-cabin-onboarding-v1')) localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.0' }));
+    if (!localStorage.getItem('flow-cabin-onboarding-v1')) localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.1' }));
     if (!localStorage.getItem(focusKey)) localStorage.setItem(focusKey, JSON.stringify({ settings: { notify: false, chime: false }, rewards: { fish: 7, xp: 100 } }));
     if (!localStorage.getItem('album-circle-focus-display-v1')) localStorage.setItem('album-circle-focus-display-v1', JSON.stringify({ autoEnter: false }));
   }, FOCUS_KEY);

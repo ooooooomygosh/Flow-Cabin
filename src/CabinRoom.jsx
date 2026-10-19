@@ -56,7 +56,7 @@ const snapshotItem = (item) => item ? ({ id: item.id, title: item.title, artist:
 // What the wallpaper and the desktop pet see (window.albumRoomSnapshot), built only when they ask.
 const buildSnapshot = ({ items, record, look, ...rest }) => ({ ...rest, look, roomName: getRoomScene(look).label, items: items.map(snapshotItem), record: snapshotItem(record) });
 
-export default function CabinRoom({ items, loading, loadError = '', reload, openRecord, openAdd, firstVisit = false, hubRequest = null, openBackup, openWall, notify }) {
+export default function CabinRoom({ items, loading, loadError = '', reload, openRecord, openAdd, firstVisit = false, hubRequest = null, openBackup, openWall, notify, saveToShelf }) {
   const appearance = useDesktopAppearance(), reduced = useReducedMotion();
   const stage = useRef(null);
   const flow = useOnboardingFlow({ client: appearance.client, loading, loadError, firstVisit, itemCount: items.length, hubRequest, notify });
@@ -70,21 +70,8 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
   useCatCareHost();
   const [catPanelOpen, setCatPanelOpen] = useState(false);
   const [smartOpen, setSmartOpen] = useState(false);
-  // SmartTurntable calls close() right after onStart(). A failed focus write
-  // consumes that one close call so the panel stays open for a retry.
-  const smartCloseBlocked = useRef(false);
-  const closeSmart = useCallback(() => {
-    if (smartCloseBlocked.current) { smartCloseBlocked.current = false; return; }
-    setSmartOpen(false);
-  }, []);
-  const openSmart = useCallback(() => { smartCloseBlocked.current = false; setSmartOpen(true); }, []);
-  // SmartTurntable currently closes immediately after onStart(), ignoring its
-  // return value. Failures suppress only that synchronous close; the flag
-  // clears on the next tick so the user can still dismiss the panel.
-  const blockSmartClose = () => {
-    smartCloseBlocked.current = true;
-    setTimeout(() => { smartCloseBlocked.current = false; }, 0);
-  };
+  const closeSmart = useCallback(() => setSmartOpen(false), []);
+  const openSmart = useCallback(() => setSmartOpen(true), []);
   // Capture the first interaction before the lazy panel's module is available.
   useLayoutEffect(() => {
     const open = () => setCatPanelOpen(true);
@@ -117,29 +104,27 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
   }, [lofiBpm]);
   useCompanionSnapshot({ look, petId, petOut: Boolean(pet.active), weather, accessory: catFocus.accessory || '', grooving, track: deck.nowTrack, startRow: view.startRow, items: view.items, selectedId: selected?.id || '', record: deckItem, recordStyle, spinning: effectiveSpin, trackIndex: deck.shownTrackIndex, reduceMotion: appearance.reduceMotion, statusText: deck.statusText, actualTrack: deck.actualTrack, provider }, buildSnapshot, (state) => setWallpaperError(state.error || ''));
   const personalizeRoom = (patch) => library?.update((old) => ({ ...old, rooms: { ...old.rooms, [library.roomId]: { ...(old.rooms[library.roomId] || {}), ...patch } } }));
-  // The smart turntable only suggests records already on this shelf. Starting
-  // is explicit: persist the focus settings and timer first, then put the
-  // first album on the deck and replace 待播 with the rest of the picks.
+  // Starting is explicit: persist the focus settings and timer first, then put
+  // the AI playlist or the first shelf pick on the deck.
   const startSmartSession = (plan) => {
     if (!focus) {
-      blockSmartClose();
       notify?.('专注记录还没有准备好，智能专注没有开始。', { tone: 'error' });
       return false;
     }
     const shelf = Array.isArray(items) ? items : [], picked = [], seen = new Set();
-    const rawItems = Array.isArray(plan?.items) && plan.items.length ? plan.items : Array.isArray(plan?.albums) ? plan.albums : [];
+    const isPlaylist = plan?.kind === 'playlist' && plan?.item?.type === 'playlist';
+    const rawItems = isPlaylist ? [plan.item] : Array.isArray(plan?.items) && plan.items.length ? plan.items : Array.isArray(plan?.albums) ? plan.albums : [];
     for (const item of rawItems) {
       const rawId = item && typeof item === 'object' ? item.id ?? item.albumId ?? item.recordId ?? item.item?.id : item;
       const id = queueId(rawId);
       if (!id || seen.has(id)) continue;
-      const shelfItem = shelf.find((entry) => queueId(entry?.id) === id);
+      const shelfItem = isPlaylist ? item : shelf.find((entry) => queueId(entry?.id) === id);
       if (!shelfItem) continue;
       seen.add(id);
       picked.push(shelfItem);
     }
     if (!picked.length) {
-      blockSmartClose();
-      notify?.('推荐的唱片已经不在唱片架里，智能专注没有开始。', { tone: 'error' });
+      notify?.('推荐的唱片或歌单不完整，智能专注没有开始。', { tone: 'error' });
       return false;
     }
     const minutes = Math.max(1, Math.min(180, Math.round(Number(plan?.minutes) || 50)));
@@ -149,14 +134,12 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
     if (Number(focus.state?.settings?.focusMin) !== minutes) {
       const saved = focus.settings({ focusMin: minutes });
       if (saved === false) {
-        blockSmartClose();
         notify?.('无法保存专注设置，智能专注没有开始。请检查存储空间后重试。', { tone: 'error' });
         return false;
       }
     }
     if (focus.start('focus') === false) {
       focus.reset?.();
-      blockSmartClose();
       notify?.('专注计时保存失败，智能专注没有开始。请检查存储空间后重试。', { tone: 'error' });
       return false;
     }
@@ -173,7 +156,7 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
     const queued = deck.replaceQueue(picked.slice(1), picked[0].id);
     deck.load(picked[0], 0, { autoplay });
     setSmartOpen(false);
-    const first = `《${picked[0].title}》`;
+    const first = `${picked[0].type === 'playlist' ? '歌单' : '唱片'}《${picked[0].title}》`;
     const queueFailure = !queued
       ? picked.length > 1 ? ' 其余推荐未能写入待播，请检查存储空间。' : ' 待播未能更新，请检查存储空间。'
       : '';
@@ -229,7 +212,7 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
     <div ref={stage} className="cabin-stage-wrap"><RoomScene look={look} items={view.items} selectedId={selected?.id} select={setSelectedId} load={deck.place} startRow={view.startRow} weather={weather} cat={cat}>
       <RoomTurntable item={deckItem} spinning={effectiveSpin} system={deck.system} trackIndex={deck.shownTrackIndex} style={recordStyle} items={items} load={deck.load} toggle={deck.toggleVisual} track={deck.setTrackIndex} eject={deck.eject} provider={provider} setProvider={deck.chooseProvider} playback={playback} player={player} tools={<nav className="turntable-room-tools" aria-label="唱片架">
         <button type="button" aria-label="整理唱片架" title="排序、筛选、唱片盒与专辑墙" aria-controls="cabin-shelf-filters" aria-expanded={filtersOpen} className={filtered ? 'is-active' : ''} onClick={() => setFiltersOpen(!filtersOpen)}><Wand2 size={17}/><span>整理唱片架{filtered ? ` · ${visible.length}` : ''}</span></button>
-        <button type="button" aria-label="智能唱片机" title="说出计划，让小屋从唱片架里搭配音乐" onClick={openSmart}><Sparkles size={17}/><span>智能唱片机</span></button>
+        <button type="button" aria-label="智能唱片机" title="说出计划，让小屋按场景编排一张可播放歌单" onClick={openSmart}><Sparkles size={17}/><span>智能唱片机</span></button>
       </nav>}/>
       {!visible.length && <div className="room-empty">
         {/* A failed read is explained once, in the titlebar alert; the shelf offers the way back. */}
@@ -253,7 +236,7 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
     {!desktopMode && <ImmersiveChrome zen={zen} fullscreen={fullscreen} exitFullscreen={chrome.exitFullscreen} toggleZen={chrome.toggleZen} tools={chrome.zenTools} setTools={chrome.setZenTools} />}
     <Suspense fallback={null}>
       <Suspense fallback={null}><CatPanel open={catPanelOpen} onClose={() => setCatPanelOpen(false)}/></Suspense>
-      <SmartTurntable open={smartOpen} close={closeSmart} items={items} onStart={startSmartSession} onNeedAiSettings={() => { setSmartOpen(false); flow.setHub('ai'); }}/>
+      <SmartTurntable open={smartOpen} close={closeSmart} items={items} onStart={startSmartSession} onSave={saveToShelf} onNeedAiSettings={() => { setSmartOpen(false); flow.setHub('ai'); }}/>
       {corner && <ListeningCorner item={deckItem} items={visible} vinyl={recordStyle} provider={provider} spinning={effectiveSpin} trackIndex={deck.shownTrackIndex} setTrackIndex={deck.setTrackIndex} playback={playback} player={player} toggleVisual={deck.toggleVisual} load={deck.load} close={() => chrome.setCorner(false)} reduceMotion={reduced}/>}
       {flow.hub && <SettingsHub section={flow.hub} setSection={flow.setHub} close={() => flow.setHub('')} env={flow.env} player={flow.playerAdapter} provider={provider} useSource={deck.chooseProvider} look={look} petId={petId} onRoomChange={personalizeRoom} reduceMotion={appearance.reduceMotion} error={library?.error} desktop={chrome.desktop} openBackup={() => { flow.setHub(''); openBackup?.(); }} restartOnboarding={flow.restartOnboarding}/>}
       {flow.wizard && <OnboardingWizard state={flow.onboarding} update={flow.saveOnboarding} env={flow.env} player={flow.playerAdapter} look={look} petId={petId} onRoomChange={personalizeRoom} useSource={deck.chooseProvider} openMusicSettings={flow.openMusicSettings} openAdd={() => { flow.closeWizard('later'); openAdd(); }} close={flow.closeWizard} reduceMotion={appearance.reduceMotion} error={library?.error}/>}

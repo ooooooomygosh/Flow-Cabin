@@ -12,6 +12,18 @@ function fakeHook() {
   return { listeners, get started() { return started; }, get stopped() { return stopped; },
     uIOhook: { on: (name, fn) => { (listeners[name] ||= []).push(fn); }, off: (name, fn) => { listeners[name] = (listeners[name] || []).filter((f) => f !== fn); }, start: () => { started++; }, stop: () => { stopped++; } } };
 }
+function fakeMac() {
+  return {
+    granted: false, running: false, starts: 0, stops: 0, requests: 0, resets: 0, keyboard: 0, click: 0,
+    preflight() { return this.granted; },
+    request() { this.requests++; return this.granted; },
+    start() { this.starts++; this.running = true; return true; },
+    stop() { this.stops++; this.running = false; },
+    status() { return { running: this.running, permission: this.granted }; },
+    reset() { this.resets++; this.keyboard = 0; this.click = 0; },
+    drain() { const value = { keyboard: this.keyboard, click: this.click }; this.keyboard = 0; this.click = 0; return value; }
+  };
+}
 // Every way to inspect a keyboard or mouse event throws, including enumeration.
 const sealedEvent = () => new Proxy({}, {
   get() { throw new Error('event content was read'); },
@@ -30,7 +42,7 @@ test('typing follow is on by default, missing values adopt it and explicit false
 
 test('global hook: keydown and mousedown stay distinct, every event is counted, no content is read', () => {
   const native = fakeHook(), seen = []; let clock = 0, loads = 0;
-  const hook = createTypingHook({ platform: 'win32', load: () => { loads++; return native; }, onActivity: (...args) => seen.push(args), now: () => clock });
+  const hook = createTypingHook({ platform: 'win32', loadWindows: () => { loads++; return native; }, onActivity: (...args) => seen.push(args), now: () => clock });
   assert.equal(hook.status(), 'off'); assert.equal(loads, 0, 'nothing loads while the setting is off');
   assert.equal(hook.setEnabled(true), 'active');
   assert.equal(hook.setEnabled(true), 'active'); assert.equal(native.started, 1);
@@ -61,7 +73,7 @@ test('failed start or partial subscription removes both listeners, stops native 
     const originalOn = native.uIOhook.on, originalStart = native.uIOhook.start;
     native.uIOhook.on = (name, fn) => { originalOn(name, fn); if (fail && failAt === 'on' && name === 'mousedown') throw new Error('registration failed'); };
     native.uIOhook.start = () => { originalStart(); if (fail && failAt === 'start') throw new Error('start failed'); };
-    const hook = createTypingHook({ platform: 'linux', load: () => native, now: () => 1000, onActivity: (event) => seen.push(event) });
+    const hook = createTypingHook({ platform: 'linux', loadWindows: () => native, now: () => 1000, onActivity: (event) => seen.push(event) });
     assert.equal(hook.setEnabled(true), 'unavailable');
     for (const name of ['keydown', 'mousedown']) assert.equal(native.listeners[name].length, 0, failAt);
     assert.equal(native.stopped, 1);
@@ -82,7 +94,7 @@ test('cleanup supports removeListener and continues when off or native stop thro
     native.uIOhook.removeListener = (name, fn) => { removed.push(name); remove(name, fn); };
     native.uIOhook.off = mode === 'off-throws' ? () => { throw new Error('off failed'); } : undefined;
     native.uIOhook.stop = () => { throw new Error('stop failed'); };
-    const hook = createTypingHook({ platform: 'linux', load: () => native, onActivity: () => {} });
+    const hook = createTypingHook({ platform: 'linux', loadWindows: () => native, onActivity: () => {} });
     assert.equal(hook.setEnabled(true), 'active');
     assert.doesNotThrow(() => hook.stop());
     assert.equal(hook.status(), 'off'); assert.deepEqual(removed, ['keydown', 'mousedown']);
@@ -90,33 +102,44 @@ test('cleanup supports removeListener and continues when off or native stop thro
   }
 });
 
-test('macOS: no native load without Accessibility permission; prompt, then start on retry', () => {
-  const native = fakeHook(); let trusted = false, loads = 0; const prompts = [];
-  const systemPreferences = { isTrustedAccessibilityClient: (prompt) => { prompts.push(prompt); return trusted; } };
-  const hook = createTypingHook({ platform: 'darwin', systemPreferences, load: () => { loads++; return native; }, onActivity: () => {} });
+test('macOS: Input Monitoring alone gates the listen-only tap; prompt, then start on retry', () => {
+  const native = fakeMac(); let loads = 0; const intervals = [];
+  const hook = createTypingHook({ platform: 'darwin', loadMac: () => { loads++; return native; }, exists: () => true, setIntervalFn: (fn) => { intervals.push(fn); return 1; }, clearIntervalFn: () => {}, onActivity: () => {} });
   assert.equal(hook.permission(), 'needs-permission');
-  assert.equal(hook.setEnabled(true), 'needs-permission'); assert.equal(loads, 0);
-  assert.equal(hook.requestPermission(), 'needs-permission'); assert.ok(prompts.includes(true), 'the system prompt is shown on request only');
-  assert.ok(prompts.filter((p) => p === true).length === 1);
-  trusted = true; assert.equal(hook.permission(), 'granted'); assert.equal(hook.retry(), 'active'); assert.equal(loads, 1);
-  hook.stop(); assert.equal(hook.status(), 'off'); assert.equal(native.stopped, 1);
+  assert.equal(hook.setEnabled(true), 'needs-permission'); assert.equal(native.starts, 0, 'the tap does not start before the grant');
+  assert.equal(hook.requestPermission(), 'needs-permission'); assert.equal(native.requests, 1, 'the system prompt is requested only by the user action');
+  native.granted = true; assert.equal(hook.permission(), 'granted'); assert.equal(hook.retry(), 'active'); assert.equal(loads, 1);
+  assert.equal(native.starts, 1); assert.equal(intervals.length, 1);
+  hook.stop(); assert.equal(hook.status(), 'off'); assert.equal(native.stops, 1);
 });
 
 test('returning from Input Monitoring rebuilds an already running hook', () => {
-  const native = fakeHook();
-  const hook = createTypingHook({ platform: 'darwin', systemPreferences: { isTrustedAccessibilityClient: () => true }, load: () => native, onActivity: () => {} });
+  const native = fakeMac(); native.granted = true;
+  const hook = createTypingHook({ platform: 'darwin', loadMac: () => native, exists: () => true, setIntervalFn: () => 1, clearIntervalFn: () => {}, onActivity: () => {} });
   assert.equal(hook.setEnabled(true), 'active');
-  assert.equal(native.started, 1);
+  assert.equal(native.starts, 1);
   assert.equal(hook.restart(), 'active');
-  assert.equal(native.stopped, 1);
-  assert.equal(native.started, 2);
-  for (const name of ['keydown', 'mousedown']) assert.equal(native.listeners[name].length, 1, 'restart never duplicates listeners');
+  assert.equal(native.stops, 1);
+  assert.equal(native.starts, 2);
   hook.stop();
+});
+
+test('macOS: native drain reports exact pressed-key and click counts without event details', () => {
+  const native = fakeMac(); native.granted = true; const seen = []; let clock = 100;
+  const hook = createTypingHook({ platform: 'darwin', loadMac: () => native, exists: () => true, setIntervalFn: () => 1, clearIntervalFn: () => {}, now: () => ++clock, onActivity: (event) => seen.push(event) });
+  hook.setEnabled(true);
+  native.keyboard = 3; native.click = 2; hook.drain();
+  assert.deepEqual(seen, [
+    { type: 'keyboard', at: 101 }, { type: 'keyboard', at: 102 }, { type: 'keyboard', at: 103 },
+    { type: 'click', at: 104 }, { type: 'click', at: 105 }
+  ]);
+  hook.drain(); assert.equal(seen.length, 5, 'draining an empty native queue is inert');
+  hook.stop(); native.keyboard = 1; hook.drain(); assert.equal(seen.length, 5, 'stopped hooks ignore late native events');
 });
 
 test('a broken native module only disables the feature', () => {
   const logs = [];
-  const hook = createTypingHook({ platform: 'linux', load: () => { throw new Error('no prebuild'); }, onActivity: () => {}, log: (...a) => logs.push(a) });
+  const hook = createTypingHook({ platform: 'linux', loadWindows: () => { throw new Error('no prebuild'); }, onActivity: () => {}, log: (...a) => logs.push(a) });
   assert.equal(hook.setEnabled(true), 'unavailable'); assert.equal(logs[0][0], 'typing-hook-error');
 });
 
@@ -125,8 +148,10 @@ test('the source never logs or forwards key or mouse details', () => {
   assert.doesNotMatch(source, /keycode|rawcode|\.key\b|\.button\b|\.buttons\b|\.x\b|\.y\b|mousemove|mousewheel|'input'/i);
   const pkg = require('../package.json');
   assert.ok(pkg.build.asarUnpack.some((glob) => glob.includes('uiohook-napi')), 'native prebuilds stay outside the asar');
+  assert.ok(pkg.build.asarUnpack.some((glob) => glob.includes('mac-input.node')), 'the macOS tap stays outside the asar');
   assert.ok(pkg.build.files.includes('typing-hook.cjs'));
   assert.ok(pkg.build.files.includes('input-stats.cjs'));
+  assert.ok(pkg.build.files.includes('native/mac-input.node'));
 });
 
 test('CompanionBridge fallback keeps keyboard and click separate, ignores Proxy content and cleans up', () => {

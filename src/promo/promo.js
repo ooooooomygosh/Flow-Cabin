@@ -1,7 +1,7 @@
 const site = document.querySelector('.site');
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
 const latestReleaseEndpoint = 'https://api.github.com/repos/ooooooomygosh/album-web/releases/latest';
-const fallbackLatestVersion = 'v1.21.0';
+const fallbackLatestVersion = 'v1.21.1';
 
 const rooms = {
   pixel: {
@@ -100,44 +100,61 @@ const weatherMoments = {
     night: '雪落在窗外，壁炉把地板照成蜂蜜色。'
   }
 };
-const tracks = [
-  { title: 'Dreamer', artist: 'Laufey · Bewitched', cover: '/promo/covers/bewitched.jpg', duration: '3:29' },
-  { title: 'While You Were Sleeping', artist: 'Laufey · Bewitched', cover: '/promo/covers/bewitched.jpg', duration: '2:58' },
-  { title: 'Lovesick', artist: 'Laufey · Bewitched', cover: '/promo/covers/bewitched.jpg', duration: '3:45' },
-  { title: 'California and Me', artist: 'Laufey · Bewitched', cover: '/promo/covers/bewitched.jpg', duration: '3:36' }
+const studyTracks = [
+  { id: 'study-dreamer', title: 'Dreamer', artist: 'Laufey', album: 'Bewitched', cover: '/promo/covers/bewitched.jpg', duration: '3:29' },
+  { id: 'study-singalongsong', title: 'Singalongsong', artist: '方大同', album: '橙月', cover: '/promo/covers/orange-moon.jpg', duration: '3:18' },
+  { id: 'study-cambrian', title: '寒武纪', artist: '王菲', album: '寓言', cover: '/promo/covers/fable.jpg', duration: '5:19' },
+  { id: 'study-from-start', title: 'From The Start', artist: 'Laufey', album: 'Bewitched', cover: '/promo/covers/bewitched.jpg', duration: '2:49' },
+  { id: 'study-three', title: '三人游', artist: '方大同', album: '橙月', cover: '/promo/covers/orange-moon.jpg', duration: '3:57' },
+  { id: 'study-new-guest', title: '新房客', artist: '王菲', album: '寓言', cover: '/promo/covers/fable.jpg', duration: '4:55' },
+  { id: 'study-letter', title: 'Letter to My 13 Year Old Self', artist: 'Laufey', album: 'Bewitched', cover: '/promo/covers/bewitched.jpg', duration: '4:20' }
+];
+
+const writeTracks = [
+  { id: 'write-black-white', title: '黑白', artist: '方大同', album: '橙月', cover: '/promo/covers/orange-moon.jpg', duration: '4:12' },
+  { id: 'write-misty', title: 'Misty', artist: 'Laufey', album: 'Bewitched', cover: '/promo/covers/bewitched.jpg', duration: '3:29' },
+  { id: 'write-forget', title: '笑忘书', artist: '王菲', album: '寓言', cover: '/promo/covers/fable.jpg', duration: '4:15' },
+  { id: 'write-little-bug', title: '小小虫', artist: '方大同', album: '橙月', cover: '/promo/covers/orange-moon.jpg', duration: '3:49' },
+  { id: 'write-promise', title: 'Promise', artist: 'Laufey', album: 'Bewitched', cover: '/promo/covers/bewitched.jpg', duration: '3:37' },
+  { id: 'write-spider-lily', title: '彼岸花', artist: '王菲', album: '寓言', cover: '/promo/covers/fable.jpg', duration: '5:17' }
+];
+
+const sleepTracks = [
+  { id: 'sleep-while', title: 'While You Were Sleeping', artist: 'Laufey', album: 'Bewitched', cover: '/promo/covers/bewitched.jpg', duration: '2:58' },
+  { id: 'sleep-everyone', title: '每个人都会', artist: '方大同', album: '橙月', cover: '/promo/covers/orange-moon.jpg', duration: '4:07' },
+  { id: 'sleep-chanel', title: '香奈儿', artist: '王菲', album: '寓言', cover: '/promo/covers/fable.jpg', duration: '4:53' },
+  { id: 'sleep-serendipity', title: 'Serendipity', artist: 'Laufey', album: 'Bewitched', cover: '/promo/covers/bewitched.jpg', duration: '3:35' },
+  { id: 'sleep-for-you', title: '为你写的歌', artist: '方大同', album: '橙月', cover: '/promo/covers/orange-moon.jpg', duration: '3:45' },
+  { id: 'sleep-asura', title: '阿修罗', artist: '王菲', album: '寓言', cover: '/promo/covers/fable.jpg', duration: '4:01' },
+  { id: 'sleep-bewitched', title: 'Bewitched', artist: 'Laufey', album: 'Bewitched', cover: '/promo/covers/bewitched.jpg', duration: '3:02' },
+  { id: 'sleep-new-guest', title: '新房客', artist: '王菲', album: '寓言', cover: '/promo/covers/fable.jpg', duration: '4:55' }
 ];
 
 const smartPicks = {
   study: {
-    ask: '学习 50 分钟，帮我搭配音乐',
+    ask: '学习 50 分钟，编一张完整歌单',
     intent: '学习 · 50 分钟',
-    albums: [
-      { id: 'bewitched', title: 'Bewitched', artist: 'Laufey', cover: '/promo/covers/bewitched.jpg' },
-      { id: 'orange-moon', title: '橙月', artist: 'Khalil Fong', cover: '/promo/covers/orange-moon.jpg' },
-      { id: 'fable', title: '寓言', artist: 'Faye Wong', cover: '/promo/covers/fable.jpg' }
-    ],
-    reason: '安静、节奏稳定；钢琴和弦乐留出空间，适合把注意力放在这一轮。',
+    title: '留白专注 · 50 分钟',
+    tracks: studyTracks,
+    reason: '从唱片架之外补进钢琴、爵士与弦乐；节奏稳定，前 6 首不抢注意力，最后留一首慢慢收尾。',
     minutes: 50,
     focusName: '深度'
   },
   write: {
-    ask: '写作 45 分钟，帮我搭配音乐',
+    ask: '写作 45 分钟，编一张完整歌单',
     intent: '写作 · 45 分钟',
-    albums: [
-      { id: 'bewitched', title: 'Bewitched', artist: 'Laufey', cover: '/promo/covers/bewitched.jpg' },
-      { id: 'orange-moon', title: '橙月', artist: 'Khalil Fong', cover: '/promo/covers/orange-moon.jpg' }
-    ],
-    reason: '温暖、不催促；旋律有呼吸感，适合写到一半停下来想一想。',
+    title: '把句子铺开 · 45 分钟',
+    tracks: writeTracks,
+    reason: '温暖、有呼吸感；人声与器乐交替，不把旋律堆满，写到停下来时也还有空间。',
     minutes: 45,
     focusName: '写作'
   },
   sleep: {
-    ask: '睡前 30 分钟，来点轻的',
+    ask: '睡前 30 分钟，编一张轻一点的歌单',
     intent: '睡前 · 30 分钟',
-    albums: [
-      { id: 'bewitched', title: 'Bewitched', artist: 'Laufey', cover: '/promo/covers/bewitched.jpg' }
-    ],
-    reason: '慢下来、留白多；不把音量推高，也不急着把这一晚结束。',
+    title: '关灯前 · 30 分钟',
+    tracks: sleepTracks,
+    reason: '音量轻、留白多，从熟悉的人声慢慢降到更安静的段落，不急着把这一晚结束。',
     minutes: 30,
     focusName: '睡前'
   }
@@ -164,8 +181,10 @@ const state = {
   playing: false,
   progress: 18,
   track: 0,
+  activeTracks: smartPicks.study.tracks,
   smartPick: 'study',
   smartAutoplay: true,
+  smartSaved: false,
   focusPreset: 50,
   focusName: '深度',
   focusRemaining: 50 * 60,
@@ -199,7 +218,7 @@ async function syncLatestVersion() {
     const release = await response.json();
     applyLatestVersion(release?.tag_name);
   } catch {
-    // The static v1.21.0 copy keeps the page useful when GitHub is unreachable.
+    // The static v1.21.1 copy keeps the page useful when GitHub is unreachable.
   } finally {
     clearTimeout(timeout);
   }
@@ -305,10 +324,11 @@ function registerCompanionMoment(type = 'keyboard') {
 }
 
 function updateTrack() {
-  const track = tracks[state.track];
+  const track = state.activeTracks[state.track];
+  if (!track) return;
   $('#track-number').textContent = String(state.track + 1).padStart(2, '0');
   $('#track-title').textContent = track.title;
-  $('#track-artist').textContent = track.artist;
+  $('#track-artist').textContent = `${track.artist} · ${track.album}`;
   $('#track-cover').src = track.cover;
   const sleeveCover = $('.record-sleeve img');
   if (sleeveCover) sleeveCover.src = track.cover;
@@ -319,13 +339,48 @@ function updateTrack() {
   });
 }
 
-function renderSmartAlbumList(pick) {
+function selectTrack(index) {
+  const track = state.activeTracks[index];
+  if (!track) return;
+  state.track = index;
+  state.progress = 8;
+  updateTrack();
+  if (!state.playing) state.playing = true;
+  renderPlaying();
+  setCat('groove', { pinned: true });
+  toast(`切到「${track.title}」。`);
+}
+
+function renderTurntableTrackList() {
+  const list = $('.tracklist');
+  const fragment = document.createDocumentFragment();
+  state.activeTracks.forEach((track, index) => {
+    const item = document.createElement('li');
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.track = String(index);
+
+    const order = document.createElement('span');
+    order.textContent = String(index + 1).padStart(2, '0');
+    const duration = document.createElement('small');
+    duration.textContent = track.duration;
+
+    button.append(order, document.createTextNode(` ${track.title} `), duration);
+    button.addEventListener('click', () => selectTrack(index));
+    item.append(button);
+    fragment.append(item);
+  });
+  list.replaceChildren(fragment);
+  updateTrack();
+}
+
+function renderSmartTrackList(pick) {
   const list = $('#smart-picks');
   const fragment = document.createDocumentFragment();
-  pick.albums.forEach((album, index) => {
+  pick.tracks.forEach((track, index) => {
     const item = document.createElement('li');
     item.className = 'smart-pick';
-    item.dataset.albumId = album.id;
+    item.dataset.trackId = track.id;
 
     const order = document.createElement('span');
     order.className = 'smart-order';
@@ -333,24 +388,25 @@ function renderSmartAlbumList(pick) {
     order.textContent = String(index + 1).padStart(2, '0');
 
     const cover = document.createElement('img');
-    cover.src = album.cover;
-    cover.alt = `${album.title} 专辑封面`;
+    cover.src = track.cover;
+    cover.alt = `${track.album} 专辑封面`;
 
     const copy = document.createElement('div');
     const title = document.createElement('strong');
-    title.textContent = album.title;
-    const artist = document.createElement('small');
-    artist.textContent = album.artist;
-    copy.append(title, artist);
+    title.textContent = track.title;
+    const meta = document.createElement('small');
+    meta.textContent = `${track.artist} · ${track.album}`;
+    copy.append(title, meta);
 
     const tag = document.createElement('span');
     tag.className = 'smart-tag';
-    tag.textContent = index === 0 ? '第一张 · 放上唱机' : '待播';
+    tag.textContent = index === 0 ? '第 1 首 · 放上唱机' : '待播';
 
     item.append(order, cover, copy, tag);
     fragment.append(item);
   });
   list.replaceChildren(fragment);
+  list.setAttribute('aria-label', `${pick.title} · 歌单曲目`);
 }
 
 function renderSmartAutoplay() {
@@ -359,45 +415,67 @@ function renderSmartAutoplay() {
     button.setAttribute('aria-pressed', String(active));
   });
   const start = $('[data-smart-start]');
-  start.textContent = state.smartAutoplay ? '确认并开始这一轮' : '开始专注，放上唱片';
+  start.textContent = state.smartAutoplay ? '保存并开始这一轮' : '保存歌单，开始专注';
   $('#smart-start-hint').textContent = state.smartAutoplay
     ? '同时开始专注与播放'
-    : '只开始专注，唱片保持暂停';
+    : '只开始专注，歌单保持暂停';
+}
+
+function renderSmartSaved() {
+  const save = $('[data-smart-save]');
+  save.disabled = state.smartSaved;
+  save.textContent = state.smartSaved ? '已保存到唱片架' : '保存到唱片架';
 }
 
 function renderSmartPick(id) {
   const pick = smartPicks[id];
   if (!pick) return;
   state.smartPick = id;
+  state.smartSaved = false;
   $('#smart-ask-text').textContent = pick.ask;
   $('#smart-intent').textContent = pick.intent;
-  $('#smart-count').textContent = `按推荐顺序 · ${pick.albums.length} 张`;
-  renderSmartAlbumList(pick);
-  $('#smart-reason').textContent = pick.reason;
-  $('#smart-status').textContent = `演示 · 已校验 ${pick.albums.length} 张`;
+  $('#smart-count').textContent = `${pick.tracks.length} 首 · 外部歌单`;
+  renderSmartTrackList(pick);
+  $('#smart-title').textContent = pick.title;
+  $('#smart-description').textContent = pick.reason;
+  $('#smart-status').textContent = `AI 演示 · 已编排 ${pick.tracks.length} 首`;
   renderSmartAutoplay();
+  renderSmartSaved();
   $$('[data-smart-request]').forEach((button) => {
     button.setAttribute('aria-pressed', String(button.dataset.smartRequest === id));
   });
 }
 
+function saveSmartPick() {
+  const pick = smartPicks[state.smartPick];
+  if (!pick || state.smartSaved) return;
+  state.smartSaved = true;
+  renderSmartSaved();
+  $('#smart-status').textContent = 'AI 演示 · 已收进唱片架';
+  toast(`《${pick.title}》已保存到唱片架，可以整张放上唱机。`);
+}
+
 function startSmartPick() {
   const pick = smartPicks[state.smartPick];
-  const first = pick?.albums?.[0];
+  const first = pick?.tracks?.[0];
   if (!first) return;
+  state.smartSaved = true;
+  renderSmartSaved();
   setFocusPreset(pick.minutes, pick.focusName);
+  state.activeTracks = pick.tracks;
   state.track = 0;
-  updateTrack();
+  state.progress = 8;
+  renderTurntableTrackList();
   state.playing = state.smartAutoplay;
   renderPlaying();
   toggleFocus();
   setCat(state.smartAutoplay ? 'groove' : 'wait', { pinned: true });
-  setCatBubble(state.smartAutoplay ? '第一张已经转起来了。' : '唱片放好了，等你按播放。');
-  $('#smart-status').textContent = state.smartAutoplay ? '演示 · 正在播放' : '演示 · 等待播放';
+  setCatBubble(state.smartAutoplay ? '第一首已经转起来了。' : '整张歌单放好了，等你按播放。');
+  $('#smart-status').textContent = state.smartAutoplay ? 'AI 演示 · 正在播放' : 'AI 演示 · 等待播放';
   const playback = state.smartAutoplay
-    ? '第一张唱片开始转'
-    : `《${first.title}》已放上唱机，保持暂停`;
-  toast(`已开始 ${pick.minutes} 分钟专注，${playback}。`);
+    ? `《${pick.title}》从第一首开始播`
+    : `《${pick.title}》已放上唱机，保持暂停`;
+  toast(`已保存到唱片架，并开始 ${pick.minutes} 分钟专注；${playback}。`);
   $('#focus').scrollIntoView({ behavior: reduceMotion.matches ? 'auto' : 'smooth' });
 }
 
@@ -428,7 +506,7 @@ setInterval(() => {
   state.progress += .18;
   if (state.progress >= 100) {
     state.progress = 8;
-    state.track = (state.track + 1) % tracks.length;
+    state.track = (state.track + 1) % state.activeTracks.length;
     updateTrack();
   }
   $('.play-progress i').style.width = `${state.progress}%`;
@@ -668,21 +746,6 @@ $$('[data-vinyl-toggle]').forEach((button) => {
   button.addEventListener('click', toggleVinyl);
 });
 
-$$('.tracklist button').forEach((button) => {
-  button.addEventListener('click', () => {
-    state.track = Number(button.dataset.track);
-    state.progress = 8;
-    updateTrack();
-    renderPlaying();
-    if (!state.playing) {
-      state.playing = true;
-      renderPlaying();
-    }
-    setCat('groove', { pinned: true });
-    toast(`切到「${tracks[state.track].title}」。`);
-  });
-});
-
 $$('[data-focus-preset]').forEach((button) => {
   button.addEventListener('click', () => {
     setFocusPreset(Number(button.dataset.focusPreset), button.dataset.focusName);
@@ -697,10 +760,11 @@ $$('[data-smart-autoplay]').forEach((button) => {
   button.addEventListener('click', () => {
     state.smartAutoplay = button.dataset.smartAutoplay === 'true';
     renderSmartAutoplay();
-    $('#smart-status').textContent = state.smartAutoplay ? '演示 · 确认后播放' : '演示 · 确认后暂停';
+    $('#smart-status').textContent = state.smartAutoplay ? 'AI 演示 · 确认后播放' : 'AI 演示 · 确认后暂停';
   });
 });
 
+$('[data-smart-save]').addEventListener('click', saveSmartPick);
 $('[data-smart-start]').addEventListener('click', startSmartPick);
 
 $('[data-focus-toggle]').addEventListener('click', toggleFocus);
@@ -757,7 +821,7 @@ addEventListener('resize', updateScrollMeter);
 
 updateRoom();
 updateTime();
-updateTrack();
+renderTurntableTrackList();
 renderPlaying();
 renderFocus();
 renderSmartPick(state.smartPick);

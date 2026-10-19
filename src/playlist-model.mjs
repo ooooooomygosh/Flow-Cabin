@@ -6,6 +6,7 @@ export const PLAYLIST_SOURCES = {
   qq: { label: 'QQ 音乐', short: 'QQ', tone: 'qq' },
   apple: { label: 'Apple Music', short: 'Apple', tone: 'apple' },
   'apple-local': { label: 'Apple Music', short: '音乐 App', tone: 'apple' },
+  ai: { label: '智能唱片机', short: 'AI', tone: 'file' },
   file: { label: '歌单文件', short: '文件', tone: 'file' }
 };
 export const PLAYLIST_TRACK_LIMIT = 5000;
@@ -40,7 +41,7 @@ export function playlistItem(detail, provider, { cover = '' } = {}) {
     tracks: tracks.map((track) => clean(track.title)),
     trackDetails: tracks.map((track, index) => ({
       title: clean(track.title), trackNumber: index + 1, lengthMillis: Math.max(0, Number(track.duration) || 0),
-      source: ['qq', 'netease', 'apple', 'local'].includes(track.source) ? track.source : 'apple',
+      source: ['qq', 'netease', 'apple', 'local', 'ai'].includes(track.source) ? track.source : 'apple',
       providerId: clean(track.providerId, 64), mediaMid: clean(track.mediaMid, 64), artist: clean(track.artist), album: clean(track.album),
       ...(/^https:\/\//.test(track.cover || '') ? { cover: String(track.cover).slice(0, 700) } : {})
     })),

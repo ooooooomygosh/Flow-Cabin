@@ -95,7 +95,7 @@ ${directExport ? 'export ' : ''}function createBeatTracker(...args) {
     return route.fulfill({ status: 404, json: { error: 'none' } }); });
   await context.route('**/desktop-music/**', (r) => r.fulfill({ json: { available: false } }));
   await context.addInitScript(() => { if (sessionStorage.getItem('s')) return; sessionStorage.setItem('s', '1'); localStorage.clear();
-    localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.0' }));
+    localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.1' }));
     localStorage.setItem('flow-cabin-cat-mood-v1', JSON.stringify({ v: 1, mood: 90, tier: 'happy', updatedAt: Date.now(), feeds: [], totalFeeds: 0, unlockedActions: [] })); });
   const page = await context.newPage(); page.on('pageerror', (e) => report.pageErrors.push(`${name}: ${e.message}`));
   try { await page.goto(origin, { waitUntil: 'domcontentloaded', timeout: 30000 }); await page.locator('button.room-cat').waitFor({ timeout: 30000 });

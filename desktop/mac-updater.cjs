@@ -14,12 +14,17 @@
 //             one into place (restoring the old one on any failure) and, after
 //             「重启安装」, opens it again.
 //
-// Ad-hoc signatures change with every build, so macOS may ask again for the
-// Automation permission (controlling 「音乐」) after an update.
+// Releases use one stable self-signed code-signing requirement. A stable
+// certificate keeps TCC grants (Input Monitoring / Automation) across updates;
+// ad-hoc builds were tied to a changing CDHash and asked again every time.
 const fs = require('node:fs'), path = require('node:path'), crypto = require('node:crypto');
 const { EventEmitter } = require('node:events');
 const { execFile, execFileSync, spawn } = require('node:child_process');
 const { latestTag, latestNotes, httpError, parseVersion, compareVersions, RELEASES_URL } = require('./updater.cjs');
+
+// Public certificate SHA-1 only. The private key lives in GitHub Actions
+// secrets and the maintainer's login keychain, never in the repository.
+const SIGNING_FINGERPRINT = String(process.env.FLOW_CABIN_SIGNING_FINGERPRINT || 'df8fb879881e5465c5e323137be7aef259ebb787').toLowerCase();
 
 // Waits for the old process, swaps the bundle, restores it on failure.
 // Every value arrives as a positional argument; nothing is interpolated.
@@ -73,7 +78,7 @@ function createMacUpdater({ app, fetch = globalThis.fetch, platform = process.pl
   let pending = null, staged = null, installing = false;
   const receiptPath = path.join(directory, 'install-receipt.json'), statusPath = path.join(directory, 'install-status');
 
-  const run = (file, args) => new Promise((resolve, reject) => execFileProcess(file, args, { timeout: 120000, maxBuffer: 1024 * 1024, encoding: 'utf8' }, (error, stdout) => error ? reject(error) : resolve(String(stdout || '').trim())));
+  const run = (file, args) => new Promise((resolve, reject) => execFileProcess(file, args, { timeout: 120000, maxBuffer: 1024 * 1024, encoding: 'utf8' }, (error, stdout, stderr) => error ? reject(error) : resolve(String(stdout || '').trim() || String(stderr || '').trim())));
   const plist = (bundle, key) => run('/usr/bin/plutil', ['-extract', key, 'raw', '-o', '-', path.join(bundle, 'Contents', 'Info.plist')]);
 
   // Whether this copy can replace itself, with the reason shown when it cannot.
@@ -168,8 +173,11 @@ function createMacUpdater({ app, fetch = globalThis.fetch, platform = process.pl
       if (!fsModule.realpathSync(binary).startsWith(fsModule.realpathSync(copy) + path.sep)) throw new Error('更新包主程序不在应用目录内。');
       fsModule.accessSync(binary, fsModule.constants.X_OK);
       await run('/usr/bin/codesign', ['--verify', '--deep', '--strict', copy]);
-      // Preserve quarantine and other platform trust decisions. Integrity of
-      // an ad-hoc signature does not authenticate a publisher.
+      const requirement = await run('/usr/bin/codesign', ['--display', '--requirements', '-', copy]);
+      const root = /certificate root = H"([a-f0-9]{40})"/i.exec(requirement)?.[1]?.toLowerCase() || '';
+      if (!SIGNING_FINGERPRINT || root !== SIGNING_FINGERPRINT) {
+        throw new Error('更新包的签名身份与心流小屋不一致，已停止安装。请从发布页重新下载。');
+      }
       staged = { version, app: copy };
     } catch (error) { clean(); throw error; }
     fsModule.rmSync(zip, { force: true });

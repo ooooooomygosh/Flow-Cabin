@@ -1,5 +1,5 @@
 /** Rebuild the 1200×630 social preview from the real promo page.
- * External requests are blocked on purpose so the static v1.21.0 fallback is
+ * External requests are blocked on purpose so the static v1.21.1 fallback is
  * what appears in the card, rather than a release API fixture.
  */
 import { launchChromium } from './launch-browser.mjs';
@@ -29,7 +29,7 @@ try {
   const page = await context.newPage();
   await page.goto(`${origin}/promo.html`, { waitUntil: 'networkidle' });
   await page.evaluate(() => document.fonts.ready);
-  await page.getByText('v1.21.0', { exact: true }).first().waitFor();
+  await page.getByText('v1.21.1', { exact: true }).first().waitFor();
   await page.screenshot({ path: output, type: 'jpeg', quality: 92, animations: 'disabled' });
   await fs.access(output);
   console.log(`Social card written to ${output}`);

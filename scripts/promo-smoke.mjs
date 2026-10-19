@@ -168,29 +168,65 @@ try {
   await page.locator('.transport').click();
   await page.locator('.turntable-demo[data-playing="true"]').waitFor();
   await page.locator('.tracklist button[data-track="2"]').click();
-  await expectText(page.locator('#track-title'), 'Lovesick');
+  await expectText(page.locator('#track-title'), '寒武纪');
+  assert.equal(await page.locator('.tracklist button').count(), 7);
   check('turntable-play-state-and-track-selection-work');
 
   await page.locator('[data-smart-request="study"]').click();
-  const smartAlbumIds = await page.locator('#smart-picks .smart-pick').evaluateAll((items) => items.map((item) => item.dataset.albumId));
-  assert.deepEqual(smartAlbumIds, ['bewitched', 'orange-moon', 'fable']);
-  await expectText(page.locator('#smart-count'), '3 张');
+  const studyTracks = await page.locator('#smart-picks .smart-pick').evaluateAll((items) => items.map((item) => ({
+    id: item.dataset.trackId,
+    title: item.querySelector('strong')?.textContent,
+    meta: item.querySelector('small')?.textContent,
+    tag: item.querySelector('.smart-tag')?.textContent
+  })));
+  assert.equal(studyTracks.length, 7);
+  assert.deepEqual(studyTracks.slice(0, 3).map((track) => track.id), ['study-dreamer', 'study-singalongsong', 'study-cambrian']);
+  assert(studyTracks.every((track) => track.title && /^.+ · .+$/.test(track.meta || '')));
+  assert.equal(studyTracks[0].tag, '第 1 首 · 放上唱机');
+  await expectText(page.locator('#smart-count'), '7 首 · 外部歌单');
+  await expectText(page.locator('#smart-title'), '留白专注 · 50 分钟');
+
+  await page.locator('[data-smart-request="sleep"]').click();
+  assert.equal(await page.locator('#smart-picks .smart-pick').count(), 8);
+  await expectText(page.locator('#smart-intent'), '睡前 · 30 分钟');
+  await expectText(page.locator('#smart-title'), '关灯前 · 30 分钟');
+
+  await page.locator('[data-smart-request="write"]').click();
+  const writeTracks = await page.locator('#smart-picks .smart-pick').evaluateAll((items) => items.map((item) => ({
+    id: item.dataset.trackId,
+    title: item.querySelector('strong')?.textContent,
+    meta: item.querySelector('small')?.textContent
+  })));
+  assert.equal(writeTracks.length, 6);
+  assert.equal(writeTracks[0].id, 'write-black-white');
+  assert.equal(writeTracks[0].title, '黑白');
+  assert.equal(writeTracks[0].meta, '方大同 · 橙月');
+  await expectText(page.locator('#smart-count'), '6 首 · 外部歌单');
+  await page.locator('[data-smart-save]').click();
+  await expectText(page.locator('[data-smart-save]'), '已保存到唱片架');
+  assert.equal(await page.locator('[data-smart-save]').isDisabled(), true);
+  assert.match(await page.locator('#smart-status').innerText(), /已收进唱片架/);
+
   await page.locator('[data-smart-autoplay="false"]').click();
   assert.equal(await page.locator('[data-smart-autoplay="false"]').getAttribute('aria-pressed'), 'true');
-  assert.equal(await page.locator('#smart-start-hint').innerText(), '只开始专注，唱片保持暂停');
+  assert.equal(await page.locator('#smart-start-hint').innerText(), '只开始专注，歌单保持暂停');
   await page.locator('[data-smart-start]').click();
   await page.waitForFunction(() => document.querySelector('#smart-status')?.textContent.includes('等待播放'));
   assert.equal(await page.locator('.turntable-demo').getAttribute('data-playing'), 'false');
   assert.equal(await page.locator('#deck-state').innerText(), '播放已暂停');
   assert.equal(await page.locator('#focus-status').innerText(), '专注进行中');
-  check('smart-turntable-shows-ordered-picks-and-paused-start');
+  await expectText(page.locator('#track-title'), '黑白');
+  await expectText(page.locator('#track-artist'), '方大同 · 橙月');
+  assert.equal(await page.locator('.tracklist button').count(), 6);
+  check('smart-turntable-covers-scenarios-saves-full-playlist-and-starts-paused');
 
   await page.locator('[data-smart-autoplay="true"]').click();
   assert.equal(await page.locator('#smart-start-hint').innerText(), '同时开始专注与播放');
   await page.locator('[data-smart-start]').click();
   await page.waitForFunction(() => document.querySelector('.turntable-demo')?.dataset.playing === 'true');
   await expectText(page.locator('#smart-status'), '正在播放');
-  check('smart-turntable-autoplay-choice-is-visible');
+  await expectText(page.locator('#track-title'), '黑白');
+  check('smart-turntable-autoplay-starts-the-same-playlist');
 
   await page.locator('[data-focus-preset="25"]').scrollIntoViewIfNeeded();
   await page.locator('[data-focus-preset="25"]').click();
@@ -228,6 +264,7 @@ try {
   await screenshot('promo-desktop');
   await screenshot('promo-story-rooms', page.locator('#rooms'));
   await screenshot('promo-story-naitang', page.locator('#naitang'));
+  await screenshot('promo-story-listening', page.locator('#listening'));
   await screenshot('promo-story-focus', page.locator('#focus'));
   await screenshot('promo-story-letters', page.locator('#letters'));
   check('desktop-responsive-and-evidence-screenshots');

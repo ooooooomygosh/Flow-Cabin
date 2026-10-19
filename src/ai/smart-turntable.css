@@ -114,7 +114,7 @@
   }
   .st-close:hover, .st-close:focus-visible { color: var(--px-ink); border-color: var(--px-accent); }
   .st-close:focus-visible, .st-example:focus-visible, .st-send:focus-visible, .st-input:focus-visible,
-  .st-refresh:focus-visible, .st-cta:focus-visible, .st-settings:focus-visible {
+  .st-refresh:focus-visible, .st-cta:focus-visible, .st-settings:focus-visible, .st-save:focus-visible {
     outline: 2px solid var(--px-focus);
     outline-offset: 2px;
   }
@@ -270,6 +270,68 @@
     line-height: 1.6;
   }
   .st-reason svg { margin-top: 2px; color: var(--px-accent-2); }
+  .st-playlist-head {
+    display: grid;
+    gap: 3px;
+    padding: 9px 10px;
+    background:
+      linear-gradient(90deg, rgba(127, 184, 168, .09), transparent 74%),
+      rgba(22, 13, 7, .42);
+    border-left: 3px solid var(--px-accent-2);
+  }
+  .st-playlist-head strong {
+    color: var(--px-ink);
+    font-family: var(--px-font-body);
+    font-size: 14px;
+    overflow-wrap: anywhere;
+  }
+  .st-playlist-head small {
+    color: var(--px-ink-dim);
+    font-family: var(--px-font-body);
+    font-size: 12px;
+    line-height: 1.55;
+  }
+  .st-tracks { list-style: none; display: grid; gap: 3px; margin: 0; padding: 0; }
+  .st-track {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    gap: 9px;
+    align-items: center;
+    min-height: 44px;
+    padding: 4px 6px 4px 4px;
+    background: rgba(36, 22, 13, .58);
+    border: 1px solid transparent;
+  }
+  .st-track:hover { border-color: var(--px-border-subtle); background: var(--px-surface-card); }
+  .st-track-cover {
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    color: var(--px-accent-2);
+    background:
+      repeating-radial-gradient(circle at 50% 50%, transparent 0 5px, rgba(127, 184, 168, .1) 5px 6px),
+      var(--px-surface-inset);
+    border: 1px solid var(--px-border);
+    box-shadow: 2px 2px 0 var(--px-shadow);
+  }
+  .st-track-copy { min-width: 0; display: grid; gap: 1px; }
+  .st-track-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--px-ink);
+    font-family: var(--px-font-body);
+    font-size: 13px;
+  }
+  .st-track-artist {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--px-ink-faint);
+    font-family: var(--px-font-body);
+    font-size: 12px;
+  }
   .st-albums { list-style: none; display: grid; gap: 4px; margin: 0; padding: 0; }
   .st-album {
     display: grid;
@@ -327,7 +389,7 @@
     font-size: 12px;
     line-height: 1.5;
   }
-  .st-refresh, .st-settings {
+  .st-refresh, .st-settings, .st-save {
     justify-self: start;
     min-height: 24px;
     display: inline-flex;
@@ -341,8 +403,13 @@
     font-size: 12px;
     cursor: pointer;
   }
-  .st-refresh:hover:not(:disabled), .st-settings:hover { color: var(--px-accent-hi); border-color: var(--px-border-subtle); }
-  .st-refresh:disabled { opacity: .45; cursor: default; }
+  .st-refresh:hover:not(:disabled), .st-settings:hover, .st-save:hover:not(:disabled) { color: var(--px-accent-hi); border-color: var(--px-border-subtle); }
+  .st-refresh:disabled, .st-save:disabled { opacity: .45; cursor: default; }
+  .st-save {
+    justify-self: end;
+    color: var(--px-accent-2);
+    border-color: var(--px-border-subtle);
+  }
   .st-footer {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);

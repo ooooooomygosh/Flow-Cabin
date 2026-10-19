@@ -106,7 +106,7 @@ export default function FocusDock({ open, close, tab, setTab, onOpenSmart }) {
     {tab === 'study' && study?.error && <div className="focus-save-error" role="alert">{study.error} 本次操作未保存，请在原控件重试。</div>}
     {tab === 'timer' && onOpenSmart && <button type="button" className="smart-turntable-entry" onClick={onOpenSmart}>
       <span className="smart-turntable-entry-icon" aria-hidden="true"><Sparkles size={17}/></span>
-      <span className="smart-turntable-entry-copy"><strong>智能唱片机</strong><small>说出计划，让小屋从唱片架里搭配音乐</small></span>
+      <span className="smart-turntable-entry-copy"><strong>智能唱片机</strong><small>说出计划，让小屋按场景编排一张歌单</small></span>
       <ChevronRight size={15}/>
     </button>}
     <div className="focus-dock-body" {...tabPanelProps(tabId, tab)}>

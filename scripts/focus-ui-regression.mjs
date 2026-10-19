@@ -54,7 +54,7 @@ try {
       if (location.origin==='null') return;
       // Most suites work in the dock after starting a round; 沉浸 on start is covered by its own test.
       if (!autoEnter && !localStorage.getItem('album-circle-focus-display-v1')) localStorage.setItem('album-circle-focus-display-v1',JSON.stringify({autoEnter:false}));
-      if (!firstVisit) localStorage.setItem('flow-cabin-onboarding-v1',JSON.stringify({version:2,status:'done',step:'done',seenVersion:'1.21.0'}));
+      if (!firstVisit) localStorage.setItem('flow-cabin-onboarding-v1',JSON.stringify({version:2,status:'done',step:'done',seenVersion:'1.21.1'}));
       if (!firstVisit && !localStorage.getItem(key)) localStorage.setItem(key,JSON.stringify({notes:'原有随手记',settings:{focusMin:1,shortMin:1,notify:false,chime:false}}));
       window.__nativeCommands=[];
       window.albumDesktopAppearance={client:true,reduceMotion:!motion};

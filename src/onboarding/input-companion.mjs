@@ -17,8 +17,7 @@ export function typingPermissionVerdict(snapshot, { enabled, env = {}, heard = 0
   if (snapshot.status === 'unavailable' || snapshot.status === 'unsupported') return 'unsupported';
   if (snapshot.status !== 'active') return 'pending';
   if (!env.mac) return 'granted';
-  // Accessibility and Input Monitoring are separate grants. The hook can
-  // report active before Input Monitoring starts feeding events, so a recorded
-  // input is the only honest end-to-end confirmation.
+  // The tap can report active before macOS starts feeding events, so a recorded
+  // input is the only honest end-to-end confirmation of Input Monitoring.
   return inputTotal(snapshot) > 0 || heard > 0 ? 'granted' : 'pending';
 }

@@ -27,7 +27,7 @@ try {
     const context=await browser.newContext({viewport:{width:1440,height:900},deviceScaleFactor:dpr,locale:'zh-CN',reducedMotion:'reduce'});
     await context.addInitScript(native=>{
       if(location.origin==='null')return;
-      localStorage.setItem('flow-cabin-onboarding-v1',JSON.stringify({version:2,status:'done',step:'done',seenVersion:'1.21.0'}));
+      localStorage.setItem('flow-cabin-onboarding-v1',JSON.stringify({version:2,status:'done',step:'done',seenVersion:'1.21.1'}));
       window.__nativeCommands=[];window.open=url=>{window.__nativeCommands.push(String(url));return null;};
       window.albumDesktopAppearance={client:native,reduceMotion:true};
       const init=()=>{document.documentElement.dataset.desktopClient=String(native);document.documentElement.dataset.desktopReduceMotion='true';};

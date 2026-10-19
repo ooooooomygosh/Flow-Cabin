@@ -69,12 +69,13 @@ test('an interrupted update resumes at its saved step instead of the release lis
 });
 
 test('one completed version never auto-opens again; the next version opens once', () => {
-  let state = m.complete({ ...m.initialState(), status: 'active', step: 'done', seenVersion: '1.18.0' }, '1.21.0');
-  for (let launch = 0; launch < 3; launch++) assert.equal(m.launchPlan(state, { currentVersion: '1.21.0' }).open, false);
+  const latest = RELEASES[0].version;
+  let state = m.complete({ ...m.initialState(), status: 'active', step: 'done', seenVersion: '1.18.0' }, latest);
+  for (let launch = 0; launch < 3; launch++) assert.equal(m.launchPlan(state, { currentVersion: latest }).open, false);
   const plan = m.launchPlan(state, { currentVersion: '9.9.9' });
   assert.deepEqual(plan, { open: true, mode: 'update' });
   const opened = m.applyLaunchPlan(state, plan, '9.9.9');
-  assert.deepEqual([opened.status, opened.step, opened.fromVersion, opened.seenVersion], ['active', 'updates', '1.21.0', '1.21.0']);
+  assert.deepEqual([opened.status, opened.step, opened.fromVersion, opened.seenVersion], ['active', 'updates', latest, latest]);
   assert.equal(m.updateContext(opened, '9.9.9').releases.length, 0, 'no release card exists yet for an unreleased version');
   assert.equal(m.complete(opened, 'v9.9.9').seenVersion, '9.9.9', 'stored versions drop the leading v');
 });

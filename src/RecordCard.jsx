@@ -85,7 +85,11 @@ export default function RecordCard({ item, close, onChanged, onRemove }) {
           {genres.length > 0 && <div><dt>标签</dt><dd>{genres.join(' · ')}</dd></div>}
           <div><dt>放上唱片架</dt><dd>{item.addedAt ? new Date(item.addedAt).toLocaleDateString('zh-CN') : '—'}</dd></div>
         </dl>
-        {names.length > 0 ? <ol className="record-card-tracks" aria-label="曲目">{names.map((name, index) => <li key={index}><button type="button" onClick={() => play(index)} title="从这一首开始播放"><span>{String(index + 1).padStart(2, '0')}</span><strong>{name}</strong><small>{duration(item.trackDetails?.[index]?.lengthMillis)}</small></button></li>)}</ol> : <p className="record-card-empty">还没有曲目资料。</p>}
+        {names.length > 0 ? <ol className="record-card-tracks" aria-label="曲目">{names.map((name, index) => {
+          const track = item.trackDetails?.[index];
+          const meta = item.type === 'playlist' ? [track?.artist, track?.album].filter(Boolean).join(' · ') : '';
+          return <li key={index}><button type="button" onClick={() => play(index)} title="从这一首开始播放"><span>{String(index + 1).padStart(2, '0')}</span><span className="record-card-track-copy"><strong>{name}</strong>{meta && <small className="record-card-track-meta">{meta}</small>}</span><small className="record-card-track-time">{duration(track?.lengthMillis)}</small></button></li>;
+        })}</ol> : <p className="record-card-empty">还没有曲目资料。</p>}
         </section>
         <label className="record-card-notes">我的笔记<textarea value={notes} maxLength={4000} rows={4} placeholder="第一次听的场景、最喜欢的一首、想记住的一句歌词…" onChange={(event) => { removing.current = false; setNotes(event.target.value); setSaved('dirty'); clearTimeout(timer.current); timer.current = setTimeout(saveNotes, 900); }} onBlur={saveNotes}/></label>
         <small className="record-card-saved" role="status">{{ saving: '正在保存…', error: <>保存失败。<button type="button" className="pixel-button is-quiet" onClick={saveNotes}>重试</button></>, dirty: '', saved: notes ? <><Check size={13}/>已保存在这台电脑</> : '' }[saved]}</small>

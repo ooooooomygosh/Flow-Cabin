@@ -13,7 +13,7 @@ function fixture({ sitePage = true } = {}) {
     music: () => ({ login: log('login'), logout: log('logout') }), appearance: () => ({ zoom: 100 }), trayPet: { setTrayPet: log('tray-pet') },
     toggleSettings: log('settings'), toggleFullscreen: log('fullscreen'), setFullscreen: log('setFullscreen'), isFullscreen: () => false,
     chooseMusicFolder: log('folder'), notifyMusic: log('notifyMusic'), saveAppearance: log('appearance'), writeLog: log('log'),
-    typing: { check: log('typing.check'), accessibility: log('typing.accessibility'), inputMonitoring: log('typing.inputMonitoring') },
+    typing: { check: log('typing.check'), permission: log('typing.permission'), inputMonitoring: log('typing.inputMonitoring'), repair: log('typing.repair') },
     handleUpdateCommand: (pathname, params) => calls.push(['update', pathname, params.get('enabled')]),
     autostart: { set: log('autostart.set'), publish: log('autostart.publish') },
     weather: { set: log('weather.set'), publish: log('weather.publish') }
@@ -24,7 +24,7 @@ function fixture({ sitePage = true } = {}) {
 test('site commands: one table, aliases explicit, hostile input refused', () => {
   const { calls, commands } = fixture();
   for (const value of ['album-desktop://action/desktop-sink-enter', 'album-desktop://action/wallpaper-start', 'album-desktop://action/tray-pet?id=fox', 'album-desktop://action/update-auto?enabled=false', 'album-desktop://action/music-login?provider=qq', 'album-desktop://action/autostart?enabled=true', 'album-desktop://action/autostart', 'album-desktop://action/typing-follow?enabled=false', 'album-desktop://action/typing-check', 'album-desktop://action/typing-permission', 'album-desktop://action/typing-input-permission']) assert.equal(commands.handle(value), true, value);
-  assert.deepEqual(calls.map((call) => call[0]), ['sink.enter', 'sink.enter', 'tray-pet', 'update', 'login', 'autostart.set', 'autostart.publish', 'appearance', 'typing.check', 'typing.accessibility', 'typing.inputMonitoring']);
+  assert.deepEqual(calls.map((call) => call[0]), ['sink.enter', 'sink.enter', 'tray-pet', 'update', 'login', 'autostart.set', 'autostart.publish', 'appearance', 'typing.check', 'typing.permission', 'typing.inputMonitoring']);
   assert.deepEqual(calls[3], ['update', '/update-auto', 'false']); assert.deepEqual(calls[5], ['autostart.set', true]);
   assert.deepEqual(calls[7], ['appearance', { zoom: 100, typingFollow: false }], 'typing follow is persisted through the one settings path');
   calls.length = 0;

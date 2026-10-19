@@ -52,7 +52,7 @@ export async function verifyBenchmarkCabin(browser, origin, { output, check = ()
     const context = await browser.newContext({ viewport, locale: 'zh-CN', reducedMotion: 'reduce' });
     await context.addInitScript(() => {
       if (location.origin === 'null') return;
-      localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.0' }));
+      localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.1' }));
       localStorage.setItem('album-circle-library-v1-local-owner', JSON.stringify({ rooms: { 'local-room': { look: 'pixel', petId: 'cat', boxes: [] } } }));
       localStorage.setItem('album-circle-focus-dock-v1', JSON.stringify({ open: false, tab: 'timer' }));
       localStorage.setItem('album-circle-sound-v1', JSON.stringify({ master: .8, lofiOn: false, tracks: { rain: 0, fire: 0, wind: 0, white: 0, vinyl: 0 } }));

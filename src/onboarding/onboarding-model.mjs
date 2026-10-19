@@ -48,7 +48,7 @@ export const providerFor = (id) => SOURCE_TABLE.find((source) => source.id === i
 
 export function permissionItems(env = {}, source = '') {
   const items = [];
-  if (env.desktop && env.mac) items.push({ id: 'typing', label: '跨应用键鼠陪伴', hint: '允许「辅助功能」和「输入监控」后，在其他应用里打字、点鼠标时奶糖也会回应。', optional: false });
+  if (env.desktop && env.mac) items.push({ id: 'typing', label: '跨应用键鼠陪伴', hint: '只需允许「输入监控」，在其他应用里打字、点鼠标时奶糖也会回应。', optional: false });
   if (env.notifications) items.push({ id: 'notifications', label: '系统通知', hint: '专注结束和休息结束时提醒你。', optional: true });
   if (env.desktop && env.mac && (source === 'appleMusic' || source === 'system')) items.push({ id: 'appleMusic', label: '控制「音乐」App', hint: 'macOS 会询问是否允许心流小屋使用自动化控制「音乐」。', optional: false });
   if (env.desktop) items.push({ id: 'autostart', label: '开机时打开小屋', hint: '可选。登录电脑后自动点亮小屋。', optional: true });

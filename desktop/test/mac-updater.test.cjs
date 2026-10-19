@@ -13,7 +13,7 @@ const yml = (version, files) => `version: ${version}\nfiles:\n${files.map((f) =>
 
 // A fake GitHub serving one release, a fake ditto that "unpacks" an Info.plist,
 // a fake plutil that reads it, and a recorded spawn.
-function harness({ version = '1.14.2', arch = 'arm64', zip = Buffer.from('zip-bytes-'.repeat(5000)), tamper = false, unpackedVersion = version, unpackedId = 'com.albumcircle.desktop', writable = true, bundlePath, executable = 'Cabin', signed = true, streamMode = '', shortWrites = false, corruptWrites = false } = {}) {
+function harness({ version = '1.14.2', arch = 'arm64', zip = Buffer.from('zip-bytes-'.repeat(5000)), tamper = false, unpackedVersion = version, unpackedId = 'com.albumcircle.desktop', writable = true, bundlePath, executable = 'Cabin', signed = true, signingRoot = 'df8fb879881e5465c5e323137be7aef259ebb787', streamMode = '', shortWrites = false, corruptWrites = false } = {}) {
   const directory = tmp(), apps = tmp(), app = new EventEmitter(); app.quit = () => { app.quitCalled = true; };
   app.getVersion = () => '1.14.1';
   const bundle = bundlePath || path.join(apps, '心流小屋.app');
@@ -37,7 +37,10 @@ function harness({ version = '1.14.2', arch = 'arm64', zip = Buffer.from('zip-by
     nativeCalls.push([file, args]);
     if (file === '/usr/bin/ditto') { const copy = path.join(args[3], '心流小屋.app', 'Contents'); fs.mkdirSync(copy, { recursive: true }); fs.writeFileSync(path.join(copy, 'Info.plist'), JSON.stringify({ CFBundleShortVersionString: unpackedVersion, CFBundleIdentifier: unpackedId, CFBundleExecutable: executable })); if (executable && !/[\\/]/.test(executable)) { fs.mkdirSync(path.join(copy,'MacOS')); fs.writeFileSync(path.join(copy,'MacOS',executable), 'fixture executable', { mode: 0o755 }); } return done(null, ''); }
     if (file === '/usr/bin/plutil') return done(null, String(plistOf(args[5])[args[1]] || ''));
-    if (file === '/usr/bin/codesign') return done(signed ? null : new Error('invalid signature'), '');
+    if (file === '/usr/bin/codesign') {
+      if (args.includes('--display')) return done(null, `designated => identifier "com.albumcircle.desktop" and certificate root = H"${signingRoot}"`);
+      return done(signed ? null : new Error('invalid signature'), '');
+    }
     done(new Error('unexpected ' + file));
   };
   const execFileSyncProcess = (file, args) => String(plistOf(args[5])[args[1]] || '');
@@ -122,11 +125,15 @@ test('installation rejects downloads superseded by a manually installed copy', a
     assert.equal(JSON.parse(fs.readFileSync(info)).CFBundleShortVersionString, installed);
   }
 });
-test('incomplete executables and broken signatures never become installable', async () => {
+test('incomplete executables, broken signatures and a different signing identity never become installable', async () => {
   for (const options of [{ executable: '' }, { executable: '../outside' }, { signed: false }]) {
     const h = harness(options); await h.mac.checkForUpdates(); await assert.rejects(h.mac.downloadUpdate());
     assert.equal(h.mac.quitAndInstall(), false); assert.equal(h.spawned.length, 0); assert.deepEqual(fs.readdirSync(h.directory), []);
   }
+  const changed = harness({ signingRoot: '1111111111111111111111111111111111111111' });
+  await changed.mac.checkForUpdates();
+  await assert.rejects(changed.mac.downloadUpdate(), /签名身份/);
+  assert.deepEqual(fs.readdirSync(changed.directory), []);
 });
 test('stream errors and timeouts clean partial downloads; partial writes are completed and stored bytes verified', async () => {
   for (const streamMode of ['error', 'stall']) {

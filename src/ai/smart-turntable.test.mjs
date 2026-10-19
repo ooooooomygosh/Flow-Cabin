@@ -2,8 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   parseDuration, parseIntent, localRecommendation, aiShelfSummary,
-  buildAiMessages, parseAiSelection, normalizePlaybackPlan,
-  AI_ALBUM_LIMIT, ACTIVITY_IDS, DEFAULT_AUTOPLAY
+  buildAiMessages, parseAiSelection, normalizePlaybackPlan, parseAiPlaylist, smartPlaylistItem,
+  normalizePlaylistPlaybackPlan,
+  AI_ALBUM_LIMIT, AI_PLAYLIST_TRACK_LIMIT, ACTIVITY_IDS, DEFAULT_AUTOPLAY
 } from './smart-turntable.mjs';
 
 const minutes = (value) => Array.from({ length: value }, (_, index) => ({
@@ -124,9 +125,10 @@ test('AI shelf summaries and prompts stay bounded and contain only selection met
   assert.ok(summary.every((row) => !('cover' in row) && !('trackDetails' in row)));
   const messages = buildAiMessages('学习五十分钟', parseIntent('学习五十分钟'), many);
   const user = JSON.parse(messages[1].content);
-  assert.equal(user.albums.length, AI_ALBUM_LIMIT);
+  assert.equal(user.shelf.length, AI_ALBUM_LIMIT);
   assert.equal(user.minutes, 50);
   assert.match(messages[0].content, /strict JSON|严格 JSON/);
+  assert.match(messages[0].content, /不限于用户唱片架/);
 });
 
 test('AI JSON validation filters invented ids, duplicates and excess picks', () => {
@@ -292,6 +294,68 @@ test('the prompt advertises the full controlled JSON contract', () => {
   assert.equal(user.activity, 'study');
   assert.match(messages[0].content, /minutes/);
   assert.match(messages[0].content, /autoplay/);
-  assert.match(messages[0].content, /albumIds/);
-  assert.match(messages[0].content, /100/);
+  assert.match(messages[0].content, /tracks/);
+  assert.match(messages[0].content, /唱片架之外/);
+  assert.ok(Array.isArray(user.outputSchema.tracks));
+});
+
+test('AI playlists accept songs outside the shelf and keep only safe track fields', () => {
+  const playlist = parseAiPlaylist(JSON.stringify({
+    title: '纸上散步',
+    description: '钢琴、氛围与低声爵士，给写作留出空间。',
+    minutes: 50,
+    activity: 'writing',
+    autoplay: true,
+    tracks: [
+      { title: 'Near Light', artist: 'Ólafur Arnalds', album: 'Living Room Songs', providerId: 'must-not-survive' },
+      { title: 'Near Light', artist: 'Ólafur Arnalds', album: 'duplicate' },
+      { title: 'A Walk', artist: 'Tycho', album: 'Dive' }
+    ]
+  }), '写论文五十分钟');
+
+  assert.equal(playlist.kind, 'playlist');
+  assert.equal(playlist.title, '纸上散步');
+  assert.equal(playlist.minutes, 50);
+  assert.equal(playlist.activity.id, 'writing');
+  assert.equal(playlist.tracks.length, 2);
+  assert.deepEqual(Object.keys(playlist.tracks[0]).sort(), ['album', 'artist', 'title']);
+  assert.equal(JSON.stringify(playlist).includes('must-not-survive'), false);
+});
+
+test('AI playlist parsing rejects empty or malformed track lists and caps output', () => {
+  assert.equal(parseAiPlaylist('{"tracks":[]}'), null);
+  assert.equal(parseAiPlaylist('{"tracks":[{"title":"only a title"}]}'), null);
+  assert.equal(parseAiPlaylist('not json'), null);
+  const many = Array.from({ length: AI_PLAYLIST_TRACK_LIMIT + 8 }, (_, index) => ({ title: `Song ${index}`, artist: 'Artist' }));
+  assert.equal(parseAiPlaylist(JSON.stringify({ tracks: many })).tracks.length, AI_PLAYLIST_TRACK_LIMIT);
+});
+
+test('a parsed AI playlist becomes an ordinary shelf playlist with automatic playback metadata', () => {
+  const parsed = parseAiPlaylist(JSON.stringify({
+    title: '五十页之后',
+    description: '低刺激，不打断阅读。',
+    minutes: 50,
+    activity: 'reading',
+    autoplay: true,
+    tracks: [
+      { title: 'Says', artist: 'Nils Frahm', album: 'Spaces' },
+      { title: 'Says', artist: 'Nils Frahm', album: 'Spaces' }
+    ]
+  }), '阅读五十分钟');
+  const item = smartPlaylistItem(parsed, parsed.tracks, { id: 'fixed-playlist' });
+  assert.equal(item.type, 'playlist');
+  assert.equal(item.artist, '智能唱片机');
+  assert.equal(item.externalIds.playlist, 'ai:fixed-playlist');
+  assert.deepEqual(item.tracks, ['Says']);
+  assert.equal(item.trackDetails[0].source, 'ai');
+  assert.equal(item.trackDetails[0].providerId, '');
+  assert.equal(item.trackDetails[0].artist, 'Nils Frahm');
+
+  const plan = normalizePlaylistPlaybackPlan({ ...parsed, item, persisted: true }, '阅读五十分钟');
+  assert.equal(plan.kind, 'playlist');
+  assert.equal(plan.persisted, true);
+  assert.equal(plan.items[0], plan.item);
+  assert.equal(plan.item.tracks.length, 1);
+  assert.equal(plan.item.trackDetails[0].source, 'ai');
+  assert.equal(plan.autoplay, true);
 });

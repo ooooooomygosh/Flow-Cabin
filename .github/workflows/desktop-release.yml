@@ -55,14 +55,56 @@ jobs:
       - run: npm --prefix desktop run build:music
       - run: npm --prefix desktop run build:web
       - run: npm run desktop:test
+      - name: Import stable macOS signing identity
+        if: matrix.platform == 'mac' && github.event_name != 'pull_request'
+        env:
+          MAC_SIGNING_P12: ${{ secrets.MAC_SIGNING_P12 }}
+          MAC_SIGNING_PASSWORD: ${{ secrets.MAC_SIGNING_PASSWORD }}
+        shell: bash
+        run: |
+          : "${MAC_SIGNING_P12:?MAC_SIGNING_P12 is required for a release build}"
+          : "${MAC_SIGNING_PASSWORD:?MAC_SIGNING_PASSWORD is required for a release build}"
+          keychain="$RUNNER_TEMP/flow-cabin-signing.keychain"
+          keychain_password="$(openssl rand -base64 24)"
+          security create-keychain -p "$keychain_password" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$keychain_password" "$keychain"
+          printf '%s' "$MAC_SIGNING_P12" | base64 --decode > "$RUNNER_TEMP/flow-cabin-signing.p12"
+          security import "$RUNNER_TEMP/flow-cabin-signing.p12" -k "$keychain" -P "$MAC_SIGNING_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+          security find-certificate -c "Flow Cabin Local Signing" -p -k "$keychain" > "$RUNNER_TEMP/flow-cabin-signing.crt"
+          security add-trusted-cert -r trustRoot -p codeSign -k "$keychain" "$RUNNER_TEMP/flow-cabin-signing.crt"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$keychain_password" "$keychain"
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          security find-identity -v -p codesigning | grep "Flow Cabin Local Signing"
       - name: Package Windows
         if: matrix.platform == 'win'
         working-directory: desktop
         run: npx electron-builder --win nsis portable --x64 --publish never
-      - name: Package macOS
-        if: matrix.platform == 'mac'
+      # Fork and same-repository pull requests build without release secrets.
+      # Ad-hoc signing is enough for the packaged client smoke test.
+      - name: Package macOS (pull request)
+        if: matrix.platform == 'mac' && github.event_name == 'pull_request'
         working-directory: desktop
-        run: npx electron-builder --mac dmg zip --${{ matrix.arch }} --publish never
+        run: npx electron-builder --mac dmg zip --${{ matrix.arch }} --publish never -c.mac.identity=-
+      # Published builds must use the stable certificate. forceCodeSigning
+      # turns a missing or unusable keychain identity into a failed release.
+      - name: Package macOS (stable signed)
+        if: matrix.platform == 'mac' && github.event_name != 'pull_request'
+        working-directory: desktop
+        run: npx electron-builder --mac dmg zip --${{ matrix.arch }} --publish never -c.mac.forceCodeSigning=true
+      - name: Verify stable macOS signature
+        if: matrix.platform == 'mac' && github.event_name != 'pull_request'
+        env:
+          MAC_SIGNING_FINGERPRINT: ${{ secrets.MAC_SIGNING_FINGERPRINT }}
+        shell: bash
+        run: |
+          : "${MAC_SIGNING_FINGERPRINT:?MAC_SIGNING_FINGERPRINT is required for a release build}"
+          app="$(dirname "$(dirname "$(dirname "${{ matrix.executable }}")")")"
+          codesign --verify --deep --strict "$app"
+          requirement="$(codesign --display --requirements - "$app" 2>&1)"
+          printf '%s\n' "$requirement"
+          fingerprint="$(printf '%s' "$MAC_SIGNING_FINGERPRINT" | tr '[:upper:]' '[:lower:]')"
+          printf '%s' "$requirement" | grep -qi "certificate root = H\"${fingerprint}\""
       - name: Verify packaged local client
         run: npm --prefix desktop run test:client
         env:

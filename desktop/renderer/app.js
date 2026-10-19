@@ -15,20 +15,24 @@ const TYPING_TEXT = {
   off: '全局键鼠跟随已关闭，仅跟随小屋内的键盘和点击活动。',
   active: '键鼠跟随已开启：奶糖会响应其他应用里的键盘按下和鼠标点击，并只在本机按天累计次数。',
   'waiting-pet': '已开启：让伙伴出门（桌宠）后生效。',
-  'needs-permission': '需要在「系统设置 › 隐私与安全性」里允许心流小屋使用「辅助功能」和「输入监控」。可分别点下面的按钮打开对应设置页；授权前只响应小屋内的输入。',
+  'needs-permission': '需要在「系统设置 › 隐私与安全性 › 输入监控」里允许心流小屋。只需这一项权限，不再需要辅助功能；授权前只响应小屋内的输入。',
   unavailable: '这台电脑暂时无法使用全局键鼠检测，键鼠跟随仅响应小屋内的键盘和点击活动。'
 };
 function showTyping(typing) {
   if (!typing) return;
   $('typing-status').textContent = TYPING_TEXT[typing.status] || '';
-  $('typing-permission').hidden = typing.status !== 'needs-permission';
-  $('typing-input-permission').hidden = typing.status !== 'needs-permission' || typing.platform !== 'darwin';
+  $('typing-permission').hidden = typing.status !== 'needs-permission' || typing.platform !== 'darwin';
+  $('typing-input-permission').hidden = typing.platform !== 'darwin';
+  $('typing-repair-permission').hidden = typing.platform !== 'darwin';
 }
 $('typing-permission').addEventListener('click', async () => {
   try { const data = await window.albumDesktop.settings('typing-permission'); showTyping(data.typing); } catch { /* the hint stays */ }
 });
 $('typing-input-permission').addEventListener('click', async () => {
   try { const data = await window.albumDesktop.settings('typing-input-permission'); showTyping(data.typing); } catch { /* the hint stays */ }
+});
+$('typing-repair-permission').addEventListener('click', async () => {
+  try { const data = await window.albumDesktop.settings('typing-repair-permission'); showTyping(data.typing); } catch { /* the user can cancel or retry */ }
 });
 function showDisplay(display) { if (display) $('display-info').textContent = `${display.name} · ${display.width} × ${display.height} · 缩放 ${display.scale}% · ${Math.round(display.refreshRate)} Hz`; }
 function updatePreview() {

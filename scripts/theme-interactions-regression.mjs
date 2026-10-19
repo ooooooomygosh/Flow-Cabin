@@ -86,7 +86,7 @@ try {
   page.on('console', message => { if (message.type() === 'error') report.consoleErrors.push(message.text()); });
   page.on('requestfailed', request => report.failedRequests.push({ url: request.url(), error: request.failure()?.errorText }));
   await context.addInitScript(() => {
-    localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.0' }));
+    localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.1' }));
   });
   await context.route('**/*', route => {
     const url = new URL(route.request().url());

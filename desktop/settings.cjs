@@ -1,7 +1,7 @@
 'use strict';
 const { execFile } = require('node:child_process');
 // Input companionship is on by default, but macOS still requires an explicit
-// system-level Accessibility / Input Monitoring grant before the native hook loads.
+// Input Monitoring grant before the listen-only HID tap starts.
 const DEFAULT_SETTINGS = Object.freeze({ font: 'bundled', weight: 400, zoom: 100, reduceMotion: false, typingFollow: true });
 const WEIGHTS = [250, 300, 400, 500, 700, 900];
 function normalizeSettings(value = {}) {

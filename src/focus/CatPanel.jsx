@@ -26,7 +26,7 @@ const weekday = (key) => ['日', '一', '二', '三', '四', '五', '六'][new D
 const INPUT_STATUS = {
   active: '跨窗口陪伴中 · 只在这台电脑按天计数',
   pending: '正在启动跨窗口陪伴',
-  'needs-permission': '等待 macOS 辅助功能授权',
+  'needs-permission': '等待 macOS「输入监控」授权',
   off: '全局统计已关闭 · 仍会响应小屋内的键鼠',
   unavailable: '这台电脑暂不支持全局检测 · 仅响应小屋内'
 };

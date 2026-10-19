@@ -1,8 +1,9 @@
 'use strict';
 
-const { app, BrowserWindow, WebContentsView, Menu, Tray, dialog, ipcMain, clipboard, shell, protocol, screen, net, safeStorage, nativeImage, powerSaveBlocker, globalShortcut, powerMonitor, systemPreferences } = require('electron');
+const { app, BrowserWindow, WebContentsView, Menu, Tray, dialog, ipcMain, clipboard, shell, protocol, screen, net, safeStorage, nativeImage, powerSaveBlocker, globalShortcut, powerMonitor } = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
+const { execFile } = require('node:child_process');
 const { SITE_ORIGIN, SHELL_URL, isSiteUrl, isShellUrl, isExternalUrl, safeSavedWindow } = require('./policy.cjs');
 const { DEFAULT_SETTINGS, normalizeSettings, appearanceScript, listSystemFonts, setSettingsVisibility } = require('./settings.cjs');
 const { registerShellProtocol } = require('./shell-protocol.cjs');
@@ -125,7 +126,6 @@ const statusPoller = createCompanionPoller({ getSite: () => siteView?.webContent
 const inputStats = createInputStats({ directory: app.getPath('userData') });
 let inputStatsTimer = null, lastInputStatsPayload = '', restartTypingOnFocus = false;
 const typingHook = createTypingHook({
-  systemPreferences,
   onActivity: ({ type, at } = {}) => {
     if (!['keyboard', 'click'].includes(type) || !Number.isFinite(at)) return;
     inputStats.record(type, at);
@@ -161,6 +161,39 @@ function openInputMonitoringSetting() {
     shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent').catch(() => {});
   }
   publishInputStats(true);
+}
+// The system request only works from an explicit user gesture. If macOS has
+// already recorded a denial it returns false, so bring the user to the exact
+// pane as a fallback. No reset is performed here.
+function requestTypingPermission() {
+  typingHook.requestPermission();
+  if (process.platform === 'darwin' && typingHook.permission() !== 'granted') openInputMonitoringSetting();
+  else { restartTypingOnFocus = true; typingHook.restart(); publishInputStats(true); }
+  return typingInfo();
+}
+// One-time repair for cabins upgraded from an ad-hoc build whose TCC record was
+// tied to an old CDHash. It runs only after a confirmation and only when the
+// user asks; the normal launch path never clears permissions.
+async function repairTypingPermission() {
+  if (process.platform !== 'darwin') return typingInfo();
+  const answer = await dialog.showMessageBox(mainWindow, {
+    type: 'warning',
+    title: '修复输入监控授权',
+    message: '只在键鼠一直没有反应时使用。',
+    detail: '这会先移除心流小屋旧的「输入监控」授权，再重新询问一次。你的键盘记录和统计不会被删除。',
+    buttons: ['取消', '修复并重新授权'],
+    defaultId: 0,
+    cancelId: 0,
+    noLink: true
+  });
+  if (answer.response !== 1) return typingInfo();
+  await new Promise((resolve) => execFile('/usr/bin/tccutil', ['reset', 'ListenEvent', 'com.albumcircle.desktop'], { timeout: 5000 }, () => resolve()));
+  restartTypingOnFocus = true;
+  typingHook.restart();
+  typingHook.requestPermission();
+  openInputMonitoringSetting();
+  publishInputStats(true);
+  return typingInfo();
 }
 function petStatus(state) {
   petState = state; refreshTray();
@@ -374,8 +407,9 @@ const siteCommands = createSiteCommands({
   toggleSettings, toggleFullscreen, setFullscreen, isFullscreen, chooseMusicFolder, notifyMusic, saveAppearance, writeLog,
   typing: {
     check: () => { typingHook.retry(); publishInputStats(true); },
-    accessibility: () => { typingHook.requestPermission(); publishInputStats(true); },
-    inputMonitoring: openInputMonitoringSetting
+    permission: () => requestTypingPermission(),
+    inputMonitoring: openInputMonitoringSetting,
+    repair: () => repairTypingPermission()
   },
   handleUpdateCommand: (pathname, params) => updates.handle(pathname, params),
   get autostart() { return autostart; },
@@ -453,7 +487,8 @@ function registerIpc() {
   ipcMain.handle('desktop:settings', async (event, operation, value) => {
     if (event.sender !== mainWindow?.webContents || event.senderFrame !== mainWindow.webContents.mainFrame || !isShellUrl(event.senderFrame.url)) throw new Error('Unknown sender');
     if (operation === 'get') { typingHook.retry(); publishInputStats(true); return { settings: appearance, fonts: await listSystemFonts(), display: currentDisplay(), typing: typingInfo() }; }
-    if (operation === 'typing-permission') { typingHook.requestPermission(); return { typing: typingInfo() }; }
+    if (operation === 'typing-permission') return { typing: requestTypingPermission() };
+    if (operation === 'typing-repair-permission') return { typing: await repairTypingPermission() };
     if (operation === 'typing-input-permission') { openInputMonitoringSetting(); return { typing: typingInfo() }; }
     if (operation === 'apply') return saveAppearance(value);
     if (operation === 'reset') return saveAppearance(DEFAULT_SETTINGS);

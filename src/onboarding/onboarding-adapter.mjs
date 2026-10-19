@@ -127,6 +127,13 @@ export function createPlayerAdapter({ api = playerSources, env = {}, request, wi
       await wait(400);
       return typingStatus();
     },
+    async repairTypingInputMonitoring() {
+      if (!env.mac || !sendTyping('typing-repair-permission')) return null;
+      // The confirmation and the macOS grant both happen in the shell; give the
+      // user time to finish them before the UI refreshes its read-only status.
+      await wait(1400);
+      return typingStatus();
+    },
     async testPlayback(provider = 'auto') {
       const result = await call(api, 'testPlayback', { provider, ...options });
       if (result.missing) return { ok: false, error: '这个版本还不能试听。' };

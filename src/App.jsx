@@ -13,7 +13,7 @@ import { RecordLibraryProvider } from './RecordLibrary';
 import { FocusProvider } from './focus/useFocus';
 import { StudyProvider } from './study/useStudy';
 import { SoundscapeProvider } from './audio/useSoundscape';
-import { listItems, removeItem } from './collection-api.mjs';
+import { addItem, listItems, removeItem } from './collection-api.mjs';
 
 // Stable identifiers keep vinyl styles, crates and focus records saved by
 // earlier releases attached to this computer's collection.
@@ -43,6 +43,11 @@ export default function App() {
     window.addEventListener('album-quick-search', receive); return () => window.removeEventListener('album-quick-search', receive);
   }, []);
   const addToShelf = useCallback((item) => setItems((list) => [item, ...list.filter((entry) => entry.id !== item.id)]), []);
+  const saveToShelf = useCallback(async (item) => {
+    const result = await addItem(item);
+    addToShelf(result.item);
+    return result;
+  }, [addToShelf]);
   const record = items.find((item) => item.id === recordId);
   const replaceItem = (item) => setItems((list) => list.map((entry) => entry.id === item.id ? item : entry));
   const remove = async (item) => {
@@ -61,7 +66,7 @@ export default function App() {
       </header>
       <main className="app-cabin">
         {error && <p className="app-error" role="alert">{error}<button type="button" disabled={loading} onClick={reload}>{loading ? '正在重试…' : '重试'}</button></p>}
-        <CabinRoom items={items} loading={loading} loadError={error} reload={reload} firstVisit={firstVisit} hubRequest={hubRequest} openBackup={() => setBackup(true)} openWall={() => setWall(true)} notify={notify} openRecord={setRecordId} openAdd={(query = '') => setAdding({ query })}/>
+        <CabinRoom items={items} loading={loading} loadError={error} reload={reload} firstVisit={firstVisit} hubRequest={hubRequest} openBackup={() => setBackup(true)} openWall={() => setWall(true)} notify={notify} openRecord={setRecordId} openAdd={(query = '') => setAdding({ query })} saveToShelf={saveToShelf}/>
       </main>
       {toast && <p className={`app-toast ${toast.tone === 'error' ? 'is-error' : ''}`} role={toast.tone === 'error' ? 'alert' : 'status'} key={toast.at}>{toast.text}</p>}
     </div>

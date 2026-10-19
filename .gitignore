@@ -19,6 +19,7 @@ desktop/node_modules/
 desktop/test-results/
 desktop/web/
 desktop/native/bin/
+desktop/native/mac-input.node
 
 .workbuddy/
 work/

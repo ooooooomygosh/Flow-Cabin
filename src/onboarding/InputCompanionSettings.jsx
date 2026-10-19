@@ -5,7 +5,7 @@ const STATUS_TEXT = {
   off: '未开启，只会在小屋里回应键鼠',
   pending: '正在启动跨应用监听',
   active: '正在跨应用监听键盘与鼠标',
-  'needs-permission': '等待 macOS 授权：先允许「辅助功能」，再打开「输入监控」',
+  'needs-permission': '等待 macOS「输入监控」授权',
   unavailable: '这台电脑暂时无法启动全局监听',
   unsupported: '这个环境不支持跨应用键鼠陪伴'
 };
@@ -60,11 +60,12 @@ export function useTypingCompanion(player, env = {}) {
     heard,
     verdict: typingPermissionVerdict(snapshot, { enabled, env, heard }),
     setEnabled: (next) => run('toggle', () => player?.setTypingFollow?.(next)),
-    requestAccessibility: () => run('accessibility', async () => {
+    requestPermission: () => run('permission', async () => {
       await player?.requestPermission?.('typing');
       return player?.typingStatus?.();
     }),
     openInputMonitoring: () => run('input', () => player?.openTypingInputMonitoring?.()),
+    repairInputMonitoring: () => run('repair', () => player?.repairTypingInputMonitoring?.()),
     refresh: () => run('refresh', () => player?.checkTypingPermission?.())
   };
 }
@@ -79,8 +80,9 @@ export default function InputCompanionSettings({ player, env = {}, onPermission,
   const today = snapshot?.today || { keyboard: 0, click: 0 };
   const week = Array.isArray(snapshot?.week) ? snapshot.week.slice(-7) : [];
   const statusText = enabled && env.mac && status === 'active' && verdict === 'pending'
-    ? '辅助功能已就绪，还在等待「输入监控」或一次输入确认'
+    ? '输入监控已授权，还在等待一次真实输入确认'
     : STATUS_TEXT[status] || STATUS_TEXT.off;
+  const needsPermission = enabled && env.mac && (status === 'needs-permission' || snapshot?.permission === 'needs-permission');
 
   useEffect(() => { onPermission?.(verdict); }, [verdict, onPermission]);
 
@@ -105,22 +107,23 @@ export default function InputCompanionSettings({ player, env = {}, onPermission,
     {snapshot && <p className="typing-companion-week">最近 7 天 {count(weekTotal(week))} 次 · 连续 {count(snapshot.streak)} 天</p>}
 
     {env.mac && enabled && <div className="typing-companion-actions">
-      <button type="button" className="pixel-button" disabled={Boolean(typing.busy)} onClick={typing.requestAccessibility}>{typing.busy === 'accessibility' ? '等待系统…' : '1 · 辅助功能授权'}</button>
-      <button type="button" className="pixel-button" disabled={Boolean(typing.busy)} onClick={typing.openInputMonitoring}>{typing.busy === 'input' ? '正在打开…' : '2 · 输入监控设置'}</button>
+      {needsPermission && <button type="button" className="pixel-button is-primary" disabled={Boolean(typing.busy)} onClick={typing.requestPermission}>{typing.busy === 'permission' ? '等待系统…' : '授予输入监控权限'}</button>}
+      <button type="button" className="pixel-button" disabled={Boolean(typing.busy)} onClick={typing.openInputMonitoring}>{typing.busy === 'input' ? '正在打开…' : '打开输入监控设置'}</button>
       <button type="button" className="onboarding-text" disabled={Boolean(typing.busy)} onClick={typing.refresh}>{typing.busy === 'refresh' ? '检测中…' : '重新检测'}</button>
     </div>}
 
-    {env.mac && enabled && <p className="typing-companion-steps">macOS 的两项授权分开进行：<b>1</b> 辅助功能 → <b>2</b> 输入监控 → <b>3</b> 回来敲一下键，确认「本次确认」开始增加。</p>}
+    {env.mac && enabled && <p className="typing-companion-steps">macOS 只需要「输入监控」一项：授予后在系统设置里打开心流小屋的开关，回到这里敲一下键，确认「本次确认」开始增加。</p>}
 
     {enabled && <div className={`typing-companion-proof${typing.heard > 0 ? ' is-heard' : ''}`} role="status">
       {typing.heard > 0
         ? `已经收到 ${count(typing.heard)} 次输入，跨应用键鼠陪伴生效了。`
         : env.mac
-          ? '随便敲几下、点一下鼠标；上面的「本次确认」增加，才表示两项权限都已生效。一直是 0 时，请点「2 · 输入监控设置」检查授权。'
+          ? '随便敲几下、点一下鼠标；上面的「本次确认」增加，才表示授权已经生效。一直是 0 时，先检查「输入监控」，再试一次「修复授权」。'
           : '随便敲几下、点一下鼠标；上面的「本次确认」增加，就表示已经在记录。'}
     </div>}
 
     <p className="typing-companion-privacy">只统计键盘按下和鼠标点击次数，不读取按键内容、鼠标坐标、窗口标题或正在使用的应用。数据只保存在这台电脑。</p>
+    {env.mac && enabled && verdict !== 'granted' && <button type="button" className="onboarding-text typing-companion-repair" disabled={Boolean(typing.busy)} onClick={typing.repairInputMonitoring}>{typing.busy === 'repair' ? '等待确认…' : '输入一直没反应？修复输入监控授权'}</button>}
     {verdict === 'unsupported' && <p className="typing-companion-warning" role="alert">全局监听组件未能启动。可以先关闭再开启一次；仍然失败时，请重新安装桌面版。</p>}
   </section>;
 }

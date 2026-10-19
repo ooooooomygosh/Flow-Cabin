@@ -33,7 +33,7 @@ try {
     window.albumDesktopAppearance = { client: true, reduceMotion: true };
     localStorage.setItem('album-circle-focus-v1:local-owner', JSON.stringify(fixture));
     localStorage.setItem('album-circle-focus-dock-v1', JSON.stringify({ open: true, tab: 'timer' }));
-    localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.0' }));
+    localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.1' }));
     localStorage.setItem('flow-cabin-ai-v1', JSON.stringify({ v: 1, enabled: true, baseUrl: 'https://api.mock-ai.test/v1', model: 'mock-model', cadence: 'weekly', tone: 'warm', shareNotes: false }));
     localStorage.setItem('flow-cabin-ai-key-v1', JSON.stringify({ v: 2, key: 'sk-readme-demo', endpoint: 'https://api.mock-ai.test/v1/chat/completions', revision: 'readme-demo' }));
   }, focusFixture);
@@ -43,7 +43,21 @@ try {
       return route.fulfill({
         status: 200,
         headers: { 'access-control-allow-origin': origin, 'access-control-allow-headers': 'authorization, content-type', 'access-control-allow-methods': 'POST' },
-        json: { choices: [{ message: { role: 'assistant', content: JSON.stringify({ minutes: 50, activity: 'study', albumIds: ['showcase-5', 'showcase-8'], autoplay: true, reason: '两张安静而有呼吸感的唱片，先由爵士把人安顿下来。' }) } }] }
+        json: { choices: [{ message: { role: 'assistant', content: JSON.stringify({
+          title: '纸上散步',
+          description: '钢琴、氛围和低声爵士，留给阅读与写字一条安静的路。',
+          minutes: 50,
+          activity: 'study',
+          autoplay: true,
+          tracks: [
+            { title: 'Says', artist: 'Nils Frahm', album: 'Spaces' },
+            { title: 'Near Light', artist: 'Ólafur Arnalds', album: 'Living Room Songs' },
+            { title: 'A Walk', artist: 'Tycho', album: 'Dive' },
+            { title: 'Kerala', artist: 'Bonobo', album: 'Migration' },
+            { title: 'Avril 14th', artist: 'Aphex Twin', album: 'Drukqs' },
+            { title: 'Aruarian Dance', artist: 'Nujabes', album: 'Departure' }
+          ]
+        }) } }] }
       });
     }
     if (url.origin !== origin) return route.abort();
@@ -66,7 +80,7 @@ try {
   await page.getByRole('button', { name: '智能唱片机', exact: true }).click();
   const smart = page.getByRole('dialog', { name: '智能唱片机', exact: true });
   await smart.getByLabel('告诉小屋你的计划').fill('我要学习五十分钟，帮我搭配音乐');
-  await smart.getByRole('button', { name: '让小屋推荐唱片', exact: true }).click();
+  await smart.getByRole('button', { name: '让小屋推荐歌单', exact: true }).click();
   await smart.locator('.st-result').waitFor();
   await page.screenshot({ path: path.join(output, 'smart-turntable.jpg'), type: 'jpeg', quality: 90, animations: 'disabled' });
   console.log('README focus screenshots written to ' + output);

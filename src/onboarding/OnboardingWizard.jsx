@@ -136,7 +136,7 @@ function PermissionStep({ heading, state, update, env, player }) {
   };
   return <>
     <Heading heading={heading} eyebrow="权限">只开需要的权限</Heading>
-    <p>{env.desktop ? '跨应用键鼠陪伴需要确认一次；macOS 的辅助功能和输入监控是两项独立授权。之后可随时在「设置 › 键鼠陪伴」里改。拒绝也不会影响小屋、音乐和专注。' : '每一项都会弹出系统询问，拒绝也能正常使用小屋。'}</p>
+    <p>{env.desktop ? '跨应用键鼠陪伴需要确认一次；macOS 现在只需要「输入监控」一项授权，不再要求辅助功能。之后可随时在「设置 › 键鼠陪伴」里改。拒绝也不会影响小屋、音乐和专注。' : '每一项都会弹出系统询问，拒绝也能正常使用小屋。'}</p>
     {env.desktop && <InputCompanionSettings player={player} env={env} compact onPermission={rememberTyping}/>}
     {items.length ? <ul className="onboarding-permissions">{items.map((item) => { const result = state.permissions[item.id]; return <li key={item.id}>
       <span><strong>{item.label}{item.optional ? <em>可选</em> : null}</strong><small>{result ? PERMISSION_TEXT[result] : item.hint}</small></span>

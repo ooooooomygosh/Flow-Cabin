@@ -39,8 +39,9 @@ function createSiteCommands(ctx) {
       if (enabled !== null) ctx.saveAppearance({ ...ctx.appearance(), typingFollow: enabled }).catch((error) => ctx.writeLog('typing-settings-error', error.message));
     },
     '/typing-check': () => ctx.typing.check(),
-    '/typing-permission': () => ctx.typing.accessibility(),
+    '/typing-permission': () => ctx.typing.permission(),
     '/typing-input-permission': () => ctx.typing.inputMonitoring(),
+    '/typing-repair-permission': () => ctx.typing.repair(),
     '/local-music-folder': () => ctx.chooseMusicFolder(),
     '/music-login': ({ searchParams }) => { const provider = searchParams.get('provider'); if (ACCOUNT_PROVIDERS.includes(provider)) ctx.music().login(provider).then((result) => ctx.notifyMusic(result)).catch((error) => ctx.notifyMusic({ error: error.message })); },
     '/music-logout': ({ searchParams }) => { const provider = searchParams.get('provider'); if (ACCOUNT_PROVIDERS.includes(provider)) ctx.music().logout(provider).then(() => ctx.notifyMusic({ ok: true })).catch((error) => ctx.notifyMusic({ error: error.message })); },
