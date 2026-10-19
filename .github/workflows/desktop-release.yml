@@ -94,6 +94,7 @@ jobs:
         run: npx electron-builder --mac dmg zip --${{ matrix.arch }} --publish never -c.mac.forceCodeSigning=true
       - name: Verify stable macOS signature
         if: matrix.platform == 'mac' && github.event_name != 'pull_request'
+        working-directory: desktop
         env:
           MAC_SIGNING_FINGERPRINT: ${{ secrets.MAC_SIGNING_FINGERPRINT }}
         shell: bash
