@@ -56,10 +56,28 @@ test('runtime PATH keeps a GUI-launched Node-based Codex executable working', ()
     home: '/Users/me',
     codexPath: '/Users/me/.nvm/versions/node/v24.14.0/bin/codex'
   });
-  const entries = value.split(path.delimiter);
+  const entries = value.split(path.posix.delimiter);
   assert.equal(entries[0], '/Users/me/.nvm/versions/node/v24.14.0/bin');
   assert.ok(entries.includes('/opt/homebrew/bin'));
   assert.ok(entries.includes('/usr/bin'));
+});
+
+test('Windows resolution keeps the npm shim and semicolon-delimited PATH', () => {
+  const appData = 'C:\\Users\\me\\AppData\\Roaming';
+  const shim = `${appData}\\npm\\codex.cmd`;
+  assert.equal(resolveCodex({
+    env: { APPDATA: appData },
+    platform: 'win32',
+    home: 'C:\\Users\\me',
+    isExecutable: (file) => file === shim
+  }), shim);
+  const value = runtimePath({
+    platform: 'win32',
+    env: { PATH: 'C:\\Windows\\System32;C:\\Tools' },
+    home: 'C:\\Users\\me',
+    codexPath: shim
+  });
+  assert.deepEqual(value.split(path.win32.delimiter).slice(0, 2), [`${appData}\\npm`, 'C:\\Windows\\System32']);
 });
 
 test('runCodex writes and returns only the final message file', async () => {

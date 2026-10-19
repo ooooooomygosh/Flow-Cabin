@@ -1,6 +1,6 @@
 # 新手引导、版本更新与设置入口
 
-本文对应当前 `v1.21.2` 行为。代码在 `src/onboarding/`：`onboarding-model.mjs` 保存纯状态，`onboarding-adapter.mjs` 连接播放器与桌面命令，`OnboardingWizard.jsx`、`InputCompanionSettings.jsx` 和 `SettingsHub.jsx` 负责界面。版本变化摘要来自 `releases.mjs`。
+本文对应当前 `v1.21.3` 行为。代码在 `src/onboarding/`：`onboarding-model.mjs` 保存纯状态，`onboarding-adapter.mjs` 连接播放器与桌面命令，`OnboardingWizard.jsx`、`InputCompanionSettings.jsx` 和 `SettingsHub.jsx` 负责界面。版本变化摘要来自 `releases.mjs`。
 
 相关验证：`src/onboarding/onboarding.test.mjs`（状态与适配层单测）、`scripts/onboarding-checks.mjs`（浏览器冒烟）、`src/ai/smart-turntable.test.mjs` 与 `scripts/smart-turntable-regression.mjs`（智能唱片机）。
 
@@ -16,7 +16,7 @@
 
 版本更新不是欢迎导览：它没有欢迎页，先展示从 `seenVersion` 到当前版本的累计变化，再重新确认音源、权限、房间伙伴与试听。中途关闭或点「稍后继续」时，状态保持 `active`，下次启动回到保存的步骤；更新向导不提供一键跳过。完成向导，或首次 / 重新引导中的明确跳过，会推进 `seenVersion`；更新向导的「稍后继续」不会。
 
-对于升级用户：在版本感知引导加入前已经完成 v1.9 入门指南的 profile，会以 `1.17.0` 作为已确认基线，因此第一次打开 v1.21.2 时能看到 `1.18.0` 到 `1.21.2` 的完整变化，而不是只看到最后一张更新卡。
+对于升级用户：在版本感知引导加入前已经完成 v1.9 入门指南的 profile，会以 `1.17.0` 作为已确认基线，因此第一次打开 v1.21.3 时能看到 `1.18.0` 到 `1.21.3` 的完整变化，而不是只看到最后一张更新卡。
 
 ## 2. 状态与恢复
 

@@ -1,8 +1,8 @@
 # 心流小屋 · 发布说明
 
-最新版本：1.21.2
+最新版本：1.21.3
 
-## 1.21.2
+## 1.21.3
 
 这次更新把 AI 连接从“自己拼接口”改成固定供应商模板，并让桌面版直接调用本机已登录的 Codex CLI；DeepSeek 的默认模型与思考模式也一并修正。
 
@@ -15,9 +15,9 @@
 
 ### 验证范围
 
-- `npm test` 478 项：477 通过、1 项预期跳过、0 失败；`npm run build` 通过。
+- 桌面端 351 项测试全部通过；根项目 478 项中 477 通过、1 项预期跳过、0 失败；`npm run build` 通过。
 - 设置页隔离回归覆盖模板切换、只读端点、DeepSeek `deepseek-flash` 请求、Codex 桌面入口与来信路径；智能唱片机隔离回归覆盖歌单保存和播放。
-- 在只保留 `/usr/bin:/bin` 的模拟 GUI 环境中，本机 macOS Codex CLI 冒烟返回 `FLOW_CABIN_CODEX_GUI_PATH_OK`，确认 Node 路径补全与最终回答读取都成立；根项目测试、生产构建与 `git diff --check` 在发布前再次运行。
+- 在只保留 `/usr/bin:/bin` 的模拟 GUI 环境中，本机 macOS Codex CLI 冒烟返回 `FLOW_CABIN_CODEX_GUI_PATH_OK`，确认 Node 路径补全与最终回答读取都成立；单元测试另覆盖 Windows npm `.cmd` shim 与分号分隔 PATH。
 
 ### 已知边界
 

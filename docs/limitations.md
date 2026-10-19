@@ -1,6 +1,6 @@
 # 使用边界与验证状态
 
-当前版本基线：`v1.21.2`（2026-10-19）。`v1.21.1` 是上一个已发布版本；`v1.21.2` 的 tag、安装资产与签名状态以 [GitHub Releases](https://github.com/ooooooomygosh/album-web/releases) 为准。#61 已在当前主线解决。
+当前版本基线：`v1.21.3`（2026-10-19）。`v1.21.1` 是上一个已发布版本；`v1.21.3` 的 tag、安装资产与签名状态以 [GitHub Releases](https://github.com/ooooooomygosh/album-web/releases) 为准。#61 已在当前主线解决。
 
 本页区分「已实现」「自动化或隔离页面已验证」和「真实设备已验证」。旧提交的测试数字不会自动套用到当前版本。
 
@@ -35,7 +35,7 @@
 | 系统正在播放 | 已实现 | macOS 连接 Music / Spotify，Windows 使用系统媒体接口；实际控制、自动化权限与 Windows 原生行为未完整验收 |
 | Music Assistant | 已实现 | 接入与隔离测试存在；真实服务器和音箱未验收 |
 | 我的歌单（网易云 / QQ / Apple Music） | 已实现 | 账号歌单、公开链接、macOS「音乐」App 和导出文件均有接入；多以离线夹具验证。Apple Music 曲目通过版本匹配在 QQ / 网易云播放，不等于 MusicKit 播放 |
-| 智能唱片机 | 已实现（v1.21.2） | AI 按用户计划生成可超出唱片架的外部完整歌单（提示词 6–14 首）；生成后可只收进唱片架，或收进唱片架并开始专注。固定模板覆盖 DeepSeek、OpenAI、OpenRouter、Ollama、LM Studio、桌面 Codex CLI 与自定义接口；DeepSeek 默认 `deepseek-flash` 并关闭思考，桌面 Codex 只读取最终回答。严格 JSON 只接受 `title` / `description` / `minutes` / `activity` / `tracks` / `autoplay`，曲目只保留 `title` / `artist` / `album`，模型提供的平台 id 会被丢弃。歌单以普通 playlist 记录保存，播放时沿用自动匹配音源；AI 不可用或输出不合格时回退本机唱片架推荐（1–3 张）。单元与隔离回归覆盖解析、落架、两条确认路径和自动匹配播放；各云厂商真实账号、真实 QQ / 网易云账号下的逐曲匹配与长歌单连续播放未完整验收 |
+| 智能唱片机 | 已实现（v1.21.3） | AI 按用户计划生成可超出唱片架的外部完整歌单（提示词 6–14 首）；生成后可只收进唱片架，或收进唱片架并开始专注。固定模板覆盖 DeepSeek、OpenAI、OpenRouter、Ollama、LM Studio、桌面 Codex CLI 与自定义接口；DeepSeek 默认 `deepseek-flash` 并关闭思考，桌面 Codex 只读取最终回答。严格 JSON 只接受 `title` / `description` / `minutes` / `activity` / `tracks` / `autoplay`，曲目只保留 `title` / `artist` / `album`，模型提供的平台 id 会被丢弃。歌单以普通 playlist 记录保存，播放时沿用自动匹配音源；AI 不可用或输出不合格时回退本机唱片架推荐（1–3 张）。单元与隔离回归覆盖解析、落架、两条确认路径和自动匹配播放；各云厂商真实账号、真实 QQ / 网易云账号下的逐曲匹配与长歌单连续播放未完整验收 |
 | 官方 MusicKit / Spotify 内嵌 SDK | 未实现 | 曲库资料、系统播放器控制和账号接入不能替代官方 SDK；授权、订阅与平台限制需单独评估 |
 | 通用第三方插件市场 / 权限沙箱 | 未实现 | 专注、待办、统计、声音和随手记是内置工具 |
 
@@ -61,11 +61,11 @@ HTTP 模板的智能唱片机请求使用 `response_format: {"type":"json_object
 
 ## 桌面、原生与安装
 
-### v1.21.2 验证快照
+### v1.21.3 验证快照
 
-- `npm test` 478 项：477 通过、1 项预期跳过、0 失败；`npm run build` 通过。
+- 桌面端 351 项测试全部通过；根项目 478 项中 477 通过、1 项预期跳过、0 失败；`npm run build` 通过。
 - 设置页隔离回归覆盖固定模板切换、只读端点、DeepSeek `deepseek-flash` 请求、桌面 Codex 入口与来信路径；智能唱片机隔离回归覆盖歌单保存和播放。
-- 在只保留 `/usr/bin:/bin` 的模拟 GUI 环境中，本机 macOS Codex CLI 冒烟返回 `FLOW_CABIN_CODEX_GUI_PATH_OK`，确认 Node 路径补全与最终回答读取都成立；桌面端单元测试还覆盖 GUI 启动时的 Node PATH、进程超时与思考/工具事件丢弃。
+- 在只保留 `/usr/bin:/bin` 的模拟 GUI 环境中，本机 macOS Codex CLI 冒烟返回 `FLOW_CABIN_CODEX_GUI_PATH_OK`，确认 Node 路径补全与最终回答读取都成立；桌面端单元测试还覆盖 Windows npm `.cmd` shim、分号分隔 PATH、进程超时与思考/工具事件丢弃。
 - 浏览器冒烟、宣传页冒烟、原生输入与打包后客户端检查在发布前按 Release 工作流运行；具体结果以对应 Release 为准。
 
 ### 仍未实测
@@ -73,7 +73,7 @@ HTTP 模板的智能唱片机请求使用 `response_format: {"type":"json_object
 - Windows 真实物理键盘 / 鼠标、macOS 输入法组合、原生焦点切换与整日办公连续运行尚未完成验收。
 - 各云厂商真实账号与额度、真实第三方 AI 端点上的 `response_format` 兼容性、AI 完整歌单在真实 QQ / 网易云账号下的逐曲匹配、无匹配曲目跳过与长歌单连续播放尚未完成端到端验收。
 - 本机 Codex CLI 需要用户自行安装并登录；心流小屋没有覆盖所有 CLI 版本、Windows shell 包装器、企业代理或 Codex 账号额度耗尽等场景。
-- `v1.17.0` → `v1.21.2` 的同安装路径安装器升级、重启与逐域数据比较尚未验证；旧包存在或校验通过不等于升级验收通过。
+- `v1.17.0` → `v1.21.3` 的同安装路径安装器升级、重启与逐域数据比较尚未验证；旧包存在或校验通过不等于升级验收通过。
 - Windows、Intel Mac、多显示器 / 缩放 / 热拔插 / 睡眠恢复、全局输入与原生动态桌面挂载尚未完成实机覆盖。
 - 真实 QQ / 网易云 / Apple Music / Music Assistant 账号、版权与会员路径仍未完成全量验收。
 - macOS 使用稳定的本地代码签名身份来保持 TCC 授权，但不是 Apple Developer ID，也没有 notarization / hardened runtime；Windows 未建立可信发布者签名。自动更新器没有端到端验收。

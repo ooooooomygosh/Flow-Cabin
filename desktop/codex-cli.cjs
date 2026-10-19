@@ -9,6 +9,7 @@ const { spawn } = require('node:child_process');
 
 const MAX_PROMPT = 32 * 1024;
 const DEFAULT_TIMEOUT = 90000;
+const pathFor = (platform) => platform === 'win32' ? path.win32 : path.posix;
 
 function childEnvironment(platform = process.platform, env = process.env) {
   const names = platform === 'win32'
@@ -21,20 +22,21 @@ function childEnvironment(platform = process.platform, env = process.env) {
 // a Node script, so prepend its own bin directory (which normally also holds
 // node) plus the common user-managed Node locations.
 function runtimePath({ platform = process.platform, env = process.env, home = os.homedir(), codexPath = '' } = {}) {
+  const platformPath = pathFor(platform);
   const directories = [
-    codexPath && path.dirname(codexPath),
-    ...String(env.PATH || '').split(path.delimiter),
+    codexPath && platformPath.dirname(codexPath),
+    ...String(env.PATH || '').split(platformPath.delimiter),
     ...(platform === 'win32'
-      ? [path.join(env.APPDATA || path.join(home, 'AppData', 'Roaming'), 'npm')]
+      ? [platformPath.join(env.APPDATA || platformPath.join(home, 'AppData', 'Roaming'), 'npm')]
       : [
           '/opt/homebrew/bin',
           '/usr/local/bin',
-          path.join(home, '.local', 'bin'),
-          path.join(home, '.volta', 'bin'),
-          ...nvmCandidates(home).map((candidate) => path.dirname(candidate))
+          platformPath.join(home, '.local', 'bin'),
+          platformPath.join(home, '.volta', 'bin'),
+          ...nvmCandidates(home, platform).map((candidate) => platformPath.dirname(candidate))
         ])
   ].filter(Boolean);
-  return [...new Set(directories)].join(path.delimiter);
+  return [...new Set(directories)].join(platformPath.delimiter);
 }
 
 function executable(file) {
@@ -46,31 +48,33 @@ function pathBinaryNames(platform = process.platform) {
   return platform === 'win32' ? ['codex.cmd', 'codex.exe', 'codex.bat', 'codex'] : ['codex'];
 }
 
-function nvmCandidates(home) {
-  const root = path.join(home, '.nvm', 'versions', 'node');
+function nvmCandidates(home, platform = process.platform) {
+  const platformPath = pathFor(platform);
+  const root = platformPath.join(home, '.nvm', 'versions', 'node');
   try {
     return fs.readdirSync(root)
       .sort((left, right) => right.localeCompare(left, undefined, { numeric: true }))
-      .map((version) => path.join(root, version, 'bin', 'codex'));
+      .map((version) => platformPath.join(root, version, 'bin', 'codex'));
   } catch { return []; }
 }
 
 function resolveCodex({ env = process.env, platform = process.platform, home = os.homedir(), isExecutable = executable } = {}) {
+  const platformPath = pathFor(platform);
   const explicit = [env.FLOW_CABIN_CODEX_BIN, env.CODEX_BIN].filter(Boolean);
-  const pathDirs = String(env.PATH || '').split(path.delimiter).filter(Boolean);
-  const pathCandidates = pathDirs.flatMap((dir) => pathBinaryNames(platform).map((name) => path.join(dir, name)));
+  const pathDirs = String(env.PATH || '').split(platformPath.delimiter).filter(Boolean);
+  const pathCandidates = pathDirs.flatMap((dir) => pathBinaryNames(platform).map((name) => platformPath.join(dir, name)));
   const localCandidates = platform === 'win32'
     ? [
-        path.join(env.APPDATA || path.join(home, 'AppData', 'Roaming'), 'npm', 'codex.cmd'),
-        path.join(home, 'AppData', 'Roaming', 'npm', 'codex.cmd')
+        platformPath.join(env.APPDATA || platformPath.join(home, 'AppData', 'Roaming'), 'npm', 'codex.cmd'),
+        platformPath.join(home, 'AppData', 'Roaming', 'npm', 'codex.cmd')
       ]
     : [
-        path.join(home, '.local', 'bin', 'codex'),
-        path.join(home, '.npm-global', 'bin', 'codex'),
-        path.join(home, '.volta', 'bin', 'codex'),
+        platformPath.join(home, '.local', 'bin', 'codex'),
+        platformPath.join(home, '.npm-global', 'bin', 'codex'),
+        platformPath.join(home, '.volta', 'bin', 'codex'),
         '/opt/homebrew/bin/codex',
         '/usr/local/bin/codex',
-        ...nvmCandidates(home)
+        ...nvmCandidates(home, platform)
       ];
   return [...explicit, ...pathCandidates, ...localCandidates].find(isExecutable) || '';
 }

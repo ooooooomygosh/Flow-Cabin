@@ -82,7 +82,7 @@ try {
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
       const day = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
-      localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.2' }));
+      localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.3' }));
       localStorage.setItem('album-circle-focus-display-v1', JSON.stringify({ autoEnter: false }));
       localStorage.setItem('album-circle-room-player-v1', 'auto');
       localStorage.setItem(queueKey, JSON.stringify({ ids: ['old-queued'], repeat: 'one', shuffle: true }));

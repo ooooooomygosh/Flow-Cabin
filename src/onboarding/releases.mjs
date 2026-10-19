@@ -2,7 +2,7 @@
 // product-facing; technical verification notes belong in RELEASE-NOTES.md.
 export const RELEASES = Object.freeze([
   {
-    version: '1.21.2',
+    version: '1.21.3',
     title: 'AI 用固定模板，桌面版可接本机 Codex',
     items: [
       'AI 设置改成固定模板：DeepSeek、OpenAI、OpenRouter、Ollama、LM Studio、本机 Codex CLI 和自定义接口；预设地址只读，Ollama / LM Studio 不需要 API Key。',

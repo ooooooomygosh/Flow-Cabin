@@ -33,7 +33,7 @@ try {
     window.albumDesktopAppearance = { client: true, reduceMotion: true };
     localStorage.setItem('album-circle-focus-v1:local-owner', JSON.stringify(fixture));
     localStorage.setItem('album-circle-focus-dock-v1', JSON.stringify({ open: true, tab: 'timer' }));
-    localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.2' }));
+    localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.3' }));
     localStorage.setItem('flow-cabin-ai-v1', JSON.stringify({ v: 1, enabled: true, baseUrl: 'https://api.mock-ai.test/v1', model: 'mock-model', cadence: 'weekly', tone: 'warm', shareNotes: false }));
     localStorage.setItem('flow-cabin-ai-key-v1', JSON.stringify({ v: 2, key: 'sk-readme-demo', endpoint: 'https://api.mock-ai.test/v1/chat/completions', revision: 'readme-demo' }));
   }, focusFixture);
