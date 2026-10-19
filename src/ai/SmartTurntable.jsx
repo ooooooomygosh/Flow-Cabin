@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Clock, Music2, Play, Refresh, Settings, Sparkles, X } from '../icons';
-import { aiReady, chatUrl } from './ai-model.mjs';
-import { chat } from './ai-transport.mjs';
+import { aiConnectionReady } from './ai-model.mjs';
+import { chat, isDesktopShell } from './ai-transport.mjs';
 import { useAiSettings } from './useCabinLetters.js';
 import {
   EXAMPLE_REQUESTS, buildAiMessages, localRecommendation, normalizePlaybackPlan, normalizePlaylistPlaybackPlan,
@@ -28,7 +28,7 @@ export default function SmartTurntable({ open, close, items = [], onStart, onSav
   const [note, setNote] = useState('');
   const panel = useRef(null), input = useRef(null), previousFocus = useRef(null), sequence = useRef(0);
   const shelf = Array.isArray(items) ? items.filter((item) => item && typeof item === 'object') : [];
-  const configured = aiReady(settings, key.stored) && key.endpoint === chatUrl(settings.baseUrl);
+  const configured = aiConnectionReady(settings, key, { desktop: isDesktopShell() });
 
   useEffect(() => {
     if (!open) {
@@ -87,7 +87,9 @@ export default function SmartTurntable({ open, close, items = [], onStart, onSav
         setResult({ ...selection, item, reason: selection.description });
         setNote('歌单已经排好，可以直接收进唱片架，或开始这一轮。');
       } else {
-        fallback(reply.ok ? 'AI 没有返回可用的歌单，已先用唱片架做本机推荐。' : 'AI 这次没有接上，已先用唱片架做本机推荐。');
+        fallback(reply.ok
+          ? 'AI 没有返回可用的歌单，已先用唱片架做本机推荐。'
+          : `AI 这次没有接上：${reply.error} 已先用唱片架做本机推荐。`);
       }
     } catch {
       if (requestId !== sequence.current) return;

@@ -4,16 +4,16 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { createAi, aiScript, validUrl, validBody } = require('../ai.cjs');
+const { createAi, aiScript, validUrl, validBody, validCliBody } = require('../ai.cjs');
 const { createSiteCommands } = require('../main/site-commands.cjs');
 
 const KEY = 'sk-test-SECRET-1234567890';
 const fakeSafe = (ok = true) => ({ isEncryptionAvailable: () => ok, encryptString: (s) => Buffer.from(`enc:${Buffer.from(s).toString('base64')}`), decryptString: (b) => Buffer.from(String(b).slice(4), 'base64').toString() });
-const body = JSON.stringify({ model: 'deepseek-chat', messages: [{ role: 'user', content: 'hi' }], max_tokens: 8 });
+const body = JSON.stringify({ model: 'deepseek-flash', messages: [{ role: 'user', content: 'hi' }], max_tokens: 8 });
 const URL_OK = 'https://api.example.com/v1/chat/completions';
-function setup({ fetch, safe = fakeSafe(), timeout } = {}) {
+function setup({ fetch, safe = fakeSafe(), timeout, ...options } = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-relay-')), out = [], logs = [];
-  const ai = createAi({ directory: dir, safeStorage: safe, fetch, publish: (d) => out.push(d), writeLog: (...a) => logs.push(a.join(' ')), timeout });
+  const ai = createAi({ directory: dir, safeStorage: safe, fetch, publish: (d) => out.push(d), writeLog: (...a) => logs.push(a.join(' ')), timeout, ...options });
   return { dir, out, logs, ai };
 }
 
@@ -141,7 +141,58 @@ test('chat relays with Bearer auth and returns only the text', async () => {
   await ai.chat('a1', URL_OK, body);
   assert.equal(seen.url, URL_OK);
   assert.equal(seen.opts.headers.Authorization, `Bearer ${KEY}`);
+  assert.equal('thinking' in JSON.parse(seen.opts.body), false);
   assert.deepEqual(out.at(-1), { type: 'result', id: 'a1', ok: true, text: '好' });
+});
+
+test('keyless loopback chat sends no Authorization header', async () => {
+  let seen;
+  const { out, ai } = setup({ fetch: async (url, opts) => { seen = { url, opts }; return { ok: true, json: async () => ({ choices: [{ message: { content: 'local' } }] }) }; } });
+  ai.setKey(KEY, URL_OK);
+  const local = JSON.stringify({ model: 'qwen3:8b', messages: [{ role: 'user', content: 'hi' }], max_tokens: 8 });
+  await ai.chat('local', 'http://127.0.0.1:11434/v1/chat/completions', local, { keyless: true });
+  assert.equal(seen.opts.headers.Authorization, undefined);
+  assert.deepEqual(out.at(-1), { type: 'result', id: 'local', ok: true, text: 'local' });
+});
+
+test('CLI relay returns only the final text and never reasoning', async () => {
+  const prompts = [];
+  const { out, ai } = setup({ runCodex: async ({ prompt }) => { prompts.push(prompt); return { ok: true, text: '最终回答', reasoning: '不该出现' }; }, resolveCodexPath: () => '/fake/codex' });
+  await ai.chatCli('cli1', JSON.stringify({ messages: [{ role: 'system', content: '只输出 JSON' }, { role: 'user', content: '排歌' }], max_tokens: 1200 }));
+  assert.match(prompts[0], /<system>/);
+  assert.match(prompts[0], /Return only the final answer/);
+  assert.deepEqual(out.at(-1), { type: 'result', id: 'cli1', ok: true, text: '最终回答' });
+  assert.ok(!JSON.stringify(out).includes('不该出现'));
+  assert.equal(validCliBody(JSON.stringify({ messages: [{ role: 'user', content: 'hi' }] })).messages.length, 1);
+  assert.equal(validCliBody(JSON.stringify({ messages: [] })), null);
+});
+
+test('CLI relay reports missing/timeout/failure without exposing process output', async () => {
+  const missing = setup({ resolveCodexPath: () => '' });
+  await missing.ai.chatCli('m', JSON.stringify({ messages: [{ role: 'user', content: 'hi' }] }));
+  assert.deepEqual(missing.out.at(-1), { type: 'result', id: 'm', ok: false, kind: 'cli-missing' });
+  const failure = setup({ runCodex: async () => ({ ok: false, kind: 'cli-failed' }), resolveCodexPath: () => '/fake/codex' });
+  await failure.ai.chatCli('f', JSON.stringify({ messages: [{ role: 'user', content: 'hi' }] }));
+  assert.deepEqual(failure.out.at(-1), { type: 'result', id: 'f', ok: false, kind: 'cli-failed' });
+});
+
+test('thinking controls are allowlisted and empty OpenAI-shaped replies are distinguished', async () => {
+  let seen;
+  const { out, ai } = setup({ fetch: async (_url, opts) => {
+    seen = JSON.parse(opts.body);
+    return { ok: true, status: 200, json: async () => ({ choices: [{ message: { content: '', reasoning_content: '思考占满输出' } }] }) };
+  } });
+  ai.setKey(KEY, URL_OK);
+  await ai.chat('empty', URL_OK, JSON.stringify({
+    model: 'deepseek-flash',
+    messages: [{ role: 'user', content: 'hi' }],
+    max_tokens: 1200,
+    thinking: { type: 'disabled' },
+    reasoning_effort: 'low'
+  }));
+  assert.deepEqual(seen.thinking, { type: 'disabled' });
+  assert.equal(seen.reasoning_effort, 'low');
+  assert.deepEqual(out.at(-1), { type: 'result', id: 'empty', ok: false, kind: 'empty' });
 });
 
 test('errors carry status and redacted message, never the key', async () => {
@@ -177,17 +228,34 @@ test('refuses bad URLs, bodies and missing keys without fetching', async () => {
   const structured = validBody(JSON.stringify({ model: 'm', messages: [{ role: 'user', content: 'json' }], response_format: { type: 'json_object' }, temperature: 0.2 }));
   assert.deepEqual(structured.response_format, { type: 'json_object' });
   assert.equal(structured.temperature, 0.2);
+  const thinking = validBody(JSON.stringify({
+    model: 'deepseek-flash',
+    messages: [{ role: 'user', content: 'json' }],
+    thinking: { type: 'disabled' },
+    reasoning_effort: 'max'
+  }));
+  assert.deepEqual(thinking.thinking, { type: 'disabled' });
+  assert.equal(thinking.reasoning_effort, 'max');
+  const unsupported = validBody(JSON.stringify({
+    model: 'deepseek-flash',
+    messages: [{ role: 'user', content: 'json' }],
+    thinking: { type: 'automatic' },
+    reasoning_effort: 'ultra'
+  }));
+  assert.equal('thinking' in unsupported, false);
+  assert.equal('reasoning_effort' in unsupported, false);
   assert.equal(validBody(JSON.stringify({ model: 'm', messages: [{ role: 'tool', content: 'x' }] })), null);
 });
 
 test('site commands route /ai-key and /ai-chat', () => {
   const calls = [];
-  const cmds = createSiteCommands({ isSitePage: () => true, ai: { setKey: (k, endpoint) => calls.push(['key', k, endpoint]), publishKey: () => calls.push(['publish']), chat: async (...a) => calls.push(['chat', ...a]) } });
-  assert.ok(cmds.commands.includes('/ai-key') && cmds.commands.includes('/ai-chat'));
+  const cmds = createSiteCommands({ isSitePage: () => true, ai: { setKey: (k, endpoint) => calls.push(['key', k, endpoint]), publishKey: () => calls.push(['publish']), chat: async (...a) => calls.push(['chat', ...a]), chatCli: async (...a) => calls.push(['cli', ...a]) } });
+  assert.ok(cmds.commands.includes('/ai-key') && cmds.commands.includes('/ai-chat') && cmds.commands.includes('/ai-chat-cli'));
   cmds.handle(`album-desktop://action/ai-key?key=${encodeURIComponent(KEY)}&endpoint=${encodeURIComponent(URL_OK)}`);
   cmds.handle('album-desktop://action/ai-key');
-  cmds.handle(`album-desktop://action/ai-chat?id=x&url=${encodeURIComponent(URL_OK)}&body=${encodeURIComponent(body)}`);
-  assert.deepEqual(calls, [['key', KEY, URL_OK], ['publish'], ['chat', 'x', URL_OK, body]]);
+  cmds.handle(`album-desktop://action/ai-chat?id=x&url=${encodeURIComponent(URL_OK)}&body=${encodeURIComponent(body)}&keyless=true`);
+  cmds.handle(`album-desktop://action/ai-chat-cli?id=y&body=${encodeURIComponent(body)}`);
+  assert.deepEqual(calls, [['key', KEY, URL_OK], ['publish'], ['chat', 'x', URL_OK, body, { keyless: true }], ['cli', 'y', body]]);
 });
 
 

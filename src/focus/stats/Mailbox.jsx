@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLetters, useAiSettings } from '../../ai/useCabinLetters.js';
-import { aiReady, chatUrl, cleanUserLetter, readLetterRecords } from '../../ai/ai-model.mjs';
+import { aiConnectionReady, cleanUserLetter, readLetterRecords } from '../../ai/ai-model.mjs';
+import { isDesktopShell } from '../../ai/ai-transport.mjs';
 import { buildLetterContext, recentLetterPeriod, ambienceSnapshot, inputCompanionSnapshot, journalSelectionCurrent } from '../../ai/letter-context.mjs';
 import { readJournalRecords } from '../journal-entries.mjs';
 import LetterJournalPicker from './LetterJournalPicker.jsx';
@@ -90,7 +91,7 @@ function ThreadView({ row, reduced, sending, onRecover, onOrganize, onPurge, inT
 
 function Composer({ sessions, state, now, reduced, draft, shareContext, setShareContext, includeNotes, setIncludeNotes, selectedJournal, setSelectedJournal, text, setText, sending, status, onSend, onClose }) {
   const { settings, key } = useAiSettings();
-  const ready = aiReady(settings, key.stored) && key.endpoint === chatUrl(settings.baseUrl);
+  const ready = aiConnectionReady(settings, key, { desktop: isDesktopShell() });
   const minute = minuteKey(now);
   const [ambience, setAmbience] = useState(() => ambienceSnapshot());
   useEffect(() => { const timer = setInterval(() => setAmbience(ambienceSnapshot()), 60000); return () => clearInterval(timer); }, []);

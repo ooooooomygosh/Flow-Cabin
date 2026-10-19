@@ -108,7 +108,7 @@ try {
     const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'zh-CN', reducedMotion: 'reduce' });
     await context.addInitScript(({ focusKey, journalKey, notes, journalSeed }) => {
       if (location.origin === 'null') return;
-      if (!localStorage.getItem('flow-cabin-onboarding-v1')) localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.1' }));
+      if (!localStorage.getItem('flow-cabin-onboarding-v1')) localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.2' }));
       if (!localStorage.getItem('album-circle-focus-display-v1')) localStorage.setItem('album-circle-focus-display-v1', JSON.stringify({ autoEnter: false }));
       if (!localStorage.getItem(focusKey)) localStorage.setItem(focusKey, JSON.stringify({ notes, settings: { focusMin: 25, shortMin: 5, notify: false, chime: false } }));
       if (journalSeed && !localStorage.getItem(journalKey)) localStorage.setItem(journalKey, JSON.stringify(journalSeed));

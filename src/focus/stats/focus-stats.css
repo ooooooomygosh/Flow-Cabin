@@ -271,6 +271,9 @@
 .ai-settings .ai-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .ai-settings .ai-row > span { min-width: 6em; }
 .ai-settings .ai-row input[type="url"], .ai-settings .ai-row input[type="text"], .ai-settings .ai-row input[type="password"] { flex: 1; min-width: 14em; }
+.ai-settings .ai-row select { flex: 1; min-width: 14em; padding: 6px 8px; background: var(--px-surface-2); border: 1px solid var(--px-border); color: var(--px-ink); }
+.ai-settings .ai-row input[readonly] { opacity: .72; cursor: default; }
+.ai-settings .ai-note code { font-size: .92em; padding: 1px 4px; background: var(--px-surface-2); }
 .ai-settings .ai-fields { border: 0; padding: 0; margin: 0; display: grid; gap: 10px; }
 .ai-settings .ai-fields:disabled { opacity: .55; }
 .ai-settings .ai-note { margin: 0; font-size: .85em; opacity: .85; }

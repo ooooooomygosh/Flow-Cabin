@@ -28,7 +28,7 @@ try {
     await context.addInitScript(({ FOCUS, desktop, ai, KEY, endpoint }) => {
       if (location.origin === 'null' || sessionStorage.getItem('seeded')) return;
       sessionStorage.setItem('seeded', '1');
-      localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.1' }));
+      localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.2' }));
       localStorage.setItem('album-circle-focus-display-v1', JSON.stringify({ autoEnter: false }));
       // Seed the browser's actual reporting period. Daily letters need yesterday,
       // not last week's weekend (those coincide only on Monday).
@@ -92,11 +92,27 @@ try {
     const region = page.getByRole('region', { name: 'AI（Beta）' });
     assert.equal(await region.getByRole('checkbox', { name: '启用 AI（Beta）' }).isChecked(), false);
     assert.equal(await region.getByRole('button', { name: '测试连接' }).isDisabled(), true);
+    assert.equal(await region.getByLabel('AI 服务').inputValue(), 'deepseek');
+    assert.equal(await region.getByLabel('接口地址').inputValue(), 'https://api.deepseek.com/v1');
+    assert.equal(await region.getByLabel('模型').inputValue(), 'deepseek-flash');
+    assert.equal(await region.getByLabel('接口地址').getAttribute('readonly'), '');
     await shot(page, 'ai-settings-off');
     await region.getByRole('checkbox', { name: '启用 AI（Beta）' }).check();
+    await region.getByLabel('AI 服务').selectOption('ollama');
+    assert.equal(await region.getByLabel('接口地址').inputValue(), 'http://127.0.0.1:11434/v1');
+    assert.equal(await region.getByLabel('模型').inputValue(), 'qwen3:8b');
+    assert.equal(await region.getByLabel('API Key').count(), 0, 'local Ollama needs no key');
+    await region.getByLabel('AI 服务').selectOption('openai');
+    assert.equal(await region.getByLabel('接口地址').inputValue(), 'https://api.openai.com/v1');
+    assert.equal(await region.getByLabel('模型').inputValue(), 'gpt-4.1-mini');
+    await region.getByLabel('AI 服务').selectOption('codex');
+    assert.equal(await region.getByLabel('接口地址').count(), 0);
+    assert.equal(await region.getByLabel('模型').count(), 0);
+    await region.getByText('本机 Codex CLI 只在桌面版可用。网页版请选择其他模板。', { exact: true }).waitFor();
+    await region.getByLabel('AI 服务').selectOption('custom');
     await region.getByLabel('接口地址').fill(`${API}/v1`);
     await region.getByLabel('API Key').fill(KEY);
-    await region.getByLabel('模型').fill('deepseek-chat');
+    await region.getByLabel('模型').fill('deepseek-flash');
     await region.getByRole('radio', { name: '俏皮' }).click();
     assert.equal(await page.evaluate(() => localStorage.getItem('flow-cabin-ai-key-v1')), null, 'blur does not save a key');
     await region.getByRole('button', { name: '保存 Key', exact: true }).click();
@@ -104,7 +120,7 @@ try {
     await region.getByRole('button', { name: '测试连接' }).click();
     await region.getByText('连接成功').waitFor();
     const req = report.aiRequests.filter((r) => r.name === 'settings-off-by-default-and-test-connection');
-    assert.equal(req.length, 1); assert.equal(req[0].path, '/v1/chat/completions'); assert.ok(req[0].auth); assert.equal(req[0].body.model, 'deepseek-chat');
+    assert.equal(req.length, 1); assert.equal(req[0].path, '/v1/chat/completions'); assert.ok(req[0].auth); assert.equal(req[0].body.model, 'deepseek-flash');
     const stored = await page.evaluate(() => ({ s: localStorage.getItem('flow-cabin-ai-v1'), k: localStorage.getItem('flow-cabin-ai-key-v1') }));
     assert.ok(!stored.s.includes(KEY));
     const credential = JSON.parse(stored.k);
@@ -398,6 +414,23 @@ try {
     await region.getByText('Key 用系统加密，只存在这台电脑上，请求由桌面版发出。', { exact: true }).waitFor();
     await shot(page, 'ai-settings-desktop');
   }, { desktop: true, ai: { enabled: true, baseUrl: API, model: 'm', cadence: 'daily' } });
+
+  await run('desktop-codex-template-runs-through-cli-without-a-key', async (page) => {
+    await openAi(page);
+    const region = page.getByRole('region', { name: 'AI（Beta）' });
+    await region.getByRole('checkbox', { name: '启用 AI（Beta）' }).check();
+    await region.getByLabel('AI 服务').selectOption('codex');
+    await region.getByText('只读取最后一条回答，不保存思考过程、工具输出或会话文件。', { exact: false }).waitFor();
+    await region.getByRole('button', { name: '测试连接' }).click();
+    await page.waitForFunction(() => window.__nativeCommands.some((u) => u.includes('/ai-chat-cli')), null, { timeout: 15000 });
+    const command = new URL(await page.evaluate(() => window.__nativeCommands.find((u) => u.includes('/ai-chat-cli'))));
+    const body = JSON.parse(command.searchParams.get('body'));
+    assert.match(JSON.stringify(body.messages), /回复「好」一个字/);
+    assert.ok(!command.href.includes('sk-'));
+    await page.evaluate((id) => window.dispatchEvent(new CustomEvent('cabin:ai-result', { detail: { id, ok: true, text: '好' } })), command.searchParams.get('id'));
+    await region.getByText(/连接成功：本机 Codex CLI 回复了「好」/).waitFor();
+    await shot(page, 'ai-settings-codex');
+  }, { desktop: true, ai: { enabled: false, provider: 'codex', baseUrl: '', model: '', cadence: 'weekly' } });
 
   assert.deepEqual(report.pageErrors, []); assert.deepEqual(report.unexpectedRequests, []);
   if (report.checks.some((x) => !x.passed)) process.exitCode = 1;

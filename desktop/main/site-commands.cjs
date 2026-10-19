@@ -54,7 +54,8 @@ function createSiteCommands(ctx) {
     // 跟随真实天气 (desktop/weather.cjs): off by default; the page sends the chosen city's coordinates.
     // AI（Beta）(desktop/ai.cjs): the key goes to safeStorage, chat requests are relayed by main.
     '/ai-key': ({ searchParams }) => { if (searchParams.has('key')) ctx.ai.setKey(searchParams.get('key'), searchParams.get('endpoint')); else ctx.ai.publishKey(); },
-    '/ai-chat': ({ searchParams }) => { ctx.ai.chat(searchParams.get('id') || '', searchParams.get('url'), searchParams.get('body')).catch(() => {}); },
+    '/ai-chat': ({ searchParams }) => { ctx.ai.chat(searchParams.get('id') || '', searchParams.get('url'), searchParams.get('body'), { keyless: searchParams.get('keyless') === 'true' }).catch(() => {}); },
+    '/ai-chat-cli': ({ searchParams }) => { ctx.ai.chatCli(searchParams.get('id') || '', searchParams.get('body')).catch(() => {}); },
     '/weather': ({ searchParams }) => { const enabled = flag(searchParams, 'enabled'); if (enabled === null) ctx.weather.publish(); else ctx.weather.set({ enabled, lat: searchParams.get('lat'), lng: searchParams.get('lng') }).catch(() => {}); }
   };
   return {

@@ -5,6 +5,7 @@
 // only. The key is never logged, never sent back to the page and never part of an error text.
 const fs = require('node:fs');
 const path = require('node:path');
+const { resolveCodex, messagesToPrompt, runCodex: defaultRunCodex } = require('./codex-cli.cjs');
 const TIMEOUT = 30000, MAX_BODY = 32 * 1024;
 
 function validUrl(value) {
@@ -12,17 +13,29 @@ function validUrl(value) {
   const loopback = ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
   return (url.protocol === 'https:' || (url.protocol === 'http:' && loopback)) && !url.username && !url.password && !url.search && !url.hash && /\/chat\/completions$/.test(url.pathname) ? url.href : null;
 }
+const loopbackUrl = (value) => {
+  try { const url = new URL(String(value)); return ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname); } catch { return false; }
+};
 function validBody(text) {
   if (typeof text !== 'string' || text.length > MAX_BODY) return null;
   let body; try { body = JSON.parse(text); } catch { return null; }
   if (!body || typeof body.model !== 'string' || !Array.isArray(body.messages) || body.messages.length > 8) return null;
   if (!body.messages.every((m) => m && ['system', 'user', 'assistant'].includes(m.role) && typeof m.content === 'string')) return null;
   const structured = body.response_format?.type === 'json_object' ? { response_format: { type: 'json_object' } } : {};
-  return { model: body.model.slice(0, 120), messages: body.messages, temperature: Number(body.temperature) || 0.8, max_tokens: Math.min(1200, Number(body.max_tokens) || 600), stream: false, ...structured };
+  const thinking = ['enabled', 'disabled'].includes(body.thinking?.type) ? { thinking: { type: body.thinking.type } } : {};
+  const reasoning = ['none', 'low', 'high', 'max'].includes(body.reasoning_effort) ? { reasoning_effort: body.reasoning_effort } : {};
+  return { model: body.model.slice(0, 120), messages: body.messages, temperature: Number(body.temperature) || 0.8, max_tokens: Math.min(1200, Number(body.max_tokens) || 600), stream: false, ...structured, ...thinking, ...reasoning };
+}
+function validCliBody(text) {
+  if (typeof text !== 'string' || text.length > MAX_BODY) return null;
+  let body; try { body = JSON.parse(text); } catch { return null; }
+  if (!body || !Array.isArray(body.messages) || !body.messages.length || body.messages.length > 8) return null;
+  if (!body.messages.every((message) => message && ['system', 'user', 'assistant'].includes(message.role) && typeof message.content === 'string' && message.content.trim())) return null;
+  return { messages: body.messages, max_tokens: Math.min(1200, Number(body.max_tokens) || 600), temperature: Number(body.temperature) || 0.8 };
 }
 const redact = (text, key) => { let s = String(text || ''); if (key && key.length > 6) s = s.split(key).join('••••'); return s.replace(/\b(sk|Bearer)[-_ ][A-Za-z0-9_\-]{8,}/g, '$1-••••'); };
 
-function createAi({ directory, safeStorage, fetch, publish, writeLog = () => {}, timeout = TIMEOUT }) {
+function createAi({ directory, safeStorage, fetch, publish, writeLog = () => {}, timeout = TIMEOUT, resolveCodexPath = resolveCodex, runCodex = defaultRunCodex }) {
   const file = path.join(directory, 'ai-key.bin');
   let memory = null, revision = 0;
   const requests = new Set();
@@ -55,16 +68,19 @@ function createAi({ directory, safeStorage, fetch, publish, writeLog = () => {},
       }
       publish({ type: 'key', ...state() });
     },
-    async chat(id, urlValue, bodyText) {
+    async chat(id, urlValue, bodyText, options = {}) {
       const reply = (detail) => publish({ type: 'result', id: String(id).slice(0, 40), ...detail });
       const url = validUrl(urlValue), body = validBody(bodyText);
       if (!url || !body) return reply({ ok: false, kind: 'config' });
       const { credential } = readCredential(), key = credential?.key, started = revision;
-      if (!key || url !== credential.endpoint) return reply({ ok: false, kind: 'config' });
+      const keyless = options?.keyless === true;
+      if (keyless ? !loopbackUrl(url) : (!key || url !== credential.endpoint)) return reply({ ok: false, kind: 'config' });
       const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), timeout);
       requests.add(ctrl);
       try {
-        const res = await fetch(url, { method: 'POST', redirect: 'error', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` }, body: JSON.stringify(body), signal: ctrl.signal });
+        const headers = { 'Content-Type': 'application/json' };
+        if (!keyless) headers.Authorization = `Bearer ${key}`;
+        const res = await fetch(url, { method: 'POST', redirect: 'error', headers, body: JSON.stringify(body), signal: ctrl.signal });
         let json = null; try { json = await res.json(); } catch { /* not JSON */ }
         if (started !== revision) return reply({ ok: false, kind: 'config' });
         if (!res.ok) {
@@ -72,16 +88,28 @@ function createAi({ directory, safeStorage, fetch, publish, writeLog = () => {},
           return reply({ ok: false, status: res.status, body: { error: { message } } });
         }
         const text = json?.choices?.[0]?.message?.content;
-        if (typeof text !== 'string' || !text.trim()) return reply({ ok: false, kind: 'format' });
+        if (typeof text !== 'string' || !text.trim()) {
+          return reply({ ok: false, kind: Array.isArray(json?.choices) && json.choices.length ? 'empty' : 'format' });
+        }
         reply({ ok: true, text: redact(text, key).slice(0, 4000) });
       } catch (error) {
         writeLog('ai-error', error?.name === 'AbortError' ? 'timeout' : 'network');
         reply({ ok: false, kind: error?.name === 'AbortError' ? 'timeout' : 'network' });
       } finally { clearTimeout(timer); requests.delete(ctrl); }
+    },
+    async chatCli(id, bodyText) {
+      const reply = (detail) => publish({ type: 'result', id: String(id).slice(0, 40), ...detail });
+      const body = validCliBody(bodyText), prompt = body && messagesToPrompt(body.messages);
+      if (!body || !prompt) return reply({ ok: false, kind: 'config' });
+      const codexPath = resolveCodexPath();
+      if (!codexPath) return reply({ ok: false, kind: 'cli-missing' });
+      const result = await runCodex({ prompt, codexPath, timeout: Math.max(timeout, 90000) });
+      if (result.ok) return reply({ ok: true, text: redact(result.text, '').slice(0, 4000) });
+      reply({ ok: false, kind: result.kind || 'cli-failed' });
     }
   };
 }
 const aiScript = (detail) => detail.type === 'key'
   ? `window.cabinAiKey = ${JSON.stringify({ stored: detail.stored === true, secure: detail.secure === true, endpoint: detail.endpoint || '', revision: detail.revision || 0 })}; window.dispatchEvent(new CustomEvent('cabin:ai-key', { detail: window.cabinAiKey }));`
   : `window.dispatchEvent(new CustomEvent('cabin:ai-result', { detail: ${JSON.stringify(detail)} }));`;
-module.exports = { createAi, aiScript, validUrl, validBody };
+module.exports = { createAi, aiScript, validUrl, validBody, validCliBody };

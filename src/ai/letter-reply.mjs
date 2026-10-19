@@ -1,5 +1,5 @@
 import {
-  AI_EVENT, AI_SETTINGS_KEY, AI_KEY_KEY, LETTER_EVENT, LETTERS_KEY, aiReady, chatUrl, cleanLetter, cleanUserLetter,
+  AI_EVENT, AI_SETTINGS_KEY, AI_KEY_KEY, LETTER_EVENT, LETTERS_KEY, aiConnectionReady, cleanLetter, cleanUserLetter,
   localLetterReply, readAi, readLetters, readLetterRecords, userLetterMessages, userLetterSubject,
   trySaveLetter, tryWriteLetters
 } from './ai-model.mjs';
@@ -166,7 +166,7 @@ export async function sendCabinLetter({
   const draftAtSend = readLetterDraft(storage);
   emit(win);
 
-  const ready = aiReady(settings, key.stored) && key.endpoint === chatUrl(settings.baseUrl);
+  const ready = aiConnectionReady(settings, key, { desktop: key.where === 'desktop' });
   let result = null, stale = false;
   const invalidate = () => { stale = true; };
   const storageChanged = (event) => {

@@ -2,6 +2,16 @@
 // product-facing; technical verification notes belong in RELEASE-NOTES.md.
 export const RELEASES = Object.freeze([
   {
+    version: '1.21.2',
+    title: 'AI 用固定模板，桌面版可接本机 Codex',
+    items: [
+      'AI 设置改成固定模板：DeepSeek、OpenAI、OpenRouter、Ollama、LM Studio、本机 Codex CLI 和自定义接口；预设地址只读，Ollama / LM Studio 不需要 API Key。',
+      'DeepSeek 官方模型统一为 deepseek-flash，旧模型会在升级时迁移；连接测试、小屋来信和智能唱片机都会关闭思考模式，避免空正文。',
+      '桌面版新增本机 Codex CLI：小屋只读取 codex exec 的最后一条回答，思考过程、工具调用和会话文件不会显示或保存；网页版不可用。',
+      '所有 AI 入口共用模板与连接判断；失败时会说明具体原因，并继续保留本机唱片架推荐或本地回信。'
+    ]
+  },
+  {
     version: '1.21.1',
     title: '奶糖连普通打字也能立刻跟上',
     items: [

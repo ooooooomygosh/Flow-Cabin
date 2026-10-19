@@ -1,7 +1,7 @@
 // Sends one chat/completions request. Web: fetch from the page (the endpoint must allow
 // CORS). Desktop: the page CSP is connect-src 'self', so the request goes through the
 // shell (desktop/ai.cjs), which also keeps the key in safeStorage; the page never holds it.
-import { chatUrl, chatBody, chatText, explainError, redact, readAi, TIMEOUT_MS, AI_KEY_KEY } from './ai-model.mjs';
+import { chatUrl, chatBody, chatText, explainError, redact, readAi, isDeepseekEndpoint, aiProvider, TIMEOUT_MS, AI_KEY_KEY } from './ai-model.mjs';
 import { desktopCommand } from '../desktop/desktop-command.mjs';
 
 export const AI_RESULT_EVENT = 'cabin:ai-result', AI_KEY_EVENT = 'cabin:ai-key';
@@ -39,10 +39,31 @@ export function saveKeyConfirmed(key, { win = globalThis, command = desktopComma
 let seq = 0;
 // Resolves { ok: true, text } or { ok: false, error } — never throws, never includes the key.
 export async function chat(settings, messages, { win = globalThis, fetchImpl = globalThis.fetch, command = desktopCommand, timeoutMs = TIMEOUT_MS, maxTokens = 600, json = false, temperature } = {}) {
+  const provider = aiProvider(settings), desktop = isDesktopShell(win);
+  if (provider.mode === 'codex') {
+    if (!desktop) return { ok: false, error: explainError({ kind: 'desktop' }) };
+    const cliTimeout = Math.max(timeoutMs, 90000);
+    return await new Promise((resolve) => {
+      const id = `aicli${Date.now().toString(36)}${++seq}`;
+      const done = (value) => { clearTimeout(timer); win.removeEventListener(AI_RESULT_EVENT, on); resolve(value); };
+      const on = (event) => {
+        if (event.detail?.id !== id) return;
+        const detail = event.detail;
+        done(detail.ok ? { ok: true, text: detail.text } : { ok: false, error: explainError(detail), status: detail.status, kind: detail.kind });
+      };
+      const timer = setTimeout(() => done({ ok: false, error: explainError({ kind: 'cli-timeout' }) }), cliTimeout + 3000);
+      win.addEventListener(AI_RESULT_EVENT, on);
+      command('ai-chat-cli', { id, body: JSON.stringify({ messages, max_tokens: maxTokens, temperature }) });
+    });
+  }
   const url = chatUrl(settings.baseUrl);
   if (!url || !settings.model) return { ok: false, error: explainError({ kind: 'config' }) };
-  const body = chatBody(settings.model, messages, maxTokens, { json, temperature });
-  if (isDesktopShell(win)) {
+  const body = chatBody(settings.model, messages, maxTokens, {
+    json,
+    temperature,
+    ...(provider.thinking === 'disabled' || isDeepseekEndpoint(url) ? { thinking: 'disabled' } : {})
+  });
+  if (desktop) {
     const send = (payload) => new Promise((resolve) => {
       const id = `ai${Date.now().toString(36)}${++seq}`;
       const done = (v) => { clearTimeout(timer); win.removeEventListener(AI_RESULT_EVENT, on); resolve(v); };
@@ -53,7 +74,7 @@ export async function chat(settings, messages, { win = globalThis, fetchImpl = g
       };
       const timer = setTimeout(() => done({ ok: false, error: explainError({ kind: 'timeout' }) }), timeoutMs + 2000);
       win.addEventListener(AI_RESULT_EVENT, on);
-      command('ai-chat', { id, url, body: JSON.stringify(payload) });
+      command('ai-chat', { id, url, body: JSON.stringify(payload), ...(provider.requiresKey ? {} : { keyless: true }) });
     });
     let result = await send(body);
     // Some otherwise compatible providers reject response_format. A
@@ -65,12 +86,14 @@ export async function chat(settings, messages, { win = globalThis, fetchImpl = g
     }
     return result;
   }
-  const credential = webCredential(win), key = credential?.key;
-  if (!key || credential.endpoint !== url) return { ok: false, error: explainError({ kind: 'config' }) };
+  const credential = provider.requiresKey ? webCredential(win) : null, key = credential?.key;
+  if (provider.requiresKey && (!key || credential.endpoint !== url)) return { ok: false, error: explainError({ kind: 'config' }) };
   const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
     const send = async (payload) => {
-      const res = await fetchImpl(url, { method: 'POST', redirect: 'error', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` }, body: JSON.stringify(payload), signal: ctrl.signal });
+      const headers = { 'Content-Type': 'application/json' };
+      if (provider.requiresKey) headers.Authorization = `Bearer ${key}`;
+      const res = await fetchImpl(url, { method: 'POST', redirect: 'error', headers, body: JSON.stringify(payload), signal: ctrl.signal });
       let data = null; try { data = await res.json(); } catch { /* not JSON */ }
       return { res, data };
     };
@@ -80,10 +103,12 @@ export async function chat(settings, messages, { win = globalThis, fetchImpl = g
       delete retry.response_format;
       ({ res, data } = await send(retry));
     }
-    if (webCredential(win)?.revision !== credential.revision) return { ok: false, error: explainError({ kind: 'config' }) };
+    if (provider.requiresKey && webCredential(win)?.revision !== credential.revision) return { ok: false, error: explainError({ kind: 'config' }) };
     if (!res.ok) return { ok: false, error: redact(explainError({ status: res.status, body: data }), key), status: res.status };
     const text = chatText(data);
-    return text ? { ok: true, text: redact(text, key) } : { ok: false, error: explainError({ kind: 'format' }) };
+    if (text) return { ok: true, text: redact(text, key) };
+    const kind = Array.isArray(data?.choices) && data.choices.length ? 'empty' : 'format';
+    return { ok: false, error: explainError({ kind }), status: res.status };
   } catch (error) {
     return { ok: false, error: explainError({ kind: error?.name === 'AbortError' ? 'timeout' : 'network' }) };
   } finally { clearTimeout(timer); }

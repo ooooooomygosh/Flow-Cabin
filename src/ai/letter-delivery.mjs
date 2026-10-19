@@ -1,4 +1,4 @@
-import { readAi, readLetters, readLetterRecords, trySaveLetter, needsLetter, letterPeriod, letterSummary, letterMessages, cleanLetter, templateLetter, aiReady, chatUrl, AI_EVENT, LETTER_EVENT, AI_SETTINGS_KEY, AI_KEY_KEY, TRY_KEY } from './ai-model.mjs';
+import { readAi, readLetters, readLetterRecords, trySaveLetter, needsLetter, letterPeriod, letterSummary, letterMessages, cleanLetter, templateLetter, aiConnectionReady, AI_EVENT, LETTER_EVENT, AI_SETTINGS_KEY, AI_KEY_KEY, TRY_KEY } from './ai-model.mjs';
 import { chat, keyState, AI_KEY_EVENT } from './ai-transport.mjs';
 import { readCatMood } from '../focus/stats/cat-mood-source.mjs';
 import { readPlaybackSessions } from '../player/playback-log.mjs';
@@ -34,7 +34,7 @@ export async function deliverLetter({ sessions, notes = '', now = Date.now(), fo
       notes
     });
     if (!force && !hasLetterFacts(summary)) return null;
-    const ready = aiReady(settings, key.stored) && key.endpoint === chatUrl(settings.baseUrl);
+    const ready = aiConnectionReady(settings, key, { desktop: key.where === 'desktop' });
     let result = null;
     if (ready) {
       try { win.localStorage.setItem(TRY_KEY, JSON.stringify({ id: period.id, at: now })); } catch { /* ignore */ }

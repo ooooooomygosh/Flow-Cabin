@@ -12,7 +12,52 @@ export const TONES = Object.freeze([
   { id: 'calm', label: '平静鼓励', hint: '安静、克制、给一点力量' }
 ]);
 export const CADENCES = Object.freeze([{ id: 'daily', label: '每天' }, { id: 'weekly', label: '每周' }]);
-export const DEFAULT_AI = Object.freeze({ v: 1, enabled: false, baseUrl: '', model: '', cadence: 'weekly', tone: 'warm', shareNotes: false });
+// One fixed template per provider. Endpoints and recommended models live here
+// so users never have to assemble an OpenAI-compatible URL by hand.
+export const AI_PROVIDERS = Object.freeze([
+  {
+    id: 'deepseek', label: 'DeepSeek', mode: 'http', requiresKey: true,
+    baseUrl: 'https://api.deepseek.com/v1', model: 'deepseek-flash', thinking: 'disabled',
+    hint: '官方 deepseek-flash；连接测试、来信和智能唱片机都默认关闭思考模式。'
+  },
+  {
+    id: 'openai', label: 'OpenAI', mode: 'http', requiresKey: true,
+    baseUrl: 'https://api.openai.com/v1', model: 'gpt-4.1-mini',
+    hint: 'OpenAI 官方 chat/completions 接口。'
+  },
+  {
+    id: 'openrouter', label: 'OpenRouter', mode: 'http', requiresKey: true,
+    baseUrl: 'https://openrouter.ai/api/v1', model: 'openai/gpt-4.1-mini',
+    hint: '一个 Key 使用多家模型；模型名可以改成 OpenRouter 目录里的任意可用模型。'
+  },
+  {
+    id: 'ollama', label: 'Ollama', mode: 'http', requiresKey: false,
+    baseUrl: 'http://127.0.0.1:11434/v1', model: 'qwen3:8b',
+    hint: '本机 Ollama 的 OpenAI 兼容接口，不需要 API Key；网页版需服务允许 CORS。'
+  },
+  {
+    id: 'lmstudio', label: 'LM Studio', mode: 'http', requiresKey: false,
+    baseUrl: 'http://127.0.0.1:1234/v1', model: 'local-model',
+    hint: 'LM Studio 本地服务，不需要 API Key；请把模型名改成当前已加载的模型。'
+  },
+  {
+    id: 'codex', label: '本机 Codex CLI', mode: 'codex', requiresKey: false,
+    baseUrl: '', model: '',
+    hint: '调用终端里已登录的 codex exec，只读取最后一条回答，不保留思考过程。'
+  },
+  {
+    id: 'custom', label: '自定义', mode: 'http', requiresKey: true,
+    baseUrl: '', model: '',
+    hint: '其他 OpenAI 兼容接口。地址、模型与 Key 都由你自己填写；仅用于你信任的服务。'
+  }
+]);
+export const DEFAULT_AI_PROVIDER = 'deepseek';
+const defaultProvider = () => AI_PROVIDERS[0];
+export const DEFAULT_AI = Object.freeze({
+  v: 1, provider: DEFAULT_AI_PROVIDER, enabled: false,
+  baseUrl: defaultProvider().baseUrl, model: defaultProvider().model,
+  cadence: 'weekly', tone: 'warm', shareNotes: false
+});
 export const TIMEOUT_MS = 30000;
 // Inbox records stay small. There is deliberately no silent count cap: a full
 // browser store surfaces as a save error in the composer instead of dropping
@@ -20,10 +65,40 @@ export const TIMEOUT_MS = 30000;
 export const MAX_LETTER_LINES = 12, MAX_LETTER_LINE = 240;
 
 const pick = (v, list, fallback) => list.some((x) => x.id === v) ? v : fallback;
+export const providerById = (id) => AI_PROVIDERS.find((provider) => provider.id === id) || defaultProvider();
+export function inferAiProvider(baseUrl = '', model = '') {
+  let hostname = '', port = '';
+  try { const url = new URL(String(baseUrl || '').trim()); hostname = url.hostname; port = url.port; } catch { /* custom */ }
+  if (hostname === 'api.deepseek.com') return 'deepseek';
+  if (hostname === 'api.openai.com') return 'openai';
+  if (hostname === 'openrouter.ai') return 'openrouter';
+  if (['localhost', '127.0.0.1', '[::1]'].includes(hostname) && (port === '11434' || String(model).startsWith('ollama/'))) return 'ollama';
+  if (['localhost', '127.0.0.1', '[::1]'].includes(hostname) && port === '1234') return 'lmstudio';
+  return 'custom';
+}
+export function applyAiProvider(value, id) {
+  const provider = providerById(id);
+  return normalizeAi({
+    ...value, provider: provider.id,
+    baseUrl: provider.mode === 'codex' ? '' : provider.baseUrl || value?.baseUrl || '',
+    model: provider.mode === 'codex' ? '' : provider.model || value?.model || ''
+  });
+}
 export function normalizeAi(raw) {
   const r = raw && typeof raw === 'object' ? raw : {};
-  return { v: 1, enabled: r.enabled === true, baseUrl: typeof r.baseUrl === 'string' ? r.baseUrl.trim().slice(0, 300) : '',
-    model: typeof r.model === 'string' ? r.model.trim().slice(0, 120) : '', cadence: pick(r.cadence, CADENCES, 'weekly'), tone: pick(r.tone, TONES, 'warm'),
+  const savedProvider = AI_PROVIDERS.some((provider) => provider.id === r.provider)
+    ? r.provider
+    : (!r.baseUrl && !r.model ? DEFAULT_AI_PROVIDER : inferAiProvider(r.baseUrl, r.model));
+  const provider = providerById(savedProvider);
+  const codex = provider.mode === 'codex';
+  const hasBaseUrl = typeof r.baseUrl === 'string' && Boolean(r.baseUrl.trim());
+  const hasModel = typeof r.model === 'string' && Boolean(r.model.trim());
+  const legacyDeepseekModel = provider.id === 'deepseek'
+    && ['deepseek-chat', 'deepseek-reasoner'].includes(String(r.model || '').trim());
+  return { v: 1, provider: provider.id, enabled: r.enabled === true,
+    baseUrl: codex ? '' : hasBaseUrl ? r.baseUrl.trim().slice(0, 300) : provider.baseUrl,
+    model: codex ? '' : legacyDeepseekModel || !hasModel ? provider.model : r.model.trim().slice(0, 120),
+    cadence: pick(r.cadence, CADENCES, 'weekly'), tone: pick(r.tone, TONES, 'warm'),
     shareNotes: r.shareNotes === true };
 }
 export function readAi(storage) { try { return normalizeAi(JSON.parse(storage?.getItem?.(AI_SETTINGS_KEY) || 'null')); } catch { return normalizeAi(null); } }
@@ -39,7 +114,24 @@ export function chatUrl(baseUrl) {
   url.pathname = p; url.hash = '';
   return url.href;
 }
-export const aiReady = (s, hasKey) => Boolean(s.enabled && chatUrl(s.baseUrl) && s.model && hasKey);
+export function isDeepseekEndpoint(value) {
+  try { return new URL(String(value || '')).hostname === 'api.deepseek.com'; } catch { return false; }
+}
+export const aiProvider = (s) => providerById(s?.provider || inferAiProvider(s?.baseUrl, s?.model));
+export const aiReady = (s, hasKey, { desktop = false } = {}) => {
+  const provider = aiProvider(s);
+  if (!s?.enabled) return false;
+  if (provider.mode === 'codex') return desktop;
+  return Boolean(chatUrl(s.baseUrl) && s.model && (!provider.requiresKey || hasKey));
+};
+export const aiConnectionReady = (s, key, { desktop = false } = {}) => {
+  const provider = aiProvider(s);
+  if (!s?.enabled) return false;
+  if (provider.mode === 'codex') return desktop;
+  const endpoint = chatUrl(s.baseUrl);
+  if (!endpoint || !s.model) return false;
+  return !provider.requiresKey || Boolean(key?.stored && key.endpoint === endpoint);
+};
 
 export function chatBody(model, messages, maxTokens = 600, options = {}) {
   const body = {
@@ -52,6 +144,10 @@ export function chatBody(model, messages, maxTokens = 600, options = {}) {
   // OpenAI-compatible endpoints that support JSON mode get an extra guard.
   // The transport retries without this field for older compatible endpoints.
   if (options.json === true) body.response_format = { type: 'json_object' };
+  // DeepSeek Flash enables thinking by default. Thinking tokens share the
+  // output budget and can leave content empty, especially for JSON responses.
+  if (options.thinking === 'disabled' || options.thinking === 'enabled') body.thinking = { type: options.thinking };
+  if (['none', 'low', 'high', 'max'].includes(options.reasoningEffort)) body.reasoning_effort = options.reasoningEffort;
   return body;
 }
 export const TEST_MESSAGES = Object.freeze([{ role: 'user', content: '回复「好」一个字。' }]);
@@ -66,6 +162,12 @@ export function explainError({ status = 0, body = null, kind = '' } = {}) {
   if (kind === 'config') return '请先填好接口地址、API Key 和模型名。';
   if (kind === 'network') return '连不上这个地址。网页版需要接口允许跨域（CORS），可以改用桌面版，或换一个支持 CORS 的地址。';
   if (kind === 'format') return '服务器有回应，但不是 OpenAI 格式的 chat/completions 结果。请检查接口地址。';
+  if (kind === 'empty') return '模型返回了空内容。这个模型可能默认开启思考模式，思考 token 占满了输出上限；请关闭思考模式或调大 max_tokens。';
+  if (kind === 'desktop') return '本机 Codex CLI 只能在心流小屋桌面版里使用。';
+  if (kind === 'cli-missing') return '找不到本机的 Codex CLI。请先在终端安装并登录 codex，再重新打开小屋。';
+  if (kind === 'cli-timeout') return '本机 Codex 超时了，没有返回最终回答。请稍后重试，或在终端检查 codex 是否正常。';
+  if (kind === 'cli-empty') return '本机 Codex 完成了，但没有写出最终回答。';
+  if (kind === 'cli-failed') return '本机 Codex 没有完成这次请求。请确认终端里的 codex 已登录，再试一次。';
   if (status === 401 || status === 403) return `API Key 无效或没有权限（${status}）。${msg}`;
   if (status === 404) return `找不到这个接口或模型（404）。请检查接口地址和模型名。${msg}`;
   if (status === 429) return `请求太频繁或余额不足（429）。${msg}`;

@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  normalizeAi, chatUrl, aiReady, chatText, explainError, redact, letterPeriod, letterSummary,
+  normalizeAi, chatUrl, chatBody, isDeepseekEndpoint, aiReady, aiConnectionReady, aiProvider, providerById, inferAiProvider, applyAiProvider,
+  AI_PROVIDERS, chatText, explainError, redact, letterPeriod, letterSummary, TEST_MESSAGES,
   letterMessages, cleanLetter, cleanUserLetter, saveLetter, trySaveLetter, readLetters, markRead,
   unreadCount, needsLetter, readAi, writeAi, LETTERS_KEY, AI_KEY_KEY, normalizeLetter,
   localLetterReply, templateLetter, summarizeListening, userLetterSubject, tryWriteLetters
@@ -65,11 +66,32 @@ test('a delayed reply respects organization performed while the request is pendi
 });
 
 test('settings default off and normalise', () => {
-  assert.deepEqual(normalizeAi(null), { v: 1, enabled: false, baseUrl: '', model: '', cadence: 'weekly', tone: 'warm', shareNotes: false });
+  assert.deepEqual(normalizeAi(null), { v: 1, provider: 'deepseek', enabled: false, baseUrl: 'https://api.deepseek.com/v1', model: 'deepseek-flash', cadence: 'weekly', tone: 'warm', shareNotes: false });
   assert.equal(normalizeAi({ tone: 'evil', cadence: 'hourly' }).tone, 'warm');
   const s = mem(); writeAi(s, { enabled: true, baseUrl: ' https://api.deepseek.com ', model: 'deepseek-chat', tone: 'playful', cadence: 'daily', shareNotes: 1 });
-  assert.deepEqual(readAi(s), { v: 1, enabled: true, baseUrl: 'https://api.deepseek.com', model: 'deepseek-chat', cadence: 'daily', tone: 'playful', shareNotes: false });
+  assert.deepEqual(readAi(s), { v: 1, provider: 'deepseek', enabled: true, baseUrl: 'https://api.deepseek.com', model: 'deepseek-flash', cadence: 'daily', tone: 'playful', shareNotes: false });
   assert.ok(!s.m.get('flow-cabin-ai-v1').includes('sk-'));
+});
+
+test('provider templates are fixed, infer legacy endpoints, and keep local providers keyless', () => {
+  assert.deepEqual(AI_PROVIDERS.map((provider) => provider.id), ['deepseek', 'openai', 'openrouter', 'ollama', 'lmstudio', 'codex', 'custom']);
+  assert.equal(providerById('deepseek').model, 'deepseek-flash');
+  assert.equal(providerById('deepseek').thinking, 'disabled');
+  assert.equal(inferAiProvider('https://api.deepseek.com/v1', 'anything'), 'deepseek');
+  assert.equal(inferAiProvider('http://127.0.0.1:11434/v1', 'qwen3:8b'), 'ollama');
+  assert.equal(inferAiProvider('https://example.com/v1', 'm'), 'custom');
+  const ollama = applyAiProvider({ cadence: 'daily', tone: 'calm' }, 'ollama');
+  assert.equal(ollama.provider, 'ollama');
+  assert.equal(ollama.baseUrl, 'http://127.0.0.1:11434/v1');
+  assert.equal(providerById(ollama.provider).requiresKey, false);
+  assert.equal(aiReady({ ...ollama, enabled: true }, false), true);
+  assert.equal(aiConnectionReady({ ...ollama, enabled: true }, { stored: false, endpoint: '' }), true);
+  const codex = applyAiProvider({ cadence: 'daily' }, 'codex');
+  assert.deepEqual([codex.provider, codex.baseUrl, codex.model], ['codex', '', '']);
+  assert.equal(aiReady({ ...codex, enabled: true }, false), false);
+  assert.equal(aiReady({ ...codex, enabled: true }, false, { desktop: true }), true);
+  assert.equal(aiConnectionReady({ ...codex, enabled: true }, null, { desktop: true }), true);
+  assert.equal(aiConnectionReady({ ...codex, enabled: true }, null), false);
 });
 
 test('chatUrl accepts base, /v1 and full URLs', () => {
@@ -77,6 +99,9 @@ test('chatUrl accepts base, /v1 and full URLs', () => {
   assert.equal(chatUrl('https://api.deepseek.com/v1/'), 'https://api.deepseek.com/v1/chat/completions');
   assert.equal(chatUrl('http://localhost:11434/v1/chat/completions'), 'http://localhost:11434/v1/chat/completions');
   assert.equal(chatUrl('ftp://x'), null); assert.equal(chatUrl('nope'), null);
+  assert.equal(isDeepseekEndpoint('https://api.deepseek.com/v1/chat/completions'), true);
+  assert.equal(isDeepseekEndpoint('https://api.deepseek.com.evil.test/v1'), false);
+  assert.equal(isDeepseekEndpoint('https://example.com/api.deepseek.com'), false);
   assert.equal(aiReady({ enabled: true, baseUrl: 'https://a.b', model: 'm' }, true), true);
   assert.equal(aiReady({ enabled: false, baseUrl: 'https://a.b', model: 'm' }, true), false);
 });
@@ -87,8 +112,20 @@ test('responses, errors and redaction', () => {
   assert.match(explainError({ status: 401 }), /API Key/);
   assert.match(explainError({ kind: 'network' }), /CORS/);
   assert.match(explainError({ kind: 'timeout' }), /超时/);
+  assert.match(explainError({ kind: 'empty' }), /思考模式/);
   assert.ok(!redact(`bad key ${KEY}`, KEY).includes(KEY));
   assert.ok(!redact('Bearer abcdefghijkl1234').includes('abcdefghijkl1234'));
+});
+
+test('chat bodies carry only supported thinking and effort controls', () => {
+  const plain = chatBody('deepseek-flash', TEST_MESSAGES, 1200);
+  assert.equal('thinking' in plain, false);
+  const disabled = chatBody('deepseek-flash', TEST_MESSAGES, 1200, { thinking: 'disabled', reasoningEffort: 'low' });
+  assert.deepEqual(disabled.thinking, { type: 'disabled' });
+  assert.equal(disabled.reasoning_effort, 'low');
+  const invalid = chatBody('deepseek-flash', TEST_MESSAGES, 1200, { thinking: 'auto', reasoningEffort: 'ultra' });
+  assert.equal('thinking' in invalid, false);
+  assert.equal('reasoning_effort' in invalid, false);
 });
 
 test('periods: daily = yesterday, weekly = last Monday-started week', () => {
@@ -360,12 +397,56 @@ test('web transport: mocked endpoint, auth header, errors, timeout', async () =>
   const ok = await chat(settings, [{ role: 'user', content: 'hi' }], { win, fetchImpl: async (u, o) => { seen = { u, o }; return { ok: true, json: async () => ({ choices: [{ message: { content: '好' } }] }) }; } });
   assert.deepEqual(ok, { ok: true, text: '好' });
   assert.equal(seen.u, 'https://api.mock/v1/chat/completions'); assert.equal(seen.o.headers.Authorization, `Bearer ${KEY}`);
+  assert.equal('thinking' in JSON.parse(seen.o.body), false);
   const bad = await chat(settings, [], { win, fetchImpl: async () => ({ ok: false, status: 401, json: async () => ({ error: { message: `wrong ${KEY}` } }) }) });
   assert.equal(bad.ok, false); assert.ok(!bad.error.includes(KEY));
   const cors = await chat(settings, [], { win, fetchImpl: async () => { throw new TypeError('Failed to fetch'); } });
   assert.match(cors.error, /CORS/);
   const slow = await chat(settings, [], { win, timeoutMs: 20, fetchImpl: (_u, o) => new Promise((_, rej) => o.signal.addEventListener('abort', () => rej(Object.assign(new Error('x'), { name: 'AbortError' })))) });
   assert.match(slow.error, /超时/);
+});
+
+test('keyless local templates send no Authorization header', async () => {
+  const win = { localStorage: mem(), document: { documentElement: { dataset: {} } }, addEventListener() {}, removeEventListener() {} };
+  let seen;
+  const result = await chat({ provider: 'ollama', baseUrl: 'http://127.0.0.1:11434/v1', model: 'qwen3:8b' }, [{ role: 'user', content: 'hi' }], {
+    win,
+    fetchImpl: async (_url, options) => {
+      seen = options;
+      return { ok: true, json: async () => ({ choices: [{ message: { content: 'local' } }] }) };
+    }
+  });
+  assert.equal(result.ok, true);
+  assert.equal('Authorization' in seen.headers, false);
+});
+
+test('official DeepSeek uses deepseek-flash with thinking disabled and reports empty content precisely', async () => {
+  const win = { localStorage: mem(), document: { documentElement: { dataset: {} } }, addEventListener() {}, removeEventListener() {} };
+  const endpoint = 'https://api.deepseek.com/v1/chat/completions';
+  win.localStorage.setItem(AI_KEY_KEY, JSON.stringify({ v: 2, key: KEY, endpoint, revision: 1 }));
+  const settings = { baseUrl: 'https://api.deepseek.com/v1', model: 'deepseek-flash' };
+  let seen;
+  const ok = await chat(settings, [{ role: 'user', content: '排一张学习歌单' }], {
+    win,
+    json: true,
+    maxTokens: 1200,
+    fetchImpl: async (_url, options) => {
+      seen = JSON.parse(options.body);
+      return { ok: true, json: async () => ({ choices: [{ message: { content: '{"tracks":[]}' } }] }) };
+    }
+  });
+  assert.equal(ok.ok, true);
+  assert.equal(seen.model, 'deepseek-flash');
+  assert.deepEqual(seen.thinking, { type: 'disabled' });
+  assert.deepEqual(seen.response_format, { type: 'json_object' });
+
+  const empty = await chat(settings, [{ role: 'user', content: '排一张学习歌单' }], {
+    win,
+    json: true,
+    fetchImpl: async () => ({ ok: true, json: async () => ({ choices: [{ message: { content: '', reasoning_content: '思考已占满输出' } }] }) })
+  });
+  assert.equal(empty.ok, false);
+  assert.match(empty.error, /思考模式/);
 });
 
 test('structured chat requests ask for JSON mode and retry without it for older endpoints', async () => {
@@ -410,6 +491,33 @@ test('desktop transport goes through the shell command and result event', async 
   assert.deepEqual(r, { ok: true, text: '好' });
   assert.equal(cmds[0][0], 'ai-chat'); assert.ok(!('key' in cmds[0][1]));
   assert.equal(cmds[0][1].url, 'https://api.mock/chat/completions');
+  assert.equal('thinking' in JSON.parse(cmds[0][1].body), false);
+});
+
+test('desktop transport disables thinking for the official DeepSeek endpoint', async () => {
+  const listeners = new Set(), cmds = [];
+  const win = { document: { documentElement: { dataset: { desktopClient: 'true' } } }, addEventListener: (_n, f) => listeners.add(f), removeEventListener: (_n, f) => listeners.delete(f) };
+  const command = (name, params) => {
+    cmds.push([name, params]);
+    setTimeout(() => { for (const f of [...listeners]) f({ detail: { id: params.id, ok: true, text: '好' } }); }, 5);
+  };
+  const result = await chat({ baseUrl: 'https://api.deepseek.com/v1', model: 'deepseek-flash' }, [], { win, command });
+  assert.deepEqual(result, { ok: true, text: '好' });
+  assert.deepEqual(JSON.parse(cmds[0][1].body).thinking, { type: 'disabled' });
+});
+
+test('desktop transport routes the Codex CLI template without a key', async () => {
+  const listeners = new Set(), cmds = [];
+  const win = { document: { documentElement: { dataset: { desktopClient: 'true' } } }, addEventListener: (_n, f) => listeners.add(f), removeEventListener: (_n, f) => listeners.delete(f) };
+  const command = (name, params) => {
+    cmds.push([name, params]);
+    setTimeout(() => { for (const f of [...listeners]) f({ detail: { id: params.id, ok: true, text: '本地回答' } }); }, 5);
+  };
+  const result = await chat({ provider: 'codex', baseUrl: '', model: '' }, [{ role: 'user', content: 'hi' }], { win, command });
+  assert.deepEqual(result, { ok: true, text: '本地回答' });
+  assert.equal(cmds[0][0], 'ai-chat-cli');
+  assert.equal(cmds[0][1].url, undefined);
+  assert.match(cmds[0][1].body, /hi/);
 });
 
 

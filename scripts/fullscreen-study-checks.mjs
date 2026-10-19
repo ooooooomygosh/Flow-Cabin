@@ -5,7 +5,7 @@ export async function verifyFullscreenStudy({ browser, origin, output, check }) 
   const errors = [], commands = [];
   await context.addInitScript(() => {
     if (location.origin === 'null') return;
-    localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.1' }));
+    localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.2' }));
     window.__commands = []; window.open = url => { window.__commands.push(String(url)); return null; };
     window.albumDesktopAppearance = { client: true, reduceMotion: true };
     const init = () => { document.documentElement.dataset.desktopClient = 'true'; document.documentElement.dataset.desktopReduceMotion = 'true'; };

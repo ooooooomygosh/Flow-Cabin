@@ -13,7 +13,7 @@ export async function verifyWeatherMotion(browser, origin, check) {
       });
       await context.addInitScript(({ surface, weather }) => {
         if (location.origin === 'null') return;
-        localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.1' }));
+        localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.2' }));
         localStorage.setItem('album-circle-performance-v1', 'quality');
         localStorage.setItem('album-circle-library-v1-local-owner', JSON.stringify({ rooms: { 'local-room': { look: 'forest' } } }));
         localStorage.setItem('album-circle-focus-v1:local-owner', JSON.stringify({ rewards: { xp: 50000, equipped: { weather } } }));
@@ -88,7 +88,7 @@ export async function verifyWeatherSwitchSteady(browser, origin, check) {
     if (location.origin === 'null') return;
     if (!sessionStorage.getItem('weather-switch')) {
       sessionStorage.setItem('weather-switch', '1');
-      localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.1' }));
+      localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.2' }));
       localStorage.setItem('album-circle-performance-v1', 'quality');
       localStorage.setItem('album-circle-library-v1-local-owner', JSON.stringify({ rooms: { 'local-room': { look: 'forest' } } }));
       localStorage.setItem('album-circle-focus-v1:local-owner', JSON.stringify({ rewards: { xp: 50000, equipped: { weather: 'snow' } } }));
