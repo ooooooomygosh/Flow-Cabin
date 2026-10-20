@@ -163,7 +163,13 @@ jobs:
           cd release
           sha256sum *.exe *.dmg *.zip > SHA256SUMS.txt
           cd ..
+          # The release page shows THIS version only: desktop/RELEASE-NOTES.md is
+          # the full archive, and shipping all of it buried the installers. The
+          # version comes from desktop/package.json — the guard below proves the
+          # tag matches it — so the notes are ready before the guard runs.
+          node scripts/release-notes.mjs "$(node -p "require('./desktop/package.json').version")" > release-notes.md
+          head -1 release-notes.md
           # Fail closed on existing manual tags or mismatched pushed tags, including
           # annotated tags. Never let gh reuse a tag merely because its name exists.
           tag="$(node scripts/release-source.mjs)"
-          gh release create "$tag" release/* --repo "$GITHUB_REPOSITORY" --title "心流小屋 Flow Cabin $tag · macOS & Windows" --notes-file desktop/RELEASE-NOTES.md --verify-tag
+          gh release create "$tag" release/* --repo "$GITHUB_REPOSITORY" --title "心流小屋 Flow Cabin $tag · macOS & Windows" --notes-file release-notes.md --verify-tag
