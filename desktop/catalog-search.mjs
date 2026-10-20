@@ -1,4 +1,8 @@
+import { createRequire } from 'node:module';
 import { scheduleMusicBrainz } from './musicbrainz-scheduler.mjs';
+
+// MusicBrainz 要求 UA 标明应用与版本；版本从 desktop/package.json 读，避免写死过期号。
+const { version: APP_VERSION } = createRequire(import.meta.url)('./package.json');
 
 // Album and song search: iTunes Search, with track lists and MusicBrainz /
 // Cover Art Archive enrichment. Runs inside the desktop client.
@@ -139,7 +143,7 @@ async function tracksForAlbum(collectionId, country, signal) {
 
 function mbHeaders() {
   return {
-    'User-Agent': 'FlowCabin/1.7.0 (https://github.com/ooooooomygosh/album-web)'
+    'User-Agent': `FlowCabin/${APP_VERSION} (https://github.com/ooooooomygosh/Flow-Cabin)`
   };
 }
 

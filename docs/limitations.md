@@ -1,6 +1,6 @@
 # 使用边界与验证状态
 
-当前版本基线：`v1.21.4`（2026-10-19）。`v1.21.3` 是上一个已发布版本；`v1.21.4` 的 tag、安装资产与签名状态以 [GitHub Releases](https://github.com/ooooooomygosh/album-web/releases) 为准。#61 已在当前主线解决。
+当前版本基线：`v1.21.4`（2026-10-19）。`v1.21.3` 是上一个已发布版本；`v1.21.4` 的 tag、安装资产与签名状态以 [GitHub Releases](https://github.com/ooooooomygosh/Flow-Cabin/releases) 为准。#61 已在当前主线解决。
 
 本页区分「已实现」「自动化或隔离页面已验证」和「真实设备已验证」。旧提交的测试数字不会自动套用到当前版本。
 
@@ -89,8 +89,8 @@ HTTP 模板的智能唱片机请求使用 `response_format: {"type":"json_object
 
 ## 许可与依赖
 
-- **根项目许可证尚未明确。** 不凭「公开仓库」推定可自由再分发；在取得项目所有者决定前不擅自重新许可。
-- 组合的 Simple Music 模块为 **GPL-3.0-only**。其许可证与来源保留在 [LICENSE](../desktop/vendor/simple-music/LICENSE) 与 [SOURCE.txt](../desktop/vendor/simple-music/SOURCE.txt)。源码提供、组合分发等义务仍需正式明确；已有 Release 不表示这些问题已解决。
+- **根项目采用 GPL-3.0-only**，许可证全文在仓库根目录的 [LICENSE](../LICENSE)（逐字收录 GNU GPL v3 正文，未作改动，GitHub 可据此识别）。选择 GPL-3.0-only 不是偏好问题：桌面发行包组合了 GPL-3.0-only 的 Simple Music 模块并随包分发，组合作品本身必须以 GPL-3.0-only 提供。
+- 组合的 Simple Music 模块为 **GPL-3.0-only**。其许可证与来源保留在 [LICENSE](../desktop/vendor/simple-music/LICENSE) 与 [SOURCE.txt](../desktop/vendor/simple-music/SOURCE.txt)（固定在提交 `da4db22e8e15cf400ff23fc261686ae73a4f8197`）。源码提供义务由本公开仓库满足：对应版本的完整源码可从仓库取得，发行包与已发布 tag 一一对应。已有 Release 不表示这些问题已解决。
 - 当前锁文件下，根项目与桌面生产依赖的 `npm audit` 记录为 0 个已知公告（`music-metadata 11.16.1`、`basic-ftp` 覆盖 `6.2.3`、本地 encrypt-only `node-forge` 适配层）。这是对特定审计数据库与时间的记录，不是「无漏洞」保证。详情见[依赖安全审查](security-dependencies.md)。
 - 字体与其他素材许可保留在 [public/licenses](../public/licenses)。新增 SVG 场景与像素伙伴是项目代码绘制，不使用参考产品的角色素材。
 

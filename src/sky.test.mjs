@@ -76,6 +76,24 @@ test('sky colours: morning and evening sets differ, night is dark, overcast grey
   assert.notEqual(landTint({ altitude: -30 }, night, 1), '#808080');
 });
 
+// 回归：算不出太阳高度时曾经产出 #NaNNaNNaN，整面窗会变成坏颜色。
+test('an unusable sun altitude never produces a broken colour', () => {
+  for (const altitude of [NaN, undefined, null, 'high', Infinity, -Infinity]) {
+    const colors = skyColors({ altitude, rising: true });
+    for (const [name, value] of Object.entries(colors)) {
+      if (name === 'light' || name === 'stars') { assert.ok(Number.isFinite(value), `${name} must be a number`); continue; }
+      assert.match(value, /^#[0-9a-f]{6}([0-9a-f]{2})?$/, `${name} = ${value}`);
+      assert.doesNotMatch(value, /NaN/, `${name} = ${value}`);
+    }
+    assert.match(landTint({ altitude }, colors), /^#[0-9a-f]{6}$/);
+  }
+  assert.equal(skyBucket({ altitude: NaN }), 'night', 'an unknown sun reads as night, not as a broken sky');
+  assert.equal(skyBucket({ altitude: undefined, rising: true }), 'night');
+  const state = skyState(new Date('invalid'), null);
+  for (const value of [state.altitude, state.azimuth, state.noonAltitude, state.moon.altitude, state.moon.phase]) assert.ok(Number.isFinite(value), String(value));
+  assert.ok(['morning', 'day', 'dusk', 'night'].includes(state.bucket));
+});
+
 test('weather: back-compatible ids, layers, 30 s cross-fade from absolute time', () => {
   for (const id of WEATHERS) assert.ok(WEATHER_KINDS.includes(id));
   assert.equal(weatherOf('nonsense').kind, 'snow');

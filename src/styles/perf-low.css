@@ -7,6 +7,9 @@
 @layer guards {
 html[data-perf='low'] :is(.pixel-clock, .pet-cat .pixel-cat) { filter: none !important; }
 html[data-perf='low'] :is(.playlist-track, .desktop-widget), html[data-perf='low'] :is(.corner-pool, .corner-weather)::before { animation: none !important; }
+/* The button hover runs a brightness() filter: every hover re-rasterizes the
+   button. The lift + hard shadow stay, so the hover still reads. */
+html[data-perf='low'] :is(.pixel-button, .room-selection-actions button, .room-selection-actions a, .cabin-scene .room-empty button, .record-card-tools .record-tools-button, .record-card-tools .discogs-link) { filter: none !important; }
 }
 @layer overrides {
 html[data-perf='low'] .ambient-mote:nth-child(odd) { display: none; }
@@ -15,4 +18,7 @@ html[data-perf='low'] .scene-deck-notes { display: none; }
 html[data-perf='low'] .scene-deck-glow { transition: none; }
 html[data-perf='low'] .desktop-widget { background: color-mix(in srgb, var(--px-bg) 94%, transparent); }
 html[data-perf='low'] .corner-pool::after { transition: none; }
+/* Dialog entrance without the scale: scaling a full-window dialog re-rasterizes
+   the whole panel on every step; opacity alone still fades it in. */
+html[data-perf='low'] :is(.cabin-dialog, .record-dialog)[open] { animation: px-dialog-in-lite var(--px-dur-med) var(--px-ease) both; }
 }

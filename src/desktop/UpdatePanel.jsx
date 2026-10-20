@@ -24,7 +24,7 @@ export default function UpdatePanel({ version, desktop }) {
     <span className="hub-row-actions">
       {view.actions.map((action) => <button type="button" key={action} className={`pixel-button${['install', 'relaunch', 'download', 'open-download'].includes(action) ? ' is-primary' : ''}`} onClick={() => desktopCommand(ACTION_COMMANDS[action])}>{ACTION_LABELS[action]}</button>)}
       {view.busy && <button type="button" className="pixel-button" disabled>检查中…</button>}
-      <a className="pixel-button" href="https://github.com/ooooooomygosh/album-web" target="_blank" rel="noreferrer">项目主页</a>
+      <a className="pixel-button" href="https://github.com/ooooooomygosh/Flow-Cabin" target="_blank" rel="noreferrer">项目主页</a>
     </span>
   </div>;
 }

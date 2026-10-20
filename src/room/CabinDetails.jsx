@@ -8,7 +8,10 @@ export default function CabinDetails() {
   useEffect(() => { if (!notice) return; const timer = setTimeout(() => setNotice(''), 3000); return () => clearTimeout(timer); }, [notice]);
   const fireOn = Boolean(sound?.enabled && sound?.mix?.tracks?.fire > 0);
   const fire = () => {
-    sound?.setTrack('fire', fireOn ? 0 : .3);
+    // The whole soundscape may be off: then the fire track alone changes
+    // nothing and the button must not claim the crackle is playing.
+    if (!sound?.enabled) { setNotice('小屋声音还没有打开：先在设置里打开声音，炉火才会响。'); return; }
+    sound.setTrack('fire', fireOn ? 0 : .3);
     setNotice(fireOn ? '炉火继续暖着，声音先歇一会儿。' : '炉火轻轻响着。声音里还能调节音量。');
   };
   return <>

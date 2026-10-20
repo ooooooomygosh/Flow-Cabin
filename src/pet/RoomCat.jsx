@@ -10,19 +10,32 @@ import { FED_EVENT, FISH_DRAG_TYPE, FISH_DRAG_TEXT } from '../cat/cat-care.mjs';
 import { roomPetPose } from './pet-presence.mjs';
 import { useInputPresence } from './useInputPresence';
 import { beatSynced } from '../cat/beat-sync.mjs';
+import { onBackgroundChange } from '../frame-clock.mjs';
 import './cat-care.css';
 import { bubbleText, celebrateUntil, petPose, pokeLine, catStroll } from './pet-model.mjs';
 
+// The cat's clock. It keeps the pose machine honest while the window is only
+// blurred (the sprite freezes, the state does not — otherwise a fed cat would
+// stay stuck mid-bite), but it stops when the app is in the background, so a
+// minimised window costs nothing.
 export function useClock(interval = 1000, enabled = true) {
   const [now, setNow] = useState(() => Date.now());
-  useEffect(() => { if (!enabled) return; setNow(Date.now()); const timer = setInterval(() => setNow(Date.now()), interval); return () => clearInterval(timer); }, [interval, enabled]);
+  useEffect(() => {
+    if (!enabled) return;
+    let timer = 0;
+    const stop = () => { clearInterval(timer); timer = 0; };
+    const start = () => { if (!timer) timer = setInterval(() => setNow(Date.now()), interval); };
+    const off = onBackgroundChange((background) => { if (background) stop(); else start(); });
+    setNow(Date.now());
+    return () => { off(); stop(); };
+  }, [interval, enabled]);
   return now;
 }
 // Shared by the room, the wallpaper and the desktop pet: tracks celebration,
 // pokes and song changes, and returns the current pose and bubble.
 export function useCatBehaviour({ focus = {}, playing = false, track = '', lastActivity = 0, petId = 'cat', reduceMotion = false, hidden = false }) {
   const motion = useCatMotion(reduceMotion, hidden);
-  const now = useClock(500, motion.visible), [celebrate, setCelebrate] = useState(0), [poke, setPoke] = useState({ text: '', at: 0 });
+  const now = useClock(500, !hidden), [celebrate, setCelebrate] = useState(0), [poke, setPoke] = useState({ text: '', at: 0 });
   useEffect(() => { setPoke({ text: '', at: 0 }); }, [petId]);
   const fish = useRef(focus.fish), song = useRef({ track, at: 0 });
   useEffect(() => { if (fish.current !== undefined && focus.fish > fish.current) setCelebrate(celebrateUntil(Date.now())); fish.current = focus.fish; }, [focus.fish]);

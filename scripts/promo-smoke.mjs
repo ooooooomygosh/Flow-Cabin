@@ -13,7 +13,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const output = path.resolve(process.env.PROMO_OUTPUT || path.join(root, 'desktop/test-results/promo'));
 const port = Number(process.env.PROMO_PORT || 4217);
 const origin = `http://127.0.0.1:${port}`;
-const latestReleaseUrl = 'https://api.github.com/repos/ooooooomygosh/album-web/releases/latest';
+const latestReleaseUrl = 'https://api.github.com/repos/ooooooomygosh/Flow-Cabin/releases/latest';
 const latestReleaseTag = 'v9.99.0';
 const packageVersion = JSON.parse(await fs.readFile(path.join(root, 'package.json'), 'utf8')).version;
 const fallbackLatestVersion = `v${packageVersion}`;
@@ -127,7 +127,7 @@ try {
   assert.equal(await page.locator('.room-card').count(), 6);
   assert.equal(await page.locator('[data-room-choice]').count(), 6);
   check('all-six-rooms-are-present-in-switcher-and-gallery');
-  const downloadLinks = await page.locator('a[href="https://github.com/ooooooomygosh/album-web/releases/latest"]').evaluateAll((links) => links.map((link) => link.href));
+  const downloadLinks = await page.locator('a[href="https://github.com/ooooooomygosh/Flow-Cabin/releases/latest"]').evaluateAll((links) => links.map((link) => link.href));
   assert(downloadLinks.length >= 3, 'header, hero and bottom download actions must use the latest release URL');
   await page.waitForFunction((version) => [...document.querySelectorAll('[data-latest-version]')].every((node) => node.textContent === version), latestReleaseTag);
   check('download-actions-use-latest-release-and-show-live-version');

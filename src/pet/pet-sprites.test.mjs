@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { cachedPetFrame, petOpaqueAt } from './pet-sprites.mjs';
 import { catFrame, POSES, TYPING_POSE, TYPING_FRAMES, CLICK_POSE, CLICK_FRAMES, EAT_POSE, EAT_FRAMES, HOP_POSE, HOP_FRAMES, LISTEN_POSE, LISTEN_FRAMES, DELIVER_POSE, DELIVER_FRAMES } from './cat-sprites.mjs';
+import { petMotionState, HOP_ART_PIXELS, hopArtPixels, hopDownArtPixels } from './pet-motion.mjs';
 
 // bini: the desk pet's eat looked like sitting / blinking — the frame cache normalised the cat-only
 // poses to idle. The rendered (cached) frame must be beauty's catFrame(pose, i, acc).
@@ -68,3 +69,54 @@ for (const accessory of ['beanie', 'sprout']) {
     }
   });
 }
+
+// --- the sprite loop and the music hop (pet-motion.mjs) ---------------------
+// An Electron window that is minimized stays "visible" to the DOM
+// (backgroundThrottling is off), so document.hidden alone never stops the
+// sprite loop: the shared clock's background flag has to gate it too.
+test('the pet stops in the background even when the window still looks visible', () => {
+  assert.equal(petMotionState({}).visible, true);
+  assert.equal(petMotionState({ background: true }).visible, false);
+  assert.equal(petMotionState({ hidden: true }).visible, false);
+});
+
+test('the desktop pet and the wallpaper keep living on the desktop', () => {
+  // No keyboard focus needed, and a minimized desktop surface is not "hidden".
+  assert.equal(petMotionState({ desktop: true, focused: false }).visible, true);
+  assert.equal(petMotionState({ desktop: true, focused: false, background: true }).visible, false);
+  // A hidden document stops every surface, desktop ones included.
+  assert.equal(petMotionState({ desktop: true, hidden: true }).visible, false);
+});
+
+test('reduced motion is a separate switch from visibility', () => {
+  assert.equal(petMotionState({ reduced: true }).reduced, true);
+  assert.equal(petMotionState({ reduced: true }).visible, true);
+  assert.equal(petMotionState({}).reduced, false);
+});
+
+// The hop must land on whole art pixels: the sprite is 32 art px wide, so a
+// fractional hop would resample it into a blurry row of pixels.
+test('the hop height is always a whole number of art pixels', () => {
+  assert.equal(HOP_ART_PIXELS, 3);
+  for (let level = 0; level <= 8; level++) {
+    const energy = level / 8, hop = hopArtPixels(energy);
+    assert.ok(Number.isInteger(hop), `${energy}: ${hop}`);
+    assert.ok(hop >= 0 && hop <= HOP_ART_PIXELS, `${energy}: ${hop}`);
+    // The half-way keyframe is on the grid too, and never above the full hop.
+    const down = hopDownArtPixels(hop);
+    assert.ok(Number.isInteger(down), `${energy}: ${down}`);
+    assert.ok(down >= 0 && down <= hop, `${energy}: ${down}`);
+  }
+});
+
+test('a silent player never lifts the cat, a loud one lifts it three pixels', () => {
+  assert.equal(hopArtPixels(0), 0);
+  assert.equal(hopArtPixels(-1), 0);
+  assert.equal(hopArtPixels(1), HOP_ART_PIXELS);
+  assert.equal(hopArtPixels(99), HOP_ART_PIXELS);
+  // The smallest audible step still lifts the cat by one art pixel.
+  assert.equal(hopArtPixels(1 / 8), 1);
+  assert.equal(hopDownArtPixels(1), 0);
+  assert.equal(hopDownArtPixels(3), 1);
+  assert.equal(hopDownArtPixels(2), 1);
+});

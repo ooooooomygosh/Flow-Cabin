@@ -603,7 +603,7 @@ try {
   const about = page.locator('.update-panel'); await about.getByText(/心流小屋 v\d+\.\d+\.\d+/).waitFor(); const send = (detail) => page.evaluate((value) => { window.cabinUpdateState = value; window.dispatchEvent(new CustomEvent('cabin:update-state', { detail: value })); }, detail);
   if (await about.getByText('网页版总是最新的').count()) assert.equal(await about.getByRole('button', { name: '检查更新' }).count(), 0, 'no fake update button on the web');
   else {
-    await send({ status: 'available', mode: 'notify', latestVersion: '9.9.0', reason: '这个 macOS 版本没有 Apple 开发者签名，系统不允许自动安装更新。', downloadUrl: 'https://github.com/ooooooomygosh/album-web/releases/download/v9.9.0/FlowCabin-9.9.0-mac-arm64.dmg', notes: '新功能' });
+    await send({ status: 'available', mode: 'notify', latestVersion: '9.9.0', reason: '这个 macOS 版本没有 Apple 开发者签名，系统不允许自动安装更新。', downloadUrl: 'https://github.com/ooooooomygosh/Flow-Cabin/releases/download/v9.9.0/FlowCabin-9.9.0-mac-arm64.dmg', notes: '新功能' });
     await about.getByText(/发现新版本 v9\.9\.0.*签名/).waitFor(); await about.getByRole('button', { name: '下载安装包' }).waitFor(); assert.equal(await about.getByRole('button', { name: '重启安装' }).count(), 0);
     await send({ status: 'downloading', mode: 'install', percent: 50, autoDownload: true }); await about.getByText('下载中 50%').waitFor(); assert.equal(await about.getByRole('progressbar').getAttribute('aria-valuenow'), '50'); await about.getByLabel(/自动下载/).waitFor();
     await send({ status: 'downloaded', mode: 'install', latestVersion: '9.9.0', autoDownload: true }); await about.getByRole('button', { name: '重启安装' }).waitFor();

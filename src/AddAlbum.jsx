@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { Search, Plus, Check, FolderOpen, Disc3, Loading } from './icons';
 import Dialog from './Dialog';
 import { Tabs, Segmented, tabPanelProps } from './ui/Roving';
@@ -49,14 +49,17 @@ function CatalogSearch({ initialQuery, onAdded, added }) {
   return <div className="add-panel">
     <form className="add-search" onSubmit={search} role="search">
       <Search size={18}/><input ref={input} type="search" name="cabin-album-search" aria-label="搜索专辑、歌手或粘贴 QQ 音乐专辑链接" placeholder="歌手 · 专辑 · 歌曲，或粘贴 QQ 音乐专辑链接" value={query} onChange={(event) => setQuery(event.target.value)}/>
-      <button type="submit" className="pixel-button is-primary" disabled={status === 'searching'}>{status === 'searching' ? <Loading size={16} className="player-spin"/> : '搜索'}</button>
+      {/* 搜索中按钮只剩一个图标（图标是 aria-hidden 的 svg）：没有 aria-label
+          的话读屏只会报「按钮」。名字跟着状态走，键盘用户才知道它在忙什么。 */}
+      <button type="submit" className="pixel-button is-primary" aria-label={status === 'searching' ? '正在搜索' : '搜索'} disabled={status === 'searching'}>{status === 'searching' ? <Loading size={16} className="player-spin"/> : '搜索'}</button>
     </form>
     <div className="add-options">
       <Segmented label="曲库" items={CATALOGS} value={provider} onChange={(value) => { if (provider !== value) { request.current?.abort(); setResults([]); setStatus(''); setProvider(value); } try { localStorage.setItem('album-circle-search-provider-v2', value); } catch {} }}/>
       <Segmented label="类型" items={RESULT_TYPES} value={type} onChange={(value) => { if (type !== value) { request.current?.abort(); setResults([]); setStatus(''); setType(value); } }}/>
     </div>
-    {status && status !== 'searching' && <p className="add-status" role="status">{status}</p>}
-    {status === 'searching' && <p className="add-status" role="status">正在翻找唱片…</p>}
+    {/* One live region for the whole search: swapping two <p role=status> in and
+        out is not announced reliably, a single region whose text changes is. */}
+    <p className="add-status" role="status">{status === 'searching' ? '正在翻找唱片…' : status}</p>
     {!status && !results.length && <p className="add-hint"><Disc3 size={16}/>输入歌手或专辑名，找到后点「放上唱片架」，封面和曲目一起带回小屋。</p>}
     <ul className="add-results" aria-label="搜索结果">{results.map((candidate) => {
       const done = added.has(candidate.id);
@@ -70,7 +73,7 @@ function CatalogSearch({ initialQuery, onAdded, added }) {
 
 // Scanned local folders: catalog artwork is preferred because it also suits the album wall.
 function LocalImport({ items, onAdded }) {
-  const desktop = useDesktopAppearance().client;
+  const desktop = useDesktopAppearance().client, folderHint = useId();
   const [state, setState] = useState(null), [busy, setBusy] = useState(''), [message, setMessage] = useState('');
   const load = async () => { try { setState(normalizeLocalLibrary(await musicRequest('/local/albums'))); } catch (error) { setState({ error: error.message, albums: [] }); } };
   useEffect(() => {
@@ -95,9 +98,18 @@ function LocalImport({ items, onAdded }) {
   };
   return <div className="add-panel">
     <p className="add-intro">扫描过的音乐文件夹按标签整理成专辑；音乐留在原位置播放，唱机音源选「本地音乐」。文件夹在「设置 › 音源 › 账户与文件夹」里管理。</p>
-    <div className="add-local-actions"><button type="button" className="pixel-button is-primary" disabled={!desktop} title={desktop ? '' : '需要在心流小屋桌面版中使用'} onClick={() => { setMessage('请在弹出的窗口中选择文件夹…'); desktopCommand('local-music-folder'); }}><FolderOpen size={16}/>添加音乐文件夹</button>{desktop && <button type="button" className="pixel-button is-quiet" onClick={() => window.dispatchEvent(new CustomEvent('cabin-open-settings', { detail: { section: 'music/accounts' } }))}>管理文件夹</button>}{state?.albumCount > 0 && <span>{state.albumCount} 张专辑 · {state.trackCount} 首歌曲</span>}</div>
+    <div className="add-local-actions">
+      {/* A natively disabled button is skipped by the Tab order and its `title`
+          is never read out, so the reason would be lost. The button keeps its
+          place in the tab order (aria-disabled), the reason is visible and
+          described, and pressing it says the reason out loud. */}
+      <button type="button" className="pixel-button is-primary" aria-disabled={!desktop || undefined} aria-describedby={!desktop ? folderHint : undefined} onClick={() => { if (!desktop) { setMessage('添加音乐文件夹需要心流小屋桌面版。'); return; } setMessage('请在弹出的窗口中选择文件夹…'); desktopCommand('local-music-folder'); }}><FolderOpen size={16}/>添加音乐文件夹</button>
+      {desktop && <button type="button" className="pixel-button is-quiet" onClick={() => window.dispatchEvent(new CustomEvent('cabin-open-settings', { detail: { section: 'music/accounts' } }))}>管理文件夹</button>}
+      {state?.albumCount > 0 && <span>{state.albumCount} 张专辑 · {state.trackCount} 首歌曲</span>}
+    </div>
+    {!desktop && <p className="add-intro" id={folderHint}>添加音乐文件夹需要心流小屋桌面版；在网页里可以先用下面的「导入文件」挑选专辑。</p>}
     {message && <p className="add-status" role="status">{message}</p>}
-    {state?.error && <p className="add-status">{state.error}</p>}
+    {state?.error && <p className="add-status" role="alert">{state.error}</p>}
     <ul className="add-results" aria-label="本地专辑">{(state?.albums || []).slice(0, 300).map((album) => {
       const done = existing.has(album.id);
       return <li key={album.id}><Cover src={album.cover} title={album.title}/><span className="add-result-copy"><strong>{album.title}</strong><small>{album.artist} · {album.tracks.length} 首{album.year ? ' · ' + album.year : ''}</small></span>
@@ -141,7 +153,10 @@ export default function AddAlbum({ items, close, initialQuery = '', initialTab =
   return <Dialog title="添加到唱片架" icon={<Plus size={20}/>} close={close} size="lg" className={`add-album-dialog is-${tab}`}>
     <Tabs className="dialog-tabs" label="添加方式" idPrefix="add-tab" items={ADD_TABS} value={tab} onChange={(id) => { setTab(id); setNotice(''); }}/>
     <div {...tabPanelProps('add-tab', tab)} className="add-album-panel">
-      {notice && tab !== 'playlists' && <p className="add-notice" role="status"><Check size={16}/>{notice}</p>}
+      {/* 常驻的活区：把带提示的节点整块换进换出，读屏的播报并不可靠——同一个
+          文件里的搜索状态就是这么做的（见上面 add-status 的注释）。外层这个
+          div 永远在文档里，空的时候不占高度、不留边框。 */}
+      <div role="status">{notice && tab !== 'playlists' && <p className="add-notice"><Check size={16}/>{notice}</p>}</div>
       {tab === 'catalog' && <CatalogSearch initialQuery={initialQuery} added={added} onAdded={handleAdded}/>}
       {tab === 'playlists' && <PlaylistImport items={items} close={close} onAdded={onAdded}/>}
       {tab === 'local' && <LocalImport items={items} onAdded={handleAdded}/>}

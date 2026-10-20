@@ -4,7 +4,7 @@
    composes with the stroll's inline transform. All motion is stepped. */
 @layer guards, reset, features, skin, overrides;
 @layer features {
-.pet-life { position: relative; display: block; width: 100%; height: 100%; --pet-energy: .5; }
+.pet-life { position: relative; display: block; width: 100%; height: 100%; --pet-energy: .5; --pet-hop: 0; --pet-hop-down: 0; }
 .pet-life > .pixel-cat { transform-origin: 50% 100%; }
 .pet-life::before { content: ''; position: absolute; left: 30%; right: 30%; bottom: 3%; height: 4%; background: #0d0805; opacity: .28; pointer-events: none; }
 
@@ -14,15 +14,20 @@
 @keyframes pet-breathe { 50% { scale: 1.015 1.035; } }
 
 /* music: one hop per beat, driven from PetLife.jsx (Web Animations, synced
-   to the detected beat); --pet-energy (0..1) sets the hop height. */
+   to the detected beat). --pet-energy (0..1, quantised to eighths) scales the
+   squash; --pet-hop (the same energy mapped onto whole art pixels) sets the
+   hop height — the sprite is 32 art px wide, so one art pixel is 100%/32 of
+   the element and the hop never lands between two pixels. */
 
-/* hover: ears up, tiny lift */
-.room-cat:hover .pet-life > .pixel-cat, .pet-cat:hover .pet-life > .pixel-cat { translate: 0 -3%; }
-.room-cat:hover .pet-life[data-pose='sleep'] > .pixel-cat { translate: 0 -1%; }
+/* hover: ears up, tiny lift — one art pixel, so the sprite never shifts by a
+   fraction of a pixel and never resamples. */
+.room-cat:hover .pet-life > .pixel-cat, .pet-cat:hover .pet-life > .pixel-cat { translate: 0 calc(-100% / 32); }
+/* 睡着的猫只抬半个美术像素：它几乎不动，别让人以为它醒了。 */
+.room-cat:hover .pet-life[data-pose='sleep'] > .pixel-cat { translate: 0 calc(-100% / 64); }
 
-/* poke: squash & stretch in three frames */
+/* poke: squash & stretch in three frames — the lift is two art pixels. */
 .pet-life.is-poked > .pixel-cat { animation: pet-squish 330ms steps(3, end) 1 !important; }
-@keyframes pet-squish { 0% { scale: 1.12 .84; } 33% { scale: .93 1.08; translate: 0 -6%; } 66% { scale: 1.03 .97; translate: 0 0; } 100% { scale: 1 1; } }
+@keyframes pet-squish { 0% { scale: 1.12 .84; } 33% { scale: .93 1.08; translate: 0 calc(-100% / 16); } 66% { scale: 1.03 .97; translate: 0 0; } 100% { scale: 1 1; } }
 
 /* drag (desktop pet): dangle from the scruff */
 .pet-cat.is-dragging .pet-life > .pixel-cat { transform-origin: 50% 20%; animation: pet-dangle 700ms steps(4, end) infinite !important; }

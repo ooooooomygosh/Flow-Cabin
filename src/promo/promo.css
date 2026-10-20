@@ -38,34 +38,8 @@
   font-display: swap;
 }
 
-@font-face {
-  font-family: "Flow Sans";
-  src: url("/fonts/HarmonyOS_Sans_SC_Regular.ttf") format("truetype");
-  font-weight: 400;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Flow Sans";
-  src: url("/fonts/HarmonyOS_Sans_SC_Medium.ttf") format("truetype");
-  font-weight: 500;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Flow Sans";
-  src: url("/fonts/HarmonyOS_Sans_SC_Bold.ttf") format("truetype");
-  font-weight: 700;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Flow Sans";
-  src: url("/fonts/HarmonyOS_Sans_SC_Black.ttf") format("truetype");
-  font-weight: 900;
-  font-display: swap;
-}
-
+/* 正文走系统中文字体：HarmonyOS Sans SC 原文件每个字重 8MB+，宣传页实测会因为
+   两个 TTF 多传 16MB（许可证也不允许裁剪原文件）。像素标题仍用 OFL 的 Fusion Pixel / Silkscreen。 */
 :root {
   --ink: #171b17;
   --ink-soft: #343b33;
@@ -85,7 +59,7 @@
   --line-light: rgba(35, 37, 29, .18);
   --pixel-cn: "Flow Pixel", "Zpix", "PingFang SC", sans-serif;
   --pixel-en: "Flow Silkscreen", "Flow Pixel", monospace;
-  --body: "Flow Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --body: "PingFang SC", "HarmonyOS Sans SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
   --scene-accent: #d8a66c;
   --scene-image: url("/promo/rooms/pixel.webp");
   --ease: cubic-bezier(.2, .7, .2, 1);
@@ -172,6 +146,12 @@ figure {
   visibility: visible;
 }
 
+/* 版本号由 promo.js 从 <meta name="promo-version"> 同步过来；先占住宽度，按钮不会跳。 */
+[data-latest-version] {
+  display: inline-block;
+  min-width: 48px;
+}
+
 .site {
   position: relative;
   min-height: 100vh;
@@ -241,8 +221,8 @@ figure {
 }
 
 .brand img {
-  width: 34px;
-  height: 34px;
+  width: 48px;
+  height: 48px;
   image-rendering: pixelated;
 }
 
@@ -427,8 +407,10 @@ figure {
   display: flex;
   align-items: flex-start;
   gap: 24px;
-  color: rgba(255, 248, 233, .68);
+  color: rgba(255, 248, 233, .78);
   font-size: 12px;
+  /* 这一块会压在唱片封面上，硬阴影比半透明底板更贴像素风，也能保住可读性。 */
+  text-shadow: 0 2px 0 rgba(4, 8, 6, .6);
 }
 
 .hero-meta p {
@@ -482,7 +464,7 @@ figure {
   z-index: 7;
   top: 23%;
   left: max(5vw, 34px);
-  width: min(700px, 53vw);
+  width: min(820px, 56vw);
 }
 
 .hero-copy > * {
@@ -509,11 +491,12 @@ figure {
   text-transform: uppercase;
 }
 
+/* 88px 是像素中文的整数档：再加宽就会把「留在一间小屋里。」挤成两行。 */
 .hero h1 {
   margin: 0;
   max-width: 760px;
   color: var(--cream);
-  font: 900 clamp(48px, 6.1vw, 94px)/1.08 var(--pixel-cn);
+  font: 900 clamp(48px, 6.1vw, 88px)/1.08 var(--pixel-cn);
   letter-spacing: -.055em;
   text-wrap: balance;
   text-shadow: 0 4px 0 rgba(0, 0, 0, .2);
@@ -3051,8 +3034,8 @@ figure {
 }
 
 .footer-mark img {
-  width: 30px;
-  height: 30px;
+  width: 24px;
+  height: 24px;
   image-rendering: pixelated;
 }
 
@@ -3223,7 +3206,7 @@ figure {
   }
 
   .hero-clock time {
-    font-size: 20px;
+    font-size: 16px;
   }
 
   .hero-copy {
@@ -3244,7 +3227,7 @@ figure {
 
   .hero-cat {
     right: 8vw;
-    bottom: 328px;
+    bottom: 296px;
     width: 128px;
     height: 128px;
   }
@@ -3462,31 +3445,42 @@ figure {
     font-size: 12px;
   }
 
+  /* 窄屏上竖向只剩一条窄缝：猫缩小并上提，气泡改挂在猫左边，
+     谁也压不住事实行、按钮和场景控制台。 */
   .hero-cat {
-    right: 20px;
-    bottom: 328px;
-    transform: scale(.88);
-    transform-origin: bottom right;
+    right: 26px;
+    bottom: 268px;
+    width: 104px;
+    height: 104px;
+    transform: none;
+  }
+
+  .hero-cat .cat-sprite {
+    width: 96px;
+    height: 96px;
   }
 
   .hero-cat .cat-bubble {
-    top: calc(100% + 5px);
+    top: 50%;
+    right: calc(100% - 4px);
     bottom: auto;
-    left: 50%;
+    left: auto;
     width: max-content;
     min-width: 0;
-    max-width: min(176px, calc(100vw - 40px));
-    transform: translateX(-50%);
+    max-width: min(168px, calc(100vw - 150px));
+    transform: translateY(-50%);
   }
 
   .hero-cat .cat-bubble::after {
-    top: auto;
-    bottom: 100%;
-    border-right: 0;
-    border-bottom: 0;
+    top: 50%;
+    right: auto;
+    bottom: auto;
+    left: 100%;
     border-top: 2px solid #39291e;
-    border-left: 2px solid #39291e;
-    transform: translate(-50%, 4px) rotate(45deg);
+    border-right: 2px solid #39291e;
+    border-bottom: 0;
+    border-left: 0;
+    transform: translate(4px, -50%) rotate(45deg);
   }
 
   .scene-console {

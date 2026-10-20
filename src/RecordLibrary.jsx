@@ -92,7 +92,7 @@ function RecordEditor({ item, close }) {
   return <Dialog title="自定义唱片" icon={<Wand2 size={20}/>} close={close} size="lg" className="record-dialog record-editor">
     <p className="record-dialog-intro"><strong>{item.title}</strong> · {item.artist}<br/>只调整黑胶视觉，原专辑封面保持原始内容。设置保存在这台电脑。</p>
     <form onSubmit={save}>
-      <div className="record-editor-grid"><div className="record-preview-column"><div className={`record-style-preview ${fullDisc ? 'is-disc-only' : ''}`} aria-label="黑胶样式预览"><PixelVinyl item={item} value={previewStyle} className="record-style-disc"/>{item.cover ? <img className="record-style-cover" src={item.cover} alt={`${item.title} 原封面`} draggable="false"/> : <RecordSleeve item={item} className="record-style-cover"/>}</div><button type="button" aria-pressed={fullDisc} onClick={() => setFullDisc(!fullDisc)}>{fullDisc ? '查看封面与黑胶' : '查看完整黑胶'}</button></div>
+      <div className="record-editor-grid"><div className="record-preview-column"><div className={`record-style-preview ${fullDisc ? 'is-disc-only' : ''}`} role="group" aria-label="黑胶样式预览"><PixelVinyl item={item} value={previewStyle} className="record-style-disc"/>{item.cover ? <img className="record-style-cover" src={item.cover} alt={`${item.title} 原封面`} draggable="false"/> : <RecordSleeve item={item} className="record-style-cover"/>}</div><button type="button" aria-pressed={fullDisc} onClick={() => setFullDisc(!fullDisc)}>{fullDisc ? '查看封面与黑胶' : '查看完整黑胶'}</button></div>
         <div className="record-style-fields">
           <label htmlFor={id + '-base'}>黑胶底色<input id={id + '-base'} type="color" value={style.base} onChange={(event) => setStyle({ ...style, base: event.target.value, autoBase: false })}/></label>
           <label htmlFor={id + '-alpha'}>黑胶透明度 <output>{style.opacity}%</output><input id={id + '-alpha'} type="range" min="0" max="100" value={style.opacity} onChange={(event) => setStyle({ ...style, opacity: Number(event.target.value) })}/></label>
@@ -118,13 +118,13 @@ export function RecordBoxControls({ items, filters, setFilters, count }) {
   const decades = [...new Set(items.map((item) => Number(item.year)).filter((year) => year >= 1900 && year < 2100).map((year) => Math.floor(year / 10) * 10))].sort((a, b) => b - a);
   const change = (key, value) => setFilters({ ...filters, [key]: value });
   useEffect(() => { if (!['all', 'unfiled'].includes(filters.box) && !boxes.some((box) => box.id === filters.box)) change('box', 'all'); }, [boxes, filters.box]);
-  return <div className="record-library-controls" aria-label="唱片盒与音乐筛选">
+  return <div className="record-library-controls" role="group" aria-label="唱片盒与音乐筛选">
     <label>唱片盒<select aria-label="筛选唱片盒" value={filters.box} onChange={(event) => change('box', event.target.value)}><option value="all">全部唱片</option><option value="unfiled">未分组</option>{boxes.map((box) => <option key={box.id} value={box.id}>{box.name}（{items.filter((item) => box.keys.includes(albumKey(item))).length}）</option>)}</select></label>
     <button type="button" onClick={() => setOpen(true)}><Library size={16}/>管理唱片盒</button>
     <label>流派<select aria-label="筛选流派" value={filters.genre} onChange={(event) => change('genre', event.target.value)}><option value="all">全部流派</option><option value="unmarked">未标注流派</option>{[...new Set([...genres, ...(!['all', 'unmarked'].includes(filters.genre) ? [filters.genre] : [])])].map((genre) => <option key={genre}>{genre}</option>)}</select></label>
     <label>年代<select aria-label="筛选年代" value={filters.decade} onChange={(event) => change('decade', event.target.value)}><option value="all">全部年代</option><option value="unknown">年份待补充</option>{decades.map((decade) => <option key={decade} value={decade}>{decade} 年代</option>)}</select></label>
     <label>来源<select aria-label="筛选来源" value={filters.provider} onChange={(event) => change('provider', event.target.value)}><option value="all">全部来源</option><option value="qq">QQ 音乐</option><option value="itunes">Apple 曲库</option><option value="other">其他来源</option></select></label>
-    <span className="record-filter-count">{count} / {items.length} 张</span><button type="button" className="record-clear-filters" onClick={() => setFilters({ box: 'all', genre: 'all', decade: 'all', provider: 'all' })}>清除音乐筛选</button>
+    <span className="record-filter-count" role="status">{count} / {items.length} 张</span><button type="button" className="record-clear-filters" onClick={() => setFilters({ box: 'all', genre: 'all', decade: 'all', provider: 'all' })}>清除音乐筛选</button>
     <small>唱片盒保存在这台电脑。流派来自已有标签或手动填写。</small>{library.error && <p role="alert" className="record-error">{library.error}</p>}
     {open && <BoxManager items={items} roomId={roomId} close={() => setOpen(false)}/>}
   </div>;
@@ -133,10 +133,17 @@ export function RecordBoxControls({ items, filters, setFilters, count }) {
 function BoxManager({ items, roomId, close }) {
   const { data, update, boxes, error } = useRecordLibrary();
   const [selectedId, setSelectedId] = useState(boxes[0]?.id || ''), [name, setName] = useState(''), [rename, setRename] = useState(''), [query, setQuery] = useState(''), [localError, setLocalError] = useState(''), [deleting, setDeleting] = useState(false);
+  // 「删除这个唱片盒」被「确认删除 / 取消」整块换掉：原按钮卸载，焦点会掉到
+  // <body>，Tab 又要从页面顶部重来。确认时把焦点交给确认按钮，取消时还回去。
+  const deleteButton = useRef(null), confirmButton = useRef(null), newBoxName = useRef(null), backToDelete = useRef(false);
   const selected = boxes.find((box) => box.id === selectedId);
   const visible = items.filter((item) => item.type === 'album' && `${item.title} ${item.artist}`.toLowerCase().includes(query.toLowerCase()));
   const mutate = (fn) => update((old) => ({ ...old, rooms: { ...old.rooms, [roomId]: { ...(old.rooms[roomId] || {}), boxes: fn(old.rooms[roomId]?.boxes || []) } } }));
   useEffect(() => { setRename(selected?.name || ''); setDeleting(false); }, [selected?.id, selected?.name]);
+  useEffect(() => {
+    if (deleting) { confirmButton.current?.focus(); return; }
+    if (backToDelete.current) { backToDelete.current = false; deleteButton.current?.focus(); }
+  }, [deleting]);
   const validName = (text, except = '') => {
     const value = text.trim();
     if (!value || value.length > 40) { setLocalError('唱片盒名称需要 1–40 个字符。'); return false; }
@@ -147,7 +154,7 @@ function BoxManager({ items, roomId, close }) {
   return <Dialog title="管理唱片盒" icon={<Library size={20}/>} close={close} size="lg" className="record-dialog record-box-manager">
     <p className="record-dialog-intro">唱片盒是你给唱片做的分组。一张专辑可放进多个盒子；删除盒子不会删除专辑。</p>
     <form className="record-new-box" onSubmit={(event) => { event.preventDefault(); if (!validName(name)) return; if (boxes.length >= 64) { setLocalError('每个房间最多 64 个唱片盒。'); return; } const id = crypto.randomUUID(); if (mutate((current) => [...current, { id, name: name.trim(), keys: [] }])) { setName(''); setSelectedId(id); } }}>
-      <input aria-label="新唱片盒名称" placeholder="给新唱片盒命名" maxLength="40" value={name} onChange={(event) => setName(event.target.value)}/><button className="pixel-button is-primary" type="submit"><Plus size={17}/>新建唱片盒</button>
+      <input ref={newBoxName} aria-label="新唱片盒名称" placeholder="给新唱片盒命名" maxLength="40" value={name} onChange={(event) => setName(event.target.value)}/><button className="pixel-button is-primary" type="submit"><Plus size={17}/>新建唱片盒</button>
     </form>
     <div className="record-box-manager-grid"><nav aria-label="我的唱片盒">{boxes.map((box) => <button type="button" key={box.id} aria-pressed={box.id === selectedId} onClick={() => setSelectedId(box.id)}><Library size={16}/><span>{box.name}</span><small>{items.filter((item) => item.type === 'album' && box.keys.includes(albumKey(item))).length}</small></button>)}{!boxes.length && <p>还没有唱片盒，先创建一个。</p>}</nav>
       <section aria-label="唱片盒内容">{selected ? <>
@@ -155,7 +162,7 @@ function BoxManager({ items, roomId, close }) {
         <input type="search" aria-label="筛选可加入唱片盒的专辑" placeholder="筛选歌手或专辑" value={query} onChange={(event) => setQuery(event.target.value)}/>
         <div className="record-box-batch"><button type="button" onClick={() => mutate((current) => current.map((box) => box.id === selectedId ? { ...box, keys: [...new Set([...box.keys, ...visible.map(albumKey)])] } : box))}>加入当前列表</button><button type="button" onClick={() => mutate((current) => current.map((box) => box.id === selectedId ? { ...box, keys: box.keys.filter((key) => !visible.some((item) => albumKey(item) === key)) } : box))}>移出当前列表</button></div>
         <div className="record-box-albums">{visible.map((item) => <label className="record-checkbox" key={item.id}><input type="checkbox" aria-label={`唱片盒包含 ${item.title}`} checked={selected.keys.includes(albumKey(item))} onChange={(event) => toggle(albumKey(item), event.target.checked)}/>{item.cover ? <img src={item.cover} alt="" loading="lazy"/> : <span className="record-box-sleeve"><RecordSleeve item={item} title={false}/></span>}<span><strong>{item.title}</strong><small>{item.artist}</small></span></label>)}{!visible.length && <p>没有符合条件的专辑。</p>}</div>
-        {!deleting ? <button type="button" className="record-delete-box" onClick={() => setDeleting(true)}><Trash2 size={16}/>删除这个唱片盒</button> : <div className="record-delete-confirm"><span>仅删除分组，保留专辑。</span><button type="button" onClick={() => { if (mutate((current) => current.filter((box) => box.id !== selectedId))) setSelectedId(boxes.find((box) => box.id !== selectedId)?.id || ''); }}>确认删除唱片盒</button><button type="button" onClick={() => setDeleting(false)}>取消</button></div>}
+        {!deleting ? <button type="button" ref={deleteButton} className="record-delete-box" onClick={() => setDeleting(true)}><Trash2 size={16}/>删除这个唱片盒</button> : <div className="record-delete-confirm"><span>仅删除分组，保留专辑。</span><button type="button" ref={confirmButton} onClick={() => { if (mutate((current) => current.filter((box) => box.id !== selectedId))) { setSelectedId(boxes.find((box) => box.id !== selectedId)?.id || ''); newBoxName.current?.focus(); } }}>确认删除唱片盒</button><button type="button" onClick={() => { backToDelete.current = true; setDeleting(false); }}>取消</button></div>}
       </> : <p>选择左侧唱片盒来整理专辑。</p>}</section>
     </div>{(localError || error) && <p role="alert" className="record-error">{localError || error}</p>}<footer><button type="button" className="pixel-button is-primary" onClick={close}>完成</button></footer>
   </Dialog>;

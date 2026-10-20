@@ -5,30 +5,39 @@
 import { getMoonIllumination, getMoonPosition, getPosition, getTimes } from './sky-suncalc.mjs';
 import { timeOfDay } from './room-ambience.mjs';
 
-const clamp01 = (v) => Math.max(0, Math.min(1, v));
+const clamp01 = (v) => (Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 0);
 // Fixed curve for "no place": rises 6:30, peaks 50° at 12:30, sets 18:30 local time.
 export function syntheticSun(date = new Date()) {
-  const hour = date.getHours() + date.getMinutes() / 60 + date.getSeconds() / 3600;
+  // 算不出时间就当午夜：宁可直接给一段夜空，也不让 NaN 传进颜色。
+  const time = date instanceof Date ? date.getTime() : Number(date);
+  const clock = Number.isFinite(time) ? new Date(time) : null;
+  const hour = clock ? clock.getHours() + clock.getMinutes() / 60 + clock.getSeconds() / 3600 : 0;
   const angle = 2 * Math.PI * (hour - 6.5) / 24;
   return { altitude: 50 * Math.sin(angle), azimuth: ((90 + (hour - 6.5) / 12 * 180) % 360 + 360) % 360, rising: hour >= .5 && hour < 12.5, noonAltitude: 50, hour };
 }
 // Bucket strings stay those of timeOfDay(); with a real sun they follow light, not the clock.
 export function skyBucket({ altitude, rising, noonAltitude = 50 }) {
+  // 算不出高度时按夜里处理：宁可暗一点，也不要给出一段坏掉的天空。
+  if (!Number.isFinite(altitude)) return 'night';
   if (altitude < -6) return 'night';
   if (rising) return altitude < Math.max(6, noonAltitude * .7) ? 'morning' : 'day';
   return altitude < Math.max(6, noonAltitude * .35) ? 'dusk' : 'day';
 }
 export function skyState(date = new Date(), city = null) {
-  const illumination = getMoonIllumination(date), moon = { phase: illumination.phase, fraction: illumination.fraction, waxing: illumination.waxing };
-  if (!city) {
+  const illumination = getMoonIllumination(date);
+  const moon = { phase: Number.isFinite(illumination.phase) ? illumination.phase : 0, fraction: Number.isFinite(illumination.fraction) ? illumination.fraction : 0, waxing: illumination.waxing === true };
+  const lat = Number(city?.lat), lng = Number(city?.lng);
+  // 城市坐标坏掉时退回本机曲线：天空照常画，不给 NaN。
+  const place = city && Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
+  if (!place) {
     const sun = syntheticSun(date), bucket = timeOfDay(Math.floor(sun.hour));
     // Without a place the moon keeps the night company; its phase is still the real one.
     return { altitude: sun.altitude, azimuth: sun.azimuth, rising: sun.rising, noonAltitude: 50, bucket, synthetic: true, moon: { ...moon, altitude: bucket === 'night' ? 35 : -10 } };
   }
-  const { lat, lng } = city, now = getPosition(date, lat, lng), later = getPosition(new Date(date.valueOf() + 6e5), lat, lng);
-  const noon = getTimes(date, lat, lng).solarNoon, noonAltitude = getPosition(noon, lat, lng).altitude;
-  const state = { altitude: now.altitude, azimuth: now.azimuth, rising: later.altitude >= now.altitude, noonAltitude, synthetic: false };
-  return { ...state, bucket: skyBucket(state), moon: { ...moon, altitude: getMoonPosition(date, lat, lng).altitude } };
+  const { lat: latitude, lng: longitude } = place, now = getPosition(date, latitude, longitude), later = getPosition(new Date(date.valueOf() + 6e5), latitude, longitude);
+  const noon = getTimes(date, latitude, longitude).solarNoon, noonAltitude = getPosition(noon, latitude, longitude).altitude;
+  const state = { altitude: Number.isFinite(now.altitude) ? now.altitude : 0, azimuth: Number.isFinite(now.azimuth) ? now.azimuth : 0, rising: later.altitude >= now.altitude, noonAltitude: Number.isFinite(noonAltitude) ? noonAltitude : 50, synthetic: false };
+  return { ...state, bucket: skyBucket(state), moon: { ...moon, altitude: getMoonPosition(date, latitude, longitude).altitude } };
 }
 
 // Keyframes: sun altitude (deg) → sky top / horizon, window glow + room ambient (soft-light,
@@ -64,29 +73,33 @@ export const mixRgba = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
 const GREY = { top: parse('#8a93a0'), horizon: parse('#b4b8bc'), glow: parse('#d8dce060'), ambient: parse('#c8ccd040') };
 // overcast 0..1 (clouds, rain, fog) greys the sky toward the same altitude's brightness.
 export function skyColors({ altitude, rising }, overcast = 0) {
-  const keys = SKY_KEYS[rising ? 'morning' : 'evening'], alt = Math.max(-18, Math.min(90, altitude));
+  const height = Number.isFinite(altitude) ? altitude : 0;
+  const keys = SKY_KEYS[rising ? 'morning' : 'evening'], alt = Math.max(-18, Math.min(90, height));
   let i = 1; while (i < keys.length - 1 && keys[i][0] < alt) i++;
   const [a0, k0] = keys[i - 1], [a1, k1] = keys[i], t = clamp01((alt - a0) / (a1 - a0 || 1));
-  const light = clamp01((altitude + 6) / 18), grey = clamp01(overcast) * .7 * (.35 + light * .65);
+  const light = clamp01((height + 6) / 18), grey = clamp01(overcast) * .7 * (.35 + light * .65);
   const out = {};
   for (const name of ['top', 'horizon', 'glow', 'ambient', 'shade']) {
     let rgba = mixRgba(parse(k0[name]), parse(k1[name]), t);
     if (GREY[name] && grey) { const target = GREY[name].map((v, j) => j < 3 ? v * (.25 + light * .75) : v); rgba = mixRgba(rgba, name === 'glow' || name === 'ambient' ? [...target.slice(0, 3), rgba[3]] : target, grey); }
     out[name] = toHex(rgba);
   }
-  return { ...out, light: Math.round(light * 100) / 100, stars: Math.round(clamp01((-altitude - 3) / 9) * (1 - clamp01(overcast)) * 100) / 100 };
+  return { ...out, light: Math.round(light * 100) / 100, stars: Math.round(clamp01((-height - 3) / 9) * (1 - clamp01(overcast)) * 100) / 100 };
 }
 // Soft-light tint for the painted land / sea inside a window: 50 % grey changes nothing; it
 // darkens toward night blue when the sky is darker than the art was painted (`painted`: 1 a
 // daylight view, 0 a night view) and lifts toward pale day when it is brighter; low sun
 // borrows the horizon's rose or amber. Returns '#rrggbb'.
 export function landTint({ altitude }, colors, painted = 1) {
-  const light = colors.light ?? clamp01((altitude + 6) / 18), delta = light - painted;
+  const light = Number.isFinite(colors?.light) ? colors.light : clamp01((altitude + 6) / 18), delta = light - painted;
   let rgb = [128, 128, 128];
   if (delta < 0) rgb = mixRgba(rgb, [34, 40, 96], Math.min(1, -delta) * .85);
   else rgb = mixRgba(rgb, [214, 226, 244], Math.min(1, delta) * .75);
   const glow = clamp01(1 - Math.abs(altitude) / 9) * .45;
-  if (glow) rgb = mixRgba(rgb, parse(colors.horizon).slice(0, 3), glow);
+  if (glow) {
+    const horizon = typeof colors?.horizon === 'string' ? parse(colors.horizon).slice(0, 3) : [128, 128, 128];
+    rgb = mixRgba(rgb, horizon, glow);
+  }
   return toHex(rgb);
 }
 // The CSS variables RoomScene writes (registered with @property in companion-room.css).

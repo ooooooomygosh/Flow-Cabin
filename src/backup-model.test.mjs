@@ -140,6 +140,25 @@ test('vinyl styles, genres and boxes follow albums the shelf gave a new id', () 
   assert.ok(merged.styles['qq:9'] && merged.styles['item:new']); assert.deepEqual(merged.rooms.here.boxes[0].keys, ['item:new', 'qq:1']);
 });
 
+// 回归：备份里的 roomId 是文件内容，不能让它去读对象的原型。
+test('a room id from a backup file never reaches the object prototype', () => {
+  const current = normalizeLibrary({ rooms: { home: { look: 'pixel' } } });
+  for (const roomId of ['__proto__', 'constructor', 'prototype', 'toString']) {
+    const merged = mergeBackupLibrary(current, { library, roomId }, 'home');
+    assert.deepEqual(Object.keys(merged.rooms), ['home'], roomId);
+    assert.equal(Object.hasOwn(merged.rooms, roomId), false, roomId);
+    assert.equal(Object.getPrototypeOf(merged.rooms), Object.prototype, roomId);
+    assert.equal({}.polluted, undefined, 'the prototype is untouched');
+    // 备份里的房间内容照旧落到当前房间：不能因为编号不认识就把整间房丢掉。
+    assert.deepEqual(merged.rooms.home.boxes[0].keys, ['item:old', 'qq:1'], roomId);
+    assert.equal(merged.rooms.home.look, 'pixel', roomId);
+  }
+  // 正常房间名照旧生效：本机其它房间保留，备份里的房间写进当前房间。
+  const merged = mergeBackupLibrary(current, { library, roomId: 'home' }, 'here');
+  assert.deepEqual(Object.keys(merged.rooms), ['home', 'here']);
+  assert.deepEqual(merged.rooms.here.boxes[0].keys, ['item:old', 'qq:1']);
+});
+
 test('v3 round-trip uses real session, care, letters and study writers/readers', () => {
   const source = memoryStorage(), { record, care } = populateMemory(source), destination = memoryStorage();
   const study = review(normalizeStudy({ decks: [{ id: 'deck', name: 'English' }], cards: [{ id: 'card', deckId: 'deck', front: 'cat', back: '猫' }], countdowns: [{ id: 'exam', title: '考试', date: '2026-12-01' }], newPerDay: 7 }), 'card', RATINGS[2].rating, at);
@@ -613,4 +632,83 @@ test('malformed deletion markers reject backup before writing and discard hidden
     assert.deepEqual(parsed.memory[domain], [{ id: 'x', purgedAt: at }]);
   }
   assert.equal(storage.writes.length, 0);
+});
+
+// 最高优先级：导入要么整份成功，要么原封不动。
+test('an import either lands completely or changes nothing at all', () => {
+  const storage = memoryStorage();
+  populateMemory(storage);
+  const before = [...storage.data];
+  // 1) 文件里有任何一处不合法，解析阶段就停下，本机一个字节都不动。
+  const broken = [
+    { version: 4, memory: { letters: [{ id: 'x', at: 'yesterday', lines: ['a'] }] } },
+    { version: 4, memory: { journalEntries: [{ id: 'x', body: 'b', createdAt: at, updatedAt: at, revisions: [] }, { id: 'x', body: 'b', createdAt: at, updatedAt: at, revisions: [] }] } },
+    { version: 4, memory: { souvenirs: souvenirState([{ ...focusSouvenir(), earnedOn: '2026-02-30' }]) } },
+    { version: 4, focus: { tasks: [null] } },
+    { version: 4, study: { decks: 'not a list' } }
+  ];
+  for (const patch of broken) {
+    assert.throws(() => parseBackup(JSON.stringify({ kind: 'FlowCabinBackup', items: [], ...patch })), /格式无效|版本|纪念物/);
+    assert.deepEqual([...storage.data], before, 'a rejected file never touches the machine');
+  }
+  // 2) 本机自己的存储坏了，也要先停下来，不能写一半。
+  const corrupt = memoryStorage([[JOURNAL_KEY, '{bad']]);
+  assert.throws(() => restoreBackupMemory({ memory: { focusSessions: [{ id: 's', start: at, end: at + 60000, completed: true }], letters: [letter()] } }, { storage: corrupt }), /小屋手记格式异常/);
+  assert.equal(corrupt.writes.length, 0, 'nothing was written');
+  assert.equal(corrupt.getItem(JOURNAL_KEY), '{bad');
+  // 3) 写盘时中途失败，已经写进去的都要退回来。
+  const destination = memoryStorage();
+  const write = destination.setItem;
+  destination.setItem = (key, value) => { if (key === LETTERS_KEY) throw new Error('quota'); write(key, value); };
+  assert.throws(() => restoreBackupMemory({ memory: { focusSessions: [{ id: 's', start: at, end: at + 60000, completed: true }], letters: [letter()] } }, { storage: destination }), /原有内容保持不变/);
+  assert.deepEqual([...destination.data], []);
+});
+
+// 最高优先级：旧版本的备份必须还能读进来。
+test('every shipped backup version still imports, and a newer one is refused', () => {
+  const storage = memoryStorage();
+  const focus = { tasks: [{ id: 't', text: '读书' }], notes: '随手记', settings: { focusMin: 30 } };
+  const study = { decks: [{ id: 'd', name: '英语' }], cards: [], countdowns: [] };
+  for (const version of [undefined, 1, 2, 3, BACKUP_VERSION]) {
+    const file = JSON.stringify({ kind: 'FlowCabinBackup', ...(version === undefined ? {} : { version }), items: [],
+      focus, study, sound: { rain: 0.5 } });
+    const parsed = parseBackup(file);
+    assert.equal(parsed.version, version === undefined ? 1 : version);
+    assert.deepEqual(parsed.focus.tasks, normalizeFocus(focus).tasks, 'the tasks are normalised, not copied raw');
+    assert.equal(parsed.focus.notes, '随手记');
+    assert.equal(parsed.focus.settings.focusMin, 30);
+    assert.deepEqual(parsed.study.decks, normalizeStudy(study).decks);
+    assert.deepEqual(parsed.sound, { rain: 0.5 });
+    assert.equal(parsed.memory, null, 'older files carry no memory domain');
+    assert.deepEqual(restoreBackupMemory(parsed, { storage }), { changed: [] }, 'an old file never touches the memory store');
+  }
+  for (const version of [0, -1, 5, 99, '4', 2.5, null, true]) {
+    assert.throws(() => parseBackup(JSON.stringify({ kind: 'FlowCabinBackup', version, items: [] })), /版本/);
+  }
+});
+
+// 未知字段：既不报错，也不写进本机。
+test('unknown fields in a backup are ignored, never written back', () => {
+  const storage = memoryStorage();
+  const parsed = parseBackup(JSON.stringify({ kind: 'FlowCabinBackup', version: BACKUP_VERSION, items: [],
+    futureDomain: { anything: true }, focus: { tasks: [], notes: 'n', futureField: 'x' }, memory: { version: 1, futureDomain: { secret: 'x' } } }));
+  assert.equal(Object.hasOwn(parsed, 'futureDomain'), false);
+  assert.equal(Object.hasOwn(parsed.focus, 'futureField'), false);
+  assert.equal(Object.hasOwn(parsed.memory, 'futureDomain'), false);
+  restoreBackupMemory(parsed, { storage });
+  assert.equal(JSON.stringify([...storage.data]).includes('futureDomain'), false);
+  // 备份里带一个未知的小屋记忆域：整份都不导入，不猜也不丢。
+  const unknown = parseBackup(JSON.stringify({ kind: 'FlowCabinBackup', version: BACKUP_VERSION, items: [], memory: { version: 1, futureDomain: { x: 1 } } }));
+  assert.equal(Object.hasOwn(unknown.memory, 'futureDomain'), false);
+  assert.deepEqual(restoreBackupMemory(unknown, { storage }), { changed: [] });
+});
+
+// 正在跑的计时器不能被备份带回来：恢复不是“继续工作”。
+test('a restore never brings a running timer back', () => {
+  const running = normalizeFocus({ timer: { phase: 'focus', endsAt: at + 60000, remaining: 60000, startedAt: at } });
+  const parsed = parseBackup(JSON.stringify({ kind: 'FlowCabinBackup', version: BACKUP_VERSION, items: [], focus: running }));
+  assert.equal(parsed.focus.timer, undefined);
+  const restored = normalizeFocus(restoreFocus(parsed.focus, running));
+  assert.equal(restored.timer.phase, 'idle');
+  assert.equal(restored.timer.endsAt, 0);
 });

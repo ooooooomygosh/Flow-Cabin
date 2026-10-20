@@ -5,6 +5,7 @@
   "productName": "心流小屋",
   "author": "Flow Cabin",
   "private": true,
+  "license": "GPL-3.0-only",
   "main": "main.cjs",
   "scripts": {
     "start": "electron .",
@@ -172,7 +173,7 @@
       {
         "provider": "github",
         "owner": "ooooooomygosh",
-        "repo": "album-web",
+        "repo": "Flow-Cabin",
         "releaseType": "release"
       }
     ]

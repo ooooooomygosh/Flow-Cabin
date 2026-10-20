@@ -1,5 +1,5 @@
 'use strict';
-// 检查更新. GitHub Releases of ooooooomygosh/album-web are the only source.
+// 检查更新. GitHub Releases of ooooooomygosh/Flow-Cabin are the only source.
 //
 // Every check goes through github.com itself, never api.github.com: the API
 // allows 60 anonymous requests an hour per IP, which a shared network (school,
@@ -20,7 +20,7 @@
 //                          we notify and offer the DMG. Once releases are signed
 //                          and notarised, electron-updater can take over again.
 //   Development / Linux    check only (notify).
-const OWNER = 'ooooooomygosh', REPO = 'album-web';
+const OWNER = 'ooooooomygosh', REPO = 'Flow-Cabin';
 const RELEASES_URL = `https://github.com/${OWNER}/${REPO}/releases`;
 const STARTUP_DELAY_MS = 20 * 1000, INTERVAL_MS = 6 * 60 * 60 * 1000;
 

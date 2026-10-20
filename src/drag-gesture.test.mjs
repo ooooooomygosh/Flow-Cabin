@@ -27,3 +27,18 @@ test('pointercancel, lost capture or Escape restores; a foreign pointer is ignor
 test('arrow nudges share one step: 16 px, Shift 64 px', () => {
   assert.deepEqual(nudgeDelta('ArrowLeft'), [-16, 0]); assert.deepEqual(nudgeDelta('ArrowDown', true), [0, 64]); assert.equal(nudgeDelta('Enter'), null);
 });
+test('a second pointer cancels the drag in flight instead of dropping it', () => {
+  const { gesture, log, frame } = rig(); gesture.down(1, 0, 0, 'w');
+  gesture.move(1, 30, 0);
+  gesture.down(2, 100, 100, 'w2');
+  frame();
+  assert.deepEqual(log, [['start', 'w'], ['cancel', 'w']]);
+  assert.equal(gesture.pending, true); assert.equal(gesture.active, false);
+});
+test('the release may come without a pointer id', () => {
+  const { gesture, log, frame } = rig(); gesture.down(1, 0, 0, 'w');
+  gesture.move(1, 30, 0);
+  assert.equal(gesture.up(), true); frame();
+  assert.deepEqual(log, [['start', 'w'], ['move', 30, 0], ['commit', 30, 0]]);
+  assert.equal(gesture.pending, false);
+});

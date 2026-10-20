@@ -267,3 +267,35 @@ test('built-in wordbooks persist their declared catalog source on the deck', () 
   const state = normalizeStudy(openWordBook(normalizeStudy(), WORD_BOOKS[0].id, T0));
   assert.equal(state.decks[0].source, WORD_BOOKS[0].source);
 });
+
+// 回归：null / '' / 布尔值不是 0。当成 0 会让“每日新词”变成永远学不了新词。
+test('a missing daily limit falls back to the default instead of zero', async () => {
+  const { LIMITS } = await import('./study-model.mjs');
+  for (const value of [null, undefined, '', '   ', false, true, NaN, 'abc', {}]) {
+    const state = normalizeStudy({ newPerDay: value });
+    assert.equal(state.newPerDay, LIMITS.perDayNew, JSON.stringify(value));
+    assert.ok(state.newPerDay > 0, 'the daily allowance stays usable');
+  }
+  assert.equal(normalizeStudy({ newPerDay: 0 }).newPerDay, 0, 'a real zero is still zero');
+  assert.equal(normalizeStudy({ newPerDay: 5 }).newPerDay, 5);
+  assert.equal(normalizeStudy({ newPerDay: 9999 }).newPerDay, 200, 'out of range is clamped');
+});
+
+// 回归：随机 id 必须可注入，模型才是可测的、才是能重放的。
+test('deck, card and countdown ids come from the injected factory', () => {
+  let counter = 0;
+  const makeId = (prefix) => `${prefix}-${++counter}`;
+  let state = normalizeStudy({}, { makeId });
+  state = addDeck(state, '英语', T0, { makeId });
+  assert.equal(state.decks[0].id, 'deck-1');
+  state = addCards(state, state.decks[0].id, parseCards('a\tA\nb\tB'), T0, { makeId }).state;
+  assert.deepEqual(state.cards.map((card) => card.id), ['card-2', 'card-3']);
+  state = addCountdown(state, '考研', '2030-06-01', { makeId });
+  assert.equal(state.countdowns[0].id, 'exam-4');
+  // 读回旧数据时没有编号的条目也用注入的来源补一个，已有编号的原样保留。
+  const restored = normalizeStudy({ decks: [{ id: 'old', name: '旧卡组' }], cards: [{ deckId: 'old', front: 'x' }] }, { makeId });
+  assert.equal(restored.decks[0].id, 'old');
+  assert.ok(restored.cards[0].id.startsWith('card-'));
+  // 没有注入时编号仍然存在，不是空串。
+  assert.ok(addDeck(normalizeStudy(), '英语', T0).decks[0].id);
+});

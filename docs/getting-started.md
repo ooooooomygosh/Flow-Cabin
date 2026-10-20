@@ -4,7 +4,7 @@
 
 ## 安装与首次打开
 
-从 [GitHub Releases](https://github.com/ooooooomygosh/album-web/releases/latest) 下载，不要用源码 ZIP 代替安装包。
+从 [GitHub Releases](https://github.com/ooooooomygosh/Flow-Cabin/releases/latest) 下载，不要用源码 ZIP 代替安装包。
 
 | 设备 | 选哪个文件 |
 | --- | --- |
@@ -14,7 +14,7 @@
 
 Mac 可在「关于本机」查看芯片；Windows 可在「设置 → 系统 → 系统信息」查看系统类型。目前没有 Windows ARM64 原生或 Linux 安装包承诺。
 
-**Mac：** 打开 DMG，把「心流小屋」拖到「应用程序」，再从那里打开。当前产物未完成开发者签名和公证。若 macOS 阻止打开，先核对文件确实来自本仓库的 Release，检查系统给出的原因；只有信任这份下载时，才使用「系统设置 → 隐私与安全性」提供的单次「仍要打开」入口。不需要关闭系统安全保护。系统没有提供入口、文件损坏或提示恶意软件时，保留提示并[反馈问题](https://github.com/ooooooomygosh/album-web/issues/new/choose)。
+**Mac：** 打开 DMG，把「心流小屋」拖到「应用程序」，再从那里打开。当前产物未完成开发者签名和公证。若 macOS 阻止打开，先核对文件确实来自本仓库的 Release，检查系统给出的原因；只有信任这份下载时，才使用「系统设置 → 隐私与安全性」提供的单次「仍要打开」入口。不需要关闭系统安全保护。系统没有提供入口、文件损坏或提示恶意软件时，保留提示并[反馈问题](https://github.com/ooooooomygosh/Flow-Cabin/issues/new/choose)。
 
 **Windows：** 安装版可选目录并创建快捷方式，便携版直接运行。未建立可信发布者签名时，系统可能显示警告；先核对下载来源和完整文件名，再决定是否继续。
 
@@ -51,7 +51,7 @@ Mac 可在「关于本机」查看芯片；Windows 可在「设置 → 系统 �
 
 QQ 旧收藏若缺少音频文件标识 `mediaMid`，可能无法播放；自动补全尚未实现。先备份，重新搜索取得资料后另行添加，保留旧笔记和外观，确认新记录可用再处理旧记录。不要为了排错清空全部收藏。
 
-没有声音时依次检查：是否仍为「仅动画展示」、是否已连接音源、平台是否允许此曲播放、音量是否静音。界面会显示当前音源的错误或状态；[反馈](https://github.com/ooooooomygosh/album-web/issues/new/choose)时附状态文字，不要附 Cookie、令牌或签名音频链接。
+没有声音时依次检查：是否仍为「仅动画展示」、是否已连接音源、平台是否允许此曲播放、音量是否静音。界面会显示当前音源的错误或状态；[反馈](https://github.com/ooooooomygosh/Flow-Cabin/issues/new/choose)时附状态文字，不要附 Cookie、令牌或签名音频链接。
 
 ## 让小屋帮你搭配唱片
 

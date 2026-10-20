@@ -53,7 +53,8 @@ test('MusicBrainz fallback cannot mark a mismatched release track count complete
       if (url.pathname === '/search') return response(url.searchParams.get('entity') === 'album' ? [album] : []);
       return response([album]);
     }
-    assert.equal(options.headers['User-Agent'], 'FlowCabin/1.7.0 (https://github.com/ooooooomygosh/album-web)');
+    const { version: appVersion } = require('../package.json');
+    assert.equal(options.headers['User-Agent'], `FlowCabin/${appVersion} (https://github.com/ooooooomygosh/Flow-Cabin)`);
     if (url.pathname === '/ws/2/release/') return Response.json({ releases: [{ id: 'release-example', title: album.collectionName, 'artist-credit': [{ name: album.artistName }], score: 100 }] });
     return Response.json({ id: 'release-example', media: [{ position: 1, tracks: [{ title: 'One track', position: 1, number: '1' }] }] });
   });

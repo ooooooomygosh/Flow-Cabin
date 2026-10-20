@@ -27,7 +27,7 @@ test('download names match what the release workflow builds', () => {
   assert.equal(assetName('1.12.0', { platform: 'linux' }), '');
 });
 test('build config publishes to GitHub so update info is generated', () => {
-  assert.deepEqual(pkg.build.publish, [{ provider: 'github', owner: 'ooooooomygosh', repo: 'album-web', releaseType: 'release' }]);
+  assert.deepEqual(pkg.build.publish, [{ provider: 'github', owner: 'ooooooomygosh', repo: 'Flow-Cabin', releaseType: 'release' }]);
   assert.ok(pkg.build.mac.target.includes('zip'), 'Squirrel.Mac / latest-mac.yml need the zip');
   assert.ok(pkg.build.files.includes('updater.cjs')); assert.ok(pkg.dependencies['electron-updater']);
 });
@@ -63,8 +63,8 @@ test('latest and network errors', async () => {
   const down = createUpdater({ currentVersion: '1.11.0', platform: 'win32', isPackaged: true, env: {}, autoUpdater: fakeAutoUpdater('1.12.0', { fail: true }) });
   const s = await down.check(); assert.equal(s.status, 'error'); assert.match(s.error, /无法连接 GitHub/);
 });
-const RELEASES = 'https://github.com/ooooooomygosh/album-web/releases';
-const feed = `<?xml version="1.0" encoding="UTF-8"?><feed xmlns="http://www.w3.org/2005/Atom"><title>Release notes from album-web</title>
+const RELEASES = 'https://github.com/ooooooomygosh/Flow-Cabin/releases';
+const feed = `<?xml version="1.0" encoding="UTF-8"?><feed xmlns="http://www.w3.org/2005/Atom"><title>Release notes from Flow-Cabin</title>
   <entry><id>tag:github.com,2008:Repository/1/v1.12.0</id><link rel="alternate" type="text/html" href="${RELEASES}/tag/v1.12.0"/><title>v1.12.0</title>
     <content type="html">&lt;h2&gt;新版本&lt;/h2&gt;&lt;ul&gt;&lt;li&gt;唱片 &amp;amp; 小猫&lt;/li&gt;&lt;li&gt;修复&lt;/li&gt;&lt;/ul&gt;</content></entry>
   <entry><id>tag:github.com,2008:Repository/1/v1.11.0</id><link rel="alternate" type="text/html" href="${RELEASES}/tag/v1.11.0"/><content type="html">&lt;p&gt;旧&lt;/p&gt;</content></entry></feed>`;

@@ -53,18 +53,36 @@ html[data-desktop-reduce-motion='true'] *::after { animation: none !important; t
   --px-surface-3: #4d311c;   /* hover */
   --px-ink: #ffe9cb;         /* primary text, warm paper */
   --px-ink-dim: #c9a47a;     /* secondary text */
-  --px-ink-faint: #a88a68;   /* tertiary / placeholders (AA on surface-2 for ≥14px) */
+  --px-ink-faint: #a88a68;   /* tertiary / placeholders — 4.50:1 on surface-2, 5.94:1 on
+                                surface-inset; only 3.67:1 on surface-3 (AA-large), so keep
+                                it off the raised/hover surfaces (use --px-ink-dim there) */
   --px-accent: #e0ad69;      /* amber lamplight — primary actions */
   --px-accent-hi: #ffd99c;   /* accent highlight bevel */
   --px-accent-lo: #a8743c;   /* accent shadow bevel */
+  --px-accent-hi-ghost: rgba(255, 217, 156, .12); /* hover wash on dark chrome */
+  --px-accent-ghost: rgba(224, 173, 105, .08);   /* selected tile wash */
   --px-accent-2: #7fb8a8;    /* teal window-light — secondary accent */
   --px-good: #9ccf8c;        /* moss */
-  --px-warn: #e06a4e;        /* ember */
+  --px-warn: #e06a4e;        /* ember (on the dark wood: 4.88:1 on surface) */
+  --px-warn-ink: #b8391f;    /* ember for TEXT on paper — 5.41:1 on --px-paper (the
+                                bright --px-warn only reaches 3.11:1 there) */
   --px-border: #8a5a32;      /* frame line */
   --px-border-hi: #b07a46;   /* frame highlight bevel */
+  --px-border-soft: rgba(138, 90, 50, .6); /* quiet card frame */
   --px-brass: #d4a46b;       /* brass frame edge (also the 9-slice highlight) */
   --px-shadow: #0d0805;      /* hard drop shadow */
   --px-focus: #ffd99c;       /* keyboard focus ring */
+  /* The one focus ring: a stepped dashed lamp ring, never a soft glow. */
+  --px-focus-ring: 2px dashed var(--px-focus);
+  --px-focus-offset: 2px;
+  /* Button bevels (hard, 2px, no blur): light from the top-left, shade bottom-right. */
+  --px-bevel-white: rgba(255, 255, 255, .12);      /* resting top-left */
+  --px-bevel-white-hi: rgba(255, 255, 255, .16);   /* hover top-left */
+  --px-bevel-white-soft: rgba(255, 255, 255, .08); /* pressed bottom-right */
+  --px-bevel-black: rgba(0, 0, 0, .30);            /* resting bottom-right / pressed top-left */
+  --px-bevel-warm: #fff0cc;                        /* primary button hover top-left */
+  --px-disabled-opacity: .45;  /* one disabled look for every control */
+  --px-backdrop: rgba(13, 8, 5, .72); /* dialog backdrop */
   --px-surface-hud: rgba(42, 26, 16, .92); /* floating HUD chips */
   --px-surface-inset: #160d07;  /* form controls / wells */
   --px-surface-card: #24160d;
@@ -85,6 +103,8 @@ html[data-desktop-reduce-motion='true'] *::after { animation: none !important; t
   --px-font-body: 'HarmonyOS Sans SC Bundled', 'PingFang SC', 'Microsoft YaHei', sans-serif; /* long-form/small text where pixel CJK hurts legibility */
   --px-text-chrome: 12px; --px-text-title: 24px; --px-text-display: 48px;
   --px-text-body-sm: 12px; --px-text-body: 14px; --px-text-body-lg: 16px;
+  /* Line boxes stay on the 4px grid (--px-unit), like every other size. */
+  --px-leading-chrome: 16px; --px-leading-title: 28px; --px-leading-title-lg: 32px;
 
   /* ── geometry ─────────────────────────────────────────────────── */
   --px-unit: 4px;            /* one art pixel at 1x */
@@ -109,8 +129,9 @@ html[data-desktop-reduce-motion='true'] *::after { animation: none !important; t
   --px-ease: steps(4, end);
   --px-ease-fine: steps(8, end);
   --px-ease-smooth: cubic-bezier(.2, .8, .2, 1); /* only for opacity/large panels */
-  /* z table (inside .cabin-room): pet-with-bubble lifts above the console, under the dock/HUD */
-  --z-scene: 0; --z-props: 10; --z-room-console: 10; --z-room-pet: 22; --z-hud: 20; --z-titlebar: 30; --z-chrome: 90; --z-overlay: 80; --z-toast: 100;
+  /* z table (inside .cabin-room): pet-with-bubble lifts above the console, under the dock/HUD.
+     --z-toast is the app-shell toast (app.css): it must stay above every panel. */
+  --z-scene: 0; --z-props: 10; --z-room-console: 10; --z-room-pet: 22; --z-hud: 20; --z-titlebar: 30; --z-chrome: 90; --z-overlay: 80; --z-toast: 300;
   /* modal widths (Dialog size=sm|md|lg|xl); modals live in the top layer, above every --z-* */
   --dialog-sm: 440px; --dialog-md: 580px; --dialog-lg: 920px; --dialog-xl: 1040px;
 }
@@ -118,7 +139,7 @@ html[data-desktop-reduce-motion='true'] *::after { animation: none !important; t
 /* Form controls take the surrounding type; a feature may still size its own control. */
 :is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) :is(select, textarea, input) { font: inherit; }
 /* Keyboard focus: a stepped dashed lamp ring, never a soft glow. Features may move it (outline-offset). */
-:focus-visible { outline: 2px dashed var(--px-focus); outline-offset: 2px; }
+:focus-visible { outline: var(--px-focus-ring); outline-offset: var(--px-focus-offset); }
 /* The one spin: records, discs and LEDs turn in 8 frames (pixel motion, no permanent layer). */
 @keyframes px-spin { to { rotate: 360deg; } }
 }

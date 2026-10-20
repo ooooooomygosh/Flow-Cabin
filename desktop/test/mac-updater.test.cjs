@@ -6,7 +6,7 @@ const { EventEmitter } = require('node:events');
 const { createMacUpdater, parseMacUpdateInfo, zipName, INSTALL_SCRIPT } = require('../mac-updater.cjs');
 const { createUpdater, updateMode } = require('../updater.cjs');
 
-const RELEASES = 'https://github.com/ooooooomygosh/album-web/releases';
+const RELEASES = 'https://github.com/ooooooomygosh/Flow-Cabin/releases';
 const sha = (buffer) => crypto.createHash('sha512').update(buffer).digest('base64');
 const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'flow-cabin-mac-'));
 const yml = (version, files) => `version: ${version}\nfiles:\n${files.map((f) => `  - url: ${f.url}\n    sha512: ${f.sha512}\n    size: ${f.size}\n    blockMapSize: 9`).join('\n')}\npath: ${files[0].url}\nsha512: ${files[0].sha512}\nreleaseDate: '2026-10-13T12:00:00.000Z'\n`;

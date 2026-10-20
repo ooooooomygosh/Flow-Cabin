@@ -1,5 +1,12 @@
 name: Checks
 
+# What this workflow proves, in order:
+#   1. 依赖装得上            npm ci（根项目 + desktop/）
+#   2. 单元测试全绿          npm test（桌面端 node:test + 根项目 node:test，含 CSS 设计系统守卫）
+#   3. 生产构建能出包        npm run build（index / promo / wallpaper / pet / mini 五个入口）
+#   4. 隔离浏览器回归不回归   npm run test:*（固定演示数据 + 生成 WAV，不联网、不碰真实账号）
+# 这一串就是 CONTRIBUTING 里写的 `npm run check` + 浏览器回归；
+# 没有覆盖到的部分写在 docs/limitations.md，不要把绿灯当成真机验收。
 on:
   pull_request:
   push:
@@ -15,7 +22,7 @@ concurrency:
 
 jobs:
   test:
-    name: Unit, production build, and browser smoke
+    name: Unit tests, production build and browser regressions
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -27,11 +34,13 @@ jobs:
           cache-dependency-path: |
             package-lock.json
             desktop/package-lock.json
-      - run: npm ci --no-audit --no-fund
-      - run: npm --prefix desktop ci --no-audit --no-fund
+      - name: Install root and desktop dependencies
+        run: |
+          npm ci --no-audit --no-fund
+          npm --prefix desktop ci --no-audit --no-fund
       - name: Build desktop music adapter
         run: npm --prefix desktop run build:music
-      - name: Run unit tests and production build
+      - name: Run unit tests and production build (npm run check)
         run: npm run check
       - name: Install Chromium
         working-directory: desktop
