@@ -140,6 +140,11 @@ setTrack(id, volume) { const next = save(...); if (next.tracks[id] > 0 && !wante
 
 ## 7. 诚实的边界
 
-- 本轮**没有**推送任何东西到远端（沙箱里没有 GitHub 凭据）。改动在 `polish/2026-10-full-polish` 分支上。
+- 本轮**没有**推送到远端。提供的 GITHUB_TOKEN 是 fine-grained PAT，经实测**只有读权限**：
+  能读 `/user`、仓库元数据与 `main` 上的文件（HTTP 200），但建 ref、写文件内容、git push 全部 403
+  （`Resource not accessible by personal access token`）。
+  改动已提交在本地分支 `polish/2026-10-full-polish`（两个提交，`main` 未动）。
+  要推上去：把 token 的 Repository access 指向 Flow-Cabin，并在 Repository permissions 里勾上
+  **Contents: Read and write**，然后跑 `GITHUB_TOKEN=... bash push-to-github.sh`。
 - 根项目许可证已按 **GPL-3.0-only** 落盘（`LICENSE` 为 GNU GPL v3 正文逐字收录）。这不是偏好：桌面发行包组合了 GPL-3.0-only 的 Simple Music 模块并随包分发，组合作品必须以 GPL-3.0-only 提供。
 - 引擎的「裁定」通道在本环境有绑定层缺陷（嵌套数组与布尔值被压成字符串），导致六个专项的复核结论无法通过引擎落地。**复核本身照常跑了**，结论以各专项交付文档与本报告为准；集成、验证与提交由主控手工完成。
