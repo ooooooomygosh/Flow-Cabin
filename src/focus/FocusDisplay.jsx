@@ -90,6 +90,7 @@ export default function FocusDisplayStage() {
     const key = (event) => {
       if (document.querySelector('dialog[open]:not(.focus-display-shell)') || event.altKey || event.ctrlKey || event.metaKey) return;
       if (event.key === 'Escape') { event.preventDefault(); event.stopImmediatePropagation(); setOpen(false); }
+      else if (/^[fF]$/.test(event.key) && !typing(event.target)) { event.preventDefault(); event.stopImmediatePropagation(); if (!event.repeat) setOpen(false); }
       // ←/→ skip tracks here (one meaning); the face itself changes with the tabs in the bar.
       else if ((event.key === 'ArrowLeft' || event.key === 'ArrowRight') && !typing(event.target) && !event.target?.closest?.('[role=radiogroup],[role=tablist]')) { event.preventDefault(); event.stopImmediatePropagation(); if (!event.repeat) playerCommand(event.key === 'ArrowRight' ? 'next' : 'previous'); }
       // 小屋日记 (L) sits above the room, not above 沉浸: leave 沉浸 first, then open it.

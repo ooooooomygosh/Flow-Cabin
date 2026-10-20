@@ -98,6 +98,9 @@ try {
   await page.keyboard.press('Escape'); await display.waitFor({ state: 'detached' });
   assert.equal(await page.locator('.focus-badge').evaluate(node => node === document.activeElement), true);
   check('immersive-display-is-modal-and-returns-keyboard-focus');
+  await page.keyboard.press('f'); await display.waitFor();
+  await page.keyboard.press('f'); await display.waitFor({ state: 'detached' });
+  check('f-still-toggles-immersion-when-the-native-dialog-is-open');
   await page.evaluate(() => document.activeElement.blur()); await page.keyboard.press('t');
   const corner = page.getByRole('dialog', { name: '唱机特写', exact: true }); await corner.waitFor();
   await page.keyboard.press('Escape'); await corner.waitFor({ state: 'detached' });
