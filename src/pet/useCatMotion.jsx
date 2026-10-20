@@ -5,5 +5,5 @@ import { readPetMotion, subscribePetMotion } from './pet-motion.mjs';
 export function useCatMotion(reduceMotion = false, hidden = false) {
   const [state, setState] = useState(() => readPetMotion());
   useEffect(() => subscribePetMotion(setState), []);
-  return { visible: state.visible && !hidden, reduced: Boolean(reduceMotion || state.reduced) };
+  return { visible: state.visible && !hidden, reduced: Boolean(reduceMotion || state.reduced), background: state.background, desktop: state.desktop };
 }

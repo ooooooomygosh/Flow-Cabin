@@ -14,7 +14,10 @@ import { onReducedMotionChange, reducedMotion as reducedFlag } from '../motion-p
 import { inBackground, onBackgroundChange } from '../frame-clock.mjs';
 
 export function petMotionState({ hidden = false, focused = true, desktop = false, reduced = false, background = false } = {}) {
-  return { visible: !hidden && !background && (desktop || focused), reduced: Boolean(reduced) };
+  // `desktop` marks the wallpaper and the desktop pet: they are separate
+  // always-on-top surfaces that are meant to keep living on the desktop, so
+  // they are not stopped when the app is in the background.
+  return { visible: !hidden && !background && (desktop || focused), reduced: Boolean(reduced), background: Boolean(background), desktop: Boolean(desktop) };
 }
 
 // The music hop is counted in art pixels: the cat's sprite is 32 art px wide

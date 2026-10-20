@@ -67,7 +67,33 @@ effect easing = linear（修复后）  ：distinct poses = 9
 
 `src/CabinRoom.jsx:207` 的「专辑墙」按钮在打开弹层的同时卸载了自己所在的整块「整理唱片架」面板，于是 `Dialog` 记下的触发元素在关闭时已不在 DOM 里。用户用键盘走完专辑网格、关闭弹层后，焦点掉到 `<body>`，Tab 顺序从头开始。已给 `Dialog` 加 `returnFocus` 兜底锚点。
 
-### 3.4 壁炉开关被改坏（集成阶段发现，已还原）
+### 3.4 发版必踩的雷：16 个回归脚本把版本号写死（已根治）
+
+把版本升到 1.21.5 后，CI 第一次就红在 `npm run test:browser`：
+
+```
+locator.dblclick: Timeout 30000ms exceeded
+  <dialog open aria-label="版本更新" class="cabin-dialog cabin-modal is-lg onboarding"> intercepts pointer events
+  at verifyWeatherSwitchSteady (scripts/weather-motion-checks.mjs:123:43)
+```
+
+根因不是新代码有问题，而是**版本更新向导在首次启动时自动弹出**（因为版本号变了），挡住了天气回归里对奶糖的双击。而向导之所以会弹，是因为 **16 个回归脚本把 `seenVersion: '1.21.4'` 写死**用来压住它——每次发版都得手改十几处，漏一处就红，v1.21.6 会再犯一次。
+
+已根治：新增 `scripts/app-version.mjs`，从根 `package.json` 读版本，17 个脚本改用它；发版从此只改一个文件。种子通过 `window.__onboardingSeed` 传进浏览器上下文（`onboardingSeed()` 是 Node 侧函数，`addInitScript` 的回调跑在页面里，直接调用会 ReferenceError —— 这个坑我踩了一次，CI 上当场抓出来）。
+
+### 3.5 降级开关统一后，桌宠被误判成「要安静」（已修）
+
+动效专项把 JS 侧降级来源统一成「OS 偏好 || 桌面开关」（与 CSS 的 kill switch 对齐，方向正确）。但焦点回归脚本给**所有页面**（含桌宠页）都打开了应用级的 `data-desktop-reduce-motion`，于是桌宠被判为降级模式，**跳跃动画压根没被创建**，`companion-generated-lofi-tempo-reaches-pet` 稳定失败。
+
+新行为是对的（用户关了动效，猫就该安静）；错的是这条用例的前提——它已经用 `emulateMedia({reducedMotion:'no-preference'})` 表达了「这一轮要动效」，却又从上下文继承了应用级的降级开关。已让上下文脚本不再覆盖桌宠页自己的设置（用 `window.albumPet` 判据：桌宠是独立浮窗，不该继承房间页的降级开关）。
+
+### 3.6 「后台就停」应该是显式开关，不是默认行为（已改）
+
+原实现让 `PetLife` 在后台一律停下跳跃动画。但**桌宠窗口和壁纸是桌面浮窗，本来就该一直活着**——只有屋里那只猫该停。已改成 `pauseInBackground` 显式开关，由 `RoomCat` 开启，桌面浮窗不传。
+
+真实 Chromium 复测：屋里的猫在后台停下、2 秒后没有复活；桌宠浮窗在后台继续活着。
+
+### 3.7 壁炉开关被改坏（集成阶段发现，已还原）
 
 交互专项给 `src/room/CabinDetails.jsx` 的壁炉按钮加了一个守卫：「声音没开时先提示、不执行」。这个改动基于一个**错误前提**——它以为单独调火声轨道不会开环境音。实际上 `src/audio/lifecycle.mjs` 的 `setTrack` 是：
 
@@ -94,7 +120,8 @@ setTrack(id, volume) { const next = save(...); if (next.tracks[id] > 0 && !wante
 | `npm --prefix desktop test` | **通过**。354 / 354 |
 | `npm run test:promo` | **通过**。18 / 18（真实 Chromium，六档宽度截图 + 逐条复刻交互断言） |
 | `npm run test:browser` | **在沙箱里不稳定**。见 §4.1 |
-| 动效两处修复 | **通过**。真实 Chromium 实测：飞行姿态 2 → 9；后台 2.3s 后动画数 0 |
+| 动效两处修复 | **通过**。真实 Chromium 实测：飞行姿态 2 → 9；屋里的猫后台停下且 2 秒后不复活；桌宠浮窗在后台继续活着 |
+| `npm run test:focus-ui` | **通过**（`companion-generated-lofi-tempo-reaches-pet` 与 `room-cat-moves-on-the-beat` 均通过）。前者曾因 §3.5 稳定失败，已修 |
 | README 链接 | **通过**。相对链接与图片 15 个全部落盘验证，缺失 0；徽章 URL 实测 200 |
 
 ### 4.1 关于 `npm run test:browser` 的不稳定
@@ -109,6 +136,8 @@ setTrack(id, volume) { const next = save(...); if (next.tracks[id] > 0 && !wante
 | 4 | **基线 7423860** | `console expands: hovered 183ms in place without support` |
 
 基线同样失败，且失败在互为兄弟的检查上。根因是 `scripts/browser-smoke.mjs` 的 `hopDuring` 辅助函数**按动画帧采样**做几何与时序断言（`arc apex`、`hovered Nms`），在负载较高的沙箱里会丢帧、采不到峰值。**这是本仓库既有测试的脆弱性，不是本轮引入的回归**——本轮没有改动 `scripts/browser-smoke.mjs` 里任何断言，也没有放宽任何一条。
+
+同一批断言里，`room-cat-moves-on-the-beat-and-listens-without-one`（`groove is N ms off the beat`，阈值 40ms）在本沙箱里也时好时坏——**基线在同一环境下同样失败（99ms）**，而 GitHub runner 上它是绿的。
 
 **没有为此改动断言**。要修的话，方向是让 `hopDuring` 不依赖逐帧采样（例如直接读动画的 keyframe 几何，或把峰值断言改成对 `translate` 曲线求值而不是对渲染结果求值），这属于测试基础设施改动，建议单开一轮做，并且要先复现基线同样的失败再动。
 

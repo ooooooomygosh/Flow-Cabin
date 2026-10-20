@@ -44,7 +44,11 @@ const writeHop = (node, energy) => {
   if (node.style.getPropertyValue('--pet-hop') !== String(hop)) node.style.setProperty('--pet-hop', String(hop));
   if (node.style.getPropertyValue('--pet-hop-down') !== String(down)) node.style.setProperty('--pet-hop-down', String(down));
 };
-export default function PetLife({ pose = 'idle', pokedAt = 0, reduced = false, children }) {
+// `pauseInBackground` is opt-in: only the cat inside the room stops hopping
+// when the app is in the background. The desktop pet and the wallpaper are
+// always-on-top surfaces that are supposed to keep living, so they leave it
+// off — and their beat/tempo must keep updating either way.
+export default function PetLife({ pose = 'idle', pokedAt = 0, reduced = false, pauseInBackground = false, children }) {
   const root = useRef(null), [burst, setBurst] = useState(0), first = useRef(true);
   const level = useRef(null);
   useEffect(() => {
@@ -64,7 +68,7 @@ export default function PetLife({ pose = 'idle', pokedAt = 0, reduced = false, c
     let hop = null, shadow = null, timer = null, background = false;
     const stop = () => { hop?.cancel(); shadow?.cancel(); hop = null; shadow = null; };
     const sync = () => {
-      if (background) return;
+      if (pauseInBackground && background) return;
       const length = beatLength(currentBeat()), phase = sinceBeat(Date.now());
       if (!hop) { hop = cat.animate(BOP, { duration: length, iterations: Infinity }); try { shadow = host.animate(SHADOW, { duration: length, iterations: Infinity, pseudoElement: '::before' }); } catch { shadow = null; } }
       else if (Math.abs(hop.effect.getTiming().duration - length) > 2) { hop.effect.updateTiming({ duration: length }); shadow?.effect.updateTiming({ duration: length }); }
@@ -81,11 +85,12 @@ export default function PetLife({ pose = 'idle', pokedAt = 0, reduced = false, c
     // hop two seconds later and the cat keeps bouncing in the background.
     const offBackground = onBackgroundChange((value) => {
       background = value;
+      if (!pauseInBackground) return;
       if (background) { clearInterval(timer); timer = null; stop(); }
       else { startTimer(); sync(); }
     });
     return () => { off(); offBackground(); clearInterval(timer); timer = null; stop(); };
-  }, [pose, reduced]);
+  }, [pose, reduced, pauseInBackground]);
   useEffect(() => {
     if (first.current) { first.current = false; return; }
     if (!pokedAt) return;
