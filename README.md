@@ -80,7 +80,7 @@
 
 [**前往 Releases 选择安装包 →**](https://github.com/ooooooomygosh/Flow-Cabin/releases/latest)
 
-当前版本 **v1.21.4**，逐版本改动见[发布说明](desktop/RELEASE-NOTES.md)。
+当前版本 **v1.21.5**，逐版本改动见[发布说明](desktop/RELEASE-NOTES.md)。
 
 | 平台 | 安装包 |
 | --- | --- |

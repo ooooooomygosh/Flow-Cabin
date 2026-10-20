@@ -1,6 +1,6 @@
 # 使用边界与验证状态
 
-当前版本基线：`v1.21.4`（2026-10-19）。`v1.21.3` 是上一个已发布版本；`v1.21.4` 的 tag、安装资产与签名状态以 [GitHub Releases](https://github.com/ooooooomygosh/Flow-Cabin/releases) 为准。#61 已在当前主线解决。
+当前版本基线：`v1.21.5`（2026-10-20）。`v1.21.4` 是上一个已发布版本；`v1.21.5` 的 tag、安装资产与签名状态以 [GitHub Releases](https://github.com/ooooooomygosh/Flow-Cabin/releases) 为准。#61 已在当前主线解决。
 
 本页区分「已实现」「自动化或隔离页面已验证」和「真实设备已验证」。旧提交的测试数字不会自动套用到当前版本。
 
@@ -74,7 +74,7 @@ HTTP 模板的智能唱片机请求使用 `response_format: {"type":"json_object
 - Windows 真实物理键盘 / 鼠标、macOS 输入法组合、原生焦点切换与整日办公连续运行尚未完成验收。
 - 各云厂商真实账号与额度、真实第三方 AI 端点上的 `response_format` 兼容性、AI 完整歌单在真实 QQ / 网易云账号下的逐曲匹配、无匹配曲目跳过与长歌单连续播放尚未完成端到端验收。
 - 本机 Codex CLI 需要用户自行安装并登录；心流小屋没有覆盖所有 CLI 版本、Windows shell 包装器、企业代理或 Codex 账号额度耗尽等场景。
-- `v1.17.0` → `v1.21.4` 的同安装路径安装器升级、重启与逐域数据比较尚未验证；旧包存在或校验通过不等于升级验收通过。
+- `v1.17.0` → `v1.21.5` 的同安装路径安装器升级、重启与逐域数据比较尚未验证；旧包存在或校验通过不等于升级验收通过。
 - Windows、Intel Mac、多显示器 / 缩放 / 热拔插 / 睡眠恢复、全局输入与原生动态桌面挂载尚未完成实机覆盖。
 - 真实 QQ / 网易云 / Apple Music / Music Assistant 账号、版权与会员路径仍未完成全量验收。
 - macOS 使用稳定的本地代码签名身份来保持 TCC 授权，但不是 Apple Developer ID，也没有 notarization / hardened runtime；Windows 未建立可信发布者签名。自动更新器没有端到端验收。
