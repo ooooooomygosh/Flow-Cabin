@@ -167,7 +167,21 @@ setTrack(id, volume) { const next = save(...); if (next.tracks[id] > 0 && !wante
 
 ---
 
-## 7. 诚实的边界
+## 7. 发布结果（2026-10-20）
+
+| 环节 | 结果 |
+| --- | --- |
+| 提交 | 6 个提交，`polish/2026-10-full-polish` → PR #71 |
+| CI | **21 个步骤全绿**（浏览器冒烟、宣传页、播放、focus/模式、节拍同步、唱片架、AI、来信、记忆删除、词书、房间主题、纪念品回归） |
+| 合并 | PR #71 已合并到 `main`（merge commit `6ad988f`，沿用仓库既有的 merge commit 惯例） |
+| 发布 | tag `v1.21.5` → `desktop-release` 工作流 **success**；Release 已公开发布，14 个资产齐全 |
+| 安装包 | macOS arm64/x64（DMG + ZIP）、Windows x64（安装版 + 便携版）、blockmap、`latest.yml`、`latest-mac.yml`、`SHA256SUMS.txt` |
+| 更新源 | `releases/latest` 正确跳转到 `v1.21.5`；`latest.yml` 的 version / sha512 / size 与安装包一致 |
+| 签名 | 发布包用稳定的自签名身份（`Flow Cabin Local Signing`）并校验了证书根指纹——**仍不是 Apple Developer ID，没有 notarization** |
+
+发布说明用的就是本轮写的那份 `desktop/RELEASE-NOTES.md`，用户看到的第一句和 README 里写的完全一致。
+
+## 8. 诚实的边界
 
 - 本轮**没有**推送到远端。提供的 GITHUB_TOKEN 是 fine-grained PAT，经实测**只有读权限**：
   能读 `/user`、仓库元数据与 `main` 上的文件（HTTP 200），但建 ref、写文件内容、git push 全部 403
