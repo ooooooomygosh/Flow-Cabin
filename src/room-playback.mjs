@@ -1,3 +1,4 @@
+import { usesBrowserCollection } from './collection-api.mjs';
 import { playbackErrorMessage } from './player/playback-cache.mjs';
 import { rankForAutoplay, matchKey, AUTO_MATCH_ATTEMPTS } from './player/auto-match.mjs';
 import { toSimplified, toTraditional } from './player/hanzi.mjs';
@@ -20,6 +21,15 @@ export function exactTrack(item, index, provider) {
 // retain a short timeout. Aborting a request does not cancel a native scan.
 export const musicRequestTimeout = (path) => ['/local/rescan', '/local/remove-folder'].includes(path) ? 10 * 60 * 1000 : 20000;
 export async function musicRequest(path, value, signal) {
+  if (usesBrowserCollection()) {
+    if (signal?.aborted) throw signal.reason || new Error('操作已取消。');
+    if (value === undefined && path === '/config') return { qqLoggedIn: false, neteaseLoggedIn: false, appleMusicAvailable: false };
+    if (value === undefined && path === '/local/summary') return { folders: [], albumCount: 0, trackCount: 0 };
+    if (value === undefined && path === '/local/albums') return { albums: [] };
+    if (value === undefined && path === '/apple/permission') return { available: false, granted: false, needsPermission: false };
+    if (value === undefined && path === '/now-playing') return { available: false };
+    throw new Error('这个音源需要桌面版。网页版可以先收藏唱片、专注，或开启小屋声音。');
+  }
   const controller = new AbortController();
   const abort = () => controller.abort(signal?.reason);
   if (signal?.aborted) abort(); else signal?.addEventListener('abort', abort, { once: true });

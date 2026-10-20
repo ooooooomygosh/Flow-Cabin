@@ -45,6 +45,8 @@ jobs:
       - name: Install Chromium
         working-directory: desktop
         run: npx playwright install --with-deps chromium
+      - name: Run static web collection without a backend
+        run: npm run test:web-static
       - name: Run record, focus, journal and return journey
         run: npm run test:journey
       - name: Run browser smoke tests
@@ -81,6 +83,7 @@ jobs:
         with:
           name: browser-smoke
           path: |
+            desktop/test-results/web-static/
             desktop/test-results/journey/
             desktop/test-results/browser/
             desktop/test-results/promo/

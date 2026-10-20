@@ -3,7 +3,7 @@ import { Search, Plus, Check, FolderOpen, Disc3, Loading } from './icons';
 import Dialog from './Dialog';
 import { Tabs, Segmented, tabPanelProps } from './ui/Roving';
 import { buildSearchInput } from './music-search.mjs';
-import { addItem } from './collection-api.mjs';
+import { addItem, usesBrowserCollection } from './collection-api.mjs';
 import { localAlbumItem, musicRequest, normalizeLocalLibrary } from './room-playback.mjs';
 import { desktopCommand, useDesktopAppearance } from './desktop-client';
 import FileImport from './player/FileImport';
@@ -22,12 +22,14 @@ function Cover({ src, title }) {
   return src && !failed ? <img className="add-cover" src={src} alt={`${title} 封面`} width="72" height="72" loading="lazy" onError={() => setFailed(true)}/> : <span className="add-cover add-cover-empty" aria-hidden="true"><Disc3 size={26}/></span>;
 }
 
-function CatalogSearch({ initialQuery, onAdded, added }) {
+function CatalogSearch({ initialQuery, onAdded, added, browserOnly = false }) {
   const [provider, setProvider] = useState(readProvider), [type, setType] = useState('album');
   const [query, setQuery] = useState(initialQuery || ''), [results, setResults] = useState([]), [status, setStatus] = useState(''), [busyId, setBusyId] = useState('');
   const request = useRef(null), input = useRef(null);
   const search = async (event, value = query) => {
-    event?.preventDefault(); request.current?.abort();
+    event?.preventDefault();
+    if (browserOnly) { setStatus('曲库搜索需要桌面版，网页版可以手动填写唱片。'); return; }
+    request.current?.abort();
     let params; try { params = buildSearchInput({ query: value, provider, type }); } catch (error) { setStatus(error.message); return; }
     const controller = new AbortController(); request.current = controller;
     setStatus('searching'); setResults([]);
@@ -51,12 +53,13 @@ function CatalogSearch({ initialQuery, onAdded, added }) {
       <Search size={18}/><input ref={input} type="search" name="cabin-album-search" aria-label="搜索专辑、歌手或粘贴 QQ 音乐专辑链接" placeholder="歌手 · 专辑 · 歌曲，或粘贴 QQ 音乐专辑链接" value={query} onChange={(event) => setQuery(event.target.value)}/>
       {/* 搜索中按钮只剩一个图标（图标是 aria-hidden 的 svg）：没有 aria-label
           的话读屏只会报「按钮」。名字跟着状态走，键盘用户才知道它在忙什么。 */}
-      <button type="submit" className="pixel-button is-primary" aria-label={status === 'searching' ? '正在搜索' : '搜索'} disabled={status === 'searching'}>{status === 'searching' ? <Loading size={16} className="player-spin"/> : '搜索'}</button>
+      <button type="submit" className="pixel-button is-primary" aria-label={status === 'searching' ? '正在搜索' : '搜索'} disabled={browserOnly || status === 'searching'}>{status === 'searching' ? <Loading size={16} className="player-spin"/> : '搜索'}</button>
     </form>
     <div className="add-options">
       <Segmented label="曲库" items={CATALOGS} value={provider} onChange={(value) => { if (provider !== value) { request.current?.abort(); setResults([]); setStatus(''); setProvider(value); } try { localStorage.setItem('album-circle-search-provider-v2', value); } catch {} }}/>
       <Segmented label="类型" items={RESULT_TYPES} value={type} onChange={(value) => { if (type !== value) { request.current?.abort(); setResults([]); setStatus(''); setType(value); } }}/>
     </div>
+    {browserOnly && <p className="add-hint">曲库搜索需要桌面版。网页版可以在「手动填写」添加唱片，也可以导入已有备份。</p>}
     {/* One live region for the whole search: swapping two <p role=status> in and
         out is not announced reliably, a single region whose text changes is. */}
     <p className="add-status" role="status">{status === 'searching' ? '正在翻找唱片…' : status}</p>
@@ -144,7 +147,8 @@ function ManualAdd({ onAdded }) {
 }
 
 export default function AddAlbum({ items, close, initialQuery = '', initialTab = 'catalog', onAdded }) {
-  const [tab, setTab] = useState(() => ADD_TABS.some(({ id }) => id === initialTab) ? initialTab : 'catalog'), [added, setAdded] = useState(() => new Set()), [notice, setNotice] = useState('');
+  const browserOnly = usesBrowserCollection();
+  const [tab, setTab] = useState(() => browserOnly && initialTab === 'catalog' ? 'manual' : ADD_TABS.some(({ id }) => id === initialTab) ? initialTab : 'catalog'), [added, setAdded] = useState(() => new Set()), [notice, setNotice] = useState('');
   const handleAdded = (item, duplicate, candidateId) => {
     setAdded((old) => new Set([...old, candidateId || item.id]));
     setNotice(duplicate ? `《${item.title}》已经在唱片架上了。` : `《${item.title}》已放上唱片架。`);
@@ -157,7 +161,7 @@ export default function AddAlbum({ items, close, initialQuery = '', initialTab =
           文件里的搜索状态就是这么做的（见上面 add-status 的注释）。外层这个
           div 永远在文档里，空的时候不占高度、不留边框。 */}
       <div role="status">{notice && tab !== 'playlists' && <p className="add-notice"><Check size={16}/>{notice}</p>}</div>
-      {tab === 'catalog' && <CatalogSearch initialQuery={initialQuery} added={added} onAdded={handleAdded}/>}
+      {tab === 'catalog' && <CatalogSearch browserOnly={browserOnly} initialQuery={initialQuery} added={added} onAdded={handleAdded}/>}
       {tab === 'playlists' && <PlaylistImport items={items} close={close} onAdded={onAdded}/>}
       {tab === 'local' && <LocalImport items={items} onAdded={handleAdded}/>}
       {tab === 'manual' && <ManualAdd onAdded={handleAdded}/>}

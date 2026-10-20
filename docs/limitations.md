@@ -103,3 +103,7 @@ HTTP 模板的智能唱片机请求使用 `response_format: {"type":"json_object
 - [既有自动验证汇总](audit/verification-summary.md)、[浏览器验证](audit/browser-validation.md)与 [Mac 原生验收](audit/native-mac-acceptance-2026-10-09.md)：保留历史提交和已验证 / 未验证项；最新结论以本页为准。
 
 [回到 README](../README.md) · [第一次使用](getting-started.md) · [新手引导](onboarding.md)
+
+### 静态网页版收藏
+
+静态网站不提供桌面 `/api/items` 和 `/desktop-music` 服务。网页版在当前浏览器存储唱片，支持手动填写、卡片笔记、移除、导出和导入既有备份；曲库搜索和平台音乐服务需要桌面版。存储失败会明确报告，原有唱片保持不变；清理站点数据前请导出备份。此路径由不模拟后端的生产构建浏览器回归验证。
