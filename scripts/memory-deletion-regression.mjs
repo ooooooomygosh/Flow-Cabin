@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { launchChromium } from './launch-browser.mjs';
 import { hasViteLocalOrigin } from './vite-readiness.mjs';
 import { JOURNAL_KEY } from '../src/focus/journal-entries.mjs';
+import { onboardingSeed } from './app-version.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const output = path.resolve(process.env.MEMORY_DELETE_OUTPUT || path.join(root, 'desktop/test-results/memory-deletion'));
@@ -106,9 +107,10 @@ try {
   const run = async (name, test, { notes = '原有随手记', journalSeed = null } = {}) => {
     if (process.env.MEMORY_DELETE_FILTER && !name.includes(process.env.MEMORY_DELETE_FILTER)) return;
     const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'zh-CN', reducedMotion: 'reduce' });
+    await context.addInitScript((seed) => { window.__onboardingSeed = seed; }, onboardingSeed());
     await context.addInitScript(({ focusKey, journalKey, notes, journalSeed }) => {
       if (location.origin === 'null') return;
-      if (!localStorage.getItem('flow-cabin-onboarding-v1')) localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.4' }));
+      if (!localStorage.getItem('flow-cabin-onboarding-v1')) localStorage.setItem('flow-cabin-onboarding-v1', window.__onboardingSeed);
       if (!localStorage.getItem('album-circle-focus-display-v1')) localStorage.setItem('album-circle-focus-display-v1', JSON.stringify({ autoEnter: false }));
       if (!localStorage.getItem(focusKey)) localStorage.setItem(focusKey, JSON.stringify({ notes, settings: { focusMin: 25, shortMin: 5, notify: false, chime: false } }));
       if (journalSeed && !localStorage.getItem(journalKey)) localStorage.setItem(journalKey, JSON.stringify(journalSeed));

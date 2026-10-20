@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import { chooseSource } from './settings-actions.mjs';
 import { normalizeItem } from '../desktop/collection-store.cjs';
+import { onboardingSeed } from './app-version.mjs';
 
 // Runs the real renderer and polls its HTTP boundary. Music.app is never opened.
 export async function verifyAppleHandoff({ browser, origin, output, check }) {
@@ -10,10 +11,11 @@ export async function verifyAppleHandoff({ browser, origin, output, check }) {
     const errors = [], controls = [], resolves = [];
     const selected = { id: 'ABCDEF0123456789', title: '所选歌曲', artist: '演示歌手', album: '原始专辑', duration: 200, elapsed: 12 };
     let current = { ...selected, title: '另一首歌曲', state: initial }, polls = 0, failPoll = false;
+    await context.addInitScript((seed) => { window.__onboardingSeed = seed; }, onboardingSeed());
     await context.addInitScript(() => {
       Object.defineProperty(navigator, 'platform', { value: 'MacIntel' });
       Object.defineProperty(navigator, 'userAgentData', { value: { platform: 'macOS' } });
-      localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.4' }));
+      localStorage.setItem('flow-cabin-onboarding-v1', window.__onboardingSeed);
       window.albumDesktopAppearance = { client: true, reduceMotion: true };
       const init = () => { document.documentElement.dataset.desktopClient = 'true'; document.documentElement.dataset.desktopReduceMotion = 'true'; };
       if (document.documentElement) init(); else new MutationObserver((_, observer) => { if (document.documentElement) { init(); observer.disconnect(); } }).observe(document, { childList: true });

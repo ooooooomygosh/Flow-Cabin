@@ -10,6 +10,7 @@ import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { launchChromium } from './launch-browser.mjs';
 import { hasViteLocalOrigin } from './vite-readiness.mjs';
+import { onboardingSeed } from './app-version.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const output = process.env.SMART_TURNTABLE_OUTPUT || path.join(root, 'desktop/test-results/smart-turntable');
@@ -82,11 +83,12 @@ try {
 
   const run = async (name, plan, test) => {
     const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'zh-CN', reducedMotion: 'reduce' });
+    await context.addInitScript((seed) => { window.__onboardingSeed = seed; }, onboardingSeed());
     await context.addInitScript(({ apiBase, apiOrigin, key, focusKey, queueKey }) => {
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
       const day = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
-      localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.4' }));
+      localStorage.setItem('flow-cabin-onboarding-v1', window.__onboardingSeed);
       localStorage.setItem('album-circle-focus-display-v1', JSON.stringify({ autoEnter: false }));
       localStorage.setItem('album-circle-room-player-v1', 'auto');
       localStorage.setItem(queueKey, JSON.stringify({ ids: ['old-queued'], repeat: 'one', shuffle: true }));

@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { spawn } from 'node:child_process';
 import { hasViteLocalOrigin } from './vite-readiness.mjs';
+import { onboardingSeed } from './app-version.mjs';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const output = process.env.FOCUS_OUTPUT || path.join(root, 'desktop/test-results/focus-ui');
 const port = Number(process.env.FOCUS_PORT || 4188), origin = `http://127.0.0.1:${port}`;
@@ -50,11 +51,12 @@ try {
   const run = async (name,test,{firstVisit=false,collection,autoEnter=false,motion=false}={}) => {
     if (process.env.FOCUS_FILTER && !process.env.FOCUS_FILTER.split(',').some(filter=>name.includes(filter))) return;
     const context = await browser.newContext({viewport:{width:1440,height:900},locale:'zh-CN',reducedMotion:motion?'no-preference':'reduce'});
+    await context.addInitScript((seed) => { window.__onboardingSeed = seed; }, onboardingSeed());
     await context.addInitScript(({key,firstVisit,autoEnter,motion}) => {
       if (location.origin==='null') return;
       // Most suites work in the dock after starting a round; 沉浸 on start is covered by its own test.
       if (!autoEnter && !localStorage.getItem('album-circle-focus-display-v1')) localStorage.setItem('album-circle-focus-display-v1',JSON.stringify({autoEnter:false}));
-      if (!firstVisit) localStorage.setItem('flow-cabin-onboarding-v1',JSON.stringify({version:2,status:'done',step:'done',seenVersion:'1.21.4'}));
+      if (!firstVisit) localStorage.setItem('flow-cabin-onboarding-v1', window.__onboardingSeed);
       if (!firstVisit && !localStorage.getItem(key)) localStorage.setItem(key,JSON.stringify({notes:'原有随手记',settings:{focusMin:1,shortMin:1,notify:false,chime:false}}));
       window.__nativeCommands=[];
       window.albumDesktopAppearance={client:true,reduceMotion:!motion};

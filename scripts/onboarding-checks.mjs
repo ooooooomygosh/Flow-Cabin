@@ -2,6 +2,7 @@ import { openRoomSettings, closeSettings } from './settings-actions.mjs';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { getRoomScene } from '../src/scene-catalog.mjs';
+import { onboardingSeed } from './app-version.mjs';
 
 // First-run wizard + settings hub checks, sharing the screenshot suite's
 // isolated, offline routes. The web build has no desktop shell, so every
@@ -11,6 +12,7 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
     const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'zh-CN', reducedMotion: 'reduce' });
     await context.route('**/*', routeHandler);
     await context.addInitScript(() => { window.open = () => { throw new Error('Onboarding must not invoke native actions on the web'); }; });
+    await context.addInitScript((seed) => { window.__onboardingSeed = seed; }, onboardingSeed());
     if (init) await context.addInitScript(init);
     const page = await context.newPage(); page.setDefaultTimeout(8000);
     const failures = []; page.on('pageerror', (error) => failures.push(error.message));
@@ -130,7 +132,7 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
     if (location.origin === 'null') return;
     window.cabinDesktop = { getDesktopModeStatus: () => ({ active: false, supported: false, reason: '当前系统不支持沉入桌面' }), enterDesktopMode() {}, exitDesktopMode() {} };
     localStorage.setItem('flow-cabin-welcome-v1', 'seen');
-    localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.4', source: 'local', permissions: {}, tested: 'skipped' }));
+    localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ ...JSON.parse(window.__onboardingSeed), source: 'local', permissions: {}, tested: 'skipped' }));
   }));
   try {
     await page.goto(origin); await button(page, '设置').click(); await page.getByRole('tab', { name: '显示与桌面' }).click();
@@ -148,9 +150,9 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
   try {
     await page.goto(origin);
     const updateWizard = wizardOf(page, '版本更新'); await updateWizard.waitFor();
-    await heading(page).filter({ hasText: '你离开的这段时间，小屋更新了 7 个版本' }).waitFor();
+    await heading(page).filter({ hasText: '你离开的这段时间，小屋更新了 8 个版本' }).waitFor();
     assert.deepEqual(await updateWizard.locator('.onboarding-progress li').allInnerTexts(), ['1\n更新', '2\n音源', '3\n权限', '4\n房间', '5\n试听', '6\n完成']);
-    assert.deepEqual(await updateWizard.locator('.onboarding-release header span').allInnerTexts(), ['v1.21.4', 'v1.21.3', 'v1.21.1', 'v1.21.0', 'v1.20.0', 'v1.19.0', 'v1.18.0']);
+    assert.deepEqual(await updateWizard.locator('.onboarding-release header span').allInnerTexts(), ['v1.21.5', 'v1.21.4', 'v1.21.3', 'v1.21.1', 'v1.21.0', 'v1.20.0', 'v1.19.0', 'v1.18.0']);
     await updateWizard.getByText('「键鼠陪伴」进入「设置」一级入口', { exact: false }).waitFor();
     await button(page, '稍后继续').waitFor();
     assert.equal(await button(page, '开始设置').count(), 0);

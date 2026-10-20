@@ -6,6 +6,7 @@ import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { launchChromium } from './launch-browser.mjs';
 import { hasViteLocalOrigin } from './vite-readiness.mjs';
+import { onboardingSeed } from './app-version.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const output = process.env.STUDY_OUTPUT || path.join(root, 'desktop/test-results/study-ui');
@@ -140,9 +141,10 @@ try {
   browser = await launchChromium();
   report.browserVersion = await browser.version();
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'zh-CN', reducedMotion: 'reduce' });
+  await context.addInitScript((seed) => { window.__onboardingSeed = seed; }, onboardingSeed());
   await context.addInitScript(({ focusKey, displayKey }) => {
     if (location.origin === 'null') return;
-    if (!localStorage.getItem('flow-cabin-onboarding-v1')) localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.4' }));
+    if (!localStorage.getItem('flow-cabin-onboarding-v1')) localStorage.setItem('flow-cabin-onboarding-v1', window.__onboardingSeed);
     if (!localStorage.getItem(focusKey)) localStorage.setItem(focusKey, JSON.stringify({ notes: '', settings: { focusMin: 25, shortMin: 5, notify: false, chime: false } }));
     if (!localStorage.getItem(displayKey)) localStorage.setItem(displayKey, JSON.stringify({ mode: 'ring', show: 'clock', seconds: true, autoEnter: false }));
     window.__nativeCommands = [];

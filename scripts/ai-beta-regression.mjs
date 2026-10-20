@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
 import { hasViteLocalOrigin } from './vite-readiness.mjs';
 import { chatUrl } from '../src/ai/ai-model.mjs';
+import { onboardingSeed } from './app-version.mjs';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const output = process.env.AI_OUTPUT || path.join(root, 'desktop/test-results/ai-beta');
 const port = Number(process.env.AI_PORT || 4196), origin = `http://127.0.0.1:${port}`;
@@ -25,10 +26,11 @@ try {
   const run = async (name, test, { desktop = false, ai = null, mode = () => ({ status: 200 }) } = {}) => {
     if (process.env.AI_FILTER && !name.includes(process.env.AI_FILTER)) return;
     const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'zh-CN', reducedMotion: 'reduce', ...(process.env.AI_TIMEZONE ? { timezoneId: process.env.AI_TIMEZONE } : {}) });
+    await context.addInitScript((seed) => { window.__onboardingSeed = seed; }, onboardingSeed());
     await context.addInitScript(({ FOCUS, desktop, ai, KEY, endpoint }) => {
       if (location.origin === 'null' || sessionStorage.getItem('seeded')) return;
       sessionStorage.setItem('seeded', '1');
-      localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.4' }));
+      localStorage.setItem('flow-cabin-onboarding-v1', window.__onboardingSeed);
       localStorage.setItem('album-circle-focus-display-v1', JSON.stringify({ autoEnter: false }));
       // Seed the browser's actual reporting period. Daily letters need yesterday,
       // not last week's weekend (those coincide only on Monday).

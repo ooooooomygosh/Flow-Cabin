@@ -1,11 +1,13 @@
 /** Offline renderer regression: isolated storage, synthetic responses, no external requests. */
 import assert from 'node:assert/strict';
+import { onboardingSeed } from './app-version.mjs';
 export async function verifyQQRegression({ browser, origin, check }) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'zh-CN', reducedMotion: 'reduce' });
   const errors = []; let mode = 'expired';
+  await context.addInitScript((seed) => { window.__onboardingSeed = seed; }, onboardingSeed());
   await context.addInitScript(() => {
     if (location.origin === 'null') return;
-    localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.4' }));
+    localStorage.setItem('flow-cabin-onboarding-v1', window.__onboardingSeed);
     localStorage.setItem('album-circle-playlist-tab-v1', 'qq');
     window.albumDesktopAppearance = { client: true, reduceMotion: true };
     window.__commands = []; window.open = url => { window.__commands.push(String(url)); return null; };

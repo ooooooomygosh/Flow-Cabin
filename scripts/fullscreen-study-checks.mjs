@@ -1,11 +1,13 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
+import { onboardingSeed } from './app-version.mjs';
 export async function verifyFullscreenStudy({ browser, origin, output, check }) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'zh-CN', reducedMotion: 'reduce' });
   const errors = [], commands = [];
+  await context.addInitScript((seed) => { window.__onboardingSeed = seed; }, onboardingSeed());
   await context.addInitScript(() => {
     if (location.origin === 'null') return;
-    localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.4' }));
+    localStorage.setItem('flow-cabin-onboarding-v1', window.__onboardingSeed);
     window.__commands = []; window.open = url => { window.__commands.push(String(url)); return null; };
     window.albumDesktopAppearance = { client: true, reduceMotion: true };
     const init = () => { document.documentElement.dataset.desktopClient = 'true'; document.documentElement.dataset.desktopReduceMotion = 'true'; };

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { onboardingSeed } from './app-version.mjs';
 
 const FOCUS_KEY = 'album-circle-focus-v1:local-owner';
 const SOUND_KEY = 'album-circle-sound-v1';
@@ -50,9 +51,10 @@ export async function verifyBenchmarkCabin(browser, origin, { output, check = ()
   for (const viewport of VIEWPORTS) {
     const size = `${viewport.width}x${viewport.height}`;
     const context = await browser.newContext({ viewport, locale: 'zh-CN', reducedMotion: 'reduce' });
+    await context.addInitScript((seed) => { window.__onboardingSeed = seed; }, onboardingSeed());
     await context.addInitScript(() => {
       if (location.origin === 'null') return;
-      localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.4' }));
+      localStorage.setItem('flow-cabin-onboarding-v1', window.__onboardingSeed);
       localStorage.setItem('album-circle-library-v1-local-owner', JSON.stringify({ rooms: { 'local-room': { look: 'pixel', petId: 'cat', boxes: [] } } }));
       localStorage.setItem('album-circle-focus-dock-v1', JSON.stringify({ open: false, tab: 'timer' }));
       localStorage.setItem('album-circle-sound-v1', JSON.stringify({ master: .8, lofiOn: false, tracks: { rain: 0, fire: 0, wind: 0, white: 0, vinyl: 0 } }));
