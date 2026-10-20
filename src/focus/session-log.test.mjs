@@ -43,3 +43,61 @@ test('the record keeps only the 32×32 thumbnail: empty until it is ready, never
   assert.equal(sessionRecord({ ...base, album: { title: 'A', cover: 'data:image/png;base64,BIG', thumb: '' } }).cover, '', 'the original data URL is not stored either');
   assert.equal(sessionRecord({ ...base, album: { title: 'A', cover: '/covers/a.png', thumb: 'data:image/png;base64,T' } }).cover, 'data:image/png;base64,T');
 });
+
+// 回归：状态从存储里重新读回来之后，同一轮专注不能被当成又结束了一次。
+test('a re-read focus state is not mistaken for a second finished round', () => {
+  const t0 = 1_700_000_000_000;
+  const running = model.startPhase(model.normalizeFocus({}), 'focus', t0);
+  const done = model.tick(running, running.timer.endsAt).state;
+  // 读回本机存储：字段被重新规范化过，但仍然是同一轮。
+  const reread = model.normalizeFocus(JSON.parse(JSON.stringify(done)));
+  assert.equal(endedSession(done, reread, done.timer.endsAt), null);
+  assert.equal(endedSession(done, reread, done.timer.endsAt + 60_000), null);
+  // 真正多出来的一轮才算结束。
+  const again = model.startPhase(reread, 'focus', done.timer.endsAt + 60_000);
+  const finished = model.tick(again, again.timer.endsAt).state;
+  const ended = endedSession(reread, finished, finished.timer.endsAt);
+  assert.ok(ended, 'a new round is reported');
+  assert.equal(ended.completed, true);
+});
+
+// 回归：写不进本机就不能说“已保存”，也不能对外宣布这轮专注。
+test('a session that cannot be written reports the failure instead of pretending it was saved', async () => {
+  const { appendSession, sessionRecord } = await import('./session-log.mjs');
+  const t0 = 1_700_000_000_000;
+  const storage = memory();
+  storage.setItem = () => { throw new Error('quota'); };
+  const record = sessionRecord({ start: t0, end: t0 + 60_000, completed: true });
+  const saved = appendSession(record, storage);
+  assert.equal(saved.ok, false);
+  assert.match(saved.error, /未能保存/);
+  assert.deepEqual(saved.list, [], 'nothing was stored');
+  const running = model.startPhase(model.normalizeFocus({}), 'focus', t0);
+  const done = model.tick(running, running.timer.endsAt).state;
+  const win = target();
+  const rec = recordEnd(running, done, running.timer.endsAt, { storage, target: win });
+  assert.equal(rec, null, 'an unlogged round is not announced');
+  assert.deepEqual(win.events, [], 'no event for a round that never reached the disk');
+  // 记录本身无效时同样不写。
+  assert.equal(appendSession({ id: 42 }, storage).ok, false);
+  assert.equal(appendSession(null, storage).ok, false);
+});
+
+// 模型层不直接摸全局 DOM：缩略图用注入的文档来画。
+test('the cover thumbnail is drawn through the injected document', async () => {
+  const { coverThumb } = await import('./session-log.mjs');
+  const drawn = [];
+  class FakeImage {
+    constructor() { this.naturalWidth = 100; this.naturalHeight = 50; }
+    set src(value) { this.url = value; setTimeout(() => this.onload?.(), 0); }
+  }
+  const doc = { defaultView: { Image: FakeImage },
+    createElement: () => ({ width: 0, height: 0, getContext: () => ({ imageSmoothingEnabled: true, drawImage: () => drawn.push('draw') }), toDataURL: () => 'data:image/png;base64,T' }) };
+  assert.equal(await coverThumb('/covers/a.png', { doc }), 'data:image/png;base64,T');
+  assert.deepEqual(drawn, ['draw']);
+  // 画不出来就安静地交回空串，不抛错。
+  const broken = { defaultView: { Image: FakeImage }, createElement: () => { throw new Error('no canvas'); } };
+  assert.equal(await coverThumb('/covers/a.png', { doc: broken }), '');
+  assert.equal(await coverThumb('/covers/a.png', { doc: { defaultView: {} } }), '', '没有图片构造器就不画');
+  assert.equal(await coverThumb('', { doc }), '');
+});

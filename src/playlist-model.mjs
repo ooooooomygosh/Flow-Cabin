@@ -29,6 +29,9 @@ export function playlistItem(detail, provider, { cover = '' } = {}) {
   const playlist = detail?.playlist || {};
   const source = PLAYLIST_SOURCES[provider] || PLAYLIST_SOURCES.file;
   const tracks = (Array.isArray(detail?.tracks) ? detail.tracks : []).filter((track) => clean(track?.title)).slice(0, PLAYLIST_TRACK_LIMIT);
+  // 没有平台编号的歌单（例如从文件导入）用内容生成稳定标识：
+  // 同一毫秒里导入两份歌单也不会互相覆盖，重开一次还是同一个。
+  const fallbackId = `${clean(playlist.name, 60)}~${clean(playlist.creator, 40)}~${tracks.length}`;
   return {
     type: 'playlist',
     title: clean(playlist.name) || '未命名歌单',
@@ -45,7 +48,7 @@ export function playlistItem(detail, provider, { cover = '' } = {}) {
       providerId: clean(track.providerId, 64), mediaMid: clean(track.mediaMid, 64), artist: clean(track.artist), album: clean(track.album),
       ...(/^https:\/\//.test(track.cover || '') ? { cover: String(track.cover).slice(0, 700) } : {})
     })),
-    externalIds: { playlist: playlistKey(provider, playlist.id || `${Date.now()}`) }
+    externalIds: { playlist: playlistKey(provider, playlist.id || fallbackId) }
   };
 }
 // Search inside a long playlist: title, artist and album, ignoring case/width.

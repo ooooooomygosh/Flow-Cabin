@@ -81,10 +81,16 @@ export function nextMinimized(minimized, type, isTrusted) {
 
 const watchers = new Set();
 // Calls cb(background) now and whenever the shared clock's background state changes.
+// Without a window (unit tests, prerender) there is no background to speak of.
 export function onBackgroundChange(cb) {
+  if (!globalThis.window) { cb(false); return () => {}; }
   const clock = frameClock(); watchers.add(cb); cb(clock.paused);
   return () => watchers.delete(cb);
 }
+// True while the app is in the background (hidden, or minimized outside the
+// desktop wallpaper / pet windows). Reads the clock that already exists — it
+// never creates one, so asking during a render has no side effect.
+export const inBackground = () => Boolean(shared?.paused);
 let shared = null;
 // Browser singleton. Paused while the document is hidden or (outside the desktop
 // wallpaper/pet windows) minimized; Electron keeps such a page "visible", so the

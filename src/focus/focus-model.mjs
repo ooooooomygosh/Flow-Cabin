@@ -55,9 +55,18 @@ export const UNLOCKS = Object.freeze([
   { id: 'starry', kind: 'weather', level: 5, name: '星空窗景' }
 ]);
 
-const clamp = (value, min, max, fallback) => Number.isFinite(Number(value)) ? Math.max(min, Math.min(max, Math.round(Number(value)))) : fallback;
+// “没有这个值”和“这个值是 0”是两回事：null / '' / 布尔值都算缺失，
+// 落回默认值，而不是被当成 0（那会把 25 分钟的专注变成 1 分钟）。
+export const numeric = (value) => {
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string' && value.trim() !== '') return Number(value);
+  return NaN;
+};
+const clamp = (value, min, max, fallback) => { const n = numeric(value); return Number.isFinite(n) ? Math.max(min, Math.min(max, Math.round(n))) : fallback; };
 const text = (value, max) => typeof value === 'string' ? value.replace(/[\x00-\x1f\x7f]/g, ' ').trim().slice(0, max) : '';
-const id = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+// 随机 id 的唯一来源。模型默认用它，调用方可以注入自己的实现（测试、确定性重建）。
+export const randomId = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+const makeId = (factory) => (typeof factory === 'function' ? String(factory()) : randomId());
 
 export function normalizeSettings(value = {}) {
   const v = value && typeof value === 'object' ? value : {};
@@ -73,9 +82,9 @@ function normalizeTimer(value = {}, settings = DEFAULT_SETTINGS) {
   if (phase === 'idle') return { phase, endsAt: 0, remaining: 0, paused: false, startedAt: 0, round: clamp(v.round, 0, 1e6, 0), taskId: text(v.taskId, 40) };
   return { phase, duration: clamp(v.duration, 1, 180 * MINUTE, phaseDuration(settings, phase)), endsAt: clamp(v.endsAt, 0, 9e15, 0), remaining: clamp(v.remaining, 0, 180 * MINUTE, 0), paused: v.paused === true, startedAt: clamp(v.startedAt, 0, 9e15, 0), round: clamp(v.round, 0, 1e6, 0), taskId: text(v.taskId, 40) };
 }
-function normalizeTask(value) {
+function normalizeTask(value, factory) {
   if (!value || typeof value !== 'object' || !text(value.text, 120)) return null;
-  return { id: text(value.id, 40) || id(), text: text(value.text, 120), done: value.done === true, pomodoros: clamp(value.pomodoros, 0, 999, 0), createdAt: clamp(value.createdAt, 0, 9e15, 0), doneAt: value.done === true ? clamp(value.doneAt, 0, 9e15, 0) : 0 };
+  return { id: text(value.id, 40) || makeId(factory), text: text(value.text, 120), done: value.done === true, pomodoros: clamp(value.pomodoros, 0, 999, 0), createdAt: clamp(value.createdAt, 0, 9e15, 0), doneAt: value.done === true ? clamp(value.doneAt, 0, 9e15, 0) : 0 };
 }
 function normalizeSession(value) {
   if (!value || typeof value !== 'object') return null;
@@ -83,7 +92,7 @@ function normalizeSession(value) {
   if (!start || end <= start || end - start > 4 * 60 * MINUTE) return null;
   return { start, end, taskId: text(value.taskId, 40), completed: value.completed !== false };
 }
-export function normalizeFocus(value = {}) {
+export function normalizeFocus(value = {}, { makeId: factory } = {}) {
   const v = value && typeof value === 'object' ? value : {};
   const rewards = v.rewards && typeof v.rewards === 'object' ? v.rewards : {};
   const equipped = rewards.equipped && typeof rewards.equipped === 'object' ? rewards.equipped : {};
@@ -94,7 +103,7 @@ export function normalizeFocus(value = {}) {
     notes: normalizeNotes(v.notes),
     settings: normalizeSettings(v.settings),
     timer: normalizeTimer(v.timer, normalizeSettings(v.settings)),
-    tasks: (Array.isArray(v.tasks) ? v.tasks : []).map(normalizeTask).filter(Boolean).slice(0, 200),
+    tasks: (Array.isArray(v.tasks) ? v.tasks : []).map((task) => normalizeTask(task, factory)).filter(Boolean).slice(0, 200),
     sessions: (Array.isArray(v.sessions) ? v.sessions : []).map(normalizeSession).filter(Boolean).slice(-2000),
     rewards: { fish: clamp(rewards.fish, 0, 1e9, 0), xp, bought, equipped: { accessory: pick(equipped.accessory, 'accessory', ''), weather: pick(equipped.weather, 'weather', 'snow') } }
   };
@@ -179,14 +188,15 @@ export function skip(state, now) {
   return finish(state, now, false);
 }
 
-export function addTask(state, value, now) {
-  const task = normalizeTask({ text: value, createdAt: now }); if (!task || state.tasks.length >= 200) return state;
+export function addTask(state, value, now, { makeId: factory } = {}) {
+  const task = normalizeTask({ text: value, createdAt: now }, factory); if (!task || state.tasks.length >= 200) return state;
   return { ...state, tasks: [...state.tasks, task] };
 }
 export function updateTask(state, taskId, change, now) {
   return { ...state, tasks: state.tasks.map((task) => {
     if (task.id !== taskId) return task;
-    const next = normalizeTask({ ...task, ...change }) || task;
+    // 任务的编号是身份，不随一次修改而变。
+    const next = normalizeTask({ ...task, ...change, id: task.id }) || task;
     return next.done && !task.done ? { ...next, doneAt: now } : next.done ? next : { ...next, doneAt: 0 };
   }) };
 }
@@ -216,11 +226,15 @@ export function clearDone(state) {
 // Minutes are split at local midnight so a late session counts on both days.
 export function minutesByDay(sessions) {
   const days = new Map();
-  for (const session of sessions) {
-    let cursor = session.start;
-    const scale = (session.durationMs ?? (session.end - session.start)) / (session.end - session.start || 1);
-    while (cursor < session.end) {
-      const until = Math.min(addDays(startOfDay(cursor), 1), session.end), key = dayKey(cursor);
+  for (const session of Array.isArray(sessions) ? sessions : []) {
+    const start = numeric(session?.start), end = numeric(session?.end);
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) continue;
+    const raw = session?.durationMs;
+    const duration = raw === null || raw === undefined ? end - start : numeric(raw);
+    const scale = Number.isFinite(duration) ? duration / (end - start) : 1;
+    let cursor = start;
+    while (cursor < end) {
+      const until = Math.min(addDays(startOfDay(cursor), 1), end), key = dayKey(cursor);
       days.set(key, (days.get(key) || 0) + (until - cursor) * scale / MINUTE);
       cursor = until;
     }
@@ -229,13 +243,22 @@ export function minutesByDay(sessions) {
 }
 export const STREAK_HINT = '按本地日期，每天累计专注至少 1 分钟；今天未满 1 分钟时从昨天算起，中间缺一天即中断。';
 export function currentStreak(days, now) {
+  const map = days instanceof Map ? days : new Map();
   let cursor = startOfDay(now), count = 0;
-  if (!(days.get(dayKey(cursor)) >= 1)) cursor = addDays(cursor, -1);
-  while (days.get(dayKey(cursor)) >= 1) { count++; cursor = addDays(cursor, -1); }
+  if (!(map.get(dayKey(cursor)) >= 1)) cursor = addDays(cursor, -1);
+  while (map.get(dayKey(cursor)) >= 1) { count++; cursor = addDays(cursor, -1); }
   return count;
 }
-export function focusStats(sessions, now) {
-  const days = minutesByDay(sessions), today = startOfDay(now), week = [];
+export function focusStats(sessions = [], now) {
+  const list = Array.isArray(sessions) ? sessions : [];
+  const days = minutesByDay(list);
+  // 没有可用的时钟就不编日期：只给与时间无关的部分，星期栏留空，
+  // 免得面板上出现 NaN-NaN-NaN 这样的假日期。
+  if (!Number.isFinite(now)) {
+    return { today: 0, week: Array.from({ length: 7 }, () => ({ key: '', label: '', minutes: 0 })), streak: 0,
+      totalMinutes: Math.round([...days.values()].reduce((sum, value) => sum + value, 0)), sessions: list.filter((s) => s?.completed).length, todaySessions: 0 };
+  }
+  const today = startOfDay(now), week = [];
   for (let i = 6; i >= 0; i--) {
     const time = new Date(addDays(today, -i));
     const key = dayKey(time.getTime());
@@ -243,7 +266,7 @@ export function focusStats(sessions, now) {
   }
   const streak = currentStreak(days, now);
   const total = [...days.values()].reduce((sum, value) => sum + value, 0);
-  return { today: week[6].minutes, week, streak, totalMinutes: Math.round(total), sessions: sessions.filter((s) => s.completed).length, todaySessions: sessions.filter((s) => s.completed && dayKey(s.end) === dayKey(now)).length };
+  return { today: week[6].minutes, week, streak, totalMinutes: Math.round(total), sessions: list.filter((s) => s?.completed).length, todaySessions: list.filter((s) => s?.completed && dayKey(s.end) === dayKey(now)).length };
 }
 
 export function levelInfo(xp) {

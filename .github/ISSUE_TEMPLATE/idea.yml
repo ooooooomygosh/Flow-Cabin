@@ -9,3 +9,10 @@ body:
       description: 描述具体场景与现在的不便，可以附你想象的行为。
     validations:
       required: true
+  - type: textarea
+    id: expect
+    attributes:
+      label: 你希望它怎么表现（可选）
+      description: 一两句话描述你期待的结果就够了，不用写实现方案。
+    validations:
+      required: false

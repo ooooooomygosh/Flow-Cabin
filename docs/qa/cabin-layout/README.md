@@ -47,6 +47,6 @@
 
 ## 与其他工作重叠及范围
 
-检查时 PR [#12](https://github.com/ooooooomygosh/album-web/pull/12) 仍为独立草稿，head 为 `350793362bace7c08f0f8dc2c3c4f2a07e5b5265`，base 同为本基线。其桌面模式、歌单、唱机特写涉及 `CabinRoom`、`RoomScene`、`RoomTurntable`、`room-console.css`，测试脚本和 `package.json` 也重叠。两份草稿并行，未来若合并需协调这些位置；本次没有合并或采纳该 PR。
+检查时 PR [#12](https://github.com/ooooooomygosh/Flow-Cabin/pull/12) 仍为独立草稿，head 为 `350793362bace7c08f0f8dc2c3c4f2a07e5b5265`，base 同为本基线。其桌面模式、歌单、唱机特写涉及 `CabinRoom`、`RoomScene`、`RoomTurntable`、`room-console.css`，测试脚本和 `package.json` 也重叠。两份草稿并行，未来若合并需协调这些位置；本次没有合并或采纳该 PR。
 
 本次仅验证布局与渲染行为、既有回归。尚未验证安装包、真实账号、物理声音输出或原生壁纸 / 桌宠附着。本次不发布安装包、不部署、不改变音乐 API 或收藏数据格式。

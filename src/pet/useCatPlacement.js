@@ -1,8 +1,8 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import { BUBBLE_OBSTACLES, catFloorOffset, chooseBubbleOffset, chooseCatSpot } from './bubble-placement.mjs';
+import { reducedMotion } from '../motion-preference.mjs';
 
 const visibleRect = (el) => el && el.getClientRects().length && getComputedStyle(el).visibility !== 'hidden' ? el.getBoundingClientRect() : null;
-const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches || document.documentElement.dataset.desktopReduceMotion === 'true';
 const SHOW_DEBOUNCE = 600, HOVER_RETURN = 1200;
 
 /** Moves the cat from where it is *seen* (before) to its new layout spot.
@@ -23,12 +23,13 @@ export function animateCatMove(catEl, before, after, kind, { grounded = true } =
     duration = Math.max(360, Math.min(1100, Math.abs(dx) * 4));
     const strides = Math.max(6, Math.round(Math.abs(dx) / 12));
     // Body rises mid-stride and drops on each footfall: up, down, up, down…
-    frames = Array.from({ length: strides + 1 }, (_, i) => ({ translate: `${dx * (1 - i / strides)}px ${i % 2 && i < strides ? -2 : 0}px`, offset: i / strides, easing: 'steps(2, end)' }));
+    // Whole pixels only: the cat is pixel art, a fraction of a pixel resamples it.
+    frames = Array.from({ length: strides + 1 }, (_, i) => ({ translate: `${Math.round(dx * (1 - i / strides))}px ${i % 2 && i < strides ? -2 : 0}px`, offset: i / strides, easing: 'steps(2, end)' }));
   } else {
     duration = grounded ? 560 : 480;
     // Without ground under its feet (perch moved/vanished) the cat takes off at once: no hover.
-    const lift = grounded ? .16 : 0, land = .8, arc = Math.max(32, Math.abs(dy) * .3 + 22);
-    const at = (t) => `${dx * (1 - t)}px ${dy * (1 - t) - arc * 4 * t * (1 - t)}px`;
+    const lift = grounded ? .16 : 0, land = .8, arc = Math.round(Math.max(32, Math.abs(dy) * .3 + 22));
+    const at = (t) => `${Math.round(dx * (1 - t))}px ${Math.round(dy * (1 - t) - arc * 4 * t * (1 - t))}px`;
     const stretch = (t) => t < .25 || t > .75 ? '.9 1.12' : '1 1';
     frames = [
       // steps(…, start): the crouch / takeoff shows on the very first frame — the cat never idles in mid-air.
@@ -133,7 +134,7 @@ export function useCatPlacement(catRef, bubbleRef, enabled = true, deps = []) {
     });
     watch(); mounts.observe(room, { childList: true }); window.addEventListener('resize', soon);
     modes.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-console-near'] });
-    return () => { clearTimeout(timer); clearTimeout(holdTimer); sizes.disconnect(); mounts.disconnect(); modes.disconnect(); stage.disconnect(); window.removeEventListener('resize', soon); };
+    return () => { clearTimeout(timer); clearTimeout(holdTimer); moveRef.current?.cancel(); sizes.disconnect(); mounts.disconnect(); modes.disconnect(); stage.disconnect(); window.removeEventListener('resize', soon); };
   }, []);
 }
 export { chooseBubbleOffset };

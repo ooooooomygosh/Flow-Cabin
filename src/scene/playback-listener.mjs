@@ -1,5 +1,6 @@
 import { PLAYBACK_EVENT } from '../player/playback-signal.mjs';
 import { setBeat } from '../player/beat-clock.mjs';
+import { inBackground } from '../frame-clock.mjs';
 
 // Visual-side subscription to the player's `cabin:playback` window event
 // (broadcast by src/player/playback-signal.mjs, contract in docs/events.md):
@@ -28,10 +29,16 @@ export function onCabinPlayback(fn) {
 // Mirrors playback energy into a CSS custom property on `target()` (an element
 // or element list getter, so it may mount later), quantised to 1/steps and written only when
 // the level changes: 15 Hz raw energy becomes a handful of style changes.
+//
+// A backgrounded window (hidden, or minimized outside the desktop wallpaper /
+// pet windows) does not restyle anything: the events keep arriving, but there
+// is nobody to see the deck glow. The level is written again as soon as the
+// window comes back — the comparison is against the last written level.
 export const quantiseEnergy = (detail, steps = 8) => detail?.playing ? Math.round(Math.max(0, Math.min(1, Number(detail.energy) || 0)) * steps) / steps : 0;
 export function bindEnergyVar(target, name, steps = 8, onLevel = null) {
   let shown = null;
   return onCabinPlayback((detail) => {
+    if (inBackground()) return;
     const level = quantiseEnergy(detail, steps), elements = [].concat(target() || []).filter(Boolean);
     if (level === shown || !elements.length) return;
     shown = level; for (const element of elements) element.style.setProperty(name, String(level));

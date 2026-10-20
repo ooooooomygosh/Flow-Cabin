@@ -7,14 +7,14 @@ body:
     attributes:
       label: 系统与版本
       description: 请写应用版本、操作系统和芯片；桌面问题请注明单屏或多屏。
-      placeholder: v1.11.0 / macOS / Apple Silicon / 双屏
+      placeholder: v1.21.4 / macOS / Apple Silicon / 双屏
     validations:
       required: true
   - type: textarea
     id: steps
     attributes:
       label: 怎么遇到的
-      description: 操作步骤、预期结果和实际结果；音乐问题请注明音源与状态文字。
+      description: 操作步骤、预期结果和实际结果；音乐问题请注明音源与状态文字，桌面问题请注明是单屏还是多屏。
     validations:
       required: true
   - type: textarea

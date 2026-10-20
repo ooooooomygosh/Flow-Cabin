@@ -28,6 +28,21 @@ const clock = (ms) => {
   return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
 };
 
+// The focus countdown ticks on its own: the pet window must not re-render once
+// a second just to move a clock. It is the only thing in the panel that needs
+// a live second, so it owns the timer instead of the whole app.
+function FocusCountdown({ phase, paused, endsAt, remaining }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!phase || phase === 'idle') return undefined;
+    setNow(Date.now());
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [phase, paused, endsAt]);
+  const left = phase && phase !== 'idle' ? (paused ? Number(remaining) || 0 : Math.max(0, Number(endsAt) - now)) : 0;
+  return <>{phase === 'idle' ? '还没有开始的专注' : `${paused ? '暂停中' : phase === 'focus' ? '专注中' : '休息中'} · ${clock(left)}`}</>;
+}
+
 // The desktop pet: a transparent always-on-top window. Clicks pass through
 // everywhere except the painted cat pixels and the speech bubble.
 function PetApp() {
@@ -37,7 +52,7 @@ function PetApp() {
   const box = useRef(null), frame = useRef(0), hit = useRef(false), drag = useRef(null), [dragging, setDragging] = useState(false);
   // A one-shot action over the usual pose: eat (fed from the menu, a dropped 小鱼干 or the cabin) or hop.
   const [hookTypingAt, setHookTypingAt] = useState(0), [hookClickAt, setHookClickAt] = useState(0), [action, setAction] = useState(null), [note, setNote] = useState(''), lastClick = useRef(-Infinity), mounted = useRef(Date.now()), seenFeed = useRef(0);
-  const [panelOpen, setPanelOpenState] = useState(false), panelOpenRef = useRef(false), clickTimer = useRef(0), [panelNow, setPanelNow] = useState(() => Date.now());
+  const [panelOpen, setPanelOpenState] = useState(false), panelOpenRef = useRef(false), clickTimer = useRef(0);
   const setPanelOpen = (value) => {
     const next = Boolean(value);
     if (panelOpenRef.current === next) return;
@@ -47,12 +62,6 @@ function PetApp() {
   useEffect(() => { if (!action) return undefined; const timer = setTimeout(() => setAction((now) => now === action ? null : now), ACTION_MS[action.pose] || 800); return () => clearTimeout(timer); }, [action]);
   useEffect(() => { if (!note) return undefined; const timer = setTimeout(() => setNote(''), 2600); return () => clearTimeout(timer); }, [note]);
   useEffect(() => () => clearTimeout(clickTimer.current), []);
-  useEffect(() => {
-    if (!panelOpen) return undefined;
-    setPanelNow(Date.now());
-    const timer = setInterval(() => setPanelNow(Date.now()), 1000);
-    return () => clearInterval(timer);
-  }, [panelOpen]);
   const care = snapshot?.care;
   useEffect(() => {
     if (!care?.fedAt || care.fedAt === seenFeed.current) return;
@@ -137,7 +146,7 @@ function PetApp() {
   const dropFish = (event) => { setDropping(false); if (!isFish(event)) return; event.preventDefault(); api?.command('cat-feed'); };
   const bubble = note || cat.bubble;
   const focus = snapshot?.focus || {};
-  const running = focus.phase && focus.phase !== 'idle' && !focus.paused, focusLeft = focus.phase && focus.phase !== 'idle' ? (focus.paused ? Number(focus.remaining) || 0 : Math.max(0, Number(focus.endsAt) - panelNow)) : 0;
+  const running = focus.phase && focus.phase !== 'idle' && !focus.paused;
   const week = Array.isArray(inputStats?.week) ? inputStats.week.slice(-7) : [], weekPeak = Math.max(1, ...week.map((day) => Math.max(0, Number(day.total) || 0)));
   const mood = MOOD[care?.tier || 'ok'] || '还不错';
   const level = Math.max(1, Number(focus.level) || 1), fish = Math.max(0, Number(focus.fish) || 0);
@@ -162,7 +171,7 @@ function PetApp() {
         {!week.length && <small>下一次敲键，这里会长出小柱子。</small>}
       </div>
       <div className="pet-panel-focus">
-        <span>{focus.phase === 'idle' ? '还没有开始的专注' : `${focus.paused ? '暂停中' : focus.phase === 'focus' ? '专注中' : '休息中'} · ${clock(focusLeft)}`}</span>
+        <span><FocusCountdown phase={focus.phase} paused={focus.paused} endsAt={focus.endsAt} remaining={focus.remaining}/></span>
         <b title={`${fish} 条小鱼干`}>鱼干 {count(fish)}</b>
       </div>
       <div className="pet-panel-actions">

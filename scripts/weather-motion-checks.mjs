@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { onboardingSeed } from './app-version.mjs';
 
 export async function verifyWeatherMotion(browser, origin, check) {
   for (const surface of ['cabin-room', 'wallpaper-room']) {
@@ -11,9 +12,10 @@ export async function verifyWeatherMotion(browser, origin, check) {
         if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/desktop-music/')) return route.fulfill({ json: { items: [] } });
         return route.continue();
       });
+      await context.addInitScript((seed) => { window.__onboardingSeed = seed; }, onboardingSeed());
       await context.addInitScript(({ surface, weather }) => {
         if (location.origin === 'null') return;
-        localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.4' }));
+        localStorage.setItem('flow-cabin-onboarding-v1', window.__onboardingSeed);
         localStorage.setItem('album-circle-performance-v1', 'quality');
         localStorage.setItem('album-circle-library-v1-local-owner', JSON.stringify({ rooms: { 'local-room': { look: 'forest' } } }));
         localStorage.setItem('album-circle-focus-v1:local-owner', JSON.stringify({ rewards: { xp: 50000, equipped: { weather } } }));
@@ -84,11 +86,12 @@ export async function verifyWeatherSwitchSteady(browser, origin, check) {
     if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/desktop-music/')) return route.fulfill({ json: { items: [] } });
     return route.continue();
   });
+  await context.addInitScript((seed) => { window.__onboardingSeed = seed; }, onboardingSeed());
   await context.addInitScript(() => {
     if (location.origin === 'null') return;
     if (!sessionStorage.getItem('weather-switch')) {
       sessionStorage.setItem('weather-switch', '1');
-      localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.4' }));
+      localStorage.setItem('flow-cabin-onboarding-v1', window.__onboardingSeed);
       localStorage.setItem('album-circle-performance-v1', 'quality');
       localStorage.setItem('album-circle-library-v1-local-owner', JSON.stringify({ rooms: { 'local-room': { look: 'forest' } } }));
       localStorage.setItem('album-circle-focus-v1:local-owner', JSON.stringify({ rewards: { xp: 50000, equipped: { weather: 'snow' } } }));

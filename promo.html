@@ -5,20 +5,55 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#111814">
   <meta name="color-scheme" content="dark">
-  <title>心流小屋 · 把一天留在一间小屋里</title>
+  <title>心流小屋 Flow Cabin · 把一天留在一间小屋里</title>
   <meta name="description" content="心流小屋是一间会随时间、天气和音乐呼吸的像素桌面小屋：唱片、番茄钟、词书、手记、来信，还有一只会跟着你打字、回点鼠标的奶糖。说一句计划，AI 会按场景编好完整歌单，保存到唱片架，再放上唱机；桌面版也能接本机 Codex。">
+  <link rel="canonical" href="https://album-circle.vercel.app/promo.html">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="心流小屋 · Flow Cabin">
-  <meta property="og:title" content="心流小屋 · 把一天留在一间小屋里">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:title" content="心流小屋 Flow Cabin · 把一天留在一间小屋里">
   <meta property="og:description" content="听一张唱片，专注一轮，把想说的话写进手记。奶糖会在任何应用里陪你敲字、点鼠标；说一句计划，AI 替你编好一张可保存、可播放的完整歌单，桌面版也能接本机 Codex。">
   <meta property="og:url" content="https://album-circle.vercel.app/promo.html">
-  <meta property="og:image" content="https://album-circle.vercel.app/promo/social-card.jpg?v=1.21.4">
+  <meta property="og:image" content="https://album-circle.vercel.app/promo/social-card.jpg?v=3">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="心流小屋首屏：像素小屋、唱片架、唱机与一只叫奶糖的像素猫">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:image" content="https://album-circle.vercel.app/promo/social-card.jpg?v=1.21.4">
+  <meta name="twitter:title" content="心流小屋 Flow Cabin · 把一天留在一间小屋里">
+  <meta name="twitter:description" content="会呼吸的像素桌面小屋：唱片与唱机、AI 歌单、番茄钟与词书、手记与来信，还有一只跟着你敲字的猫。">
+  <meta name="twitter:image" content="https://album-circle.vercel.app/promo/social-card.jpg?v=3">
+  <meta name="twitter:image:alt" content="心流小屋首屏：像素小屋、唱片架、唱机与一只叫奶糖的像素猫">
   <link rel="icon" href="/promo/icon.png">
+  <link rel="apple-touch-icon" href="/promo/icon.png">
+  <!-- 版本号只在这一处写死：页面上的三处版本标签与结构化数据都由 promo.js 从这里同步。 -->
+  <meta name="promo-version" content="v1.21.5">
+  <!-- 首屏大图：房间图同时是 CSS 背景，预加载可让 LCP 早于脚本到位。 -->
+  <link rel="preload" as="image" href="/promo/rooms/pixel.webp" fetchpriority="high">
+  <!-- 标题用的像素中文字体：先取到，首屏大字才不会先闪一遍系统字。 -->
+  <link rel="preload" as="font" type="font/woff2" href="/fonts/pixel/fusion-pixel-12-zh_hans.subset.woff2" crossorigin>
   <link rel="stylesheet" href="/src/promo/promo.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "心流小屋 · Flow Cabin",
+    "alternateName": "Flow Cabin",
+    "applicationCategory": "ProductivityApplication",
+    "operatingSystem": "macOS, Windows",
+    "inLanguage": "zh-CN",
+    "url": "https://album-circle.vercel.app/promo.html",
+    "downloadUrl": "https://github.com/ooooooomygosh/Flow-Cabin/releases/latest",
+    "softwareVersion": "1.21.5",
+    "description": "本地优先的像素桌面小屋：唱片与唱机、AI 智能唱片机、番茄钟与词书、六间小屋与桌宠奶糖、小屋来信与手记。",
+    "featureList": [
+      "唱片与唱机，支持本地音乐、QQ 音乐、网易云",
+      "AI 智能唱片机：一句话生成 6–14 首完整歌单，可保存到唱片架",
+      "四档番茄钟、待办、统计与 FSRS 词书",
+      "六间可切换小屋与跨应用键鼠陪伴的桌宠奶糖",
+      "小屋来信、手记与本地优先的备份导出"
+    ]
+  }
+  </script>
 </head>
 <body>
   <a class="skip-link" href="#main">跳到正文</a>
@@ -28,7 +63,7 @@
 
     <header class="site-header">
       <a class="brand" href="#top" aria-label="心流小屋首页">
-        <img src="/promo/icon.png" width="34" height="34" alt="">
+        <img src="/promo/icon-48.png" width="48" height="48" alt="" decoding="async">
         <span><strong>心流小屋</strong><small>FLOW CABIN</small></span>
       </a>
       <nav aria-label="页面导航">
@@ -38,8 +73,8 @@
         <a href="#focus">专注</a>
         <a href="#letters">来信</a>
       </nav>
-      <a class="header-download" href="https://github.com/ooooooomygosh/album-web/releases/latest" target="_blank" rel="noreferrer">
-        下载 <span data-latest-version>v1.21.4</span> <span aria-hidden="true">↗</span>
+      <a class="header-download" href="https://github.com/ooooooomygosh/Flow-Cabin/releases/latest" target="_blank" rel="noreferrer">
+        下载 <span data-latest-version></span> <span aria-hidden="true">↗</span>
       </a>
     </header>
 
@@ -58,22 +93,22 @@
         </div>
 
         <div class="hero-copy">
-          <p class="eyebrow">A QUIET PLACE FOR LOUD DAYS · 2026</p>
+          <p class="eyebrow">A QUIET PLACE FOR LOUD DAYS</p>
           <h1 id="hero-title">把一天，<br><em>留在一间小屋里。</em></h1>
-          <p class="lead">听一张唱片，专注一轮，把想说的话写进手记。窗外会亮，壁炉会响；说一句今天要做什么，AI 会排好一整张歌单，存进唱片架，再放上唱机。</p>
+          <p class="lead">听一张唱片，专注一轮，把想说的话写进手记。窗外会亮，壁炉会响；说一句「今天要做什么」，AI 会排好一整张歌单，存进唱片架，再放上唱机。</p>
           <div class="hero-actions">
-            <a class="button primary" href="https://github.com/ooooooomygosh/album-web/releases/latest" target="_blank" rel="noreferrer">下载 <span data-latest-version>v1.21.4</span> <span aria-hidden="true">↓</span></a>
+            <a class="button primary" href="https://github.com/ooooooomygosh/Flow-Cabin/releases/latest" target="_blank" rel="noreferrer">下载 <span data-latest-version></span> <span aria-hidden="true">↓</span></a>
             <a class="button quiet" href="#rooms">先逛一圈 <span aria-hidden="true">↘</span></a>
           </div>
           <ul class="hero-facts" aria-label="产品特点">
-            <li>macOS · Windows</li>
-            <li>无账号也能开始</li>
-            <li>数据保存在本机</li>
+            <li>macOS / Windows 桌面应用</li>
+            <li>不用注册账号</li>
+            <li>数据只存在本机</li>
           </ul>
         </div>
 
         <div class="hero-cat" data-cat-stage>
-          <span class="cat-bubble" data-cat-bubble>夜深了，做完这一点就休息。</span>
+          <span class="cat-bubble" data-cat-bubble aria-live="polite">夜深了，做完这一点就休息。</span>
           <div class="cat-sprite" data-cat-action="wait" role="img" aria-label="奶糖正趴在小屋地板上等你"></div>
           <span class="cat-shadow" aria-hidden="true"></span>
         </div>
@@ -102,12 +137,12 @@
           <div class="console-row room-row">
             <span class="console-label">房间</span>
             <div class="room-switcher" role="group" aria-label="切换房间">
-              <button type="button" data-room-choice="pixel" aria-pressed="true"><img src="/promo/rooms/pixel.webp" alt="">像素小屋</button>
-              <button type="button" data-room-choice="warm"><img src="/promo/rooms/warm.webp" alt="">琥珀小屋</button>
-              <button type="button" data-room-choice="night-study"><img src="/promo/rooms/night-study.webp" alt="">月夜书桌</button>
-              <button type="button" data-room-choice="forest"><img src="/promo/rooms/forest.webp" alt="">林间书屋</button>
-              <button type="button" data-room-choice="seaside"><img src="/promo/rooms/seaside.webp" alt="">海边慢屋</button>
-              <button type="button" data-room-choice="starlight"><img src="/promo/rooms/starlight.webp" alt="">星夜阁楼</button>
+              <button type="button" data-room-choice="pixel" aria-pressed="true"><img src="/promo/rooms/pixel.webp" width="33" height="25" alt="" decoding="async">像素小屋</button>
+              <button type="button" data-room-choice="warm"><img src="/promo/rooms/warm.webp" width="33" height="25" alt="" decoding="async">琥珀小屋</button>
+              <button type="button" data-room-choice="night-study"><img src="/promo/rooms/night-study.webp" width="33" height="25" alt="" decoding="async">月夜书桌</button>
+              <button type="button" data-room-choice="forest"><img src="/promo/rooms/forest.webp" width="33" height="25" alt="" decoding="async">林间书屋</button>
+              <button type="button" data-room-choice="seaside"><img src="/promo/rooms/seaside.webp" width="33" height="25" alt="" decoding="async">海边慢屋</button>
+              <button type="button" data-room-choice="starlight"><img src="/promo/rooms/starlight.webp" width="33" height="25" alt="" decoding="async">星夜阁楼</button>
             </div>
           </div>
         </div>
@@ -131,15 +166,15 @@
 
         <div class="day-strip" role="group" aria-label="同一间房的一天">
           <p class="day-strip-label"><span>同一间房的一天</span><small>点一张换光</small></p>
-          <button class="day-card" type="button" data-day-time="morning">
+          <button class="day-card" type="button" data-day-time="morning" aria-label="切换到第一个时刻：晨光">
             <span class="day-card-art" aria-hidden="true"></span>
             <span class="day-card-copy"><b>07:20 · 晨光</b><small>窗子先亮起来</small></span>
           </button>
-          <button class="day-card" type="button" data-day-time="day">
+          <button class="day-card" type="button" data-day-time="day" aria-label="切换到第二个时刻：午后">
             <span class="day-card-art" aria-hidden="true"></span>
             <span class="day-card-copy"><b>14:40 · 午后</b><small>唱针可以慢一点落</small></span>
           </button>
-          <button class="day-card" type="button" data-day-time="dusk">
+          <button class="day-card" type="button" data-day-time="dusk" aria-label="切换到第三个时刻：黄昏">
             <span class="day-card-art" aria-hidden="true"></span>
             <span class="day-card-copy"><b>17:10 · 黄昏</b><small>开一盏小灯</small></span>
           </button>
@@ -151,42 +186,42 @@
 
         <div class="room-gallery">
           <button class="room-card" type="button" data-gallery-room="pixel" data-accent="#d8a66c">
-            <img src="/promo/rooms/pixel.webp" alt="像素小屋，雪窗、十二格唱片架与壁炉" loading="lazy">
+            <img src="/promo/rooms/pixel.webp" alt="像素小屋，雪窗、十二格唱片架与壁炉" width="1440" height="1080" loading="lazy">
             <span class="room-card-shade"></span>
             <span class="room-card-index">01</span>
             <span class="room-card-copy"><b>像素小屋</b><small>把灯调暗，壁炉会更亮一点</small></span>
             <span class="room-card-arrow" aria-hidden="true">↗</span>
           </button>
           <button class="room-card" type="button" data-gallery-room="warm" data-accent="#dba668">
-            <img src="/promo/rooms/warm.webp" alt="琥珀小屋，暖灯、雪窗与壁炉" loading="lazy">
+            <img src="/promo/rooms/warm.webp" alt="琥珀小屋，暖灯、雪窗与壁炉" width="1440" height="1080" loading="lazy">
             <span class="room-card-shade"></span>
             <span class="room-card-index">02</span>
             <span class="room-card-copy"><b>琥珀小屋</b><small>泡一杯热茶，看热气慢慢升起来</small></span>
             <span class="room-card-arrow" aria-hidden="true">↗</span>
           </button>
           <button class="room-card" type="button" data-gallery-room="night-study" data-accent="#dba668">
-            <img src="/promo/rooms/night-study.webp" alt="月夜书桌，窗边戴耳机写字的女孩" loading="lazy">
+            <img src="/promo/rooms/night-study.webp" alt="月夜书桌，窗边戴耳机写字的女孩" width="1440" height="1080" loading="lazy">
             <span class="room-card-shade"></span>
             <span class="room-card-index">03</span>
             <span class="room-card-copy"><b>月夜书桌</b><small>她写字、停笔，再转一圈笔</small></span>
             <span class="room-card-arrow" aria-hidden="true">↗</span>
           </button>
           <button class="room-card" type="button" data-gallery-room="forest" data-accent="#b7c59a">
-            <img src="/promo/rooms/forest.webp" alt="林间书屋，拱形森林窗与绿色沙发" loading="lazy">
+            <img src="/promo/rooms/forest.webp" alt="林间书屋，拱形森林窗与绿色沙发" width="1440" height="1080" loading="lazy">
             <span class="room-card-shade"></span>
             <span class="room-card-index">04</span>
             <span class="room-card-copy"><b>林间书屋</b><small>浇花，转半圈花盆，再读几页</small></span>
             <span class="room-card-arrow" aria-hidden="true">↗</span>
           </button>
           <button class="room-card" type="button" data-gallery-room="seaside" data-accent="#bcd4c3">
-            <img src="/promo/rooms/seaside.webp" alt="海边慢屋，圆形海景窗与条纹亚麻椅" loading="lazy">
+            <img src="/promo/rooms/seaside.webp" alt="海边慢屋，圆形海景窗与条纹亚麻椅" width="1440" height="1080" loading="lazy">
             <span class="room-card-shade"></span>
             <span class="room-card-index">05</span>
             <span class="room-card-copy"><b>海边慢屋</b><small>推开圆窗，让海风替唱片翻页</small></span>
             <span class="room-card-arrow" aria-hidden="true">↗</span>
           </button>
           <button class="room-card" type="button" data-gallery-room="starlight" data-accent="#c1b7db">
-            <img src="/promo/rooms/starlight.webp" alt="星夜阁楼，星空圆窗与望远镜" loading="lazy">
+            <img src="/promo/rooms/starlight.webp" alt="星夜阁楼，星空圆窗与望远镜" width="1440" height="1080" loading="lazy">
             <span class="room-card-shade"></span>
             <span class="room-card-index">06</span>
             <span class="room-card-copy"><b>星夜阁楼</b><small>抬起望远镜，连一张自己的星图</small></span>
@@ -205,14 +240,14 @@
             <span class="desk-paper"></span>
           </div>
           <div class="cat-sprite big" data-cat-action="wait" role="img" aria-label="奶糖趴在小桌上等你"></div>
-          <span class="cat-bubble" data-cat-bubble>今天也一起写两行吧。</span>
+          <span class="cat-bubble" data-cat-bubble aria-live="polite">今天也一起写两行吧。</span>
           <p class="stage-caption"><span class="live-dot"></span> 奶糖 · 工位在线</p>
         </div>
 
         <div class="naitang-copy">
           <p class="chapter-index">CHAPTER 02 · NAITANG</p>
           <h2 id="naitang-title">你敲字，<br>它真的会跟着敲。</h2>
-          <p>奶糖不是一张贴在桌面的动图。小屋窗口里，你敲字它会压低身子、轮流拍两只爪子；点鼠标时，它又会伸爪拍拍小老鼠。桌面版在「设置 › 键鼠陪伴」一级入口里打开并授权后，其他应用里的键盘和点击也会让它回应，并按天记下次数——只判断有没有输入，不保存按了什么、点了哪里。</p>
+          <p>奶糖不是一张贴在桌面的动图。小屋窗口里，你敲字它会压低身子、轮流拍两只爪子；点鼠标时，它又会伸爪拍拍小老鼠。桌面版在「设置 › 键鼠陪伴」里打开并授权后，其他应用里的键盘和点击也会让它回应，并按天记下次数——只判断有没有输入，不保存按了什么、点了哪里。</p>
           <div class="typing-demo">
             <label for="pet-typing">键鼠陪伴 · 在这里试一下</label>
             <div class="typing-line">
@@ -267,13 +302,13 @@
               <span id="deck-state" aria-live="polite">播放已暂停</span>
             </div>
             <button class="record-stage" type="button" data-vinyl-toggle aria-label="播放或暂停唱片演示" aria-pressed="false">
-              <span class="record-sleeve"><img src="/promo/covers/bewitched.jpg" alt="Bewitched 专辑封面"></span>
+              <span class="record-sleeve"><img src="/promo/covers/bewitched.jpg" alt="Bewitched 专辑封面" width="300" height="300" decoding="async"></span>
               <span class="vinyl" aria-hidden="true"><i class="vinyl-label"></i></span>
               <span class="tonearm" aria-hidden="true"><i></i></span>
               <span class="record-shadow" aria-hidden="true"></span>
             </button>
             <div class="now-playing">
-              <img id="track-cover" src="/promo/covers/bewitched.jpg" alt="">
+              <img id="track-cover" src="/promo/covers/bewitched.jpg" alt="" width="48" height="48" decoding="async">
               <div>
                 <span id="track-number">01</span>
                 <strong id="track-title">Dreamer</strong>
@@ -316,43 +351,43 @@
               <ol class="smart-picks" id="smart-picks" aria-label="AI 生成的完整歌单">
                 <li class="smart-pick" data-track-id="study-dreamer">
                   <span class="smart-order" aria-hidden="true">01</span>
-                  <img src="/promo/covers/bewitched.jpg" alt="Bewitched 专辑封面">
+                  <img src="/promo/covers/bewitched.jpg" alt="Bewitched 专辑封面" width="48" height="48" decoding="async">
                   <div><strong>Dreamer</strong><small>Laufey · Bewitched</small></div>
                   <span class="smart-tag">第 1 首 · 放上唱机</span>
                 </li>
                 <li class="smart-pick" data-track-id="study-singalongsong">
                   <span class="smart-order" aria-hidden="true">02</span>
-                  <img src="/promo/covers/orange-moon.jpg" alt="橙月 专辑封面">
+                  <img src="/promo/covers/orange-moon.jpg" alt="橙月 专辑封面" width="48" height="48" decoding="async">
                   <div><strong>Singalongsong</strong><small>方大同 · 橙月</small></div>
                   <span class="smart-tag">待播</span>
                 </li>
                 <li class="smart-pick" data-track-id="study-cambrian">
                   <span class="smart-order" aria-hidden="true">03</span>
-                  <img src="/promo/covers/fable.jpg" alt="寓言 专辑封面">
+                  <img src="/promo/covers/fable.jpg" alt="寓言 专辑封面" width="48" height="48" decoding="async">
                   <div><strong>寒武纪</strong><small>王菲 · 寓言</small></div>
                   <span class="smart-tag">待播</span>
                 </li>
                 <li class="smart-pick" data-track-id="study-from-start">
                   <span class="smart-order" aria-hidden="true">04</span>
-                  <img src="/promo/covers/bewitched.jpg" alt="Bewitched 专辑封面">
+                  <img src="/promo/covers/bewitched.jpg" alt="Bewitched 专辑封面" width="48" height="48" decoding="async">
                   <div><strong>From The Start</strong><small>Laufey · Bewitched</small></div>
                   <span class="smart-tag">待播</span>
                 </li>
                 <li class="smart-pick" data-track-id="study-three">
                   <span class="smart-order" aria-hidden="true">05</span>
-                  <img src="/promo/covers/orange-moon.jpg" alt="橙月 专辑封面">
+                  <img src="/promo/covers/orange-moon.jpg" alt="橙月 专辑封面" width="48" height="48" decoding="async">
                   <div><strong>三人游</strong><small>方大同 · 橙月</small></div>
                   <span class="smart-tag">待播</span>
                 </li>
                 <li class="smart-pick" data-track-id="study-new-guest">
                   <span class="smart-order" aria-hidden="true">06</span>
-                  <img src="/promo/covers/fable.jpg" alt="寓言 专辑封面">
+                  <img src="/promo/covers/fable.jpg" alt="寓言 专辑封面" width="48" height="48" decoding="async">
                   <div><strong>新房客</strong><small>王菲 · 寓言</small></div>
                   <span class="smart-tag">待播</span>
                 </li>
                 <li class="smart-pick" data-track-id="study-letter">
                   <span class="smart-order" aria-hidden="true">07</span>
-                  <img src="/promo/covers/bewitched.jpg" alt="Bewitched 专辑封面">
+                  <img src="/promo/covers/bewitched.jpg" alt="Bewitched 专辑封面" width="48" height="48" decoding="async">
                   <div><strong>Letter to My 13 Year Old Self</strong><small>Laufey · Bewitched</small></div>
                   <span class="smart-tag">待播</span>
                 </li>
@@ -372,7 +407,7 @@
             </div>
             <div class="note-list">
               <article><span>01</span><div><b>双击歌单，整张都会放上唱机</b><p>唱臂抬起、摆入、落针，控制台同步亮起；第一首之后按顺序继续。</p></div></article>
-              <article><span>02</span><div><b>下一首先准备好，再切歌</b><p>本地、QQ、网易云可自动匹配可播放版本，下一首提前缓冲；放不了就跳过。</p></div></article>
+              <article><span>02</span><div><b>下一首先准备好，再切歌</b><p>本地音乐、QQ 音乐、网易云可自动匹配可播放版本，下一首提前缓冲；放不了就跳过。</p></div></article>
               <article><span>03</span><div><b>AI 歌单也能留在唱片架</b><p>保存后随时重开；歌名、歌手和专辑信息都留在同一张唱片里。</p></div></article>
             </div>
             <p class="scope-note">本页动作为产品演示，不播放真实音频。平台播放受账号、版权与地区限制。</p>
@@ -395,8 +430,8 @@
               <span>DEEP WORK · <b id="focus-mode-label">深度</b></span>
               <span id="focus-status" aria-live="polite">准备开始</span>
             </div>
-            <div class="flip-clock" aria-label="专注计时">
-              <span class="flip-digit" data-digit="0">5</span><span class="flip-digit" data-digit="1">0</span><span class="flip-colon" aria-hidden="true">:</span><span class="flip-digit" data-digit="2">0</span><span class="flip-digit" data-digit="3">0</span>
+            <div class="flip-clock" role="timer" aria-label="专注计时，剩余 50 分钟">
+              <span class="flip-digit" data-digit="0" aria-hidden="true">5</span><span class="flip-digit" data-digit="1" aria-hidden="true">0</span><span class="flip-colon" aria-hidden="true">:</span><span class="flip-digit" data-digit="2" aria-hidden="true">0</span><span class="flip-digit" data-digit="3" aria-hidden="true">0</span>
             </div>
             <p class="focus-quote" id="focus-quote">把这一轮留给自己。</p>
             <div class="focus-presets" role="group" aria-label="选择专注节奏">
@@ -413,17 +448,17 @@
 
           <div class="study-stack">
             <article class="wordbook-card">
-              <header><span>词书 · 学习生活</span><span>第 1 / 12 张</span></header>
+              <header><span>词书 · 音乐生活</span><span>第 1 / 15 本</span></header>
               <button class="flashcard" type="button" data-card-flip aria-pressed="false">
                 <span class="flashcard-inner">
                   <span class="flash-face front"><b>record</b><small>点击翻面</small></span>
-                  <span class="flash-face back"><b>记录；唱片</b><small>She keeps a record of quiet days.</small><em>/ˈrekərd/ · n.</em></span>
+                  <span class="flash-face back"><b>唱片；记录音乐的实体载体</b><small>She keeps a record of quiet days.</small><em>/ˈrekərd/ · n.</em></span>
                 </span>
               </button>
               <footer><span>FSRS 间隔复习</span><b>15 本 · 258 词</b></footer>
             </article>
             <article class="focus-note">
-              <img src="/promo/shots/focus.webp" alt="心流小屋全屏专注画面与翻页钟" loading="lazy">
+              <img src="/promo/shots/focus.webp" alt="心流小屋全屏专注画面与翻页钟" width="1440" height="900" loading="lazy" decoding="async">
               <div><span>沉浸时</span><b>整间房只剩钟、唱片和这一轮。</b></div>
             </article>
           </div>
@@ -442,11 +477,11 @@
         <div class="letters-layout">
           <div class="mailbox-panel">
             <div class="mailbox-tabs" role="tablist" aria-label="信箱内容">
-              <button type="button" role="tab" aria-selected="true" data-letter-tab="cabin">小屋来信</button>
-              <button type="button" role="tab" aria-selected="false" data-letter-tab="journal">今日手记</button>
-              <button type="button" role="tab" aria-selected="false" data-letter-tab="weekly">本周折页</button>
+              <button type="button" role="tab" id="letter-tab-cabin" aria-controls="letter-panel" aria-selected="true" data-letter-tab="cabin">小屋来信</button>
+              <button type="button" role="tab" id="letter-tab-journal" aria-controls="letter-panel" aria-selected="false" data-letter-tab="journal">今日手记</button>
+              <button type="button" role="tab" id="letter-tab-weekly" aria-controls="letter-panel" aria-selected="false" data-letter-tab="weekly">本周折页</button>
             </div>
-            <div class="letter-paper" role="tabpanel" aria-live="polite">
+            <div class="letter-paper" role="tabpanel" id="letter-panel" aria-labelledby="letter-tab-cabin" aria-live="polite">
               <div class="letter-stamp" aria-hidden="true">小<br>屋</div>
               <p class="letter-date" id="letter-date">10 月 19 日 · 23:10</p>
               <h3 id="letter-title">小屋来信 · 夜深</h3>
@@ -493,16 +528,16 @@
         </header>
         <div class="proof-grid">
           <figure class="proof-shot wide">
-            <img src="/promo/shots/journal.webp" alt="心流小屋手记界面，真实截图" loading="lazy">
+            <img src="/promo/shots/journal.webp" alt="心流小屋手记界面，真实截图" width="1440" height="900" loading="lazy" decoding="async">
             <figcaption><span>01 · 手记</span><b>写、改、搜索、回看，整组保留。</b></figcaption>
           </figure>
           <figure class="proof-shot">
-            <img src="/promo/shots/study.webp" alt="心流小屋学习卡复习界面，真实截图" loading="lazy">
+            <img src="/promo/shots/study.webp" alt="心流小屋学习卡复习界面，真实截图" width="1440" height="900" loading="lazy" decoding="async">
             <figcaption><span>02 · 学习</span><b>原创中英对照与 FSRS 复习。</b></figcaption>
           </figure>
           <div class="proof-numbers">
             <div><b>6</b><span>间可切换小屋</span></div>
-            <div><b>5</b><span>位像素伙伴</span></div>
+            <div><b>4</b><span>档专注节奏</span></div>
             <div><b>258</b><span>张内置词卡</span></div>
             <div><b>0</b><span>个必需云账号</span></div>
           </div>
@@ -519,27 +554,37 @@
           <h2 id="download-title">先把桌子收一收，<br>然后回小屋。</h2>
           <p>macOS 与 Windows 桌面版。第一次打开会逐项确认音源、键鼠权限、房间伙伴与试听；之后每次更新也会自动打开更新向导，不需要注册账号。</p>
           <div class="download-actions">
-            <a class="button primary large" href="https://github.com/ooooooomygosh/album-web/releases/latest" target="_blank" rel="noreferrer">下载 <span data-latest-version>v1.21.4</span> <span aria-hidden="true">↓</span></a>
-            <a class="text-link" href="https://github.com/ooooooomygosh/album-web" target="_blank" rel="noreferrer">在 GitHub 看源码 <span aria-hidden="true">↗</span></a>
+            <a class="button primary large" href="https://github.com/ooooooomygosh/Flow-Cabin/releases/latest" target="_blank" rel="noreferrer">下载 <span data-latest-version></span> <span aria-hidden="true">↓</span></a>
+            <a class="text-link" href="https://github.com/ooooooomygosh/Flow-Cabin" target="_blank" rel="noreferrer">在 GitHub 看源码 <span aria-hidden="true">↗</span></a>
           </div>
         </div>
         <div class="download-window" aria-hidden="true">
-          <div><span></span><span></span><span></span><small>Flow Cabin · <data data-latest-version>v1.21.4</data></small></div>
-          <img src="/promo/rooms/starlight.webp" alt="">
-          <p><i></i> 星夜阁楼 · 22:14</p>
+          <div><span></span><span></span><span></span><small>Flow Cabin · <data data-latest-version></data></small></div>
+          <img src="/promo/rooms/starlight.webp" alt="" width="1440" height="1080" decoding="async">
+          <p><i></i> 星夜阁楼 · 23:10</p>
         </div>
-        <p class="release-note">macOS 暂未完成开发者签名与公证，Windows 可能提示未知发布者。下载前请核对来源；真实账号、系统级全局输入与部分真机适配仍以 <a href="https://github.com/ooooooomygosh/album-web/blob/main/docs/limitations.md" target="_blank" rel="noreferrer">使用边界</a> 为准。</p>
+        <p class="release-note">macOS 暂未完成开发者签名与公证，Windows 可能提示未知发布者。下载前请核对来源；真实账号、系统级全局输入与部分真机适配仍以 <a href="https://github.com/ooooooomygosh/Flow-Cabin/blob/main/docs/limitations.md" target="_blank" rel="noreferrer">使用边界</a> 为准。</p>
       </section>
     </main>
 
     <footer class="site-footer">
-      <div class="footer-mark"><img src="/promo/icon.png" alt=""><span><b>心流小屋 · Flow Cabin</b><small>让专注有一点生活感。</small></span></div>
+      <div class="footer-mark"><img src="/promo/icon-48.png" width="48" height="48" alt="" decoding="async"><span><b>心流小屋 · Flow Cabin</b><small>让专注有一点生活感。</small></span></div>
       <p>Pixel art, playlists, focus and a small cat that notices you came back.</p>
-      <nav aria-label="页脚链接"><a href="https://github.com/ooooooomygosh/album-web/releases/latest">Releases</a><a href="https://github.com/ooooooomygosh/album-web">GitHub</a><a href="https://github.com/ooooooomygosh/album-web/blob/main/README.md">README</a></nav>
+      <nav aria-label="页脚链接"><a href="https://github.com/ooooooomygosh/Flow-Cabin/releases/latest">Releases</a><a href="https://github.com/ooooooomygosh/Flow-Cabin">GitHub</a><a href="https://github.com/ooooooomygosh/Flow-Cabin/blob/main/README.md">README</a></nav>
       <p class="art-credit">页面中的专辑封面、曲名与艺人名称用于演示唱片交互，权利归各自权利人所有。</p>
     </footer>
   </div>
   <div class="toast" data-toast role="status" aria-live="polite"></div>
+  <!-- 版本号的唯一来源是 <meta name="promo-version">。这段内联脚本在首帧之前把三处标签填好，
+       外部模块随后再拿 GitHub 的最新 release 对齐，页面上不会闪出空的版本号。 -->
+  <script>
+    (function () {
+      var version = (document.querySelector('meta[name="promo-version"]') || {}).content || '';
+      if (!version) return;
+      var nodes = document.querySelectorAll('[data-latest-version]');
+      for (var i = 0; i < nodes.length; i += 1) nodes[i].textContent = version;
+    })();
+  </script>
   <script type="module" src="/src/promo/promo.js"></script>
 </body>
 </html>

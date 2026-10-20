@@ -18,6 +18,9 @@ export const MAX_BACKUP_BYTES = 8 * 1024 * 1024;
 const KINDS = [BACKUP_KIND, 'AlbumCircleCollection'];
 const plain = (value) => value && typeof value === 'object' && !Array.isArray(value);
 const own = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
+// 房间编号必须是本机认识的普通名字：原型相关的名字一律不接受。
+const safeRoomId = (value) => typeof value === 'string' && /^[A-Za-z0-9_.-]{1,160}$/.test(value)
+  && !['__proto__', 'constructor', 'prototype'].includes(value);
 const pick = (value, keys) => Object.fromEntries(keys.filter((key) => own(value, key)).map((key) => [key, value[key]]));
 const invalid = (domain) => { throw new Error(`备份中的${domain}格式无效，原有内容保持不变。`); };
 const object = (value, domain) => { if (!plain(value)) invalid(domain); return value; };
@@ -322,6 +325,12 @@ export function remapItemKeys(library, ids = {}) {
 }
 // Merges a restored library into this computer's: vinyl styles and genres per album, and this room's boxes and look.
 export function mergeBackupLibrary(current, parsed, roomId, ids = {}) {
-  const source = remapItemKeys(parsed.library, ids), room = source.rooms[parsed.roomId || roomId] || source.rooms[roomId];
-  return { ...current, styles: { ...current.styles, ...source.styles }, genres: { ...current.genres, ...source.genres }, rooms: room ? { ...current.rooms, [roomId]: { ...(current.rooms[roomId] || {}), ...room } } : current.rooms };
+  const source = remapItemKeys(parsed.library, ids);
+  // 房间编号来自备份文件：只认本机认识的房间名，绝不去读对象的原型。
+  const wanted = safeRoomId(parsed.roomId) ? parsed.roomId : '';
+  const target = safeRoomId(roomId) ? roomId : '';
+  const room = (wanted && own(source.rooms, wanted) ? source.rooms[wanted] : null)
+    || (target && own(source.rooms, target) ? source.rooms[target] : null);
+  return { ...current, styles: { ...current.styles, ...source.styles }, genres: { ...current.genres, ...source.genres },
+    rooms: room && target ? { ...current.rooms, [target]: { ...(current.rooms[target] || {}), ...room } } : current.rooms };
 }

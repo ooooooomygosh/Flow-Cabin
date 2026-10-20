@@ -22,32 +22,32 @@
 .pixel-button, .cabin-room .cabin-toolbar button, .room-selection-actions button, .room-selection-actions a,
 .dialog-tabs button, .segmented button, .app-toast, .room-cat-bubble, .room-shelf-navigation,
 .turntable-controls button, .turntable-heading, .turntable-copy > strong, .app-brand small, .room-selection-copy small,
-.record-card-kicker, .backup-stats dt, .scene-choice strong, .pet-choice strong { font-size: 12px; line-height: 16px; }
-.app-brand strong, .cabin-dialog-header h2, .room-selection-copy h2, .room-empty > p { font-size: 24px; line-height: 28px; }
-.record-card-copy h3 { font-size: 24px; line-height: 30px; }
+.record-card-kicker, .backup-stats dt, .scene-choice strong, .pet-choice strong { font-size: var(--px-text-chrome); line-height: var(--px-leading-chrome); }
+.app-brand strong, .cabin-dialog-header h2, .room-selection-copy h2, .room-empty > p { font-size: var(--px-text-title); line-height: var(--px-leading-title); }
+.record-card-copy h3 { font-size: var(--px-text-title); line-height: var(--px-leading-title-lg); }
 .room-selection-copy p, .turntable-artist, .turntable-track { font-family: var(--px-font-body); }
 /* The provider tag is CJK (仅展示 / 本地音乐): the pixel CJK face at 12px, never 8px Latin. */
-.turntable-heading > small { font: 400 12px/16px var(--px-font-cn); letter-spacing: 0; }
+.turntable-heading > small { font-family: var(--px-font-cn); font-weight: 400; font-size: var(--px-text-chrome); line-height: var(--px-leading-chrome); letter-spacing: 0; }
 
 /* ── buttons: bevel + hover lift + click squish, all in frames ─────────── */
 .pixel-button, .room-selection-actions button, .room-selection-actions a, .cabin-scene .room-empty button,
 .add-manual > .pixel-button, .record-card-tools .record-tools-button, .record-card-tools .discogs-link {
-  box-shadow: inset 2px 2px 0 #ffffff1f, inset -2px -2px 0 #0000004d, var(--px-shadow-2);
+  box-shadow: inset 2px 2px 0 var(--px-bevel-white), inset -2px -2px 0 var(--px-bevel-black), var(--px-shadow-2);
   transition: translate var(--px-dur-fast) steps(2, end), box-shadow var(--px-dur-fast) steps(2, end), background-color var(--px-dur-fast) steps(2, end), filter var(--px-dur-fast) steps(2, end);
 }
-.pixel-button:hover:not(:disabled), .room-selection-actions button:hover, .room-selection-actions a:hover,
-.cabin-scene .room-empty button:hover, .record-card-tools .record-tools-button:hover, .record-card-tools .discogs-link:hover {
-  translate: 0 -2px; box-shadow: inset 2px 2px 0 #ffffff29, inset -2px -2px 0 #0000004d, 4px 6px 0 var(--px-shadow); filter: brightness(1.06);
+.pixel-button:hover:not(:disabled), .room-selection-actions button:hover:not(:disabled), .room-selection-actions a:hover:not(:disabled),
+.cabin-scene .room-empty button:hover:not(:disabled), .record-card-tools .record-tools-button:hover:not(:disabled), .record-card-tools .discogs-link:hover:not(:disabled) {
+  translate: 0 -2px; box-shadow: inset 2px 2px 0 var(--px-bevel-white-hi), inset -2px -2px 0 var(--px-bevel-black), 4px 6px 0 var(--px-shadow); filter: brightness(1.06);
 }
-.pixel-button:active:not(:disabled), .room-selection-actions button:active, .room-selection-actions a:active,
-.cabin-scene .room-empty button:active, .record-card-tools .record-tools-button:active, .record-card-tools .discogs-link:active {
-  translate: 2px 2px; box-shadow: inset 2px 2px 0 #0000004d, inset -2px -2px 0 #ffffff14, 1px 1px 0 var(--px-shadow); transition-duration: 0s;
+.pixel-button:active:not(:disabled), .room-selection-actions button:active:not(:disabled), .room-selection-actions a:active:not(:disabled),
+.cabin-scene .room-empty button:active:not(:disabled), .record-card-tools .record-tools-button:active:not(:disabled), .record-card-tools .discogs-link:active:not(:disabled) {
+  translate: 2px 2px; box-shadow: inset 2px 2px 0 var(--px-bevel-black), inset -2px -2px 0 var(--px-bevel-white-soft), 1px 1px 0 var(--px-shadow); transition-duration: 0s;
 }
 .pixel-button.is-primary, .cabin-scene .room-empty button:not(.room-welcome-focus) {
   color: var(--px-ink-on-accent); background: var(--px-accent); border-color: var(--px-accent-hi);
   box-shadow: inset 2px 2px 0 var(--px-accent-hi), inset -2px -2px 0 var(--px-accent-lo), var(--px-shadow-2);
 }
-.pixel-button.is-primary:hover:not(:disabled) { box-shadow: inset 2px 2px 0 #fff0cc, inset -2px -2px 0 var(--px-accent-lo), 4px 6px 0 var(--px-shadow); }
+.pixel-button.is-primary:hover:not(:disabled) { box-shadow: inset 2px 2px 0 var(--px-bevel-warm), inset -2px -2px 0 var(--px-accent-lo), 4px 6px 0 var(--px-shadow); }
 /* The selection card's primary action takes the scene's own accent (CabinRoom sets --scene-accent). */
 .cabin-room .room-selection-actions .room-open-album {
   color: var(--px-ink-on-accent); background: var(--scene-accent); border-color: color-mix(in srgb, var(--scene-accent) 55%, #fff);
@@ -56,6 +56,14 @@
 .cabin-room .room-selection-actions .room-open-album:hover { box-shadow: inset 2px 2px 0 color-mix(in srgb, var(--scene-accent) 40%, #fff), inset -2px -2px 0 color-mix(in srgb, var(--scene-accent) 65%, #000), 4px 6px 0 var(--px-shadow); }
 .pixel-button.is-quiet { box-shadow: none; }
 .pixel-button.is-quiet:hover:not(:disabled) { box-shadow: var(--px-shadow-1); }
+/* One disabled look for every button: no bevel, no hard shadow, no lift. The skin
+   layer owns the box-shadow, so the state has to be restated here (app.css only
+   dims the button — its `box-shadow:none` lost to this layer). It sits after the
+   primary/quiet faces on purpose: same specificity, so source order wins. */
+.pixel-button:disabled, .pixel-button.is-disabled, .room-selection-actions button:disabled,
+.cabin-scene .room-empty button:disabled, .record-card-tools .record-tools-button:disabled {
+  box-shadow: none; opacity: var(--px-disabled-opacity); cursor: default; translate: none;
+}
 
 /* HUD chips (the toolbar's groups: the focus badge, then the room actions): one framed
    strip each, 40px tall, keys light up like lamp buttons. A running timer lights its frame. */
@@ -67,7 +75,7 @@
 .cabin-toolbar-group:has(> .focus-badge.is-running) { border-image-source: var(--px-frame-img-accent); }
 .cabin-room .cabin-toolbar button.is-on > svg { color: var(--px-good); }
 .cabin-room .cabin-toolbar button { transition: background-color var(--px-dur-fast) steps(2, end), color var(--px-dur-fast) steps(2, end), translate var(--px-dur-fast) steps(2, end); }
-.cabin-room .cabin-toolbar button:hover:not(:disabled) { background: #ffd99c1f; color: var(--px-ink); translate: 0 -1px; }
+.cabin-room .cabin-toolbar button:hover:not(:disabled) { background: var(--px-accent-hi-ghost); color: var(--px-ink); translate: 0 -1px; }
 .cabin-room .cabin-toolbar button:active:not(:disabled) { translate: 0 1px; transition-duration: 0s; }
 .cabin-room .cabin-toolbar button svg, .pixel-button svg { shape-rendering: crispEdges; }
 
@@ -78,9 +86,12 @@
 .cabin-dialog, .record-dialog { box-shadow: var(--px-shadow-3); }
 .cabin-dialog-header { background: linear-gradient(var(--px-surface-3), var(--px-surface-2)); border-bottom: 2px solid var(--px-shadow); box-shadow: inset 0 -2px 0 var(--px-border); }
 .cabin-dialog-close, .desktop-controls button { transition: background-color var(--px-dur-fast) steps(2, end), color var(--px-dur-fast) steps(2, end); }
-:is(.cabin-dialog, .record-dialog)::backdrop { background: #0d0805b8; }
+:is(.cabin-dialog, .record-dialog)::backdrop { background: var(--px-backdrop); }
 .cabin-dialog[open], .record-dialog[open] { animation: px-dialog-in var(--px-dur-med) var(--px-ease) both; }
 @keyframes px-dialog-in { 0% { opacity: 0; translate: 0 12px; scale: .96; } 100% { opacity: 1; translate: 0; scale: 1; } }
+/* The lite entrance (流畅模式): opacity only — scaling a full-window dialog
+   re-rasterizes the whole panel every step. */
+@keyframes px-dialog-in-lite { 0% { opacity: 0; } 100% { opacity: 1; } }
 
 /* Tabs and segmented controls: sliding lamp-lit key. */
 .dialog-tabs button { transition: color var(--px-dur-fast) steps(2, end), border-color var(--px-dur-fast) steps(2, end); }
@@ -98,7 +109,7 @@
 }
 :is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) :is(select, textarea, input:is([type=text], [type=search], [type=number], [type=date], [type=url], :not([type]))):hover { border-color: var(--px-border-hi); }
 :is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) :is(select, textarea, input:is([type=text], [type=search], [type=number], [type=date], [type=url], :not([type]))):focus-visible { border-color: var(--px-accent-hi); }
-:is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) :is(select, textarea, input:is([type=text], [type=search], [type=number], [type=date], [type=url], :not([type]))):disabled { opacity: .5; cursor: default; }
+:is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) :is(select, textarea, input:is([type=text], [type=search], [type=number], [type=date], [type=url], :not([type]))):disabled { opacity: var(--px-disabled-opacity); cursor: default; }
 :is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) :is(textarea, input:is([type=text], [type=search], [type=number], [type=date], [type=url], :not([type])))::placeholder { color: var(--px-ink-faint); opacity: 1; }
 :is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) select {
   cursor: pointer; padding-right: 28px;
@@ -119,7 +130,7 @@ input[type=range]::-moz-range-progress { height: 6px; background: var(--px-accen
 input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 10px; height: 14px; margin-top: -6px; border: 0; background: var(--px-accent); box-shadow: inset 2px 2px 0 var(--px-accent-hi), inset -2px -2px 0 var(--px-accent-lo), 0 0 0 2px var(--px-shadow); transition: translate var(--px-dur-fast) steps(2, end); }
 input[type=range]::-moz-range-thumb { width: 10px; height: 14px; border: 2px solid var(--px-shadow); background: var(--px-accent); }
 input[type=range]:hover::-webkit-slider-thumb { translate: 0 -1px; }
-input[type=range]:disabled { opacity: .45; cursor: default; }
+input[type=range]:disabled { opacity: var(--px-disabled-opacity); cursor: default; }
 input[type=checkbox], input[type=radio] { accent-color: var(--px-accent); }
 
 
@@ -135,8 +146,9 @@ input[type=checkbox], input[type=radio] { accent-color: var(--px-accent); }
 }
 .room-cat-bubble::after { content: ''; position: absolute; left: 50%; top: 100%; width: 8px; height: 6px; translate: -50% 2px; rotate: 0deg; border: 0;
   background: linear-gradient(var(--px-paper-ink) 0 0) 2px 0 / 4px 2px no-repeat, linear-gradient(var(--px-paper-ink) 0 0) 2px 2px / 4px 2px no-repeat, linear-gradient(var(--px-paper) 0 0) 2px -2px / 4px 2px no-repeat; }
-/* An error toast keeps the paper tag but inks it in the warn colour, with a warn rule on the left. */
-.app-toast.is-error { color: var(--px-warn); box-shadow: inset 4px 0 0 var(--px-warn), var(--px-shadow-1); }
+/* An error toast keeps the paper tag but inks it in the warn colour, with a warn rule on the left.
+   The text uses --px-warn-ink: the bright ember only reaches 3.11:1 on paper, the ink 5.41:1. */
+.app-toast.is-error { color: var(--px-warn-ink); box-shadow: inset 4px 0 0 var(--px-warn), var(--px-shadow-1); }
 .app-toast { animation: px-toast-in var(--px-dur-med) var(--px-ease) both; }
 @keyframes px-toast-in { 0% { opacity: 0; translate: -50% 12px; } 100% { opacity: 1; translate: -50% 0; } }
 /* Cat bubble placement (CatBubble.jsx): offset vars, tail follows the side. */
@@ -148,19 +160,30 @@ input[type=checkbox], input[type=radio] { accent-color: var(--px-accent); }
 .room-cat-bubble:not([data-side='left']):not([data-side='right'])::after { left: calc(50% - var(--bubble-dx, 0px)); }
 
 /* Choice cards (scenes / companions): framed tiles that lift and lock in. */
-.scene-choice, .pet-choice { border: 2px solid #8a5a3299; box-shadow: var(--px-shadow-2); transition: translate var(--px-dur-fast) steps(2, end), border-color var(--px-dur-fast) steps(2, end), box-shadow var(--px-dur-fast) steps(2, end); }
+.scene-choice, .pet-choice { border: 2px solid var(--px-border-soft); box-shadow: var(--px-shadow-2); transition: translate var(--px-dur-fast) steps(2, end), border-color var(--px-dur-fast) steps(2, end), box-shadow var(--px-dur-fast) steps(2, end); }
 .scene-choice:hover, .pet-choice:hover { translate: 0 -2px; border-color: var(--px-accent); box-shadow: 4px 6px 0 var(--px-shadow); }
 .scene-choice:active, .pet-choice:active { translate: 1px 1px; box-shadow: var(--px-shadow-1); transition-duration: 0s; }
-.scene-choice[aria-pressed=true], .pet-choice[aria-pressed=true] { border-color: var(--px-accent-hi); background: #e0ad6914; box-shadow: 0 0 0 2px var(--px-shadow), var(--px-shadow-2); }
+.scene-choice[aria-pressed=true], .pet-choice[aria-pressed=true] { border-color: var(--px-accent-hi); background: var(--px-accent-ghost); box-shadow: 0 0 0 2px var(--px-shadow), var(--px-shadow-2); }
 .scene-choice > img { image-rendering: pixelated; }
 
 /* Square corners for chrome another file still rounds (companion-room.css; handed off). */
 .music-local-folders li { border-radius: 0; }
 
 /* ── reduced motion: keep states, drop movement ───────────────────────── */
+/* Every hover lift in this file has to be listed here: the OS switch (and the
+   in-app one) kills transitions, so a lift would otherwise jump instantly.
+   The :active squish stays — it is the press feedback, not decoration. */
 @media (prefers-reduced-motion: reduce) {
-  .pixel-button:hover:not(:disabled), .cabin-room .cabin-toolbar button:hover:not(:disabled), .scene-choice:hover, .pet-choice:hover { translate: none; }
+  .pixel-button:hover:not(:disabled), .cabin-room .cabin-toolbar button:hover:not(:disabled),
+  .room-selection-actions button:hover:not(:disabled), .room-selection-actions a:hover:not(:disabled),
+  .cabin-scene .room-empty button:hover:not(:disabled),
+  .record-card-tools .record-tools-button:hover:not(:disabled), .record-card-tools .discogs-link:hover:not(:disabled),
+  .scene-choice:hover, .pet-choice:hover { translate: none; }
 }
-html[data-desktop-reduce-motion='true'] :is(.pixel-button:hover:not(:disabled), .cabin-room .cabin-toolbar button:hover:not(:disabled), .scene-choice:hover, .pet-choice:hover) { translate: none; }
+html[data-desktop-reduce-motion='true'] :is(.pixel-button:hover:not(:disabled), .cabin-room .cabin-toolbar button:hover:not(:disabled),
+  .room-selection-actions button:hover:not(:disabled), .room-selection-actions a:hover:not(:disabled),
+  .cabin-scene .room-empty button:hover:not(:disabled),
+  .record-card-tools .record-tools-button:hover:not(:disabled), .record-card-tools .discogs-link:hover:not(:disabled),
+  .scene-choice:hover, .pet-choice:hover) { translate: none; }
 
 }

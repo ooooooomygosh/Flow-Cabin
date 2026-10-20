@@ -4,7 +4,12 @@
 
 ## 报告问题或提出想法
 
-通过 [Issues](https://github.com/ooooooomygosh/album-web/issues/new/choose) 提供系统／芯片、应用版本、复现步骤、预期与实际结果。音乐问题请注明音源和界面状态，桌面问题请注明单屏／多屏。截图只截小屋；不要提交 Cookie、令牌、签名音频 URL、个人数据备份或完整个人路径。
+从 [新建 Issue](https://github.com/ooooooomygosh/Flow-Cabin/issues/new/choose) 选一个模板：
+
+- [使用中遇到问题](https://github.com/ooooooomygosh/Flow-Cabin/issues/new?template=bug_report.yml) —— 需要系统／芯片、应用版本、复现步骤、预期与实际结果。
+- [一个小屋改进想法](https://github.com/ooooooomygosh/Flow-Cabin/issues/new?template=idea.yml) —— 从一个具体场景说起就行。
+
+音乐问题请注明音源和界面状态，桌面问题请注明单屏／多屏。截图只截小屋；不要提交 Cookie、令牌、签名音频 URL、个人数据备份或完整个人路径。
 
 建议从具体场景出发，例如「第一次打开时不知道怎样听歌」。较大的功能先开 Issue 讨论。独立的小改进可以直接提交 PR。
 
@@ -13,10 +18,14 @@
 使用 Node.js **24.x**，在独立分支与隔离数据目录工作：
 
 ```bash
+git clone https://github.com/ooooooomygosh/Flow-Cabin.git
+cd Flow-Cabin
 npm ci
 npm --prefix desktop ci
 npm run desktop:dev
 ```
+
+`npm run desktop:dev` 会先构建原生组件、音乐模块和前端，再拉起 Electron；只想改界面时用 `npm run dev`（只启动 Vite 渲染层）。
 
 开发启动使用应用数据目录；避免拿个人收藏做实验。可指定隔离 profile（替换成自己新建的临时目录）：
 
@@ -34,6 +43,8 @@ npm --prefix desktop run build:music
 npm --prefix desktop run build:web
 npm run test:browser
 ```
+
+`npm run check` 等于 `npm test` + `npm run build`：`npm test` 先跑桌面端单测，再跑根项目的 `node:test` 单测（含 CSS 设计系统守卫 `src/css-lint.test.mjs`）；`npm run build` 产出 index / promo / wallpaper / pet / mini 五个入口的生产构建。CI 跑的就是这一套，再加隔离浏览器回归。
 
 浏览器测试需要 Chromium，可用 `BROWSER_EXECUTABLE` 指定已有可执行文件；它使用隔离数据与生成 WAV，不访问个人收藏或登录账号。音乐播放、计时或数据持久化改动，请补对应回归；呈现改动请检查 1440×900 和 960×600，附脱敏截图与生成方式。[更多桌面测试与打包命令](desktop/README.md)。
 

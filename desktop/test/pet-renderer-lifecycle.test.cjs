@@ -85,7 +85,17 @@ test('motion reconciles initial focus, visibility, desktop exemptions, OS prefer
   const target = extra => Object.assign(new EventTarget(), extra);
   const media = target({ matches: false }), win = target({ matchMedia: () => media });
   const doc = target({ hidden: false, hasFocus: () => false }), values = [];
-  assert.deepEqual(readPetMotion(win, doc, media), { visible: false, reduced: false });
+  // The third argument is the background flag (the shared frame clock), not the media query:
+  // the reduced-motion source is now the shared one (OS preference OR the desktop switch).
+  assert.deepEqual(readPetMotion(win, doc, false), { visible: false, reduced: false, background: false, desktop: false });
+  assert.deepEqual(readPetMotion(win, doc, true), { visible: false, reduced: false, background: true, desktop: false });
+  // The desktop pet and the wallpaper are separate always-on-top surfaces: they stay visible
+  // even when the main window is not focused.
+  for (const bridge of ['albumPet', 'albumWallpaper']) {
+    win[bridge] = {};
+    assert.deepEqual(readPetMotion(win, doc, false), { visible: true, reduced: false, background: false, desktop: true });
+    delete win[bridge];
+  }
   const stop = subscribePetMotion(v => values.push(v), win, doc);
   assert.equal(values.at(-1).visible, false, 'mount respects initial unfocused main window');
   win.dispatchEvent(new Event('focus')); assert.equal(values.at(-1).visible, true);

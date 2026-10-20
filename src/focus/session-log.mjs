@@ -12,7 +12,9 @@ export const SESSION_EVENT = 'cabin:focus-session';
 const MAX = 5000, MINUTE = 60000;
 
 export function sessionRecord({ start, end, completed, todo = null, album = null, track = null }) {
-  const s = Math.round(start), e = Math.round(end);
+  const s = Math.round(Number(start)), e = Math.round(Number(end));
+  // 没有可用时间就不写记录：一条 NaN 记录会在读回时被丢掉，等于悄悄消失。
+  if (!Number.isFinite(s) || !Number.isFinite(e)) return null;
   return {
     id: `s${s}`, start: s, end: e, durationMs: Math.max(0, e - s), completed: Boolean(completed),
     taskId: todo?.id || '', taskText: todo?.text || '',
@@ -29,8 +31,11 @@ export function storableCover(value) {
 // a PNG data URL; '' when it cannot be read (e.g. cross-origin without CORS).
 export function coverThumb(url, { size = 32, doc = globalThis.document } = {}) {
   if (!url || !doc) return Promise.resolve('');
+  // 图片构造器也从注入的文档里取：这段画缩略图的代码因此可以被假文档测到。
+  const ImageClass = doc.defaultView?.Image || globalThis.Image;
+  if (typeof ImageClass !== 'function') return Promise.resolve('');
   return new Promise((resolve) => {
-    const img = new Image(); img.crossOrigin = 'anonymous'; img.decoding = 'async';
+    const img = new ImageClass(); img.crossOrigin = 'anonymous'; img.decoding = 'async';
     img.onload = () => { try { const c = doc.createElement('canvas'); c.width = c.height = size; const ctx = c.getContext('2d'); ctx.imageSmoothingEnabled = true; const s = Math.min(img.naturalWidth, img.naturalHeight); ctx.drawImage(img, (img.naturalWidth - s) / 2, (img.naturalHeight - s) / 2, s, s, 0, 0, size, size); resolve(c.toDataURL('image/png')); } catch { resolve(''); } };
     img.onerror = () => resolve('');
     img.src = url;
@@ -39,18 +44,24 @@ export function coverThumb(url, { size = 32, doc = globalThis.document } = {}) {
 export function readSessions(storage = globalThis.localStorage) {
   try { const raw = JSON.parse(storage.getItem(SESSION_LOG_KEY)); const list = Array.isArray(raw) ? raw : Array.isArray(raw?.sessions) ? raw.sessions : []; return list.filter((s) => s && Number.isFinite(s.start) && Number.isFinite(s.end)); } catch { return []; }
 }
+// 写进本机才算数：写失败时如实返回失败，不把没落盘的记录说成已保存。
 export function appendSession(record, storage = globalThis.localStorage) {
+  if (!record || typeof record.id !== 'string') return { ok: false, list: readSessions(storage), error: '专注日志记录无效，未写入。' };
   const list = [...readSessions(storage).filter((s) => s.id !== record.id), record].slice(-MAX);
-  try { storage.setItem(SESSION_LOG_KEY, JSON.stringify(list)); } catch {}
-  return list;
+  try { storage.setItem(SESSION_LOG_KEY, JSON.stringify(list)); return { ok: true, list, error: '' }; }
+  catch { return { ok: false, list: readSessions(storage), error: '专注日志未能保存，原有记录保持不变。请检查本机存储后重试。' }; }
 }
+// Two records describe the same round when they cover the same window; a
+// re-read (re-normalised) state must not look like a second finished round.
+const sameRound = (a, b) => Boolean(a) && Boolean(b) && a.start === b.start && a.end === b.end && Boolean(a.completed) === Boolean(b.completed);
 // What ended between two focus states (null when no focus round ended): a new entry in
 // state.sessions (finished or skipped), or a round stopped from the focus phase (abandoned).
 export function endedSession(previous, next, now) {
   const before = previous?.sessions || [], after = next?.sessions || [];
   const task = (id) => (next?.tasks || previous?.tasks || []).find((t) => t.id === id) || (id ? { id } : null);
-  if (after.length > before.length || (after.length === before.length && after.length && after.at(-1) !== before.at(-1))) {
-    const s = after.at(-1); return { start: s.start, end: s.end, completed: Boolean(s.completed), todo: task(s.taskId) };
+  const last = (list) => (list.length ? list[list.length - 1] : null);
+  if (after.length > before.length || (after.length === before.length && after.length && !sameRound(last(after), last(before)))) {
+    const s = last(after); return { start: s.start, end: s.end, completed: Boolean(s.completed), todo: task(s.taskId) };
   }
   const t = previous?.timer;
   if (t?.phase === 'focus' && next?.timer?.phase === 'idle') {
@@ -63,7 +74,10 @@ export function endedSession(previous, next, now) {
 export function recordEnd(previous, next, now, { storage = globalThis.localStorage, target = globalThis.window, album = target?.__cabinDeckItem, track = target?.__cabinLastPlayback?.track } = {}) {
   const ended = endedSession(previous, next, now); if (!ended) return null;
   const record = sessionRecord({ ...ended, album, track });
-  appendSession(record, storage);
+  if (!record) return null;
+  const saved = appendSession(record, storage);
+  // 没写进本机就不对外宣布：这轮专注否则只活在别人的内存里。
+  if (!saved.ok) return null;
   target?.dispatchEvent?.(new CustomEvent(SESSION_EVENT, { detail: record }));
   return record;
 }

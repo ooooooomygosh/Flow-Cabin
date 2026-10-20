@@ -11,6 +11,7 @@ import { createPlaybackLog, PLAYBACK_LOG_KEY } from '../src/player/playback-log.
 import { normalizeLetter, LETTERS_KEY, LETTER_EVENT } from '../src/ai/ai-model.mjs';
 import { saveJournalEntry, JOURNAL_KEY, JOURNAL_CHANGE } from '../src/focus/journal-entries.mjs';
 import { SOUVENIR_PREFIX, SOUVENIR_KEYS } from '../src/focus/souvenirs.mjs';
+import { onboardingSeed } from './app-version.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const output = path.resolve(process.env.SOUVENIR_OUTPUT || path.join(root, 'desktop/test-results/souvenirs'));
@@ -97,9 +98,10 @@ async function newPage(context, label, { open = true } = {}) {
 async function run(name, test, { open = true, prepare } = {}) {
   if (process.env.SOUVENIR_FILTER && !name.includes(process.env.SOUVENIR_FILTER)) return;
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'zh-CN', reducedMotion: 'reduce' });
+  await context.addInitScript((seed) => { window.__onboardingSeed = seed; }, onboardingSeed());
   await context.addInitScript(focusKey => {
     if (location.origin === 'null') return;
-    if (!localStorage.getItem('flow-cabin-onboarding-v1')) localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.4' }));
+    if (!localStorage.getItem('flow-cabin-onboarding-v1')) localStorage.setItem('flow-cabin-onboarding-v1', window.__onboardingSeed);
     if (!localStorage.getItem(focusKey)) localStorage.setItem(focusKey, JSON.stringify({ settings: { notify: false, chime: false }, rewards: { fish: 7, xp: 100 } }));
     if (!localStorage.getItem('album-circle-focus-display-v1')) localStorage.setItem('album-circle-focus-display-v1', JSON.stringify({ autoEnter: false }));
   }, FOCUS_KEY);

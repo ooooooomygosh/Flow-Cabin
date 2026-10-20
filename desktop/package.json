@@ -1,10 +1,11 @@
 {
   "name": "album-circle-desktop",
-  "version": "1.21.4",
+  "version": "1.21.5",
   "description": "心流小屋 · Flow Cabin — a pixel lo-fi cabin for your favourite albums, focus timer and desktop cat",
   "productName": "心流小屋",
   "author": "Flow Cabin",
   "private": true,
+  "license": "GPL-3.0-only",
   "main": "main.cjs",
   "scripts": {
     "start": "electron .",
@@ -172,7 +173,7 @@
       {
         "provider": "github",
         "owner": "ooooooomygosh",
-        "repo": "album-web",
+        "repo": "Flow-Cabin",
         "releaseType": "release"
       }
     ]

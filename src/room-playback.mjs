@@ -91,7 +91,7 @@ export async function findPlayableSource({ record, index, provider, request, pla
       if (!active()) return false;
       lastError = playbackErrorMessage(error);
       // Browser gesture restrictions are not a reason to try unrelated recordings.
-      if (error.name === 'NotAllowedError') throw error;
+      if (error?.name === 'NotAllowedError') throw error;
       return false;
     }
   };
@@ -141,11 +141,11 @@ export async function findPlayableSource({ record, index, provider, request, pla
           if (!active()) return null;
         }
       } catch (error) {
-        if (!active() || error.name === 'AbortError') return null;
-        if (error.name === 'NotAllowedError') throw error;
+        if (!active() || error?.name === 'AbortError') return null;
+        if (error?.name === 'NotAllowedError') throw error;
         // The platform refused or could not be reached: the other spellings
         // would only repeat the refusal, so move on to the next platform.
-        searchErrors.set(source, error.message);
+        searchErrors.set(source, playbackErrorMessage(error));
         break;
       }
     }
@@ -165,8 +165,8 @@ export async function findPlayableSource({ record, index, provider, request, pla
         if (found[0] && await attempt(found[0])) return { candidate: found[0], candidates: [] };
         if (!active()) return null;
       } catch (error) {
-        if (!active() || error.name === 'AbortError') return null;
-        lastError = error.message;
+        if (!active() || error?.name === 'AbortError') return null;
+        lastError = playbackErrorMessage(error);
       }
     }
   }

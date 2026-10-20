@@ -21,15 +21,19 @@ function PixelCoverTool({ item, onChanged }) {
     try { const result = await updateItem(item.id, patch); onChanged(result.item); setPreview(null); setState(done); } catch (error) { setState(error.message); }
   };
   const generate = async () => { setState('working'); const result = await pixelCover(item, { source: item.originalCover || item.cover }); setPreview(result); setState(''); };
-  if (preview) return <div className="record-pixel-cover" aria-label="像素封面预览">
+  // 状态文字待在一个常驻的活区里：整块换进换出读屏不一定播报，而「正在生成…」
+  // 「正在保存…」这两个中间态原来一点声音都没有（按钮只是被 disable 了）。
+  const status = state === 'working' ? '正在生成像素封面…' : state === 'saving' ? '正在保存…' : (state && !['working', 'saving'].includes(state) ? state : '');
+  if (preview) return <div className="record-pixel-cover" role="group" aria-label="像素封面预览">
     <img src={preview.cover} alt={`${item.title} 像素封面预览`} width="256" height="256"/>
     <small>{preview.method === 'pixelated' ? '已把原封面转成小屋配色的像素画。' : preview.reason || '按专辑名生成的像素封面。'}</small>
     <span><button type="button" className="pixel-button is-primary" disabled={state === 'saving'} onClick={() => save({ cover: preview.cover, ...(item.originalCover || !item.cover || item.cover.startsWith('data:image/png') ? {} : { originalCover: item.cover }) }, '已换上像素封面。')}><Check size={15}/>用这张</button><button type="button" className="pixel-button" onClick={() => setPreview(null)}>算了</button></span>
+    <small className="record-card-saved" role="status">{status}</small>
   </div>;
   return <>
     <button type="button" className="pixel-button" disabled={state === 'working'} title="生成小屋风格的像素封面，可预览后再决定" onClick={generate}><Sparkles size={15}/>{state === 'working' ? '正在生成…' : '像素封面'}</button>
     {item.originalCover && item.originalCover !== item.cover && <button type="button" className="pixel-button is-quiet" onClick={() => save({ cover: item.originalCover, originalCover: '' }, '已恢复原封面。')}>恢复原封面</button>}
-    {state && !['working', 'saving'].includes(state) && <small className="record-card-saved" role="status">{state}</small>}
+    <small className="record-card-saved" role="status">{status}</small>
   </>;
 }
 
@@ -92,7 +96,10 @@ export default function RecordCard({ item, close, onChanged, onRemove }) {
         })}</ol> : <p className="record-card-empty">还没有曲目资料。</p>}
         </section>
         <label className="record-card-notes">我的笔记<textarea value={notes} maxLength={4000} rows={4} placeholder="第一次听的场景、最喜欢的一首、想记住的一句歌词…" onChange={(event) => { removing.current = false; setNotes(event.target.value); setSaved('dirty'); clearTimeout(timer.current); timer.current = setTimeout(saveNotes, 900); }} onBlur={saveNotes}/></label>
-        <small className="record-card-saved" role="status">{{ saving: '正在保存…', error: <>保存失败。<button type="button" className="pixel-button is-quiet" onClick={saveNotes}>重试</button></>, dirty: '', saved: notes ? <><Check size={13}/>已保存在这台电脑</> : '' }[saved]}</small>
+        {/* 活区里只放文字：把「重试」按钮塞进 role=status，读屏会把它当文本念出来，
+            按钮自己出现的时候也没有人知道。失败原因在活区里，重试按钮在它旁边。 */}
+        <small className="record-card-saved" role="status">{{ saving: '正在保存…', error: '保存失败。', dirty: '', saved: notes ? <><Check size={13}/>已保存在这台电脑</> : '' }[saved]}</small>
+        {saved === 'error' && <button type="button" className="pixel-button is-quiet" onClick={saveNotes}>重试保存</button>}
         <footer className="record-card-footer">
           {links.map(([label, url]) => <a key={label} href={url} target="_blank" rel="noreferrer"><External size={15}/>{label}</a>)}
           <span className="record-card-spacer"/>

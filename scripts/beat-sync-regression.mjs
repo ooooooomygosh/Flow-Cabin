@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
 import { hasViteLocalOrigin } from './vite-readiness.mjs';
 import { createBeatTracker } from '../src/player/beat-tracker.mjs';
+import { onboardingSeed } from './app-version.mjs';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const output = process.env.BEAT_OUTPUT || path.join(root, 'desktop/test-results/beat-sync');
 const port = Number(process.env.BEAT_PORT || 4197), origin = `http://127.0.0.1:${port}`;
@@ -94,8 +95,9 @@ ${directExport ? 'export ' : ''}function createBeatTracker(...args) {
       if (r.method() === 'PATCH') { const it = items.find((i) => i.id === u.searchParams.get('id')); Object.assign(it || {}, b); return route.fulfill({ json: { item: it } }); } }
     return route.fulfill({ status: 404, json: { error: 'none' } }); });
   await context.route('**/desktop-music/**', (r) => r.fulfill({ json: { available: false } }));
+  await context.addInitScript((seed) => { window.__onboardingSeed = seed; }, onboardingSeed());
   await context.addInitScript(() => { if (sessionStorage.getItem('s')) return; sessionStorage.setItem('s', '1'); localStorage.clear();
-    localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.4' }));
+    localStorage.setItem('flow-cabin-onboarding-v1', window.__onboardingSeed);
     localStorage.setItem('flow-cabin-cat-mood-v1', JSON.stringify({ v: 1, mood: 90, tier: 'happy', updatedAt: Date.now(), feeds: [], totalFeeds: 0, unlockedActions: [] })); });
   const page = await context.newPage(); page.on('pageerror', (e) => report.pageErrors.push(`${name}: ${e.message}`));
   try { await page.goto(origin, { waitUntil: 'domcontentloaded', timeout: 30000 }); await page.locator('button.room-cat').waitFor({ timeout: 30000 });

@@ -8,6 +8,7 @@ import { spawn } from 'node:child_process';
 import { hasViteLocalOrigin } from './vite-readiness.mjs';
 import { showcaseAlbums } from './showcase-albums.mjs';
 import { ROOM_SCENES } from '../src/scene-catalog.mjs';
+import { onboardingSeed } from './app-version.mjs';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const output = process.env.SHELF_OUTPUT || path.join(root, 'desktop/test-results/shelf-ui');
 const port = Number(process.env.SHELF_PORT || 4191), origin = `http://127.0.0.1:${port}`;
@@ -25,9 +26,10 @@ try {
   const run=async(name,test,{native=true,dpr=1,collectionItems=items}={})=>{
     if(process.env.SHELF_FILTER&&!process.env.SHELF_FILTER.split(',').some(s=>name.includes(s)))return;
     const context=await browser.newContext({viewport:{width:1440,height:900},deviceScaleFactor:dpr,locale:'zh-CN',reducedMotion:'reduce'});
+    await context.addInitScript((seed) => { window.__onboardingSeed = seed; }, onboardingSeed());
     await context.addInitScript(native=>{
       if(location.origin==='null')return;
-      localStorage.setItem('flow-cabin-onboarding-v1',JSON.stringify({version:2,status:'done',step:'done',seenVersion:'1.21.4'}));
+      localStorage.setItem('flow-cabin-onboarding-v1', window.__onboardingSeed);
       window.__nativeCommands=[];window.open=url=>{window.__nativeCommands.push(String(url));return null;};
       window.albumDesktopAppearance={client:native,reduceMotion:true};
       const init=()=>{document.documentElement.dataset.desktopClient=String(native);document.documentElement.dataset.desktopReduceMotion='true';};

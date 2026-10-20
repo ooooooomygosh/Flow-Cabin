@@ -10,19 +10,32 @@ import { FED_EVENT, FISH_DRAG_TYPE, FISH_DRAG_TEXT } from '../cat/cat-care.mjs';
 import { roomPetPose } from './pet-presence.mjs';
 import { useInputPresence } from './useInputPresence';
 import { beatSynced } from '../cat/beat-sync.mjs';
+import { onBackgroundChange } from '../frame-clock.mjs';
 import './cat-care.css';
 import { bubbleText, celebrateUntil, petPose, pokeLine, catStroll } from './pet-model.mjs';
 
+// The cat's clock. It keeps the pose machine honest while the window is only
+// blurred (the sprite freezes, the state does not — otherwise a fed cat would
+// stay stuck mid-bite), but it stops when the app is in the background, so a
+// minimised window costs nothing.
 export function useClock(interval = 1000, enabled = true) {
   const [now, setNow] = useState(() => Date.now());
-  useEffect(() => { if (!enabled) return; setNow(Date.now()); const timer = setInterval(() => setNow(Date.now()), interval); return () => clearInterval(timer); }, [interval, enabled]);
+  useEffect(() => {
+    if (!enabled) return;
+    let timer = 0;
+    const stop = () => { clearInterval(timer); timer = 0; };
+    const start = () => { if (!timer) timer = setInterval(() => setNow(Date.now()), interval); };
+    const off = onBackgroundChange((background) => { if (background) stop(); else start(); });
+    setNow(Date.now());
+    return () => { off(); stop(); };
+  }, [interval, enabled]);
   return now;
 }
 // Shared by the room, the wallpaper and the desktop pet: tracks celebration,
 // pokes and song changes, and returns the current pose and bubble.
 export function useCatBehaviour({ focus = {}, playing = false, track = '', lastActivity = 0, petId = 'cat', reduceMotion = false, hidden = false }) {
   const motion = useCatMotion(reduceMotion, hidden);
-  const now = useClock(500, motion.visible), [celebrate, setCelebrate] = useState(0), [poke, setPoke] = useState({ text: '', at: 0 });
+  const now = useClock(500, !hidden), [celebrate, setCelebrate] = useState(0), [poke, setPoke] = useState({ text: '', at: 0 });
   useEffect(() => { setPoke({ text: '', at: 0 }); }, [petId]);
   const fish = useRef(focus.fish), song = useRef({ track, at: 0 });
   useEffect(() => { if (fish.current !== undefined && focus.fish > fish.current) setCelebrate(celebrateUntil(Date.now())); fish.current = focus.fish; }, [focus.fish]);
@@ -37,7 +50,12 @@ export function useCatBehaviour({ focus = {}, playing = false, track = '', lastA
   const stroll = catStroll(now - strollStart, rest.current, eligible);
   const pose = stroll.walking ? 'walk' : basePose === 'walk' ? 'idle' : basePose;
   const bubble = bubbleText({ phase: focus.phase, paused: focus.paused, remaining, track, trackChangedAt: song.current.at, poke: poke.text, pokedAt: poke.at, now, hour });
-  return { pose, synced, bubble, now, x: stroll.x, reduced: motion.reduced, pokedAt: poke.at, poke: () => { setPoke({ text: pokeLine(Math.random, petId), at: Date.now() }); window.dispatchEvent(new Event('cabin:cat-petted')); } };
+  // The in-app cat stops hopping when the cabin is backgrounded (a minimised
+  // Electron window would keep the sprite alive). The wallpaper and the desktop
+  // pet are separate always-on-top surfaces: they keep living, so they must
+  // not be stopped here.
+  const pauseInBackground = Boolean(motion.background && !motion.desktop);
+  return { pose, synced, bubble, now, x: stroll.x, reduced: motion.reduced, pauseInBackground, pokedAt: poke.at, poke: () => { setPoke({ text: pokeLine(Math.random, petId), at: Date.now() }); window.dispatchEvent(new Event('cabin:cat-petted')); } };
 }
 
 export const EAT_MS = 2400, FULL_MS = 1500;
@@ -66,7 +84,7 @@ export default function RoomCat({ focus, playing, track, reduceMotion, petId = '
   if (hidden) return null;
   const labels = { idle: '等你回来', groove: '跟着音乐摇摆', celebrate: '开心地庆祝', walk: '轻轻散步', sleep: '蜷着打盹', focus: '陪你读书', listen: '闭眼听歌', typing: '陪你敲敲键盘', click: '陪你点点鼠标', eat: '认真吃小鱼干' };
   const bubble = eating ? '慢慢吃，今天也辛苦啦。' : full ? '吃饱啦，再陪你一会儿。' : cat.bubble;
-  const body = <><PetLife pose={pose} pokedAt={cat.pokedAt} reduced={cat.reduced}><PixelCat petId={pet.id} pose={pose} accessory={focus?.accessory || ''} skin={focus?.catSkin} reduceMotion={cat.reduced} origin={eating ? actionOrigin.current : 0} style={{ transform: `translateX(${cat.x}px)` }} label={`像素${pet.species} · ${pet.name} · ${labels[pose] || labels.idle}`}/></PetLife>{bubble && <CatBubble ref={bubbleRef} text={bubble}/>}</>;
+  const body = <><PetLife pose={pose} pokedAt={cat.pokedAt} reduced={cat.reduced} pauseInBackground={cat.pauseInBackground}><PixelCat petId={pet.id} pose={pose} accessory={focus?.accessory || ''} skin={focus?.catSkin} reduceMotion={cat.reduced} origin={eating ? actionOrigin.current : 0} style={{ transform: `translateX(${cat.x}px)` }} label={`像素${pet.species} · ${pet.name} · ${labels[pose] || labels.idle}`}/></PetLife>{bubble && <CatBubble ref={bubbleRef} text={bubble}/>}</>;
   const props = { ref: catRef, className: `room-cat${eating ? ' cat--eating' : ''}${dropping ? ' cat--drop-target' : ''}`, 'data-mood': mood.tier, 'data-pet-id': pet.id, 'data-music': music || undefined, 'data-pose': pose, 'data-art': `sprite-${pet.id}`, 'data-typing': input.active && input.type === 'keyboard' || undefined, 'data-clicking': input.active && input.type === 'click' || undefined };
   return interactive ? <button {...props} type="button" {...dropProps} aria-haspopup="dialog" aria-expanded="false" title={`点一下摸摸${pet.name} · 双击看看等级和打扮`} aria-label={`摸摸${pet.species}${pet.name}；双击打开等级和打扮`} onClick={(event) => { clearTimeout(pokeTimer.current); if (event.detail > 1) return; pokeTimer.current = setTimeout(cat.poke, event.detail === 0 ? 0 : 260); }} onDoubleClick={() => { clearTimeout(pokeTimer.current); window.dispatchEvent(new Event('cabin-open-cat')); }} onContextMenu={(event) => { event.preventDefault(); window.dispatchEvent(new Event('cabin-open-cat')); }}>{body}</button> : <div {...props}>{body}</div>;
 }

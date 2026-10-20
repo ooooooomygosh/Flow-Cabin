@@ -435,8 +435,8 @@ export function trySaveLetter(storage, letter) {
   } catch { return { ok: false, list: [], error: '信箱无法读取，原数据没有覆盖。' }; }
   return tryWriteLetters(storage, [value, ...readLetters(storage).filter((item) => item.id !== value.id)]);
 }
-export function markRead(storage, id) {
-  const list = readLetters(storage).map((l) => l.id === id && l.direction === 'in' ? { ...l, read: true, readAt: Date.now() } : l);
+export function markRead(storage, id, now = Date.now()) {
+  const list = readLetters(storage).map((l) => l.id === id && l.direction === 'in' ? { ...l, read: true, readAt: now } : l);
   return tryWriteLetters(storage, list).list;
 }
 export function updateLetter(storage, id, patch) {

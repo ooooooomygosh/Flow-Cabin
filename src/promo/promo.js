@@ -1,7 +1,10 @@
 const site = document.querySelector('.site');
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
-const latestReleaseEndpoint = 'https://api.github.com/repos/ooooooomygosh/album-web/releases/latest';
-const fallbackLatestVersion = 'v1.21.4';
+const latestReleaseEndpoint = 'https://api.github.com/repos/ooooooomygosh/Flow-Cabin/releases/latest';
+// 版本号只有一个来源：promo.html 里的 <meta name="promo-version">。
+// 离线时用它兜底，在线时再用 GitHub 的最新 release 覆盖，页面上的标签与结构化数据一起走。
+const staticVersion = (document.querySelector('meta[name="promo-version"]')?.content || '').trim()
+  || (document.querySelector('[data-latest-version]')?.textContent || '').trim();
 
 const rooms = {
   pixel: {
@@ -9,42 +12,48 @@ const rooms = {
     copy: '木架、壁炉和一扇会变的窗',
     image: '/promo/rooms/pixel.webp',
     accent: '#d8a66c',
-    note: '壁炉把地板照成蜂蜜色，木架上的唱片安静地排着。'
+    note: '壁炉把地板照成蜂蜜色，木架上的唱片安静地排着。',
+    bubble: '这间屋子的木架最顺手。'
   },
   warm: {
     name: '琥珀小屋',
     copy: '泡一杯热茶，在琥珀色灯光里慢慢听歌',
     image: '/promo/rooms/warm.webp',
     accent: '#dba668',
-    note: '茶的热气升起来，灯光刚好比刚才暖一点。'
+    note: '茶的热气升起来，灯光刚好比刚才暖一点。',
+    bubble: '这边的灯光更黄一点。'
   },
   'night-study': {
     name: '月夜书桌',
     copy: '暖灯下写几行字，停下来转一转笔',
     image: '/promo/rooms/night-study.webp',
     accent: '#d6a56b',
-    note: '窗边的人还在写字，笔在手指间转了半圈。'
+    note: '窗边的人还在写字，笔在手指间转了半圈。',
+    bubble: '写字的人还没睡。'
   },
   forest: {
     name: '林间书屋',
     copy: '浇浇窗边的植物，转半圈花盆再读几页',
     image: '/promo/rooms/forest.webp',
     accent: '#b7c59a',
-    note: '叶子把窗外的光筛得很细，风从拱形窗里进来。'
+    note: '叶子把窗外的光筛得很细，风从拱形窗里进来。',
+    bubble: '窗外的叶子在响。'
   },
   seaside: {
     name: '海边慢屋',
     copy: '推开圆窗，让海风陪一张慢慢转的唱片',
     image: '/promo/rooms/seaside.webp',
     accent: '#bcd4c3',
-    note: '圆窗外有潮声，窗内的唱片也慢半拍。'
+    note: '圆窗外有潮声，窗内的唱片也慢半拍。',
+    bubble: '好像听见海了。'
   },
   starlight: {
     name: '星夜阁楼',
     copy: '抬起望远镜，亲手连一张想象星图',
     image: '/promo/rooms/starlight.webp',
     accent: '#c1b7db',
-    note: '阁楼很安静，只听见灯丝和远处的星。'
+    note: '阁楼很安静，只听见灯丝和远处的星。',
+    bubble: '抬头就是整片星空。'
   }
 };
 
@@ -80,6 +89,11 @@ const times = {
 };
 
 const weatherNames = { clear: '晴天', rain: '雨天', snow: '雪天' };
+const weatherBubbles = {
+  clear: '今天的天很透。',
+  rain: '雨把窗户敲得有点响。',
+  snow: '雪落下来，屋里更安静了。'
+};
 const weatherMoments = {
   clear: {
     morning: '薄雾刚刚散开，晨光落在窗沿上。',
@@ -204,6 +218,18 @@ function applyLatestVersion(tagName) {
   $$('[data-latest-version]').forEach((node) => {
     node.textContent = label;
   });
+  // 结构化数据里的版本号跟着一起走，搜索引擎看到的和页面上写的是同一个。
+  const schema = document.querySelector('script[type="application/ld+json"]');
+  if (!schema) return;
+  try {
+    const data = JSON.parse(schema.textContent);
+    if (data && typeof data === 'object') {
+      data.softwareVersion = label.replace(/^v/i, '');
+      schema.textContent = JSON.stringify(data, null, 2);
+    }
+  } catch {
+    // 结构化数据坏了也不该影响页面，保留原文。
+  }
 }
 
 async function syncLatestVersion() {
@@ -218,7 +244,7 @@ async function syncLatestVersion() {
     const release = await response.json();
     applyLatestVersion(release?.tag_name);
   } catch {
-    // The static v1.21.4 copy keeps the page useful when GitHub is unreachable.
+    // 离线时保留 promo.html 里写死的版本号，页面照常可用。
   } finally {
     clearTimeout(timeout);
   }
@@ -261,7 +287,8 @@ function updateTime() {
   $$('[data-day-time]').forEach((button) => {
     button.setAttribute('aria-pressed', String(button.dataset.dayTime === state.time));
   });
-  setCatBubble(time.bubble);
+  // 换时刻时，气泡要跟着当前动作走：跳着舞的猫别突然说「做完就休息」。
+  setCatBubbleFor(state.catPinned);
 }
 
 function updateWeather() {
@@ -277,6 +304,18 @@ function setCatBubble(message) {
   $$('[data-cat-bubble]').forEach((bubble) => {
     if (message !== bubble.textContent) bubble.textContent = message;
   });
+}
+
+// 奶糖回到某个动作时，气泡要说同一件事：别让「夜深了休息」配上一只在跳舞的猫。
+const catBubbleByAction = {
+  wait: () => times[state.time].bubble,
+  typing: () => '你敲哪里，我就敲哪里。',
+  click: () => '你点一下，我也拍一下。',
+  groove: () => '这首歌我也喜欢。'
+};
+
+function setCatBubbleFor(action) {
+  setCatBubble(catBubbleByAction[action]?.() || times[state.time].bubble);
 }
 
 function setCat(action, { pinned = false } = {}) {
@@ -305,7 +344,7 @@ function temporaryCat(action, message, duration = 950) {
   if (message) setCatBubble(message);
   state.catReturnTimer = setTimeout(() => {
     setCat(state.catPinned);
-    setCatBubble(times[state.time].bubble);
+    setCatBubbleFor(state.catPinned);
   }, duration);
 }
 
@@ -390,6 +429,9 @@ function renderSmartTrackList(pick) {
     const cover = document.createElement('img');
     cover.src = track.cover;
     cover.alt = `${track.album} 专辑封面`;
+    cover.width = 48;
+    cover.height = 48;
+    cover.decoding = 'async';
 
     const copy = document.createElement('div');
     const title = document.createElement('strong');
@@ -497,7 +539,7 @@ function toggleVinyl() {
     toast('唱片开始转了。这里只演示界面，不播放音频。');
   } else {
     setCat(state.catPinned === 'groove' ? 'wait' : state.catPinned, { pinned: true });
-    setCatBubble(times[state.time].bubble);
+    setCatBubbleFor(state.catPinned);
   }
 }
 
@@ -518,6 +560,12 @@ function formatFocus(seconds) {
   return `${String(minutes).padStart(2, '0')}${String(rest).padStart(2, '0')}`;
 }
 
+function focusRemainingLabel() {
+  const minutes = Math.floor(state.focusRemaining / 60);
+  const rest = state.focusRemaining % 60;
+  return rest ? `剩余 ${minutes} 分 ${rest} 秒` : `剩余 ${minutes} 分钟`;
+}
+
 function renderFocus(animate = false) {
   const value = formatFocus(state.focusRemaining);
   $$('.flip-digit').forEach((digit, index) => {
@@ -531,6 +579,8 @@ function renderFocus(animate = false) {
   });
   $('#focus-mode-label').textContent = state.focusName;
   $('#focus-status').textContent = state.focusRunning ? '专注进行中' : state.focusRemaining === state.focusPreset * 60 ? '准备开始' : '已暂停';
+  const clock = $('.flip-clock');
+  if (clock) clock.setAttribute('aria-label', `专注计时，${focusRemainingLabel()}`);
   const toggle = $('[data-focus-toggle]');
   toggle.textContent = state.focusRunning ? '暂停这一轮' : state.focusRemaining < state.focusPreset * 60 ? '继续这一轮' : '开始这一轮';
   $$('[data-focus-preset]').forEach((button) => {
@@ -570,7 +620,7 @@ function toggleFocus() {
       }
     }, 1000);
   } else {
-    setCatBubble(times[state.time].bubble);
+    setCatBubbleFor(state.catPinned);
   }
   renderFocus();
 }
@@ -612,15 +662,43 @@ const letterCopy = {
   }
 };
 
+// 来信正文只认自家模板里的 <b> 强调，不拼 innerHTML：以后接动态数据也不会变成注入口。
+function richParagraph(markup) {
+  const paragraph = document.createElement('p');
+  markup.split(/<b>|<\/b>/).forEach((part, index) => {
+    if (!part) return;
+    if (index % 2 === 1) {
+      const strong = document.createElement('b');
+      strong.textContent = part;
+      paragraph.append(strong);
+    } else {
+      paragraph.append(document.createTextNode(part));
+    }
+  });
+  return paragraph;
+}
+
 function updateLetter() {
   const copy = letterCopy[state.letterTab]();
   $('#letter-date').textContent = currentDateLabel();
   $('#letter-title').textContent = copy.title;
-  $('#letter-body').innerHTML = copy.body.map((paragraph) => `<p>${paragraph}</p>`).join('');
-  $('#letter-tags').innerHTML = copy.tags.map((tag) => `<li>${tag}</li>`).join('');
-  $$('[data-letter-tab]').forEach((button) => {
-    button.setAttribute('aria-selected', String(button.dataset.letterTab === state.letterTab));
+  const body = $('#letter-body');
+  const paragraphs = copy.body.map((markup) => richParagraph(markup));
+  body.replaceChildren(...paragraphs);
+  const tags = copy.tags.map((tag) => {
+    const item = document.createElement('li');
+    item.textContent = tag;
+    return item;
   });
+  $('#letter-tags').replaceChildren(...tags);
+  $$('[data-letter-tab]').forEach((button) => {
+    const active = button.dataset.letterTab === state.letterTab;
+    button.setAttribute('aria-selected', String(active));
+    // 漫游式 tabindex：Tab 只落在当前这一页，左右方向键在信箱之间走。
+    button.tabIndex = active ? 0 : -1;
+  });
+  const panel = $('.letter-paper');
+  if (panel) panel.setAttribute('aria-labelledby', `letter-tab-${state.letterTab}`);
 }
 
 function updateScrollMeter() {
@@ -632,6 +710,7 @@ function chooseRoom(id, scroll = false) {
   if (!rooms[id]) return;
   state.room = id;
   updateRoom();
+  setCatBubble(rooms[id].bubble);
   toast(`已把${rooms[id].name}搬到首屏。`);
   if (scroll) $('#top').scrollIntoView({ behavior: reduceMotion.matches ? 'auto' : 'smooth' });
 }
@@ -646,6 +725,7 @@ function chooseWeather(id) {
   if (!weatherNames[id]) return;
   state.weather = id;
   updateWeather();
+  setCatBubble(weatherBubbles[id]);
   toast(`窗外换成了${weatherNames[id]}。`);
 }
 
@@ -685,7 +765,7 @@ $$('[data-cat-choice]').forEach((button) => {
     } else if (action === 'groove') {
       setCatBubble('这首歌我也喜欢。');
     } else {
-      setCatBubble(times[state.time].bubble);
+      setCatBubbleFor(state.catPinned);
     }
   });
 });
@@ -707,19 +787,14 @@ $('#pet-typing').addEventListener('input', () => {
   registerCompanionMoment('keyboard');
   typingTimer = setTimeout(() => {
     setCat(state.catPinned);
-    setCatBubble(times[state.time].bubble);
+    setCatBubbleFor(state.catPinned);
   }, 1100);
 });
 
+// 点一下鼠标只是「演示」：临时摆一个拍鼠标的姿势，演示结束回到玩家自己选的动作。
 $('[data-promo-click]').addEventListener('click', () => {
-  clearTimeout(state.catReturnTimer);
-  setCat('click', { pinned: true });
-  setCatBubble('你点一下，我也拍一下。');
+  temporaryCat('click', '你点一下，我也拍一下。', 1100);
   registerCompanionMoment('click');
-  state.catReturnTimer = setTimeout(() => {
-    setCat(state.catPinned);
-    setCatBubble(times[state.time].bubble);
-  }, 720);
 });
 
 document.addEventListener('keydown', (event) => {
@@ -773,7 +848,7 @@ $('[data-focus-reset]').addEventListener('click', () => {
   state.focusRunning = false;
   state.focusRemaining = state.focusPreset * 60;
   renderFocus();
-  setCatBubble(times[state.time].bubble);
+  setCatBubbleFor(state.catPinned);
 });
 
 $('[data-card-flip]').addEventListener('click', (event) => {
@@ -783,10 +858,22 @@ $('[data-card-flip]').addEventListener('click', (event) => {
   button.setAttribute('aria-label', flipped ? '显示词卡正面' : '翻到词卡背面');
 });
 
-$$('[data-letter-tab]').forEach((button) => {
+const letterTabs = $$('[data-letter-tab]');
+letterTabs.forEach((button, index) => {
   button.addEventListener('click', () => {
     state.letterTab = button.dataset.letterTab;
     updateLetter();
+  });
+  button.addEventListener('keydown', (event) => {
+    const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[event.key];
+    if (step === undefined && event.key !== 'Home' && event.key !== 'End') return;
+    event.preventDefault();
+    const next = event.key === 'Home' ? 0
+      : event.key === 'End' ? letterTabs.length - 1
+        : (index + step + letterTabs.length) % letterTabs.length;
+    state.letterTab = letterTabs[next].dataset.letterTab;
+    updateLetter();
+    letterTabs[next].focus();
   });
 });
 
@@ -826,6 +913,14 @@ renderPlaying();
 renderFocus();
 renderSmartPick(state.smartPick);
 updateScrollMeter();
-setCatBubble(times[state.time].bubble);
-applyLatestVersion(fallbackLatestVersion);
-void syncLatestVersion();
+setCatBubbleFor(state.catPinned);
+// 版本号先落成静态值（离线也能看），随后再问 GitHub 对齐最新 release。
+applyLatestVersion(staticVersion);
+// 版本号不跟首屏抢带宽：等 load 之后再问 GitHub，拿不到就继续用静态版本。
+const scheduleVersionSync = () => {
+  const run = () => { void syncLatestVersion(); };
+  if (typeof requestIdleCallback === 'function') requestIdleCallback(run, { timeout: 2000 });
+  else setTimeout(run, 0);
+};
+if (document.readyState === 'complete') scheduleVersionSync();
+else addEventListener('load', scheduleVersionSync, { once: true });

@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { spawn } from 'node:child_process';
 import { hasViteLocalOrigin } from './vite-readiness.mjs';
+import { onboardingSeed } from './app-version.mjs';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const output = process.env.FOCUS_OUTPUT || path.join(root, 'desktop/test-results/focus-ui');
 const port = Number(process.env.FOCUS_PORT || 4188), origin = `http://127.0.0.1:${port}`;
@@ -50,16 +51,20 @@ try {
   const run = async (name,test,{firstVisit=false,collection,autoEnter=false,motion=false}={}) => {
     if (process.env.FOCUS_FILTER && !process.env.FOCUS_FILTER.split(',').some(filter=>name.includes(filter))) return;
     const context = await browser.newContext({viewport:{width:1440,height:900},locale:'zh-CN',reducedMotion:motion?'no-preference':'reduce'});
+    await context.addInitScript((seed) => { window.__onboardingSeed = seed; }, onboardingSeed());
     await context.addInitScript(({key,firstVisit,autoEnter,motion}) => {
       if (location.origin==='null') return;
       // Most suites work in the dock after starting a round; 沉浸 on start is covered by its own test.
       if (!autoEnter && !localStorage.getItem('album-circle-focus-display-v1')) localStorage.setItem('album-circle-focus-display-v1',JSON.stringify({autoEnter:false}));
-      if (!firstVisit) localStorage.setItem('flow-cabin-onboarding-v1',JSON.stringify({version:2,status:'done',step:'done',seenVersion:'1.21.4'}));
+      if (!firstVisit) localStorage.setItem('flow-cabin-onboarding-v1', window.__onboardingSeed);
       if (!firstVisit && !localStorage.getItem(key)) localStorage.setItem(key,JSON.stringify({notes:'原有随手记',settings:{focusMin:1,shortMin:1,notify:false,chime:false}}));
       window.__nativeCommands=[];
       window.albumDesktopAppearance={client:true,reduceMotion:!motion};
       window.open=url=>{ window.__nativeCommands.push(String(url)); return null; };
-      const init=()=>{document.documentElement.dataset.desktopClient='true';document.documentElement.dataset.desktopReduceMotion=String(!motion);};
+      const init=()=>{document.documentElement.dataset.desktopClient='true';
+        // 桌宠窗口是另一个浮窗：它有自己的 init 脚本（见下方 pet.addInitScript），
+        // 表达的是「这一轮要动效」。上下文级的设置是给房间页的，不该套到桌宠上。
+        if(!window.albumPet)document.documentElement.dataset.desktopReduceMotion=String(!motion);};
       if(document.documentElement) init(); else new MutationObserver((_,o)=>{if(document.documentElement){init();o.disconnect();}}).observe(document,{childList:true});
     },{key:KEY,firstVisit,autoEnter,motion});
     await context.route('**/*',async route=>{
@@ -590,7 +595,9 @@ try {
     await page.waitForFunction(()=>window.albumCompanionSnapshot?.().sound?.lofi===true,null,{timeout:30000});
     const source=await page.evaluate(()=>window.albumCompanionSnapshot());const tempo=Number((await page.locator('.sound-section').innerText()).match(/(\d+) BPM/)[1]);
     await screenshot(page,'lofi-source-playing');assert.equal(source.lofiBpm,tempo,'generated lo-fi snapshot carries its actual section tempo');assert.equal(source.musicPlaying,false);assert.equal(source.bpm,0);assert.equal(source.energy,0);
-    const pet=await page.context().newPage();pet.on('pageerror',e=>report.pageErrors.push(e.message));await pet.emulateMedia({reducedMotion:'no-preference'});await pet.addInitScript(()=>{window.albumPet={getSnapshot:async()=>null,onSnapshot:fn=>{window.__pushTempo=fn;return()=>{};},setHit(){},moveBy(){},dragEnd(){},menu(){},open(){}};window.__tempoEvents=[];window.addEventListener('cabin:playback',e=>window.__tempoEvents.push(e.detail));});
+    const pet=await page.context().newPage();pet.on('pageerror',e=>report.pageErrors.push(e.message));await pet.emulateMedia({reducedMotion:'no-preference'});await pet.addInitScript(()=>{window.albumPet={getSnapshot:async()=>null,onSnapshot:fn=>{window.__pushTempo=fn;return()=>{};},setHit(){},moveBy(){},dragEnd(){},menu(){},open(){}};window.__tempoEvents=[];window.addEventListener('cabin:playback',e=>window.__tempoEvents.push(e.detail));
+      // 这一轮要动效：emulateMedia 已经说明系统没有要求减少动效，而上下文级的降级开关只给房间页（见那里的 window.albumPet 判断）。
+    });
     await pet.setViewportSize({width:420,height:420});await pet.goto(origin+'/pet.html',{waitUntil:'domcontentloaded',timeout:30000});await pet.locator('.pet-cat .pixel-cat').waitFor();
     const push=async value=>{await pet.evaluate(companion=>window.__pushTempo({companion,size:192}),cleanCompanion({...value,reduceMotion:false}));};
     const beat=()=>pet.evaluate(async()=>({...((await import('/src/player/beat-clock.mjs')).currentBeat())}));

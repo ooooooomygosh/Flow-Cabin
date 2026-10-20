@@ -6,6 +6,12 @@ export const MAX_LIBRARY_BYTES = 768000;
 export const DEFAULT_RECORD_STYLE = Object.freeze({ base: '#16191d', opacity: 100, splatter: false, splashes: Object.freeze(['#dba746', '#efe3c1', '#9f3d2e']) });
 const hex = /^#[0-9a-f]{6}$/i;
 const own = (object, key) => Object.prototype.hasOwnProperty.call(object, key);
+// “没有这个值”和“这个值是 0”是两回事：null / '' / 布尔值都算缺失，落回默认值。
+const numeric = (value) => {
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string' && value.trim() !== '') return Number(value);
+  return NaN;
+};
 export function albumKey(item = {}) {
   if (item.externalIds?.qqAlbumMid) return `qq:${item.externalIds.qqAlbumMid}`;
   if (item.collectionId) return `itunes:${item.collectionId}`;
@@ -15,10 +21,11 @@ export function albumKey(item = {}) {
 export function normalizeStyle(value = {}) {
   if (!value || typeof value !== 'object') value = {};
   const colours = Array.isArray(value.splashes) ? value.splashes.slice(0, 3) : hex.test(value.splash) ? [value.splash] : DEFAULT_RECORD_STYLE.splashes;
+  const opacity = numeric(value.opacity);
   return {
     ...(value.autoBase === true ? { autoBase: true } : {}),
     base: hex.test(value.base) ? value.base.toLowerCase() : DEFAULT_RECORD_STYLE.base,
-    opacity: Number.isFinite(Number(value.opacity)) ? Math.max(0, Math.min(100, Math.round(Number(value.opacity)))) : 100,
+    opacity: Number.isFinite(opacity) ? Math.max(0, Math.min(100, Math.round(opacity))) : 100,
     splatter: value.splatter === true,
     splashes: colours.length ? colours.map((colour, index) => hex.test(colour) ? colour.toLowerCase() : DEFAULT_RECORD_STYLE.splashes[index]) : [...DEFAULT_RECORD_STYLE.splashes]
   };
@@ -35,8 +42,8 @@ export function genreList(value) {
   return [...new Set(list.filter((x) => typeof x === 'string').map((x) => x.trim().slice(0, 32)).filter(Boolean))].slice(0, 12);
 }
 export function genresFor(item, data) {
-  const key = albumKey(item);
-  if (own(data.genres || {}, key)) return data.genres[key];
+  const key = albumKey(item), saved = data?.genres;
+  if (own(saved || {}, key)) return saved[key];
   const source = [...genreList(item.genres), ...genreList(item.genre), ...genreList(item.primaryGenreName), ...genreList(item.tags)];
   return genreList(source.filter((tag) => !/^(album|song|qq|itunes|apple music|专辑|单曲|QQ 音乐|链接精确定位|name search)$/i.test(tag)));
 }
@@ -72,8 +79,8 @@ export function readLibrary(storage, userId) {
     return normalizeLibrary(JSON.parse(raw));
   } catch { return normalizeLibrary(); }
 }
-export function matchesLibraryFilters(item, data, roomId, filters) {
-  const key = albumKey(item), boxes = data.rooms[roomId]?.boxes || [];
+export function matchesLibraryFilters(item, data, roomId, filters = {}) {
+  const key = albumKey(item), boxes = data?.rooms?.[roomId]?.boxes || [];
   if (filters.box === 'unfiled' && boxes.some((box) => box.keys.includes(key))) return false;
   if (filters.box && !['all', 'unfiled'].includes(filters.box) && !boxes.find((box) => box.id === filters.box)?.keys.includes(key)) return false;
   const genres = genresFor(item, data);

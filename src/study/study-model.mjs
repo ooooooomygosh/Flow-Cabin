@@ -15,13 +15,27 @@ const scheduler = fsrs(generatorParameters({ enable_fuzz: true, request_retentio
 const strict = fsrs(generatorParameters({ enable_fuzz: false, request_retention: 0.9, maximum_interval: 3650 }));
 const DAY = 86400000;
 const text = (value, max) => (typeof value === 'string' ? value : '').replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, '').trim().slice(0, max);
+// 真实存在的日历日：2026-02-30 不是日期，不能当成考试日存进去。
+const calendarDate = (value) => {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T12:00:00Z`);
+  return Number.isFinite(+date) && date.toISOString().slice(0, 10) === value;
+};
 // Optional metadata keeps legacy cards/decks unchanged; source is plain text.
 export function sourceFields(value) {
   const source = text(value, LIMITS.source);
   return source ? { source } : {};
 }
-const number = (value, low, high, fallback = 0) => Number.isFinite(Number(value)) ? Math.max(low, Math.min(high, Number(value))) : fallback;
-const uid = (prefix) => `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+// “没有这个值”和“这个值是 0”是两回事：null / '' / 布尔值都算缺失，落回默认值。
+export const numeric = (value) => {
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string' && value.trim() !== '') return Number(value);
+  return NaN;
+};
+const number = (value, low, high, fallback = 0) => { const n = numeric(value); return Number.isFinite(n) ? Math.max(low, Math.min(high, n)) : fallback; };
+// 随机 id 的唯一来源。模型默认用它，调用方可以注入自己的实现（测试、确定性重建）。
+export const randomUid = (prefix = 'id') => `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+const makeUid = (prefix, factory) => (typeof factory === 'function' ? String(factory(prefix)) : randomUid(prefix));
 import { dayKey } from '../focus/focus-model.mjs';
 export { dayKey };
 
@@ -43,29 +57,29 @@ function normalizeMemory(value) {
       || !Number.isFinite(new Date(memory.last_review).getTime())))) return null;
   return memory;
 }
-function normalizeCard(value, decks) {
+function normalizeCard(value, decks, factory) {
   if (!value || typeof value !== 'object') return null;
   const front = text(value.front, LIMITS.side), back = text(value.back, LIMITS.side), deckId = text(value.deckId, 60);
   if (!front || !decks.has(deckId)) return null;
-  return { id: text(value.id, 60) || uid('card'), deckId, front, back, ...sourceFields(value.source), createdAt: number(value.createdAt, 0, 9e15, 0), memory: normalizeMemory(value.memory) };
+  return { id: text(value.id, 60) || makeUid('card', factory), deckId, front, back, ...sourceFields(value.source), createdAt: number(value.createdAt, 0, 9e15, 0), memory: normalizeMemory(value.memory) };
 }
-export function normalizeStudy(value = {}) {
+export function normalizeStudy(value = {}, { makeId: factory } = {}) {
   const v = value && typeof value === 'object' ? value : {};
-  const decks = (Array.isArray(v.decks) ? v.decks : []).map((deck) => deck && typeof deck === 'object' && text(deck.name, 40) ? { id: text(deck.id, 60) || uid('deck'), name: text(deck.name, 40), ...sourceFields(deck.source), createdAt: number(deck.createdAt, 0, 9e15, 0) } : null).filter(Boolean).slice(0, LIMITS.decks);
+  const decks = (Array.isArray(v.decks) ? v.decks : []).map((deck) => deck && typeof deck === 'object' && text(deck.name, 40) ? { id: text(deck.id, 60) || makeUid('deck', factory), name: text(deck.name, 40), ...sourceFields(deck.source), createdAt: number(deck.createdAt, 0, 9e15, 0) } : null).filter(Boolean).slice(0, LIMITS.decks);
   const ids = new Set(decks.map((deck) => deck.id));
   const log = v.log && typeof v.log === 'object' ? Object.fromEntries(Object.entries(v.log).filter(([key]) => /^\d{4}-\d{2}-\d{2}$/.test(key)).slice(-400).map(([key, entry]) => [key, { reviews: number(entry?.reviews, 0, 1e5, 0), learned: number(entry?.learned, 0, 1e5, 0) }])) : {};
   return {
     version: 1, decks,
-    cards: (Array.isArray(v.cards) ? v.cards : []).map((card) => normalizeCard(card, ids)).filter(Boolean).slice(0, LIMITS.cards),
-    countdowns: (Array.isArray(v.countdowns) ? v.countdowns : []).map((entry) => entry && text(entry.title, 40) && /^\d{4}-\d{2}-\d{2}$/.test(entry.date || '') ? { id: text(entry.id, 60) || uid('exam'), title: text(entry.title, 40), date: entry.date } : null).filter(Boolean).slice(0, LIMITS.countdowns),
+    cards: (Array.isArray(v.cards) ? v.cards : []).map((card) => normalizeCard(card, ids, factory)).filter(Boolean).slice(0, LIMITS.cards),
+    countdowns: (Array.isArray(v.countdowns) ? v.countdowns : []).map((entry) => entry && text(entry.title, 40) && /^\d{4}-\d{2}-\d{2}$/.test(entry.date || '') ? { id: text(entry.id, 60) || makeUid('exam', factory), title: text(entry.title, 40), date: entry.date } : null).filter(Boolean).slice(0, LIMITS.countdowns),
     newPerDay: number(v.newPerDay, 0, 200, LIMITS.perDayNew),
     log
   };
 }
 
-export function addDeck(state, name, now = Date.now()) {
+export function addDeck(state, name, now = Date.now(), { makeId: factory } = {}) {
   const value = text(name, 40); if (!value || state.decks.length >= LIMITS.decks) return state;
-  return { ...state, decks: [...state.decks, { id: uid('deck'), name: value, createdAt: now }] };
+  return { ...state, decks: [...state.decks, { id: makeUid('deck', factory), name: value, createdAt: now }] };
 }
 export function renameDeck(state, deckId, name) { const value = text(name, 40); return value ? { ...state, decks: state.decks.map((deck) => deck.id === deckId ? { ...deck, name: value } : deck) } : state; }
 export function removeDeck(state, deckId) { return { ...state, decks: state.decks.filter((deck) => deck.id !== deckId), cards: state.cards.filter((card) => card.deckId !== deckId) }; }
@@ -78,14 +92,14 @@ export function parseCards(input) {
 }
 // One duplicate rule for typed, pasted and imported cards: ｗｉｎｄｏｗ, Window and window are the same card.
 export const cardKey = (front) => String(front || '').normalize('NFKC').trim().toLowerCase();
-export function addCards(state, deckId, cards, now = Date.now()) {
+export function addCards(state, deckId, cards, now = Date.now(), { makeId: factory } = {}) {
   if (!state.decks.some((deck) => deck.id === deckId)) return { state, added: 0 };
   const existing = new Set(state.cards.filter((card) => card.deckId === deckId).map((card) => cardKey(card.front)));
   const fresh = [];
   for (const card of cards) {
     if (state.cards.length + fresh.length >= LIMITS.cards) break;
     const key = cardKey(card.front); if (existing.has(key)) continue; existing.add(key);
-    fresh.push({ id: uid('card'), deckId, front: card.front, back: card.back, ...sourceFields(card.source), createdAt: now + fresh.length, memory: null });
+    fresh.push({ id: makeUid('card', factory), deckId, front: card.front, back: card.back, ...sourceFields(card.source), createdAt: now + fresh.length, memory: null });
   }
   return { state: { ...state, cards: [...state.cards, ...fresh] }, added: fresh.length };
 }
@@ -154,9 +168,9 @@ export function daysUntil(date, now = Date.now()) {
   const [y, m, d] = String(date).split('-').map(Number), target = new Date(y, m - 1, d).getTime(), today = new Date(now); today.setHours(0, 0, 0, 0);
   return Math.round((target - today.getTime()) / DAY);
 }
-export function addCountdown(state, title, date) {
-  const value = text(title, 40); if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(date || '') || state.countdowns.length >= LIMITS.countdowns) return state;
-  return { ...state, countdowns: [...state.countdowns, { id: uid('exam'), title: value, date }].sort((a, b) => a.date.localeCompare(b.date)) };
+export function addCountdown(state, title, date, { makeId: factory } = {}) {
+  const value = text(title, 40); if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(date || '') || !calendarDate(date) || state.countdowns.length >= LIMITS.countdowns) return state;
+  return { ...state, countdowns: [...state.countdowns, { id: makeUid('exam', factory), title: value, date }].sort((a, b) => a.date.localeCompare(b.date)) };
 }
 export function removeCountdown(state, id) { return { ...state, countdowns: state.countdowns.filter((entry) => entry.id !== id) }; }
 export function restoreCountdown(state, entry) {
@@ -167,17 +181,21 @@ export function nextCountdown(state, now = Date.now()) { return state.countdowns
 
 // Focus heatmap: the last N weeks as columns of 7 days (Sunday first), levels 0–4.
 export function heatmap(minutesByDay, now = Date.now(), weeks = 18) {
-  const today = new Date(now); today.setHours(0, 0, 0, 0);
-  const start = new Date(today); start.setDate(start.getDate() - today.getDay() - (weeks - 1) * 7);
-  const columns = [];
-  for (let week = 0; week < weeks; week++) {
+  const count = numeric(weeks);
+  const columns = Number.isFinite(count) ? Math.max(1, Math.min(52, Math.floor(count))) : 18;
+  const time = Number(now);
+  if (!Number.isFinite(time)) return Array.from({ length: columns }, () => Array.from({ length: 7 }, () => ({ key: '', minutes: 0, future: true, level: 0 })));
+  const today = new Date(time); today.setHours(0, 0, 0, 0);
+  const start = new Date(today); start.setDate(start.getDate() - today.getDay() - (columns - 1) * 7);
+  const out = [];
+  for (let week = 0; week < columns; week++) {
     const column = [];
     for (let day = 0; day < 7; day++) {
       const date = new Date(start); date.setDate(start.getDate() + week * 7 + day);
-      const key = dayKey(date.getTime()), minutes = Math.round(minutesByDay.get(key) || 0), future = date > today;
+      const key = dayKey(date.getTime()), minutes = Math.round(minutesByDay?.get?.(key) || 0), future = date > today;
       column.push({ key, minutes, future, level: future || !minutes ? 0 : minutes < 25 ? 1 : minutes < 60 ? 2 : minutes < 120 ? 3 : 4 });
     }
-    columns.push(column);
+    out.push(column);
   }
-  return columns;
+  return out;
 }
