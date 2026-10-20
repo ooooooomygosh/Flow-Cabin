@@ -9,11 +9,11 @@ export const FACE_HINTS = Object.freeze({ flip: '胡桃木与黄铜，数字一�
 export const SHOW_MODES = Object.freeze([['auto', '自动'], ['clock', '时钟'], ['timer', '计时']]);
 // The face a scene opens with (琥珀/像素: the flip clock; window scenes: the window).
 export const SCENE_FACES = Object.freeze({ warm: 'flip', pixel: 'flip', 'night-study': 'window', starlight: 'window', seaside: 'window', forest: 'growth' });
-export const DEFAULT_DISPLAY = Object.freeze({ mode: '', show: 'auto', seconds: false, autoEnter: true });
+export const DEFAULT_DISPLAY = Object.freeze({ mode: '', show: 'auto', seconds: false, autoEnter: false });
 
 export function normalizeDisplay(value) {
   const v = value && typeof value === 'object' ? value : {};
-  return { mode: FACE_IDS.includes(v.mode) ? v.mode : '', show: SHOW_MODES.some(([id]) => id === v.show) ? v.show : 'auto', seconds: v.seconds === true, autoEnter: v.autoEnter !== false };
+  return { mode: FACE_IDS.includes(v.mode) ? v.mode : '', show: SHOW_MODES.some(([id]) => id === v.show) ? v.show : 'auto', seconds: v.seconds === true, autoEnter: v.autoEnter === true };
 }
 export const faceFor = (display, look) => normalizeDisplay(display).mode || SCENE_FACES[look] || 'flip';
 // ←/→ in the whole-window display.

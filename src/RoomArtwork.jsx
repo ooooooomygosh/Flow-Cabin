@@ -1,37 +1,37 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { artworkResolution } from './artwork-resolution.mjs';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { roomArtworkResolution } from './artwork-resolution.mjs';
 import RecordSleeve from './ui/RecordSleeve';
 
 export function ShowroomArtwork({ item, className = '', pixel = false }) {
-  const [failed, setFailed] = useState(false), [painted, setPainted] = useState(false);
-  const root = useRef(null), canvas = useRef(null);
+  const [failed, setFailed] = useState(false), [loaded, setLoaded] = useState(null);
+  const [painted, setPainted] = useState('');
+  const canvas = useRef(null);
   useEffect(() => {
-    setFailed(false); setPainted(false);
+    setFailed(false); setLoaded(null); setPainted('');
     if (!pixel || !item.cover) return;
-    const image = new Image();
-    let disposed = false, ready = false, frame = 0;
-    const paint = () => {
-      const element = canvas.current;
-      if (disposed || !ready || !element) return;
-      const side = Math.min(image.naturalWidth, image.naturalHeight);
-      const resolution = artworkResolution(element.parentElement.getBoundingClientRect().width, window.devicePixelRatio, side);
-      if (element.width !== resolution) element.width = element.height = resolution;
-      const context = element.getContext('2d');
-      if (!context) return; // the ordinary image remains available
-      // Average on reduction, then use crisp enlargement. No cross-origin readback.
-      context.imageSmoothingEnabled = true; context.imageSmoothingQuality = 'high';
-      context.clearRect(0, 0, resolution, resolution);
-      context.drawImage(image, (image.naturalWidth - side) / 2, (image.naturalHeight - side) / 2, side, side, 0, 0, resolution, resolution);
-      setPainted(true);
-    };
-    const schedule = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(paint); };
-    const observer = new ResizeObserver(schedule);
-    if (root.current) observer.observe(root.current);
-    image.onload = () => { ready = true; paint(); };
-    image.onerror = () => { if (!disposed) setFailed(true); }; image.src = item.cover;
-    return () => { disposed = true; cancelAnimationFrame(frame); observer.disconnect(); image.onload = image.onerror = null; };
+    const source = item.cover, image = new Image();
+    let disposed = false;
+    image.onload = () => { if (!disposed) setLoaded({ source, image }); };
+    image.onerror = () => { if (!disposed) setFailed(true); };
+    image.src = source;
+    return () => { disposed = true; image.onload = image.onerror = null; };
   }, [item.cover, pixel]);
-  return <span ref={root} className={`showroom-artwork ${className} ${pixel ? 'pixel-artwork' : ''}`}>
-    {item.cover && !failed ? <><img src={item.cover} alt={`${item.title} 封面`} width="800" height="800" decoding="async" draggable="false" style={painted ? { visibility: 'hidden' } : undefined} onError={() => setFailed(true)}/>{pixel && <canvas ref={canvas} width="96" height="96" className={painted ? 'is-painted' : ''} aria-hidden="true"/>}</> : <RecordSleeve item={item} className="showroom-art-placeholder is-generated"/>}
+  // Paint after React has restored the canvas following an image error. A fixed
+  // backing grid needs neither ResizeObservers nor repainting on window resize.
+  useLayoutEffect(() => {
+    const element = canvas.current;
+    if (!pixel || !element || loaded?.source !== item.cover) return;
+    const { image } = loaded, side = Math.min(image.naturalWidth, image.naturalHeight);
+    const resolution = roomArtworkResolution(side);
+    element.width = element.height = resolution;
+    const context = element.getContext('2d');
+    if (!context) return;
+    context.imageSmoothingEnabled = true; context.imageSmoothingQuality = 'high';
+    context.drawImage(image, (image.naturalWidth - side) / 2, (image.naturalHeight - side) / 2, side, side, 0, 0, resolution, resolution);
+    setPainted(item.cover);
+  }, [loaded, item.cover, pixel]);
+  const ready = painted === item.cover && Boolean(item.cover);
+  return <span className={`showroom-artwork ${className} ${pixel ? 'pixel-artwork' : ''}`}>
+    {item.cover && !failed ? <><img src={item.cover} alt={`${item.title} 封面`} width="800" height="800" decoding="async" draggable="false" style={ready ? { visibility: 'hidden' } : undefined} onError={() => setFailed(true)}/>{pixel && <canvas ref={canvas} width="64" height="64" className={ready ? 'is-painted' : ''} aria-hidden="true"/>}</> : <RecordSleeve item={item} className="showroom-art-placeholder is-generated"/>}
   </span>;
 }

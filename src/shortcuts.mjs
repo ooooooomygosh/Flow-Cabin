@@ -23,7 +23,7 @@ export const SHORTCUTS = Object.freeze([
   { id: 'back', keys: 'Escape', label: 'Esc', action: '返回 / 退出沉浸', scope: 'room' },
   { id: 'fullscreen', keys: 'F11', label: 'F11', action: '全屏', scope: 'app' },
   { id: 'desktop', keys: 'Control+Alt+D Alt+Meta+D', label: 'Ctrl/⌘+Alt+D', action: '沉入 / 浮出桌面（桌面版）', scope: 'app', desktop: true },
-  { id: 'settings', keys: 'Control+, Meta+,', label: 'Ctrl/⌘+,', action: '显示与字体（桌面版）', scope: 'app', desktop: true },
+  { id: 'settings', keys: 'Control+, Meta+,', label: 'Ctrl/⌘+,', action: '打开设置（桌面版）', scope: 'app', desktop: true },
   { id: 'journal', keys: 'L', label: 'L', action: '打开小屋日记', scope: 'room' },
   { id: 'focusDisplay', keys: 'F', label: 'F', action: '沉浸（同 Z）', scope: 'room' },
   { id: 'focusFaces', keys: 'ArrowLeft ArrowRight', label: '← →', action: '沉浸里上一首 / 下一首', scope: 'display' }

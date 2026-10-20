@@ -183,11 +183,15 @@
     "electron-updater": "6.8.9",
     "music-metadata": "11.16.1",
     "NeteaseCloudMusicApi": "4.32.0",
-    "uiohook-napi": "1.5.5"
+    "uiohook-napi": "1.5.5",
+    "node-forge": "file:./vendor/node-forge-encrypt-only"
   },
   "overrides": {
     "music-metadata": "$music-metadata",
     "basic-ftp": "6.2.3",
-    "node-forge": "file:vendor/node-forge-encrypt-only"
+    "node-forge": "$node-forge"
+  },
+  "engines": {
+    "node": "24.x"
   }
 }

@@ -60,15 +60,15 @@ test('the flip follows gluqlo: the top leaf folds and darkens, the bottom leaf o
 
 test('display preferences live in their own key, follow the scene until picked, and sync', () => {
   assert.equal(DISPLAY_KEY, 'album-circle-focus-display-v1');
-  assert.deepEqual(normalizeDisplay({ mode: 'nope', show: 'x', seconds: 1 }), { mode: '', show: 'auto', seconds: false, autoEnter: true });
-  assert.deepEqual(normalizeDisplay({ mode: 'ring', show: 'timer', seconds: true }), { mode: 'ring', show: 'timer', seconds: true, autoEnter: true });
+  assert.deepEqual(normalizeDisplay({ mode: 'nope', show: 'x', seconds: 1 }), { mode: '', show: 'auto', seconds: false, autoEnter: false });
+  assert.deepEqual(normalizeDisplay({ mode: 'ring', show: 'timer', seconds: true }), { mode: 'ring', show: 'timer', seconds: true, autoEnter: false });
   assert.equal(normalizeDisplay({ autoEnter: false }).autoEnter, false, 'auto-enter on pomodoro start can be turned off');
   for (const id of ROOM_SCENE_IDS) assert.ok(FACE_IDS.includes(SCENE_FACES[id]), `${id} has a default face`);
   assert.equal(faceFor({}, 'warm'), 'flip'); assert.equal(faceFor({}, 'forest'), 'growth'); assert.equal(faceFor({ mode: 'record' }, 'forest'), 'record');
   assert.equal(cycleFace('growth', 1), 'flip'); assert.equal(cycleFace('flip', -1), 'growth'); assert.equal(cycleFace('bogus', 1), FACE_IDS[1]);
   const storage = memory();
-  assert.deepEqual(readDisplay(storage), { mode: '', show: 'auto', seconds: false, autoEnter: true });
-  storage.setItem(DISPLAY_KEY, '{broken'); assert.deepEqual(readDisplay(storage), { mode: '', show: 'auto', seconds: false, autoEnter: true });
+  assert.deepEqual(readDisplay(storage), { mode: '', show: 'auto', seconds: false, autoEnter: false });
+  storage.setItem(DISPLAY_KEY, '{broken'); assert.deepEqual(readDisplay(storage), { mode: '', show: 'auto', seconds: false, autoEnter: false });
   assert.equal(writeDisplay({ mode: 'window' }, storage), true); assert.equal(readDisplay(storage).mode, 'window');
   assert.equal(writeDisplay({}, { setItem() { throw new Error('quota'); } }), false);
   const listeners = {}, win = { addEventListener: (t, fn) => { listeners[t] = fn; }, removeEventListener: (t) => { delete listeners[t]; } };
@@ -137,4 +137,9 @@ test('the record arm tracks inward and the ring has 36 distinct beads', () => {
   const r = (p) => { const [x, y] = stylus(p); return Math.hypot(x - 37, y - 36); };
   assert.ok(r(0) > r(.5) && r(.5) > r(1), 'lead-in to run-out'); assert.ok(Math.abs(r(0) - 28) < 1.5 && Math.abs(r(1) - 13) < 1.5);
   assert.equal(new Set(beadPoints.map(String)).size, BEADS);
+});
+
+test('automatic immersion is opt-in and an existing opt-in remains honoured', () => {
+  assert.equal(normalizeDisplay({}).autoEnter, false);
+  assert.equal(normalizeDisplay({ autoEnter: true }).autoEnter, true);
 });

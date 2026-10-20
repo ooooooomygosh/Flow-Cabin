@@ -14,7 +14,7 @@
 .cabin-room .room-selection-copy h2{margin:3px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cabin-room .room-selection-copy p{font-size:12px}.cabin-room .room-selection-actions button,.cabin-room .room-selection-actions a{white-space:nowrap;margin:0}
 .room-shelf-navigation{position:absolute;right:18px;top:45%;z-index:12;display:grid;justify-items:center;gap:9px;padding:10px;color:#f7dbb0;font-size:12px}
-.room-shelf-navigation button{display:grid;place-items:center;padding:7px;color:#ffe1af}.room-shelf-navigation button:disabled{opacity:.3}.room-shelf-navigation small{font-size:12px;writing-mode:vertical-rl;text-orientation:upright;letter-spacing:.1em}
+.room-shelf-navigation button{display:grid;place-items:center;padding:7px;color:#ffe1af}.room-shelf-navigation button:disabled{opacity:.3}.room-shelf-navigation small{font-size:12px;line-height:16px;writing-mode:horizontal-tb;white-space:nowrap;letter-spacing:0}
 .wallpaper-error{position:absolute;z-index:26;left:25%;right:20px;top:132px;display:flex;align-items:center;gap:12px;overflow-wrap:anywhere;background:#471f14ed;color:#ffe0bd;padding:10px 16px;border:2px solid #e6ae67;font-size:13px}
 .wallpaper-error button{margin-left:auto;flex:none;min-width:24px;min-height:24px;border:0;background:none;color:inherit;font-size:20px;cursor:pointer}
 
@@ -34,7 +34,7 @@
 @media(max-height:750px){.room-turntable{bottom:19%;width:18%;min-width:165px}.turntable-controls button{padding:5px}.turntable-controls select{padding:5px}.room-shelf-navigation small{display:none}.turntable-console{scrollbar-width:thin;scrollbar-color:#b48753 #352518}.turntable-console>*{max-width:100%}.turntable-status{overflow-wrap:anywhere}}
 @media(max-height:700px){.turntable-audio-sliders{gap:2px}.turntable-status{max-height:28px}}
 /* Only the heading moves the furniture; playback, selects and album drops keep their own gestures. */
-.turntable-drag-handle{display:flex;align-items:center;gap:5px;border:0;padding:3px 0;background:none;color:inherit;font:inherit;cursor:grab;touch-action:none;user-select:none}
+.turntable-drag-handle{min-height:24px;display:flex;align-items:center;gap:5px;border:0;padding:3px 0;background:none;color:inherit;font:inherit;cursor:grab;touch-action:none;user-select:none}
 .room-turntable[data-moving=true] .turntable-drag-handle{cursor:grabbing}
 
 .wallpaper-room{position:fixed;inset:0;background:#38200f;color:#ffe9c6}.wallpaper-room .room-turntable{bottom:17%}.wallpaper-caption{position:absolute;bottom:24px;left:25%;right:24px;color:#f5d8a6;text-shadow:2px 2px 0 var(--px-shadow);font-size:14px;letter-spacing:.05em}

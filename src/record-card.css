@@ -5,7 +5,8 @@
 @layer features {
 .record-card { --card-sleeve: 192px; display: grid; grid-template-columns: calc(var(--card-sleeve) * 1.6 + 8px) minmax(0, 1fr); gap: 28px; }
 @media (min-width: 1100px) and (min-height: 760px) { .record-card { --card-sleeve: 240px; } }
-.record-card-art { display: grid; align-content: start; gap: 20px; }
+.record-card-art { display: flex; flex-direction: column; align-items: flex-start; gap: 20px; min-width: 0; }
+.record-card-art > .record-card-slip { align-self: stretch; margin-top: auto; }
 .record-card-sleeve { position: relative; width: calc(var(--card-sleeve) * 1.6); height: calc(var(--card-sleeve) + 8px); }
 .record-card-sleeve .record-card-vinyl { position: absolute; left: calc(var(--card-sleeve) * .6); top: 0; width: var(--card-sleeve); height: var(--card-sleeve); image-rendering: pixelated; }
 .record-card-sleeve .record-card-cover { position: absolute; left: 0; top: 0; width: var(--card-sleeve); height: var(--card-sleeve); z-index: 1; border: 2px solid var(--px-shadow); box-shadow: var(--px-shadow-2); }
@@ -24,25 +25,26 @@
 
 /* Liner notes: paper 9-slice, paper ink, ruled like a printed insert. */
 .record-card-liner { display: grid; gap: 10px; padding: 16px 20px 18px; color: var(--px-paper-ink); background: var(--px-paper) padding-box; border: 6px solid transparent; border-image: var(--px-frame-img-paper) 2 / 6px; box-shadow: var(--px-shadow-2); }
-.record-card-kicker { color: var(--px-accent-lo); }
+.record-card-kicker { color: var(--px-paper-dim); }
 .record-card-copy h3 { margin: 0; color: var(--px-paper-ink); overflow-wrap: anywhere; }
 .record-card-artist { margin: -4px 0 0; font-size: 14px; color: var(--px-paper-ink); }
 .record-card-facts { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
 .record-card-facts div { padding: 4px 10px; border: 2px solid var(--px-paper-ink); box-shadow: 2px 2px 0 #e9d6b4; }
-.record-card-facts dt { font-size: 12px; color: var(--px-accent-lo); }
+.record-card-facts dt { font-size: 12px; color: var(--px-paper-dim); }
 .record-card-facts dd { margin: 0; font-size: 12px; font-variant-numeric: tabular-nums; }
-.record-card-tracks { list-style: none; margin: 0; padding: 0; max-height: min(30vh, 264px); overflow: auto; border-top: 2px solid var(--px-paper-ink); scrollbar-width: thin; scrollbar-color: var(--px-accent-lo) transparent; }
+.record-card-tracks { list-style: none; margin: 0; padding: 0; max-height: min(30vh, 264px); overflow: auto; border-top: 2px solid var(--px-paper-ink); scrollbar-width: thin; scrollbar-color: var(--px-paper-dim) transparent; }
 .record-card-tracks button { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; gap: 8px; width: 100%; min-height: var(--px-hit); padding: 6px 4px; text-align: left; color: inherit; background: none; border: 0; border-bottom: 2px dotted #e9d6b4; cursor: pointer; }
 .record-card-tracks button:hover { background: #f6e6c6; }
-.record-card-tracks button:hover strong::before { content: '▶ '; color: var(--px-accent-lo); }
-.record-card-tracks span { font: 400 12px/16px var(--px-font-cn); color: var(--px-accent-lo); font-variant-numeric: tabular-nums; -webkit-font-smoothing: none; }
+.record-card-tracks button:hover strong::before { content: '▶ '; color: var(--px-paper-dim); }
+.record-card-tracks span { font: 400 12px/16px var(--px-font-cn); color: var(--px-paper-dim); font-variant-numeric: tabular-nums; -webkit-font-smoothing: none; }
 .record-card-tracks strong { font-weight: 500; font-size: 14px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.record-card-tracks small { font-size: 12px; color: var(--px-accent-lo); font-variant-numeric: tabular-nums; }
+.record-card-tracks small { font-size: 12px; color: var(--px-paper-dim); font-variant-numeric: tabular-nums; }
 .record-card-track-copy { min-width: 0; display: grid; gap: 1px; }
-.record-card-track-meta { overflow: hidden; color: var(--px-accent-lo); text-overflow: ellipsis; white-space: nowrap; }
+.record-card-track-meta { overflow: hidden; color: var(--px-paper-dim); text-overflow: ellipsis; white-space: nowrap; }
 .record-card-track-time { justify-self: end; }
-.record-card-empty { margin: 0; color: var(--px-accent-lo); font-size: 12px; }
+.record-card-empty { margin: 0; color: var(--px-paper-dim); font-size: 12px; }
 
+.record-card-writing { grid-column: 1 / -1; display: grid; gap: 8px; }
 .record-card-notes { display: grid; gap: 6px; font-size: 12px; color: var(--px-ink-dim); }
 .record-card-saved { display: flex; align-items: center; gap: 4px; min-height: 16px; font-size: 12px; color: var(--px-good); }
 .record-card-footer { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; font-size: 12px; }

@@ -97,3 +97,8 @@
 .focus-display-bar .face-tabs, .focus-display-bar .face-show { display: inline-flex; flex: none; }
 .focus-display-bar .face-tabs button, .focus-display-bar .face-show button { white-space: nowrap; padding: 0 8px; }
 @media (max-width: 1100px) { .focus-display-bar .face-show { display: none; } }
+
+@layer overrides {
+.cabin-modal.focus-display-shell { background: transparent; color: var(--px-ink); }
+.cabin-modal.focus-display-shell::backdrop { background: transparent; }
+}

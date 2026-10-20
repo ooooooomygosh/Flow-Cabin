@@ -9,3 +9,7 @@ export function artworkResolution(cssSide, dpr = 1, sourceSide = 800) {
   const target = Math.max(96, Math.min(256, Math.round(display * density / 2)));
   return Math.max(1, Math.min(target, Number.isFinite(sourceSide) && sourceSide > 0 ? Math.floor(sourceSide) : target));
 }
+
+// Scene covers share one 64×64 backing; resizing the room needs no repaint.
+// Original artwork remains untouched for cards, exports and user data.
+export const roomArtworkResolution = (sourceSide = 64) => Math.max(1, Math.min(64, Number.isFinite(sourceSide) && sourceSide > 0 ? Math.floor(sourceSide) : 64));

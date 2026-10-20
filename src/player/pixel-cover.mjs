@@ -14,6 +14,7 @@ export const PALETTE_TOKENS = [
   ['--px-night', '#22304a'], ['--px-accent-2', '#7fb8a8'], ['--px-good', '#9ccf8c'], ['--px-warn', '#e06a4e']
 ];
 export const GRID = 32;
+export const ARTWORK_GRID = 64;
 
 export function hexToRgb(hex) {
   const value = String(hex || '').trim().replace('#', '');
@@ -155,10 +156,10 @@ export function gridToRgba(grid, size, palette, scale = 1) {
 // ---------- browser renderers ----------
 const OUT = 256;
 function paletteFromDocument() { try { return readPalette(getComputedStyle(document.documentElement)); } catch { return readPalette(null); } }
-function gridToDataUrl(grid, palette) {
+function gridToDataUrl(grid, palette, size = GRID) {
   const canvas = document.createElement('canvas'); canvas.width = canvas.height = OUT;
   const context = canvas.getContext('2d');
-  context.putImageData(new ImageData(gridToRgba(grid, GRID, palette, OUT / GRID), OUT, OUT), 0, 0);
+  context.putImageData(new ImageData(gridToRgba(grid, size, palette, OUT / size), OUT, OUT), 0, 0);
   return canvas.toDataURL('image/png');
 }
 // The sleeve's own colour for a record's label (deck, mini player): the most used
@@ -189,12 +190,12 @@ export async function pixelCover(item, { source = item?.cover } = {}) {
     // the desktop image proxy, so its pixels may be read back.
     const image = await loadWallCover(source) || await loadElement(source), side = Math.min(image?.width || 0, image?.height || 0);
     if (!side) throw new Error('原封面暂时无法读取。');
-    const canvas = document.createElement('canvas'); canvas.width = canvas.height = GRID;
+    const canvas = document.createElement('canvas'); canvas.width = canvas.height = ARTWORK_GRID;
     const context = canvas.getContext('2d', { willReadFrequently: true });
     context.imageSmoothingEnabled = true; context.imageSmoothingQuality = 'high';
-    context.drawImage(image, (image.width - side) / 2, (image.height - side) / 2, side, side, 0, 0, GRID, GRID);
-    const grid = quantize(context.getImageData(0, 0, GRID, GRID).data, GRID, palette);
-    return { cover: gridToDataUrl(grid, palette), method: 'pixelated' };
+    context.drawImage(image, (image.width - side) / 2, (image.height - side) / 2, side, side, 0, 0, ARTWORK_GRID, ARTWORK_GRID);
+    const grid = quantize(context.getImageData(0, 0, ARTWORK_GRID, ARTWORK_GRID).data, ARTWORK_GRID, palette);
+    return { cover: gridToDataUrl(grid, palette, ARTWORK_GRID), method: 'pixelated' };
   } catch (error) {
     const reason = error?.name === 'SecurityError' ? '原封面来自不允许读取像素的网站，改为按专辑名生成。' : `${error?.message || '原封面读取失败。'} 已按专辑名生成。`;
     return { cover: gridToDataUrl(proceduralGrid(item).grid, palette), method: 'generated', reason };

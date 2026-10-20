@@ -53,9 +53,8 @@ html[data-desktop-reduce-motion='true'] *::after { animation: none !important; t
   --px-surface-3: #4d311c;   /* hover */
   --px-ink: #ffe9cb;         /* primary text, warm paper */
   --px-ink-dim: #c9a47a;     /* secondary text */
-  --px-ink-faint: #a88a68;   /* tertiary / placeholders — 4.50:1 on surface-2, 5.94:1 on
-                                surface-inset; only 3.67:1 on surface-3 (AA-large), so keep
-                                it off the raised/hover surfaces (use --px-ink-dim there) */
+  --px-ink-faint: #ae906e;   /* tertiary / placeholders — 4.86:1 on surface-2;
+                                use --px-ink-dim on the lighter hover surface */
   --px-accent: #e0ad69;      /* amber lamplight — primary actions */
   --px-accent-hi: #ffd99c;   /* accent highlight bevel */
   --px-accent-lo: #a8743c;   /* accent shadow bevel */
@@ -90,6 +89,7 @@ html[data-desktop-reduce-motion='true'] *::after { animation: none !important; t
   --px-ink-on-accent: #1c120b;
   --px-paper: #fff7e6;          /* speech bubble / toast paper */
   --px-paper-ink: #3b2a20;
+  --px-paper-dim: #6b4e36;   /* secondary text on paper; decorative bevels are not ink */
   --px-border-subtle: rgba(138, 90, 50, .42);
   --px-shadow-inset: inset 2px 2px 0 #090503, inset -1px -1px 0 rgba(255, 217, 156, .10);
   --px-heat-0: #180e08; --px-heat-1: #5c3b1e; --px-heat-2: #8f5d2e; --px-heat-3: #c48745; --px-heat-4: #ffd99c;
@@ -97,10 +97,10 @@ html[data-desktop-reduce-motion='true'] *::after { animation: none !important; t
   --scene-accent: var(--px-accent);
 
   /* ── type: pixel faces are drawn on a 12px grid, so they come in 12 / 24 / 48 only;
-     the body face (HarmonyOS) carries prose at 12–16. ─────────────── */
-  --px-font-cn: 'Fusion Pixel 12', 'Fusion Pixel', 'Zpix', 'HarmonyOS Sans SC Bundled', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+     the system body face carries prose at 12–16. ─────────────── */
+  --px-font-cn: 'Fusion Pixel 12', 'Fusion Pixel', 'Zpix', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   --px-font-en: 'Silkscreen', 'Fusion Pixel 12', 'Press Start 2P', monospace;
-  --px-font-body: 'HarmonyOS Sans SC Bundled', 'PingFang SC', 'Microsoft YaHei', sans-serif; /* long-form/small text where pixel CJK hurts legibility */
+  --px-font-body: system-ui, 'PingFang SC', 'Microsoft YaHei', sans-serif; /* long-form/small text where pixel CJK hurts legibility */
   --px-text-chrome: 12px; --px-text-title: 24px; --px-text-display: 48px;
   --px-text-body-sm: 12px; --px-text-body: 14px; --px-text-body-lg: 16px;
   /* Line boxes stay on the 4px grid (--px-unit), like every other size. */

@@ -95,7 +95,7 @@ export function FocusProvider({ userId, children }) {
       if (command === 'focus-start') applyTimer((s, t) => s.timer.phase === 'idle' ? model.startPhase(s, 'focus', t) : model.resume(s, t));
       else if (command === 'focus-pause') applyTimer((s, t) => model.pause(s, t));
       else if (command === 'focus-toggle') applyTimer((s, t) => model.toggle(s, t));
-      else if (command === 'focus-skip') applyTimer((s, t) => model.skip(s, t));
+      else if (command === 'focus-skip') applyTimer((s, t) => s.timer.phase === 'focus' ? model.endRound(s, t) : model.skip(s, t));
     };
     window.addEventListener('album-companion-command', receive);
     return () => window.removeEventListener('album-companion-command', receive);
@@ -115,6 +115,7 @@ export function FocusProvider({ userId, children }) {
     toggle: () => { if (current.current.settings.notify && 'Notification' in window && Notification.permission === 'default') Notification.requestPermission().catch?.(() => {}); return applyTimer(model.toggle); },
     start: (phase = 'focus', taskId) => applyTimer((s, t) => model.startPhase(s, phase, t, taskId)),
     skip: () => applyTimer(model.skip),
+    endRound: () => applyTimer(model.endRound),
     reset: () => apply((s, t) => { const elapsed = model.tick(s, t); return { state: model.reset(elapsed.state), event: elapsed.event }; }, { volatile: true }),
     settings: (change) => apply((s) => ({ ...s, settings: model.normalizeSettings({ ...s.settings, ...change }) })),
     addTask: (text) => apply((s, t) => model.addTask(s, text, t)),

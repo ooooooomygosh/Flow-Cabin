@@ -38,7 +38,7 @@ function showDisplay(display) { if (display) $('display-info').textContent = `${
 function updatePreview() {
   $('zoom-value').textContent = `${$('zoom').value}%`;
   const family = $('font').value === 'bundled' ? 'HarmonyOS Sans SC Bundled' : $('font').value;
-  $('font-preview').style.fontFamily = `${JSON.stringify(family)}, "HarmonyOS Sans SC Bundled", sans-serif`;
+  $('font-preview').style.fontFamily = $('font').value === 'system' ? 'system-ui, "PingFang SC", "Microsoft YaHei", sans-serif' : `${JSON.stringify(family)}, system-ui, sans-serif`;
   $('font-preview').style.fontWeight = $('weight').value;
 }
 async function loadSettings() {
@@ -55,7 +55,7 @@ async function loadSettings() {
 for (const id of ['font', 'weight', 'zoom']) $(id).addEventListener('input', updatePreview);
 let saveQueue = Promise.resolve();
 function saveDraft() {
-  const draft = { font: $('font').value || 'bundled', weight: Number($('weight').value), zoom: Number($('zoom').value), reduceMotion: $('reduce-motion').checked, typingFollow: $('typing-follow').checked };
+  const draft = { font: $('font').value || 'system', weight: Number($('weight').value), zoom: Number($('zoom').value), reduceMotion: $('reduce-motion').checked, typingFollow: $('typing-follow').checked };
   $('settings-notice').textContent = '正在应用…';
   saveQueue = saveQueue.catch(() => {}).then(async () => {
     const saved = await window.albumDesktop.settings('apply', draft); showTyping(saved?.typing);

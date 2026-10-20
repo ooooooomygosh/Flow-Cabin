@@ -35,9 +35,9 @@ export default function Dialog({ title, icon, close, className = '', children, s
     // restart from the top of the page. Fall back to a stable anchor.
     return () => {
       if (node.open) node.close();
-      if (previous && previous.isConnected !== false) { previous.focus?.({ preventScroll: true }); return; }
+      if (previous && previous !== document.body && previous !== document.documentElement && previous.isConnected && !previous.closest('[inert]') && previous.getClientRects().length) { previous.focus?.({ preventScroll: true }); if (document.activeElement === previous) return; }
       const anchor = typeof returnRef.current === 'string' ? document.querySelector(returnRef.current) : returnRef.current?.current;
-      anchor?.focus?.({ preventScroll: true });
+      (anchor || document.querySelector('.focus-badge'))?.focus?.({ preventScroll: true });
     };
   }, []);
   const outside = (event) => {

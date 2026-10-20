@@ -7,9 +7,16 @@ import { desktopCommand } from '../desktop/desktop-command.mjs';
 export const AI_RESULT_EVENT = 'cabin:ai-result', AI_KEY_EVENT = 'cabin:ai-key';
 export const isDesktopShell = (win = globalThis) => win.document?.documentElement?.dataset?.desktopClient === 'true';
 function webCredential(win) {
-  try { const value = JSON.parse(win.localStorage?.getItem(AI_KEY_KEY) || 'null'); return value?.v === 2 && chatUrl(value.endpoint) === value.endpoint && typeof value.key === 'string' ? value : null; } catch { return null; }
+  try {
+    // Retire persisted credentials from older web builds on first access.
+    const legacy = win.localStorage?.getItem(AI_KEY_KEY);
+    win.localStorage?.removeItem(AI_KEY_KEY);
+    if (!win.sessionStorage?.getItem(AI_KEY_KEY) && legacy) win.sessionStorage?.setItem(AI_KEY_KEY, legacy);
+    const value = JSON.parse(win.sessionStorage?.getItem(AI_KEY_KEY) || 'null');
+    return value?.v === 2 && chatUrl(value.endpoint) === value.endpoint && typeof value.key === 'string' ? value : null;
+  } catch { return null; }
 }
-// { stored, secure } — desktop: published by the shell as window.cabinAiKey; web: localStorage.
+// { stored, secure } — desktop: published by the shell as window.cabinAiKey; web: tab-scoped sessionStorage (not encrypted).
 export function keyState(win = globalThis) {
   if (isDesktopShell(win)) return { stored: win.cabinAiKey?.stored === true, secure: win.cabinAiKey?.secure === true, where: 'desktop', endpoint: win.cabinAiKey?.endpoint || '', revision: win.cabinAiKey?.revision || 0 };
   const credential = webCredential(win);
@@ -19,7 +26,7 @@ export function saveKey(key, { win = globalThis, command = desktopCommand, baseU
   const value = String(key || '').trim(), endpoint = chatUrl(baseUrl);
   if (value && !endpoint) return false;
   if (isDesktopShell(win)) { command('ai-key', { key: value, endpoint: endpoint || '' }); return true; }
-  try { if (value) win.localStorage.setItem(AI_KEY_KEY, JSON.stringify({ v: 2, key: value, endpoint, revision: `${Date.now()}:${++seq}` })); else win.localStorage.removeItem(AI_KEY_KEY); } catch { return false; }
+  try { win.localStorage?.removeItem(AI_KEY_KEY); if (value) win.sessionStorage.setItem(AI_KEY_KEY, JSON.stringify({ v: 2, key: value, endpoint, revision: `${Date.now()}:${++seq}` })); else win.sessionStorage.removeItem(AI_KEY_KEY); } catch { return false; }
   win.dispatchEvent?.(new CustomEvent(AI_KEY_EVENT));
   return true;
 }

@@ -34,7 +34,7 @@ test('selected journal excerpts are bounded, explicit, and invalidated by edits 
 
 test('mailbox searches reply text and keeps favorite/trash operations on the whole thread', async () => {
   const storage = mem(), win = new EventTarget();
-  win.localStorage = storage;
+  win.localStorage = storage; win.sessionStorage = mem();
   const sent = await sendCabinLetter({ storage, text: '今天写完了一页。', win, replyDelayMs: 0 });
   const id = sent.outgoing.id;
   assert.equal(mailboxRows(readLetters(storage), 'all', sent.reply.lines.at(-1)).length, 1);
@@ -55,7 +55,7 @@ test('mailbox searches reply text and keeps favorite/trash operations on the who
 
 test('a delayed reply respects organization performed while the request is pending', async () => {
   const storage = mem(), win = new EventTarget();
-  win.localStorage = storage;
+  win.localStorage = storage; win.sessionStorage = mem();
   const pending = sendCabinLetter({ storage, text: '稍后再读。', win, replyDelayMs: 20 });
   const outgoing = readLetters(storage).find((letter) => letter.direction === 'out');
   organizeLetterThread({ storage, id: outgoing.id, action: 'trash', win });
@@ -282,7 +282,7 @@ test('drafts autosave, reload and clear; write failures are explicit', () => {
 });
 
 test('sending saves the original first and always leaves a grounded reply', async () => {
-  const s = mem(), win = new EventTarget(); win.localStorage = s;
+  const s = mem(), win = new EventTarget(); win.localStorage = s; win.sessionStorage = mem();
   const summary = letterSummary([{ start: 1, durationMs: 25 * 60000, completed: true }], { from: 0, to: 2e12, label: '最近 7 天' }, null, {
     playbackSessions: [{ start: 2, durationMs: 5 * 60000, album: { title: '真播放' }, track: { title: '曲' } }],
     weather: { kind: 'snow', bucket: 'night' }
@@ -311,7 +311,7 @@ test('a failed first write keeps the draft and reports why sending stopped', asy
   const map = new Map(), win = new EventTarget();
   let fail = false;
   const s = { getItem: (key) => map.has(key) ? map.get(key) : null, setItem: (key, value) => { if (fail) throw new Error('quota'); map.set(key, String(value)); }, removeItem: (key) => map.delete(key) };
-  win.localStorage = s;
+  win.localStorage = s; win.sessionStorage = mem();
   assert.equal(saveLetterDraft(s, { text: '别丢掉这一封。' }).ok, true);
   fail = true;
   const result = await sendCabinLetter({ storage: s, win, text: '别丢掉这一封。', now: 1, replyDelayMs: 0 });
@@ -334,7 +334,7 @@ test('user prose survives long paragraphs, many lines, and repeated draft reload
 });
 
 test('failed reply storage retains draft and interruption can recover without duplicating the send', async () => {
-  const s = mem(), win = new EventTarget(); win.localStorage = s;
+  const s = mem(), win = new EventTarget(); win.localStorage = s; win.sessionStorage = mem();
   saveLetterDraft(s, { text: '留住这封信', shareContext: false });
   writeAi(s, { enabled: true, baseUrl: 'https://api.mock/v1', model: 'm' });
   s.setItem(AI_KEY_KEY, JSON.stringify({ v: 2, key: KEY, endpoint: chatUrl('https://api.mock/v1'), revision: 1 }));
@@ -353,7 +353,7 @@ test('failed reply storage retains draft and interruption can recover without du
 });
 
 test('outbound replies discard stale AI results and preserve a newer draft', async () => {
-  const s = mem(), win = new EventTarget(); win.localStorage = s;
+  const s = mem(), win = new EventTarget(); win.localStorage = s; win.sessionStorage = mem();
   writeAi(s, { enabled: true, baseUrl: 'https://api.mock/v1', model: 'm' });
   s.setItem(AI_KEY_KEY, JSON.stringify({ v: 2, key: KEY, endpoint: chatUrl('https://api.mock/v1'), revision: 1 }));
   saveLetterDraft(s, { text: '第一封' });
@@ -369,7 +369,7 @@ test('outbound replies discard stale AI results and preserve a newer draft', asy
 
 test('automatic delivery falls back locally even when a transport throws', async () => {
   const { deliverLetter } = await import('./letter-delivery.mjs');
-  const s = mem(), win = new EventTarget(); win.localStorage = s;
+  const s = mem(), win = new EventTarget(); win.localStorage = s; win.sessionStorage = mem();
   writeAi(s, { enabled: true, baseUrl: 'https://api.mock/v1', model: 'm' });
   s.setItem(AI_KEY_KEY, JSON.stringify({ v: 2, key: KEY, endpoint: chatUrl('https://api.mock/v1'), revision: 1 }));
   const result = await deliverLetter({ win, force: true, sessions: [], chatImpl: async () => { throw new Error('offline'); } });
@@ -393,7 +393,7 @@ test('mailbox groups replies, filters directions and paginates stably', () => {
 });
 
 test('web transport: mocked endpoint, auth header, errors, timeout', async () => {
-  const win = { localStorage: mem(), document: { documentElement: { dataset: {} } }, addEventListener() {}, removeEventListener() {} };
+  const win = { localStorage: mem(), sessionStorage: mem(), document: { documentElement: { dataset: {} } }, addEventListener() {}, removeEventListener() {} };
   win.localStorage.setItem(AI_KEY_KEY, JSON.stringify({ v: 2, key: KEY, endpoint: 'https://api.mock/v1/chat/completions', revision: 1 }));
   const settings = { baseUrl: 'https://api.mock/v1', model: 'm' };
   let seen;
@@ -410,7 +410,7 @@ test('web transport: mocked endpoint, auth header, errors, timeout', async () =>
 });
 
 test('keyless local templates send no Authorization header', async () => {
-  const win = { localStorage: mem(), document: { documentElement: { dataset: {} } }, addEventListener() {}, removeEventListener() {} };
+  const win = { localStorage: mem(), sessionStorage: mem(), document: { documentElement: { dataset: {} } }, addEventListener() {}, removeEventListener() {} };
   let seen;
   const result = await chat({ provider: 'ollama', baseUrl: 'http://127.0.0.1:11434/v1', model: 'qwen3:8b' }, [{ role: 'user', content: 'hi' }], {
     win,
@@ -424,7 +424,7 @@ test('keyless local templates send no Authorization header', async () => {
 });
 
 test('official DeepSeek uses deepseek-flash with thinking disabled and reports empty content precisely', async () => {
-  const win = { localStorage: mem(), document: { documentElement: { dataset: {} } }, addEventListener() {}, removeEventListener() {} };
+  const win = { localStorage: mem(), sessionStorage: mem(), document: { documentElement: { dataset: {} } }, addEventListener() {}, removeEventListener() {} };
   const endpoint = 'https://api.deepseek.com/v1/chat/completions';
   win.localStorage.setItem(AI_KEY_KEY, JSON.stringify({ v: 2, key: KEY, endpoint, revision: 1 }));
   const settings = { baseUrl: 'https://api.deepseek.com/v1', model: 'deepseek-flash' };
@@ -453,7 +453,7 @@ test('official DeepSeek uses deepseek-flash with thinking disabled and reports e
 });
 
 test('structured chat requests ask for JSON mode and retry without it for older endpoints', async () => {
-  const win = { localStorage: mem(), document: { documentElement: { dataset: {} } }, addEventListener() {}, removeEventListener() {} };
+  const win = { localStorage: mem(), sessionStorage: mem(), document: { documentElement: { dataset: {} } }, addEventListener() {}, removeEventListener() {} };
   win.localStorage.setItem(AI_KEY_KEY, JSON.stringify({ v: 2, key: KEY, endpoint: 'https://api.mock/v1/chat/completions', revision: 1 }));
   const settings = { baseUrl: 'https://api.mock/v1', model: 'm' };
   const bodies = [];
@@ -541,7 +541,7 @@ test('aborting a chat cancels the desktop task and resolves a cancelled result',
 });
 
 test('aborting a web request uses the fetch signal and reports cancellation', async () => {
-  const win = { localStorage: mem(), document: { documentElement: { dataset: {} } }, addEventListener() {}, removeEventListener() {} };
+  const win = { localStorage: mem(), sessionStorage: mem(), document: { documentElement: { dataset: {} } }, addEventListener() {}, removeEventListener() {} };
   win.localStorage.setItem(AI_KEY_KEY, JSON.stringify({ v: 2, key: KEY, endpoint: 'https://api.mock/v1/chat/completions', revision: 1 }));
   const controller = new AbortController();
   const pending = chat({ baseUrl: 'https://api.mock/v1', model: 'm' }, [], {
@@ -562,7 +562,7 @@ test('aborting a web request uses the fetch signal and reports cancellation', as
 test('letters discard late replies after settings/key changes, including off then on', async () => {
   const { deliverLetter } = await import('./letter-delivery.mjs');
   const { saveKey } = await import('./ai-transport.mjs');
-  const win = new EventTarget(); win.localStorage = mem();
+  const win = new EventTarget(); win.localStorage = mem(); win.sessionStorage = mem();
   const settings = { enabled: true, baseUrl: 'https://api.mock/v1', model: 'm' };
   writeAi(win.localStorage, settings); saveKey(KEY, { win });
   let finish;
@@ -578,7 +578,7 @@ test('letters discard late replies after settings/key changes, including off the
 
 test('web credential cannot follow an edited endpoint or a redirect', async () => {
   const { saveKey, keyState } = await import('./ai-transport.mjs');
-  const win = new EventTarget(); win.localStorage = mem();
+  const win = new EventTarget(); win.localStorage = mem(); win.sessionStorage = mem();
   saveKey(KEY, { win, baseUrl: 'https://api.mock/v1' });
   let calls = 0;
   const bad = await chat({ baseUrl: 'https://other.mock/v1', model: 'm' }, [], { win, fetchImpl: async () => { calls++; } });
@@ -598,7 +598,7 @@ test('cross-tab activity keeps letters; only credential/settings changes or clea
     ['flow-cabin-ai-key-v1', false],
     [null, false]
   ]) {
-    const win = new EventTarget(); win.localStorage = mem();
+    const win = new EventTarget(); win.localStorage = mem(); win.sessionStorage = mem();
     writeAi(win.localStorage, { enabled: true, baseUrl: 'https://api.mock/v1', model: 'm' });
     saveKey(KEY, { win });
     let finish;
@@ -615,7 +615,7 @@ test('cross-tab activity keeps letters; only credential/settings changes or clea
 test('purging a thread removes all replies atomically and blocks stale saves and late delivery', async () => {
   const { purgeLetterThread } = await import('./letter-reply.mjs');
   const { readLetterRecords } = await import('./ai-model.mjs');
-  const storage = mem(), win = new EventTarget(); win.localStorage = storage;
+  const storage = mem(), win = new EventTarget(); win.localStorage = storage; win.sessionStorage = mem();
   saveLetterDraft(storage, { text: 'private-outgoing' });
   const pending = sendCabinLetter({ storage, win, text: 'private-outgoing', now: Date.now() + 1, replyDelayMs: 20 });
   const outgoing = readLetters(storage).find((letter) => letter.status === 'sending');
@@ -653,7 +653,7 @@ test('purging a thread removes all replies atomically and blocks stale saves and
 test('purged automatic letters do not regenerate or dispatch another AI request', async () => {
   const { deliverLetter } = await import('./letter-delivery.mjs');
   const { purgeLetterThread } = await import('./letter-reply.mjs');
-  const win = new EventTarget(); win.localStorage = mem();
+  const win = new EventTarget(); win.localStorage = mem(); win.sessionStorage = mem();
   const now = Date.now(), id = letterPeriod(now, 'weekly').id;
   saveLetter(win.localStorage, { id, lines: ['old'], at: now });
   organizeLetterThread({ storage: win.localStorage, id, action: 'trash', win });
@@ -669,4 +669,21 @@ test('corrupt letter stores refuse writes instead of clearing unknown existing d
   assert.equal(trySaveLetter(storage, { id: 'new', lines: ['new'], at: 1 }).ok, false);
   assert.equal(tryWriteLetters(storage, []).ok, false);
   assert.equal(storage.getItem(LETTERS_KEY), '{broken');
+});
+
+test('web keys migrate out of persistent storage and stay within the current tab session', async () => {
+  const { saveKey, keyState } = await import('./ai-transport.mjs');
+  const persistent = mem(), session = mem(), win = { localStorage: persistent, sessionStorage: session };
+  persistent.setItem(AI_KEY_KEY, JSON.stringify({ v: 2, key: KEY, endpoint: chatUrl('https://api.mock/v1'), revision: 'legacy' }));
+  assert.equal(keyState(win).stored, true);
+  assert.equal(persistent.getItem(AI_KEY_KEY), null);
+  assert.ok(session.getItem(AI_KEY_KEY));
+  const otherTab = { localStorage: persistent, sessionStorage: mem() };
+  assert.equal(keyState(otherTab).stored, false);
+  assert.equal(saveKey('', { win, baseUrl: 'https://api.mock/v1' }), true);
+  assert.equal(keyState(win).stored, false);
+  assert.equal(session.getItem(AI_KEY_KEY), null);
+  assert.equal(saveKey(KEY, { win, baseUrl: 'https://api.mock/v1' }), true);
+  assert.equal(persistent.getItem(AI_KEY_KEY), null);
+  assert.equal(keyState({ localStorage: persistent, sessionStorage: mem() }).stored, false);
 });

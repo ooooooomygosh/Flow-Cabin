@@ -24,10 +24,10 @@ export default function FocusStats() {
       <div><dt>今日专注</dt><dd>{hours(stats.today)}</dd></div>
       <div title={STREAK_HINT}><dt>当前连续</dt><dd>{stats.streak} 天</dd></div>
     </dl>
-    {goal > 0 ? <div className={`focus-goal ${stats.today >= goal ? 'is-met' : ''}`}>
+    {goal > 0 && stats.today > 0 ? <div className={`focus-goal ${stats.today >= goal ? 'is-met' : ''}`}>
       <span>每日目标 {stats.today} / {goal} 分钟{stats.today >= goal ? ' · 今天达成了' : ` · 还差 ${goal - stats.today} 分钟`}</span>
       <span className="focus-goal-bar" role="progressbar" aria-label="每日目标进度" aria-valuemin={0} aria-valuemax={goal} aria-valuenow={Math.min(goal, stats.today)}><i style={{ width: `${Math.min(100, stats.today / goal * 100)}%` }}/></span>
-    </div> : <p className="fs-hint">每日目标已关闭，可在「设置 › 专注工具」里打开。</p>}
+    </div> : <p className="fs-hint">{goal > 0 ? '从一轮开始，今天的时间会慢慢记在这里。' : '按自己的节奏来，想设目标时可以到「设置 › 专注工具」。'}</p>}
     <Bars days={stats.week.map((d) => ({ ...d, isToday: d.key === today }))} label="最近 7 天 · 分钟" mini/>
     <InputCompanion input={input} title="键鼠陪伴"/>
     <button type="button" className="fs-open-journal" aria-keyshortcuts="L" title="概览、待办与周报 · L" onClick={() => openJournal()}>打开小屋日记 →</button>

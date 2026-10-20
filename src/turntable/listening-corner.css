@@ -66,7 +66,7 @@
 .corner-meter-bar i.is-now { background: var(--px-accent-lo); }
 .corner-meter-bar i.is-fill { flex: none; background: var(--px-accent-lo); }
 .corner-now { display: flex; gap: 8px; align-items: baseline; margin: 0; overflow: hidden; font-size: 13px; line-height: 18px; white-space: nowrap; text-overflow: ellipsis; color: var(--corner-ink); }
-.corner-now span { color: var(--px-accent-lo); font-size: 12px; }
+.corner-now span { color: var(--corner-ink-2); font-size: 12px; }
 .corner-transport { display: flex; align-items: center; gap: 6px; padding: 8px 0; border-top: 2px solid var(--corner-paper-3); border-bottom: 2px solid var(--corner-paper-3); }
 .corner-transport > button { display: grid; place-items: center; width: 32px; height: 32px; padding: 0; color: var(--corner-paper); background: var(--corner-ink); border: 0; box-shadow: inset 2px 2px 0 #ffffff1f, 2px 2px 0 var(--corner-paper-3); cursor: pointer; }
 .corner-transport > button:disabled { opacity: .35; cursor: default; }
@@ -80,7 +80,7 @@
 .corner-tracks button { position: relative; display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; align-items: center; gap: 8px; width: 100%; padding: 6px 6px 8px; color: var(--corner-ink-2); text-align: left; scroll-margin: 6px; background: none; border: 0; font: inherit; font-size: 13px; cursor: pointer; }
 .corner-tracks button:hover { color: var(--corner-ink); background: var(--corner-paper-2); }
 .corner-tracks button[aria-current=true] { color: var(--corner-ink); background: var(--corner-paper-2); box-shadow: inset 3px 0 0 var(--px-accent-lo); }
-.corner-tracks button[aria-current=true] b { color: var(--px-accent-lo); }
+.corner-tracks button[aria-current=true] b { color: var(--corner-ink-2); }
 .corner-tracks b { font: 400 8px/8px var(--px-font-en); }
 .corner-tracks span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .corner-tracks small { font: 400 8px/8px var(--px-font-en); }
@@ -144,7 +144,7 @@ button[aria-current=true] > .corner-groove { background: var(--px-accent-lo); }
 .corner-crate-queue { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: var(--px-hit); padding: 2px 8px; font: 400 12px/16px var(--px-font-cn); color: var(--corner-paper); background: var(--corner-ink); border: 0; box-shadow: 2px 2px 0 var(--corner-paper-3); cursor: pointer; -webkit-font-smoothing: none; }
 .corner-crate-queue:hover:not(:disabled) { background: var(--px-accent-lo); }
 .corner-crate-queue:disabled { opacity: .55; cursor: default; }
-.corner-crate-peek em { font: 400 12px/16px var(--px-font-cn); font-style: normal; color: var(--px-accent-lo); text-align: center; -webkit-font-smoothing: none; }
+.corner-crate-peek em { font: 400 12px/16px var(--px-font-cn); font-style: normal; color: var(--corner-ink-2); text-align: center; -webkit-font-smoothing: none; }
 
 /* Flying records (shelf → deck, → queue). */
 .record-flight { position: fixed; z-index: 120; pointer-events: none; transform-origin: center; will-change: transform; }

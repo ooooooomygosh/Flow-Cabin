@@ -300,7 +300,7 @@ export default function SmartTurntable({ open, close, items = [], onStart, onSav
               {result.savedItem ? '已收进唱片架' : saving ? '正在收进…' : '只收进唱片架'}
             </button>
           )}
-          <button type="button" className="st-cta" disabled={busy || saving || starting || !ready} onClick={start}>
+          <button type="button" className="st-cta pixel-button is-primary" disabled={busy || saving || starting || !ready} onClick={start}>
             <Play size={17}/>{ctaLabel}
           </button>
           <p className="st-privacy">只发送你的计划与唱片架摘要；不会发送待办、日记或 API Key。</p>

@@ -14,7 +14,7 @@
 .scene-choice:hover, .pet-choice:hover { background: var(--px-surface-2); }
 .scene-choice > img { display: block; flex: none; width: 100%; height: auto; aspect-ratio: 4/3; object-fit: cover; border-bottom: 2px solid var(--px-shadow); background: var(--px-surface-2); }
 .choice-copy { flex: 1; display: grid; align-content: start; padding: 8px; gap: 4px; }
-.choice-copy small, .pet-choice small { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; font-size: 12px; line-height: 16px; min-height: 32px; color: var(--px-ink-dim); }
+.choice-copy small, .pet-choice small { display: block; font-size: 12px; line-height: 16px; min-height: 32px; color: var(--px-ink-dim); }
 .choice-copy strong, .pet-choice strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* The ✓ on the chosen card: a square lamp key, not a dot. */
 .choice-mark { position: absolute; right: 6px; top: 6px; display: grid; place-items: center; width: 20px; height: 20px; font: 400 12px/1 var(--px-font-cn); background: var(--px-accent); color: var(--px-ink-on-accent); box-shadow: inset 2px 2px 0 var(--px-accent-hi), inset -2px -2px 0 var(--px-accent-lo), var(--px-shadow-1); }

@@ -5,7 +5,9 @@
    plain replacements sit in `overrides`, the last layer. */
 @layer guards, reset, features, skin, overrides;
 @layer guards {
-html[data-perf='low'] :is(.pixel-clock, .pet-cat .pixel-cat) { filter: none !important; }
+/* SVG presentation attributes on the mask's <use> need their own override. */
+html[data-perf='low'] .cabin-atmosphere [filter] { filter: none !important; }
+html[data-perf='low'] :is(.cabin-scene-art, .cabin-scene-canvas, .cabin-scene-canvas svg, .pixel-clock, .pet-cat .pixel-cat) { filter: none !important; }
 html[data-perf='low'] :is(.playlist-track, .desktop-widget), html[data-perf='low'] :is(.corner-pool, .corner-weather)::before { animation: none !important; }
 /* The button hover runs a brightness() filter: every hover re-rasterizes the
    button. The lift + hard shadow stay, so the hover still reads. */

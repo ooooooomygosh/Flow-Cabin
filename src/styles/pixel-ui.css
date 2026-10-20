@@ -10,7 +10,7 @@
 @layer skin {
 /* ── type: pixel display face for UI chrome, readable body face for prose.
    Smoothing is switched off only where a pixel face is drawn; prose keeps it. ── */
-.app-brand strong, .cabin-dialog-header h2, .record-card-copy h3, .room-selection-copy h2,
+.app-brand h1, .cabin-dialog-header h2, .record-card-copy h3, .room-selection-copy h2,
 .turntable-copy > strong, .turntable-heading, .room-empty > p,
 .pixel-button, .cabin-room .cabin-toolbar button, .room-selection-actions button, .room-selection-actions a,
 .dialog-tabs button, .segmented button, .room-cat-bubble, .app-toast, .room-shelf-navigation, .focus-badge,
@@ -23,7 +23,7 @@
 .dialog-tabs button, .segmented button, .app-toast, .room-cat-bubble, .room-shelf-navigation,
 .turntable-controls button, .turntable-heading, .turntable-copy > strong, .app-brand small, .room-selection-copy small,
 .record-card-kicker, .backup-stats dt, .scene-choice strong, .pet-choice strong { font-size: var(--px-text-chrome); line-height: var(--px-leading-chrome); }
-.app-brand strong, .cabin-dialog-header h2, .room-selection-copy h2, .room-empty > p { font-size: var(--px-text-title); line-height: var(--px-leading-title); }
+.app-brand h1, .cabin-dialog-header h2, .room-selection-copy h2, .room-empty > p { font-size: var(--px-text-title); line-height: var(--px-leading-title); }
 .record-card-copy h3 { font-size: var(--px-text-title); line-height: var(--px-leading-title-lg); }
 .room-selection-copy p, .turntable-artist, .turntable-track { font-family: var(--px-font-body); }
 /* The provider tag is CJK (仅展示 / 本地音乐): the pixel CJK face at 12px, never 8px Latin. */

@@ -31,6 +31,7 @@ import { queueId } from './player/player-queue.mjs';
 import { useCatCareHost } from './cat/useCatCare';
 import { coverThumb } from './focus/session-log.mjs';
 import './companion-room.css';
+import Dialog from './Dialog';
 
 // Opened on demand: Settings (with 音源 › 账户与文件夹), the first-run guide and
 // 唱机特写 load on first use (prefetched once the room is idle).
@@ -85,6 +86,11 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
   useEffect(() => { if (!wallpaperError) return; const timer = setTimeout(() => setWallpaperError(''), 5000); return () => clearTimeout(timer); }, [wallpaperError]);
   useEffect(() => { sound?.setDucked(deck.audible); }, [deck.audible]);
   usePrefetch();
+  useEffect(() => {
+    const ended = (event) => { if (event.detail?.phase === 'focus' && event.detail?.next === 'idle' && !event.detail?.completed) notify?.('这一轮结束了。歇一会儿，唱片还在这里。'); };
+    window.addEventListener('album-focus-phase', ended);
+    return () => window.removeEventListener('album-focus-phase', ended);
+  }, [notify]);
   const recordStyle = useRecordStyle(deckItem);
   // The deck's record for other surfaces (专注画面 › 唱片计时): cabin:deck-item, docs/events.md.
   useEffect(() => { const detail = deckItem ? { id: deckItem.id, title: deckItem.title || '', artist: deckItem.artist || '', cover: deckItem.cover || '' } : null; window.__cabinDeckItem = detail; window.dispatchEvent(new CustomEvent('cabin:deck-item', { detail })); if (detail?.cover) coverThumb(detail.cover).then((thumb) => { if (window.__cabinDeckItem === detail) window.__cabinDeckItem = { ...detail, thumb }; }); }, [deckItem?.id, deckItem?.title, deckItem?.artist, deckItem?.cover]);
@@ -237,7 +243,7 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
     <Suspense fallback={null}>
       <Suspense fallback={null}><CatPanel open={catPanelOpen} onClose={() => setCatPanelOpen(false)}/></Suspense>
       <SmartTurntable open={smartOpen} close={closeSmart} items={items} onStart={startSmartSession} onSave={saveToShelf} onNeedAiSettings={() => { setSmartOpen(false); flow.setHub('ai'); }}/>
-      {corner && <ListeningCorner item={deckItem} items={visible} vinyl={recordStyle} provider={provider} spinning={effectiveSpin} trackIndex={deck.shownTrackIndex} setTrackIndex={deck.setTrackIndex} playback={playback} player={player} toggleVisual={deck.toggleVisual} load={deck.load} close={() => chrome.setCorner(false)} reduceMotion={reduced}/>}
+      {corner && <Suspense fallback={<Dialog title="唱机特写" close={() => chrome.setCorner(false)} returnFocus=".focus-badge" size="sm"><p role="status">正在点亮唱机旁的台灯…</p></Dialog>}><ListeningCorner item={deckItem} items={visible} vinyl={recordStyle} provider={provider} spinning={effectiveSpin} trackIndex={deck.shownTrackIndex} setTrackIndex={deck.setTrackIndex} playback={playback} player={player} toggleVisual={deck.toggleVisual} load={deck.load} close={() => chrome.setCorner(false)} reduceMotion={reduced}/></Suspense>}
       {flow.hub && <SettingsHub section={flow.hub} setSection={flow.setHub} close={() => flow.setHub('')} env={flow.env} player={flow.playerAdapter} provider={provider} useSource={deck.chooseProvider} look={look} petId={petId} onRoomChange={personalizeRoom} reduceMotion={appearance.reduceMotion} error={library?.error} desktop={chrome.desktop} openBackup={() => { flow.setHub(''); openBackup?.(); }} restartOnboarding={flow.restartOnboarding}/>}
       {flow.wizard && <OnboardingWizard state={flow.onboarding} update={flow.saveOnboarding} env={flow.env} player={flow.playerAdapter} look={look} petId={petId} onRoomChange={personalizeRoom} useSource={deck.chooseProvider} openMusicSettings={flow.openMusicSettings} openAdd={() => { flow.closeWizard('later'); openAdd(); }} close={flow.closeWizard} reduceMotion={appearance.reduceMotion} error={library?.error}/>}
     </Suspense>

@@ -1,7 +1,7 @@
 /* Main window type defaults: the HarmonyOS faces are declared once in tokens.css. */
 @layer guards, reset, features, skin, overrides;
 @layer reset {
-:root { --desktop-font: 'HarmonyOS Sans SC Bundled', sans-serif; --desktop-weight: 400; --desktop-heading-weight: 700; }
+:root { --desktop-font: system-ui, 'PingFang SC', 'Microsoft YaHei', sans-serif; --desktop-weight: 400; --desktop-heading-weight: 700; }
 html, body, button, input, textarea, select { font-family: var(--desktop-font); font-synthesis: none; }
 body, input, textarea, select { font-weight: var(--desktop-weight); }
 h1, h2, h3, h4, strong, b { font-weight: var(--desktop-heading-weight); }

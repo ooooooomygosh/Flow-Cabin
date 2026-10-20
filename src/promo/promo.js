@@ -269,6 +269,8 @@ function updateRoom() {
   site.style.setProperty('--scene-image', `url("${room.image}")`);
   site.style.setProperty('--scene-accent', room.accent);
   $('[data-room-name]').textContent = room.name;
+  const proof = $('.hero-product img');
+  if (proof) { proof.src = `/promo/shots/rooms/${state.room}.jpg`; proof.alt = `心流小屋真实界面：${room.name}、唱片架与唱机`; }
   $('[data-room-copy]').textContent = room.copy;
   $$('[data-room-choice]').forEach((button) => {
     button.setAttribute('aria-pressed', String(button.dataset.roomChoice === state.room));

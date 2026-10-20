@@ -25,6 +25,8 @@ test('disposable preview scripts are not desktop release inputs', () => {
 test('the narrowed node-forge adapter is included in packaged apps', () => {
   assert(build.files.includes('vendor/node-forge-encrypt-only/**/*'));
   const pkg = require('../package.json');
-  assert.equal(pkg.overrides['node-forge'], 'file:vendor/node-forge-encrypt-only');
+  assert.equal(pkg.dependencies['node-forge'], 'file:./vendor/node-forge-encrypt-only');
+  assert.equal(pkg.overrides['node-forge'], '$node-forge');
+  assert(fs.realpathSync(require.resolve('node-forge')).startsWith(path.join(desktop, 'vendor/node-forge-encrypt-only') + path.sep));
   assert(fs.existsSync(path.join(desktop, 'vendor/node-forge-encrypt-only/index.cjs')));
 });

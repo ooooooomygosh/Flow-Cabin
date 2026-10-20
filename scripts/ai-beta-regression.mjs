@@ -47,7 +47,7 @@ try {
       localStorage.setItem('flow-cabin-focus-sessions-v1', JSON.stringify(sessions));
       localStorage.setItem(FOCUS, JSON.stringify({ settings: { focusMin: 25, shortMin: 5, notify: false, chime: false } }));
       localStorage.setItem('flow-cabin-cat-mood-v1', JSON.stringify({ v: 1, mood: 80, tier: 'happy', updatedAt: Date.now(), feeds: [{ at: sessions[0].start + 3600000, fishLeft: 2 }], totalFeeds: 1, unlockedActions: [] }));
-      if (ai) { localStorage.setItem('flow-cabin-ai-v1', JSON.stringify({ v: 1, ...ai })); if (!desktop) localStorage.setItem('flow-cabin-ai-key-v1', JSON.stringify({ v: 2, key: KEY, endpoint, revision: 'fixture:1' })); }
+      if (ai) { localStorage.setItem('flow-cabin-ai-v1', JSON.stringify({ v: 1, ...ai })); if (!desktop) sessionStorage.setItem('flow-cabin-ai-key-v1', JSON.stringify({ v: 2, key: KEY, endpoint, revision: 'fixture:1' })); }
       window.__nativeCommands = [];
       if (desktop) {
         window.cabinAiKey = { stored: true, secure: true, endpoint, revision: 1 };
@@ -123,8 +123,9 @@ try {
     await region.getByText('连接成功').waitFor();
     const req = report.aiRequests.filter((r) => r.name === 'settings-off-by-default-and-test-connection');
     assert.equal(req.length, 1); assert.equal(req[0].path, '/v1/chat/completions'); assert.ok(req[0].auth); assert.equal(req[0].body.model, 'deepseek-flash');
-    const stored = await page.evaluate(() => ({ s: localStorage.getItem('flow-cabin-ai-v1'), k: localStorage.getItem('flow-cabin-ai-key-v1') }));
+    const stored = await page.evaluate(() => ({ s: localStorage.getItem('flow-cabin-ai-v1'), k: sessionStorage.getItem('flow-cabin-ai-key-v1'), persisted: localStorage.getItem('flow-cabin-ai-key-v1') }));
     assert.ok(!stored.s.includes(KEY));
+    assert.equal(stored.persisted, null, 'web credentials never persist in localStorage');
     const credential = JSON.parse(stored.k);
     assert.equal(credential.v, 2); assert.equal(credential.key, KEY);
     assert.equal(credential.endpoint, `${API}/v1/chat/completions`); assert.ok(credential.revision);

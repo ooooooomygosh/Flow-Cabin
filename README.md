@@ -32,6 +32,15 @@
 
 ---
 
+<details>
+<summary>看看小屋如何动起来（演示动图）</summary>
+
+<img src="docs/assets/cabin-tour.gif" width="100%" alt="心流小屋功能演示：房间、唱片、专注与小猫">
+
+[观看视频版本](docs/assets/cabin-tour.mp4)
+
+</details>
+
 ## 里面有什么
 
 - **唱片架与唱机** —— 搜专辑、贴 QQ 音乐链接或手填；双击封面就放上唱机，拖过去也行。每张能写笔记、换黑胶外观、收进唱片盒。
@@ -87,6 +96,8 @@
 | macOS | Apple Silicon · Intel（DMG 或 ZIP） |
 | Windows | x64 安装版 · x64 便携版 |
 
+没有你的系统，或暂时不想安装？先用[网页版](https://album-circle.vercel.app/)。完整的文件名与大小见[下载指南](docs/DOWNLOAD-GUIDE.md)。
+
 不确定挑哪个文件，照[安装说明](docs/getting-started.md#安装与首次打开)里的文件名对一下就行。目前没有 Windows ARM64 原生包，也没有 Linux 安装包。
 
 ---
@@ -103,6 +114,16 @@
 更完整也更严格的功能与验证状态见[使用边界](docs/limitations.md)——那份文档区分「已实现」「自动化已验证」和「真实设备已验证」，里面写着的未验收项就是未验收项。
 
 ---
+
+## 版本与更新
+
+下载入口的 `latest` 指向最近公开的正式 Release；每个 Release 只展示该版本的变化，全部历史见[发布说明](desktop/RELEASE-NOTES.md)。桌面版的更新检查和手动安装路径见[第一次使用](docs/getting-started.md#安装与首次打开)。更新前建议导出一份本机备份。
+
+## 常见问题
+
+- **被系统拦住了怎么办？** 核对官方来源，按[下载指南](docs/DOWNLOAD-GUIDE.md)处理系统提示；不需要关闭系统安全保护。
+- **网页版和桌面版差在哪里？** 网页版适合先体验房间、收藏、专注与手记；平台登录、桌宠和系统集成请使用桌面版，详见[使用边界](docs/limitations.md)。
+- **唱片转了，为什么没有声音？** 默认的「仅展示」不播放音频。到「设置 › 音源」选择实际音源；平台版权、账号与地区也会影响可播范围。
 
 ## 跑起来
 

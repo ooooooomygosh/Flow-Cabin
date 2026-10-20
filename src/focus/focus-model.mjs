@@ -188,6 +188,14 @@ export function skip(state, now) {
   return finish(state, now, false);
 }
 
+// Ending work is an explicit stop, independent of automatic break preferences.
+// Reuse settlement so paused time, sub-minute rounds and rewards stay consistent.
+export function endRound(state, now) {
+  if (state.timer.phase !== 'focus') return { state, event: null };
+  const result = finish(state, now, false);
+  return { state: reset(result.state), event: { ...result.event, next: 'idle' } };
+}
+
 export function addTask(state, value, now, { makeId: factory } = {}) {
   const task = normalizeTask({ text: value, createdAt: now }, factory); if (!task || state.tasks.length >= 200) return state;
   return { ...state, tasks: [...state.tasks, task] };

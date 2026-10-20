@@ -58,7 +58,7 @@ export default function App() {
     <CompanionBridge/>
     <div className="app">
       <header className="app-titlebar">
-        <div className="app-brand"><PixelCat pose="idle" accessory="headphones" className="app-brand-cat" label="心流小屋"/><span><strong>心流小屋</strong><small>{loading ? '整理唱片中…' : `${items.length} 张唱片`}</small></span></div>
+        <div className="app-brand"><PixelCat pose="idle" accessory="headphones" className="app-brand-cat" label="心流小屋"/><span><h1>心流小屋</h1><small>{loading ? '整理唱片中…' : `${items.length} 张唱片`}</small></span></div>
         <div className="app-actions">
           <button type="button" className="pixel-button is-primary" aria-label="添加到唱片架" title="曲库搜索、我的歌单、本地音乐或手动填写" onClick={() => setAdding({ query: '' })}><Plus size={17}/><span>添加到唱片架</span></button>
         </div>

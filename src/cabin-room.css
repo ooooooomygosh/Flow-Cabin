@@ -62,7 +62,7 @@ html[data-desktop-reduce-motion='true'] .cabin-rack .room-record:hover .room-rec
 .cabin-room .room-shelf-navigation button { border: 2px solid #deb57055; background: #7c542d; }
 /* 月夜书桌: the cabinet reaches the right edge, so shelf paging sits on the wall
    left of the cabinet (art x≈812), centred on the middle row — never on a record. */
-.cabin-night-study .room-shelf-navigation { right: auto; left: calc(var(--scene-x) + 812px * var(--scene-k)); top: calc(var(--scene-y) + 471px * var(--scene-k)); translate: -100% -50%; transition: left 240ms steps(4, end), top 240ms steps(4, end); }
+.cabin-night-study .room-shelf-navigation { grid-template-columns: auto auto auto; gap: 8px; padding: 8px; right: auto; left: calc(var(--scene-x) + 812px * var(--scene-k)); top: calc(var(--scene-y) + 471px * var(--scene-k)); translate: -100% -50%; transition: left 240ms steps(4, end), top 240ms steps(4, end); }
 
 /* Immersive: the console is fully gone (not 8% ghost on the window art) and
    steps back in when the pointer comes near it (CabinRoom → data-console-near). */

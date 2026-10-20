@@ -3765,3 +3765,40 @@ figure {
 }
 
 }
+
+@layer overrides {
+/* Actual renderer beside the atmosphere, kept separate from the illustration. */
+.hero-product { width: min(300px, 25vw); padding: 0; margin: 0; gap: 0; border: 2px solid var(--scene-accent); box-shadow: 6px 6px 0 rgba(0,0,0,.4); text-align: left; }
+.hero-product img { display: block; width: 100%; height: auto; aspect-ratio: 8/5; object-fit: cover; }
+.hero-product figcaption { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; width: 100%; padding: 10px 12px; }
+.hero-product .note-kicker { align-self: center; font-family: var(--body); letter-spacing: .04em; }
+.hero-product strong { text-align: right; font-size: 14px; }
+.hero-product figcaption > span:last-child { grid-column: 1 / -1; font-size: 12px; }
+.cabin-faq { padding: 96px max(6vw, 24px); background: var(--bg); border-top: 1px solid rgba(255,248,233,.12); }
+.cabin-faq h2 { margin: 16px 0 36px; font: 400 clamp(24px, 3vw, 40px)/1.4 var(--pixel-cn); color: var(--cream); }
+.cabin-faq-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 48px; }
+.cabin-faq details { padding: 20px 0; border-bottom: 1px solid rgba(255,248,233,.18); }
+.cabin-faq summary { cursor: pointer; font-size: 16px; line-height: 1.6; color: var(--cream); }
+.cabin-faq summary:focus-visible { outline: 2px solid var(--amber); outline-offset: 6px; }
+.cabin-faq p { max-width: 60ch; margin: 16px 0 0; color: rgba(255,248,233,.76); font: 400 14px/1.9 var(--body); }
+.cabin-faq a { color: var(--amber); text-underline-offset: 4px; }
+@media (max-width: 1100px) and (min-width: 701px) {
+  .hero-product { top: 184px; width: 27vw; display: flex; }
+}
+@media (max-width: 700px) {
+  .hero { min-height: 820px; height: 100svh; max-height: 920px; }
+  .hero-copy { top: 122px; }
+  .hero h1 { font-size: clamp(30px, 9vw, 36px); line-height: 1.18; }
+  .hero h1 br { display: block; }
+  .hero .lead { margin-top: 16px; font-size: 14px; line-height: 1.7; }
+  .hero-actions { margin-top: 20px; }
+  .hero-facts { margin-top: 14px; }
+  .hero-facts li:first-child, .hero-facts li:nth-child(2)::before { display: none; }
+  .hero-product { display: flex; top: 408px; left: 50%; right: auto; translate: -50% 0; width: min(280px, calc(100% - 40px)); }
+  .hero-product figcaption { padding: 6px 10px; }
+  .hero-product figcaption > span:last-child { display: none; }
+  .hero-cat { display: none; }
+  .cabin-faq { padding: 64px 24px; }
+  .cabin-faq-grid { grid-template-columns: 1fr; }
+}
+}

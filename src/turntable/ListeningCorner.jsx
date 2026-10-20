@@ -191,7 +191,7 @@ export default function ListeningCorner({ item, items = [], vinyl, provider, spi
   const count = names.length, sideTotal = lengths.reduce((sum, value) => sum + value, 0);
   const style = { '--corner-s': `${layout.s}px` };
   const s = layout.s;
-  return <Dialog variant="full" title="唱机特写" close={close} onKeyDown={keys} deckKeys className={`listening-corner is-${light}${layout.narrow ? ' is-narrow' : ''}`} container={document.querySelector('.cabin-room')}>
+  return <Dialog variant="full" title="唱机特写" close={close} returnFocus=".focus-badge" onKeyDown={keys} deckKeys className={`listening-corner is-${light}${layout.narrow ? ' is-narrow' : ''}`} container={document.querySelector('.cabin-room')}>
     <div className="corner-room" style={style} aria-hidden="true">
       <canvas ref={scene} className="corner-scene" style={{ width: layout.art.w * s, height: layout.art.h * s }}/>
       {tiles.weather && <span className={`corner-weather is-${ambience.weather}`} style={{ ...box({ x: props.panes.x * s, y: props.panes.y * s, w: props.panes.w * s, h: props.panes.h * s }), '--tile': `url(${tiles.weather})`, '--tile-size': `${32 * s}px` }}/>}

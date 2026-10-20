@@ -31,8 +31,8 @@ export const DECK_COLOURS = Object.freeze({
 export const DECK_PALETTES = Object.freeze({
   'night-study': Object.freeze({ 16: '#9fb4d8' }),
   forest: Object.freeze({ 2: '#5a4a32', 3: '#6e5c3f', 4: '#3b3020', 5: '#7d6a48', 6: '#94805a', 12: '#2e261a', 16: '#d8e6a0', 17: '#6c5a3c' }),
-  seaside: Object.freeze({ 2: '#9c8462', 3: '#b09774', 4: '#735f45', 5: '#bca684', 6: '#cfbc98', 12: '#5a4a36', 16: '#cfe2e8', 17: '#a8916f' }),
-  starlight: Object.freeze({ 2: '#3d4660', 3: '#55607e', 4: '#262c3d', 5: '#6b7596', 6: '#8a93b0', 12: '#1e2333', 16: '#c2cbe8', 17: '#5c6585' })
+  seaside: Object.freeze({ 2: '#73553b', 3: '#8a6846', 4: '#4d3929', 5: '#9c7850', 6: '#b48d5d', 12: '#30251c', 16: '#cfe2e8', 17: '#806042' }),
+  starlight: Object.freeze({ 2: '#4c382b', 3: '#6c4e36', 4: '#30251e', 5: '#815d3e', 6: '#a07a50', 12: '#241d18', 16: '#c2cbe8', 17: '#634832' })
 });
 export const deckPalette = (look) => ({ ...DECK_COLOURS, ...DECK_PALETTES[look] });
 const DECK_VARS = Object.fromEntries(Object.entries(DECK_COLOURS).map(([key, hex]) => [key, `var(--deck-${key}, ${hex})`]));

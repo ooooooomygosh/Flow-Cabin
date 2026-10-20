@@ -123,7 +123,8 @@ export default function CabinJournal() {
 
 // `fallback`: sprite used when the file is not there yet (e.g. art still in review).
 function Sprite({ name, fallback, scale = 2, size = 64, className = '', alt = '' }) {
-  return <img className={`fs-sprite ${className}`} src={sprite(name)} alt={alt} width={size * scale} height={size * scale} draggable={false}
+  const source = sprite(name), [readyFor, setReadyFor] = useState('');
+  return <img className={`fs-sprite ${className}`} src={source} alt={alt} width={size * scale} height={size * scale} draggable={false} style={{ visibility: readyFor === source ? 'visible' : 'hidden' }} onLoad={() => setReadyFor(source)}
     onError={fallback ? (e) => { const to = sprite(fallback); if (to && !e.currentTarget.src.endsWith(to)) e.currentTarget.src = to; } : undefined}/>;
 }
 // 16×16 sticker for narrow screens; until the -sm file exists the 32×32 one is drawn at 16 px.
@@ -236,10 +237,10 @@ function JournalBook({ state, now, view, setView, close }) {
         <InputCompanion input={input} title="今天的陪伴"/>
         <div className="fs-section-head"><h3 className="fs-title">每天</h3><div className="fs-seg" role="group" aria-label="时间范围">{[7, 30].map((n) => <button key={n} type="button" aria-pressed={range === n} onClick={() => setRange(n)}>近 {n} 天</button>)}</div></div>
         <Bars days={daily} label={`最近 ${range} 天 · 分钟`} set="records"/>
-        <figure className="fs-year stats-chart-well" aria-label={`过去一年专注热力图，有 ${activeDays} 天专注`}>
+        {activeDays > 0 ? <figure className="fs-year stats-chart-well" aria-label={`过去一年专注热力图，有 ${activeDays} 天专注`}>
           <div className="fs-year-grid">{year.flat().map((d) => <span key={d.key} data-level={d.level} className={d.future ? 'is-future' : ''} title={`${d.key} · ${d.minutes} 分钟`}/>)}</div>
           <figcaption className="focus-heatmap-legend">过去一年 · {activeDays} 天有专注 · 少{[1, 2, 3, 4].map((l) => <span key={l} data-level={l}/>)}多</figcaption>
-        </figure>
+        </figure> : <p className="fs-hint fs-hand">每一轮都会在这一页留下一点颜色。</p>}
       </div>
       {spine}
       <div className="fs-page is-turning fs-ov-right">
@@ -252,7 +253,7 @@ function JournalBook({ state, now, view, setView, close }) {
         {recent.recent.length ? <ol className="fs-sessions">{recent.recent.map((s) => <li key={s.id}>
           <span className="fs-time">{clock(s.start)}</span><span className="fs-task">{taskName(s.taskId) || s.taskText || '自由专注'}{s.album ? <small> · 《{s.album.title}》</small> : null}</span>
           <span className="fs-min">{Math.round(s.durationMs / 60000)} 分{s.completed ? '' : ' · 提前结束'}</span></li>)}</ol>
-          : <Empty title="还没有专注记录">开一个番茄，小屋会帮你记下来。</Empty>}
+          : <Empty title="第一轮，从这里开始">开一个番茄，小屋会帮你记下来。</Empty>}
       </div>
     </div>}
     {view === 'tasks' && <div className="fs-spread" key="tasks" role="tabpanel" aria-label="待办"><div className="fs-page is-turning fs-tasks-left">
@@ -260,7 +261,7 @@ function JournalBook({ state, now, view, setView, close }) {
       {taskRows.length ? <ol className="fs-rank fs-task-rank">{taskRows.map((r, i) => <li key={r.id || 'free'} className={`${r.free ? 'is-free' : ''} ${i === 0 ? 'is-best' : ''}`}>
         <span className="fs-rank-name"><b className="fs-rank-no">{i + 1}</b>{r.name}{r.done ? <small> · 已完成</small> : null}</span><span className="fs-rank-num">{formatMinutes(r.minutes)} · {r.pomodoros} 个番茄</span>
         <span className="fs-meter" aria-hidden="true"><i style={{ width: `${r.minutes / taskPeak * 100}%` }}/></span></li>)}</ol>
-        : <Empty pose="cat-wait" title="还没有按待办记下的专注" action={<button type="button" className="fs-cta" onClick={close}>回小屋写一条待办</button>}>在「待办」里选一件事再开番茄，这一页就会告诉你时间都花在了哪里。</Empty>}
+        : <Empty pose="cat-wait" title="把时间，留给一件小事" action={<button type="button" className="fs-cta" onClick={close}>回小屋写一条待办</button>}>在「待办」里选一件事再开番茄，这一页就会告诉你时间都花在了哪里。</Empty>}
       {taskRows.some((r) => !r.free) && <figure className="fs-task-note"><Sprite name="cat-desk" scale={2}/><figcaption className="fs-hand">{(() => { const top = taskRows.find((r) => !r.free); const all = taskRows.reduce((n, r) => n + r.minutes, 0); return <>你最常陪伴的是「{top.name}」，<br/>占了全部专注的 {Math.round(top.minutes / Math.max(1, all) * 100)}%。<br/>{openTasks ? `还有 ${openTasks} 件在路上，慢慢来。` : '手头的事都做完了，休息一下吧。'}</>; })()}</figcaption></figure>}
     </div>{spine}<div className="fs-page is-turning fs-tasks-right">
       <h3 className="fs-title">做完的事 {doneTasks.length ? <small>· {tasks.filter((t) => t.done).length} 件{openTasks ? ` · 还有 ${openTasks} 件在路上` : ''}</small> : null}</h3>
@@ -295,12 +296,12 @@ function JournalBook({ state, now, view, setView, close }) {
       <div className="fs-board">
         <figure className="fs-polaroid" style={{ '--tilt': '-3deg' }}><Tape className="is-polaroid"/>
           {report.album ? (showCover ? <img className="fs-card-cover" src={report.album.cover} alt="" width={96} height={96} onError={() => setCoverFailed(report.album.cover)}/> : <span className="fs-cover-ph" aria-hidden="true"/>) : <span className="fs-cover-ph is-empty" aria-hidden="true"/>}
-          <figcaption className="fs-hand"><small>专注时放在唱机上的唱片</small>{report.album ? `《${report.album.title}》` : '这周没有唱片记录'}{report.album?.artist ? <small>{report.album.artist}</small> : null}</figcaption></figure>
+          <figcaption className="fs-hand"><small>专注时放在唱机上的唱片</small>{report.album ? `《${report.album.title}》` : '下一张唱片，会陪你开始'}{report.album?.artist ? <small>{report.album.artist}</small> : null}</figcaption></figure>
         <ul className="fs-notes is-mini" aria-label="这周做完的事">{weekDone.length ? weekDone.slice(0, 3).map((t, i) => <li key={t.id} className="fs-note" style={{ '--tilt': `${[2, -1.5, 1][i]}deg` }}><span className="fs-note-check" aria-hidden="true">✓</span><span className="fs-note-text">{t.text}</span></li>)
-          : <li className="fs-note is-blank" style={{ '--tilt': '1.5deg' }}><span className="fs-note-text">这周还没勾掉待办，也没关系。</span></li>}
+          : <li className="fs-note is-blank" style={{ '--tilt': '1.5deg' }}><span className="fs-note-text">做完的一件小事，会成为这里的一张便签。</span></li>}
           {weekDone.length > 3 && <li className="fs-note-more">还有 {weekDone.length - 3} 件</li>}</ul>
         {mood && <figure className="fs-mood" aria-label="小猫心情"><Sprite name={mood.tier === 'droopy' ? 'cat-droopy' : mood.tier === 'happy' ? 'cat-rub' : 'cat-wait'} scale={1}/>{mood.feeds > 0 && <img className="fs-sticker" src={sprite('sticker-fed')} alt="" width={32} height={32}/>}
-          <figcaption className="fs-hand">{mood.feeds > 0 ? `喂了 ${mood.feeds} 次` : '还没喂过'}{mood.label ? <small>{mood.label}</small> : null}</figcaption></figure>}
+          <figcaption className="fs-hand">{mood.feeds > 0 ? `喂了 ${mood.feeds} 次` : '来陪小猫坐一会儿'}{mood.label ? <small>{mood.label}</small> : null}</figcaption></figure>}
       </div>
       <ol className="fs-weeks" aria-label="最近几周">{pastWeeks.map((w) => <li key={w.offset}><button type="button" aria-pressed={w.offset === weekOffset} aria-label={`${w.label} · ${formatMinutes(w.totalMinutes)}`} title={`${w.label} · ${formatMinutes(w.totalMinutes)}`} onClick={() => setWeekOffset(w.offset)}>
         <span className="fs-weeks-bars" aria-hidden="true">{w.daily.map((d) => <i key={d.key} style={{ height: `${d.minutes ? Math.max(2, Math.round(d.minutes / weekPeak * 24 / 2) * 2) : 1}px` }}/>)}</span>
