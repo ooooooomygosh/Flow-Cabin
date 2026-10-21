@@ -51,6 +51,11 @@ try {
   await page.getByRole('button', { name: '放上唱片架', exact: true }).tap(); await page.getByText('《手机里的唱片》已放上唱片架。', { exact: true }).waitFor(); await page.keyboard.press('Escape');
   assert.match(db.get('flow-cabin-web-collection-v1'), /手机里的唱片/); check('touch-add-persists-to-native-transaction-before-confirmation');
   const assertWithin = async selector => { const box = await page.locator(selector).first().boundingBox(), viewport = page.viewportSize(); assert.ok(box && box.x >= -1 && box.y >= -1 && box.x + box.width <= viewport.width + 1 && box.y + box.height <= viewport.height + 1, selector + ': ' + JSON.stringify(box)); };
+  const assertFullBleed = async () => {
+    assert.equal(await page.locator('.cabin-scene-canvas').count(), 1, 'The scene must use one camera, without a duplicated background cabinet');
+    const art = await page.locator('.cabin-scene-art').boundingBox(), viewport = page.viewportSize();
+    assert.ok(art.x <= .5 && art.y <= .5 && art.x + art.width >= viewport.width - .5 && art.y + art.height >= viewport.height - .5, 'Scene leaves a solid-filled edge: ' + JSON.stringify({ art, viewport }));
+  };
   for (const [width, height] of [[360, 640], [390, 844], [412, 915], [844, 390], [800, 1280]]) {
     await page.setViewportSize({ width, height }); await page.waitForTimeout(350);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
@@ -58,6 +63,7 @@ try {
     const consoleBox = await page.locator('.turntable-console').boundingBox(), footerBox = await page.locator('.room-now-playing').boundingBox();
     assert.ok(consoleBox.y + consoleBox.height <= footerBox.y - 2 || consoleBox.x + consoleBox.width <= footerBox.x - 2 || consoleBox.x >= footerBox.x + footerBox.width + 2, 'Console content overlaps footer: ' + JSON.stringify({ consoleBox, footerBox }));
     const ratio = await page.locator('.cabin-scene-art').evaluate(e => { const b = e.getBoundingClientRect(); return b.width / b.height; }); assert.ok(Math.abs(ratio - 4 / 3) < .01);
+    await assertFullBleed();
     await page.screenshot({ path: path.join(output, `android-layout-${width}x${height}.png`), animations: 'disabled' }); check(`phone-tablet-layout-${width}x${height}`);
   }
   await page.setViewportSize({ width: 390, height: 844 }); await page.getByRole('button', { name: '唱片卡片', exact: true }).tap();
@@ -92,6 +98,9 @@ try {
     for (let i=0;i<buttons.length;i++) for(let j=i+1;j<buttons.length;j++) { const a=buttons[i],b=buttons[j]; assert.ok(a.right<=b.x||b.right<=a.x||a.bottom<=b.y||b.bottom<=a.y, 'Player buttons overlap'); }
     const center = await page.locator('.pocket-center').evaluate(e => { const r=e.getBoundingClientRect(); const hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2); return e===hit||e.contains(hit); }); assert.equal(center,true,'Play button is covered or clipped');
     const source = await page.locator('.turntable-source-chip').boundingBox(), consoleBounds = await page.locator('.turntable-console').boundingBox(); assert.ok(source.x >= consoleBounds.x && source.x+source.width<=consoleBounds.x+consoleBounds.width,'Source chip is clipped');
+    const sleeves = await page.locator('.room-record').evaluateAll(elements=>elements.map(element=>{const r=element.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return {left:r.left,top:r.top,right:r.right,bottom:r.bottom,hit:element===hit||element.contains(hit)};}));
+    for(const sleeve of sleeves){assert.ok(sleeve.left>=left-.5&&sleeve.right<=width-right+.5&&sleeve.top>=top-.5&&sleeve.bottom<=height-bottom+.5,'Sleeve did not refit after safe-area change: '+JSON.stringify({left,right,sleeve}));assert.equal(sleeve.hit,true,'Sleeve is blocked after same-size cutout side change');}
+    await assertFullBleed();
     await page.screenshot({ path: path.join(output, `android-cutout-${width}x${height}-${left}-${right}.png`), animations:'disabled' }); check(`loaded-player-cutout-${width}x${height}-${left}-${right}`);
   }
   await page.setViewportSize({width:393,height:852}); await page.evaluate(() => { document.documentElement.style.setProperty('--safe-area-inset-left','0px');document.documentElement.style.setProperty('--safe-area-inset-right','0px'); });
@@ -105,6 +114,33 @@ try {
   await page.keyboard.press('Escape'); await page.getByRole('button',{name:'唱片卡片',exact:true}).tap(); await page.getByLabel('我的笔记').focus(); await page.setViewportSize({width:393,height:490}); await page.waitForTimeout(250);
   assert.equal(await page.locator('html').getAttribute('data-mobile-keyboard'),'true'); assert.equal(await page.locator('.room-turntable').isVisible(),false); await assertWithin('dialog[open]');
   await page.screenshot({path:path.join(output,'android-keyboard-note.png'),animations:'disabled'}); check('keyboard-note-dialog-remains-reachable-without-player-overlay');
+  // More records than any viewport can show: every page must remain reachable,
+  // and the visible sleeves must be the original scene's clickable shelf cells.
+  await page.getByLabel('我的笔记').blur(); await page.keyboard.press('Escape'); await page.setViewportSize({width:393,height:852});
+  const fixtureItems = Array.from({length:29},(_,index)=>({id:`mobile-page-${index}`,type:'album',title:`全面屏唱片 ${index+1}`,artist:'布局测试',tracks:['测试曲目'],addedAt:new Date(2026,0,1,index).toISOString()}));
+  db.set('flow-cabin-web-collection-v1',JSON.stringify({version:1,items:fixtureItems}));
+  for (const look of ['pixel','warm','night-study','forest','seaside','starlight']) for (const [width,height] of [[393,852],[852,393]]) {
+    db.set('album-circle-library-v1-local-owner',JSON.stringify({version:1,rooms:{'local-room':{look,petId:'cat',boxes:[]}}}));
+    await page.setViewportSize({width,height}); await page.reload(); await page.locator('.room-record').first().waitFor(); await page.waitForTimeout(300);
+    const visited = new Set();
+    for (let index=0;index<fixtureItems.length;index++) {
+      await assertFullBleed();
+      const sleeves = await page.locator('.room-record').evaluateAll(elements=>elements.map(element=>{const r=element.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return {label:element.getAttribute('aria-label'),hit:element===hit||element.contains(hit),rect:{left:r.left,top:r.top,right:r.right,bottom:r.bottom}};}));
+      assert.ok(sleeves.length>0,`${look} ${width}x${height}: no accessible shelf slots`);
+      for(const sleeve of sleeves){assert.equal(sleeve.hit,true,`${look} ${width}x${height}: sleeve blocked by controls: ${JSON.stringify(sleeve)}`);visited.add(sleeve.label);}
+      const next=page.getByRole('button',{name:'下一页唱片',exact:true});
+      if(await next.count()===0||await next.isDisabled())break;
+      const previous=await page.locator('.room-rack-grid').getAttribute('data-start-row');await next.tap();await page.waitForFunction(value=>document.querySelector('.room-rack-grid')?.dataset.startRow!==value,previous);await page.waitForTimeout(250);
+    }
+    assert.equal(visited.size,fixtureItems.length,`${look} ${width}x${height}: some records cannot be reached`);
+    await page.screenshot({path:path.join(output,`android-fullbleed-${look}-${width}x${height}.png`),animations:'disabled'});check(`fullbleed-aligned-clickable-shelf-pages-${look}-${width}x${height}`);
+  }
+  const selectedSleeve=await page.locator('.room-record[aria-pressed=true]').getAttribute('aria-label');await page.setViewportSize({width:393,height:852});await page.waitForTimeout(400);
+  assert.equal(await page.locator('.room-record[aria-pressed=true]').getAttribute('aria-label'),selectedSleeve);check('rotation-keeps-selected-record-on-its-new-page');
+  await page.setViewportSize({width:640,height:240});await page.waitForTimeout(500);await assertFullBleed();
+  assert.equal(await page.locator('.cabin-room').getAttribute('data-mobile-shelf-compact'),'true');
+  await page.getByRole('button',{name:'打开播放器',exact:true}).tap();await page.getByRole('dialog',{name:'唱机特写',exact:true}).waitFor();await page.keyboard.press('Escape');
+  await page.setViewportSize({width:393,height:852});await page.waitForTimeout(400);assert.equal(await page.locator('.room-turntable').isVisible(),true);assert.equal(await page.locator('.cabin-room').getAttribute('data-mobile-shelf-compact'),'false');check('short-viewport-folds-console-but-retains-player-access-and-restores-on-resize');
   assert.deepEqual(report.errors, []); report.passed = true;
 } catch (error) { report.error = error.stack; report.passed = false; console.error(error); await page?.screenshot({ path: path.join(output, 'android-failure.png'), animations: 'disabled' }).catch(() => {}); process.exitCode = 1; }
 finally { await fs.writeFile(path.join(output, 'mobile-ui-report.json'), JSON.stringify(report, null, 2)); await browser?.close(); server?.kill(); }

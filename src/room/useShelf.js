@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRecordLibrary } from '../RecordLibrary';
 import { matchesLibraryFilters } from '../record-library.mjs';
-import { shelfWindow } from '../room-model.mjs';
+import { shelfWindow, shelfPage } from '../room-model.mjs';
 import { getRoomScene } from '../scene-catalog.mjs';
 import { readJSON, writeJSON } from './room-storage.mjs';
 
@@ -12,7 +12,7 @@ const BY = { year: (a, b) => (Number(b.year) || 0) - (Number(a.year) || 0), titl
 
 // The record shelf: sort / filter (kept on this computer), the three visible
 // rows, the selected sleeve, and ↑ ↓ Home End / wheel paging over `stage`.
-export default function useShelf({ items, look, stage }) {
+export default function useShelf({ items, look, stage, mobileSlotCount = null }) {
   const library = useRecordLibrary();
   const [filters, setFiltersState] = useState(() => readJSON(FILTERS_KEY, DEFAULT_FILTERS));
   const setFilters = useCallback((change) => setFiltersState((old) => { const next = typeof change === 'function' ? change(old) : change; writeJSON(FILTERS_KEY, next); return next; }), []);
@@ -23,10 +23,14 @@ export default function useShelf({ items, look, stage }) {
   const columns = getRoomScene(look).geometry.columns.length;
   const [row, setRow] = useState(0), [selectedId, setSelectedId] = useState(visible[0]?.id || '');
   const signature = visible.map((item) => item.id).join('|');
-  const view = useMemo(() => shelfWindow(visible, row, columns), [visible, row, columns]);
+  const pageSize = mobileSlotCount === null ? null : Math.max(1, mobileSlotCount);
+  const view = useMemo(() => pageSize === null ? shelfWindow(visible, row, columns) : shelfPage(visible, row, pageSize), [visible, row, columns, pageSize]);
   const selected = view.items.find((item) => item.id === selectedId) || view.items[0];
-  const live = useRef(null); live.current = { visible, columns, view };
-  const changeRow = useCallback((next) => { const { visible: list, columns: count } = live.current, value = shelfWindow(list, next, count); setRow(value.startRow); setSelectedId(value.items[0]?.id || ''); }, []);
+  const live = useRef(null); live.current = { visible, columns, view, pageSize };
+  const changeRow = useCallback((next) => { const { visible: list, columns: count, pageSize: size } = live.current, value = size === null ? shelfWindow(list, next, count) : shelfPage(list, next, size); setRow(value.startRow); setSelectedId(value.items[0]?.id || ''); }, []);
+  // Rotation can change how many original shelf slots fit on the screen.
+  // Keep the selected record on its new page instead of making it disappear.
+  useEffect(() => { if (pageSize !== null) { const index = visible.findIndex(item => item.id === selectedId); setRow(Math.floor(Math.max(0, index) / pageSize)); } }, [pageSize]);
   useEffect(() => { setRow(0); setSelectedId(visible[0]?.id || ''); }, [signature, look]);
   useEffect(() => {
     const wheel = { amount: 0, time: 0 }, element = stage.current;

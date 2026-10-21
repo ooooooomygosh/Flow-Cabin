@@ -5,6 +5,7 @@
   :root[data-platform=android] { --px-titlebar:calc(48px + var(--safe-area-inset-top,env(safe-area-inset-top,0px))); --mobile-bottom:var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px)); --mobile-left:var(--safe-area-inset-left,env(safe-area-inset-left,0px)); --mobile-right:var(--safe-area-inset-right,env(safe-area-inset-right,0px)); color-scheme:dark; }
   html[data-platform=android], html[data-platform=android] body, html[data-platform=android] #root, html[data-platform=android] .app { width:100%;height:var(--mobile-height,100dvh);min-height:0;overflow:hidden;overscroll-behavior:none; }
   html[data-platform=android] body { -webkit-tap-highlight-color:transparent; }
+  html[data-platform=android] .cabin-scene-canvas { transition:none; }
   html[data-platform=android] .app-titlebar { height:var(--px-titlebar);padding:var(--safe-area-inset-top,env(safe-area-inset-top,0px)) calc(var(--mobile-right) + 8px) 0 calc(var(--mobile-left) + 8px);gap:4px; }
   html[data-platform=android] .app-brand h1 { font-size:16px; }
   html[data-platform=android] .app-brand small { font-size:12px; }
@@ -28,7 +29,8 @@
   html[data-platform=android] .shelf-filters { left:calc(var(--mobile-left) + 6px);right:calc(var(--mobile-right) + 6px);width:auto;top:calc(var(--px-titlebar) + 44px);max-height:calc(var(--mobile-height,100dvh) - var(--px-titlebar) - var(--mobile-bottom) - 60px); }
   html[data-platform=android] .mobile-storage-note { padding:12px;border:2px solid var(--px-border);line-height:1.7; }
   html[data-platform=android] .mobile-storage-note button { margin-top:8px; }
-  html[data-platform=android] .room-shelf-navigation { right:calc(var(--mobile-right) + 2px);padding:2px; }
+  html[data-platform=android] .room-shelf-navigation { right:calc(var(--mobile-right) + 2px);width:44px;box-sizing:border-box;padding:2px 0; }
+  html[data-platform=android] .room-shelf-navigation span { max-width:44px;overflow-wrap:anywhere;text-align:center; }
   html[data-platform=android] .room-shelf-navigation button { min-width:40px;min-height:44px; }
   html[data-platform=android] .room-welcome-tip { white-space:normal; }
   html[data-platform=android] .room-turntable .turntable-side-cabinet { max-height:inherit; }
@@ -62,6 +64,7 @@
   html[data-platform=android] .music-advanced { display:none; }
   html[data-platform=android] .app-toast { left:calc(var(--mobile-left) + 8px);right:calc(var(--mobile-right) + 8px);margin-inline:auto;max-width:calc(100vw - var(--mobile-left) - var(--mobile-right) - 16px); }
   html[data-platform=android][data-mobile-keyboard=true] :is(.room-turntable,.room-now-playing) { display:none; }
+  html[data-platform=android][data-mobile-keyboard=true] textarea { box-sizing:border-box;min-height:40px;height:clamp(40px,calc(var(--mobile-height,100dvh) - var(--safe-area-inset-top,0px) - 100px),104px);max-height:clamp(40px,calc(var(--mobile-height,100dvh) - var(--safe-area-inset-top,0px) - 100px),104px); }
   @media(orientation:portrait) {
     html[data-platform=android] .app-actions button span { display:none; }
     html[data-platform=android] .app-actions button { width:44px;padding:8px; }
@@ -90,4 +93,5 @@
     html[data-platform=android] .turntable-console { max-height:inherit; }
     html[data-platform=android] .focus-dock { left:15%;right:15%;top:calc(var(--px-titlebar) + 4px); }
   }
+  html[data-platform=android] .cabin-room[data-mobile-shelf-compact=true] :is(.room-turntable,.room-now-playing) { display:none; }
 }

@@ -1,6 +1,7 @@
 package cn.flowcabin.app;
 
-import android.app.Activity;
+import androidx.activity.ComponentActivity;
+import androidx.activity.OnBackPressedCallback;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -16,7 +17,7 @@ import androidx.core.view.WindowInsetsCompat;
 import java.util.*;
 
 /** Official HTTPS pages in a separate process/profile, with no native JS bridge. */
-public class MusicLoginActivity extends Activity {
+public class MusicLoginActivity extends ComponentActivity {
     private static boolean profileSet;
     private WebView web;
     private String provider;
@@ -30,6 +31,9 @@ public class MusicLoginActivity extends Activity {
     }
     @Override public void onCreate(Bundle state) {
         super.onCreate(state); provider = getIntent().getStringExtra("provider"); if (!"qq".equals(provider) && !"netease".equals(provider)) { finish(); return; }
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override public void handleOnBackPressed() { complete(null); }
+        });
         if (!profileSet) { WebView.setDataDirectorySuffix("cabin-platform-login"); profileSet = true; }
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         LinearLayout root = new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setBackgroundColor(Color.rgb(35,26,20));
@@ -65,6 +69,5 @@ public class MusicLoginActivity extends Activity {
         // Retain only the Keystore-encrypted app credential, not a second plaintext WebView cookie database.
         CookieManager.getInstance().removeAllCookies(value -> { CookieManager.getInstance().flush(); if (cookie != null) setResult(RESULT_OK, new Intent().putExtra("provider", provider).putExtra("cookie", cookie)); else setResult(RESULT_CANCELED); finish(); });
     }
-    @Override public void onBackPressed() { complete(null); }
     @Override protected void onDestroy() { handler.removeCallbacksAndMessages(null); if (web != null) { web.stopLoading(); web.clearCache(true); web.destroy(); } super.onDestroy(); }
 }

@@ -63,7 +63,9 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
   const flow = useOnboardingFlow({ client: appearance.client, loading, loadError, firstVisit, itemCount: items.length, hubRequest, notify });
   const chrome = useRoomChrome({ client: appearance.client, notify });
   const library = useRecordLibrary(), look = library?.data.rooms[library.roomId]?.look || 'pixel';
-  const { filters, setFilters, visible, view, selected, setSelectedId, changeRow, filtered } = useShelf({ items, look, stage });
+  const [mobileSlotCount, setMobileSlotCount] = useState(null);
+  const [mobileShelfCompact, setMobileShelfCompact] = useState(false);
+  const { filters, setFilters, visible, view, selected, setSelectedId, changeRow, filtered } = useShelf({ items, look, stage, mobileSlotCount });
   const petId = normalizePetId(library?.data.rooms[library.roomId]?.petId);
   const deck = useDeck({ items, onLoad: (item) => setSelectedId(item.id) });
   const { record, provider, playback, player, deckItem, effectiveSpin } = deck;
@@ -196,6 +198,7 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
     <nav className="cabin-toolbar" aria-label="小屋工具">
       {focus && <span className="zen-keep cabin-toolbar-group"><FocusBadge open={dock.open && dock.tab !== 'sound'} onClick={() => saveDock({ open: !(dock.open && dock.tab !== 'sound'), ...(dock.tab === 'sound' ? { tab: 'timer' } : {}) })}/></span>}
       <span className="cabin-toolbar-group">
+        {mobileShelfCompact && <button type="button" aria-label="打开播放器" title="打开唱机特写与播放控制" onClick={() => chrome.setCorner(true)}><Play size={17}/><span>播放器</span></button>}
         {sound && <button type="button" className={sound.enabled ? 'is-on' : ''} aria-label={sound.enabled ? '小屋声音（开）' : '小屋声音（关）'} aria-expanded={dock.open && dock.tab === 'sound'} title="Lo-fi 电台与环境音" onClick={() => saveDock(dock.open && dock.tab === 'sound' ? { open: false } : { open: true, tab: 'sound' })}>{sound.enabled ? <SpeakerWave size={17}/> : <SpeakerOff size={17}/>}<span>声音</span></button>}
         <button type="button" aria-label={petLabel} title={pet.active ? `让${petName}回家` : `${petName}出门：到桌面上散步`} aria-pressed={Boolean(pet.active)} onClick={() => desktopCommand(pet.active ? 'pet-stop' : 'pet-start')}><Heart size={17}/><span>{petLabel}</span></button>
         <button type="button" aria-label={sink.busy ? '取消沉入桌面' : sink.active ? '浮出桌面' : '沉入桌面'} aria-pressed={Boolean(sink.active)} disabled={appearance.client && !sink.supported} title={sink.active ? '浮出桌面：回到小屋窗口 · Ctrl/⌘+Alt+D' : sink.reason || '沉入桌面：窗口收起，小屋变成桌面背景，伙伴和迷你唱机还能点 · Ctrl/⌘+Alt+D'} onClick={chrome.toggleDesktopMode}><Computer size={17}/><span>{sink.busy ? '正在沉入…' : sink.active ? '浮出桌面' : '沉入桌面'}</span></button>
@@ -215,7 +218,7 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
     {library?.error && flow.hub !== 'room' && !flow.wizard && !filtersOpen && <p className="room-preferences-error" role="alert">设置未保存：{library.error}</p>}
     {wallpaperError && <p className="wallpaper-error" role="alert">{wallpaperError}<button type="button" aria-label="关闭动态背景提示" onClick={() => setWallpaperError('')}>×</button></p>}
     {/* Under the opaque 唱机特写 the room is skipped entirely: no style, layout or paint work. */}
-    <div ref={stage} className="cabin-stage-wrap"><RoomScene look={look} items={view.items} selectedId={selected?.id} select={setSelectedId} load={deck.place} startRow={view.startRow} weather={weather} cat={cat}>
+    <div ref={stage} className="cabin-stage-wrap"><RoomScene look={look} items={view.items} selectedId={selected?.id} select={setSelectedId} load={deck.place} startRow={view.startRow} weather={weather} cat={cat} onShelfCapacity={setMobileSlotCount} onShelfCompact={setMobileShelfCompact}>
       <RoomTurntable item={deckItem} spinning={effectiveSpin} system={deck.system} trackIndex={deck.shownTrackIndex} style={recordStyle} items={items} load={deck.load} toggle={deck.toggleVisual} track={deck.setTrackIndex} eject={deck.eject} provider={provider} setProvider={deck.chooseProvider} playback={playback} player={player} tools={<nav className="turntable-room-tools" aria-label="唱片架">
         <button type="button" aria-label="整理唱片架" title="排序、筛选、唱片盒与专辑墙" aria-controls="cabin-shelf-filters" aria-expanded={filtersOpen} className={filtered ? 'is-active' : ''} onClick={() => setFiltersOpen(!filtersOpen)}><Wand2 size={17}/><span>整理唱片架{filtered ? ` · ${visible.length}` : ''}</span></button>
         <button type="button" aria-label="智能唱片机" title="说出计划，让小屋按场景编排一张可播放歌单" onClick={openSmart}><Sparkles size={17}/><span>智能唱片机</span></button>
@@ -229,7 +232,7 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
           <small className="room-welcome-tip">在标题栏「设置 › 房间与桌宠」里换场景和伙伴。</small>
         </>)}
       </div>}
-      {view.rows > 3 && <div className="room-shelf-navigation" aria-label="唱片架浏览"><button type="button" aria-label="上一排唱片" disabled={view.startRow === 0} onClick={() => changeRow(view.startRow - 1)}><Up/></button><span>{`${view.startRow + 1}–${Math.min(view.rows, view.startRow + 3)} / ${view.rows} 排`}</span><button type="button" aria-label="下一排唱片" disabled={view.startRow >= view.maxRow} onClick={() => changeRow(view.startRow + 1)}><Down/></button><small>↑↓ 或滚轮翻排</small></div>}
+      {(view.mode === 'page' ? view.rows > 1 : view.rows > 3) && <div className="room-shelf-navigation" aria-label="唱片架浏览"><button type="button" aria-label={view.mode === 'page' ? '上一页唱片' : '上一排唱片'} disabled={view.startRow === 0} onClick={() => changeRow(view.startRow - 1)}><Up/></button><span>{view.mode === 'page' ? `${view.startRow + 1} / ${view.rows} 页` : `${view.startRow + 1}–${Math.min(view.rows, view.startRow + 3)} / ${view.rows} 排`}</span><button type="button" aria-label={view.mode === 'page' ? '下一页唱片' : '下一排唱片'} disabled={view.startRow >= view.maxRow} onClick={() => changeRow(view.startRow + 1)}><Down/></button><small>{view.mode === 'page' ? '翻页浏览' : '↑↓ 或滚轮翻排'}</small></div>}
     </RoomScene></div>
     {selected && <div className="room-now-playing"><div className="room-selection-copy"><small>唱片架 · 双击或回车放盘</small><h2 title={selected.title}>{displayTitle(selected.title)}</h2><p title={selected.type === 'playlist' ? `歌单 · ${selected.artist} · ${selected.tracks?.length || 0} 首` : `${selected.artist} · ${selected.year || '年份待补充'} · ${selected.tracks?.length || 0} 首曲目`}>{selected.type === 'playlist' ? `歌单 · ${selected.artist} · ${selected.tracks?.length || 0} 首` : `${selected.artist} · ${selected.year || '年份待补充'} · ${selected.tracks?.length || 0} 首曲目`}</p></div><div className="room-selection-actions">
       {/* An empty deck: the visible keyboard / pointer path to play. With a record

@@ -1,6 +1,6 @@
 # Android 安装包
 
-基于主分支 `455700d`（v1.21.6），本次版本为 `1.21.6-android.2`，包名 `cn.flowcabin.app`。Android 1 只封装了网页与本地文件，缺少 Portable 版的平台登录听歌能力，不能作为本次需求的交付。Android 2 复用 Windows Portable 的 `desktop/music-service.cjs`、平台适配器、歌单和曲库模块，通过 Javet 6.0.2 在应用私有线程运行真正的 Node.js 26.10.0；无需电脑或云端中转。界面使用随 APK 打包的资源。
+基于主分支 `455700d`（v1.21.6），本次版本为 `1.21.6-android.3`，包名 `cn.flowcabin.app`。Android 1 只封装了网页与本地文件，缺少 Portable 版的平台登录听歌能力，不能作为本次需求的交付。Android 2 复用 Windows Portable 的 `desktop/music-service.cjs`、平台适配器、歌单和曲库模块，通过 Javet 6.0.2 在应用私有线程运行真正的 Node.js 26.10.0；无需电脑或云端中转。界面使用随 APK 打包的资源。
 
 最低 Android 10 / API 29，支持 64 位 ARM 手机（arm64-v8a）和 x86_64，Android System WebView 111 以上。原生库支持 16 KB 内存页，APK 的 ELF 和 ZIP 对齐另行检查；不是只调整手机屏幕比例。
 
@@ -8,7 +8,8 @@
 
 把签名 APK 传到手机，用文件管理器打开安装即可，不需要 ADB、USB 调试或 Windows 防火墙授权。仅在 Android 提示时，允许当前文件管理器安装此 APK。后续更新需使用同一包名、签名和更高 versionCode；不要先卸载旧版。
 
-- 手机竖屏重新安排唱机与唱片操作，横屏和平板保留房间原始 4:3 比例。标题、工具栏、弹窗留白和重复信息缩小；播放控制改为紧凑的一排按钮，移除会盖住播放/切歌的粘性音量条。为刘海、左右挖孔、手势/三键导航和软键盘预留空间，主要操作保持易于点击的尺寸。
+- Android 3 修正顶部、左侧的大块纯色填充：原生 WebView 延伸至系统栏和挖孔边缘，安全区只用于交互控件，不给整个画面加外边距。单幅房间图保持 4:3 等比裁切铺满，不复制背景或拉伸。根据横竖屏能完整显示的原画格子分页展示收藏，旋转后保留当前唱片。极短窗口折叠底部面板，仍可通过工具栏「打开播放器」操作，恢复尺寸后面板回来。
+- 标题、工具栏、弹窗留白和重复信息缩小；播放控制改为紧凑的一排按钮，音量条不再覆盖播放/切歌。刘海、左右挖孔、手势/三键导航由原生安全区适配；横屏软键盘出现时笔记框随剩余高度收缩。
 - 「设置 → 音源 → 账户与文件夹」提供 QQ / 网易云官方页面登录，登录结果回传本机音乐服务；可读取平台歌单、搜索和匹配原始曲目，按账号权限获取播放地址。自动匹配、音质降级、播放流和下拉切歌沿用 Portable 的实现。平台会员、地区、风控和歌曲版权仍以平台实际返回为准。
 - 工具栏全屏按钮调用 Android 沉浸模式。系统返回键依次关闭弹窗、收起专注面板、退出全屏，再将应用放到后台。
 - 「添加 → 手机里的音乐」通过系统文件选择器读取你选择的音乐，保存读取授权和曲目信息。文件仍在原位置；移动、删除、撤销授权或云盘文件离线后需要重新选择。
@@ -63,7 +64,19 @@ npm run android:apk
 - `:app:assembleDebug` 和 `:app:assembleDebugAndroidTest` 编译成功。原生 SQLite 测试使用隔离测试库，覆盖重启、事务拒绝、损坏文件保留；仅完成编译，尚未执行。
 - 签名 release APK 另以 `apksigner verify` 检查签名，以 `aapt2 dump badging` 检查包名、版本与 SDK 配置。
 
-因 Windows 未允许 ADB，保持 ADB 和模拟器停止。没有完成 Android 真机/模拟器运行验收，包括用户在官方页面真实登录、会员和地区权限下的歌曲播放、Android JNI/Keystore、SQLite 真实进程重启、系统文件选择、键盘/系统栏、升级和设备兼容性。没有使用用户账号或代填凭据，自动测试音频是合成测试内容。请将本次 APK 作为包含 Portable 音乐能力、仍待真机验收的构建。
+Android 2 当时因 ADB 不可用，没有完成 Android 运行验收。Android 3 按用户要求在本机安装官方模拟器后补测，结果见下文。仍未使用真实账号或代填凭据；真实平台登录、会员/地区歌曲播放、Android Keystore 凭据持久化、系统文件选择、签名覆盖升级、ARM 真机和其他厂商设备尚未验收。浏览器合成音频不等同于真实平台音乐播放。
+
+### Android 3 的全面屏修复与模拟器复验
+
+- `npm test`：916 通过、7 个原有跳过；移动浏览器 31 项通过，六种场景各自横竖屏四边覆盖、4:3、29 张收藏逐页可达、实际封面命中，以及同尺寸下左右挖孔安全区互换。
+- Android 16 / API 36、x86_64、WebView 133 的官方 Emulator 实测：普通竖屏、横屏、反向横屏，模拟挖孔的三个方向，以及竖横屏沉浸模式；WebView 到达整个显示区域、原画四边覆盖、封面与控件可达。真实 Android JNI 中的嵌入音乐服务成功启动，读取平台配置成功，没有代登录或播放用户账号歌曲。
+- `connectedDebugAndroidTest` 在模拟器执行 3 项 SQLite 测试通过：数据与删除重启保存、非法事务拒绝并保留旧值、损坏数据库不被空库覆盖。签名 release/debug 构建和 release lint 通过。
+- 登录页返回操作改用 AndroidX OnBackPressedDispatcher，兼容 Android 16 的返回手势。
+- 真实模拟器界面回归 12 项通过，包含横竖屏软键盘的笔记输入可达、关闭键盘恢复，以及强制结束应用进程再启动后 29 张收藏和笔记仍在 SQLite。截图取自 Android 实际合成屏幕，包含系统栏与输入法。
+
+本机 SDK / Emulator 位于 `D:\APPS\Android\Sdk`，测试手机资料位于同级 `avd`；同级及开始菜单提供「Android Emulator - Flow Cabin」快捷方式。启动器仅设置自身 SDK/AVD 环境，不修改 Windows 安全设置或全局 PATH。不调试时关闭模拟器。
+
+复验真实 WebView 布局：在专用 `flow-cabin-qa` 模拟器安装 debug APK，设置 `ANDROID_HOME`，运行 `node scripts/android-device-regression.mjs --fixture`。该命令只允许此测试 AVD，用标明为测试的 29 张收藏替换模拟器收藏，通过原生 SQLite 写入；不操作真实手机或账号。报告和实际 Android 截图保存到 `mobile-test-results/android-device-report.json` 及同目录。模拟挖孔会重建 WebView，脚本重新连接调试接口；退出时移除测试挖孔并恢复竖屏。
 
 重复浏览器验证：安装 `desktop/` 测试依赖和 Playwright Chromium，运行 `npm run android:bundle && npm run test:mobile-ui`；可用 `BROWSER_EXECUTABLE` 指定现有 Chrome。结果和截图位于忽略的 `mobile-test-results/`。原生测试仅在设备可用且允许 ADB 时运行 `cd android && ./gradlew :app:connectedDebugAndroidTest`。
 
