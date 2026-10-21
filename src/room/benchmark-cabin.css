@@ -8,6 +8,9 @@
 .cabin-welcome p { margin: 8px 0; font: 400 24px/1.4 var(--px-font-cn); }
 .cabin-welcome > div { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 12px; }
 .cabin-welcome > div > span { flex-basis: 100%; color: #d7bc98; }
+.cabin-return-note { display: grid; gap: 4px; margin: 12px 0; padding: 8px 12px; border-left: 2px solid var(--px-accent); background: var(--px-surface-hud); color: var(--px-ink); text-shadow: none; font: 400 12px/20px var(--px-font-body); }
+.cabin-return-note strong { font: inherit; overflow-wrap: anywhere; }
+.cabin-return-note small { color: var(--px-ink-dim); font: inherit; }
 .cabin-welcome button { min-height: 32px; padding: 3px 10px; color: #eddbb7; background: #211b17d9; border: 1px solid #a585554d; box-shadow: 0 2px 0 #100b07; font: inherit; cursor: pointer; }
 .cabin-welcome button:hover { border-color: #d9b67c; background: #453020; }
 .cabin-pixel .cabin-scene-art { filter: saturate(.82); }

@@ -199,3 +199,20 @@ test('a streak survives month, year and clock changes', () => {
     assert.equal(model.currentStreak(new Map([['2026-01-01', 0.5]]), day(2026, 1, 1)), 0);
   } finally { if (previous === undefined) delete process.env.TZ; else process.env.TZ = previous; }
 });
+
+test('ending a round settles worked time without starting a break or giving rewards', () => {
+  const start = 1700000000000;
+  const initial = model.normalizeFocus({ settings: { autoBreak: true, autoFocus: true } });
+  const running = model.startPhase(initial, 'focus', start);
+  const ended = model.endRound(running, start + 120000);
+  assert.equal(ended.state.timer.phase, 'idle');
+  assert.equal(ended.event.next, 'idle');
+  assert.equal(ended.state.sessions.length, 1);
+  assert.equal(ended.state.sessions[0].completed, false);
+  assert.equal(ended.state.sessions[0].end - ended.state.sessions[0].start, 120000);
+  assert.deepEqual(ended.state.rewards, initial.rewards);
+  assert.equal(model.endRound(running, start + 1000).state.sessions.length, 0, 'sub-minute rounds stay uncounted');
+  const paused = model.pause(running, start + 90000);
+  assert.equal(model.endRound(paused, start + 900000).state.sessions[0].end - model.endRound(paused, start + 900000).state.sessions[0].start, 90000);
+  assert.equal(model.endRound(initial, start).state, initial);
+});

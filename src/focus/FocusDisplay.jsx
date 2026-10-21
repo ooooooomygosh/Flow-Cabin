@@ -1,3 +1,4 @@
+import Dialog from '../Dialog';
 import React, { useEffect, useRef, useState } from 'react';
 import FocusFace, { faceFocus } from './FocusFace';
 import { useFocusDisplay, useSceneLook } from './useFocusDisplay';
@@ -23,7 +24,7 @@ const typing = (target) => target?.closest?.('input,textarea,select,[contentedit
 export function FacePicker() {
   const look = useSceneLook(), [display, setDisplay] = useFocusDisplay(), current = faceFor(display, look);
   return <section className="face-picker" aria-label="专注画面">
-    <header><strong>专注画面</strong><small>{display.mode ? '计时和时钟都用这个画面，按 Z 进入沉浸；开始专注时也会自动进入。' : `正在跟随「${getRoomScene(look).label}」的默认画面，选一个就固定下来。`}</small>
+    <header><strong>专注画面</strong><small>{display.mode ? '计时和时钟都用这个画面。按 Z 进入沉浸，或在下方开启自动进入。' : `正在跟随「${getRoomScene(look).label}」的默认画面，选一个就固定下来。`}</small>
       {display.mode && <button type="button" className="face-picker-reset" onClick={() => setDisplay({ mode: '' })}>跟随场景</button>}</header>
     <Segmented className="face-grid" label="专注画面" value={current} onChange={(mode) => setDisplay({ mode })}
       items={FACE_IDS.map((id) => ({ id, title: FACE_HINTS[id], label: <><FocusFace face={id} look={look} still variant="thumb"/><span>{FACE_LABELS[id]}</span></> }))}/>
@@ -55,7 +56,7 @@ export default function FocusDisplayStage() {
   const [open, setOpen] = useState(false), [flash, setFlash] = useState(''), [idle, setIdle] = useState(false), [offer, setOffer] = useState('');
   const now = useNowPlaying();
   const focus = useFocusState(), look = useSceneLook(), [display, setDisplay] = useFocusDisplay(), id = faceFor(display, look);
-  const fullscreen = useDesktopFullscreen(), ownFullscreen = useRef(false), stage = useRef(null), returnTo = useRef(null), live = useRef(id); live.current = id;
+  const fullscreen = useDesktopFullscreen(), ownFullscreen = useRef(false), stage = useRef(null), live = useRef(id); live.current = id;
   const close = () => { setOpen(false); setOffer(''); };
   const autoEnter = useRef(display.autoEnter); autoEnter.current = display.autoEnter;
   // Starting a pomodoro (button, shortcut, tray or the next round) enters 沉浸.
@@ -84,11 +85,12 @@ export default function FocusDisplayStage() {
   useEffect(() => {
     if (!open) return undefined;
     const root = document.documentElement;
-    returnTo.current = document.activeElement; root.classList.add('room-focus-display'); stage.current?.focus({ preventScroll: true });
+    root.classList.add('room-focus-display'); stage.current?.focus({ preventScroll: true });
     // Capture phase: these keys belong to the display, not the deck (←/→ would seek).
     const key = (event) => {
-      if (roomCovered() || event.altKey || event.ctrlKey || event.metaKey) return;
+      if (document.querySelector('dialog[open]:not(.focus-display-shell)') || event.altKey || event.ctrlKey || event.metaKey) return;
       if (event.key === 'Escape') { event.preventDefault(); event.stopImmediatePropagation(); setOpen(false); }
+      else if (/^[fF]$/.test(event.key) && !typing(event.target)) { event.preventDefault(); event.stopImmediatePropagation(); if (!event.repeat) setOpen(false); }
       // ←/→ skip tracks here (one meaning); the face itself changes with the tabs in the bar.
       else if ((event.key === 'ArrowLeft' || event.key === 'ArrowRight') && !typing(event.target) && !event.target?.closest?.('[role=radiogroup],[role=tablist]')) { event.preventDefault(); event.stopImmediatePropagation(); if (!event.repeat) playerCommand(event.key === 'ArrowRight' ? 'next' : 'previous'); }
       // 小屋日记 (L) sits above the room, not above 沉浸: leave 沉浸 first, then open it.
@@ -103,7 +105,6 @@ export default function FocusDisplayStage() {
       root.classList.remove('room-focus-display'); window.removeEventListener('keydown', key, true); window.removeEventListener('pointermove', wake); clearTimeout(timer);
       if (ownFullscreen.current && readCabinFullscreen()) requestCabinFullscreen({ exit: true }).catch(() => {});
       ownFullscreen.current = false;
-      const back = returnTo.current; (back?.isConnected ? back : document.querySelector('.focus-badge'))?.focus?.({ preventScroll: true });
     };
   }, [open]);
   if (!open) return null;
@@ -112,7 +113,7 @@ export default function FocusDisplayStage() {
   const task = state?.tasks.find((item) => item.id === timer.taskId)?.text;
   const note = clockShown ? (running ? `${PHASE_LABELS[timer.phase]}中` : '') : [task, timer && running ? `第 ${timer.round % state.settings.longEvery + (timer.phase === 'focus' ? 1 : 0)} / ${state.settings.longEvery} 轮` : ''].filter(Boolean).join(' · ');
   const toggleFullscreen = () => { const exit = readCabinFullscreen(); ownFullscreen.current = !exit; requestCabinFullscreen({ exit }).catch(() => {}); };
-  return <div ref={stage} className={`focus-display${idle ? ' is-idle' : ''}`} data-face={id} role="dialog" aria-label="专注画面" tabIndex={-1} onClick={(event) => { if (!event.target.closest('.focus-display-bar, .focus-display-offer')) close(); }}>
+  return <Dialog variant="full" title="专注画面" close={close} initialFocus={stage} returnFocus=".focus-badge" className="focus-display-shell" deckKeys><div ref={stage} className={`focus-display${idle ? ' is-idle' : ''}`} data-face={id} tabIndex={-1} onClick={(event) => { if (!event.target.closest('.focus-display-bar, .focus-display-offer')) close(); }}>
     <div className="focus-display-stage">
       <FocusFace face={id} look={look} focus={faceFocus(state)} show={display.show} seconds={display.seconds} variant="full" maxScale={8} caption={id !== 'record'} music={id === 'record' ? { playing: now.playing } : null}>{id === 'record' ? <RecordNowPlaying now={now}/> : null}</FocusFace>
       {note && <p className="focus-display-note">{note}</p>}
@@ -130,5 +131,5 @@ export default function FocusDisplayStage() {
       <button type="button" onClick={toggleFullscreen}>{fullscreen ? <><Contract size={16}/>退出全屏</> : <><Expand size={16}/>全屏</>}</button>
       <button type="button" aria-keyshortcuts="Escape" onClick={close}><X size={16}/>返回小屋</button>
     </nav>
-  </div>;
+  </div></Dialog>;
 }

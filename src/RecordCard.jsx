@@ -95,6 +95,8 @@ export default function RecordCard({ item, close, onChanged, onRemove }) {
           return <li key={index}><button type="button" onClick={() => play(index)} title="从这一首开始播放"><span>{String(index + 1).padStart(2, '0')}</span><span className="record-card-track-copy"><strong>{name}</strong>{meta && <small className="record-card-track-meta">{meta}</small>}</span><small className="record-card-track-time">{duration(track?.lengthMillis)}</small></button></li>;
         })}</ol> : <p className="record-card-empty">还没有曲目资料。</p>}
         </section>
+      </div>
+      <div className="record-card-writing">
         <label className="record-card-notes">我的笔记<textarea value={notes} maxLength={4000} rows={4} placeholder="第一次听的场景、最喜欢的一首、想记住的一句歌词…" onChange={(event) => { removing.current = false; setNotes(event.target.value); setSaved('dirty'); clearTimeout(timer.current); timer.current = setTimeout(saveNotes, 900); }} onBlur={saveNotes}/></label>
         {/* 活区里只放文字：把「重试」按钮塞进 role=status，读屏会把它当文本念出来，
             按钮自己出现的时候也没有人知道。失败原因在活区里，重试按钮在它旁边。 */}

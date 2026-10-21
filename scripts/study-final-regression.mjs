@@ -352,7 +352,7 @@ try {
   await faceSwitch.getByRole('button', { name: '沉浸', exact: true }).click();
   const stage = page.getByRole('dialog', { name: '专注画面' });
   await stage.waitFor();
-  assert.equal(await stage.getAttribute('data-face'), 'flip');
+  assert.equal(await stage.locator('.focus-display').getAttribute('data-face'), 'flip');
   assert.equal(await page.evaluate(() => document.documentElement.classList.contains('room-focus-display')), true);
   const canvas = await stage.locator('.focus-face.is-full[data-face=flip] .focus-face-canvas').evaluate((element) => {
     const context = element.getContext('2d');
@@ -385,7 +385,7 @@ try {
   await page.evaluate(() => document.activeElement?.blur());
   await page.keyboard.press('z');
   await page.getByRole('dialog', { name: '专注画面' }).waitFor();
-  assert.equal(await page.getByRole('dialog', { name: '专注画面' }).getAttribute('data-face'), 'flip');
+  assert.equal(await page.getByRole('dialog', { name: '专注画面' }).locator('.focus-display').getAttribute('data-face'), 'flip');
   await shot(page, '13-flip-clock-immersive-keyboard');
   await page.keyboard.press('Escape');
   await page.getByRole('dialog', { name: '专注画面' }).waitFor({ state: 'detached' });

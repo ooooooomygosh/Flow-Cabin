@@ -55,7 +55,7 @@ try {
     await context.addInitScript(({key,firstVisit,autoEnter,motion}) => {
       if (location.origin==='null') return;
       // Most suites work in the dock after starting a round; 沉浸 on start is covered by its own test.
-      if (!autoEnter && !localStorage.getItem('album-circle-focus-display-v1')) localStorage.setItem('album-circle-focus-display-v1',JSON.stringify({autoEnter:false}));
+      if (!localStorage.getItem('album-circle-focus-display-v1')) localStorage.setItem('album-circle-focus-display-v1',JSON.stringify({autoEnter}));
       if (!firstVisit) localStorage.setItem('flow-cabin-onboarding-v1', window.__onboardingSeed);
       if (!firstVisit && !localStorage.getItem(key)) localStorage.setItem(key,JSON.stringify({notes:'原有随手记',settings:{focusMin:1,shortMin:1,notify:false,chime:false}}));
       window.__nativeCommands=[];
@@ -195,7 +195,7 @@ try {
     assert(!(await polaroid.innerText()).includes(playbackAlbum),'the separate playback album is not a focus snapshot');
     // Leave legacy focus and real playback intact: neither may invent missing focus album metadata.
     await page.evaluate(key=>{localStorage.removeItem(key);window.dispatchEvent(new StorageEvent('storage',{key,storageArea:localStorage}));},fixture.focusLogKey);
-    await polaroid.filter({hasText:'这周没有唱片记录'}).waitFor();
+    await polaroid.filter({hasText:'下一张唱片，会陪你开始'}).waitFor();
     assert(!(await polaroid.innerText()).includes(playbackAlbum),'playback-only records never fill the focus-album slot');
     await page.evaluate(({key,value})=>{localStorage.setItem(key,value);window.dispatchEvent(new StorageEvent('storage',{key,newValue:value,storageArea:localStorage}));},{key:fixture.focusLogKey,value:fixture.focusLog});
     await polaroid.filter({hasText:`《${fixture.focusAlbum}》`}).waitFor();
@@ -556,7 +556,7 @@ try {
     await page.evaluate(()=>document.fonts.ready);
     for(const width of [1440,960,640]) {
       await page.setViewportSize({width,height:600});
-      const bounds=await page.locator('.app-titlebar').evaluate(header=>{const r=header.getBoundingClientRect(), brand=header.querySelector('.app-brand strong'), count=header.querySelector('.app-brand small'), range=document.createRange();range.selectNodeContents(brand);return {lines:range.getClientRects().length,brandBottom:brand.getBoundingClientRect().bottom,countBottom:count.getBoundingClientRect().bottom,headerBottom:r.bottom,buttons:[...header.querySelectorAll('button')].map(button=>{const b=button.getBoundingClientRect();return {name:button.getAttribute('aria-label'),left:b.left,right:b.right,top:b.top,bottom:b.bottom,reachable:document.elementFromPoint(b.left+b.width/2,b.top+b.height/2)?.closest('button')===button};})};});
+      const bounds=await page.locator('.app-titlebar').evaluate(header=>{const r=header.getBoundingClientRect(), brand=header.querySelector('.app-brand h1'), count=header.querySelector('.app-brand small'), range=document.createRange();range.selectNodeContents(brand);return {lines:range.getClientRects().length,brandBottom:brand.getBoundingClientRect().bottom,countBottom:count.getBoundingClientRect().bottom,headerBottom:r.bottom,buttons:[...header.querySelectorAll('button')].map(button=>{const b=button.getBoundingClientRect();return {name:button.getAttribute('aria-label'),left:b.left,right:b.right,top:b.top,bottom:b.bottom,reachable:document.elementFromPoint(b.left+b.width/2,b.top+b.height/2)?.closest('button')===button};})};});
       await page.screenshot({path:path.join(output,`compact-header-${width}x600.png`),animations:'disabled'});assert.equal(bounds.lines,1,JSON.stringify(bounds));assert.ok(bounds.countBottom<=bounds.headerBottom);assert.ok(bounds.buttons.every(b=>b.left>=0&&b.right<=width&&b.top>=0&&b.bottom<=bounds.headerBottom&&b.reachable),JSON.stringify(bounds.buttons));
     }
     await page.getByRole('button',{name:'添加到唱片架',exact:true}).click();await page.getByRole('dialog',{name:'添加到唱片架',exact:true}).waitFor();await page.keyboard.press('Escape');assert.equal(await page.getByRole('button',{name:'添加到唱片架',exact:true}).evaluate(e=>e===document.activeElement),true);

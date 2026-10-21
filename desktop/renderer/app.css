@@ -1,5 +1,5 @@
 /* Desktop shell: loading screen and settings, in the cabin's pixel style. */
-:root{color-scheme:dark;--desktop-font:"HarmonyOS Sans SC Bundled",sans-serif;--desktop-weight:400;--desktop-heading-weight:700;
+:root{color-scheme:dark;--desktop-font:system-ui,"PingFang SC","Microsoft YaHei",sans-serif;--desktop-weight:400;--desktop-heading-weight:700;
   /* Same names and values as src/styles/tokens.css (the shell page cannot load it). */
   --px-bg:#1c120b;--px-surface:#2e1d12;--px-surface-2:#3a2416;--px-border:#8a5a32;--px-brass:#d4a46b;--px-ink:#ffe9cb;--px-ink-dim:#c9a47a;--px-accent:#e0ad69;--px-ink-on-accent:#1c120b;--px-warn:#e06a4e;--px-shadow:#0d0805;--px-surface-card:#24160d;
   font-family:var(--desktop-font);color:var(--px-ink);background:var(--px-bg);font-synthesis:none}

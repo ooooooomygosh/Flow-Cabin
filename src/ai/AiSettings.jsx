@@ -55,7 +55,7 @@ export default function AiSettings() {
       <p className="ai-note">{preset.hint}</p>
       {codex ? <>
         {!desktop && <p className="ai-note is-error" role="alert">本机 Codex CLI 只在桌面版可用。网页版请选择其他模板。</p>}
-        <p className="ai-note">桌面版会在临时目录运行 <code>codex exec</code>，使用你在终端里已经登录的 Codex；请求仍按该 CLI 的服务商与账号发出。只读取最后一条回答，不保存思考过程、工具输出或会话文件。</p>
+        <p className="ai-note">桌面版会在临时目录运行 <code>codex exec</code>，使用你在终端里已经登录的 Codex；请求仍按该 CLI 的服务商与账号发出。CLI 的只读沙箱仍可能读取本机文件；请求会按你的 CLI 配置发送给对应服务商。小屋只读取最后一条回答，不保存思考过程、工具输出或会话文件。</p>
       </> : <>
         <label className="ai-row"><span>接口地址</span><input type="url" inputMode="url" placeholder={preset.baseUrl || 'https://…/v1'} value={settings.baseUrl} readOnly={settings.provider !== 'custom'} onChange={(e) => update({ baseUrl: e.target.value })} aria-invalid={!urlOk}/></label>
         {!urlOk && <p className="ai-note is-error" role="alert">请使用 HTTPS 地址。本机服务可使用 localhost 的 HTTP 地址；不要带账号、查询参数或锚点。</p>}
@@ -66,7 +66,7 @@ export default function AiSettings() {
             {keyDraft.trim() && <button type="button" className="pixel-button is-quiet" disabled={!urlOk} onClick={storeKey}>保存 Key</button>}
             {key.stored && <button type="button" className="pixel-button is-quiet" onClick={() => { testVersion.current++; saveKey(''); setTest({ state: 'idle', text: '' }); }}>清除</button>}</label>
           {key.stored && key.endpoint !== chatUrl(settings.baseUrl) && <p className="ai-note is-error" role="alert">接口地址已改变。请为这个地址重新保存 Key，旧 Key 不会发给新地址。</p>}
-          <p className="ai-note">{desktop ? (!key.stored ? '尚未保存 Key，保存时才尝试系统加密。' : key.secure ? 'Key 用系统加密，只存在这台电脑上，请求由桌面版发出。' : '当前 Key 仅保存在本次运行的内存中，退出后需重新填写。') : 'Key 只存在这个浏览器里。网页版直接从浏览器请求，接口必须允许跨域（CORS）；不支持时请用桌面版。'}</p>
+          <p className="ai-note">{desktop ? (!key.stored ? '尚未保存 Key，保存时才尝试系统加密。' : key.secure ? 'Key 用系统加密，只存在这台电脑上，请求由桌面版发出。' : '当前 Key 仅保存在本次运行的内存中，退出后需重新填写。') : 'Key 未加密，仅保存在当前标签页的会话中，关闭标签页后需重新填写。网页版直接请求接口，需要接口允许跨域（CORS）；不支持时请用桌面版。'}</p>
         </> : <p className="ai-note">这个模板连接本机服务，不需要 API Key。</p>}
       </>}
       {key.stored && !needsKey && <div className="ai-row"><span>已保存 Key</span>

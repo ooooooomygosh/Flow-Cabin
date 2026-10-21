@@ -5,12 +5,15 @@ const { normalizeSettings, DEFAULT_SETTINGS, appearanceScript } = require('../se
 const { safeSavedWindow } = require('../policy.cjs');
 test('saved appearance rejects CSS injection and clamps excessive scaling', () => {
   assert.deepEqual(normalizeSettings(), DEFAULT_SETTINGS);
-  assert.equal(normalizeSettings({ font: '"; url(https://example.com)' }).font, 'bundled');
+  assert.equal(normalizeSettings({ font: '"; url(https://example.com)' }).font, 'system');
   assert.equal(normalizeSettings({ zoom: 999, weight: 600, theme: 'invalid' }).zoom, 150);
   assert.equal(normalizeSettings({ weight: 600 }).weight, 400);
   assert.equal(normalizeSettings({ weight: 250 }).weight, 250);
   assert.equal(normalizeSettings({ font: 'Microsoft YaHei' }).font, 'Microsoft YaHei');
-  assert.ok(appearanceScript(DEFAULT_SETTINGS).includes('HarmonyOS Sans SC Bundled'));
+  assert.ok(appearanceScript(DEFAULT_SETTINGS).includes('system-ui'));
+  assert.ok(!appearanceScript(DEFAULT_SETTINGS).includes('HarmonyOS Sans SC Bundled'));
+  assert.ok(appearanceScript({ font: 'bundled' }).includes('HarmonyOS Sans SC Bundled'));
+  assert.equal(normalizeSettings({ font: 'bundled' }).font, 'bundled', 'existing explicit font choice is preserved');
 });
 test('restore fits small work areas and clamps partly offscreen saved windows', () => {
   const area = { x: -800, y: 0, width: 800, height: 480 };

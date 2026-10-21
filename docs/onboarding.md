@@ -1,6 +1,6 @@
 # 新手引导、版本更新与设置入口
 
-本文对应当前 `v1.21.5` 行为。代码在 `src/onboarding/`：`onboarding-model.mjs` 保存纯状态，`onboarding-adapter.mjs` 连接播放器与桌面命令，`OnboardingWizard.jsx`、`InputCompanionSettings.jsx` 和 `SettingsHub.jsx` 负责界面。版本变化摘要来自 `releases.mjs`。
+本文对应当前 `v1.21.6` 行为。代码在 `src/onboarding/`：`onboarding-model.mjs` 保存纯状态，`onboarding-adapter.mjs` 连接播放器与桌面命令，`OnboardingWizard.jsx`、`InputCompanionSettings.jsx` 和 `SettingsHub.jsx` 负责界面。版本变化摘要来自 `releases.mjs`。
 
 相关验证：`src/onboarding/onboarding.test.mjs`（状态与适配层单测）、`scripts/onboarding-checks.mjs`（浏览器冒烟）、`src/ai/smart-turntable.test.mjs` 与 `scripts/smart-turntable-regression.mjs`（智能唱片机）。
 

@@ -87,3 +87,32 @@ test('every class a stylesheet styles is rendered somewhere', () => {
     }
   }
 });
+
+// Match semantic text/background pairs, rather than treating bevel colours as ink.
+test('small text tokens meet AA contrast on their intended surfaces', () => {
+  const source = fs.readFileSync(path.join(SRC, 'styles/tokens.css'), 'utf8');
+  const palette = new Map([...source.matchAll(/(--px-[\w-]+):\s*(#[\da-f]{6})\s*;/gi)].map(m => [m[1], m[2]]));
+  const luminance = name => {
+    const value = palette.get(name); assert(value, `Missing colour ${name}`);
+    const channels = value.slice(1).match(/../g).map(hex => { const v = parseInt(hex, 16) / 255; return v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; });
+    return channels[0] * .2126 + channels[1] * .7152 + channels[2] * .0722;
+  };
+  for (const [text, background, minimum] of [
+    ['--px-paper-ink', '--px-paper', 4.5], ['--px-paper-dim', '--px-paper', 4.5],
+    ['--px-warn-ink', '--px-paper', 4.5], ['--px-ink-faint', '--px-surface-2', 4.8],
+    ['--px-ink-dim', '--px-surface-3', 4.5], ['--px-ink-on-accent', '--px-accent', 4.5]
+  ]) {
+    const a = luminance(text), b = luminance(background), ratio = (Math.max(a, b) + .05) / (Math.min(a, b) + .05);
+    assert(ratio >= minimum, `${text} on ${background}: ${ratio.toFixed(2)}:1 < ${minimum}:1`);
+  }
+  for (const file of ['record-card.css', 'turntable/listening-corner.css']) {
+    assert(!/\bcolor:\s*var\(--px-accent-lo\)/.test(fs.readFileSync(path.join(SRC, file), 'utf8')), `${file}: bevel colour used as small text`);
+  }
+});
+
+test('desktop companion panel labels use readable text sizes', () => {
+  const css = sheets.find(s => s.file === 'pet/pet.css').css;
+  for (const { selector, body } of rules(css)) if (selector.includes('.pet-panel')) {
+    for (const [, size] of body.matchAll(/font-size:\s*(\d+)px/g)) assert(Number(size) >= 12, `${selector}: ${size}px label`);
+  }
+});

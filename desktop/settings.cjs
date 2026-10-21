@@ -2,10 +2,10 @@
 const { execFile } = require('node:child_process');
 // Input companionship is on by default, but macOS still requires an explicit
 // Input Monitoring grant before the listen-only HID tap starts.
-const DEFAULT_SETTINGS = Object.freeze({ font: 'bundled', weight: 400, zoom: 100, reduceMotion: false, typingFollow: true });
+const DEFAULT_SETTINGS = Object.freeze({ font: 'system', weight: 400, zoom: 100, reduceMotion: false, typingFollow: true });
 const WEIGHTS = [250, 300, 400, 500, 700, 900];
 function normalizeSettings(value = {}) {
-  const font = typeof value.font === 'string' && value.font.length <= 160 && !/[\x00-\x1f\x7f"'\\;{}<>]/.test(value.font) ? value.font : 'bundled';
+  const font = typeof value.font === 'string' && value.font.length <= 160 && !/[\x00-\x1f\x7f"'\\;{}<>]/.test(value.font) ? value.font : 'system';
   return {
     font,
     weight: WEIGHTS.includes(Number(value.weight)) ? Number(value.weight) : 400,
@@ -19,11 +19,12 @@ function normalizeSettings(value = {}) {
 function appearanceScript(value, extra = {}) {
   const settings = normalizeSettings(value);
   const family = settings.font === 'bundled' ? 'HarmonyOS Sans SC Bundled' : settings.font;
+  const stack = settings.font === 'system' ? 'system-ui, "PingFang SC", "Microsoft YaHei", sans-serif' : JSON.stringify(family) + ', system-ui, "PingFang SC", "Microsoft YaHei", sans-serif';
   return `(() => { const s = ${JSON.stringify({ ...settings, ...extra })}; const root = document.documentElement;
     window.albumDesktopAppearance = s;
     root.dataset.desktopClient = 'true';
     root.dataset.desktopReduceMotion = String(s.reduceMotion);
-    root.style.setProperty('--desktop-font', ${JSON.stringify(JSON.stringify(family) + ', "HarmonyOS Sans SC Bundled", sans-serif')});
+    root.style.setProperty('--desktop-font', ${JSON.stringify(stack)});
     root.style.setProperty('--desktop-weight', String(s.weight));
     root.style.setProperty('--desktop-heading-weight', String(s.weight >= 700 ? 900 : 700));
     window.dispatchEvent(new CustomEvent('album-desktop-settings', { detail: s }));

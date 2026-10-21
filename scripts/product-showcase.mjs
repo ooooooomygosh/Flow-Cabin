@@ -37,6 +37,7 @@ try {
   browser = await launchChromium();
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1, locale: 'zh-CN', reducedMotion: 'reduce' });
   await context.addInitScript(() => {
+    localStorage.setItem('album-circle-focus-display-v1', JSON.stringify({ autoEnter: true })); // Explicitly showcase the optional immersive start.
     window.albumDesktopAppearance = { client: true, reduceMotion: true };
     window.open = () => { throw new Error('Native actions are disabled in product screenshots'); };
     if (!localStorage.getItem('album-circle-focus-v1:local-owner')) localStorage.setItem('album-circle-focus-v1:local-owner', JSON.stringify({ version: 1, settings: { notify: false, chime: false, autoSound: false }, tasks: [], sessions: [], timer: { phase: 'idle', round: 0 }, rewards: { fish: 0, xp: 0 } }));

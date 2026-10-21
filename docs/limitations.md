@@ -1,6 +1,6 @@
 # 使用边界与验证状态
 
-当前版本基线：`v1.21.5`（2026-10-20）。`v1.21.4` 是上一个已发布版本；`v1.21.5` 的 tag、安装资产与签名状态以 [GitHub Releases](https://github.com/ooooooomygosh/Flow-Cabin/releases) 为准。#61 已在当前主线解决。
+当前版本基线：`v1.21.6`（2026-10-21）。`v1.21.5` 是上一个已发布版本；tag、安装资产与签名状态以 [GitHub Releases](https://github.com/ooooooomygosh/Flow-Cabin/releases) 为准。#61 已在当前主线解决。
 
 本页区分「已实现」「自动化或隔离页面已验证」和「真实设备已验证」。旧提交的测试数字不会自动套用到当前版本。
 
@@ -103,3 +103,7 @@ HTTP 模板的智能唱片机请求使用 `response_format: {"type":"json_object
 - [既有自动验证汇总](audit/verification-summary.md)、[浏览器验证](audit/browser-validation.md)与 [Mac 原生验收](audit/native-mac-acceptance-2026-10-09.md)：保留历史提交和已验证 / 未验证项；最新结论以本页为准。
 
 [回到 README](../README.md) · [第一次使用](getting-started.md) · [新手引导](onboarding.md)
+
+### 静态网页版收藏
+
+静态网站不提供桌面 `/api/items` 和 `/desktop-music` 服务。网页版在当前浏览器存储唱片，支持手动填写、卡片笔记、移除、导出和导入既有备份；曲库搜索和平台音乐服务需要桌面版。存储失败会明确报告，原有唱片保持不变；清理站点数据前请导出备份。此路径由不模拟后端的生产构建浏览器回归验证。

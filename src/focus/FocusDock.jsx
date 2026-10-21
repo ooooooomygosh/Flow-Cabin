@@ -46,7 +46,7 @@ export function FocusTimer() {
     <div className="focus-rounds" aria-label={`本组第 ${timer.round % settings.longEvery + (timer.phase === 'focus' ? 1 : 0)} 轮`}>{Array.from({ length: settings.longEvery }, (_, index) => <span key={index} className={index < timer.round % settings.longEvery ? 'is-done' : index === timer.round % settings.longEvery && timer.phase === 'focus' ? 'is-active' : ''}/>)}</div>
     <div className="focus-controls">
       <button type="button" className="pixel-button is-primary" onClick={focus.toggle}>{idle ? <><Play size={18}/>开始专注</> : timer.paused ? <><Play size={18}/>继续</> : <><Pause size={18}/>暂停</>}</button>
-      {!idle && <button type="button" aria-label={timer.phase === 'focus' ? '提前结束本轮专注' : '跳过休息'} title={timer.phase === 'focus' ? '提前结束本轮（不计奖励）' : '跳过休息'} onClick={focus.skip}><Forward size={18}/></button>}
+      {!idle && <button type="button" aria-label={timer.phase === 'focus' ? '提前结束本轮专注' : '跳过休息'} title={timer.phase === 'focus' ? '结束并回到待机，满一分钟的专注时间会保留（不计奖励）' : '跳过休息'} onClick={timer.phase === 'focus' ? focus.endRound : focus.skip}><Forward size={18}/></button>}
       {!idle && <ConfirmButton className="" label="重置计时" title="重置计时" icon={<Reset size={18}/>} question={timer.phase === 'focus' ? '放弃这一轮专注？' : '结束这次休息？'} confirmLabel="重置" skip={() => timer.phase !== 'focus' || (!timer.paused && Date.now() >= timer.endsAt)} onConfirm={focus.reset}/>}
       {idle && <button type="button" onClick={() => focus.start('shortBreak')}>休息一下</button>}
       <button type="button" aria-label="计时设置" aria-expanded={editing} onClick={() => setEditing(!editing)}><Settings size={18}/></button>

@@ -32,6 +32,15 @@
 
 ---
 
+<details>
+<summary>看看小屋如何动起来（演示动图）</summary>
+
+<img src="docs/assets/cabin-tour.gif" width="100%" alt="心流小屋功能演示：房间、唱片、专注与小猫">
+
+[观看视频版本](docs/assets/cabin-tour.mp4)
+
+</details>
+
 ## 里面有什么
 
 - **唱片架与唱机** —— 搜专辑、贴 QQ 音乐链接或手填；双击封面就放上唱机，拖过去也行。每张能写笔记、换黑胶外观、收进唱片盒。
@@ -80,12 +89,14 @@
 
 [**前往 Releases 选择安装包 →**](https://github.com/ooooooomygosh/Flow-Cabin/releases/latest)
 
-当前版本 **v1.21.5**，逐版本改动见[发布说明](desktop/RELEASE-NOTES.md)。
+当前版本 **v1.21.6**，逐版本改动见[发布说明](desktop/RELEASE-NOTES.md)。
 
 | 平台 | 安装包 |
 | --- | --- |
 | macOS | Apple Silicon · Intel（DMG 或 ZIP） |
 | Windows | x64 安装版 · x64 便携版 |
+
+没有你的系统，或暂时不想安装？先用[网页版](https://album-circle.vercel.app/)。完整的文件名与大小见[下载指南](docs/DOWNLOAD-GUIDE.md)。
 
 不确定挑哪个文件，照[安装说明](docs/getting-started.md#安装与首次打开)里的文件名对一下就行。目前没有 Windows ARM64 原生包，也没有 Linux 安装包。
 
@@ -98,11 +109,21 @@
 - **安装包没有完成商业签名与公证。** macOS 用的是稳定的自签名发布身份，不是 Apple Developer ID；Windows 没有可信发布者签名。第一次打开被系统拦下时，先核对下载来源，别为了装上它去关掉系统安全保护。
 - **QQ 音乐 / 网易云走的是非官方接口。** 基于 [Simple Music](https://github.com/Yyyangshenghao/simple-music) 模块，不宣称官方合作授权；能不能播、能不能听全，取决于你的账号、版权、会员和地区。
 - **macOS 的系统集成需要一次授权。** 用「系统 Apple Music」或「系统正在播放」会弹一次「自动化」授权；跨应用键鼠陪伴只需要「输入监控」。没有这些授权，收藏、普通专注和屋里的键鼠回应照常可用。
-- **网页版功能少于桌面版。** 网页版不能登录 QQ / 网易云，没有 Music Assistant、桌宠、动态桌面、自动更新和本机 Codex CLI；它只在小屋窗口内响应键鼠。
+- **网页版功能少于桌面版。** 网页版的收藏使用浏览器本地存储，支持手动填写和备份导入；曲库搜索、QQ / 网易云登录需要桌面版，没有 Music Assistant、桌宠、动态桌面、自动更新和本机 Codex CLI；它只在小屋窗口内响应键鼠。
 
 更完整也更严格的功能与验证状态见[使用边界](docs/limitations.md)——那份文档区分「已实现」「自动化已验证」和「真实设备已验证」，里面写着的未验收项就是未验收项。
 
 ---
+
+## 版本与更新
+
+下载入口的 `latest` 指向最近公开的正式 Release；每个 Release 只展示该版本的变化，全部历史见[发布说明](desktop/RELEASE-NOTES.md)。桌面版的更新检查和手动安装路径见[第一次使用](docs/getting-started.md#安装与首次打开)。更新前建议导出一份本机备份。
+
+## 常见问题
+
+- **被系统拦住了怎么办？** 核对官方来源，按[下载指南](docs/DOWNLOAD-GUIDE.md)处理系统提示；不需要关闭系统安全保护。
+- **网页版和桌面版差在哪里？** 网页版适合先体验房间、收藏、专注与手记；平台登录、桌宠和系统集成请使用桌面版，详见[使用边界](docs/limitations.md)。
+- **唱片转了，为什么没有声音？** 默认的「仅展示」不播放音频。到「设置 › 音源」选择实际音源；平台版权、账号与地区也会影响可播范围。
 
 ## 跑起来
 
