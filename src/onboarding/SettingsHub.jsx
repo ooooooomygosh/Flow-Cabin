@@ -20,6 +20,7 @@ import { CROSSFADE_OPTIONS, crossfadeSeconds, setCrossfadeSeconds, onCrossfadeCh
 import { SHORTCUTS } from '../shortcuts.mjs';
 import AiSettings from '../ai/AiSettings.jsx';
 import InputCompanionSettings from './InputCompanionSettings';
+import StorageStatus from '../mobile/StorageStatus';
 
 export const HUB_SECTIONS = Object.freeze([
   { id: 'music', label: '音源' }, { id: 'room', label: '房间与桌宠' }, { id: 'companion', label: '键鼠陪伴' }, { id: 'focus', label: '专注工具' },
@@ -53,6 +54,7 @@ export default function SettingsHub({ section = 'music', setSection, close, env,
         {tab === 'focus' && <><p className="personalization-intro">番茄钟的时长和提醒。计时、待办、学习和声音在右上角「专注」里。</p><FocusSettingsForm className="hub-focus-settings"/><DailyGoalField/></>}
         {tab === 'desktop' && <DisplaySection env={env} desktop={desktop}/>}
         {tab === 'data' && <div className="hub-rows">
+          {env.mobile && <StorageStatus/>}
           <Row title="收藏与备份" hint="导出 / 导入唱片、歌单、专注记录。备份文件只保存在你选的位置。"><button type="button" className="pixel-button" onClick={openBackup}>收藏与备份</button></Row>
           {env.desktop && <Row title="本地音乐文件夹" hint="添加或移除扫描的文件夹。"><button type="button" className="pixel-button" onClick={() => setSection('music/accounts')}>管理文件夹<ChevronRight size={14}/></button></Row>}
         </div>}
@@ -73,7 +75,7 @@ function CompanionSection({ env, player }) {
     <p className="personalization-intro">奶糖会在你使用其他应用时，陪着你打字和点鼠标。这里可以直接开关、检查授权，并确认今天的记录是否真的在增加。</p>
     {env.desktop
       ? <InputCompanionSettings player={player} env={env}/>
-      : <div className="onboarding-hint">跨应用键鼠陪伴需要心流小屋桌面版。网页版仍会在小屋窗口内回应键盘和鼠标。</div>}
+      : <div className="onboarding-hint">{env.mobile ? '手机版的小猫在小屋内陪伴你；跨应用键鼠统计与独立桌宠需要电脑桌面版。' : '跨应用键鼠陪伴需要心流小屋桌面版。网页版仍会在小屋窗口内回应键盘和鼠标。'}</div>}
     {env.desktop && <Row title="统计位置" hint="今天的键盘、点击、连续天数与最近 7 天，也在奶糖的小猫面板、右上角「专注 › 统计」和「小屋日记」里。"/>}
   </>;
 }

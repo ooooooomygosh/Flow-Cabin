@@ -56,6 +56,11 @@ function RoomScene({ look = 'warm', items = [], selectedId, select, load, startR
       const sheet = window.matchMedia('(max-width: 900px)').matches;
       // The turntable console docked on the left edge is an obstruction too (it can be dragged elsewhere).
       const deck = safeArea && box(room.querySelector('.room-turntable'));
+      if (safeArea && document.documentElement.dataset.platform === 'android' && rect.height > rect.width) {
+        room.style.setProperty('--mobile-footer-height', `${foot ? foot.height + 10 : 0}px`);
+        if (deck) safeArea.bottom = Math.max(safeArea.bottom, (foot ? foot.height + 10 : 0) + deck.height + 24 + (parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--safe-area-inset-bottom')) || 0));
+        safeArea.right = 42;
+      }
       if (deck && deck.right < rect.left + rect.width * .4) safeArea.left = deck.right - rect.left + 12;
       const obstacle = panel && !sheet ? { left: panel.left - rect.left, right: panel.right - rect.left, top: panel.top - rect.top, bottom: panel.bottom - rect.top } : null;
       const next = roomGeometryAroundPanel(rect.width, rect.height, safeArea || (obstacle ? { top: 12, bottom: 12 } : undefined), { ...scene.geometry, band: scene.band }, obstacle);

@@ -100,7 +100,7 @@ export default function RecordCard({ item, close, onChanged, onRemove }) {
         <label className="record-card-notes">我的笔记<textarea value={notes} maxLength={4000} rows={4} placeholder="第一次听的场景、最喜欢的一首、想记住的一句歌词…" onChange={(event) => { removing.current = false; setNotes(event.target.value); setSaved('dirty'); clearTimeout(timer.current); timer.current = setTimeout(saveNotes, 900); }} onBlur={saveNotes}/></label>
         {/* 活区里只放文字：把「重试」按钮塞进 role=status，读屏会把它当文本念出来，
             按钮自己出现的时候也没有人知道。失败原因在活区里，重试按钮在它旁边。 */}
-        <small className="record-card-saved" role="status">{{ saving: '正在保存…', error: '保存失败。', dirty: '', saved: notes ? <><Check size={13}/>已保存在这台电脑</> : '' }[saved]}</small>
+        <small className="record-card-saved" role="status">{{ saving: '正在保存…', error: '保存失败。', dirty: '', saved: notes ? <><Check size={13}/>{globalThis.albumMobile ? '已保存在这台手机' : '已保存在这台电脑'}</> : '' }[saved]}</small>
         {saved === 'error' && <button type="button" className="pixel-button is-quiet" onClick={saveNotes}>重试保存</button>}
         <footer className="record-card-footer">
           {links.map(([label, url]) => <a key={label} href={url} target="_blank" rel="noreferrer"><External size={15}/>{label}</a>)}

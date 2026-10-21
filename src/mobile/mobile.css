@@ -1,0 +1,66 @@
+/* Android layout keeps the illustrated room's aspect ratio and refits its
+   interactive shelf band. It never scales down the entire desktop interface. */
+@layer guards, reset, features, skin, overrides;
+@layer overrides {
+  :root[data-platform=android] { --px-titlebar:calc(56px + var(--safe-area-inset-top,env(safe-area-inset-top,0px))); --mobile-bottom:var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px)); color-scheme:dark; }
+  html[data-platform=android], html[data-platform=android] body, html[data-platform=android] #root, html[data-platform=android] .app { width:100%;height:var(--mobile-height,100dvh);min-height:0;overflow:hidden;overscroll-behavior:none; }
+  html[data-platform=android] body { -webkit-tap-highlight-color:transparent; }
+  html[data-platform=android] .app-titlebar { height:var(--px-titlebar);padding:var(--safe-area-inset-top,env(safe-area-inset-top,0px)) 10px 0;gap:6px; }
+  html[data-platform=android] .app-brand h1 { font-size:16px; }
+  html[data-platform=android] .app-brand small { font-size:12px; }
+  html[data-platform=android] .app-brand-cat { width:32px;height:32px; }
+  html[data-platform=android] .desktop-controls { margin-left:0;gap:2px; }
+  html[data-platform=android] :is(button,.pixel-button,select,input:not([type=range]):not([type=checkbox])) { min-height:44px;touch-action:manipulation; }
+  html[data-platform=android] :is(input,textarea,select) { font-size:16px;max-width:100%; }
+  html[data-platform=android] :is(.desktop-controls button,.cabin-dialog-close,.record-dialog header>button,.focus-dock-close) { min-width:44px;min-height:44px; }
+  html[data-platform=android] :is(.cabin-toolbar button[aria-label*=出门],.cabin-toolbar button[aria-label*=回家],.cabin-toolbar button[aria-label*=沉入桌面],.cabin-toolbar button[aria-label*=浮出桌面]) { display:none; }
+  html[data-platform=android] .cabin-room .cabin-toolbar { top:calc(var(--px-titlebar) + 4px);left:8px;right:8px;justify-content:space-between;gap:2px;flex-wrap:nowrap; }
+  html[data-platform=android] .cabin-room .cabin-toolbar button { min-height:44px;padding:6px 8px;font-size:12px; }
+  html[data-platform=android] .cabin-toolbar-group { gap:0; }
+  html[data-platform=android] .app-toast { width:max-content;max-width:calc(100vw - 32px);bottom:calc(var(--mobile-bottom) + 16px);line-height:1.6;z-index:1000; }
+  html[data-platform=android] dialog { width:calc(100vw - 16px);max-width:800px;max-height:calc(var(--mobile-height,100dvh) - var(--safe-area-inset-top,0px) - var(--mobile-bottom) - 20px);margin:auto;padding:0; }
+  html[data-platform=android] :is(.cabin-dialog-header,.record-dialog>header) { padding:8px 12px;min-height:52px; }
+  html[data-platform=android] .cabin-dialog-body { padding:12px;min-height:0;overscroll-behavior:contain; }
+  html[data-platform=android] :is(.dialog-tabs,.settings-hub-nav,.focus-dock-tabs) { overflow-x:auto;overscroll-behavior:contain;scrollbar-width:thin; }
+  html[data-platform=android] :is(.dialog-tabs,.focus-dock-tabs) button { flex-shrink:0;min-height:44px; }
+  html[data-platform=android] .focus-dock { position:fixed;top:calc(var(--px-titlebar) + 48px);bottom:var(--mobile-bottom);left:0;right:0;width:auto;max-height:none;z-index:70; }
+  html[data-platform=android] :is(.focus-dock-body,.settings-hub-panel,.add-album-panel,.cabin-dialog-body) { overscroll-behavior:contain;scroll-padding-block:12px; }
+  html[data-platform=android] .shelf-filters { left:8px;right:8px;width:auto;top:calc(var(--px-titlebar) + 52px);max-height:calc(var(--mobile-height,100dvh) - var(--px-titlebar) - var(--mobile-bottom) - 72px); }
+  html[data-platform=android] .mobile-storage-note { padding:12px;border:2px solid var(--px-border);line-height:1.7; }
+  html[data-platform=android] .mobile-storage-note button { margin-top:8px; }
+  html[data-platform=android] .room-shelf-navigation { right:4px;padding:2px; }
+  html[data-platform=android] .room-shelf-navigation button { min-width:40px;min-height:44px; }
+  html[data-platform=android] .room-welcome-tip { white-space:normal; }
+  html[data-platform=android] .room-turntable .turntable-side-cabinet { max-height:inherit; }
+  html[data-platform=android] .room-turntable .turntable-console { box-sizing:border-box; }
+  html[data-platform=android] .turntable-room-tools { display:flex;gap:4px; }
+  html[data-platform=android] .turntable-room-tools button { flex:1;min-width:0;justify-content:center; }
+  html[data-platform=android][data-mobile-keyboard=true] :is(.room-turntable,.room-now-playing) { display:none; }
+  @media(orientation:portrait) {
+    html[data-platform=android] .app-actions button span { display:none; }
+    html[data-platform=android] .app-actions button { width:44px;padding:8px; }
+    html[data-platform=android] .window-control-divider { display:none; }
+    html[data-platform=android] .cabin-room .room-turntable { position:fixed;left:10px;right:10px;top:auto;bottom:calc(var(--mobile-footer-height,0px) + var(--mobile-bottom) + 12px);width:auto;min-width:0;max-height:min(220px,28dvh);transform:none;translate:none; }
+    html[data-platform=android] .room-turntable .turntable-console { max-height:inherit;overflow-y:auto; }
+    html[data-platform=android] .turntable-drag-handle { pointer-events:none; }
+    html[data-platform=android] .cabin-room .room-now-playing { position:fixed;left:10px;right:10px;bottom:calc(var(--mobile-bottom) + 6px);width:auto;min-height:0;max-height:134px;padding:8px;gap:4px;display:flex;flex-direction:row;align-items:center; }
+    html[data-platform=android] .room-selection-copy { flex:1;min-width:0; }
+    html[data-platform=android] .room-selection-copy small { display:none; }
+    html[data-platform=android] .room-selection-copy h2 { font-size:15px;line-height:1.5; }
+    html[data-platform=android] .room-selection-copy p { margin:0;font-size:12px; }
+    html[data-platform=android] .room-selection-actions { flex:0 0 auto;display:flex;gap:4px;flex-wrap:wrap;max-width:52%;justify-content:flex-end; }
+    html[data-platform=android] .room-selection-actions button { font-size:12px;min-height:44px;padding:6px; }
+    html[data-platform=android] .room-selection-actions a { display:none; }
+    html[data-platform=android] .cabin-scene .room-empty { width:calc(100% - 32px);max-width:340px;left:16px;right:16px;top:calc(var(--px-titlebar) + 100px);bottom:auto;transform:none;margin:auto;padding:14px 10px; }
+    html[data-platform=android] :is(.record-card,.add-manual-grid,.wall-workspace) { grid-template-columns:minmax(0,1fr); }
+    html[data-platform=android] .record-card-sleeve { max-width:240px;margin-inline:auto; }
+    html[data-platform=android] :is(.hub-focus-settings .focus-settings-grid,.focus-settings-grid) { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    html[data-platform=android] .room-cat { max-width:92px; }
+  }
+  @media(orientation:landscape) and (max-height:550px) {
+    html[data-platform=android] { --px-titlebar:calc(48px + var(--safe-area-inset-top,0px)); }
+    html[data-platform=android] .cabin-room .room-turntable { max-height:calc(var(--mobile-height,100dvh) - var(--px-titlebar) - 115px);width:200px;min-width:0;bottom:calc(var(--mobile-bottom) + 12px); }
+    html[data-platform=android] .turntable-console { max-height:inherit; }
+    html[data-platform=android] .focus-dock { left:15%;right:15%;top:calc(var(--px-titlebar) + 4px); }
+  }
+}

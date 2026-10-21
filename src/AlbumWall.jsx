@@ -77,7 +77,9 @@ export default function AlbumWall({ items, onClose }) {
       const images = await Promise.all(ordered.map((item) => loadWallCover(item.cover)));
       const image = document.createElement('canvas'); const result = await paintWall(image, ordered, options, images, options.scale);
       const blob = await new Promise((resolve) => image.toBlob(resolve, 'image/png')); if (!blob) throw new Error('无法生成图片，请降低下载倍率重试。');
-      downloadBlob(blob, `Album-Wall-${(options.title || 'Collection').replace(/[<>:"/\\|?*\x00-\x1f]/g, '').slice(0, 60)}.png`);
+      const saved = await downloadBlob(blob, `Album-Wall-${(options.title || 'Collection').replace(/[<>:"/\\|?*\x00-\x1f]/g, '').slice(0, 60)}.png`);
+      if (saved?.failed) throw new Error('图片未能保存，请降低导出尺寸后重试。');
+      if (saved?.cancelled) { setNotice('已取消保存。'); return; }
       setNotice(`PNG 已生成：${result.width} × ${result.height}。${result.missing ? ` ${result.missing} 张封面未加载，图片中用生成的唱片封套代替。` : '请选择保存位置。'}`);
     } catch (error) { setNotice(''); setProblem(error.message); }
     finally { setBusy(false); }

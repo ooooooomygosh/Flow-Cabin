@@ -23,7 +23,7 @@ export function detectEnv(win = globalThis) {
   const root = win.document?.documentElement?.dataset || {};
   const nav = win.navigator || {};
   const platform = String(nav.userAgentData?.platform || nav.platform || nav.userAgent || '');
-  return { desktop: root.desktopClient === 'true', mac: /mac/i.test(platform), notifications: 'Notification' in win };
+  return { desktop: root.desktopClient === 'true', mobile: root.platform === 'android', mac: /mac/i.test(platform), notifications: root.platform !== 'android' && 'Notification' in win };
 }
 
 // Sources the first-run step offers, in this order; names come from the one provider table.
@@ -39,7 +39,7 @@ const SOURCE_TABLE = [
 export function sourceOptions(env = {}) {
   return SOURCE_TABLE.filter((source) => !source.macOnly || env.mac).map((source) => ({
     ...source,
-    ...(source.id === 'local' && !env.desktop ? { hint: '在「添加到唱片架 › 本地音乐」里选择音乐文件，本次打开期间可播。' } : {}),
+    ...(source.id === 'local' && !env.desktop ? { hint: env.mobile ? '在「添加到唱片架 › 本地音乐」选择手机歌曲，重新打开仍可播放。' : '在「添加到唱片架 › 本地音乐」里选择音乐文件，本次打开期间可播。' } : {}),
     available: !source.desktopOnly || Boolean(env.desktop),
     reason: source.desktopOnly && !env.desktop ? '需要心流小屋桌面版' : ''
   }));

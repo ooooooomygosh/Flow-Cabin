@@ -7,6 +7,7 @@ import { STREAK_HINT } from '../focus-model.mjs';
 import { drawWeekCard, canDrawCover, CARD_W, CARD_H } from './week-card.mjs';
 import { JOURNAL_EVENT, JOURNAL_TABS, journalTab, isJournalKey } from './journal-events.mjs';
 import './focus-stats.css';
+import { downloadBlob } from '../../lib/download.mjs';
 import './journal-art.css';
 import { journalArtStyle, hasArt, JOURNAL_ART, CARD_EXPORT_SLOTS, cardArt, sprite, LETTER_PLACEHOLDER } from './journal-art.mjs';
 import { defaultWeekOffset, weekName, catPose, CAT_POSE_CAPTION, barUnits, cabinLetter } from './journal-layout.mjs';
@@ -215,7 +216,10 @@ function JournalBook({ state, now, view, setView, close }) {
     const slotImgs = imgs.slice(0, CARD_EXPORT_SLOTS.length), [cat, best, unit, cap, fed] = imgs.slice(CARD_EXPORT_SLOTS.length);
     const art = { ...cardArt(Object.fromEntries(CARD_EXPORT_SLOTS.map((slot, i) => [slot, slotImgs[i]]))), cat, bestSticker: best, barUnit: unit, barCap: cap, fedSticker: fed };
     drawWeekCard(el.getContext('2d'), report, undefined, { cover, art, letter, mood });
-    const a = document.createElement('a'); a.href = el.toDataURL('image/png'); a.download = `心流小屋周报-${dayKey(report.from)}.png`; a.click(); flash('周报图片已导出');
+    const blob = await new Promise(resolve => el.toBlob(resolve, 'image/png'));
+    if (!blob) { flash('无法生成周报图片，请重试'); return; }
+    const saved = await downloadBlob(blob, `心流小屋周报-${dayKey(report.from)}.png`);
+    if (!saved?.cancelled && !saved?.failed) flash('周报图片已导出');
   };
   const [coverFailed, setCoverFailed] = useState('');
   const showCover = report.album?.cover && coverFailed !== report.album.cover;

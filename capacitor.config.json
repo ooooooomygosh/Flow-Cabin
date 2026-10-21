@@ -1,0 +1,8 @@
+{
+  "appId": "cn.flowcabin.app",
+  "appName": "心流小屋",
+  "webDir": "dist-android",
+  "server": { "hostname": "localhost", "androidScheme": "https" },
+  "android": { "backgroundColor": "#231a14", "allowMixedContent": false, "minWebViewVersion": 111 },
+  "plugins": { "CapacitorHttp": { "enabled": false }, "SystemBars": { "insetsHandling": "css", "style": "DARK" } }
+}

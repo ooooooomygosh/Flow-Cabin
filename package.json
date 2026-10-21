@@ -8,6 +8,10 @@
     "node": "24.x"
   },
   "scripts": {
+    "android:bundle": "vite build --config vite.android.config.js && node scripts/android-prepare.mjs && cap sync android",
+    "android:apk": "npm run android:bundle && node scripts/android-build.mjs",
+    "test:mobile": "node --test src/mobile/storage.test.mjs",
+    "test:mobile-ui": "node scripts/mobile-regression.mjs",
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
     "desktop:dev": "npm --prefix desktop start",
@@ -39,6 +43,9 @@
     "test:web-static": "node scripts/web-static-regression.mjs"
   },
   "dependencies": {
+    "@capacitor/android": "8.5.3",
+    "@capacitor/app": "8.1.2",
+    "@capacitor/core": "8.5.3",
     "@heroicons/react": "2.2.0",
     "@vitejs/plugin-react": "^6.0.3",
     "react": "^19.2.1",
@@ -51,5 +58,8 @@
   "overrides": {
     "esbuild": "0.28.1"
   },
-  "description": "心流小屋 · Flow Cabin — a pixel lo-fi cabin desktop app: favourite albums, a turntable, focus timer, ambience and a desktop cat"
+  "description": "心流小屋 · Flow Cabin — a pixel lo-fi cabin desktop app: favourite albums, a turntable, focus timer, ambience and a desktop cat",
+  "devDependencies": {
+    "@capacitor/cli": "8.5.3"
+  }
 }

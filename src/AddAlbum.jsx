@@ -9,6 +9,7 @@ import { desktopCommand, useDesktopAppearance } from './desktop-client';
 import FileImport from './player/FileImport';
 import PlaylistImport from './PlaylistLibrary';
 import { generatedCover } from './player/pixel-cover.mjs';
+import { isAndroid } from './mobile/platform.mjs';
 
 // Every way onto the shelf, in one dialog: catalog search, account playlists / links /
 // files, scanned local folders and picked files, or typed by hand.
@@ -75,7 +76,8 @@ function CatalogSearch({ initialQuery, onAdded, added, browserOnly = false }) {
 }
 
 // Scanned local folders: catalog artwork is preferred because it also suits the album wall.
-function LocalImport({ items, onAdded }) {
+function LocalImport(props) { return isAndroid() ? <FileImport {...props}/> : <FolderImport {...props}/>; }
+function FolderImport({ items, onAdded }) {
   const desktop = useDesktopAppearance().client, folderHint = useId();
   const [state, setState] = useState(null), [busy, setBusy] = useState(''), [message, setMessage] = useState('');
   const load = async () => { try { setState(normalizeLocalLibrary(await musicRequest('/local/albums'))); } catch (error) { setState({ error: error.message, albums: [] }); } };
