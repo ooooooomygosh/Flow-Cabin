@@ -35,7 +35,7 @@ function CatalogSearch({ initialQuery, onAdded, added, browserOnly = false }) {
     const controller = new AbortController(); request.current = controller;
     setStatus('searching'); setResults([]);
     try {
-      const response = await fetch('/api/search?' + new URLSearchParams(params), { signal: controller.signal });
+      const response = globalThis.albumMobile ? { ok: true, json: () => globalThis.albumMobile.catalogRequest(String(new URLSearchParams(params))) } : await fetch('/api/search?' + new URLSearchParams(params), { signal: controller.signal });
       const data = await response.json();
       if (!response.ok || data.error) throw new Error(data.error || '搜索失败，请稍后重试。');
       if (controller.signal.aborted || request.current !== controller) return;
@@ -149,7 +149,7 @@ function ManualAdd({ onAdded }) {
 }
 
 export default function AddAlbum({ items, close, initialQuery = '', initialTab = 'catalog', onAdded }) {
-  const browserOnly = usesBrowserCollection();
+  const browserOnly = usesBrowserCollection() && !isAndroid();
   const [tab, setTab] = useState(() => browserOnly && initialTab === 'catalog' ? 'manual' : ADD_TABS.some(({ id }) => id === initialTab) ? initialTab : 'catalog'), [added, setAdded] = useState(() => new Set()), [notice, setNotice] = useState('');
   const handleAdded = (item, duplicate, candidateId) => {
     setAdded((old) => new Set([...old, candidateId || item.id]));

@@ -1,2 +1,5 @@
 desktop/music-upstream.cjs linguist-generated=true
 desktop/music-login.cjs linguist-generated=true
+
+# Preserve the upstream Node license's original indentation.
+mobile/licenses/Node-LICENSE.txt -whitespace

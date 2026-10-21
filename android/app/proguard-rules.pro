@@ -1,4 +1,8 @@
 # Add project specific ProGuard rules here.
+
+# Required by the embedded Node JNI entry points and native credential callbacks.
+-keep class com.caoccao.javet.** { *; }
+-keepclassmembers class * { @com.caoccao.javet.annotations.** <methods>; }
 # You can control the set of applied configuration files using the
 # proguardFiles setting in build.gradle.
 #

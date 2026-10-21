@@ -17,7 +17,7 @@ const db = new Map([
   ['flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.6' })],
   ['album-circle-focus-v1:local-owner', JSON.stringify({ settings: { notify: false, chime: false } })],
   ['album-circle-performance-v1', 'low']
-]), files = [];
+]), files = [], account = { qqLoggedIn: false, neteaseLoggedIn: false, quality: 'exhigh', qualities: [{ id: 'standard', label: '标准' }, { id: 'exhigh', label: '高品质' }] };
 try {
   server = spawn(process.execPath, [path.join(root, 'node_modules/vite/bin/vite.js'), 'preview', '--config', 'vite.android.config.js', '--host', '127.0.0.1', '--port', '4293', '--strictPort'], { cwd: root, stdio: 'ignore' });
   for (let i = 0; ; i++) { if (server.exitCode !== null || i > 100) throw new Error('Android preview did not start'); if (await fetch('http://127.0.0.1:4293').then(r => r.ok, () => false)) break; await new Promise(r => setTimeout(r, 100)); }
@@ -26,6 +26,9 @@ try {
     if (plugin === 'CabinDevice' && method === 'loadData') return { initialized: true, entries: Object.fromEntries(db) };
     if (plugin === 'CabinDevice' && method === 'saveData') { for (const { key, value } of options.changes) value === null ? db.delete(key) : db.set(key, value); return {}; }
     if (plugin === 'CabinDevice' && method === 'saveFile') { files.push(options); return { cancelled: false }; }
+    if (plugin === 'CabinDevice' && method === 'startMusic') return { ready: true };
+    if (plugin === 'CabinDevice' && method === 'musicRequest') { if (options.path === '/config') return { ...account }; if (options.path === '/quality') { account.quality = JSON.parse(options.body).quality; return { ...account }; } return { playlists: [], candidates: [] }; }
+    if (plugin === 'CabinDevice' && ['musicLogin', 'musicLogout'].includes(method)) { account[options.provider === 'qq' ? 'qqLoggedIn' : 'neteaseLoggedIn'] = method === 'musicLogin'; return { ok: true }; }
     if (plugin === 'CabinDevice' && method === 'pickMusic') return { tracks: [1, 2].map(n => ({ uri: `content://qa/music/${n}.wav`, name: `${n}.wav`, title: `手机歌曲${n}`, artist: '测试歌手', album: '手机离线专辑', track: String(n), duration: '60000' })) };
     return {};
   });
@@ -33,7 +36,7 @@ try {
     window.androidBridge = {};
     window.Capacitor = {
       convertFileSrc: uri => uri.startsWith('content://') ? `${location.origin}/_capacitor_content_/${uri.slice(10)}` : uri,
-      PluginHeaders: [{ name: 'CabinDevice', methods: ['loadData', 'saveData', 'saveFile', 'pickMusic', 'setImmersive'].map(name => ({ name, rtype: 'promise' })) }, { name: 'App', methods: [{ name: 'addListener', rtype: 'callback' }, { name: 'removeListener', rtype: 'promise' }, { name: 'minimizeApp', rtype: 'promise' }] }],
+      PluginHeaders: [{ name: 'CabinDevice', methods: ['loadData', 'saveData', 'saveFile', 'pickMusic', 'setImmersive', 'startMusic', 'musicRequest', 'musicLogin', 'musicLogout', 'catalogRequest'].map(name => ({ name, rtype: 'promise' })) }, { name: 'App', methods: [{ name: 'addListener', rtype: 'callback' }, { name: 'removeListener', rtype: 'promise' }, { name: 'minimizeApp', rtype: 'promise' }] }],
       nativePromise: (plugin, method, options) => window.__qaNativePromise({ plugin, method, options }),
       nativeCallback: () => 'mock-listener'
     };
@@ -43,6 +46,7 @@ try {
   await page.route('**/_capacitor_content_/**', route => route.fulfill({ status: 200, contentType: 'audio/wav', body: wav, headers: { 'accept-ranges': 'bytes' } }));
   await page.goto('http://127.0.0.1:4293'); await page.locator('html[data-platform=android] .focus-badge').waitFor();
   await page.getByRole('button', { name: '添加到唱片架', exact: true }).tap();
+  await page.getByRole('tab', { name: '手动填写', exact: true }).tap();
   await page.getByLabel('专辑名', { exact: true }).fill('手机里的唱片'); await page.getByLabel('歌手', { exact: true }).fill('本地艺人'); await page.getByLabel('曲目', { exact: true }).fill('第一首\n第二首');
   await page.getByRole('button', { name: '放上唱片架', exact: true }).tap(); await page.getByText('《手机里的唱片》已放上唱片架。', { exact: true }).waitFor(); await page.keyboard.press('Escape');
   assert.match(db.get('flow-cabin-web-collection-v1'), /手机里的唱片/); check('touch-add-persists-to-native-transaction-before-confirmation');
@@ -81,6 +85,26 @@ try {
   await page.getByLabel('唱机展示曲目', { exact: true }).selectOption('1');
   await page.waitForFunction(() => [...document.querySelectorAll('audio')].some(a => a.src.includes('/music/2.wav') && !a.paused && a.currentTime > .1));
   check('restored-phone-uri-plays-and-track-dropdown-autoplays-with-fixture-audio');
+  for (const [width, height, left, right, top, bottom] of [[393, 852, 0, 0, 44, 28], [852, 393, 44, 0, 0, 24], [852, 393, 0, 44, 0, 24], [360, 740, 0, 0, 32, 48]]) {
+    await page.setViewportSize({ width, height }); await page.evaluate(({ left, right, top, bottom }) => { for (const [side, value] of Object.entries({left,right,top,bottom})) document.documentElement.style.setProperty('--safe-area-inset-' + side, value + 'px'); window.dispatchEvent(new Event('resize')); }, {left,right,top,bottom}); await page.waitForTimeout(300);
+    for (const selector of ['.cabin-toolbar', '.room-turntable', '.room-now-playing']) { const box = await page.locator(selector).first().boundingBox(); assert.ok(box.x >= left && box.x + box.width <= width - right + 1 && box.y + box.height <= height - bottom + 1, 'safe-area ' + selector + JSON.stringify(box)); }
+    const buttons = await page.locator('.pocket-wheel button').evaluateAll(elements => elements.map(e => { const r=e.getBoundingClientRect(); return {x:r.x,y:r.y,right:r.right,bottom:r.bottom}; }));
+    for (let i=0;i<buttons.length;i++) for(let j=i+1;j<buttons.length;j++) { const a=buttons[i],b=buttons[j]; assert.ok(a.right<=b.x||b.right<=a.x||a.bottom<=b.y||b.bottom<=a.y, 'Player buttons overlap'); }
+    const center = await page.locator('.pocket-center').evaluate(e => { const r=e.getBoundingClientRect(); const hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2); return e===hit||e.contains(hit); }); assert.equal(center,true,'Play button is covered or clipped');
+    const source = await page.locator('.turntable-source-chip').boundingBox(), consoleBounds = await page.locator('.turntable-console').boundingBox(); assert.ok(source.x >= consoleBounds.x && source.x+source.width<=consoleBounds.x+consoleBounds.width,'Source chip is clipped');
+    await page.screenshot({ path: path.join(output, `android-cutout-${width}x${height}-${left}-${right}.png`), animations:'disabled' }); check(`loaded-player-cutout-${width}x${height}-${left}-${right}`);
+  }
+  await page.setViewportSize({width:393,height:852}); await page.evaluate(() => { document.documentElement.style.setProperty('--safe-area-inset-left','0px');document.documentElement.style.setProperty('--safe-area-inset-right','0px'); });
+  await page.getByRole('button', { name:'设置',exact:true }).first().tap(); await page.getByRole('tab', {name:'音源',exact:true}).tap();
+  assert.equal(await page.getByRole('radio', {name:'QQ 音乐',exact:true}).isEnabled(),true);
+  assert.equal(await page.getByRole('radio', {name:'网易云音乐',exact:true}).isEnabled(),true);
+  await page.getByRole('button', {name:'账户与文件夹',exact:true}).tap(); await page.getByRole('button', {name:'登录',exact:true}).first().tap();
+  await page.getByRole('button', {name:'重新登录',exact:true}).waitFor(); assert.equal(account.qqLoggedIn,true);
+  await page.screenshot({path:path.join(output,'android-platform-accounts.png'),animations:'disabled'});
+  await page.getByRole('button', {name:'退出平台',exact:true}).tap(); await page.waitForFunction(() => document.querySelector('.music-account button')?.textContent==='登录'); assert.equal(account.qqLoggedIn,false); check('phone-platform-login-and-logout-use-native-account-bridge');
+  await page.keyboard.press('Escape'); await page.getByRole('button',{name:'唱片卡片',exact:true}).tap(); await page.getByLabel('我的笔记').focus(); await page.setViewportSize({width:393,height:490}); await page.waitForTimeout(250);
+  assert.equal(await page.locator('html').getAttribute('data-mobile-keyboard'),'true'); assert.equal(await page.locator('.room-turntable').isVisible(),false); await assertWithin('dialog[open]');
+  await page.screenshot({path:path.join(output,'android-keyboard-note.png'),animations:'disabled'}); check('keyboard-note-dialog-remains-reachable-without-player-overlay');
   assert.deepEqual(report.errors, []); report.passed = true;
 } catch (error) { report.error = error.stack; report.passed = false; console.error(error); await page?.screenshot({ path: path.join(output, 'android-failure.png'), animations: 'disabled' }).catch(() => {}); process.exitCode = 1; }
 finally { await fs.writeFile(path.join(output, 'mobile-ui-report.json'), JSON.stringify(report, null, 2)); await browser?.close(); server?.kill(); }

@@ -1,16 +1,19 @@
 # Android 安装包
 
-基于主分支 `455700d`（v1.21.6），首个 Android 版本为 `1.21.6-android.1`，包名 `cn.flowcabin.app`。使用 Capacitor 8 将本地生产资源打进 APK，启动不依赖网站或电脑服务。最低 Android 7.0 / API 24，Android System WebView 111 以上；旧系统兼容性仍需真机确认。
+基于主分支 `455700d`（v1.21.6），本次版本为 `1.21.6-android.2`，包名 `cn.flowcabin.app`。Android 1 只封装了网页与本地文件，缺少 Portable 版的平台登录听歌能力，不能作为本次需求的交付。Android 2 复用 Windows Portable 的 `desktop/music-service.cjs`、平台适配器、歌单和曲库模块，通过 Javet 6.0.2 在应用私有线程运行真正的 Node.js 26.10.0；无需电脑或云端中转。界面使用随 APK 打包的资源。
+
+最低 Android 10 / API 29，支持 64 位 ARM 手机（arm64-v8a）和 x86_64，Android System WebView 111 以上。原生库支持 16 KB 内存页，APK 的 ELF 和 ZIP 对齐另行检查；不是只调整手机屏幕比例。
 
 ## 安装与使用
 
 把签名 APK 传到手机，用文件管理器打开安装即可，不需要 ADB、USB 调试或 Windows 防火墙授权。仅在 Android 提示时，允许当前文件管理器安装此 APK。后续更新需使用同一包名、签名和更高 versionCode；不要先卸载旧版。
 
-- 手机竖屏重新安排唱机与唱片操作，横屏和平板保留房间原始 4:3 比例。为系统栏、安全区域和软键盘预留空间；常用操作使用至少 44 CSS px 的触摸区域。
+- 手机竖屏重新安排唱机与唱片操作，横屏和平板保留房间原始 4:3 比例。标题、工具栏、弹窗留白和重复信息缩小；播放控制改为紧凑的一排按钮，移除会盖住播放/切歌的粘性音量条。为刘海、左右挖孔、手势/三键导航和软键盘预留空间，主要操作保持易于点击的尺寸。
+- 「设置 → 音源 → 账户与文件夹」提供 QQ / 网易云官方页面登录，登录结果回传本机音乐服务；可读取平台歌单、搜索和匹配原始曲目，按账号权限获取播放地址。自动匹配、音质降级、播放流和下拉切歌沿用 Portable 的实现。平台会员、地区、风控和歌曲版权仍以平台实际返回为准。
 - 工具栏全屏按钮调用 Android 沉浸模式。系统返回键依次关闭弹窗、收起专注面板、退出全屏，再将应用放到后台。
 - 「添加 → 手机里的音乐」通过系统文件选择器读取你选择的音乐，保存读取授权和曲目信息。文件仍在原位置；移动、删除、撤销授权或云盘文件离线后需要重新选择。
 - 六个房间、收藏、专注、待办、学习、小屋日记与合成环境音使用本地资源。天气、外部图片与自定义 AI 等联网功能仍需要网络及服务支持。
-- 本版没有迁移 Electron 的 QQ/网易音乐后端、Music Assistant、桌面壁纸、桌宠出门和跨应用输入统计。手机系统后台音频、锁屏控制与定时通知尚未实现；切到后台后 WebView 可能暂停音频或计时调度。主要用于应用前台使用。
+- Windows 二进制、桌面壁纸、桌宠出门、跨应用输入统计及 macOS 系统播放器不适用于 Android。手机系统后台音频、锁屏控制与定时通知尚未实现；切到后台后 WebView 可能暂停音频或计时调度。主要用于应用前台使用。
 
 ## 数据保存在何处
 
@@ -22,12 +25,17 @@
 
 原生接口仅处理小屋命名空间、所选音乐文件与系统保存面板返回的位置。只声明 INTERNET 权限，不申请扫描全部存储空间权限。Android 资源入口额外设置 CSP，禁止远程脚本和 iframe 获取原生桥。
 
+平台登录页面在独立 Android 进程与 WebView 配置中运行，不安装 Capacitor/Node 桥，只允许相应平台 HTTPS 导航。成功后只把 Cookie 在应用内交给音乐服务，并清理登录 WebView Cookie；落盘由 Android Keystore 的 AES-GCM 加密。音乐凭据与 Node 代码位于应用私有 no-backup 目录，不进入收藏数据库、JSON 备份、Git 或 APK。退出平台会清除本机凭据并使旧播放流失效。
+
+Node 服务仅监听随机的 `127.0.0.1` 端口，使用每次进程随机生成的令牌；端口和令牌不暴露给界面。界面只可调用白名单 JSON 接口，音频通过同源 WebView 拦截流式转发；原生登录 Cookie 接口不开放给界面。只有本机回环允许明文 HTTP。网络工作与 SQLite 写入使用独立执行器，避免登录、搜索等待阻塞本机保存。
+
 ## 构建
 
 需要 Node 24、JDK 21、Android SDK platform 36、相应 Build Tools。设置 `JAVA_HOME`、`ANDROID_HOME`；通过 SDK Manager 接受许可证。Gradle Wrapper 使用 8.14.3，首次构建需要联网下载依赖。
 
 ```sh
 npm ci
+npm --prefix desktop ci --ignore-scripts
 npm run android:apk
 ```
 
@@ -49,13 +57,16 @@ npm run android:apk
 2026-10-21 本地验证：
 
 - 现有桌面测试 349 通过 / 5 跳过，网页模型测试 557 通过 / 2 跳过。
-- 新增存储队列测试 6 项，覆盖恢复、删除、写入失败重试、并发修改合并、配额与清空。
-- Chromium 加载真实 Android 生产资源，使用固定原生桥替身，11 项检查通过：覆盖触摸新增、事务确认、重载恢复笔记、系统保存接口的备份内容、所选音乐 URI 恢复及生成 WAV 的播放/下拉切歌，以及 360×640、390×844、412×915、844×390、800×1280 的布局、房间比例、唱机不遮挡底栏、专注面板边界。此测试不等同于 Android WebView 真机测试。
+- 移动端测试 7 项：存储恢复、删除、失败重试、并发修改合并、配额、清空，以及使用实际 Portable 服务的凭据加密/重启、授权保护、搜索、音频流和退出登录。完整 `npm test` 共 913 通过、7 跳过。
+- Chromium 加载真实 Android 生产资源，使用固定原生桥替身，17 项检查通过：触摸新增、事务确认、笔记/音乐映射重载、备份、生成 WAV 播放/下拉切歌、平台登录按钮到原生接口，以及 360×640、390×844、412×915、844×390、800×1280、393×852、852×393、360×740 等尺寸。额外模拟左右各 44 px 挖孔、安全底栏和 393×490 键盘窗口，检查按钮不互相遮挡、播放按钮实际命中、音源按钮未裁切、输入弹窗可达。此测试不等同于 Android WebView 真机测试。
+- 主机 JVM 的真实 Javet 6.0.2 / Node 26.10.0 测试 2 项：Java 加密回调、模拟账号、搜索/解析/音频流/退出，以及不替换上游模块时真实 Portable 适配器和 NCM 请求/加密模块的加载。NCM 入口保留原参数与 Cookie 处理、按需加载原始端点，避免启动时执行不需要的 Express 服务与全部端点。发现并修复了普通脚本执行与 CommonJS 作用域差异、私有 Node 上下文禁止依赖内部 Function() 等问题。这里用的是主机 JNI 和测试加密密钥，不代表 Android Keystore 已实测。
 - `:app:assembleDebug` 和 `:app:assembleDebugAndroidTest` 编译成功。原生 SQLite 测试使用隔离测试库，覆盖重启、事务拒绝、损坏文件保留；仅完成编译，尚未执行。
 - 签名 release APK 另以 `apksigner verify` 检查签名，以 `aapt2 dump badging` 检查包名、版本与 SDK 配置。
 
-因 Windows 未允许 ADB，已停止 ADB 和模拟器。没有完成 Android 真机/模拟器运行验收，包含 SQLite 在真实进程重启后的行为、系统音乐/保存选择器、原生文件播放、键盘和系统栏效果、升级保留数据及低版本兼容性。请将本次 APK 作为待真机验收版本。
+因 Windows 未允许 ADB，保持 ADB 和模拟器停止。没有完成 Android 真机/模拟器运行验收，包括用户在官方页面真实登录、会员和地区权限下的歌曲播放、Android JNI/Keystore、SQLite 真实进程重启、系统文件选择、键盘/系统栏、升级和设备兼容性。没有使用用户账号或代填凭据，自动测试音频是合成测试内容。请将本次 APK 作为包含 Portable 音乐能力、仍待真机验收的构建。
 
 重复浏览器验证：安装 `desktop/` 测试依赖和 Playwright Chromium，运行 `npm run android:bundle && npm run test:mobile-ui`；可用 `BROWSER_EXECUTABLE` 指定现有 Chrome。结果和截图位于忽略的 `mobile-test-results/`。原生测试仅在设备可用且允许 ADB 时运行 `cd android && ./gradlew :app:connectedDebugAndroidTest`。
+
+主机嵌入引擎复验：从 Maven Central 获取 Javet 6.0.2 的 `javet` 核心 JAR 和当前主机的 Node 原生 JAR（Windows 为 `javet-node-windows-x86_64`）；将二者路径按系统 classpath 分隔符写入 `JAVET_TEST_CLASSPATH`，设置 `JAVA_HOME`，在 `android:bundle` 后运行 `npm run test:mobile-engine`。测试资料与报告只写到 `mobile-test-results/`。许可证和来源见 [移动运行时第三方说明](../mobile/THIRD-PARTY.md)。
 
 参考：[Capacitor 配置](https://capacitorjs.com/docs/config)、[Android 系统文件访问](https://developer.android.com/training/data-storage/shared/documents-files)、[应用私有存储](https://developer.android.com/training/data-storage/app-specific)。

@@ -61,6 +61,7 @@ function RoomScene({ look = 'warm', items = [], selectedId, select, load, startR
         if (deck) safeArea.bottom = Math.max(safeArea.bottom, (foot ? foot.height + 10 : 0) + deck.height + 24 + (parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--safe-area-inset-bottom')) || 0));
         safeArea.right = 42;
       }
+      if (safeArea && document.documentElement.dataset.platform === 'android') { const css = getComputedStyle(document.documentElement); safeArea.left = Math.max(safeArea.left || 0, parseFloat(css.getPropertyValue('--safe-area-inset-left')) || 0); safeArea.right = Math.max(safeArea.right || 0, (parseFloat(css.getPropertyValue('--safe-area-inset-right')) || 0) + 42); }
       if (deck && deck.right < rect.left + rect.width * .4) safeArea.left = deck.right - rect.left + 12;
       const obstacle = panel && !sheet ? { left: panel.left - rect.left, right: panel.right - rect.left, top: panel.top - rect.top, bottom: panel.bottom - rect.top } : null;
       const next = roomGeometryAroundPanel(rect.width, rect.height, safeArea || (obstacle ? { top: 12, bottom: 12 } : undefined), { ...scene.geometry, band: scene.band }, obstacle);

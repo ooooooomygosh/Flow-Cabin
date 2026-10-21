@@ -37,11 +37,11 @@ const SOURCE_TABLE = [
 ].map((source) => ({ ...source, label: providerLabel(source.id) }));
 
 export function sourceOptions(env = {}) {
-  return SOURCE_TABLE.filter((source) => !source.macOnly || env.mac).map((source) => ({
+  return SOURCE_TABLE.filter((source) => (!source.macOnly || env.mac) && (!env.mobile || ['local', 'qq', 'netease'].includes(source.id))).map((source) => ({
     ...source,
     ...(source.id === 'local' && !env.desktop ? { hint: env.mobile ? '在「添加到唱片架 › 本地音乐」选择手机歌曲，重新打开仍可播放。' : '在「添加到唱片架 › 本地音乐」里选择音乐文件，本次打开期间可播。' } : {}),
-    available: !source.desktopOnly || Boolean(env.desktop),
-    reason: source.desktopOnly && !env.desktop ? '需要心流小屋桌面版' : ''
+    available: !source.desktopOnly || Boolean(env.desktop) || Boolean(env.mobile && ['qq', 'netease'].includes(source.id)),
+    reason: source.desktopOnly && !env.desktop && !(env.mobile && ['qq', 'netease'].includes(source.id)) ? '需要心流小屋桌面版' : ''
   }));
 }
 export const providerFor = (id) => SOURCE_TABLE.find((source) => source.id === id)?.provider || '';

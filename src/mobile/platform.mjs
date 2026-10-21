@@ -9,8 +9,10 @@ const report = text => window.dispatchEvent(new CustomEvent('cabin:mobile-notice
 export async function initializeMobile() {
   if (!isAndroid()) return;
   document.documentElement.dataset.platform = 'android';
-  const resize = () => { const height = window.visualViewport?.height || innerHeight; document.documentElement.style.setProperty('--mobile-height', `${height}px`); document.documentElement.dataset.mobileKeyboard = String(Boolean(document.activeElement?.matches('input,textarea,select') && screen.height - height > 180)); if (document.activeElement?.matches('input,textarea,select')) document.activeElement.scrollIntoView({ block: 'nearest' }); };
+  let viewportWidth = innerWidth, fullHeight = window.visualViewport?.height || innerHeight;
+  const resize = () => { const height = window.visualViewport?.height || innerHeight; if (Math.abs(innerWidth - viewportWidth) > 80) { viewportWidth = innerWidth; fullHeight = height; } else fullHeight = Math.max(fullHeight, height); document.documentElement.style.setProperty('--mobile-height', `${height}px`); document.documentElement.dataset.mobileKeyboard = String(Boolean(document.activeElement?.matches('input,textarea,select') && Math.max(fullHeight, screen.height) - height > 140)); if (document.activeElement?.matches('input,textarea,select')) document.activeElement.scrollIntoView({ block: 'nearest' }); };
   window.visualViewport?.addEventListener('resize', resize); window.addEventListener('resize', resize); resize();
+  document.addEventListener('focusout', () => setTimeout(resize, 100));
   const saved = await Device.loadData(); // Never start an empty cabin after a read/corruption error.
   const previous = window.localStorage;
   const entries = saved.initialized ? saved.entries : Object.fromEntries(Array.from({ length: previous.length }, (_, i) => previous.key(i)).filter(persistentKey).map(key => [key, previous.getItem(key)]));
@@ -41,6 +43,22 @@ export async function initializeMobile() {
     if (!result.cancelled) report('文件已保存到你选择的位置。');
     return result;
   };
+  window.albumMobile.musicRequest = async (path, value) => {
+    if (path === '/local/summary' || path === '/local/albums') { const mapping = JSON.parse(localStorage.getItem(MUSIC_KEY) || '{}'), albums = Object.values(mapping); return { folders: [], albums: [], albumCount: albums.length, trackCount: albums.reduce((sum, tracks) => sum + tracks.length, 0) }; }
+    if (path === '/now-playing') return { available: false };
+    if (path === '/apple/permission') return { available: false, granted: false };
+    return Device.musicRequest({ path, ...(value === undefined ? {} : { body: JSON.stringify(value) }) });
+  };
+  window.albumMobile.catalogRequest = query => Device.catalogRequest({ query });
+  let connecting = false;
+  window.albumMobile.platformAccount = async (provider, logout = false) => {
+    if (connecting) return; connecting = true;
+    try { const result = await (logout ? Device.musicLogout({ provider }) : Device.musicLogin({ provider })); window.dispatchEvent(new CustomEvent('album-music-account', { detail: { provider, ...result } })); window.dispatchEvent(new Event('album-music-settings')); }
+    catch (error) { window.dispatchEvent(new CustomEvent('album-music-account', { detail: { provider, ok: false, error: error.message } })); }
+    finally { connecting = false; }
+  };
+  // Start the embedded Portable service, without blocking access to local data.
+  Device.startMusic().catch(() => report('手机音乐服务未能启动，请重新打开应用。收藏数据已保留。'));
 }
 const MUSIC_KEY = 'flow-cabin-android-music-v1';
 export const pickMobileMusic = () => Device.pickMusic();

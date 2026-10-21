@@ -21,6 +21,12 @@ export function exactTrack(item, index, provider) {
 // retain a short timeout. Aborting a request does not cancel a native scan.
 export const musicRequestTimeout = (path) => ['/local/rescan', '/local/remove-folder'].includes(path) ? 10 * 60 * 1000 : 20000;
 export async function musicRequest(path, value, signal) {
+  if (globalThis.albumMobile?.musicRequest) {
+    if (signal?.aborted) throw signal.reason || new Error('操作已取消。');
+    const result = await globalThis.albumMobile.musicRequest(path, value);
+    if (signal?.aborted) throw signal.reason || new Error('操作已取消。');
+    return result;
+  }
   if (usesBrowserCollection()) {
     if (signal?.aborted) throw signal.reason || new Error('操作已取消。');
     if (value === undefined && path === '/config') return { qqLoggedIn: false, neteaseLoggedIn: false, appleMusicAvailable: false };

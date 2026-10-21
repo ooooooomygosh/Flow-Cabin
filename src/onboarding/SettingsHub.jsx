@@ -86,10 +86,10 @@ function MusicSection({ env, player, provider, useSource, openAccounts }) {
   const { sources, status, quality, setQuality } = useSourceStatus(player, env);
   const rows = [
     { id: 'visual', available: true, hint: '唱片转动、显示曲目，不出声。' },
-    { id: 'auto', available: Boolean(env.desktop), hint: '按唱片在已连接的音源里找能播放的版本。', reason: '需要心流小屋桌面版' },
+    { id: 'auto', available: Boolean(env.desktop || env.mobile), hint: '按唱片在已连接的音源里找能播放的版本。', reason: '需要心流小屋桌面版' },
     ...sources.map((source) => ({ id: source.provider || providerFor(source.id), source: source.id, available: source.available, hint: status[source.id]?.detail || source.hint, reason: source.reason, connected: status[source.id]?.connected })),
     { id: 'ma', available: Boolean(env.desktop), hint: '由家里的 Music Assistant 服务器出声，在「账户与文件夹」里连接。', reason: '需要心流小屋桌面版' }
-  ].filter((row, index, list) => PROVIDERS.some((item) => item.id === row.id) && list.findIndex((other) => other.id === row.id) === index);
+  ].filter((row, index, list) => (!env.mobile || ['visual', 'auto', 'local', 'qq', 'netease'].includes(row.id)) && PROVIDERS.some((item) => item.id === row.id) && list.findIndex((other) => other.id === row.id) === index);
   const move = (event) => {
     const keys = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }; if (!keys[event.key]) return;
     const enabled = rows.filter((row) => row.available), index = enabled.findIndex((row) => row.id === provider);
@@ -100,7 +100,7 @@ function MusicSection({ env, player, provider, useSource, openAccounts }) {
     <div className="hub-sources" role="radiogroup" aria-label="唱机音源" onKeyDown={move}>{rows.map((row) => { const on = row.id === provider; return <button type="button" role="radio" key={row.id} id={`hub-source-${row.id}`} aria-checked={on} tabIndex={on || (!rows.some((item) => item.id === provider) && row.id === 'visual') ? 0 : -1} disabled={!row.available} aria-label={providerLabel(row.id)} onClick={() => useSource(row.id)}>
       <i className={`hub-led ${row.available && (on || row.connected) ? 'is-on' : ''}`} aria-hidden="true"/><span><strong>{providerLabel(row.id)}</strong><small>{row.available ? row.hint : row.reason}</small></span>{on && <span className="onboarding-ok"><Check size={14}/>唱机在用</span>}
     </button>; })}</div>
-    {env.desktop && <Row title="账户与文件夹" hint="登录 QQ 音乐 / 网易云、管理本地文件夹、连接 Music Assistant。"><button type="button" className="pixel-button" onClick={openAccounts}>账户与文件夹<ChevronRight size={14}/></button></Row>}
+    {(env.desktop || env.mobile) && <Row title="账户与文件夹" hint={env.mobile ? '登录 QQ 音乐 / 网易云，凭据加密保存在这台手机。' : '登录 QQ 音乐 / 网易云、管理本地文件夹、连接 Music Assistant。'}><button type="button" className="pixel-button" onClick={openAccounts}>账户与文件夹<ChevronRight size={14}/></button></Row>}
     {quality?.options?.length > 0 && <Row title="音质" hint="QQ 音乐 / 网易云向平台请求的音质。没有会员或没有该音质时，自动换成能播放的最高一档。">
       <select aria-label="音质" value={quality.current || quality.options[0].id} onChange={(event) => setQuality(event.target.value)}>{quality.options.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</select>
     </Row>}

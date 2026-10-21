@@ -8,10 +8,11 @@
     "node": "24.x"
   },
   "scripts": {
-    "android:bundle": "vite build --config vite.android.config.js && node scripts/android-prepare.mjs && cap sync android",
+    "android:bundle": "npm --prefix desktop run build:music && vite build --config vite.android.config.js && node scripts/android-prepare.mjs && node scripts/android-backend.mjs && cap sync android",
     "android:apk": "npm run android:bundle && node scripts/android-build.mjs",
-    "test:mobile": "node --test src/mobile/storage.test.mjs",
+    "test:mobile": "node --test src/mobile/storage.test.mjs mobile/backend/backend.test.cjs",
     "test:mobile-ui": "node scripts/mobile-regression.mjs",
+    "test:mobile-engine": "node scripts/android-engine-smoke.mjs",
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
     "desktop:dev": "npm --prefix desktop start",

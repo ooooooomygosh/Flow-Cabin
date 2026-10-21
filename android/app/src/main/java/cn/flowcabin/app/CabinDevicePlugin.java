@@ -27,12 +27,41 @@ import java.util.LinkedHashSet;
 @CapacitorPlugin(name = "CabinDevice")
 public class CabinDevicePlugin extends Plugin {
     private CabinStore store;
+    private final java.util.concurrent.ExecutorService work = java.util.concurrent.Executors.newFixedThreadPool(4);
+    private final java.util.concurrent.ExecutorService storageWork = java.util.concurrent.Executors.newSingleThreadExecutor();
+    @Override protected void handleOnDestroy() { work.shutdownNow(); storageWork.shutdown(); super.handleOnDestroy(); }
     @Override public void load() { store = new CabinStore(getContext()); }
+    @PluginMethod public void startMusic(PluginCall call) {
+        work.execute(() -> { try { CabinMusic.get(getContext()).awaitReady(); call.resolve(new JSObject().put("ready", true)); } catch (Exception e) { call.reject(e.getMessage()); } });
+    }
+    @PluginMethod public void musicRequest(PluginCall call) {
+        String path = call.getString("path", "");
+        if (!path.matches("/(config|quality|search|playlists|playlist|playlist/link|resolve|track-cover|ma/players|ma/state|ma/control)(\\?[^#]*)?")) { call.reject("不支持此音源请求。"); return; }
+        work.execute(() -> { try { call.resolve(new JSObject(CabinMusic.get(getContext()).request("/music" + path, call.getString("body")).toString())); } catch (Exception e) { call.reject(e.getMessage()); } });
+    }
+    @PluginMethod public void catalogRequest(PluginCall call) {
+        String query = call.getString("query", ""); if (query.length() > 2400 || query.contains("#") || query.contains("\r") || query.contains("\n")) { call.reject("搜索条件无效。"); return; }
+        work.execute(() -> { try { call.resolve(new JSObject(CabinMusic.get(getContext()).request("/catalog?" + query, null).toString())); } catch (Exception e) { call.reject(e.getMessage()); } });
+    }
+    @PluginMethod public void musicLogin(PluginCall call) {
+        String provider = call.getString("provider", ""); if (!provider.equals("qq") && !provider.equals("netease")) { call.reject("不支持此平台。"); return; }
+        startActivityForResult(call, new Intent(getContext(), MusicLoginActivity.class).putExtra("provider", provider), "musicLoggedIn");
+    }
+    @ActivityCallback private void musicLoggedIn(PluginCall call, ActivityResult result) {
+        if (call == null) return;
+        if (result.getResultCode() != Activity.RESULT_OK || result.getData() == null) { call.resolve(new JSObject().put("ok", false).put("cancelled", true)); return; }
+        String provider = result.getData().getStringExtra("provider"), cookie = result.getData().getStringExtra("cookie");
+        work.execute(() -> { try { JSObject body = new JSObject().put("provider", provider).put("cookie", cookie); call.resolve(new JSObject(CabinMusic.get(getContext()).request("/native/session", body.toString()).toString())); } catch (Exception e) { call.reject("登录凭据未能加密保存，请重试。"); } });
+    }
+    @PluginMethod public void musicLogout(PluginCall call) {
+        String provider = call.getString("provider", ""); if (!provider.equals("qq") && !provider.equals("netease")) { call.reject("不支持此平台。"); return; }
+        work.execute(() -> { try { CabinMusic.get(getContext()).request("/native/session", new JSObject().put("provider", provider).put("cookie", "").toString()); call.resolve(new JSObject().put("ok", true)); } catch (Exception e) { call.reject(e.getMessage()); } });
+    }
     @PluginMethod public void loadData(PluginCall call) {
-        getBridge().execute(() -> { try { call.resolve(new JSObject(store.read().toString())); } catch (Exception e) { call.reject("无法读取本机小屋数据库，原数据保持不变。"); } });
+        storageWork.execute(() -> { try { call.resolve(new JSObject(store.read().toString())); } catch (Exception e) { call.reject("无法读取本机小屋数据库，原数据保持不变。"); } });
     }
     @PluginMethod public void saveData(PluginCall call) {
-        getBridge().execute(() -> { try { store.apply(call.getArray("changes")); call.resolve(); } catch (Exception e) { call.reject("手机数据库写入失败，请检查剩余空间后重试。"); } });
+        storageWork.execute(() -> { try { store.apply(call.getArray("changes")); call.resolve(); } catch (Exception e) { call.reject("手机数据库写入失败，请检查剩余空间后重试。"); } });
     }
     @PluginMethod public void setImmersive(PluginCall call) {
         getActivity().runOnUiThread(() -> {
@@ -53,7 +82,7 @@ public class CabinDevicePlugin extends Plugin {
         if (call == null) return;
         Uri uri = result.getData() == null ? null : result.getData().getData();
         if (result.getResultCode() != Activity.RESULT_OK || uri == null) { call.resolve(new JSObject().put("cancelled", true)); return; }
-        getBridge().execute(() -> {
+        work.execute(() -> {
             try (OutputStream stream = getContext().getContentResolver().openOutputStream(uri, "wt")) {
                 if (stream == null) throw new IllegalStateException(); stream.write(Base64.decode(call.getString("data", ""), Base64.DEFAULT)); stream.flush(); call.resolve(new JSObject().put("cancelled", false));
             } catch (Exception e) { call.reject("文件未能保存到选定位置，请重试。"); }
@@ -71,7 +100,7 @@ public class CabinDevicePlugin extends Plugin {
         LinkedHashSet<Uri> chosen = new LinkedHashSet<>();
         if (data.getClipData() != null) for (int i = 0; i < Math.min(200, data.getClipData().getItemCount()); i++) chosen.add(data.getClipData().getItemAt(i).getUri());
         else if (data.getData() != null) chosen.add(data.getData());
-        getBridge().execute(() -> {
+        work.execute(() -> {
             JSArray tracks = new JSArray();
             try {
                 for (Uri uri : chosen) {

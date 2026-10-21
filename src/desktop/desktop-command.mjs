@@ -7,5 +7,6 @@ export function desktopCommandUrl(command, params = {}) {
   return url.href;
 }
 export function desktopCommand(command, params = {}, open = (href) => window.open(href, '_blank')) {
+  if (globalThis.albumMobile && ['music-login', 'music-logout'].includes(command)) { globalThis.albumMobile.platformAccount(params.provider, command === 'music-logout'); return; }
   open(desktopCommandUrl(command, params));
 }

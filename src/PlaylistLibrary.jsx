@@ -153,7 +153,7 @@ function LinkAndFile({ openDetail, busy, setBusy, setError, compact = false, app
 }
 
 export default function PlaylistImport({ items, close, onAdded }) {
-  const desktop = useDesktopAppearance().client;
+  const desktop = useDesktopAppearance().client || Boolean(globalThis.albumMobile);
   // The source rail stands upright on a wide window and lies down on a narrow
   // one; the tablist says which way it runs, and both arrow pairs always work.
   const [railVertical, setRailVertical] = useState(() => typeof matchMedia === 'function' ? !matchMedia('(max-width: 760px)').matches : true);
