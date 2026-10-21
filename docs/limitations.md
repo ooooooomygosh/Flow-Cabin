@@ -1,6 +1,6 @@
 # 使用边界与验证状态
 
-当前版本基线：`v1.21.5`（2026-10-20）。`v1.21.4` 是上一个已发布版本；`v1.21.5` 的 tag、安装资产与签名状态以 [GitHub Releases](https://github.com/ooooooomygosh/Flow-Cabin/releases) 为准。#61 已在当前主线解决。
+当前版本基线：`v1.21.6`（2026-10-21）。`v1.21.5` 是上一个已发布版本；tag、安装资产与签名状态以 [GitHub Releases](https://github.com/ooooooomygosh/Flow-Cabin/releases) 为准。#61 已在当前主线解决。
 
 本页区分「已实现」「自动化或隔离页面已验证」和「真实设备已验证」。旧提交的测试数字不会自动套用到当前版本。
 
