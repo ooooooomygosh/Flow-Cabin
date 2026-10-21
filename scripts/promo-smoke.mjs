@@ -8,6 +8,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { launchChromium } from './launch-browser.mjs';
+import { checkPromoLowerLayout } from './promo-layout-checks.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const output = path.resolve(process.env.PROMO_OUTPUT || path.join(root, 'desktop/test-results/promo'));
@@ -95,9 +96,9 @@ try {
     report.checks.push({ name, passed: true, ...details });
     console.log(`PASS ${name}`);
   };
-  const screenshot = async (name, locator = null) => {
+  const screenshot = async (name, locator = null, options = {}) => {
     const target = locator || page;
-    await target.screenshot({ path: path.join(output, `${name}.png`), animations: 'disabled' });
+    await target.screenshot({ path: path.join(output, `${name}.png`), animations: 'disabled', ...options });
     report.screenshots.push(`${name}.png`);
   };
 
@@ -268,6 +269,7 @@ try {
   await screenshot('promo-story-focus', page.locator('#focus'));
   await screenshot('promo-story-letters', page.locator('#letters'));
   check('desktop-responsive-and-evidence-screenshots');
+  await checkPromoLowerLayout(page, { check, screenshot });
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.evaluate(() => scrollTo(0, 0));

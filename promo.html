@@ -520,19 +520,25 @@
       <section class="chapter proof-chapter" aria-labelledby="proof-title">
         <header class="chapter-head">
           <div>
-            <p class="chapter-index">CHAPTER 06 · THE QUIET MACHINE</p>
-            <h2 id="proof-title">它看起来柔软，<br>底下其实很认真。</h2>
+            <p class="chapter-index">CHAPTER 06 · SMALL THINGS, KEPT</p>
+            <h2 id="proof-title">写下一点，<br>也记住一点。</h2>
           </div>
-          <p>真实的像素素材、真实的播放器回归、真实的无头浏览器操作。漂亮不是把功能藏起来，而是让每一个按钮都更像你愿意每天碰一下的东西。</p>
+          <p>把今天的片刻写进手记，或翻几张词卡。记录留在本机，下次回小屋时，接着上次的地方继续。</p>
         </header>
         <div class="proof-grid">
-          <figure class="proof-shot wide">
-            <img src="/promo/shots/journal.webp" alt="心流小屋手记界面，真实截图" width="1440" height="900" loading="lazy" decoding="async">
-            <figcaption><span>01 · 手记</span><b>写、改、搜索、回看，整组保留。</b></figcaption>
+          <figure class="proof-shot">
+            <a class="proof-media" href="/promo/shots/journal-detail.png" target="_blank" rel="noreferrer" aria-label="查看手记完整截图（新标签页）">
+              <img src="/promo/shots/journal-detail.png" alt="手记中保存的两篇日常记录，可以搜索、编辑与添加标签" width="1100" height="820" loading="lazy" decoding="async">
+              <span class="proof-enlarge" aria-hidden="true">查看大图 ↗</span>
+            </a>
+            <figcaption><h3><span>01</span> 把今天留一页</h3><p>写手记、加标签，随时搜索和回看。和小屋备份一起收好。</p></figcaption>
           </figure>
           <figure class="proof-shot">
-            <img src="/promo/shots/study.webp" alt="心流小屋学习卡复习界面，真实截图" width="1440" height="900" loading="lazy" decoding="async">
-            <figcaption><span>02 · 学习</span><b>原创中英对照与 FSRS 复习。</b></figcaption>
+            <a class="proof-media proof-media-study" href="/promo/shots/study-detail.png" target="_blank" rel="noreferrer" aria-label="查看学习卡完整截图（新标签页）">
+              <img src="/promo/shots/study-detail.png" alt="学习卡展示 morning 的中英释义，以及忘了、模糊、记得、简单四个复习选项" width="360" height="419" loading="lazy" decoding="async">
+              <span class="proof-enlarge" aria-hidden="true">查看大图 ↗</span>
+            </a>
+            <figcaption><h3><span>02</span> 每次记住几个词</h3><p>中英对照词卡，按记忆程度安排下次复习。几分钟也可以开始。</p></figcaption>
           </figure>
           <div class="proof-numbers">
             <div><b>6</b><span>间可切换小屋</span></div>
@@ -540,23 +546,27 @@
             <div><b>258</b><span>张内置词卡</span></div>
             <div><b>0</b><span>个必需云账号</span></div>
           </div>
-          <div class="proof-note">
-            <p>“微小的连续性，比一次盛大的打卡更有黏性。”</p>
-            <span>今天多坐五分钟，明天回来时灯还亮着。产品要做的，是让这种回来不需要下决心。</span>
-          </div>
         </div>
       </section>
 
       <section class="cabin-faq" aria-labelledby="faq-title">
-        <p class="chapter-index">BEFORE YOU COME IN</p>
-        <h2 id="faq-title">进小屋前，你可能想知道</h2>
+        <header class="faq-head">
+          <div><p class="chapter-index">BEFORE YOU COME IN</p><h2 id="faq-title">进小屋前，<br>你可能想知道</h2></div>
+          <p>从哪里开始、能做什么，以及数据放在哪里。<br>先了解清楚，再安心坐下来。</p>
+        </header>
         <div class="cabin-faq-grid">
+          <div class="faq-column">
+          <h3>使用与安装</h3>
           <details><summary>先用网页版，能做什么？</summary><p>不用安装或注册，可以手动收藏唱片、导入备份、体验房间与专注、写手记。曲库搜索、QQ / 网易云登录、Music Assistant、桌宠、动态桌面、自动更新与本机 Codex CLI 需要桌面版。</p></details>
           <details><summary>我的电脑该下载哪个版本？</summary><p>Mac 按 Apple Silicon 或 Intel 选择，Windows 选择 x64 安装版或便携版。暂未提供 Linux 与 Windows ARM64 原生安装包；可以先用网页版。<a href="https://github.com/ooooooomygosh/Flow-Cabin/blob/main/docs/DOWNLOAD-GUIDE.md" rel="noreferrer">查看下载指南 ↗</a></p></details>
           <details><summary>为什么第一次安装会被系统拦住？</summary><p>macOS 尚未完成 Apple Developer ID 签名与公证，Windows 没有可信发布者签名。请核对官方 Releases 来源，按安装指南处理提示，保留系统安全保护。</p></details>
+          </div>
+          <div class="faq-column">
+          <h3>音乐与隐私</h3>
           <details><summary>收藏的唱片都能直接播放吗？</summary><p>收藏与实际播放是两件事。QQ 音乐和网易云使用非官方接口，可播范围取决于版权、地区与账号。仅展示模式会转动唱片，不播放真实音频。</p></details>
           <details><summary>奶糖会读取我打的字吗？</summary><p>不会。键鼠陪伴只统计键盘与点击次数，不读取内容、坐标、应用名或窗口标题。跨应用陪伴是桌面功能，macOS 需要输入监控授权。</p></details>
           <details><summary>数据和 AI 请求会去哪里？</summary><p>收藏、手记和来信优先保存在本机，可以导出备份。AI 默认关闭，启用后会向你选择的服务发送界面说明的内容；网页版 Key 仅保留在当前标签页的会话中，未加密。</p></details>
+          </div>
         </div>
       </section>
 
@@ -573,7 +583,7 @@
         </div>
         <div class="download-window" aria-hidden="true">
           <div><span></span><span></span><span></span><small>Flow Cabin · <data data-latest-version></data></small></div>
-          <img src="/promo/rooms/starlight.webp" alt="" width="1440" height="1080" decoding="async">
+          <img src="/promo/shots/rooms/starlight.jpg" alt="" width="1440" height="900" loading="lazy" decoding="async">
           <p><i></i> 星夜阁楼 · 23:10</p>
         </div>
         <p class="release-note">macOS 暂未完成开发者签名与公证，Windows 可能提示未知发布者。下载前请核对来源；真实账号、系统级全局输入与部分真机适配仍以 <a href="https://github.com/ooooooomygosh/Flow-Cabin/blob/main/docs/limitations.md" target="_blank" rel="noreferrer">使用边界</a> 为准。</p>
