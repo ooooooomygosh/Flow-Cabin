@@ -8,6 +8,7 @@ export function readLyricSettings(track) { try { return JSON.parse(localStorage.
 export function invalidateLyrics(track) { cache.delete(lyricTrackKey(track)); listeners.forEach(fn => fn()); globalThis.dispatchEvent?.(new Event(LYRIC_CHANGED)); }
 export const subscribeLyrics = fn => { listeners.add(fn); return () => listeners.delete(fn); };
 export function loadLyrics(track, retry = false) {
+  if (!String(track?.title || track?.id || '').trim()) return Promise.resolve({ lines:[], plain:'', precision:'plain', source:'none', reason:'还没有正在播放的歌曲' });
   const key = lyricTrackKey(track);
   if (retry) cache.delete(key);
   if (cache.has(key)) return cache.get(key);

@@ -129,6 +129,7 @@ try {
         report.savedPlaylists.push(savedPlaylist);
         return route.fulfill({ status: 201, json: { item: savedPlaylist, duplicate: false } });
       }
+      if (pathname === '/desktop-music/lyrics') return route.fulfill({ json: { text: '', source: 'fixture', reason: 'No fixture lyrics' } });
       if (pathname === '/desktop-music/config') return route.fulfill({ json: { qqLoggedIn: false, neteaseLoggedIn: false } });
       if (pathname === '/desktop-music/now-playing' || pathname === '/desktop-music/apple/permission') return route.fulfill({ json: { available: false } });
       if (pathname === '/desktop-music/local/summary') return route.fulfill({ json: { folders: [], albumCount: items.length, trackCount: items.length } });

@@ -4,6 +4,7 @@ import {readSkySettings,subscribeSky,writeSkySettings,refreshWeather} from './sk
 import {weatherRequest} from './weather-client.mjs';
 import {readLocation,LOCATION_EVENT} from './location/location-state.mjs';
 import {requestLocation} from './location/location-client.mjs';
+import {interfaceMode} from './interface-mode.mjs';
 const KINDS={clear:'晴',cloudy:'多云',fog:'雾',rain:'雨',snow:'雪',storm:'雷雨'};
 const MESSAGES={idle:'使用系统大致位置，不持续追踪。',requesting:'正在获取大致位置…',available:'已保存大致位置，前台使用超过六小时后更新。',denied:'未获得定位权限。你可以在系统设置中允许定位，也可以搜索城市。',timeout:'定位超时，保留上次地点和天气；可以重试或搜索城市。',disabled:'系统定位已关闭，保留上次天气；可以搜索城市。',unavailable:'暂时无法获取位置，保留上次天气；可以搜索城市。'};
 export default function SkySettings(){
@@ -17,6 +18,7 @@ export default function SkySettings(){
  const search=async e=>{e.preventDefault();setBusy(true);setNotice('');try{const value=await weatherRequest('/search?name='+encodeURIComponent(query));setResults(value.results||[]);if(!value.results?.length)setNotice('没有找到这个地点，可以试试城市名或英文名称。');}catch(error){setNotice(error.message);}finally{setBusy(false);}};
  const weather=snapshot?.real,city=snapshot?.city;
  return <section className="home-weather-settings" aria-label="位置与天气">
+   {interfaceMode() === 'classic' && <h3>窗外</h3>}
    <div className="home-weather-current"><small>{settings.realWeather&&city?placeDescription(city):'窗外'}</small><strong>{Number.isFinite(weather?.temperature)?`${Math.round(weather.temperature)}°`:'—'}</strong><span>{weather?KINDS[weather.kind]||'天气':'还没有实时天气'}</span>{weather&&<small>更新于 {new Date(weather.fetchedAt).toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}</small>}</div>
    <button type="button" className="home-primary" disabled={location.status==='requesting'} onClick={locate}>{location.status==='requesting'?'定位中…':location.fix?'更新当前位置':'使用当前位置'}</button>
    <p role="status">{MESSAGES[location.status]}</p>

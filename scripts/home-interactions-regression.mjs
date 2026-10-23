@@ -39,6 +39,23 @@ try{
  await page.waitForFunction(()=>document.querySelector('.cabin-home').dataset.zone==='work');
  await page.locator('.corner-hotspot[aria-label=随手记]').dispatchEvent('click');assert.equal(await page.locator('dialog[open]').count(),0);pass('touch-swipe-changes-corner-without-opening-a-furniture-panel');
  await page.screenshot({path:path.join(output,'mobile-work.png')});
+ const fallback=await browser.newContext({viewport:{width:1440,height:900},reducedMotion:'reduce'});
+ await fallback.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());
+ await fallback.addInitScript(()=>{
+   localStorage.setItem('flow-cabin-interface-v1','beta');localStorage.setItem('flow-cabin-home-intro-v1','done');
+   const getContext=HTMLCanvasElement.prototype.getContext;
+   HTMLCanvasElement.prototype.getContext=function(kind,...args){return /webgl/i.test(kind)?null:getContext.call(this,kind,...args);};
+   if (globalThis.OffscreenCanvas) { const offscreen=OffscreenCanvas.prototype.getContext; OffscreenCanvas.prototype.getContext=function(kind,...args){return /webgl/i.test(kind)?null:offscreen.call(this,kind,...args);}; }
+   Object.defineProperty(navigator,'gpu',{value:undefined,configurable:true});
+ });
+ const noGpu=await fallback.newPage();noGpu.on('pageerror',e=>report.errors.push(e.message));await noGpu.goto(origin);
+ await noGpu.locator('.home-canvas[data-renderer=canvas2d][data-art-ready=true]').waitFor();
+ assert.ok(await noGpu.locator('.home-static-scene canvas').evaluate(c=>c.getContext('2d').getImageData(600,400,1,1).data[3])>0,'visible room survives unavailable WebGL');
+ await noGpu.getByRole('button',{name:'设置',exact:true}).click();await noGpu.getByRole('button',{name:'小屋明信片',exact:true}).click();
+ await noGpu.getByRole('button',{name:'生成预览',exact:true}).click();await noGpu.locator('.home-postcard-preview').waitFor();
+ assert.match(await noGpu.locator('.home-postcard-preview').getAttribute('src'),/^data:image\/png;base64,/);
+ await noGpu.screenshot({path:path.join(output,'postcard-no-webgl.png')});await fallback.close();
+ pass('room-and-postcard-render-current-layout-without-webgl');
  assert.deepEqual(report.errors,[]);report.passed=true;
 }catch(error){report.failure=error.stack;process.exitCode=1;console.error(error);await page?.screenshot({path:path.join(output,'failure.png')}).catch(()=>{});}
 finally{await browser?.close();server?.kill();await fs.writeFile(path.join(output,'report.json'),JSON.stringify(report,null,2));}

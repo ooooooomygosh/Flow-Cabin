@@ -83,7 +83,9 @@ async function choosePet(id, name) {
   const backup=JSON.parse(fs.readFileSync(backupPath,'utf8'));assert.equal(backup.version,5);assert.equal(backup.petAssets.media.clips.idle.data,imported.media.clips.idle.data);assert.match(backup.focus.notes,/这份草稿还在/);await close();
   report.checks.push('Actual native Backup v5 export includes current notes, layouts and imported transparent video bytes');
   await page.evaluate(()=>{localStorage.removeItem('cabin.petPack.v1');window.dispatchEvent(new Event('cabin:pet-pack'));});
-  await menu('小屋明信片'); await page.getByRole('button',{name:'生成预览',exact:true}).click(); await page.locator('.home-postcard-preview').waitFor();
+  await menu('小屋明信片'); await page.getByRole('button',{name:'生成预览',exact:true}).click();
+  try { await page.locator('.home-postcard-preview').waitFor(); }
+  catch(error){report.scene=await page.locator('.home-canvas').evaluate(el=>({state:{...el.dataset},error:el.querySelector('.home-scene-error')?.textContent}));throw error;}
   const png=await page.locator('.home-postcard-preview').getAttribute('src'); fs.writeFileSync(path.join(output,'postcard.png'),Buffer.from(png.split(',')[1],'base64'));await close();report.checks.push('Postcard captures actual room and current pet; private text defaults off');
   await menu('场景配方');await page.getByLabel('场景名称',{exact:true}).fill('原生安静小屋');await page.getByRole('button',{name:'保存当前场景',exact:true}).click();await page.getByRole('button',{name:'进入',exact:true}).click();await page.getByRole('status').filter({hasText:'已进入'}).waitFor();await close();
   await menu('睡前模式');await page.getByRole('button',{name:'开始睡前模式',exact:true}).click();await page.getByRole('button',{name:'取消睡前模式',exact:true}).click();await close();report.checks.push('Scene save/apply and sleep start/cancel operate on existing runtime');

@@ -10,6 +10,7 @@ import { useInputPresence } from '../pet/useInputPresence';
 import { useLife } from './useLife';
 import { useCatMotion } from '../pet/useCatMotion';
 import { loadPetArt, loadPetAccessories, artFrame, artBeatFrame, MUSIC_ART_ACTIONS, drawPetArt } from '../pet/pet-art-v21.mjs';
+import { roomSnapshot } from './room-snapshot.mjs';
 
 const json = async url => { const r = await fetch(url); if (!r.ok) throw Error('小屋素材尚未加载完成。'); return r.json(); };
 const leases = new Map();
@@ -30,9 +31,10 @@ export default function RoomCanvas({ layout, selected, reduced, dim, active = tr
   const motion = useCatMotion(reduced, !active), life = useLife(), input = useInputPresence(active);
   const living = useRef(createLivingPet()), importedHost = useRef(null);
   useEffect(() => bindPetLife(living.current), []);
-  const host = useRef(null), application = useRef(null), live = useRef(null), petPosition = useRef({ u: 640, v: 600 });
+  const host = useRef(null), fallbackHost = useRef(null), application = useRef(null), live = useRef(null), petPosition = useRef({ u: 640, v: 600 });
   const [importedPose,setImportedPose]=useState('idle');
   const [ready, setReady] = useState(false), [error, setError] = useState(''), [art, setArt] = useState(null), [petArt, setPetArt] = useState(null);
+  const [rendererError, setRendererError] = useState(false);
   const playing = deck.audible, concentrating = focus.state.timer.phase === 'focus' && !focus.state.timer.paused;
   live.current = { playing, concentrating, identity, onPetPosition, life, input, quiet:focus.state.settings.quietMode };
   useEffect(() => {
@@ -40,7 +42,7 @@ export default function RoomCanvas({ layout, selected, reduced, dim, active = tr
     app.init({ width: 1200, height: 800, preference: 'webgl', antialias: false, resolution: Math.min(2, devicePixelRatio || 1), backgroundAlpha: 0, autoStart: false }).then(() => {
       initialized = true; if (disposed) { app.destroy(true, { children: true }); return; }
       application.current = app; host.current.prepend(app.canvas); app.ticker.maxFPS = innerWidth < 700 ? 30 : 60; setReady(true);
-    }).catch(() => !disposed && setError('画面暂时无法启动；下方的家具入口仍然可用。'));
+    }).catch(() => !disposed && setRendererError(true));
     return () => { disposed = true; application.current = null; if (initialized) app.destroy(true, { children: true }); };
   }, []);
   useEffect(() => {
@@ -74,10 +76,19 @@ export default function RoomCanvas({ layout, selected, reduced, dim, active = tr
     return () => { disposed=true; };
   }, [identity.builtinId]);
   useEffect(() => {
-    if (!ready || art?.theme !== layout.theme) return;
+    if (art?.theme !== layout.theme || error) return;
+    const snapshot = (includeImported = true) => {
+      let pet = includeImported ? host.current.querySelector('.home-imported-pet canvas') : null;
+      if (!identity.pack && petArt?.id === identity.builtinId) {
+        pet = document.createElement('canvas'); pet.width = pet.height = 256;
+        drawPetArt(pet.getContext('2d'), petArt.body, artFrame(petArt.body.manifest, importedPose, 0, true), identity.accessory, petArt.gear);
+      }
+      return roomSnapshot({ art, layout, dim, pet, petPosition: petPosition.current });
+    };
+    if (rendererError && fallbackHost.current) fallbackHost.current.replaceChildren(snapshot(false));
     return sceneCapture.register(() => {
       const app = application.current;
-      if (!app || error) throw Error('小屋画面尚未就绪。');
+      if (!app || rendererError) return snapshot();
       app.render();
       const canvas = document.createElement('canvas'); canvas.width = 1200; canvas.height = 800;
       const ctx = canvas.getContext('2d'); ctx.fillStyle = '#263529'; ctx.fillRect(0, 0, 1200, 800);
@@ -86,7 +97,7 @@ export default function RoomCanvas({ layout, selected, reduced, dim, active = tr
       if (imported) { const p = project(petPosition.current); ctx.drawImage(imported, p.x - 43, p.y - 87, 87, 87); }
       return canvas;
     });
-  }, [ready, art, layout.theme, error, sceneCapture]);
+  }, [ready, art, layout, dim, error, rendererError, sceneCapture, petArt, identity.builtinId, identity.accessory, identity.pack, importedPose]);
   useEffect(() => {
     const app = application.current; if (!ready || !app || art?.theme !== layout.theme) return;
     app.stop(); app.stage.removeChildren().forEach(child => child.destroy({ children: true }));
@@ -141,7 +152,8 @@ export default function RoomCanvas({ layout, selected, reduced, dim, active = tr
     document.addEventListener('visibilitychange', visibility); visibility(); animate(); app.render();
     return () => { document.removeEventListener('visibilitychange', visibility); if (application.current === app) { app.stop(); app.ticker.remove(animate); petTexture.destroy(true); app.stage.removeChildren().forEach(child => child.destroy({ children: true })); } };
   }, [ready, art, layout, selected, reduced, dim, petArt, identity.pack, motion.visible, reduced && playing, reduced && concentrating, reduced && life.resting]);
-  return <div ref={host} className="home-canvas" aria-hidden="true" data-art-ready={ready && art?.theme === layout.theme && !error} data-art-theme={art?.theme}>
+  return <div ref={host} className="home-canvas" aria-hidden="true" data-art-ready={(ready || rendererError) && art?.theme === layout.theme && !error} data-art-theme={art?.theme} data-renderer={rendererError ? 'canvas2d' : 'webgl'}>
+    {rendererError && <div ref={fallbackHost} className="home-static-scene"/>}
     {identity.pack && <div ref={importedHost} className="home-imported-pet" style={{ left: project(petPosition.current).x - 43, top: project(petPosition.current).y - 87 }}><PixelCat petId={identity.builtinId} accessory={identity.accessory} pose={importedPose} reduceMotion={reduced}/></div>}
     {error && <span className="home-scene-error">{error}</span>}
   </div>;

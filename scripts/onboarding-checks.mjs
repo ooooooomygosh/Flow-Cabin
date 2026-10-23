@@ -2,7 +2,9 @@ import { openRoomSettings, closeSettings } from './settings-actions.mjs';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { getRoomScene } from '../src/scene-catalog.mjs';
-import { onboardingSeed } from './app-version.mjs';
+import { releasesBetween } from '../src/onboarding/releases.mjs';
+import { LEGACY_SEEN_VERSION } from '../src/onboarding/onboarding-model.mjs';
+import { onboardingSeed, APP_VERSION } from './app-version.mjs';
 
 // First-run wizard + settings hub checks, sharing the screenshot suite's
 // isolated, offline routes. The web build has no desktop shell, so every
@@ -150,9 +152,10 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
   try {
     await page.goto(origin);
     const updateWizard = wizardOf(page, '版本更新'); await updateWizard.waitFor();
-    await heading(page).filter({ hasText: '你离开的这段时间，小屋更新了 10 个版本' }).waitFor();
+    const updates = releasesBetween(LEGACY_SEEN_VERSION, APP_VERSION);
+    await heading(page).filter({ hasText: `你离开的这段时间，小屋更新了 ${updates.length} 个版本` }).waitFor();
     assert.deepEqual(await updateWizard.locator('.onboarding-progress li').allInnerTexts(), ['1\n更新', '2\n音源', '3\n权限', '4\n房间', '5\n试听', '6\n完成']);
-    assert.deepEqual(await updateWizard.locator('.onboarding-release header span').allInnerTexts(), ['v2.0.0', 'v1.21.6', 'v1.21.5', 'v1.21.4', 'v1.21.3', 'v1.21.1', 'v1.21.0', 'v1.20.0', 'v1.19.0', 'v1.18.0']);
+    assert.deepEqual(await updateWizard.locator('.onboarding-release header span').allInnerTexts(), updates.map(release => `v${release.version}`));
     await updateWizard.getByText('「键鼠陪伴」进入「设置」一级入口', { exact: false }).waitFor();
     await button(page, '稍后继续').waitFor();
     assert.equal(await button(page, '开始设置').count(), 0);

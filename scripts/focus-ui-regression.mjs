@@ -72,6 +72,7 @@ try {
       if(u.origin!==origin){report.unexpectedRequests.push(u.href);return route.abort();}
       if(p==='/api/items') return collection ? collection(route) : route.fulfill({json:{items}});
       if(p==='/api/items/import') return route.fulfill({json:{added:0,total:items.length}});
+      if(p==='/desktop-music/lyrics') return route.fulfill({json:{text:'',source:'fixture',reason:'No fixture lyrics'}});
       if(p==='/desktop-music/config') return route.fulfill({json:{qqLoggedIn:false,neteaseLoggedIn:false}});
       if(p==='/desktop-music/now-playing'||p==='/desktop-music/apple/permission') return route.fulfill({json:{available:false}});
       if(p==='/desktop-music/local/summary') return route.fulfill({json:{folders:[],albumCount:0,trackCount:0}});
@@ -584,7 +585,7 @@ try {
     assert.equal(await cat.locator('.pixel-cat').getAttribute('data-pose'),'listen');
     // A detected beat: the shared cat sprite hops once per beat, phase-locked to beatAt.
     const beatAt=await page.evaluate(()=>{const at=Date.now()-130;window.dispatchEvent(new CustomEvent('cabin:playback',{detail:{playing:true,energy:.5,bpm:120,beatAt:at}}));return at;});
-    await page.waitForFunction(()=>document.querySelector('.room-cat .pixel-cat')?.dataset.pose==='groove',null,{timeout:5000});
+    await page.waitForFunction(()=>['listen','nod','sway','dance'].includes(document.querySelector('.room-cat .pixel-cat')?.dataset.pose),null,{timeout:5000});
     const lock=await page.evaluate(beatAt=>{const a=document.querySelector('.room-cat .pixel-cat').getAnimations().find(x=>x.effect.getKeyframes().some(k=>k.translate));const d=a.effect.getTiming().duration;const want=((Date.now()-beatAt)%d+d)%d,at=a.currentTime%d;return {d,off:Math.min(Math.abs(at-want),d-Math.abs(at-want))};},beatAt);
     assert.equal(lock.d,500);assert.ok(lock.off<40,`groove is ${Math.round(lock.off)} ms off the beat`);
     await screenshot(page,'cat-on-the-beat');

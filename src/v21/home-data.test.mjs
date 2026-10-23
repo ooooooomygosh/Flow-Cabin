@@ -69,3 +69,9 @@ test('New pet artwork changes only on heard half-beats and never invents a tempo
   assert.equal(pet.resolve({now:5000,playing:true,synced:false}).pose,'idle');
   assert.equal(pet.resolve({now:12100,playing:true,synced:false}).pose,'listen');
 });
+
+test('Empty companion lyric state never makes a music-service request', async () => {
+  const { loadLyrics } = await import('../lyrics/lyric-session.mjs');
+  const doc=await loadLyrics({provider:'visual',title:'',id:''});
+  assert.deepEqual(doc.lines,[]); assert.equal(doc.source,'none');
+});

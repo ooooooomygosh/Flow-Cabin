@@ -67,6 +67,8 @@ try {
       if (request.method() === 'DELETE') { items = items.filter(i => i.id !== id); return json({ ok: true }); }
     }
     if (p === '/api/search') return json({ candidates: [{ ...items[0], id: 'search-result', title: '搜索找到的专辑' }] });
+    if (p === '/desktop-music/lyrics') return json({ text:'', source:'fixture', reason:'No fixture lyrics' });
+    if (p.startsWith('/desktop-weather/')) return json({ report:null });
     if (p === '/desktop-music/apple/permission') return json({ available: true, granted: false, needsPermission: true, error: 'Fixture: automation permission not granted' });
     if (p === '/desktop-music/config') return json({ qqLoggedIn: false, neteaseLoggedIn, maURL: '', playerId: '', quality, qualities: [{ id: 'standard', label: '标准 · 128k' }, { id: 'exhigh', label: '高品质 · 320k' }, { id: 'lossless', label: '无损 · FLAC' }] });
     if (p === '/desktop-music/quality') { quality = body.quality; return json({ qqLoggedIn: false, neteaseLoggedIn, maURL: '', playerId: '', quality }); }
@@ -90,6 +92,7 @@ try {
   };
   await context.route('**/*', routeHandler);
   const welcomeRoute = route => new URL(route.request().url()).pathname === '/api/items' ? route.fulfill({ json: { items: [] } }) : routeHandler(route);
+  if (process.env.FLOW_CABIN_BROWSER_PHASE !== 'main') {
   await verifyWeatherMotion(browser, origin, check);
   await verifyWeatherSwitchSteady(browser, origin, check);
   await verifyOnboarding({ browser, origin, routeHandler: welcomeRoute, evidence: output, output, check });
@@ -99,6 +102,7 @@ try {
   catch (error) { report.benchmarkCabin = error.report; throw error; }
   await verifyFullscreenStudy({ browser, origin, output, check });
   await verifyPlaylistPagination({ browser, origin, check });
+  } else report.skipped.push('Isolated suites already run separately; this local run covers the main journey only.');
   context.on('page', watched => { watched.on('pageerror', error => report.pageErrors.push(error.stack || error.message)); watched.on('console', message => { if (message.type() === 'error') report.consoleErrors.push(message.text()); }); watched.on('requestfailed', request => { if (request.failure()?.errorText !== 'net::ERR_ABORTED') report.failedRequests.push({ url: request.url(), error: request.failure()?.errorText }); }); });
   page = await context.newPage(); page.setDefaultTimeout(12000); await page.clock.install({ time: new Date('2026-10-08T10:00:00Z') });
   /* context captures errors across the main, wallpaper and pet renderers. */
@@ -279,7 +283,7 @@ try {
   await page.getByLabel('导入备份文件').setInputFiles({ name: 'bad.json', mimeType: 'application/json', buffer: Buffer.from('{invalid') }); await page.getByText('文件内容无法读取。', { exact: true }).waitFor(); check('backup-rejects-malformed-input');
   const imported = { kind: 'FlowCabinBackup', items: [{ ...items[0], id: 'backup-imported', title: '备份导入唱片' }] };
   await page.getByLabel('导入备份文件').setInputFiles({ name: 'fixture.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(imported)) }); await page.getByText('导入完成：新增 1 张唱片，唱片架现在共有 19 张。', { exact: true }).waitFor(); assert(items.some(i => i.id === 'backup-imported')); check('backup-import-merges-new-album'); await closeDialog();
-  assert.equal(await page.locator('.app-titlebar').getByRole('button', { name: /专辑墙|我的歌单/ }).count(), 0, 'the titlebar keeps one add button'); await openAlbumWall(page); await page.locator('.wall-library-album').first().click(); await page.waitForFunction(() => { const c = document.querySelector('.wall-canvas-wrap canvas'); return c?.width > 300 && !document.querySelector('.wall-preview-bar').textContent.includes('正在更新'); }); await screenshot('album-wall');
+  assert.equal(await page.locator('.app-titlebar').getByRole('button', { name: '专辑墙', exact: true }).count(), 1, 'album wall remains directly discoverable beside the add button'); await openAlbumWall(page); await page.locator('.wall-library-album').first().click(); await page.waitForFunction(() => { const c = document.querySelector('.wall-canvas-wrap canvas'); return c?.width > 300 && !document.querySelector('.wall-preview-bar').textContent.includes('正在更新'); }); await screenshot('album-wall');
   const pngPromise = page.waitForEvent('download'); await page.getByRole('button', { name: '下载 PNG', exact: true }).click(); const png = await pngPromise; await png.saveAs(path.join(output, 'fixture-album-wall.png')); const pngBytes = await fs.readFile(path.join(output, 'fixture-album-wall.png')); assert.equal(pngBytes.subarray(1, 4).toString(), 'PNG'); assert(pngBytes.length > 1000); check('album-wall-paints-and-downloads-real-png'); await closeDialog();
   await page.keyboard.press('h'); assert(await page.evaluate(() => document.documentElement.classList.contains('room-zen'))); await screenshot('zen-mode'); await page.keyboard.press('Escape'); check('zen-mode-keyboard');
   // 我的歌单: account playlists, link import, file import; a playlist plays like an album.
@@ -414,7 +418,8 @@ try {
   await page.locator('.pet-stage:not([data-action])').waitFor({ timeout: 4000 });
   await page.evaluate(({ companion }) => window.__pushPet({ companion: { ...companion, petId: 'cat', care: { fedAt: Date.now() + 1, ok: false, note: '小猫今天已经吃饱啦，明天再喂吧～', tier: 'happy' } }, size: 192 }), { companion });
   await page.locator('.pet-bubble', { hasText: '吃饱啦' }).waitFor();
-  const opaque = await page.evaluate(async () => { const { opaqueAt } = await import('/src/pet/PixelCat.jsx'); const r = document.querySelector('.pet-cat').getBoundingClientRect(); for (let y = .95; y > .3; y -= .05) for (let x = .3; x < .7; x += .05) if (opaqueAt('idle', 0, '', x, y)) return { x: r.left + x * r.width, y: r.top + y * r.height }; return null; });
+  const opaque = await page.evaluate(() => { const canvas=document.querySelector('.pet-cat .pixel-cat'),r=canvas.getBoundingClientRect(),pixels=canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height);for(let y=.6;y<.8;y+=.02)for(let x=.4;x<.6;x+=.02)if(pixels.data[(Math.floor(y*pixels.height)*pixels.width+Math.floor(x*pixels.width))*4+3]>245)return{x:r.left+x*r.width,y:r.top+y*r.height};return null; });
+  assert.ok(opaque,'click the displayed pet, using its actual drawn alpha');
   await page.mouse.click(opaque.x, opaque.y); await page.waitForTimeout(80); await page.mouse.click(opaque.x, opaque.y);
   await page.locator('.pet-stage[data-action="hop"]').waitFor(); await screenshot('desktop-pet-hop');
   await page.mouse.click(opaque.x, opaque.y, { button: 'right' }); assert.ok((await calls()).includes('menu'), 'right-click opens the pet menu');

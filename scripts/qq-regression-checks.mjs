@@ -17,6 +17,7 @@ export async function verifyQQRegression({ browser, origin, check }) {
     if (url.origin !== origin) { errors.push('external request blocked'); return route.abort(); }
     const json = value => route.fulfill({ json: value });
     if (p === '/api/items') return json({ items: [] });
+    if (p === '/desktop-music/lyrics') return json({ text: '', source: 'fixture', reason: 'No fixture lyrics' });
     if (p === '/desktop-music/config') return json({ qqLoggedIn: true, neteaseLoggedIn: false });
     if (p === '/desktop-music/playlists') {
       if (mode === 'expired') return json({ loggedIn: false, provider: 'qq', playlists: [] });
