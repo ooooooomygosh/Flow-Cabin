@@ -26,6 +26,8 @@ try {
   const run = async (name, test, { desktop = false, ai = null, mode = () => ({ status: 200 }) } = {}) => {
     if (process.env.AI_FILTER && !name.includes(process.env.AI_FILTER)) return;
     const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'zh-CN', reducedMotion: 'reduce', ...(process.env.AI_TIMEZONE ? { timezoneId: process.env.AI_TIMEZONE } : {}) });
+    // These flows exercise the classic shelf; since 2.2 the life cabin is the default home.
+    await context.addInitScript(() => { if (localStorage.getItem('flow-cabin-interface-v1') === null) localStorage.setItem('flow-cabin-interface-v1', 'classic'); });
     await context.addInitScript((seed) => { window.__onboardingSeed = seed; }, onboardingSeed());
     await context.addInitScript(({ FOCUS, desktop, ai, KEY, endpoint }) => {
       if (location.origin === 'null' || sessionStorage.getItem('seeded')) return;

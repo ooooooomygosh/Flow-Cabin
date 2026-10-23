@@ -1,6 +1,7 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { App } from '@capacitor/app';
 import { createMobileStorage, persistentKey } from './storage.mjs';
+import { backStack } from '../ui/back-stack.mjs';
 
 export const isAndroid = () => Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
 const Device = registerPlugin('CabinDevice');
@@ -35,6 +36,8 @@ export async function initializeMobile() {
   await App.addListener('backButton', async () => {
     const dialogs = [...document.querySelectorAll('dialog[open]')], dialog = dialogs.at(-1);
     if (dialog) { const event = new Event('cancel', { cancelable: true }); if (dialog.dispatchEvent(event)) dialog.close(); return; }
+    // Corners, furniture editing, the lyrics stage, armed confirms: one layer per press.
+    if (backStack.back()) return;
     const close = document.querySelector('.focus-dock-close');
     if (close) { close.click(); return; }
     if (document.documentElement.dataset.mobileFullscreen === 'true') { await window.albumMobile.setFullscreen(false); return; }

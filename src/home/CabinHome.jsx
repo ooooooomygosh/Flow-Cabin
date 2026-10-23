@@ -11,6 +11,8 @@ import { readLights, setRoomLight } from './recipes.mjs';
 import { SleepIndicator } from './SceneTools';
 import HomeCorner from './HomeCorner';
 import { ClockReadout, CalendarReadout, LyricsReadout } from './HomeReadouts';
+import useBackLayer from '../ui/useBackLayer';
+import { shouldShowHomeNotice, dismissHomeNotice } from '../interface-mode.mjs';
 import './home.css';
 
 const ZONES = [{ id: 'music', name: '听歌角', x: 335, y: 454 }, { id: 'work', name: '工作角', x: 790, y: 388 }, { id: 'life', name: '生活角', x: 880, y: 545 }];
@@ -68,6 +70,8 @@ export default function CabinHome({ reduced = false, editRequest = 0, focusOpen 
   const petHit = useRef(null);
   const placePetHit = useCallback(point => { if (petHit.current) { petHit.current.style.left = `${point.x - 38}px`; petHit.current.style.top = `${point.y - 82}px`; } }, []);
   const [intro, setIntro] = useState(() => localStorage.getItem('flow-cabin-home-intro-v1') !== 'done');
+  const [homeNotice, setHomeNotice] = useState(() => shouldShowHomeNotice());
+  const closeHomeNotice = () => { dismissHomeNotice(); setHomeNotice(false); };
   const host = useRef(null), drag = useRef(null), swipe = useRef(null), held = useRef(0), suppressClick = useRef(false), compact = useRef(innerWidth < 700);
   const [preview, setPreview] = useState(null); const shown = preview || layout;
   const chosen = layout.items.find(i => i.id === selected), theme = THEMES.find(t => t.id === look) || THEMES[0];
@@ -77,6 +81,9 @@ export default function CabinHome({ reduced = false, editRequest = 0, focusOpen 
     return () => { observer.disconnect(); clearTimeout(held.current); };
   }, []);
   const overview = zone === 'all';
+  const finishEditing = () => { setEditing(false); setDrawer(''); setSelected(''); };
+  useBackLayer(!overview && !editing, () => setZone('all'), 'corner');
+  useBackLayer(editing, finishEditing, 'decorate');
   const scale = Math.min(viewport.width / 1200, viewport.height / 800);
   const transform = `translate(${viewport.width / 2 - 600 * scale}px, ${viewport.height / 2 - 400 * scale}px) scale(${scale})`;
   const completeIntro = () => { setIntro(false); try { localStorage.setItem('flow-cabin-home-intro-v1', 'done'); } catch {} };
@@ -111,7 +118,7 @@ export default function CabinHome({ reduced = false, editRequest = 0, focusOpen 
   return <section className={`cabin-home theme-${look} ${editing ? 'is-editing' : ''} ${!overview ? 'is-corner' : ''} ${reduced ? 'is-reduced' : ''}`} aria-label="生活小屋首页" data-zone={zone}>
     <header className="home-header">
       <button type="button" className="home-pet-portrait" aria-expanded={petOpen} aria-label={`伙伴与装扮 · ${identity.name}`} onClick={() => commands.open('pet')}><PixelCat petId={identity.builtinId} accessory={identity.accessory} reduceMotion={reduced} label={identity.name}/></button>
-      <button type="button" className="home-room-name" aria-label="选择房间主题" onClick={() => setDrawer('themes')}><small>FLOW CABIN · BETA</small><span>{theme.name}<ChevronDown size={14}/></span></button>
+      <button type="button" className="home-room-name" aria-label="选择房间主题" onClick={() => setDrawer('themes')}><small>FLOW CABIN</small><span>{theme.name}<ChevronDown size={14}/></span></button>
       <nav className="home-shortcuts" aria-label="小屋常用工具"><button type="button" onClick={() => commands.open('wall')}><Grid3X3 size={17}/><span>专辑墙</span></button><button type="button" onClick={() => commands.open('library')}><Library size={17}/><span>唱片库</span></button><button type="button" className="focus-badge" aria-expanded={focusOpen} onClick={() => commands.open('timer')}><Clock size={17}/><span>专注</span></button><button type="button" onClick={() => commands.open('notes')}><BookOpen size={17}/><span>随手记</span></button><button type="button" aria-pressed={editing} onClick={() => { if (editing) { setEditing(false); setDrawer(''); setSelected(''); } else { setZone('all'); setEditing(true); setDrawer('decorate'); } }}><Settings size={16}/><span>{editing ? '完成布置' : '布置'}</span></button></nav>
       <DesktopControls onSettings={() => setDrawer('menu')} onError={text => notify(text, { tone: 'error' })}/>
     </header>
@@ -133,12 +140,13 @@ export default function CabinHome({ reduced = false, editRequest = 0, focusOpen 
       {!overview && <HomeCorner zone={zone} viewport={viewport} reduced={reduced} dim={dim} onLight={() => setDim(v => !v)}/>}
     </div>
     <SleepIndicator/>
-    {intro && <aside className="home-intro" aria-label="小屋初次指引"><span>点唱机听歌，点钟开始专注。布置可以慢慢来。</span><button type="button" onClick={completeIntro}>知道了</button></aside>}
+    {homeNotice ? <aside className="home-intro home-notice" aria-label="新的首页"><span><b>首页换成了生活小屋。</b>唱片、手记和专注记录都在，原版唱片架也随时可以换回。</span><button type="button" onClick={closeHomeNotice}>好的</button><button type="button" onClick={() => { closeHomeNotice(); window.dispatchEvent(new Event('cabin:interface-choice')); }}>改用原版</button></aside>
+    : intro && <aside className="home-intro" aria-label="小屋初次指引"><span>点唱机听歌，点钟开始专注。布置可以慢慢来。</span><button type="button" onClick={completeIntro}>知道了</button></aside>}
     {store.error && <p className="home-layout-error" role="alert">{store.error}</p>}
     <footer className="home-footer"><button type="button" className="home-now-playing" onClick={() => commands.open('music')} aria-label="打开播放器">{deck.deckItem?.cover && <img src={deck.deckItem.cover} alt=""/>}<span><strong>{playingTitle || '今天想听什么？'}</strong><small>{playingTitle ? deck.statusText : '从唱片库选一张喜欢的'}</small></span>{deck.audible ? <Pause size={16}/> : <Play size={16}/>}</button><nav className="home-zones" aria-label="房间区域"><button type="button" aria-pressed={zone === 'all'} onClick={() => setZone('all')}>{overview ? '全屋' : '返回全屋'}</button>{ZONES.map(z => <button type="button" key={z.id} aria-pressed={zone === z.id} onClick={() => setZone(z.id)}>{z.name}</button>)}</nav><button type="button" className="home-pet-return" aria-label="回到宠物" onClick={() => setZone('life')}><Heart size={16}/>{identity.name}</button></footer>
     <details className="home-accessible-furniture"><summary>家具与无障碍入口</summary><div>{layout.items.map(item => <button type="button" key={item.id} onClick={() => activate(item)}>{FURNITURE[item.type].name}</button>)}</div></details>
     {drawer && <Dialog title={drawer === 'themes' ? '选择小屋' : drawer === 'menu' ? '小屋日常' : '布置小屋'} close={() => setDrawer('')} className="home-tool home-editor" size="lg">
-      {drawer === 'menu' ? <nav className="home-menu-grid" aria-label="小屋功能">{[['recipes','场景配方'],['sleep','睡前模式'],['postcard','小屋明信片'],['weather','位置与天气'],['diagnostics','功能诊断'],['backup','备份与恢复'],['settings','全部设置'],['interface','切回原版首页']].map(([id,name]) => <button type="button" key={id} onClick={() => { setDrawer(''); commands.open(id); }}>{name}</button>)}</nav> : drawer === 'themes' ? <div className="home-theme-grid">{THEMES.map(t => <button type="button" key={t.id} aria-pressed={look === t.id} onClick={() => { commands.theme(t.id); setDrawer(''); }}><img src={`/room-scenes/v21/${t.id}/shell.png`} alt=""/><span>{t.name}</span></button>)}</div> : <>
+      {drawer === 'menu' ? <nav className="home-menu-grid" aria-label="小屋功能">{[['recipes','场景配方'],['sleep','睡前模式'],['postcard','小屋明信片'],['weather','位置与天气'],['diagnostics','功能诊断'],['backup','备份与恢复'],['settings','全部设置'],['interface','改用原版唱片架']].map(([id,name]) => <button type="button" key={id} onClick={() => { setDrawer(''); commands.open(id); }}>{name}</button>)}</nav> : drawer === 'themes' ? <div className="home-theme-grid">{THEMES.map(t => <button type="button" key={t.id} aria-pressed={look === t.id} onClick={() => { commands.theme(t.id); setDrawer(''); }}><img src={`/room-scenes/v21/${t.id}/shell.png`} alt=""/><span>{t.name}</span></button>)}</div> : <>
         <p>拖动家具，或聚焦后用方向键微调。桌面小物会跟着桌子移动。</p>
         <div className="home-editor-actions"><button type="button" disabled={!store.canUndo} onClick={store.undo}>撤销</button><button type="button" disabled={!store.canRedo} onClick={store.redo}>重做</button><button type="button" className="home-primary" onClick={() => { setDrawer(''); setEditing(false); setSelected(''); }}>完成布置</button><button type="button" onClick={() => setDrawer('')}>到屋内拖动</button></div>
         <fieldset><legend>完整布置预设</legend>{[['listen', '听歌'], ['work', '工作'], ['rest', '休息']].map(([id, label]) => <button type="button" key={id} onClick={() => commit(defaultLayout(look, id))}>{label}</button>)}</fieldset>

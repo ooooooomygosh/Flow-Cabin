@@ -63,6 +63,8 @@ let browser, server;
 const run = async (name, test) => {
   if (process.env.BEAT_FILTER && !process.env.BEAT_FILTER.split(',').some((f) => name.includes(f))) return;
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'zh-CN', reducedMotion: 'no-preference' });
+  // These flows exercise the classic shelf; since 2.2 the life cabin is the default home.
+  await context.addInitScript(() => { if (localStorage.getItem('flow-cabin-interface-v1') === null) localStorage.setItem('flow-cabin-interface-v1', 'classic'); });
   // Capture the exact production tracker inputs for deterministic replay. The
   // wrapper delegates every call unchanged; it neither resamples nor retries.
   await context.route(/\/src\/player\/beat-tracker\.mjs(?:\?|$)/, async route => {

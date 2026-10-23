@@ -69,6 +69,7 @@
 .home-footer .home-pet-return{display:flex;align-items:center;gap:7px;font-size:12px;opacity:.7;min-width:120px;justify-content:end}
 .home-intro{position:absolute;bottom:100px;left:50%;transform:translateX(-50%);z-index:6;display:flex;align-items:center;gap:16px;background:#24251ee6;border:1px solid #dfc39a26;border-radius:12px;padding:6px 8px 6px 18px;font-size:12px;white-space:nowrap;box-shadow:0 6px 25px #0003}
 .home-intro button{color:#e5c99e;min-height:36px;flex-shrink:0;padding:4px 10px}
+.home-notice{white-space:normal;max-width:min(560px,calc(100vw - 32px));gap:10px}.home-notice b{font-weight:600;margin-right:4px}
 .home-layout-error{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);z-index:80;background:#392b23f5;border:1px solid #d7aa73;padding:12px 18px;max-width:90vw;border-radius:10px;font-size:13px}
 .home-accessible-furniture{position:absolute;bottom:3px;left:50%;transform:translateX(-50%);font-size:12px;color:var(--home-muted);z-index:7}
 .home-accessible-furniture summary{cursor:pointer;opacity:.55}

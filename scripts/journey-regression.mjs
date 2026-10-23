@@ -23,6 +23,8 @@ try {
   for (let i = 0; ; i++) { if (server.exitCode !== null || i > 150) throw new Error(log || 'Vite startup timed out'); if (hasViteLocalOrigin(log, origin) && await fetch(origin).then(r => r.ok, () => false)) break; await new Promise(r => setTimeout(r, 100)); }
   browser = await launchChromium();
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'zh-CN', reducedMotion: 'reduce' });
+  // These flows exercise the classic shelf; since 2.2 the life cabin is the default home.
+  await context.addInitScript(() => { if (localStorage.getItem('flow-cabin-interface-v1') === null) localStorage.setItem('flow-cabin-interface-v1', 'classic'); });
   await context.addInitScript(({ seed, key }) => {
     if (location.origin === 'null' || sessionStorage.getItem('journey-seeded')) return;
     sessionStorage.setItem('journey-seeded', '1');

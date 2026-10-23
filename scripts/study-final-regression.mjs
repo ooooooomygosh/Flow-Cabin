@@ -141,6 +141,8 @@ try {
   browser = await launchChromium();
   report.browserVersion = await browser.version();
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'zh-CN', reducedMotion: 'reduce' });
+  // These flows exercise the classic shelf; since 2.2 the life cabin is the default home.
+  await context.addInitScript(() => { if (localStorage.getItem('flow-cabin-interface-v1') === null) localStorage.setItem('flow-cabin-interface-v1', 'classic'); });
   await context.addInitScript((seed) => { window.__onboardingSeed = seed; }, onboardingSeed());
   await context.addInitScript(({ focusKey, displayKey }) => {
     if (location.origin === 'null') return;

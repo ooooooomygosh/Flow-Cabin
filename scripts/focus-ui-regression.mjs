@@ -51,6 +51,8 @@ try {
   const run = async (name,test,{firstVisit=false,collection,autoEnter=false,motion=false}={}) => {
     if (process.env.FOCUS_FILTER && !process.env.FOCUS_FILTER.split(',').some(filter=>name.includes(filter))) return;
     const context = await browser.newContext({viewport:{width:1440,height:900},locale:'zh-CN',reducedMotion:motion?'no-preference':'reduce'});
+    // These flows exercise the classic shelf; since 2.2 the life cabin is the default home.
+    await context.addInitScript(() => { if (localStorage.getItem('flow-cabin-interface-v1') === null) localStorage.setItem('flow-cabin-interface-v1', 'classic'); });
     await context.addInitScript((seed) => { window.__onboardingSeed = seed; }, onboardingSeed());
     await context.addInitScript(({key,firstVisit,autoEnter,motion}) => {
       if (location.origin==='null') return;

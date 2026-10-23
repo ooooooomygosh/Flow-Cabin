@@ -29,10 +29,11 @@ const PetPackSettings = lazy(() => import('../pet/PetPackSettings'));
 
 export const HUB_SECTIONS = Object.freeze([
   { id: 'music', label: '音源' }, { id: 'room', label: '房间与桌宠' }, { id: 'companion', label: '键鼠陪伴' }, { id: 'focus', label: '专注工具' },
-  { id: 'sync', label: '同步与设备' }, { id: 'desktop', label: '显示与桌面' }, { id: 'data', label: '数据与备份' }, { id: 'ai', label: 'AI（Beta）' }, { id: 'beta', label: '小屋 Beta' }, { id: 'about', label: '关于' }
+  { id: 'sync', label: '同步与设备' }, { id: 'desktop', label: '显示与桌面' }, { id: 'data', label: '数据与备份' }, { id: 'ai', label: 'AI（Beta）' }, { id: 'about', label: '关于' }
 ]);
 // A section may open on a sub-page: 'music/accounts' is 音源 › 账户与文件夹.
-export const hubTab = (section = '') => String(section).split('/')[0] || 'music';
+// 'beta' (2.1 首页选择) now lives in 房间与桌宠.
+export const hubTab = (section = '') => { const tab = String(section).split('/')[0] || 'music'; return tab === 'beta' ? 'room' : tab; };
 
 // Preferences, in one place; actions (timer, album wall, the companion going
 // out, fullscreen) stay in the room. Tray / menu / deck shortcuts open this
@@ -54,7 +55,7 @@ export default function SettingsHub({ section = 'music', setSection, close, env,
           <button type="button" className="hub-back" onClick={() => setSection('music')}><ChevronLeft size={14}/>音源</button>
           <MusicAccounts/>
         </div>}
-        {tab === 'room' && <>{interfaceMode()==='beta'&&<Row title="生活小屋" hint="首页就是生活小屋。调整家具位置，或套用听歌、工作、休息预设。"><button type="button" className="pixel-button" onClick={openStudio}>布置小屋</button></Row>}<p className="personalization-intro">选一个今天想待着的地方，再找一位安静的伙伴。换装不会打断音乐和专注。</p><RoomPickers look={look} petId={petId} onChange={onRoomChange} reduceMotion={reduceMotion}/><SkySettings/><Suspense fallback={<p role="status">正在整理桌宠衣柜…</p>}>{(window.albumDesktopCapabilities?.petPacks || window.albumMobile?.petRequest) && <PetPackSettings/>}</Suspense>{window.albumMobile?.setLauncherIcon && <Row title="桌宠启动图标" hint="使用当前伙伴作为启动器图标；系统图标缓存可能稍后更新。"><button type="button" className="pixel-button" onClick={() => window.albumMobile.setLauncherIcon(petId)}>使用当前桌宠图标</button></Row>}{error && <p role="alert" className="record-error">{error}</p>}</>}
+        {tab === 'room' && <><InterfacePreference/>{interfaceMode()==='beta'&&<Row title="生活小屋" hint="首页就是生活小屋。调整家具位置，或套用听歌、工作、休息预设。"><button type="button" className="pixel-button" onClick={openStudio}>布置小屋</button></Row>}<p className="personalization-intro">选一个今天想待着的地方，再找一位安静的伙伴。换装不会打断音乐和专注。</p><RoomPickers look={look} petId={petId} onChange={onRoomChange} reduceMotion={reduceMotion}/><SkySettings/><Suspense fallback={<p role="status">正在整理桌宠衣柜…</p>}>{(window.albumDesktopCapabilities?.petPacks || window.albumMobile?.petRequest) && <PetPackSettings/>}</Suspense>{window.albumMobile?.setLauncherIcon && <Row title="桌宠启动图标" hint="使用当前伙伴作为启动器图标；系统图标缓存可能稍后更新。"><button type="button" className="pixel-button" onClick={() => window.albumMobile.setLauncherIcon(petId)}>使用当前桌宠图标</button></Row>}{error && <p role="alert" className="record-error">{error}</p>}</>}
         {tab === 'sync' && <Suspense fallback={<p role="status">正在打开同步设置…</p>}><SyncSettings/></Suspense>}
         {tab === 'companion' && <CompanionSection env={env} player={player}/>}
         {tab === 'focus' && <><p className="personalization-intro">番茄钟的时长和提醒。计时、待办、学习和声音在右上角「专注」里。</p><FocusSettingsForm className="hub-focus-settings"/><DailyGoalField/></>}
@@ -65,7 +66,6 @@ export default function SettingsHub({ section = 'music', setSection, close, env,
           {env.desktop && <Row title="本地音乐文件夹" hint="添加或移除扫描的文件夹。"><button type="button" className="pixel-button" onClick={() => setSection('music/accounts')}>管理文件夹<ChevronRight size={14}/></button></Row>}
         </div>}
         {tab === 'ai' && <AiSettings/>}
-        {tab === 'beta' && <InterfacePreference/>}
         {tab === 'about' && <div className="hub-rows">
           <UpdatePanel version={version} desktop={Boolean(env.desktop)}/>
           <Row title="重新引导" hint="再走一遍新手引导，之前的选择会保留。"><button type="button" className="pixel-button" onClick={restartOnboarding}>重新引导</button></Row>
