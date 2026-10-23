@@ -1,6 +1,6 @@
 // The existing models keep a synchronous Storage contract. Android backs it with
 // a native SQLite transaction queue, hydrated before any model module is loaded.
-export const persistentKey = key => /^(?:album-circle-|flow-cabin-)/.test(key) && key !== 'flow-cabin-ai-key-v1';
+export const persistentKey = key => (key === 'cabin.petPack.v1' || /^(?:album-circle-|flow-cabin-)/.test(key)) && key !== 'flow-cabin-ai-key-v1';
 const MAX_BYTES = 32 * 1024 * 1024;
 export function createMobileStorage({ entries = {}, write, onError = () => {}, schedule = setTimeout, cancel = clearTimeout }) {
   const values = new Map(Object.entries(entries).filter(([key, value]) => persistentKey(key) && typeof value === 'string'));

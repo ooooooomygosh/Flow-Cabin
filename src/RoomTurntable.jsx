@@ -15,7 +15,7 @@ const EMPTY_DECK_HINT = '双击封面或拖到这里'; // Enter is spelled out o
 const QUALITY = /(\d{2,4}\s?k(?:bps)?(?:\s?(?:MP3|AAC|OGG))?|Hi-?Res|FLAC|无损)/i;
 const statusNode = (text) => { const match = typeof text === 'string' && QUALITY.exec(text); return match ? <>{text.slice(0, match.index)}<span className="turntable-quality">{match[0]}</span>{text.slice(match.index + match[0].length)}</> : text; };
 
-export default function RoomTurntable({ item, spinning, trackIndex = 0, style, items = [], load, toggle, track, eject, readOnly = false, provider = 'visual', setProvider, playback, statusText, actualTrack, system, player, tools }) {
+export default function RoomTurntable({ item, spinning, trackIndex = 0, style, items = [], load, toggle, track, eject, readOnly = false, ownsAudio = true, physicalDeck = true, provider = 'visual', setProvider, playback, statusText, actualTrack, system, player, tools }) {
   const [dragging, setDragging] = useState(false), names = trackNames(item), deckAnchor = useRef(null);
   const [lyricsOpen, setLyricsOpen] = useState(false);
   const placement = useTurntablePosition(readOnly);
@@ -29,15 +29,15 @@ export default function RoomTurntable({ item, spinning, trackIndex = 0, style, i
   }}>
     {/* The physical deck lives in the scene (shelf top) — see src/scene/SceneDeck.jsx. */}
     <span ref={deckAnchor} hidden/>
-    <SceneDeck anchor={deckAnchor} item={item} spinning={spinning} vinyl={style} readOnly={readOnly} dragType={ROOM_DRAG_TYPE}
+    {physicalDeck && <SceneDeck anchor={deckAnchor} item={item} spinning={spinning} vinyl={style} readOnly={readOnly} dragType={ROOM_DRAG_TYPE}
       onActivate={() => window.dispatchEvent(new Event('cabin-open-corner'))}
-      onDropRecord={(id) => { const found = items.find((candidate) => candidate.id === id); if (found && !readOnly) load?.(found); }}/>
+      onDropRecord={(id) => { const found = items.find((candidate) => candidate.id === id); if (found && !readOnly) load?.(found); }}/>}
     <div className="turntable-side-cabinet">
       <div className="turntable-console">
     <div className="turntable-heading">{readOnly ? <span><Disc3 size={15}/>木屋唱机</span> : <button type="button" className="turntable-drag-handle" aria-label="移动唱机" title="拖动移动唱机 · 方向键微调 · 双击或 Home 复位" {...placement.handle}><Disc3 size={15}/>木屋唱机<GripPixel size={12}/></button>}{readOnly ? <small className="turntable-source-chip">{providerLabel(provider, 'short')}</small> : <button type="button" className="turntable-source-chip" aria-label={`音源 ${providerLabel(provider, 'short')} · 更换`} title={`唱机音源：${providerLabel(provider)} · 在「设置 › 音源」里更换`} onClick={() => window.dispatchEvent(new Event('cabin-open-music-settings'))}>{providerLabel(provider, 'short')}<span aria-hidden="true">▾</span></button>}</div>
     {!readOnly && tools}
     {/* Two decks take turns: one plays, the other buffers the next song. */}
-    {!readOnly && playback && playback.deckRefs.map((ref, index) => <audio key={index} ref={ref} {...playback.events} preload="auto"/>)}
+    {!readOnly && ownsAudio && playback && playback.deckRefs.map((ref, index) => <audio key={index} ref={ref} {...playback.events} preload="auto"/>)}
     {/* The screen: a backlit LCD with the sleeve, the song, its status and progress. */}
     <div className="pocket-screen" data-state={screenState}>
     <div className="pocket-statusbar" aria-hidden="true"><span className="pocket-state">{screenState === 'playing' ? <PlayPixel size={12}/> : screenState === 'paused' ? <PausePixel size={12}/> : <i className="pocket-dot"/>}{{ playing: '播放中', paused: '已暂停', busy: '连接中', error: '没接上', idle: item ? '待播放' : '空唱机' }[screenState]}</span><span className="pocket-flags">{player?.queue.repeat === 'one' ? <RepeatOnePixel size={12}/> : player?.queue.repeat === 'all' ? <RepeatPixel size={12}/> : null}{player?.queue.shuffle && <ShufflePixel size={12}/>}{item && names.length > 0 && <b>{trackIndex + 1}/{names.length}</b>}</span></div>

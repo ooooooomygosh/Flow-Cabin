@@ -1,3 +1,4 @@
+import { invalidateRecovery } from '../backup/recovery.mjs';
 import {
   AI_EVENT, AI_SETTINGS_KEY, AI_KEY_KEY, LETTER_EVENT, LETTERS_KEY, aiConnectionReady, cleanLetter, cleanUserLetter,
   localLetterReply, readAi, readLetters, readLetterRecords, userLetterMessages, userLetterSubject,
@@ -99,6 +100,7 @@ export function purgeLetterThread({ storage, id, expectedOrganizedAt, now = Date
     return { ok: false, error: '信件状态已改变。只能永久删除仍在回收站里的往来信，请重新确认。' };
   const removed = list.filter((letter) => letter.id === id || letter.replyTo === id
     || (letter.status === 'draft' && letter.at <= root.at && letter.lines.join('\n') === root.lines.join('\n')));
+  try { invalidateRecovery(storage); } catch { return { ok:false, error:'旧恢复点未能清理，尚未永久删除。' }; }
   const result = tryWriteLetters(storage, [
     ...removed.map((letter) => ({ id: letter.id, purgedAt: now })),
     ...list.filter((letter) => !removed.includes(letter))

@@ -1,4 +1,5 @@
 'use strict';
+const { createLiveSession } = require('./live-session.cjs');
 const https = require('node:https');
 const net = require('node:net');
 const tls = require('node:tls');
@@ -71,10 +72,11 @@ function createLanService({ directory, now = Date.now } = {}) {
     try { return await pinnedRequest(address, fingerprint, route, data, auth, { signal: controller.signal }); }
     finally { controllers.delete(controller); if (!controllers.size) requests.delete(id); }
   }
+  const live = createLiveSession({identity,getPeers:()=>state.peers,privateIP,endpoint,signature,equal,hash,now});
   const nonces = new Map(), limits = new Map();
   const save = () => atomic(statePath, JSON.stringify(state));
-  const publicPeer = ({ id, name, address, pin }) => ({ id, name, address, pin });
-  const status = () => ({ id: identity.id, enabled: Boolean(server?.listening), pin, addresses: server?.listening ? [...new Set(['127.0.0.1', ...Object.values(os.networkInterfaces()).flat().filter(n => n.family === 'IPv4' && privateIP(n.address)).map(n => n.address)])].map(ip => `https://${ip}:${server.address().port}`) : [], peers: state.peers.map(publicPeer) });
+  const publicPeer = ({ id, name, address, pin, autoReconnect }) => ({ id, name, address, pin, autoReconnect: autoReconnect === true });
+  const status = () => ({ id: identity.id, enabled: Boolean(server?.listening), pin, addresses: server?.listening ? [...new Set(['127.0.0.1', ...Object.values(os.networkInterfaces()).flat().filter(n => n.family === 'IPv4' && privateIP(n.address)).map(n => n.address)])].map(ip => `https://${ip}:${server.address().port}`) : [], peers: state.peers.map(publicPeer), live:live.status() });
   async function start({ host = '0.0.0.0', port = 0 } = {}) {
     if (server?.listening) return status(); if (listening) return listening;
     if (host !== '0.0.0.0' && !privateIP(host)) throw new Error('Only local interfaces allowed');
@@ -104,11 +106,12 @@ function createLanService({ directory, now = Date.now } = {}) {
         respond(200, { id: identity.id, key, pin });
       } catch { respond(400, { error: '同步数据无效，原数据已保留' }); }
     });
+    live.install(server);
     server.headersTimeout = 10000; server.requestTimeout = 15000; server.maxConnections = 8;
     listening = new Promise((resolve, reject) => { server.once('error', reject); server.listen(port, host, () => resolve(status())); });
     try { return await listening; } finally { listening = null; }
   }
-  async function stop() { lifecycle++; cancelRequests(); pairing = null; if (server) { const current = server; if (listening) await listening.catch(() => {}); if (server === current) server = null; current.closeAllConnections(); await new Promise(resolve => current.close(resolve)); } return status(); }
+  async function stop() { live.stop(); lifecycle++; cancelRequests(); pairing = null; if (server) { const current = server; if (listening) await listening.catch(() => {}); if (server === current) server = null; current.closeAllConnections(); await new Promise(resolve => current.close(resolve)); } return status(); }
   async function invite() { const generation = lifecycle; await start(); if (generation !== lifecycle || !server?.listening) throw new Error('局域网接收已关闭'); pairing = { token: secret(), expiresAt: now() + 120000 }; return { version: 1, type: 'flow-cabin-pair', ...pairing, pin, addresses: status().addresses }; }
   async function pair({ address, pin: remotePin, token, name = '我的小屋' }) {
     const generation = lifecycle, origin = endpoint(address), result = await outbound('pair', origin, remotePin, '/pair', { id: identity.id, name, pin, token });
@@ -124,17 +127,25 @@ function createLanService({ directory, now = Date.now } = {}) {
     state.snapshot = mergeSnapshots(state.snapshot, mergeSnapshots(candidate, incoming)); save(); return state.snapshot;
   }
   function stage(snapshot) { state.snapshot = mergeSnapshots(state.snapshot, snapshot); save(); return state.snapshot; }
-  function revoke(id) { lifecycle++; cancelRequests(id); cancelRequests('pair'); state.peers = state.peers.filter(p => p.id !== id); save(); return status(); }
+  function revoke(id) { lifecycle++; cancelRequests(id); cancelRequests('pair'); state.peers = state.peers.filter(p => p.id !== id); live.disconnect(id); save(); return status(); }
   async function routeLocal(request, route) {
     const json = (data, status = 200) => new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
     try {
       const origin = request.headers.get('origin');
       if ((origin && origin !== new URL(request.url).origin) || request.headers.get('sec-fetch-site') === 'cross-site') return json({ error: 'Forbidden' }, 403);
       if (request.method === 'GET' && route === '/status') return json(status());
-      if (request.method !== 'POST' || !['/start', '/stop', '/invite', '/pair', '/sync', '/stage', '/revoke'].includes(route)) return json({ error: 'Not found' }, 404);
+      if (request.method === 'GET' && route === '/live/status') return json(live.status());
+      if (request.method !== 'POST' || !['/start', '/stop', '/invite', '/pair', '/sync', '/stage', '/revoke', '/live/connect', '/live/publish', '/live/send', '/live/ack', '/live/preferences'].includes(route)) return json({ error: 'Not found' }, 404);
       if (Number(request.headers.get('content-length')) > MAX) return json({ error: 'Payload too large' }, 413);
       const raw = await request.text(); if (Buffer.byteLength(raw) > MAX) return json({ error: 'Payload too large' }, 413);
       const data = raw ? JSON.parse(raw) : {};
+      if(route.startsWith('/live/')) {
+        if(route==='/live/connect')return json(await live.connect(data.peerId));
+        if(route==='/live/publish')return json(live.publish(data));
+        if(route==='/live/send')return json(await live.send(data));
+        if(route==='/live/ack')return json(live.ack(data));
+        if(route==='/live/preferences'){const peer=state.peers.find(p=>p.id===data.peerId);if(!peer)throw Error('设备未配对');peer.autoReconnect=data.autoReconnect===true;save();if(peer.autoReconnect)live.schedule(peer.id);return json(status());}
+      }
       return json(await ({ '/start': () => start(), '/stop': stop, '/invite': invite, '/pair': () => pair(data), '/sync': () => sync(data), '/stage': () => stage(data), '/revoke': () => revoke(data.id) }[route])());
     } catch (e) { return json({ error: e.message }, 400); }
   }

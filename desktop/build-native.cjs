@@ -25,6 +25,8 @@ function buildMacInput() {
     '-o', output, source
   ], { stdio: 'inherit' });
   console.log('Built native/mac-input.node');
+  execFileSync('clang++',['-std=c++17','-O2','-fPIC','-fobjc-arc','-bundle','-undefined','dynamic_lookup','-mmacosx-version-min=11.0','-I',include,...(fs.existsSync(path.join(sdkCxx,'atomic'))?['-isystem',sdkCxx]:[]),'-framework','Foundation','-framework','CoreLocation','-o',path.join(__dirname,'native','mac-location.node'),path.join(__dirname,'native','mac-location.mm')],{stdio:'inherit'});
+  console.log('Built native/mac-location.node');
 }
 
 if (process.platform === 'darwin') {
@@ -52,9 +54,10 @@ function unionMetadata() {
 const winmd = unionMetadata();
 try {
   if (!winmd) throw new Error('Windows SDK UnionMetadata\\Windows.winmd was not found.');
-  console.log('Building NowPlaying.exe with ' + winmd);
+  console.log('Building location and playback helpers with ' + winmd);
   const references = ['System.Web.Extensions.dll', winmd, ...['System.Runtime.WindowsRuntime.dll', 'System.Runtime.dll', 'System.Threading.Tasks.dll', 'System.Runtime.InteropServices.WindowsRuntime.dll'].map((name) => path.join(framework, name)).filter((file) => fs.existsSync(file))];
   execFileSync(compiler, ['/nologo', '/target:exe', '/platform:x64', '/optimize+', ...references.map((file) => '/reference:' + file), '/out:' + path.join(directory, 'NowPlaying.exe'), path.join(__dirname, 'native', 'NowPlaying.cs')], { stdio: 'inherit', windowsHide: true });
+  execFileSync(compiler,['/nologo','/target:exe','/platform:x64','/optimize+',...references.map(file=>'/reference:'+file),'/out:'+path.join(directory,'ApproximateLocation.exe'),path.join(__dirname,'native','ApproximateLocation.cs')],{stdio:'inherit',windowsHide:true});
 } catch (error) {
   if (process.env.REQUIRE_NOWPLAYING === '1') { console.error('NowPlaying.exe is required for this build. ' + error.message); process.exit(1); }
   console.warn('NowPlaying.exe was not built; the system now-playing source will be unavailable. ' + error.message);

@@ -1,0 +1,412 @@
+{
+  "version": 2,
+  "petId": "fox",
+  "identityRevision": "2.1.0-art-1",
+  "avatar": "avatar-256.png",
+  "dock": {
+    "1024": "dock-1024.png",
+    "512": "dock-512.png",
+    "256": "dock-256.png",
+    "128": "dock-128.png",
+    "64": "dock-64.png"
+  },
+  "menu": {
+    "logicalSize": 18,
+    "template": false,
+    "states": {
+      "idle": {
+        "one": "menu-idle.png",
+        "two": "menu-idle@2x.png"
+      },
+      "blink": {
+        "one": "menu-blink.png",
+        "two": "menu-blink@2x.png"
+      },
+      "listen": {
+        "one": "menu-listen.png",
+        "two": "menu-listen@2x.png"
+      },
+      "focus": {
+        "one": "menu-focus.png",
+        "two": "menu-focus@2x.png"
+      }
+    },
+    "blinkDurationMs": 130,
+    "idleIntervalMs": 9000,
+    "reducedMotion": "idle"
+  },
+  "identityAnchors": {
+    "avatar": {
+      "supported": true,
+      "revision": "2.1.0-fit-2",
+      "source": "detected-eye-pair",
+      "orientation": "front",
+      "rotationDegrees": 11.02,
+      "head": {
+        "x": 0.37793,
+        "y": 0.39242,
+        "width": 0.61306,
+        "layer": "front"
+      },
+      "neck": {
+        "x": 0.37793,
+        "y": 0.69282,
+        "width": 0.39236,
+        "layer": "front"
+      },
+      "crown": {
+        "x": 0.37793,
+        "y": 0.31272,
+        "width": 0.55176,
+        "layer": "front"
+      },
+      "temple": {
+        "x": 0.61702,
+        "y": 0.33111,
+        "width": 0.15327,
+        "layer": "front"
+      }
+    },
+    "dock": {
+      "supported": true,
+      "revision": "2.1.0-fit-2",
+      "source": "detected-eye-pair",
+      "orientation": "front",
+      "rotationDegrees": 11.02,
+      "head": {
+        "x": 0.37793,
+        "y": 0.39242,
+        "width": 0.61306,
+        "layer": "front"
+      },
+      "neck": {
+        "x": 0.37793,
+        "y": 0.69282,
+        "width": 0.39236,
+        "layer": "front"
+      },
+      "crown": {
+        "x": 0.37793,
+        "y": 0.31272,
+        "width": 0.55176,
+        "layer": "front"
+      },
+      "temple": {
+        "x": 0.61702,
+        "y": 0.33111,
+        "width": 0.15327,
+        "layer": "front"
+      }
+    },
+    "menu": {
+      "idle": {
+        "supported": true,
+        "revision": "2.1.0-equipped-1",
+        "source": "reviewed-menu-portrait-landmarks",
+        "orientation": "front",
+        "rotationDegrees": 0,
+        "head": {
+          "x": 0.43875,
+          "y": 0.39969,
+          "width": 0.665,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.43875,
+          "y": 0.72554,
+          "width": 0.4389,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.43875,
+          "y": 0.32654,
+          "width": 0.51205,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.69145,
+          "y": 0.36644,
+          "width": 0.17955,
+          "layer": "front"
+        }
+      },
+      "blink": {
+        "supported": true,
+        "revision": "2.1.0-equipped-1",
+        "source": "reviewed-menu-portrait-landmarks",
+        "orientation": "front",
+        "rotationDegrees": 0,
+        "head": {
+          "x": 0.43709,
+          "y": 0.39828,
+          "width": 0.67242,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.43709,
+          "y": 0.72776,
+          "width": 0.4438,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.43709,
+          "y": 0.32431,
+          "width": 0.51776,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.69261,
+          "y": 0.36465,
+          "width": 0.18155,
+          "layer": "front"
+        }
+      },
+      "listen": {
+        "supported": true,
+        "revision": "2.1.0-equipped-1",
+        "source": "reviewed-menu-portrait-landmarks",
+        "orientation": "front",
+        "rotationDegrees": 16,
+        "head": {
+          "x": 0.39548,
+          "y": 0.37438,
+          "width": 0.6843,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.39548,
+          "y": 0.70968,
+          "width": 0.45164,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.39548,
+          "y": 0.29911,
+          "width": 0.52691,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.65551,
+          "y": 0.34016,
+          "width": 0.18476,
+          "layer": "front"
+        }
+      },
+      "focus": {
+        "supported": true,
+        "revision": "2.1.0-equipped-1",
+        "source": "reviewed-menu-portrait-landmarks",
+        "orientation": "front",
+        "rotationDegrees": 0,
+        "head": {
+          "x": 0.436,
+          "y": 0.39555,
+          "width": 0.6843,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.436,
+          "y": 0.73086,
+          "width": 0.45164,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.436,
+          "y": 0.32028,
+          "width": 0.52691,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.69603,
+          "y": 0.36134,
+          "width": 0.18476,
+          "layer": "front"
+        }
+      }
+    }
+  },
+  "sourceMasterSize": [
+    1254,
+    1254
+  ],
+  "equipped": {
+    "headphones": {
+      "accessory": "headphones",
+      "revision": "2.1.0-equipped-1",
+      "avatar": "equipped/headphones/avatar-256.png",
+      "dock": {
+        "512": "equipped/headphones/dock-512.png",
+        "1024": "equipped/headphones/dock-1024.png"
+      },
+      "menu": {
+        "logicalSize": 18,
+        "template": false,
+        "states": {
+          "idle": {
+            "one": "equipped/headphones/menu-idle.png",
+            "two": "equipped/headphones/menu-idle@2x.png"
+          },
+          "blink": {
+            "one": "equipped/headphones/menu-blink.png",
+            "two": "equipped/headphones/menu-blink@2x.png"
+          },
+          "listen": {
+            "one": "equipped/headphones/menu-listen.png",
+            "two": "equipped/headphones/menu-listen@2x.png"
+          },
+          "focus": {
+            "one": "equipped/headphones/menu-focus.png",
+            "two": "equipped/headphones/menu-focus@2x.png"
+          }
+        },
+        "blinkDurationMs": 130,
+        "idleIntervalMs": 9000,
+        "reducedMotion": "idle",
+        "equipmentOpticalScale": 1
+      }
+    },
+    "scarf": {
+      "accessory": "scarf",
+      "revision": "2.1.0-equipped-1",
+      "avatar": "equipped/scarf/avatar-256.png",
+      "dock": {
+        "512": "equipped/scarf/dock-512.png",
+        "1024": "equipped/scarf/dock-1024.png"
+      },
+      "menu": {
+        "logicalSize": 18,
+        "template": false,
+        "states": {
+          "idle": {
+            "one": "equipped/scarf/menu-idle.png",
+            "two": "equipped/scarf/menu-idle@2x.png"
+          },
+          "blink": {
+            "one": "equipped/scarf/menu-blink.png",
+            "two": "equipped/scarf/menu-blink@2x.png"
+          },
+          "listen": {
+            "one": "equipped/scarf/menu-listen.png",
+            "two": "equipped/scarf/menu-listen@2x.png"
+          },
+          "focus": {
+            "one": "equipped/scarf/menu-focus.png",
+            "two": "equipped/scarf/menu-focus@2x.png"
+          }
+        },
+        "blinkDurationMs": 130,
+        "idleIntervalMs": 9000,
+        "reducedMotion": "idle",
+        "equipmentOpticalScale": 1
+      }
+    },
+    "beanie": {
+      "accessory": "beanie",
+      "revision": "2.1.0-equipped-1",
+      "avatar": "equipped/beanie/avatar-256.png",
+      "dock": {
+        "512": "equipped/beanie/dock-512.png",
+        "1024": "equipped/beanie/dock-1024.png"
+      },
+      "menu": {
+        "logicalSize": 18,
+        "template": false,
+        "states": {
+          "idle": {
+            "one": "equipped/beanie/menu-idle.png",
+            "two": "equipped/beanie/menu-idle@2x.png"
+          },
+          "blink": {
+            "one": "equipped/beanie/menu-blink.png",
+            "two": "equipped/beanie/menu-blink@2x.png"
+          },
+          "listen": {
+            "one": "equipped/beanie/menu-listen.png",
+            "two": "equipped/beanie/menu-listen@2x.png"
+          },
+          "focus": {
+            "one": "equipped/beanie/menu-focus.png",
+            "two": "equipped/beanie/menu-focus@2x.png"
+          }
+        },
+        "blinkDurationMs": 130,
+        "idleIntervalMs": 9000,
+        "reducedMotion": "idle",
+        "equipmentOpticalScale": 1
+      }
+    },
+    "bow": {
+      "accessory": "bow",
+      "revision": "2.1.0-equipped-1",
+      "avatar": "equipped/bow/avatar-256.png",
+      "dock": {
+        "512": "equipped/bow/dock-512.png",
+        "1024": "equipped/bow/dock-1024.png"
+      },
+      "menu": {
+        "logicalSize": 18,
+        "template": false,
+        "states": {
+          "idle": {
+            "one": "equipped/bow/menu-idle.png",
+            "two": "equipped/bow/menu-idle@2x.png"
+          },
+          "blink": {
+            "one": "equipped/bow/menu-blink.png",
+            "two": "equipped/bow/menu-blink@2x.png"
+          },
+          "listen": {
+            "one": "equipped/bow/menu-listen.png",
+            "two": "equipped/bow/menu-listen@2x.png"
+          },
+          "focus": {
+            "one": "equipped/bow/menu-focus.png",
+            "two": "equipped/bow/menu-focus@2x.png"
+          }
+        },
+        "blinkDurationMs": 130,
+        "idleIntervalMs": 9000,
+        "reducedMotion": "idle",
+        "equipmentOpticalScale": 1.4
+      }
+    },
+    "sprout": {
+      "accessory": "sprout",
+      "revision": "2.1.0-equipped-1",
+      "avatar": "equipped/sprout/avatar-256.png",
+      "dock": {
+        "512": "equipped/sprout/dock-512.png",
+        "1024": "equipped/sprout/dock-1024.png"
+      },
+      "menu": {
+        "logicalSize": 18,
+        "template": false,
+        "states": {
+          "idle": {
+            "one": "equipped/sprout/menu-idle.png",
+            "two": "equipped/sprout/menu-idle@2x.png"
+          },
+          "blink": {
+            "one": "equipped/sprout/menu-blink.png",
+            "two": "equipped/sprout/menu-blink@2x.png"
+          },
+          "listen": {
+            "one": "equipped/sprout/menu-listen.png",
+            "two": "equipped/sprout/menu-listen@2x.png"
+          },
+          "focus": {
+            "one": "equipped/sprout/menu-focus.png",
+            "two": "equipped/sprout/menu-focus@2x.png"
+          }
+        },
+        "blinkDurationMs": 130,
+        "idleIntervalMs": 9000,
+        "reducedMotion": "idle",
+        "equipmentOpticalScale": 1.5
+      }
+    }
+  },
+  "coordinateSpace": {
+    "identityAnchors": "normalized-image"
+  }
+}

@@ -1,4 +1,5 @@
 'use strict';
+const { createPetPackStore, createPetPackRoute } = require('../../desktop/pet-pack.cjs');
 // The same music service and platform adapters shipped by Windows Portable.
 const http = require('node:http'), crypto = require('node:crypto');
 const { createWeather } = require('../../desktop/weather.cjs');
@@ -14,8 +15,9 @@ async function startCabinBackend({ directory, token, safeStorage, upstream, fetc
   const lan = createLanService({ directory: path.join(directory, 'lan-sync') });
   const music = createMusicService({ directory, safeStorage, ...(upstream ? { upstream } : {}), fetch,
     login: async provider => { const entry = nextLogin; nextLogin = null; return entry?.provider === provider ? { ok: true, cookie: entry.cookie } : { ok: false, cancelled: true }; }, logout: async () => {} });
+  const petStore=createPetPackStore({directory:path.join(directory,'pet-packs')}), petRoute=createPetPackRoute({store:petStore});
   const qq = createQQMusic(fetch);
-  const weather = createWeather({ fetch, publish: () => {} });
+  const weather = createWeather({ directory, safeStorage, fetch, publish: () => {} });
   const weatherApi = createWeatherApi({ fetch, weather });
   const json = (res, value, status = 200) => { res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(value)); };
   const server = http.createServer(async (req, res) => {
@@ -23,9 +25,14 @@ async function startCabinBackend({ directory, token, safeStorage, upstream, fetc
     if (supplied.length !== expected.length || !crypto.timingSafeEqual(supplied, expected)) return json(res, { error: 'Unauthorized' }, 401);
     try {
       const url = new URL(req.url, 'http://127.0.0.1');
-      const chunks = []; let bytes = 0; const limit = url.pathname.startsWith('/sync/') ? 8 * 1024 * 1024 : 32768;
+      const chunks = []; let bytes = 0; const limit = url.pathname.startsWith('/pets/') ? 23 * 1024 * 1024 : url.pathname.startsWith('/sync/') ? 8 * 1024 * 1024 : 32768;
       for await (const chunk of req) { bytes += chunk.length; if (bytes > limit) return json(res, { error: 'Too large' }, 413); chunks.push(chunk); }
       const body = Buffer.concat(chunks).toString('utf8');
+      if (url.pathname.startsWith('/pets/')) {
+        if(url.pathname==='/pets/remove' && req.method==='POST'){await petStore.remove(JSON.parse(body).id);return json(res,{ok:true});}
+        const request=new Request('http://127.0.0.1/desktop-pets'+url.pathname.slice('/pets'.length),{method:req.method,...(req.method==='POST'?{body,headers:{'Content-Type':'application/json'}}:{})});
+        const response=await petRoute(request);res.writeHead(response.status,Object.fromEntries(response.headers));res.end(Buffer.from(await response.arrayBuffer()));return;
+      }
       if (url.pathname.startsWith('/sync/')) {
         const request = new Request('http://127.0.0.1' + req.url, { method: req.method, ...(req.method === 'POST' ? { body } : {}) });
         const response = await lan.routeLocal(request, url.pathname.slice('/sync'.length));

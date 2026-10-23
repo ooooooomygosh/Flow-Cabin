@@ -15,7 +15,8 @@ try {
  server.stdout.on('data', b => log += b); server.stderr.on('data', b => log += b);
  for (let n = 0; ; n++) { if (server.exitCode !== null || n > 100) throw Error(log); if (hasViteLocalOrigin(log, origin) && await fetch(origin).then(r => r.ok, () => false)) break; await new Promise(r => setTimeout(r, 100)); }
  browser = await launchChromium(); const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, reducedMotion: 'reduce' });
- await context.addInitScript(seed => { localStorage.setItem('flow-cabin-onboarding-v1', seed); window.albumDesktopAppearance = { client: true, reduceMotion: true }; window.albumDesktopCapabilities = { lanSync: true, petPacks: true }; window.open = () => null; }, onboardingSeed());
+ await context.addInitScript(()=>localStorage.setItem('flow-cabin-interface-v1','beta'));
+  await context.addInitScript(seed => { localStorage.setItem('flow-cabin-onboarding-v1', seed); window.albumDesktopAppearance = { client: true, reduceMotion: true }; window.albumDesktopCapabilities = { lanSync: true, petPacks: true }; window.open = () => null; }, onboardingSeed());
  let enabled = false;
  const pin = 'a'.repeat(64), token = 'b'.repeat(64);
  await context.route('**/*', route => { const u = new URL(route.request().url()); if (u.origin !== origin) { external.push(u.origin); return route.abort(); } const json = value => route.fulfill({ json: value });
@@ -32,7 +33,8 @@ try {
   return route.continue();
  });
  page = await context.newPage(); page.setDefaultTimeout(12000); page.on('pageerror', e => errors.push(e.stack)); await page.goto(origin);
- await page.getByRole('button', { name: '设置', exact: true }).click(); await page.getByRole('tab', { name: '同步与设备', exact: true }).click();
+ const intro=page.getByRole('button',{name:'知道了',exact:true});if(await intro.isVisible())await intro.click();
+ await page.getByRole('button', { name: '设置', exact: true }).click(); await page.getByRole('button',{name:'全部设置',exact:true}).click(); await page.getByRole('tab', { name: '同步与设备', exact: true }).click();
  await page.getByRole('button', { name: '开启局域网接收', exact: true }).click(); await page.getByRole('button', { name: '生成 2 分钟配对码', exact: true }).click();
  await page.getByAltText('两分钟有效的心流小屋配对二维码').waitFor();
  assert.match(await page.getByAltText('两分钟有效的心流小屋配对二维码').getAttribute('src'), /^data:image\/png;base64,/);
@@ -42,9 +44,9 @@ try {
  await page.getByRole('tab', { name: '房间与桌宠', exact: true }).click();
  await page.getByRole('region', { name: '宠物动画包', exact: true }).waitFor();
  assert.equal(await page.locator('input[type=file][accept*=".zip"]').isEnabled(), true); pass('pet-pack JSON and ZIP import is wired into real settings');
- await page.getByRole('button', { name: '走进生活小屋', exact: true }).click(); await page.getByRole('dialog', { name: '生活小屋', exact: true }).waitFor();
- await page.locator('.room2-canvas[data-art-ready=true]').waitFor(); assert.equal(await page.locator('.room2-header').count(), 0); pass('production settings entry opens the immersive scene without the old control bar');
- await page.keyboard.press('Escape'); assert.equal(await page.getByRole('dialog', { name: '生活小屋', exact: true }).count(), 0);
+ await page.getByRole('button', { name: '布置小屋', exact: true }).click(); await page.getByRole('dialog', { name: '布置小屋', exact: true }).waitFor();
+ await page.locator('.home-canvas[data-art-ready=true]').waitFor(); assert.equal(await page.locator('.room2-header').count(), 0); pass('production settings entry opens the immersive scene without the old control bar');
+ await page.keyboard.press('Escape'); assert.equal(await page.getByRole('dialog', { name: '布置小屋', exact: true }).count(), 0);
  assert.deepEqual(errors, []); assert.deepEqual(external, []); pass('no runtime errors or external requests');
  await fs.writeFile(path.join(output, 'report.json'), JSON.stringify({ passed: true, fixtureData: true, checks, errors, external }, null, 2));
 } catch(error) { console.error('DEVICE SETTINGS FAILURE', errors, await page?.locator('body').innerText()); throw error; } finally { await browser?.close(); server?.kill(); }

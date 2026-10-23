@@ -162,5 +162,7 @@ a{color:var(--px-accent-hi)}
   .app-actions{gap:4px}.app-actions .pixel-button{padding:7px 9px}
   .app-actions .pixel-button.is-primary span{display:none}
   .desktop-controls button{width:30px}
+  .app-actions :is(.album-wall-entry,.interface-choice-button) span{display:inline;font-size:12px}
+  .app-actions :is(.album-wall-entry,.interface-choice-button) svg{display:none}
 }
 }

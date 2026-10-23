@@ -1,0 +1,684 @@
+{
+  "result": "PASS",
+  "scope": "Images and source-coordinate data only, not application interactions.",
+  "imageCount": 24,
+  "totalBytes": 40604358,
+  "checks": [
+    "Lossless WebP decode",
+    "1536x1024 RGB full opacity",
+    "runtime and archived source SHA-256",
+    "all 37,748,736 decoded RGB pixels equal archived PNG masters",
+    "all rectangles inside source",
+    "portrait focal point inside primary target",
+    "object anchors inside own target",
+    "non-overlapping hit targets",
+    "mapped blank rectangles inside their perspective face"
+  ],
+  "images": [
+    {
+      "theme": "pixel",
+      "view": "music",
+      "image": "pixel/corners/music.webp",
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGB",
+      "format": "WEBP",
+      "encoding": "lossless",
+      "bytes": 1357168,
+      "sha256": "03c1bf100202d82435e175e00051715c2cf06e45d5519679d7bfe700ee0f22ab",
+      "decodedPixelsSha256": "fb5cdf464fca3fffd459a82bb8a2c9854c5e0ec32b9bc02a3ff5ad62930caa70",
+      "sourcePng": {
+        "workspaceRelativePath": "outputs/art-v21/corner-sources/pixel/music.png",
+        "bytes": 1844047,
+        "sha256": "33b32d34090ee1106b1663b68a8044c73d213f785234dfb29e2b8cc237424cb1"
+      },
+      "pixelRoundtrip": {
+        "result": "PASS",
+        "comparedPixels": 1572864,
+        "differentPixels": 0,
+        "comparison": "Complete decoded RGB byte equality"
+      },
+      "geometryChecks": "PASS",
+      "runtimeInteraction": "NOT TESTED by this art task"
+    },
+    {
+      "theme": "pixel",
+      "view": "work",
+      "image": "pixel/corners/work.webp",
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGB",
+      "format": "WEBP",
+      "encoding": "lossless",
+      "bytes": 1614038,
+      "sha256": "b28d468b9487a8b6e71e671415d5dab1115cfcd4b57b2cc4e61fc644f6c8c7f8",
+      "decodedPixelsSha256": "d2b958ab2bafc88affe66500eb0595b318f9310aa317bfcb8f76aa0dc6b48e94",
+      "sourcePng": {
+        "workspaceRelativePath": "outputs/art-v21/corner-sources/pixel/work.png",
+        "bytes": 2273065,
+        "sha256": "27a0ca810395c059ec1f653c52ac44d58bc3a9df2b5b3afa9a19874de36a78eb"
+      },
+      "pixelRoundtrip": {
+        "result": "PASS",
+        "comparedPixels": 1572864,
+        "differentPixels": 0,
+        "comparison": "Complete decoded RGB byte equality"
+      },
+      "geometryChecks": "PASS",
+      "runtimeInteraction": "NOT TESTED by this art task"
+    },
+    {
+      "theme": "pixel",
+      "view": "life",
+      "image": "pixel/corners/life.webp",
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGB",
+      "format": "WEBP",
+      "encoding": "lossless",
+      "bytes": 1804552,
+      "sha256": "3d9c419c61692fbe8ab0ecbe4382ffbd33512206529b3ce1267641632dfcaac0",
+      "decodedPixelsSha256": "6b5bc0f4a9014026798c18ae0210b8b30c65d477c3a2753bb70a8cf326e0c027",
+      "sourcePng": {
+        "workspaceRelativePath": "outputs/art-v21/corner-sources/pixel/life.png",
+        "bytes": 2491375,
+        "sha256": "6987398b5aeb22e131e8e85e867a95179a4f8d5c08bb19f861eec86f76b138bb"
+      },
+      "pixelRoundtrip": {
+        "result": "PASS",
+        "comparedPixels": 1572864,
+        "differentPixels": 0,
+        "comparison": "Complete decoded RGB byte equality"
+      },
+      "geometryChecks": "PASS",
+      "runtimeInteraction": "NOT TESTED by this art task"
+    },
+    {
+      "theme": "warm",
+      "view": "music",
+      "image": "warm/corners/music.webp",
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGB",
+      "format": "WEBP",
+      "encoding": "lossless",
+      "bytes": 1624016,
+      "sha256": "48f67e8a14396b63d4255342203dba07cca1e43b67391187176e1b54f465e39b",
+      "decodedPixelsSha256": "97dbaf659c8f370b00c3e78aa946a9912171e43e7db271947745c8c66a905459",
+      "sourcePng": {
+        "workspaceRelativePath": "outputs/art-v21/corner-sources/warm/music.png",
+        "bytes": 2293623,
+        "sha256": "c948ab140f103b085731a765354a5977ddc16b5bc22c9ad17306af267983f743"
+      },
+      "pixelRoundtrip": {
+        "result": "PASS",
+        "comparedPixels": 1572864,
+        "differentPixels": 0,
+        "comparison": "Complete decoded RGB byte equality"
+      },
+      "geometryChecks": "PASS",
+      "runtimeInteraction": "NOT TESTED by this art task"
+    },
+    {
+      "theme": "warm",
+      "view": "work",
+      "image": "warm/corners/work.webp",
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGB",
+      "format": "WEBP",
+      "encoding": "lossless",
+      "bytes": 1641052,
+      "sha256": "312eca604e2425e81327bdf5cef142e41e60c2f780c3e301aa8bba1432a95d4b",
+      "decodedPixelsSha256": "6380975b66acff88e2644f1ce64fb3b1d0ab4d256f929f5d9ca39e3ac3e12d1e",
+      "sourcePng": {
+        "workspaceRelativePath": "outputs/art-v21/corner-sources/warm/work.png",
+        "bytes": 2249335,
+        "sha256": "21fa7ed94caab2d055bb10c16c692f5b6ce6c238d38db90d2bde0f8733e99229"
+      },
+      "pixelRoundtrip": {
+        "result": "PASS",
+        "comparedPixels": 1572864,
+        "differentPixels": 0,
+        "comparison": "Complete decoded RGB byte equality"
+      },
+      "geometryChecks": "PASS",
+      "runtimeInteraction": "NOT TESTED by this art task"
+    },
+    {
+      "theme": "warm",
+      "view": "life",
+      "image": "warm/corners/life.webp",
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGB",
+      "format": "WEBP",
+      "encoding": "lossless",
+      "bytes": 1806720,
+      "sha256": "84f42612bbe8c9593a7ec22e9aff1c1fc9c7ab5af129bcfb527f8e7f57fc5300",
+      "decodedPixelsSha256": "9fed09654583139389e68adacc0dd7096bf5c3444093f5e30c4082684831710f",
+      "sourcePng": {
+        "workspaceRelativePath": "outputs/art-v21/corner-sources/warm/life.png",
+        "bytes": 2486915,
+        "sha256": "7b841e29be14e60bf1f6ca602c56b86a67d4984d8c0822d93323c044a1fe76ff"
+      },
+      "pixelRoundtrip": {
+        "result": "PASS",
+        "comparedPixels": 1572864,
+        "differentPixels": 0,
+        "comparison": "Complete decoded RGB byte equality"
+      },
+      "geometryChecks": "PASS",
+      "runtimeInteraction": "NOT TESTED by this art task"
+    },
+    {
+      "theme": "night-study",
+      "view": "music",
+      "image": "night-study/corners/music.webp",
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGB",
+      "format": "WEBP",
+      "encoding": "lossless",
+      "bytes": 1517226,
+      "sha256": "984c56bd3577bb51de8072e0da14d8d82e42a3a0fd2453a479d6fc446d0dc2b1",
+      "decodedPixelsSha256": "13e293af72eac3303bfdec11170c76949ddcd3f747fa6807cba9155e156b68d5",
+      "sourcePng": {
+        "workspaceRelativePath": "outputs/art-v21/corner-sources/night-study/music.png",
+        "bytes": 2165957,
+        "sha256": "58c7c1e0612b12d5c06fcaabcdad0f2db3084c4cdea1247c373b07ff475614a3"
+      },
+      "pixelRoundtrip": {
+        "result": "PASS",
+        "comparedPixels": 1572864,
+        "differentPixels": 0,
+        "comparison": "Complete decoded RGB byte equality"
+      },
+      "geometryChecks": "PASS",
+      "runtimeInteraction": "NOT TESTED by this art task"
+    },
+    {
+      "theme": "night-study",
+      "view": "work",
+      "image": "night-study/corners/work.webp",
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGB",
+      "format": "WEBP",
+      "encoding": "lossless",
+      "bytes": 1513792,
+      "sha256": "29f9eb4b4b634a5b04c118c27473f3bde935fe4a05f3f05a48dac7c80fac1020",
+      "decodedPixelsSha256": "e38656156d9ae8aa67f48943ae86078c96330b37af623e1d6f15f77e515577f2",
+      "sourcePng": {
+        "workspaceRelativePath": "outputs/art-v21/corner-sources/night-study/work.png",
+        "bytes": 2150243,
+        "sha256": "8230b300a98e9e027715c0bfd9a9359151705b74b8cd90d73e02a370412e326b"
+      },
+      "pixelRoundtrip": {
+        "result": "PASS",
+        "comparedPixels": 1572864,
+        "differentPixels": 0,
+        "comparison": "Complete decoded RGB byte equality"
+      },
+      "geometryChecks": "PASS",
+      "runtimeInteraction": "NOT TESTED by this art task"
+    },
+    {
+      "theme": "night-study",
+      "view": "life",
+      "image": "night-study/corners/life.webp",
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGB",
+      "format": "WEBP",
+      "encoding": "lossless",
+      "bytes": 1721792,
+      "sha256": "5b812489c673a923f9c839d8b771f33a3f388d2fefbfdee915abbc7476fb074a",
+      "decodedPixelsSha256": "582d5c188d67d4c2641000d8b3235edba387b211b6b42b2cfd72a534465d2ed1",
+      "sourcePng": {
+        "workspaceRelativePath": "outputs/art-v21/corner-sources/night-study/life.png",
+        "bytes": 2453198,
+        "sha256": "1d98541196244636730dda32a07847a3f10535009054b731c333167b8c5b33e4"
+      },
+      "pixelRoundtrip": {
+        "result": "PASS",
+        "comparedPixels": 1572864,
+        "differentPixels": 0,
+        "comparison": "Complete decoded RGB byte equality"
+      },
+      "geometryChecks": "PASS",
+      "runtimeInteraction": "NOT TESTED by this art task"
+    },
+    {
+      "theme": "forest",
+      "view": "music",
+      "image": "forest/corners/music.webp",
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGB",
+      "format": "WEBP",
+      "encoding": "lossless",
+      "bytes": 1754786,
+      "sha256": "52683e7ceb49bb5e5d1ca9d6dbbd4893a234a175fe076a743e38ec607637d0b3",
+      "decodedPixelsSha256": "4bad827a2713ad9bd3af893756f6dd640572ad2de6c2cbb9570e917265d95950",
+      "sourcePng": {
+        "workspaceRelativePath": "outputs/art-v21/corner-sources/forest/music.png",
+        "bytes": 2569325,
+        "sha256": "0e35a86144abe4cd3c79473a4b779f0347a5b761639ddce9e9d1526dd2824fa7"
+      },
+      "pixelRoundtrip": {
+        "result": "PASS",
+        "comparedPixels": 1572864,
+        "differentPixels": 0,
+        "comparison": "Complete decoded RGB byte equality"
+      },
+      "geometryChecks": "PASS",
+      "runtimeInteraction": "NOT TESTED by this art task"
+    },
+    {
+      "theme": "forest",
+      "view": "work",
+      "image": "forest/corners/work.webp",
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGB",
+      "format": "WEBP",
+      "encoding": "lossless",
+      "bytes": 1755714,
+      "sha256": "1e028659569198002c66db586f468794856251d188f1643873e9e533f0d70eea",
+      "decodedPixelsSha256": "85f2cb7b17aee66503c58eb63f9d4d372ac2932fa2ce8c5f3e8e37260a7c2755",
+      "sourcePng": {
+        "workspaceRelativePath": "outputs/art-v21/corner-sources/forest/work.png",
+        "bytes": 2525979,
+        "sha256": "1ef84719df52518b41b866afbdbfbc7497ab072711ddf712c792c018535ee0fc"
+      },
+      "pixelRoundtrip": {
+        "result": "PASS",
+        "comparedPixels": 1572864,
+        "differentPixels": 0,
+        "comparison": "Complete decoded RGB byte equality"
+      },
+      "geometryChecks": "PASS",
+      "runtimeInteraction": "NOT TESTED by this art task"
+    },
+    {
+      "theme": "forest",
+      "view": "life",
+      "image": "forest/corners/life.webp",
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGB",
+      "format": "WEBP",
+      "encoding": "lossless",
+      "bytes": 1994646,
+      "sha256": "bbf4873b8c841e1b3fb6d76c54ad58e9fe0aab635a3ee48e515c9bcf8f163337",
+      "decodedPixelsSha256": "a7b8446294ef565fcebf8827da654f47fe6c890ad4a6a7b004999cc438973afb",
+      "sourcePng": {
+        "workspaceRelativePath": "outputs/art-v21/corner-sources/forest/life.png",
+        "bytes": 2857462,
+        "sha256": "2530b0faea318d21633e0bd0d562c0bbdcfec59450366be10acfcab3cb78c80f"
+      },
+      "pixelRoundtrip": {
+        "result": "PASS",
+        "comparedPixels": 1572864,
+        "differentPixels": 0,
+        "comparison": "Complete decoded RGB byte equality"
+      },
+      "geometryChecks": "PASS",
+      "runtimeInteraction": "NOT TESTED by this art task"
+    },
+    {
+      "theme": "seaside",
+      "view": "music",
+      "image": "seaside/corners/music.webp",
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGB",
+      "format": "WEBP",
+      "encoding": "lossless",
+      "bytes": 1558758,
+      "sha256": "52f3052e8f2e6e90bf4d71cb72d5f0eb6c71001a5074b7f462a09cecdbca1e09",
+      "decodedPixelsSha256": "f9cea02d0da178842588167469ce136ac0da3cb42b28f9afd9b3e07df29be3be",
+      "sourcePng": {
+        "workspaceRelativePath": "outputs/art-v21/corner-sources/seaside/music.png",
+        "bytes": 2259824,
+        "sha256": "3b2d69b86d8ffbdee943d2708a2a00f1c3051ddc0aca0525c039869bf2fa1c2f"
+      },
+      "pixelRoundtrip": {
+        "result": "PASS",
+        "comparedPixels": 1572864,
+        "differentPixels": 0,
+        "comparison": "Complete decoded RGB byte equality"
+      },
+      "geometryChecks": "PASS",
+      "runtimeInteraction": "NOT TESTED by this art task"
+    },
+    {
+      "theme": "seaside",
+      "view": "work",
+      "image": "seaside/corners/work.webp",
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGB",
+      "format": "WEBP",
+      "encoding": "lossless",
+      "bytes": 1574814,
+      "sha256": "47df6b7af70b6ddbb995d2429b3a2fb7e70a124d16e5cb3502069419aa4c913f",
+      "decodedPixelsSha256": "be6dfcb50c63ac6a0d33d943bc8340a854b6607eca816ce4a5c6d56ecbbd4787",
+      "sourcePng": {
+        "workspaceRelativePath": "outputs/art-v21/corner-sources/seaside/work.png",
+        "bytes": 2250527,
+        "sha256": "691002244b3c457d5a521d5df995459d33773013c6d8fe6c5039acff14d90a32"
+      },
+      "pixelRoundtrip": {
+        "result": "PASS",
+        "comparedPixels": 1572864,
+        "differentPixels": 0,
+        "comparison": "Complete decoded RGB byte equality"
+      },
+      "geometryChecks": "PASS",
+      "runtimeInteraction": "NOT TESTED by this art task"
+    },
+    {
+      "theme": "seaside",
+      "view": "life",
+      "image": "seaside/corners/life.webp",
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGB",
+      "format": "WEBP",
+      "encoding": "lossless",
+      "bytes": 1886700,
+      "sha256": "e33f86e4f6b3c146a0f91620d182bb4d4f4d157aaf8d14c929bc52340d01e118",
+      "decodedPixelsSha256": "7abd7e7ef1eab75bad60ab2fdadc1d371cb75261cba63f637344945b788f3de4",
+      "sourcePng": {
+        "workspaceRelativePath": "outputs/art-v21/corner-sources/seaside/life.png",
+        "bytes": 2747311,
+        "sha256": "5d3540155abb9997b7f95b814edb5dfad846db4729cc412134f4ef63446705df"
+      },
+      "pixelRoundtrip": {
+        "result": "PASS",
+        "comparedPixels": 1572864,
+        "differentPixels": 0,
+        "comparison": "Complete decoded RGB byte equality"
+      },
+      "geometryChecks": "PASS",
+      "runtimeInteraction": "NOT TESTED by this art task"
+    },
+    {
+      "theme": "starlight",
+      "view": "music",
+      "image": "starlight/corners/music.webp",
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGB",
+      "format": "WEBP",
+      "encoding": "lossless",
+      "bytes": 1485808,
+      "sha256": "8d7a55e44390fc1c1e3c604c2530c1b7d5c2e4c2f6b74cc5753199c3596bb598",
+      "decodedPixelsSha256": "085a2614f8f30ddde3a4015903ddb8f50fc3164d6f66d00d6754eee199d544d2",
+      "sourcePng": {
+        "workspaceRelativePath": "outputs/art-v21/corner-sources/starlight/music.png",
+        "bytes": 2126288,
+        "sha256": "ff26d75d8ec1038ecf43d8411cc34af93d16a51bf06065bbc2f44e893611dc98"
+      },
+      "pixelRoundtrip": {
+        "result": "PASS",
+        "comparedPixels": 1572864,
+        "differentPixels": 0,
+        "comparison": "Complete decoded RGB byte equality"
+      },
+      "geometryChecks": "PASS",
+      "runtimeInteraction": "NOT TESTED by this art task"
+    },
+    {
+      "theme": "starlight",
+      "view": "work",
+      "image": "starlight/corners/work.webp",
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGB",
+      "format": "WEBP",
+      "encoding": "lossless",
+      "bytes": 1577602,
+      "sha256": "8bc5782302c6284a472dd955e5e60404d70f133654cee34472eb8c529a3fa2bb",
+      "decodedPixelsSha256": "4da90a2adbb8b384bbecd97984c3cb027dda299668a5720908df6858ecd7b382",
+      "sourcePng": {
+        "workspaceRelativePath": "outputs/art-v21/corner-sources/starlight/work.png",
+        "bytes": 2276268,
+        "sha256": "1ea56f9ada3e40c5e3a9ffedfa50a412ca00b0caea34dde80547a5cbdceb2097"
+      },
+      "pixelRoundtrip": {
+        "result": "PASS",
+        "comparedPixels": 1572864,
+        "differentPixels": 0,
+        "comparison": "Complete decoded RGB byte equality"
+      },
+      "geometryChecks": "PASS",
+      "runtimeInteraction": "NOT TESTED by this art task"
+    },
+    {
+      "theme": "starlight",
+      "view": "life",
+      "image": "starlight/corners/life.webp",
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGB",
+      "format": "WEBP",
+      "encoding": "lossless",
+      "bytes": 1881374,
+      "sha256": "457574c8d6f4de497680f3a9875df27fc133564e868575319a9b47609e186bad",
+      "decodedPixelsSha256": "afe413939b8b788d2dc7de3f7b9f96c7053dcaa1fe93c148b54263c28933c7ac",
+      "sourcePng": {
+        "workspaceRelativePath": "outputs/art-v21/corner-sources/starlight/life.png",
+        "bytes": 2731474,
+        "sha256": "3e99850df40ba2f58bd6b019df280ade15cf773ca3560df5803e0cbc4e849172"
+      },
+      "pixelRoundtrip": {
+        "result": "PASS",
+        "comparedPixels": 1572864,
+        "differentPixels": 0,
+        "comparison": "Complete decoded RGB byte equality"
+      },
+      "geometryChecks": "PASS",
+      "runtimeInteraction": "NOT TESTED by this art task"
+    },
+    {
+      "theme": "rain-train",
+      "view": "music",
+      "image": "rain-train/corners/music.webp",
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGB",
+      "format": "WEBP",
+      "encoding": "lossless",
+      "bytes": 1590892,
+      "sha256": "6cd757956760c1cde82fb6c55292cd333b030669fa844d159cf3aa25b241cebe",
+      "decodedPixelsSha256": "421359f261d0b14257fb60ccdb1d5e36594be097ee2743c3bda0bdc138b4e76a",
+      "sourcePng": {
+        "workspaceRelativePath": "outputs/art-v21/corner-sources/rain-train/music.png",
+        "bytes": 2205821,
+        "sha256": "ec9b6d2fcbc8c2f77924ea6dc99af5556a8a78d7d9888a31ccd4d810192a9135"
+      },
+      "pixelRoundtrip": {
+        "result": "PASS",
+        "comparedPixels": 1572864,
+        "differentPixels": 0,
+        "comparison": "Complete decoded RGB byte equality"
+      },
+      "geometryChecks": "PASS",
+      "runtimeInteraction": "NOT TESTED by this art task"
+    },
+    {
+      "theme": "rain-train",
+      "view": "work",
+      "image": "rain-train/corners/work.webp",
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGB",
+      "format": "WEBP",
+      "encoding": "lossless",
+      "bytes": 1554516,
+      "sha256": "0dab8cc52bdcfb536fa9081167b0e278d746ae755aa9f55568fd15e30d0b3772",
+      "decodedPixelsSha256": "79e00c87223219b43aa87553c8698f016dbd4f5dd8ecf2c2f87e7a460bde5d7c",
+      "sourcePng": {
+        "workspaceRelativePath": "outputs/art-v21/corner-sources/rain-train/work.png",
+        "bytes": 2146229,
+        "sha256": "c1da85a4a45ddd29a709eac990d43107db1467b2d1343b0bb6d9fdeb70f7149b"
+      },
+      "pixelRoundtrip": {
+        "result": "PASS",
+        "comparedPixels": 1572864,
+        "differentPixels": 0,
+        "comparison": "Complete decoded RGB byte equality"
+      },
+      "geometryChecks": "PASS",
+      "runtimeInteraction": "NOT TESTED by this art task"
+    },
+    {
+      "theme": "rain-train",
+      "view": "life",
+      "image": "rain-train/corners/life.webp",
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGB",
+      "format": "WEBP",
+      "encoding": "lossless",
+      "bytes": 1812918,
+      "sha256": "ead3d96c646808f57ff907eb7195349dec6f1c4d7edb874d392f977b68f5f3ae",
+      "decodedPixelsSha256": "5ace51716d02d846387c103039fa16072215a0bb4e75a9e8a6c2ed7c9b98f714",
+      "sourcePng": {
+        "workspaceRelativePath": "outputs/art-v21/corner-sources/rain-train/life.png",
+        "bytes": 2520022,
+        "sha256": "d7766498b28ad84579f75eb7d14b8d78a94badf9837984bdcffc5f935cab97ca"
+      },
+      "pixelRoundtrip": {
+        "result": "PASS",
+        "comparedPixels": 1572864,
+        "differentPixels": 0,
+        "comparison": "Complete decoded RGB byte equality"
+      },
+      "geometryChecks": "PASS",
+      "runtimeInteraction": "NOT TESTED by this art task"
+    },
+    {
+      "theme": "greenhouse",
+      "view": "music",
+      "image": "greenhouse/corners/music.webp",
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGB",
+      "format": "WEBP",
+      "encoding": "lossless",
+      "bytes": 1759220,
+      "sha256": "e1bd644fbd040c0db9eb7d838b5a2dbed01b2464f251b379f45e93a0b645748e",
+      "decodedPixelsSha256": "976c7c1418d59d7e4fbb77f706eb3e6ac727139de0cc67020c3efe3e07b1755c",
+      "sourcePng": {
+        "workspaceRelativePath": "outputs/art-v21/corner-sources/greenhouse/music.png",
+        "bytes": 2501913,
+        "sha256": "0052bd333334c04d00a425a4f067dfd35aeb5c9151e44454220200eea782162f"
+      },
+      "pixelRoundtrip": {
+        "result": "PASS",
+        "comparedPixels": 1572864,
+        "differentPixels": 0,
+        "comparison": "Complete decoded RGB byte equality"
+      },
+      "geometryChecks": "PASS",
+      "runtimeInteraction": "NOT TESTED by this art task"
+    },
+    {
+      "theme": "greenhouse",
+      "view": "work",
+      "image": "greenhouse/corners/work.webp",
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGB",
+      "format": "WEBP",
+      "encoding": "lossless",
+      "bytes": 1745692,
+      "sha256": "78c899c4e3545bcce67e9d51a2b88dc3d5c7d09e00d8106bc834cab3b92b968f",
+      "decodedPixelsSha256": "b27d6d6321353786e9e4b16b467c8b38bb3b53c48e004ec60d1ce6479175a85e",
+      "sourcePng": {
+        "workspaceRelativePath": "outputs/art-v21/corner-sources/greenhouse/work.png",
+        "bytes": 2472592,
+        "sha256": "3c2b43ff4c168c0624a7fe83950fa9cfc4bf2c26403a9a2cea05691de35c6f2f"
+      },
+      "pixelRoundtrip": {
+        "result": "PASS",
+        "comparedPixels": 1572864,
+        "differentPixels": 0,
+        "comparison": "Complete decoded RGB byte equality"
+      },
+      "geometryChecks": "PASS",
+      "runtimeInteraction": "NOT TESTED by this art task"
+    },
+    {
+      "theme": "greenhouse",
+      "view": "life",
+      "image": "greenhouse/corners/life.webp",
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGB",
+      "format": "WEBP",
+      "encoding": "lossless",
+      "bytes": 2070562,
+      "sha256": "f6b69fdede6f011d8258909e0fcef683f1f32a14b27d7490365ff95b1ca8f1c0",
+      "decodedPixelsSha256": "4c0142c08d23a2e40f2d38e3701fcf262d3bcd7d45e914761e3dfde05653f74f",
+      "sourcePng": {
+        "workspaceRelativePath": "outputs/art-v21/corner-sources/greenhouse/life.png",
+        "bytes": 2925468,
+        "sha256": "39c6b497bb8640d80f783796589b09579522d5456e98faaee7f67c4b424b798b"
+      },
+      "pixelRoundtrip": {
+        "result": "PASS",
+        "comparedPixels": 1572864,
+        "differentPixels": 0,
+        "comparison": "Complete decoded RGB byte equality"
+      },
+      "geometryChecks": "PASS",
+      "runtimeInteraction": "NOT TESTED by this art task"
+    }
+  ],
+  "generatedAt": "2026-10-23",
+  "visualScope": "All 24 rendered source images inspected in the image tool output for focused composition, blank functional surfaces and absent pets/UI. This is not an application screenshot review.",
+  "notes": [
+    "Original PNG masters archived before format conversion; runtime lossless WebP decoded pixels match every source pixel exactly. No resize, recolor, cropping, or visual retouching.",
+    "All seven variant themes reference the corresponding approved pixel corner, their own shell and their own furniture atlas.",
+    "The keyboard inner hit rectangle starts at y=638 so it does not overlap the focus clock rectangle.",
+    "weatherMain is a short temperature/state value only; long location text should be shown in the real tool panel.",
+    "Portrait focal coordinates are recorded as design data; actual mobile cropping and accessibility require runtime review."
+  ],
+  "production": {
+    "scope": "24 corner images only; excludes JSON metadata, shells, and furniture assets.",
+    "runtimeFormat": "lossless-webp",
+    "imageCount": 24,
+    "runtimeImageBytes": 40604358,
+    "pngSourceBytes": 57524261,
+    "savedBytes": 16919903,
+    "savedPercent": 29.4135,
+    "sourceArchiveWorkspacePath": "outputs/art-v21/corner-sources",
+    "encoder": {
+      "library": "Pillow",
+      "libwebp": "1.6.0",
+      "lossless": true,
+      "quality": 100,
+      "method": 6,
+      "exact": true
+    },
+    "decodedPixelEquality": "PASS for all 24 images; all 37,748,736 pixels compared; zero differences.",
+    "shellsChanged": false
+  },
+  "sourceProvenanceVerification": {
+    "result": "PASS",
+    "generator": "image_gen.imagegen",
+    "imageCount": 24,
+    "comparison": "Archived PNG files match the original generated-image output files by SHA-256.",
+    "workspaceEvidence": "outputs/art-v21/corner-sources/generation-provenance-verification.json"
+  },
+  "repeatVerification": {
+    "result": "PASS",
+    "workspaceScript": "outputs/art-v21/verify-corners.py",
+    "workspaceEvidence": "outputs/art-v21/corner-sources/final-verification.json"
+  }
+}

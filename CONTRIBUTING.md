@@ -49,7 +49,7 @@ Windows PowerShell 请先设置 `$env:ALBUM_DESKTOP_TEST_PROFILE`。不要在测
 npm run check
 npm --prefix desktop run build:music
 npm --prefix desktop run build:web
-npm run test:browser
+npm run test:home && npm run test:home-interactions
 ```
 
 `npm run check` 等于 `npm test` + `npm run build`：`npm test` 先跑桌面端单测，再跑根项目的 `node:test` 单测（含 CSS 设计系统守卫 `src/css-lint.test.mjs`）；`npm run build` 产出 index / promo / wallpaper / pet / mini 五个入口的生产构建。CI 跑的就是这一套，再加隔离浏览器回归。
@@ -60,6 +60,18 @@ PR 描述说明问题、变化与实际检查结果。明确区分代码实现�
 
 保持温暖、简洁的房间体验，避免增加无目的的面板。保留稳定的本地存储键、迁移路径、原创素材来源与上游许可证。根项目许可及 GPL 组合发行义务仍待明确，贡献不自动解决再分发许可。
 
-新增截图可运行 `npm run screenshots:product`；只启动隐藏浏览器和回环服务器，使用公开曲库的真实专辑与封面，来源与复现方式见[展示素材说明](docs/showcase-sources.md)。原始封面只缓存在被忽略的测试目录，不随应用分发。生成图是真实渲染，不能标成真实平台账号播放证据。入门向导检查已纳入 `npm run test:browser`，这套离线回归无需下载真实封面。
+新增截图可运行 `npm run screenshots:product`；只启动隐藏浏览器和回环服务器，使用公开曲库的真实专辑与封面，来源与复现方式见[展示素材说明](docs/showcase-sources.md)。原始封面只缓存在被忽略的测试目录，不随应用分发。生成图是真实渲染，不能标成真实平台账号播放证据。原版入门向导检查已纳入 `npm run test:browser`，这套离线回归无需下载真实封面。
 
-核心旅程回归运行 `npm run test:journey`，使用合成收藏与隔离浏览器，不连接真实账号；证据写入 `desktop/test-results/journey/`。
+Beta 核心旅程回归运行 `npm run test:home`，使用合成收藏与隔离浏览器，不连接真实账号；证据写入 `desktop/test-results/home-v21/`。
+
+
+2.1 默认保留原版，Beta 为本机主动选择。完整离线门禁是 `npm run qa`，同时覆盖两种首页：
+
+- `test:interface`：默认原版、取消选择、双向重启、专辑墙草稿与 PNG、记录共用、唯一音频引擎、手机入口。
+- `test:journey/browser/focus-ui/beat/shelf-ui/theme`：继续验证原版唱片架，不因加入 Beta 而移除。
+- `test:home/home-interactions/room-production`：显式启用 Beta，检查角落、家具、播放持续、布置和横竖屏。
+- `test:web-static/playback/ai/journal/memory/study-ui/devices-ui/souvenirs`：共用功能、数据往返与服务边界。
+- 实际 Electron `npm --prefix desktop run test:client`：原版默认、保存并请求重启、新进程进入 Beta、系统宠物与真实媒体解码。
+- 旧 2.0 `room-studio` 只对应开发查询参数下的旧布置页；用户入口已经由 Beta 布置替代，其能力由家具与生产回归继续覆盖。
+
+两小时播放使用 `SOAK_MINUTES=120 npm run test:home`，默认短回归不等待两小时。长测使用静音生成 WAV，不宣称真实账号音源通过。Android 实际 WebView 用 `scripts/android-home-v21.mjs --fixture`，仅在明确命名的专用 AVD 执行。

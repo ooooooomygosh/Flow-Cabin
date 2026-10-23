@@ -1,11 +1,12 @@
 'use strict';
 const crypto = require('node:crypto');
-const domains = ['notes', 'layouts', 'focus'];
+const baseDomains = ['notes', 'layouts', 'focus'], extendedDomains = ['companion', 'recipes', 'favorites'];
+const domainsFor = version => version === 2 ? [...baseDomains,...extendedDomains] : baseDomains;
 const digest = value => crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex');
 function validateSnapshot(value) {
-  if (!value || value.version !== 1) throw new Error('Unsupported sync format');
-  const out = { version: 1 };
-  for (const domain of domains) {
+  if (!value || ![1,2].includes(value.version)) throw new Error('Unsupported sync format');
+  const out = { version: value.version };
+  for (const domain of domainsFor(value.version)) {
     if (!Array.isArray(value[domain]) || value[domain].length > 5000) throw new Error('Invalid sync records');
     const seen = new Set();
     out[domain] = value[domain].map(record => {
@@ -22,17 +23,17 @@ function validateSnapshot(value) {
 }
 function mergeSnapshots(a, b) {
   a = validateSnapshot(a); b = validateSnapshot(b);
-  const result = { version: 1 };
-  for (const domain of domains) {
-    const map = new Map(a[domain].map(r => [r.id, r]));
-    for (const next of b[domain]) {
+  const result = { version: Math.max(a.version,b.version) };
+  for (const domain of domainsFor(result.version)) {
+    const map = new Map((a[domain] || []).map(r => [r.id, r]));
+    for (const next of b[domain] || []) {
       const old = map.get(next.id);
       if (!old || digest(old) === digest(next)) { map.set(next.id, next); continue; }
       // Focus session IDs are immutable and idempotent. Deterministic ties converge.
       const rank = r => `${String(r.rev).padStart(16, '0')}:${r.device}:${digest(r)}`;
       let winner = rank(old) >= rank(next) ? old : next, loser = winner === old ? next : old;
       if (old.deleted || next.deleted) winner = old.deleted ? old : next;
-      if (domain !== 'focus' && !old.deleted && !next.deleted && digest(old.value) !== digest(next.value)
+      if (['notes','layouts','recipes'].includes(domain) && !old.deleted && !next.deleted && digest(old.value) !== digest(next.value)
         && next.base !== digest(old) && old.base !== digest(next)) {
         const copyId = `${next.id.slice(0, 170)}~conflict-${digest(loser).slice(0, 16)}`;
         map.set(copyId, { ...loser, id: copyId });

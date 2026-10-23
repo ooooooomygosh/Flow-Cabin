@@ -43,5 +43,5 @@ test('desk pet CSP keeps effects and fixed local atlas source while excluding ar
   assert.deepEqual(directives['img-src'], ["'self'", require('../policy.cjs').SITE_ORIGIN, 'data:']);
   assert.ok(!directives['img-src'].includes('https:'));
   for (const [name, values] of Object.entries(directives)) if (name !== 'img-src') assert.ok(!values.includes('data:') && !values.includes('*') && !values.includes("'unsafe-eval'"), `${name} stays strict`);
-  assert.deepEqual(directives['script-src'], ["'self'"]); assert.deepEqual(directives['connect-src'], ["'none'"]); assert.deepEqual(directives['default-src'], ["'self'"]);
+  assert.deepEqual(directives['script-src'], ["'self'"]); assert.deepEqual(directives['connect-src'], ["'self'"]); assert.deepEqual(directives['default-src'], ["'self'"]);
 });

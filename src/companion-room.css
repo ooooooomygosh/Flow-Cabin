@@ -33,7 +33,7 @@
    it to --cat-floor-scene px (≥28px from the edge); before that, the old baselines. */
 .cabin-scene[data-room-look=pixel],.cabin-scene[data-room-look=warm]{--scene-floor:880}
 .cabin-scene[data-room-look=night-study]{--scene-floor:1000}
-.cabin-scene:is([data-room-look=forest],[data-room-look=seaside],[data-room-look=starlight]){--scene-floor:900}
+.cabin-scene:is([data-room-look=forest],[data-room-look=seaside],[data-room-look=starlight],[data-room-look=rain-train],[data-room-look=greenhouse]){--scene-floor:900}
 /* bubble showing: lift the cat above the console (.room-turntable z10) — both live in .room-scene's isolated stacking context, so this stays under the focus dock/dialogs */
 .room-scene .room-cat:has(> .room-cat-bubble){z-index:var(--z-room-pet,22);pointer-events:none}
 /* …but the pet itself stays pokeable (专注暂停中 too): only a body-sized zone catches the pointer, so the lifted

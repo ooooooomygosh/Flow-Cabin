@@ -1,0 +1,814 @@
+{
+  "schemaVersion": 1,
+  "theme": "seaside",
+  "kind": "full-screen-corner-scenes",
+  "coordinateSpace": "source-pixels",
+  "sourceSize": {
+    "width": 1536,
+    "height": 1024
+  },
+  "opaque": true,
+  "camera": "seated-eye close view, gentle three-quarter perspective",
+  "responsive": {
+    "desktop": "Fit the entire source aspect ratio or use restrained cover cropping.",
+    "portrait": "Crop about each view's portraitFocalPoint; retain accessible text navigation and full-room return in application chrome."
+  },
+  "views": {
+    "music": {
+      "image": "music.webp",
+      "label": "听歌角",
+      "focalPoint": {
+        "x": 760,
+        "y": 580
+      },
+      "portraitFocalPoint": {
+        "x": 760,
+        "y": 580
+      },
+      "primary": "deck",
+      "anchors": {
+        "deck": {
+          "x": 710,
+          "y": 575
+        },
+        "library": {
+          "x": 172,
+          "y": 690
+        },
+        "speaker": {
+          "x": 1330,
+          "y": 531
+        },
+        "lyrics": {
+          "x": 1285,
+          "y": 856
+        }
+      },
+      "hotspotRects": {
+        "deck": {
+          "x": 398,
+          "y": 466,
+          "width": 636,
+          "height": 392
+        },
+        "library": {
+          "x": 0,
+          "y": 476,
+          "width": 350,
+          "height": 365
+        },
+        "speaker": {
+          "x": 1195,
+          "y": 356,
+          "width": 282,
+          "height": 360
+        },
+        "lyrics": {
+          "x": 1037,
+          "y": 748,
+          "width": 490,
+          "height": 233
+        }
+      },
+      "blankRects": {
+        "albumCover1": {
+          "x": 45,
+          "y": 626,
+          "width": 105,
+          "height": 105
+        },
+        "albumCover2": {
+          "x": 199,
+          "y": 609,
+          "width": 105,
+          "height": 105
+        },
+        "recordLabel": {
+          "x": 680,
+          "y": 556,
+          "width": 64,
+          "height": 22
+        },
+        "lyricCurrent": {
+          "x": 1152,
+          "y": 812,
+          "width": 110,
+          "height": 55
+        },
+        "lyricNext": {
+          "x": 1338,
+          "y": 812,
+          "width": 100,
+          "height": 80
+        }
+      },
+      "planes": {
+        "albumCover1": {
+          "quad": [
+            [
+              30,
+              614
+            ],
+            [
+              164,
+              591
+            ],
+            [
+              168,
+              751
+            ],
+            [
+              33,
+              778
+            ]
+          ],
+          "contentAspectRatio": 1
+        },
+        "albumCover2": {
+          "quad": [
+            [
+              188,
+              586
+            ],
+            [
+              315,
+              565
+            ],
+            [
+              317,
+              725
+            ],
+            [
+              192,
+              747
+            ]
+          ],
+          "contentAspectRatio": 1
+        },
+        "lyricLeft": {
+          "quad": [
+            [
+              1175,
+              755
+            ],
+            [
+              1325,
+              774
+            ],
+            [
+              1243,
+              915
+            ],
+            [
+              1069,
+              887
+            ]
+          ]
+        },
+        "lyricRight": {
+          "quad": [
+            [
+              1340,
+              770
+            ],
+            [
+              1497,
+              794
+            ],
+            [
+              1458,
+              944
+            ],
+            [
+              1259,
+              917
+            ]
+          ]
+        }
+      },
+      "movingElements": {
+        "record": {
+          "center": {
+            "x": 711,
+            "y": 575
+          },
+          "radiusX": 169,
+          "radiusY": 73,
+          "rotationPlane": "ellipse",
+          "occludedByTonearm": true
+        }
+      },
+      "windowQuad": [
+        [
+          42,
+          0
+        ],
+        [
+          635,
+          0
+        ],
+        [
+          634,
+          259
+        ],
+        [
+          41,
+          354
+        ]
+      ],
+      "notes": [
+        "Album covers are two unobscured front-facing sleeve planes; use the quads to preserve physical perspective.",
+        "The full lyric text belongs in the opened tool; blankRects are for a short current/next-line preview."
+      ],
+      "source": {
+        "generator": "image_gen.imagegen",
+        "originalFile": "exec-f408a2f2-5914-49b1-b28b-73594c874cfb.png",
+        "references": [
+          "/room-scenes/v21/pixel/corners/music.webp",
+          "/room-scenes/v21/seaside/shell.png",
+          "/room-scenes/v21/furniture/seaside/atlas.webp"
+        ],
+        "promptsFile": "prompts.json",
+        "postProcessed": false,
+        "archivedPng": {
+          "workspaceRelativePath": "outputs/art-v21/corner-sources/seaside/music.png",
+          "bytes": 2259824,
+          "sha256": "3b2d69b86d8ffbdee943d2708a2a00f1c3051ddc0aca0525c039869bf2fa1c2f"
+        },
+        "pixelsModified": false,
+        "runtimeEncoding": "lossless-webp",
+        "generationReferences": [
+          "/room-scenes/v21/pixel/corners/music.png",
+          "/room-scenes/v21/seaside/shell.png",
+          "/room-scenes/v21/furniture/seaside/atlas.png"
+        ],
+        "referenceNote": "Generation used the PNG references recorded in generationReferences. Current corner and furniture reference URLs point to their lossless WebP runtime equivalents; original PNG provenance is retained in the corresponding outputs archives."
+      },
+      "verification": {
+        "image": {
+          "width": 1536,
+          "height": 1024,
+          "mode": "RGB",
+          "format": "WEBP",
+          "encoding": "lossless",
+          "bytes": 1558758,
+          "sha256": "52f3052e8f2e6e90bf4d71cb72d5f0eb6c71001a5074b7f462a09cecdbca1e09",
+          "decodedPixelsSha256": "f9cea02d0da178842588167469ce136ac0da3cb42b28f9afd9b3e07df29be3be"
+        },
+        "visualInspection": "This generated variant was inspected for composition, blank dynamic faces, same functional object positions, full-bleed opaque image, no baked pet/text/UI.",
+        "coordinatePrecision": "Functional object planes preserved from the pixel reference and visually compared in this variant; conservatively inset blank rectangles and inner hit targets retained. About ±5 px tracing tolerance. Theme materials do not imply runtime interaction verification.",
+        "runtimeIntegration": "NOT TESTED; image generation and coordinate inspection do not verify app interactions.",
+        "pixelRoundtrip": {
+          "result": "PASS",
+          "comparedPixels": 1572864,
+          "differentPixels": 0,
+          "comparison": "Complete decoded RGB byte equality"
+        }
+      },
+      "blankRectPlanes": {
+        "albumCover1": "albumCover1",
+        "albumCover2": "albumCover2",
+        "lyricCurrent": "lyricLeft",
+        "lyricNext": "lyricRight"
+      }
+    },
+    "work": {
+      "image": "work.webp",
+      "label": "工作角",
+      "focalPoint": {
+        "x": 800,
+        "y": 520
+      },
+      "portraitFocalPoint": {
+        "x": 800,
+        "y": 520
+      },
+      "primary": "focus",
+      "anchors": {
+        "focus": {
+          "x": 811,
+          "y": 504
+        },
+        "tasks": {
+          "x": 1230,
+          "y": 226
+        },
+        "notes": {
+          "x": 1190,
+          "y": 782
+        },
+        "lamp": {
+          "x": 413,
+          "y": 405
+        },
+        "keyboard": {
+          "x": 493,
+          "y": 711
+        }
+      },
+      "hotspotRects": {
+        "focus": {
+          "x": 650,
+          "y": 358,
+          "width": 348,
+          "height": 270
+        },
+        "tasks": {
+          "x": 965,
+          "y": 67,
+          "width": 521,
+          "height": 289
+        },
+        "notes": {
+          "x": 907,
+          "y": 658,
+          "width": 561,
+          "height": 276
+        },
+        "lamp": {
+          "x": 282,
+          "y": 221,
+          "width": 310,
+          "height": 362
+        },
+        "keyboard": {
+          "x": 191,
+          "y": 638,
+          "width": 605,
+          "height": 178
+        }
+      },
+      "blankRects": {
+        "focusTime": {
+          "x": 715,
+          "y": 480,
+          "width": 195,
+          "height": 42
+        },
+        "focusCaption": {
+          "x": 760,
+          "y": 525,
+          "width": 125,
+          "height": 12
+        },
+        "task1": {
+          "x": 999,
+          "y": 151,
+          "width": 96,
+          "height": 125
+        },
+        "task2": {
+          "x": 1154,
+          "y": 169,
+          "width": 112,
+          "height": 128
+        },
+        "task3": {
+          "x": 1327,
+          "y": 173,
+          "width": 114,
+          "height": 139
+        },
+        "noteTitle": {
+          "x": 1050,
+          "y": 720,
+          "width": 110,
+          "height": 35
+        },
+        "notePreview": {
+          "x": 1229,
+          "y": 749,
+          "width": 94,
+          "height": 61
+        }
+      },
+      "planes": {
+        "focusDisplay": {
+          "quad": [
+            [
+              688,
+              451
+            ],
+            [
+              928,
+              471
+            ],
+            [
+              927,
+              552
+            ],
+            [
+              689,
+              535
+            ]
+          ]
+        },
+        "task1": {
+          "quad": [
+            [
+              987,
+              110
+            ],
+            [
+              1107,
+              115
+            ],
+            [
+              1107,
+              294
+            ],
+            [
+              987,
+              287
+            ]
+          ]
+        },
+        "task2": {
+          "quad": [
+            [
+              1142,
+              131
+            ],
+            [
+              1281,
+              136
+            ],
+            [
+              1281,
+              322
+            ],
+            [
+              1142,
+              312
+            ]
+          ]
+        },
+        "task3": {
+          "quad": [
+            [
+              1316,
+              126
+            ],
+            [
+              1459,
+              132
+            ],
+            [
+              1459,
+              333
+            ],
+            [
+              1316,
+              323
+            ]
+          ]
+        },
+        "noteLeft": {
+          "quad": [
+            [
+              1066,
+              665
+            ],
+            [
+              1219,
+              693
+            ],
+            [
+              1126,
+              842
+            ],
+            [
+              944,
+              800
+            ]
+          ]
+        },
+        "noteRight": {
+          "quad": [
+            [
+              1241,
+              691
+            ],
+            [
+              1426,
+              731
+            ],
+            [
+              1386,
+              898
+            ],
+            [
+              1144,
+              848
+            ]
+          ]
+        }
+      },
+      "windowQuad": [
+        [
+          0,
+          0
+        ],
+        [
+          271,
+          0
+        ],
+        [
+          270,
+          350
+        ],
+        [
+          0,
+          403
+        ]
+      ],
+      "notes": [
+        "Clock screen, all three task cards and notebook pages are intentionally blank.",
+        "Keyboard and mouse are a secondary interaction group; no separate controls are baked into the background."
+      ],
+      "source": {
+        "generator": "image_gen.imagegen",
+        "originalFile": "exec-d6fe0d2d-3554-4d90-9522-bef917dfde3c.png",
+        "references": [
+          "/room-scenes/v21/pixel/corners/work.webp",
+          "/room-scenes/v21/seaside/shell.png",
+          "/room-scenes/v21/furniture/seaside/atlas.webp"
+        ],
+        "promptsFile": "prompts.json",
+        "postProcessed": false,
+        "archivedPng": {
+          "workspaceRelativePath": "outputs/art-v21/corner-sources/seaside/work.png",
+          "bytes": 2250527,
+          "sha256": "691002244b3c457d5a521d5df995459d33773013c6d8fe6c5039acff14d90a32"
+        },
+        "pixelsModified": false,
+        "runtimeEncoding": "lossless-webp",
+        "generationReferences": [
+          "/room-scenes/v21/pixel/corners/work.png",
+          "/room-scenes/v21/seaside/shell.png",
+          "/room-scenes/v21/furniture/seaside/atlas.png"
+        ],
+        "referenceNote": "Generation used the PNG references recorded in generationReferences. Current corner and furniture reference URLs point to their lossless WebP runtime equivalents; original PNG provenance is retained in the corresponding outputs archives."
+      },
+      "verification": {
+        "image": {
+          "width": 1536,
+          "height": 1024,
+          "mode": "RGB",
+          "format": "WEBP",
+          "encoding": "lossless",
+          "bytes": 1574814,
+          "sha256": "47df6b7af70b6ddbb995d2429b3a2fb7e70a124d16e5cb3502069419aa4c913f",
+          "decodedPixelsSha256": "be6dfcb50c63ac6a0d33d943bc8340a854b6607eca816ce4a5c6d56ecbbd4787"
+        },
+        "visualInspection": "This generated variant was inspected for composition, blank dynamic faces, same functional object positions, full-bleed opaque image, no baked pet/text/UI.",
+        "coordinatePrecision": "Functional object planes preserved from the pixel reference and visually compared in this variant; conservatively inset blank rectangles and inner hit targets retained. About ±5 px tracing tolerance. Theme materials do not imply runtime interaction verification.",
+        "runtimeIntegration": "NOT TESTED; image generation and coordinate inspection do not verify app interactions.",
+        "pixelRoundtrip": {
+          "result": "PASS",
+          "comparedPixels": 1572864,
+          "differentPixels": 0,
+          "comparison": "Complete decoded RGB byte equality"
+        }
+      },
+      "blankRectPlanes": {
+        "focusTime": "focusDisplay",
+        "focusCaption": "focusDisplay",
+        "task1": "task1",
+        "task2": "task2",
+        "task3": "task3",
+        "noteTitle": "noteLeft",
+        "notePreview": "noteRight"
+      }
+    },
+    "life": {
+      "image": "life.webp",
+      "label": "生活角",
+      "focalPoint": {
+        "x": 1240,
+        "y": 620
+      },
+      "portraitFocalPoint": {
+        "x": 1240,
+        "y": 620
+      },
+      "primary": "pet",
+      "anchors": {
+        "pet": {
+          "x": 1290,
+          "y": 785
+        },
+        "weather": {
+          "x": 1360,
+          "y": 390
+        },
+        "tea": {
+          "x": 978,
+          "y": 495
+        },
+        "plant": {
+          "x": 143,
+          "y": 430
+        },
+        "rest": {
+          "x": 565,
+          "y": 492
+        }
+      },
+      "hotspotRects": {
+        "pet": {
+          "x": 1051,
+          "y": 620,
+          "width": 483,
+          "height": 309
+        },
+        "weather": {
+          "x": 1264,
+          "y": 304,
+          "width": 195,
+          "height": 170
+        },
+        "tea": {
+          "x": 829,
+          "y": 412,
+          "width": 294,
+          "height": 171
+        },
+        "plant": {
+          "x": 0,
+          "y": 80,
+          "width": 247,
+          "height": 617
+        },
+        "rest": {
+          "x": 263,
+          "y": 250,
+          "width": 563,
+          "height": 592
+        }
+      },
+      "blankRects": {
+        "weatherMain": {
+          "x": 1298,
+          "y": 375,
+          "width": 108,
+          "height": 24
+        }
+      },
+      "planes": {
+        "weatherDisplay": {
+          "quad": [
+            [
+              1290,
+              354
+            ],
+            [
+              1410,
+              371
+            ],
+            [
+              1410,
+              417
+            ],
+            [
+              1290,
+              401
+            ]
+          ]
+        }
+      },
+      "petMount": {
+        "feet": {
+          "x": 1290,
+          "y": 800
+        },
+        "spriteBounds": {
+          "x": 1155,
+          "y": 548,
+          "width": 270,
+          "height": 265
+        },
+        "cushionRect": {
+          "x": 1130,
+          "y": 696,
+          "width": 340,
+          "height": 118
+        },
+        "frontOccluderPolygon": [
+          [
+            1085,
+            771
+          ],
+          [
+            1142,
+            817
+          ],
+          [
+            1284,
+            842
+          ],
+          [
+            1424,
+            818
+          ],
+          [
+            1498,
+            764
+          ],
+          [
+            1495,
+            848
+          ],
+          [
+            1435,
+            893
+          ],
+          [
+            1291,
+            919
+          ],
+          [
+            1140,
+            878
+          ],
+          [
+            1068,
+            838
+          ]
+        ]
+      },
+      "windowQuad": [
+        [
+          901,
+          0
+        ],
+        [
+          1483,
+          0
+        ],
+        [
+          1483,
+          419
+        ],
+        [
+          900,
+          328
+        ]
+      ],
+      "notes": [
+        "Pet bed is empty in the image; add the current pet at petMount.feet and composite the front cushion edge above its feet if needed.",
+        "Weather instrument display is blank. Use weatherMain for a short temperature/state value; show location and long details in the opened weather tool."
+      ],
+      "source": {
+        "generator": "image_gen.imagegen",
+        "originalFile": "exec-59de37a0-b7bc-458e-ad5f-9cda32350812.png",
+        "references": [
+          "/room-scenes/v21/pixel/corners/life.webp",
+          "/room-scenes/v21/seaside/shell.png",
+          "/room-scenes/v21/furniture/seaside/atlas.webp"
+        ],
+        "promptsFile": "prompts.json",
+        "postProcessed": false,
+        "archivedPng": {
+          "workspaceRelativePath": "outputs/art-v21/corner-sources/seaside/life.png",
+          "bytes": 2747311,
+          "sha256": "5d3540155abb9997b7f95b814edb5dfad846db4729cc412134f4ef63446705df"
+        },
+        "pixelsModified": false,
+        "runtimeEncoding": "lossless-webp",
+        "generationReferences": [
+          "/room-scenes/v21/pixel/corners/life.png",
+          "/room-scenes/v21/seaside/shell.png",
+          "/room-scenes/v21/furniture/seaside/atlas.png"
+        ],
+        "referenceNote": "Generation used the PNG references recorded in generationReferences. Current corner and furniture reference URLs point to their lossless WebP runtime equivalents; original PNG provenance is retained in the corresponding outputs archives."
+      },
+      "verification": {
+        "image": {
+          "width": 1536,
+          "height": 1024,
+          "mode": "RGB",
+          "format": "WEBP",
+          "encoding": "lossless",
+          "bytes": 1886700,
+          "sha256": "e33f86e4f6b3c146a0f91620d182bb4d4f4d157aaf8d14c929bc52340d01e118",
+          "decodedPixelsSha256": "7abd7e7ef1eab75bad60ab2fdadc1d371cb75261cba63f637344945b788f3de4"
+        },
+        "visualInspection": "This generated variant was inspected for composition, blank dynamic faces, same functional object positions, full-bleed opaque image, no baked pet/text/UI.",
+        "coordinatePrecision": "Functional object planes preserved from the pixel reference and visually compared in this variant; conservatively inset blank rectangles and inner hit targets retained. About ±5 px tracing tolerance. Theme materials do not imply runtime interaction verification.",
+        "runtimeIntegration": "NOT TESTED; image generation and coordinate inspection do not verify app interactions.",
+        "pixelRoundtrip": {
+          "result": "PASS",
+          "comparedPixels": 1572864,
+          "differentPixels": 0,
+          "comparison": "Complete decoded RGB byte equality"
+        }
+      },
+      "blankRectPlanes": {
+        "weatherMain": "weatherDisplay"
+      }
+    }
+  },
+  "style": "TARGET THEME: Seaside cottage. Whitewashed plank walls, pale bleached oak window trim, a calm turquoise ocean and distant headland through the same window opening. Furniture bleached oak, muted seafoam/mist blue painted panels and ivory cotton linen, subtle cane weave, small brushed brass details. Fresh warm sandy morning light, soft clear blue/cream palette, no orange cast. If scene contains plant, compact broadleaf palm in a sandy ceramic pot in SAME position. No nautical symbols, anchors, shells or ropes.",
+  "runtimeEncoding": "lossless-webp"
+}

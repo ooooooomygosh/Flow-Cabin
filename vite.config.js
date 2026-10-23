@@ -1,3 +1,4 @@
+import { artProduction } from './scripts/art-production.mjs';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import { fileURLToPath } from 'node:url';
@@ -11,7 +12,7 @@ const chunkGroups = [
 ];
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), artProduction()],
   optimizeDeps: { include: ['qrcode', 'jsqr', 'pixi.js', 'pixi.js/unsafe-eval', 'motion/react', '@applemusic-like-lyrics/react', '@applemusic-like-lyrics/lyric'] },
   server: { watch: { ignored: ['**/android/**/build/**', '**/android/.gradle/**', '**/android/app/src/main/assets/**', '**/dist-android/**'] } },
   // Offline test copies can share dependencies, but must not share Vite's mutable cache.

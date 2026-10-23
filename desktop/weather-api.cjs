@@ -9,7 +9,7 @@ function normalizeLocation(value) {
   for (const key of ['admin1', 'admin2', 'country']) if (typeof value[key] === 'string') result[key] = value[key].slice(0, 80);
   return result;
 }
-function createWeatherApi({ fetch, weather, now = Date.now }) {
+function createWeatherApi({ fetch, weather, location, now = Date.now }) {
   const cache = new Map(); let lastSearch = -Infinity;
   async function search(name) {
     if (typeof name !== 'string' || name.trim().length < 2 || name.trim().length > 80) throw new Error('请输入 2 至 80 字的城市或地区名称');
@@ -31,7 +31,10 @@ function createWeatherApi({ fetch, weather, now = Date.now }) {
     try {
       const url = new URL(request.url), origin = request.headers.get('origin');
       if (origin && origin !== url.origin) return json({ error: 'Forbidden' }, 403);
+      if (request.method === 'POST' && subpath === '/location' && location) return json(await location.request());
       if (request.method === 'GET' && subpath === '/search') return json({ results: await search(url.searchParams.get('name')) });
+      if (request.method === 'GET' && subpath === '/provider') return json(weather.profile());
+      if (request.method === 'POST' && subpath === '/provider') { const body = await request.text(); if (body.length > 2048) throw Error('配置过长'); return json(await weather.configure(JSON.parse(body))); }
       if (request.method === 'GET' && subpath === '/status') return json({ report: weather?.state() || null });
       if (request.method === 'POST' && subpath === '/set' && weather) { const body = await request.text(); if (body.length > 1024) throw new Error('地点设置过长'); return json({ report: await weather.set(JSON.parse(body)) }); }
       return json({ error: 'Not found' }, 404);

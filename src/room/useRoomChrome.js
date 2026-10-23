@@ -11,9 +11,9 @@ export const roomCovered = (doc = document) => Boolean(doc.querySelector('dialog
 // Everything around the room: 沉浸 (zen) and its tools, 唱机特写 (corner), the
 // focus dock, the filter panel, 桌面模式 / 沉入桌面, fullscreen and the
 // matching <html> classes, plus the Z / T / Esc keys.
-export default function useRoomChrome({ client, notify }) {
+export default function useRoomChrome({ client, notify, restoreDock = true }) {
   const [zen, setZen] = useState(false), [zenTools, setZenTools] = useState(false), [corner, setCorner] = useState(false), [filtersOpen, setFiltersOpen] = useState(false);
-  const [dock, setDock] = useState(() => readJSON(DOCK_KEY, { open: false, tab: 'timer' }));
+  const [dock, setDock] = useState(() => ({ ...readJSON(DOCK_KEY, { open: false, tab: 'timer' }), ...(!restoreDock ? { open: false } : {}) }));
   const saveDock = useCallback((change) => setDock((old) => { const next = { ...old, ...change }; writeJSON(DOCK_KEY, next); return next; }), []);
   const fullscreen = useDesktopFullscreen();
   const exitFullscreen = useCallback(() => requestCabinFullscreen({ exit: true }).catch(() => notify?.('无法退出全屏，请重试或使用系统退出全屏快捷键。')), [notify]);

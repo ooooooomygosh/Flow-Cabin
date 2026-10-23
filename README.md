@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="public/icons/icon-192.png" width="84" alt="心流小屋图标">
+<img src="public/pet-art/v21/cat/avatar-256.png" width="84" alt="心流小屋图标">
 
 # 心流小屋 · Flow Cabin
 
@@ -26,14 +26,14 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0--only-blue" alt="GPL-3.0-only 许可证" height="20"></a>
 </p>
 
-<img src="docs/assets/screenshots/cabin.jpg" width="100%" alt="心流小屋：雪夜木屋里的十二格唱片架、木屋唱机、奶糖与壁炉">
+<img src="docs/assets/screenshots/cabin.jpg" width="100%" alt="默认原版首页：唱片架、唱机、专注与伙伴">
 
 </div>
 
 ---
 
 <details>
-<summary>看看小屋如何动起来（演示动图）</summary>
+<summary>原版界面功能演示</summary>
 
 <img src="docs/assets/cabin-tour.gif" width="100%" alt="心流小屋功能演示：房间、唱片、专注与小猫">
 
@@ -45,10 +45,13 @@
 
 Android 适配版包含 Portable 同源的 QQ / 网易云登录音乐服务、全面屏布局和本地保存，安装与构建见 [Android 说明](docs/android.md)。手机版本仍待真实账号和真机验收；支持范围也在其中列出。
 
-- **唱片架与唱机** —— 搜专辑、贴 QQ 音乐链接或手填；双击封面就放上唱机，拖过去也行。每张能写笔记、换黑胶外观、收进唱片盒。
+- **原版继续保留，Beta 主动体验** —— 默认仍是熟悉的唱片架，顶部直接打开专辑墙。点击 Beta 并重启可进入新小屋，也能随时切回。Beta 的听歌、工作与生活角各有全屏近景，手机可滑动换区。
+- **唱片库与唱机** —— 搜专辑、贴 QQ 音乐链接或手填；封面上的播放按钮直接继续音乐。曲库、队列、歌词和笔记在小屋内打开，切角落不打断播放。
 - **智能唱片机** —— 说一句「学习 50 分钟，帮我搭配音乐」，AI 排一整张歌单；可以只收进唱片架，也可以收下并直接开始这一轮。
 - **专注与学习** —— 四档番茄节奏、待办、连续天数、7 天趋势、一年热力图；15 本词书用 FSRS 复习，还能加自己的考试倒计时。
-- **六个房间** —— 像素、琥珀、月夜书桌、林间书屋、海边慢屋、星夜阁楼。窗外天色跟着太阳走，天气和城市可以自己选。
+- **八个房间** —— 像素、琥珀、月夜、林间、海边、星光、雨夜列车和温室；各有听歌、工作、休息预设，可吸附布置、撤销、另存与恢复。天气可请求系统大致位置，也可搜索城市。
+- **五位伙伴** —— 24 类实际绘制动作；选择和配饰同步到首页、独立桌宠和支持的系统表面。macOS 有彩色菜单栏小宠物，点击可控制音乐和专注。
+- **自己的设备与场景** —— 配对后遥控音乐、查看歌词、接力专注；保存场景、睡前淡出、导出小屋明信片。备份 v5 包含布局与导入宠物素材。
 - **奶糖** —— 桌面版在别的窗口打字或点鼠标时，它会落爪回应；只统计次数，不读按键内容。
 - **小屋日记** —— 随手记、手记和小屋来信都存在本机；近 7 天、时段分布、一年热力图和周报都能导出成图片。
 
@@ -59,13 +62,19 @@ Android 适配版包含 Portable 同源的 QQ / 网易云登录音乐服务、�
   </tr>
   <tr>
     <td width="50%"><img src="docs/assets/screenshots/smart-turntable.jpg" alt="智能唱片机：根据学习 50 分钟的计划生成完整歌单，提供只收进唱片架与收进唱片架并开始这一轮两种选择"><br><sub>智能唱片机 · 按计划编排一张完整歌单</sub></td>
-    <td width="50%"><img src="docs/assets/screenshots/personalization.jpg" alt="房间与桌宠设置：六间房、五位伙伴，以及窗外天色的城市与真实天气开关"><br><sub>房间与桌宠 · 六间房 · 五位伙伴 · 窗外天色</sub></td>
+    <td width="50%"><img src="docs/assets/screenshots/work-corner-v21.png" alt="Beta 全屏工作角：真实专注钟、任务板与随手记"><br><sub>Beta 全屏工作角 · 专注 · 任务 · 随手记</sub></td>
   </tr>
 </table>
 
 ---
 
-## 六间房
+## Beta 生活小屋
+
+从顶部「Beta」或「设置 → 小屋 Beta」主动开启，重启后生效。新小屋顶部同样保留专辑墙。
+
+<img src="docs/assets/screenshots/cabin-v21.png" width="100%" alt="可选 Beta 小屋：听歌、工作与生活三个区域">
+
+## 原版六间房
 
 <img src="docs/assets/screenshots/rooms-grid.webp" width="100%" alt="六间房：像素小屋、琥珀小屋、月夜书桌、林间书屋、海边慢屋、星夜阁楼">
 
@@ -91,7 +100,7 @@ Android 适配版包含 Portable 同源的 QQ / 网易云登录音乐服务、�
 
 [**前往 Releases 选择安装包 →**](https://github.com/ooooooomygosh/Flow-Cabin/releases/latest)
 
-当前版本 **v2.0.0**，逐版本改动见[发布说明](desktop/RELEASE-NOTES.md)。
+当前版本 **v2.1.0**，逐版本改动见[发布说明](desktop/RELEASE-NOTES.md)。
 
 | 平台 | 安装包 |
 | --- | --- |

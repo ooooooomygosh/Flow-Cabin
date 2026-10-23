@@ -24,7 +24,7 @@ function createUpdates(ctx) {
     // A loaded Electron shell can still contain a failed/blank React page.
     const cabinReady = await contents.executeJavaScript(`new Promise(resolve => {
       const timer = setTimeout(() => { observer.disconnect(); resolve(false); }, 10000);
-      const check = () => { if (!document.querySelector('.cabin-room')) return; observer.disconnect(); clearTimeout(timer); setTimeout(() => resolve(Boolean(document.querySelector('.cabin-room'))), 500); };
+      const check = () => { if (!document.querySelector('.cabin-home,.cabin-room')) return; observer.disconnect(); clearTimeout(timer); setTimeout(() => resolve(Boolean(document.querySelector('.cabin-home,.cabin-room'))), 500); };
       const observer = new MutationObserver(check); observer.observe(document.documentElement, { childList: true, subtree: true }); check();
     })`).catch(() => false);
     if (cabinReady === true && contents === ctx.getContents() && !contents.isDestroyed() && ctx.pageReady()) {

@@ -1,18 +1,18 @@
 // One shared minute clock for the window sky: settings (place, opt-in real weather), the
 // sun/moon state, and the desktop shell's weather reports. It wakes once a minute (aligned to
 // the minute) and only while something listens; nothing in here draws.
-import { resolveSkyCity, normalizeCustomPlace } from './sky-cities.mjs';
+import { resolveSkyCity, normalizeCustomPlace, getSkyCity } from './sky-cities.mjs';
 import { skyState } from './sky-model.mjs';
-import { desktopCommand } from './desktop/desktop-command.mjs';
+import { weatherRequest } from './weather-client.mjs';
 
 export const SKY_SETTINGS_KEY = 'flow-cabin-sky-v1';
 export const SKY_SETTINGS_EVENT = 'cabin:sky-settings';
 export const WEATHER_EVENT = 'cabin:weather';
-const DEFAULTS = Object.freeze({ place: 'auto', realWeather: false });
+const DEFAULTS = Object.freeze({ place: 'clock', realWeather: false, locationSource: 'manual' });
 export function normalizeSkySettings(value) {
-  const place = typeof value?.place === 'string' && /^[a-z]{2,20}$/.test(value.place) ? value.place : 'auto';
+  const place = ['auto','clock','custom'].includes(value?.place) || getSkyCity(value?.place) ? value.place : 'clock';
   const customPlace = normalizeCustomPlace(value?.customPlace);
-  return { place, realWeather: value?.realWeather === true, ...(customPlace ? { customPlace } : {}) };
+  return { place, realWeather: value?.realWeather === true && Boolean(place === 'custom' ? customPlace : getSkyCity(place)), locationSource: value?.locationSource === 'system' ? 'system' : 'manual', ...(customPlace ? { customPlace } : {}) };
 }
 export function readSkySettings(storage = globalThis.localStorage) {
   try { return normalizeSkySettings(JSON.parse(storage?.getItem(SKY_SETTINGS_KEY) || 'null') || DEFAULTS); } catch { return { ...DEFAULTS }; }
@@ -24,8 +24,7 @@ export function writeSkySettings(patch, storage = globalThis.localStorage) {
   globalThis.dispatchEvent?.(new CustomEvent(SKY_SETTINGS_EVENT, { detail: next }));
   return next;
 }
-// Real weather comes only from the desktop shell (desktop/weather.cjs, Open-Meteo in the main
-// process); the web build never asks for it.
+// Desktop and Android use their local bridge; web uses the same rounded location with Open-Meteo.
 export const desktopShell = (win = globalThis) => Boolean(win.albumMobile?.weatherRequest || win.albumDesktopAppearance?.client || win.document?.documentElement?.dataset.desktopClient === 'true');
 export const realWeatherReport = (win = globalThis) => win.cabinWeather && typeof win.cabinWeather === 'object' ? win.cabinWeather : null;
 
@@ -46,7 +45,7 @@ function compute() {
   const settings = current || (current = readSkySettings()), city = resolveSkyCity(settings.place, undefined, settings.customPlace);
   const report = realWeatherReport();
   const matchesPlace = city && (!Number.isFinite(report?.lat) || (Math.abs(report.lat - city.lat) < .011 && Math.abs(report.lng - city.lng) < .011));
-  steadyReal = settings.realWeather && desktopShell() && matchesPlace ? steadyWeather(steadyReal, report) : null;
+  steadyReal = settings.realWeather && matchesPlace ? steadyWeather(steadyReal, report) : null;
   const real = steadyReal;
   snapshot = { settings, city, state: skyState(new Date(), city), real, at: Date.now() };
   return snapshot;
@@ -55,18 +54,13 @@ function notify() { const value = compute(); for (const cb of [...listeners]) cb
 function schedule() {
   clearTimeout(timer); timer = null;
   if (!listeners.size) return;
-  timer = setTimeout(() => { if (!globalThis.document?.hidden) { notify(); if (current?.realWeather && globalThis.albumMobile?.weatherRequest) askMobileWeather('/status'); } schedule(); }, msToNextMinute(Date.now()));
+  timer = setTimeout(() => { if (!globalThis.document?.hidden) { notify(); if (current?.realWeather) askShell(); } schedule(); }, msToNextMinute(Date.now()));
 }
-function askMobileWeather(path, value) {
-  globalThis.albumMobile?.weatherRequest?.(path, value).then(result => { globalThis.cabinWeather = result.report; globalThis.dispatchEvent?.(new CustomEvent(WEATHER_EVENT)); }).catch(() => {});
-}
-function askShell() {
-  if (!desktopShell()) return;
+function askShell(force = false) {
   const { settings, city } = snapshot || compute();
-  if (globalThis.albumMobile?.weatherRequest) { askMobileWeather('/set', { enabled: Boolean(settings.realWeather && city), ...(city ? { lat: city.lat, lng: city.lng } : {}) }); return; }
-  if (settings.realWeather && city) desktopCommand('weather', { enabled: true, lat: city.lat.toFixed(2), lng: city.lng.toFixed(2), name: city.name, zone: city.zone });
-  else desktopCommand('weather', { enabled: false });
+  weatherRequest('/set', { enabled: Boolean(settings.realWeather && city), ...(city ? { lat: city.lat, lng: city.lng } : {}), force }).then(result => { globalThis.cabinWeather = result.report; globalThis.dispatchEvent?.(new CustomEvent(WEATHER_EVENT)); }).catch(() => {});
 }
+export function refreshWeather() { askShell(true); }
 const onSettings = () => { current = readSkySettings(); steadyReal = null; notify(); askShell(); };
 const onStorage = (event) => { if (event.key === SKY_SETTINGS_KEY) onSettings(); };
 const onVisible = () => { if (!globalThis.document?.hidden) { notify(); schedule(); } };

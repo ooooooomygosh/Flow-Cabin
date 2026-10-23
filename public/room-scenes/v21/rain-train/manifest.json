@@ -1,0 +1,510 @@
+{
+  "schemaVersion": 1,
+  "theme": "rain-train",
+  "label": "雨夜列车",
+  "kind": "empty-room-shell",
+  "image": "shell.png",
+  "imageSize": {
+    "width": 1536,
+    "height": 1024
+  },
+  "logicalSize": {
+    "width": 1200,
+    "height": 800
+  },
+  "camera": {
+    "kind": "fixed-oblique",
+    "floorMapping": "bilinear-quad",
+    "elevationAxis": [
+      0,
+      -1
+    ],
+    "worldExtent": {
+      "u": [
+        0,
+        800
+      ],
+      "v": [
+        0,
+        800
+      ]
+    },
+    "mapping": "s=u/800, t=v/800; p=(1-s)(1-t)*back+s(1-t)*right+s*t*front+(1-s)*t*left; elevation subtracts from p.y."
+  },
+  "geometry": {
+    "floor": {
+      "coordinateSpace": "logical",
+      "corners": {
+        "back": [
+          600.8,
+          322.7
+        ],
+        "right": [
+          1095.3,
+          510.2
+        ],
+        "front": [
+          593.8,
+          760.9
+        ],
+        "left": [
+          100.8,
+          507
+        ]
+      },
+      "polygon": [
+        [
+          600.8,
+          322.7
+        ],
+        [
+          1095.3,
+          510.2
+        ],
+        [
+          593.8,
+          760.9
+        ],
+        [
+          100.8,
+          507
+        ]
+      ],
+      "sourcePixelPolygon": [
+        [
+          769,
+          413
+        ],
+        [
+          1402,
+          653
+        ],
+        [
+          760,
+          974
+        ],
+        [
+          129,
+          649
+        ]
+      ]
+    },
+    "walls": [
+      {
+        "id": "left-wall",
+        "polygon": [
+          [
+            101,
+            247
+          ],
+          [
+            584,
+            72
+          ],
+          [
+            584,
+            312.7
+          ],
+          [
+            101,
+            483
+          ]
+        ],
+        "usablePolygons": [
+          [
+            [
+              112,
+              272
+            ],
+            [
+              137,
+              261
+            ],
+            [
+              137,
+              391
+            ],
+            [
+              112,
+              401
+            ]
+          ]
+        ]
+      },
+      {
+        "id": "right-wall",
+        "polygon": [
+          [
+            619,
+            73
+          ],
+          [
+            1093,
+            250
+          ],
+          [
+            1093,
+            485.2
+          ],
+          [
+            619,
+            312.7
+          ]
+        ],
+        "usablePolygons": [
+          [
+            [
+              631,
+              115
+            ],
+            [
+              835,
+              191
+            ],
+            [
+              835,
+              299
+            ],
+            [
+              631,
+              222
+            ]
+          ],
+          [
+            [
+              851,
+              203
+            ],
+            [
+              956,
+              242
+            ],
+            [
+              956,
+              330
+            ],
+            [
+              851,
+              290
+            ]
+          ]
+        ]
+      }
+    ],
+    "fixedObstacles": [
+      {
+        "id": "radiator",
+        "kind": "built-in-heater",
+        "floorPolygon": [
+          [
+            828.1,
+            407
+          ],
+          [
+            914.1,
+            441.4
+          ],
+          [
+            925.8,
+            427.3
+          ],
+          [
+            842.2,
+            392.2
+          ]
+        ],
+        "occluderPolygon": [
+          [
+            833.6,
+            311.7
+          ],
+          [
+            853.9,
+            299.2
+          ],
+          [
+            918.8,
+            325.8
+          ],
+          [
+            918.8,
+            410.9
+          ],
+          [
+            925.8,
+            427.3
+          ],
+          [
+            914.1,
+            441.4
+          ],
+          [
+            828.1,
+            407
+          ]
+        ]
+      },
+      {
+        "id": "door-step",
+        "kind": "built-in-step",
+        "floorPolygon": [
+          [
+            969.5,
+            471.9
+          ],
+          [
+            1044.5,
+            507.8
+          ],
+          [
+            1071.1,
+            495.3
+          ],
+          [
+            998.4,
+            460.2
+          ]
+        ]
+      }
+    ],
+    "floorUsablePolygon": [
+      [
+        600.4,
+        351
+      ],
+      [
+        1020.6,
+        514.6
+      ],
+      [
+        594.4,
+        723.4
+      ],
+      [
+        175.3,
+        511.8
+      ]
+    ],
+    "emptyDeskSurfaces": true
+  },
+  "anchors": {
+    "floor": [
+      {
+        "id": "music-zone",
+        "worldPosition": {
+          "u": 180,
+          "v": 520
+        },
+        "position": [
+          386.8,
+          494.4
+        ],
+        "radius": 100
+      },
+      {
+        "id": "work-zone",
+        "worldPosition": {
+          "u": 260,
+          "v": 170
+        },
+        "position": [
+          655.2,
+          427.4
+        ],
+        "radius": 80
+      },
+      {
+        "id": "life-zone",
+        "worldPosition": {
+          "u": 650,
+          "v": 550
+        },
+        "position": [
+          658,
+          638.8
+        ],
+        "radius": 90
+      },
+      {
+        "id": "pet-start",
+        "worldPosition": {
+          "u": 440,
+          "v": 600
+        },
+        "position": [
+          497.2,
+          591.4
+        ],
+        "radius": 45
+      }
+    ],
+    "wall": [
+      {
+        "id": "right-board",
+        "wall": "right-wall",
+        "position": [
+          731,
+          210
+        ],
+        "maxSize": [
+          168,
+          98
+        ]
+      },
+      {
+        "id": "right-clock",
+        "wall": "right-wall",
+        "position": [
+          905,
+          266
+        ],
+        "maxSize": [
+          72,
+          72
+        ]
+      }
+    ],
+    "desk": [],
+    "deskNote": "No desk is baked into the shell. Use support surfaces supplied by separately placed furniture.",
+    "window": [
+      {
+        "id": "window-1",
+        "polygon": [
+          [
+            149,
+            288
+          ],
+          [
+            311,
+            223
+          ],
+          [
+            333,
+            230
+          ],
+          [
+            337,
+            341
+          ],
+          [
+            318,
+            370
+          ],
+          [
+            165,
+            425
+          ],
+          [
+            145,
+            410
+          ]
+        ]
+      },
+      {
+        "id": "window-2",
+        "polygon": [
+          [
+            383,
+            175
+          ],
+          [
+            533,
+            116
+          ],
+          [
+            556,
+            125
+          ],
+          [
+            557,
+            262
+          ],
+          [
+            538,
+            282
+          ],
+          [
+            393,
+            332
+          ],
+          [
+            374,
+            315
+          ]
+        ]
+      },
+      {
+        "id": "window-3",
+        "polygon": [
+          [
+            1009,
+            264
+          ],
+          [
+            1044,
+            276
+          ],
+          [
+            1062,
+            304
+          ],
+          [
+            1062,
+            370
+          ],
+          [
+            1045,
+            382
+          ],
+          [
+            1015,
+            366
+          ],
+          [
+            1009,
+            347
+          ]
+        ]
+      }
+    ],
+    "fireplace": []
+  },
+  "source": {
+    "generator": "image_gen.imagegen",
+    "generatedAt": "2026-10-23",
+    "reference": "/room-scenes/v21/pixel/shell.png",
+    "referenceSha256": "05bb654bb6ea2c5328e372ea2ec0c9bf9247491e823a2eba3d2fa8b492d14372",
+    "promptFile": "prompt.txt",
+    "originalFile": "exec-96044406-28a3-415d-8568-03732a7b5b8f.png",
+    "imageEditedAfterGeneration": false
+  },
+  "verification": {
+    "visual": "Full two-wall cutaway, empty floor, no movable furniture, no pet, no text or UI.",
+    "architecture": "Rounded brass railway glazing, cream enamel, teal lower panels, rain windows, fixed radiator and carriage door.",
+    "alpha": {
+      "theme": "rain-train",
+      "size": [
+        1536,
+        1024
+      ],
+      "mode": "RGBA",
+      "alphaExtrema": [
+        0,
+        254
+      ],
+      "transparentPixels": 631555,
+      "nearlyOpaquePixels": 917328,
+      "totalPixels": 1572864,
+      "alpha8Bounds": [
+        76,
+        18,
+        1460,
+        1012
+      ],
+      "edgeAlpha": 0,
+      "sha256": "6fcd9b92ee3c479c314b6d5cc1ca71bd2e00af8bf38ef33843d06920fb6c9bb6",
+      "bytes": 2249259
+    },
+    "geometry": "Floor and obstacle polygons manually traced from this generated image; allow ±4 logical pixels of visual tracing tolerance. Use this theme's actual quad rather than assuming the reference parallelogram."
+  }
+}

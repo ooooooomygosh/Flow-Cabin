@@ -8,7 +8,7 @@ function item(value) {
   if (!value || typeof value !== 'object' || !string(value.id)) return null;
   return { id: string(value.id), title: string(value.title), artist: string(value.artist), type: value.type === 'song' ? 'song' : 'album', cover: safeCover(value.cover), tracks: Array.isArray(value.tracks) ? value.tracks.slice(0, 500).map((track) => string(typeof track === 'string' ? track : track?.title)).filter(Boolean) : [] };
 }
-const PETS = ['cat', 'chick', 'bunny', 'bear', 'fox'], LOOKS = ['warm', 'pixel', 'forest', 'seaside', 'starlight', 'night-study'];
+const PETS = ['cat', 'chick', 'bunny', 'bear', 'fox'], LOOKS = ['warm', 'pixel', 'forest', 'seaside', 'starlight', 'night-study', 'rain-train', 'greenhouse'];
 const petId = (value) => PETS.includes(value) ? value : 'cat';
 const PHASES = ['idle', 'focus', 'shortBreak', 'longBreak'], WEATHERS = ['snow', 'clear', 'rain', 'starry'], ACCESSORIES = ['', 'headphones', 'scarf', 'beanie', 'bow', 'sprout'];
 // Mirrors of renderer catalogs (main never loads ../src); test/catalog-contract.test.cjs keeps them equal.
@@ -39,7 +39,7 @@ function cleanCompanion(value) {
   if (!value || typeof value !== 'object') return null;
   const musicPlaying = value.musicPlaying === true, energy = Number(value.energy), bpm = Number(value.bpm), beatAt = Number(value.beatAt), lofiBpm = Number(value.lofiBpm);
   const beat = musicPlaying && bpm >= 40 && bpm <= 220 && Number.isFinite(beatAt) && beatAt > 0 ? { bpm: Math.round(bpm * 10) / 10, beatAt: Math.round(beatAt) } : { bpm: 0, beatAt: 0 };
-  return { petId: petId(value.petId), petPack: cleanPetPack(value.petPack), focus: cleanFocus(value.focus), playing: value.playing === true, track: string(value.track, 200), reduceMotion: value.reduceMotion === true,
+  return { ...(require('./pet-pack.cjs').ACTIONS.includes(value.pose)?{pose:value.pose}:{}), petId: petId(value.petId), petPack: cleanPetPack(value.petPack), focus: cleanFocus(value.focus), playing: value.playing === true, track: string(value.track, 200), reduceMotion: value.reduceMotion === true,
     lofiBpm: !musicPlaying && value.playing === true && Number.isFinite(lofiBpm) && lofiBpm >= 40 && lofiBpm <= 220 ? Math.round(lofiBpm * 10) / 10 : 0,
     musicPlaying, energy: musicPlaying && Number.isFinite(energy) ? Math.round(Math.max(0, Math.min(1, energy)) * 100) / 100 : 0, energyEstimated: musicPlaying && value.energyEstimated === true, ...beat, care: cleanCare(value.care),
     // 键鼠跟随 fallback: when the cabin last saw a keydown / pointerdown (a time only).

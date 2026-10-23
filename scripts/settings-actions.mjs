@@ -4,7 +4,7 @@ import { providerLabel } from '../src/player/providers.mjs';
 
 export const settingsDialog = (page) => page.getByRole('dialog', { name: '设置', exact: true });
 export async function openSettingsSection(page, section) {
-  if (!await settingsDialog(page).isVisible()) await page.getByRole('button', { name: '设置', exact: true }).click();
+  if (!await settingsDialog(page).isVisible()) { for(let i=0;i<4 && await page.locator('dialog[open]').count();i++) await page.keyboard.press('Escape'); await page.getByRole('button', { name: '设置', exact: true }).click(); if(await page.getByRole('button', { name: '全部设置', exact: true }).isVisible())await page.getByRole('button', { name: '全部设置', exact: true }).click(); }
   await settingsDialog(page).getByRole('tab', { name: section, exact: true }).click();
 }
 export async function closeSettings(page) {
@@ -26,6 +26,7 @@ export async function chooseSource(page, value) {
 }
 export const addDialog = (page) => page.getByRole('dialog', { name: '添加到唱片架', exact: true });
 export async function openAddToShelf(page, tab = '曲库搜索') {
+  if (await page.locator('.cabin-home').count() && !await page.getByRole('dialog', { name: '唱片库', exact: true }).isVisible()) await page.getByRole('button', { name: '唱片库', exact: true }).first().click();
   await page.getByRole('button', { name: '添加到唱片架', exact: true }).click(); await addDialog(page).waitFor();
   if (tab !== '曲库搜索') await addDialog(page).getByRole('tab', { name: tab, exact: true }).click();
 }
@@ -35,5 +36,5 @@ export async function openShelfTools(page) {
   await page.getByRole('region', { name: '整理唱片架', exact: true }).waitFor();
 }
 export async function openAlbumWall(page) {
-  await openShelfTools(page); await page.getByRole('region', { name: '整理唱片架', exact: true }).getByRole('button', { name: '专辑墙', exact: true }).click();
+  await page.getByRole('button', { name: '专辑墙', exact: true }).first().click();
 }

@@ -1,0 +1,218 @@
+{
+  "generatedAt": "2026-10-23",
+  "result": "PASS",
+  "scope": "Architectural image assets only; application integration and runtime visuals still require main-agent verification.",
+  "checks": {
+    "allEightGeneratedWithImageGen": true,
+    "referenceGeometryPreserved": true,
+    "allRGBA": true,
+    "all1536x1024": true,
+    "sha256MatchesSavedOriginals": true,
+    "outerCornerAlphaAtMost1": true,
+    "allFloorAnchorsInsideOwnFloorQuad": true,
+    "allFloorAnchorsOutsideFixedObstacles": true,
+    "promptsAndSourceIdsRecorded": true,
+    "noAppCodeModified": true
+  },
+  "images": [
+    {
+      "theme": "pixel",
+      "size": [
+        1536,
+        1024
+      ],
+      "mode": "RGBA",
+      "alphaExtrema": [
+        0,
+        254
+      ],
+      "transparentPixels": 640007,
+      "nearlyOpaquePixels": 908941,
+      "totalPixels": 1572864,
+      "alpha8Bounds": [
+        80,
+        20,
+        1458,
+        1002
+      ],
+      "edgeAlpha": 0,
+      "sha256": "05bb654bb6ea2c5328e372ea2ec0c9bf9247491e823a2eba3d2fa8b492d14372",
+      "bytes": 2091509
+    },
+    {
+      "theme": "warm",
+      "size": [
+        1536,
+        1024
+      ],
+      "mode": "RGBA",
+      "alphaExtrema": [
+        0,
+        254
+      ],
+      "transparentPixels": 628770,
+      "nearlyOpaquePixels": 914273,
+      "totalPixels": 1572864,
+      "alpha8Bounds": [
+        76,
+        17,
+        1460,
+        1011
+      ],
+      "edgeAlpha": 0,
+      "sha256": "6b8d76705f5baffc0349bdaf9d3f0bfbde6829d8345ab62c8d93435ceaa9e52e",
+      "bytes": 2261653
+    },
+    {
+      "theme": "night-study",
+      "size": [
+        1536,
+        1024
+      ],
+      "mode": "RGBA",
+      "alphaExtrema": [
+        0,
+        254
+      ],
+      "transparentPixels": 634117,
+      "nearlyOpaquePixels": 918981,
+      "totalPixels": 1572864,
+      "alpha8Bounds": [
+        79,
+        19,
+        1460,
+        1009
+      ],
+      "edgeAlpha": 0,
+      "sha256": "e3a18424be32dc67a8125bb85b2cd6a5cf01e46fef1513f2dc526efad0458074",
+      "bytes": 2139943
+    },
+    {
+      "theme": "forest",
+      "size": [
+        1536,
+        1024
+      ],
+      "mode": "RGBA",
+      "alphaExtrema": [
+        0,
+        254
+      ],
+      "transparentPixels": 623949,
+      "nearlyOpaquePixels": 915982,
+      "totalPixels": 1572864,
+      "alpha8Bounds": [
+        78,
+        12,
+        1459,
+        1005
+      ],
+      "edgeAlpha": 1,
+      "sha256": "6ec3f4814b534af25234299cc17ccfb69e5487904cd41e718b98144d395f507e",
+      "bytes": 2385054
+    },
+    {
+      "theme": "seaside",
+      "size": [
+        1536,
+        1024
+      ],
+      "mode": "RGBA",
+      "alphaExtrema": [
+        0,
+        254
+      ],
+      "transparentPixels": 632769,
+      "nearlyOpaquePixels": 911515,
+      "totalPixels": 1572864,
+      "alpha8Bounds": [
+        80,
+        17,
+        1460,
+        1005
+      ],
+      "edgeAlpha": 0,
+      "sha256": "44a4866e64c0da7f9d1d0de88e43e220486c8590afe426ba59171f58134345d5",
+      "bytes": 2184861
+    },
+    {
+      "theme": "starlight",
+      "size": [
+        1536,
+        1024
+      ],
+      "mode": "RGBA",
+      "alphaExtrema": [
+        0,
+        254
+      ],
+      "transparentPixels": 632008,
+      "nearlyOpaquePixels": 910612,
+      "totalPixels": 1572864,
+      "alpha8Bounds": [
+        80,
+        15,
+        1458,
+        1005
+      ],
+      "edgeAlpha": 1,
+      "sha256": "4e12a1045421e6ad900472723ae79323e39e3224adb5fc7b6a5ace6031f8e249",
+      "bytes": 2247005
+    },
+    {
+      "theme": "rain-train",
+      "size": [
+        1536,
+        1024
+      ],
+      "mode": "RGBA",
+      "alphaExtrema": [
+        0,
+        254
+      ],
+      "transparentPixels": 631555,
+      "nearlyOpaquePixels": 917328,
+      "totalPixels": 1572864,
+      "alpha8Bounds": [
+        76,
+        18,
+        1460,
+        1012
+      ],
+      "edgeAlpha": 0,
+      "sha256": "6fcd9b92ee3c479c314b6d5cc1ca71bd2e00af8bf38ef33843d06920fb6c9bb6",
+      "bytes": 2249259
+    },
+    {
+      "theme": "greenhouse",
+      "size": [
+        1536,
+        1024
+      ],
+      "mode": "RGBA",
+      "alphaExtrema": [
+        0,
+        254
+      ],
+      "transparentPixels": 642435,
+      "nearlyOpaquePixels": 905441,
+      "totalPixels": 1572864,
+      "alpha8Bounds": [
+        81,
+        15,
+        1456,
+        1005
+      ],
+      "edgeAlpha": 0,
+      "sha256": "bdc0c583c581204d5a3820c1f2f7c6af94c3a512e7c607385d1c1ac53593553d",
+      "bytes": 2397917
+    }
+  ],
+  "notes": [
+    "Source pixels are preserved unchanged. Forest and starlight have one corner at alpha 1/255; the remaining corner samples are 0. This trace is recorded rather than silently altering generated pixels.",
+    "Every manifest's floor polygon is manually traced to ±4 logical pixels. Floor maps are per-theme bilinear quads, not claimed to be mathematically identical parallelograms.",
+    "Greenhouse has mostly glazing; use independent freestanding boards for large wall widgets.",
+    "Rain-train's fixed heater and entry step are both included in obstacle data."
+  ],
+  "totalImageBytes": 17957201
+}

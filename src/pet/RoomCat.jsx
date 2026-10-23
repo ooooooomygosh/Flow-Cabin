@@ -1,4 +1,4 @@
-import { createPetScheduler } from './pet-actions.mjs';
+import { createLivingPet, bindPetLife } from './living-pet.mjs';
 import React, { useEffect, useRef, useState } from 'react';
 import PixelCat from './PixelCat';
 import PetLife from './PetLife';
@@ -49,8 +49,9 @@ export function useCatBehaviour({ focus = {}, playing = false, track = '', lastA
   const rest = useRef(90000 + Math.random() * 60000);
   useEffect(() => { setStrollStart(Date.now()); }, [eligible, petId]);
   const stroll = catStroll(now - strollStart, rest.current, eligible);
-  const scheduler = useRef(createPetScheduler());
-  const scheduled = scheduler.current.resolve({ now, base: stroll.walking ? 'walk' : basePose === 'walk' ? 'idle' : basePose, playing, synced, quiet: focus.quietMode, reduced: motion.reduced });
+  const scheduler = useRef(createLivingPet());
+  useEffect(() => bindPetLife(scheduler.current), []);
+  const scheduled = scheduler.current.resolve({ now, focus:focus.phase==='focus'&&!focus.paused, walking:stroll.walking, base: stroll.walking ? 'walk' : basePose === 'walk' ? 'idle' : basePose, playing, synced, quiet: focus.quietMode, reduced: motion.reduced });
   const pose = scheduled.pose;
   const bubble = bubbleText({ phase: focus.phase, paused: focus.paused, remaining, track, trackChangedAt: song.current.at, poke: poke.text, pokedAt: poke.at, now, hour });
   // The in-app cat stops hopping when the cabin is backgrounded (a minimised
@@ -58,7 +59,7 @@ export function useCatBehaviour({ focus = {}, playing = false, track = '', lastA
   // pet are separate always-on-top surfaces: they keep living, so they must
   // not be stopped here.
   const pauseInBackground = Boolean(motion.background && !motion.desktop);
-  return { pose, synced, bubble, now, x: stroll.x, reduced: motion.reduced, pauseInBackground, pokedAt: poke.at, poke: () => { scheduler.current.request('happy',Date.now(),{quiet:focus.quietMode}); setPoke({ text: pokeLine(Math.random, petId), at: Date.now() }); window.dispatchEvent(new Event('cabin:cat-petted')); } };
+  return { pose, synced, bubble, now, x: stroll.x, reduced: motion.reduced, pauseInBackground, pokedAt: poke.at, poke: () => { if(!focus.quietMode)scheduler.current.request('petresponse',Date.now()); setPoke({ text: pokeLine(Math.random, petId), at: Date.now() }); window.dispatchEvent(new Event('cabin:cat-petted')); } };
 }
 
 export const EAT_MS = 2400, FULL_MS = 1500;

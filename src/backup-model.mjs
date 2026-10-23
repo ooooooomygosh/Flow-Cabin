@@ -1,3 +1,6 @@
+import { normalizePetAssets } from './backup/pet-assets.mjs';
+import { invalidateRecovery } from './backup/recovery.mjs';
+import { readRoomData, normalizeRoomData } from './backup/room-data.mjs';
 import { normalizeLibrary } from './record-library.mjs';
 import { normalizeStudy } from './study/study-model.mjs';
 import { normalizeFocus } from './focus/focus-model.mjs';
@@ -9,11 +12,11 @@ import { PLAYBACK_LOG_KEY, readPlaybackSessions } from './player/playback-log.mj
 import { JOURNAL_KEY, JOURNAL_CHANGE, normalizeJournalStoredRecord, readJournalState, mergeJournalRecord } from './focus/journal-entries.mjs';
 import { SOUVENIR_KEYS, SOUVENIR_PREFIX, SOUVENIR_CHANGE, normalizeSouvenirs, readSouvenirs, mergeSouvenirs } from './focus/souvenirs.mjs';
 
-// v4 carries content-free permanent deletion markers; older backups remain readable.
+// v5 includes spatial layouts, companion configuration and scene recipes; v4 deletion markers are preserved.
 // Credentials and AI connection settings are never read.
 export const BACKUP_KIND = 'FlowCabinBackup';
-export const BACKUP_VERSION = 4;
-export const MAX_BACKUP_BYTES = 8 * 1024 * 1024;
+export const BACKUP_VERSION = 5;
+export const MAX_BACKUP_BYTES = 32 * 1024 * 1024;
 // Earlier releases exported "AlbumCircleCollection" files with the same fields.
 const KINDS = [BACKUP_KIND, 'AlbumCircleCollection'];
 const plain = (value) => value && typeof value === 'object' && !Array.isArray(value);
@@ -182,9 +185,9 @@ export const backupFileName = (now = new Date()) => `FlowCabin-backup-${now.toIS
 export function buildBackup({ items = [], library, roomId = '', focus = null, study = null, sound = null, storage = localStorageOrNull(), memory, now = new Date() }) {
   const backup = { kind: BACKUP_KIND, version: BACKUP_VERSION, exportedAt: now.toISOString(), roomId, items: backupItems(items), library: normalizeLibrary(library),
     focus: focus == null ? null : backupFocus(focus), study: study == null ? null : studyRecord(study),
-    sound: sound == null ? null : soundRecord(sound), memory: memory === undefined ? readBackupMemory(storage) : normalizeMemory(memory) };
+    sound: sound == null ? null : soundRecord(sound), cabin: readRoomData(storage), memory: memory === undefined ? readBackupMemory(storage) : normalizeMemory(memory) };
   // Match the formatted download, so an exported file is always accepted by the importer.
-  if (new TextEncoder().encode(JSON.stringify(backup, null, 2)).byteLength > MAX_BACKUP_BYTES) throw new Error('备份文件最大 8 MB。');
+  if (new TextEncoder().encode(JSON.stringify(backup, null, 2)).byteLength > MAX_BACKUP_BYTES) throw new Error('备份文件最大 32 MB。');
   return backup;
 }
 
@@ -192,25 +195,28 @@ export function buildBackup({ items = [], library, roomId = '', focus = null, st
 // and performs its own catalog normalization and id remapping.
 export function parseBackup(text) {
   if (typeof text !== 'string') throw new Error('文件内容无法读取。');
-  if (new TextEncoder().encode(text).byteLength > MAX_BACKUP_BYTES) throw new Error('备份文件最大 8 MB。');
+  if (new TextEncoder().encode(text).byteLength > MAX_BACKUP_BYTES) throw new Error('备份文件最大 32 MB。');
   let data;
   try { data = JSON.parse(text); } catch { throw new Error('文件内容无法读取。'); }
   if (!plain(data) || !KINDS.includes(data.kind) || !Array.isArray(data.items)) throw new Error('请选择心流小屋导出的备份文件。');
   const version = own(data, 'version') ? data.version : 1;
-  if (![1, 2, 3, BACKUP_VERSION].includes(version)) throw new Error('不支持此备份版本，请使用兼容版本的小屋。');
+  if (![1, 2, 3, 4, BACKUP_VERSION].includes(version)) throw new Error('不支持此备份版本，请使用兼容版本的小屋。');
   const study = data.study == null ? null : studyRecord(data.study);
   return {
     version, items: backupItems(data.items), roomId: typeof data.roomId === 'string' ? data.roomId : '', library: normalizeLibrary(data.library),
     focus: data.focus == null ? null : focusRecord(data.focus),
     study: study && (study.decks.length || study.countdowns.length || Object.keys(study.log).length || own(data.study, 'newPerDay')) ? study : null,
     sound: data.sound == null ? null : soundRecord(data.sound),
-    memory: normalizeMemory(data.memory)
+    cabin: normalizeRoomData(data.cabin),
+    memory: normalizeMemory(data.memory),
+    petAssets: normalizePetAssets(data.petAssets)
   };
 }
 
 // What a restore would overwrite on this computer besides the shelf; asked once before replacing.
 export function backupReplacements(parsed, available = {}) {
   const out = [];
+  if (parsed.cabin && (Object.keys(parsed.cabin.layouts).length || Object.keys(parsed.cabin.legacyLayouts).length || Object.keys(parsed.cabin).some(key => !['version','layouts','legacyLayouts'].includes(key)))) out.push({ id: 'cabin', label: '家具布局、伙伴、场景配方、天气和生活记录' });
   if (parsed.focus && available.focus) out.push({ id: 'focus', label: '专注记录、待办与随手记' });
   if (parsed.study && available.study) out.push({ id: 'study', label: `学习记录（${parsed.study.decks.length} 个卡组、${parsed.study.cards.length} 张闪卡、${parsed.study.countdowns.length} 个倒计时）` });
   if (parsed.sound && available.sound) out.push({ id: 'sound', label: '环境声音设置' });
@@ -290,6 +296,7 @@ export function restoreBackupMemory(parsed, { storage = localStorageOrNull(), ta
     }
   }
   const committed = [];
+  if ([...(incoming.letters || []), ...(incoming.journalEntries || [])].some(v => v.purgedAt != null)) invalidateRecovery(storage);
   try {
     for (const write of writes) { storage.setItem(write.key, write.newValue); committed.push(write); }
   } catch {

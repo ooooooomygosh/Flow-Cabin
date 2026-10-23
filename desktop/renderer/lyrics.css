@@ -1,0 +1,1 @@
+:root{font-family:system-ui,sans-serif;color:#f5e9cf;background:#222923;color-scheme:dark}body{margin:0}main{padding:22px;display:grid;gap:12px;text-align:center;min-height:140px;align-content:center}small{color:#afbaac}strong{font-size:clamp(20px,4vw,30px);font-weight:500;line-height:1.6}p{margin:0;color:#a4afa0;font-size:17px;line-height:1.5}

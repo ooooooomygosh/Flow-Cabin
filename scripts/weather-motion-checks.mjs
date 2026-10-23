@@ -80,9 +80,10 @@ export async function verifyWeatherMotion(browser, origin, check) {
 export async function verifyWeatherSwitchSteady(browser, origin, check) {
   const context = await browser.newContext({ reducedMotion: 'no-preference', viewport: { width: 1280, height: 800 } });
   const errors = [];
-  await context.route('**/*', route => {
+  await context.route('**/*', async route => {
     const url = new URL(route.request().url());
     if (url.origin !== origin) return route.abort();
+    if (url.pathname === '/desktop-weather/set') { const enabled = route.request().postDataJSON()?.enabled; await new Promise(r => setTimeout(r, 150)); return route.fulfill({ json: { report: enabled ? { kind: 'cloudy', intensity: 1, wind: .95, fetchedAt: Date.now() } : null } }); }
     if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/desktop-music/')) return route.fulfill({ json: { items: [] } });
     return route.continue();
   });
@@ -97,14 +98,9 @@ export async function verifyWeatherSwitchSteady(browser, origin, check) {
       localStorage.setItem('album-circle-focus-v1:local-owner', JSON.stringify({ rewards: { xp: 50000, equipped: { weather: 'snow' } } }));
       localStorage.setItem('flow-cabin-sky-v1', JSON.stringify({ place: 'shanghai', realWeather: false }));
     }
-    // A fake desktop shell answering the page's `weather` command with a windy storm report.
+    // Native weather now uses the same-origin API fixture above.
     window.albumDesktopAppearance = { client: true };
-    window.open = (href) => {
-      const url = new URL(href); if (!url.pathname.endsWith('/weather')) return null;
-      const on = url.searchParams.get('enabled') === 'true';
-      setTimeout(() => { window.cabinWeather = on ? { kind: 'cloudy', intensity: 1, wind: .95, fetchedAt: Date.now() } : null; window.dispatchEvent(new CustomEvent('cabin:weather', { detail: window.cabinWeather })); }, 150);
-      return null;
-    };
+    window.open = () => null;
   });
   const page = await context.newPage(); page.on('pageerror', error => errors.push(error.message));
   try {

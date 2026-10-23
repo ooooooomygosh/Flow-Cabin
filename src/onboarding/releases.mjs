@@ -2,6 +2,17 @@
 // product-facing; technical verification notes belong in RELEASE-NOTES.md.
 export const RELEASES = Object.freeze([
   {
+    version: '2.1.0',
+    title: '保留原版，随时体验 Beta 小屋',
+    items: [
+      '原版唱片架仍是默认首页，专辑墙放在顶部。主动点击 Beta 并重启后才进入新小屋，可随时切回；收藏和记录共用。',
+      '八主题家具与五位伙伴重新整理。任务纸可直接勾选，挂历保存重要日期，随手记保留草稿；布置支持撤销与另存。',
+      '头像、配饰、Dock 和菜单栏跟随当前伙伴。macOS 菜单栏小宠物能控制播放与专注，导入伙伴支持透明 WebM 和备份携带素材。',
+      '天气可请求系统大致位置，也能搜索城市；自己的设备配对后，可遥控音乐、显示歌词和接力专注。',
+      'Beta 小屋菜单加入场景配方、睡前模式、明信片与诊断。备份升级至 v5，旧数据迁移前先保留恢复点。'
+    ]
+  },
+  {
     version: '2.0.0',
     title: '走进小屋，和伙伴一起生活',
     items: [

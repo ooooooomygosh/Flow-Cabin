@@ -15,6 +15,8 @@ function createSiteCommands(ctx) {
   const sink = () => ctx.desktopSink(), window = () => ctx.mainWindow();
   const update = ({ pathname, searchParams }) => ctx.handleUpdateCommand(pathname, searchParams);
   const table = {
+    '/interface-restart': () => ctx.restartInterface?.(),
+    '/lyrics-open': () => ctx.openLyrics?.(),
     '/settings': () => ctx.toggleSettings(true),
     '/update-check': update, '/update-download': update, '/update-install': update, '/update-relaunch': update, '/update-open': update, '/update-auto': update, '/update-state': update,
     '/fullscreen': () => ctx.toggleFullscreen(),

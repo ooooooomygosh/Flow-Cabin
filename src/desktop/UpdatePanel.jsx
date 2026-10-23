@@ -1,3 +1,4 @@
+import { checkpointBeforeUpdate } from '../backup/upgrade.mjs';
 import React, { useEffect, useState } from 'react';
 import { desktopCommand } from '../desktop-client';
 import { updateView, UPDATE_EVENT, ACTION_LABELS, ACTION_COMMANDS } from './update-model.mjs';
@@ -5,6 +6,7 @@ import './update-panel.css';
 
 // 设置 › 关于: current version, update status and the 自动下载 switch.
 export default function UpdatePanel({ version, desktop }) {
+  const [checkpointing,setCheckpointing] = useState(false), [checkpointError,setCheckpointError] = useState('');
   const [state, setState] = useState(() => (typeof window !== 'undefined' && window.cabinUpdateState) || null);
   useEffect(() => {
     if (!desktop) return;
@@ -22,7 +24,8 @@ export default function UpdatePanel({ version, desktop }) {
       {desktop && native && <label className="update-auto"><input type="checkbox" checked={state?.autoDownload !== false} onChange={(event) => desktopCommand('update-auto', { enabled: event.target.checked })}/>有新版本时自动下载（不会自动重启）</label>}
     </span>
     <span className="hub-row-actions">
-      {view.actions.map((action) => <button type="button" key={action} className={`pixel-button${['install', 'relaunch', 'download', 'open-download'].includes(action) ? ' is-primary' : ''}`} onClick={() => desktopCommand(ACTION_COMMANDS[action])}>{ACTION_LABELS[action]}</button>)}
+      {view.actions.map((action) => <button type="button" key={action} className={`pixel-button${['install', 'relaunch', 'download', 'open-download'].includes(action) ? ' is-primary' : ''}`} disabled={checkpointing} onClick={async () => { if (['install','relaunch'].includes(action)) {setCheckpointing(true);setCheckpointError('');try{await checkpointBeforeUpdate();}catch(error){setCheckpointError(error.message);setCheckpointing(false);return;}} desktopCommand(ACTION_COMMANDS[action]);setCheckpointing(false); }}>{ACTION_LABELS[action]}</button>)}
+      {checkpointError && <p role="alert">恢复点未保存：{checkpointError}</p>}
       {view.busy && <button type="button" className="pixel-button" disabled>检查中…</button>}
       <a className="pixel-button" href="https://github.com/ooooooomygosh/Flow-Cabin" target="_blank" rel="noreferrer">项目主页</a>
     </span>

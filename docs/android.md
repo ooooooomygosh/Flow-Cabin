@@ -1,8 +1,8 @@
 # Android 安装包
 
-当前发行版本为 `2.0.0`，包名保持 `cn.flowcabin.app`。平台账号、歌单、搜索与音乐解析复用桌面 Portable 的本机 Node 服务；Media3 执行实际音乐播放，环境音使用独立 AudioTrack。无需电脑或云中转。
+当前发行版本为 `2.1.0`，包名保持 `cn.flowcabin.app`。平台账号、歌单、搜索与音乐解析复用桌面 Portable 的本机 Node 服务；Media3 执行实际音乐播放，环境音使用独立 AudioTrack。无需电脑或云中转。
 
-2.0 新增原生后台/锁屏播放、可解析队列的随机/循环与跨专辑播放、程序环境音、实际解码PCM能量、非精确专注提醒、唱片/专注两个桌面小组件、五种启动器图标、局域网配对同步和扫码。生活小屋入口位于设置 → 房间与桌宠，桌面版和Android共用八套房间及独立家具。
+2.0 新增原生后台/锁屏播放、可解析队列的随机/循环与跨专辑播放、程序环境音、实际解码PCM能量、非精确专注提醒、唱片/专注两个桌面小组件、五种启动器图标、局域网配对同步和扫码。2.1 默认保留原版唱片架与专辑墙。主动开启「Beta」并重启界面后，桌面版和 Android 共用八主题与全屏角落；也可切回原版。当前伙伴同步到小组件与内置启动图标，外部宠物提供系统固定快捷方式；导入入口在设置 → 房间与桌宠。
 
 最低 Android 10 / API 29，支持 64 位 ARM 手机（arm64-v8a）和 x86_64，Android System WebView 111 以上。原生库支持 16 KB 内存页，APK 的 ELF 和 ZIP 对齐另行检查；不是只调整手机屏幕比例。
 
@@ -80,8 +80,10 @@ Android 2 当时因 ADB 不可用，没有完成 Android 运行验收。Android 
 
 复验真实 WebView 布局：在专用 `flow-cabin-qa` 模拟器安装 debug APK，设置 `ANDROID_HOME`，运行 `node scripts/android-device-regression.mjs --fixture`。该命令只允许此测试 AVD，用标明为测试的 29 张收藏替换模拟器收藏，通过原生 SQLite 写入；不操作真实手机或账号。报告和实际 Android 截图保存到 `mobile-test-results/android-device-report.json` 及同目录。模拟挖孔会重建 WebView，脚本重新连接调试接口；退出时移除测试挖孔并恢复竖屏。
 
-重复浏览器验证：安装 `desktop/` 测试依赖和 Playwright Chromium，运行 `npm run android:bundle && npm run test:mobile-ui`；可用 `BROWSER_EXECUTABLE` 指定现有 Chrome。结果和截图位于忽略的 `mobile-test-results/`。原生测试仅在设备可用且允许 ADB 时运行 `cd android && ./gradlew :app:connectedDebugAndroidTest`。
+重复浏览器验证：安装 `desktop/` 测试依赖和 Playwright Chromium，运行 `npm run android:bundle && npm run test:native-playback`；可用 `BROWSER_EXECUTABLE` 指定现有 Chrome。结果和截图位于忽略的 `mobile-test-results/`。原生测试仅在设备可用且允许 ADB 时运行 `cd android && ./gradlew :app:connectedDebugAndroidTest`。
 
 主机嵌入引擎复验：从 Maven Central 获取 Javet 6.0.2 的 `javet` 核心 JAR 和当前主机的 Node 原生 JAR（Windows 为 `javet-node-windows-x86_64`）；将二者路径按系统 classpath 分隔符写入 `JAVET_TEST_CLASSPATH`，设置 `JAVA_HOME`，在 `android:bundle` 后运行 `npm run test:mobile-engine`。测试资料与报告只写到 `mobile-test-results/`。许可证和来源见 [移动运行时第三方说明](../mobile/THIRD-PARTY.md)。
 
 参考：[Capacitor 配置](https://capacitorjs.com/docs/config)、[Android 系统文件访问](https://developer.android.com/training/data-storage/shared/documents-files)、[应用私有存储](https://developer.android.com/training/data-storage/app-specific)。
+
+2.1 原生首页回归：在专用测试 AVD 安装 debug APK，设置 `ANDROID_HOME`、`CABIN_TEST_AVD`，运行 `node scripts/android-home-v21.mjs --fixture`。此命令写入明确的测试草稿和宠物包，只允许 emulator，不能用于个人设备。覆盖真实 WebView、安全边距、输入法、原生存储重启、启动器联动和导入入口；不代替物理耳机、蓝牙和来电验证。

@@ -332,7 +332,7 @@ function useWebRoomPlayback(record, trackIndex, provider, onNext, options = {}) 
   }, [provider, record?.id, trackIndex, accountEpoch]);
   useEffect(() => { decks.current.forEach((element, index) => { if (element) { element.volume = clampVolume(volume * faders.current[index].gain); element.muted = muted; } }); }, [volume, muted]);
   useEffect(() => () => { if (remote.current) commandRemote(remote.current, remote.current === 'appleMusic' ? 'pause' : 'stop').catch(() => {}); }, []);
-  const toggle = async () => {
+  const toggle = async ({ propagateError = false } = {}) => {
     if (controlling.current || provider === 'system' || provider === 'visual') return;
     autoStart.current = true;
     controlling.current = true;
@@ -351,7 +351,7 @@ function useWebRoomPlayback(record, trackIndex, provider, onNext, options = {}) 
     } catch (error) { if (owns()) {
       if (appleHandoff.current) { appleHandoff.current.bound = null; clock.reset(); update({ status: 'handoff', handoff: true, playing: false, actualTrack: '', error: '', notice: error.message }); }
       else update({ status: 'error', error: playbackErrorMessage(error) || '音频加载失败。' });
-    } }
+    } if (propagateError) throw error; }
     finally { controlling.current = false; }
   };
   // Both decks share these handlers; only the live deck's events count.

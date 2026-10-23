@@ -1,0 +1,127 @@
+{
+  "schemaVersion": 1,
+  "title": "Flow Cabin 2.1 focused corner scenes",
+  "sourceSize": {
+    "width": 1536,
+    "height": 1024
+  },
+  "opaque": true,
+  "viewIds": [
+    "music",
+    "work",
+    "life"
+  ],
+  "themes": [
+    {
+      "id": "pixel",
+      "label": "像素小屋",
+      "manifest": "pixel/corners/manifest.json",
+      "views": {
+        "music": "pixel/corners/music.webp",
+        "work": "pixel/corners/work.webp",
+        "life": "pixel/corners/life.webp"
+      }
+    },
+    {
+      "id": "warm",
+      "label": "琥珀小屋",
+      "manifest": "warm/corners/manifest.json",
+      "views": {
+        "music": "warm/corners/music.webp",
+        "work": "warm/corners/work.webp",
+        "life": "warm/corners/life.webp"
+      }
+    },
+    {
+      "id": "night-study",
+      "label": "月夜书房",
+      "manifest": "night-study/corners/manifest.json",
+      "views": {
+        "music": "night-study/corners/music.webp",
+        "work": "night-study/corners/work.webp",
+        "life": "night-study/corners/life.webp"
+      }
+    },
+    {
+      "id": "forest",
+      "label": "林间小屋",
+      "manifest": "forest/corners/manifest.json",
+      "views": {
+        "music": "forest/corners/music.webp",
+        "work": "forest/corners/work.webp",
+        "life": "forest/corners/life.webp"
+      }
+    },
+    {
+      "id": "seaside",
+      "label": "海边小屋",
+      "manifest": "seaside/corners/manifest.json",
+      "views": {
+        "music": "seaside/corners/music.webp",
+        "work": "seaside/corners/work.webp",
+        "life": "seaside/corners/life.webp"
+      }
+    },
+    {
+      "id": "starlight",
+      "label": "星光观测室",
+      "manifest": "starlight/corners/manifest.json",
+      "views": {
+        "music": "starlight/corners/music.webp",
+        "work": "starlight/corners/work.webp",
+        "life": "starlight/corners/life.webp"
+      }
+    },
+    {
+      "id": "rain-train",
+      "label": "雨夜列车",
+      "manifest": "rain-train/corners/manifest.json",
+      "views": {
+        "music": "rain-train/corners/music.webp",
+        "work": "rain-train/corners/work.webp",
+        "life": "rain-train/corners/life.webp"
+      }
+    },
+    {
+      "id": "greenhouse",
+      "label": "晨光温室",
+      "manifest": "greenhouse/corners/manifest.json",
+      "views": {
+        "music": "greenhouse/corners/music.webp",
+        "work": "greenhouse/corners/work.webp",
+        "life": "greenhouse/corners/life.webp"
+      }
+    }
+  ],
+  "coordinateSpace": "source-pixels",
+  "manifestFields": [
+    "views.*.portraitFocalPoint",
+    "views.*.hotspotRects",
+    "views.*.blankRects",
+    "views.*.blankRectPlanes",
+    "views.*.planes",
+    "views.life.petMount"
+  ],
+  "verification": "corners-verification.json",
+  "runtimeInteractionVerification": "NOT TESTED by this art task.",
+  "production": {
+    "scope": "24 corner images only; excludes JSON metadata, shells, and furniture assets.",
+    "runtimeFormat": "lossless-webp",
+    "imageCount": 24,
+    "runtimeImageBytes": 40604358,
+    "pngSourceBytes": 57524261,
+    "savedBytes": 16919903,
+    "savedPercent": 29.4135,
+    "sourceArchiveWorkspacePath": "outputs/art-v21/corner-sources",
+    "encoder": {
+      "library": "Pillow",
+      "libwebp": "1.6.0",
+      "lossless": true,
+      "quality": 100,
+      "method": 6,
+      "exact": true
+    },
+    "decodedPixelEquality": "PASS for all 24 images; all 37,748,736 pixels compared; zero differences.",
+    "shellsChanged": false
+  }
+}

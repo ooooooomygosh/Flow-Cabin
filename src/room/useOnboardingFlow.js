@@ -7,7 +7,7 @@ import { version as currentVersion } from '../../package.json';
 
 // First-run guide and the settings hub (section '' = closed; 'music/accounts'
 // is 音源 › 账户与文件夹), plus the window events and companion commands that open them.
-export default function useOnboardingFlow({ client, loading, loadError, firstVisit, itemCount, hubRequest, notify }) {
+export default function useOnboardingFlow({ client, loading, loadError, firstVisit, itemCount, hubRequest, notify, homeFirst = false }) {
   const [hub, setHub] = useState('');
   const env = useMemo(() => onboardingModel.detectEnv(window), [client]);
   const playerAdapter = useMemo(() => createPlayerAdapter({ env, command: desktopCommand, request: musicRequest }), [env]);
@@ -25,7 +25,7 @@ export default function useOnboardingFlow({ client, loading, loadError, firstVis
     const next = onboardingModel.applyLaunchPlan(current.current, plan, currentVersion);
     if (next !== current.current) saveOnboarding(next);
     setWizardMode(plan.mode);
-    setWizard(true);
+    if (!homeFirst) setWizard(true);
   }, [loading, loadError, firstVisit, itemCount]);
   // An external request is an event, not persistent desired dialog state.
   // Effect replay (including Fast Refresh) must not reopen a dismissed request.

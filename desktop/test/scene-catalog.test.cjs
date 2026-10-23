@@ -4,10 +4,10 @@ const { readFile, stat } = require('node:fs/promises');
 const path = require('node:path');
 const catalog = import('../../src/scene-catalog.mjs');
 
-test('six stable scene IDs preserve legacy looks and normalize invalid settings', async () => {
+test('eight stable scene IDs preserve legacy looks and normalize invalid settings', async () => {
   const { ROOM_SCENES, ROOM_SCENE_IDS, getRoomScene, normalizeRoomSceneId } = await catalog;
-  assert.deepEqual(ROOM_SCENE_IDS, ['pixel', 'warm', 'night-study', 'forest', 'seaside', 'starlight']);
-  assert.equal(new Set(ROOM_SCENES.map((scene) => scene.art)).size, 6);
+  assert.deepEqual(ROOM_SCENE_IDS, ['pixel', 'warm', 'night-study', 'forest', 'seaside', 'starlight', 'rain-train', 'greenhouse']);
+  assert.equal(new Set(ROOM_SCENES.map((scene) => scene.art)).size, 8);
   for (const scene of ROOM_SCENES) {
     assert.equal(getRoomScene(scene.id), scene);
     assert.equal(normalizeRoomSceneId(scene.id), scene.id);
@@ -15,7 +15,7 @@ test('six stable scene IDs preserve legacy looks and normalize invalid settings'
     assert.match(scene.style.accent, /^#[a-f\d]{6}$/i);
     assert.match(scene.style.background, /^#[a-f\d]{6}$/i);
   }
-  assert.deepEqual(ROOM_SCENES.map((scene) => [scene.label, scene.labelEn]), [['像素小屋', 'Pixel Cabin'], ['琥珀小屋', 'Amber Cabin'], ['月夜书桌', 'Moonlit Study'], ['林间书屋', 'Forest Glade'], ['海边慢屋', 'Seaside'], ['星夜阁楼', 'Starry Night']]);
+  assert.deepEqual(ROOM_SCENES.map((scene) => [scene.label, scene.labelEn]), [['像素小屋', 'Pixel Cabin'], ['琥珀小屋', 'Amber Cabin'], ['月夜书桌', 'Moonlit Study'], ['林间书屋', 'Forest Glade'], ['海边慢屋', 'Seaside'], ['星夜阁楼', 'Starry Night'], ['雨夜列车书房', 'Rainy Night Train'], ['屋顶温室', 'Rooftop Greenhouse']]);
   for (const invalid of [undefined, null, '', 'constructor', '__proto__', 'invalid', 1, {}, []]) {
     assert.equal(normalizeRoomSceneId(invalid), 'pixel');
     assert.equal(getRoomScene(invalid).id, 'pixel');

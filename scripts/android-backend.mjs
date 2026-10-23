@@ -29,6 +29,7 @@ async function copyPackage(name, from) {
   for (const dep of Object.keys(meta.dependencies || {})) await copyPackage(dep, source);
 }
 await copyPackage('NeteaseCloudMusicApi', path.join(root, 'desktop'));
+await copyPackage('ws', path.join(root, 'desktop'));
 await fs.cp(path.join(root, 'mobile/licenses'), path.join(out, 'licenses'), { recursive: true });
 await fs.copyFile(path.join(root, 'LICENSE'), path.join(out, 'licenses/Flow-Cabin-LICENSE.txt'));
 await fs.copyFile(path.join(root, 'desktop/vendor/simple-music/LICENSE'), path.join(out, 'licenses/Simple-Music-LICENSE.txt'));

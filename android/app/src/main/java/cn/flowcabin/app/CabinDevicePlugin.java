@@ -24,12 +24,13 @@ import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
 import java.util.LinkedHashSet;
 
-@CapacitorPlugin(name = "CabinDevice", permissions = { @com.getcapacitor.annotation.Permission(alias = "camera", strings = { android.Manifest.permission.CAMERA }) })
+@CapacitorPlugin(name = "CabinDevice", permissions = { @com.getcapacitor.annotation.Permission(alias = "camera", strings = { android.Manifest.permission.CAMERA }), @com.getcapacitor.annotation.Permission(alias = "location", strings = { android.Manifest.permission.ACCESS_COARSE_LOCATION }) })
 public class CabinDevicePlugin extends Plugin {
     private CabinStore store;
+    private CabinLocation location;
     private final java.util.concurrent.ExecutorService work = java.util.concurrent.Executors.newFixedThreadPool(4);
     private final java.util.concurrent.ExecutorService storageWork = java.util.concurrent.Executors.newSingleThreadExecutor();
-    @Override protected void handleOnDestroy() { work.shutdownNow(); storageWork.shutdown(); super.handleOnDestroy(); }
+    @Override protected void handleOnDestroy() { if(location!=null) location.cancel(); work.shutdownNow(); storageWork.shutdown(); super.handleOnDestroy(); }
     @Override public void load() { store = new CabinStore(getContext()); }
     @PluginMethod public void startMusic(PluginCall call) {
         work.execute(() -> { try { CabinMusic.get(getContext()).awaitReady(); call.resolve(new JSObject().put("ready", true)); } catch (Exception e) { call.reject(e.getMessage()); } });
@@ -49,8 +50,28 @@ public class CabinDevicePlugin extends Plugin {
     }
     @PluginMethod public void weatherRequest(PluginCall call) {
         String path = call.getString("path", ""), body = call.getString("body");
-        if (!path.matches("/desktop-weather/(search|status|set)(\\?[^#\\r\\n]*)?") || path.length() > 2048 || (body != null && body.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 1024)) { call.reject("无效的天气请求。"); return; }
+        if (!path.matches("/desktop-weather/(search|status|set|provider)(\\?[^#\\r\\n]*)?") || path.length() > 2048 || (body != null && body.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 1024)) { call.reject("无效的天气请求。"); return; }
         work.execute(() -> { try { String result = CabinMusic.get(getContext()).request(path.replace("/desktop-weather/", "/weather/"), body).toString(); if (result.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 256 * 1024) throw new java.io.IOException("天气响应过大。"); call.resolve(new JSObject(result)); } catch (Exception e) { call.reject(e.getMessage()); } });
+    }
+    @PluginMethod public void petRequest(PluginCall call) {
+        String path=call.getString("path",""),body=call.getString("body");
+        if(!path.matches("/(packs|packs/restore|packs/[a-z0-9_-]{1,64}/export|remove)") || body!=null && body.getBytes(java.nio.charset.StandardCharsets.UTF_8).length>23*1024*1024){call.reject("伙伴素材请求无效或过大");return;}
+        work.execute(()->{try{call.resolve(new JSObject(CabinMusic.get(getContext()).request("/pets"+path,body).toString()));}catch(Exception error){call.reject(error.getMessage());}});
+    }
+    @PluginMethod public void pinPetShortcut(PluginCall call) {
+        if(android.os.Build.VERSION.SDK_INT<26){call.reject("当前系统不支持固定快捷方式");return;}
+        String name=call.getString("name","小屋伙伴"),data=call.getString("icon","");
+        if(name.isEmpty()||name.length()>80||data.length()>700000){call.reject("快捷方式内容无效");return;}
+        try{byte[] bytes=android.util.Base64.decode(data,android.util.Base64.DEFAULT);android.graphics.BitmapFactory.Options options=new android.graphics.BitmapFactory.Options();options.inJustDecodeBounds=true;android.graphics.BitmapFactory.decodeByteArray(bytes,0,bytes.length,options);if(options.outWidth<16||options.outWidth>512||options.outHeight<16||options.outHeight>512)throw new Exception();android.graphics.Bitmap bitmap=android.graphics.BitmapFactory.decodeByteArray(bytes,0,bytes.length);if(bitmap==null)throw new Exception();android.content.pm.ShortcutManager manager=getContext().getSystemService(android.content.pm.ShortcutManager.class);if(!manager.isRequestPinShortcutSupported()){call.resolve(new JSObject().put("requested",false));return;}android.content.pm.ShortcutInfo shortcut=new android.content.pm.ShortcutInfo.Builder(getContext(),"cabin-current-companion").setShortLabel(name).setIcon(android.graphics.drawable.Icon.createWithBitmap(bitmap)).setIntent(new Intent(getContext(),MainActivity.class).setAction(Intent.ACTION_VIEW)).build();call.resolve(new JSObject().put("requested",manager.requestPinShortcut(shortcut,null)));}catch(Exception error){call.reject("伙伴图标无法读取");}
+    }
+    @PluginMethod public void approximateLocation(PluginCall call) {
+        if(getPermissionState("location")!=com.getcapacitor.PermissionState.GRANTED){requestPermissionForAlias("location",call,"locationPermission");return;}
+        if(location!=null) { call.resolve(new JSObject().put("status","unavailable"));return; }
+        location=new CabinLocation(getContext());location.request(value->{location=null;call.resolve(value);});
+    }
+    @com.getcapacitor.annotation.PermissionCallback private void locationPermission(PluginCall call) {
+        if(getPermissionState("location")!=com.getcapacitor.PermissionState.GRANTED){call.resolve(new JSObject().put("status","denied"));return;}
+        approximateLocation(call);
     }
     @PluginMethod public void beginCameraScan(PluginCall call) {
         if (getPermissionState("camera") != com.getcapacitor.PermissionState.GRANTED) { requestPermissionForAlias("camera", call, "cameraPermission"); return; }
@@ -63,7 +84,7 @@ public class CabinDevicePlugin extends Plugin {
     @PluginMethod public void endCameraScan(PluginCall call) { ((MainActivity)getActivity()).endCameraScan(); call.resolve(); }
     @PluginMethod public void syncRequest(PluginCall call) {
         String path = call.getString("path", ""), body = call.getString("body");
-        if (!path.matches("/desktop-sync/(status|start|stop|invite|pair|sync|stage|revoke)") || (body != null && body.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 8 * 1024 * 1024)) { call.reject("无效的局域网同步请求。"); return; }
+        if (!path.matches("/desktop-sync/(status|start|stop|invite|pair|sync|stage|revoke|live/(status|connect|publish|send|ack|preferences))") || (body != null && body.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 8 * 1024 * 1024)) { call.reject("无效的局域网同步请求。"); return; }
         work.execute(() -> { try { call.resolve(new JSObject(CabinMusic.get(getContext()).request(path.replace("/desktop-sync/", "/sync/"), body).toString())); } catch (Exception e) { call.reject(e.getMessage()); } });
     }
     @PluginMethod public void catalogRequest(PluginCall call) {
@@ -93,6 +114,7 @@ public class CabinDevicePlugin extends Plugin {
     @PluginMethod public void setLauncherIcon(PluginCall call) {
         String pet = call.getString("pet", "cat");
         if (!java.util.Arrays.asList("cat", "chick", "bunny", "bear", "fox").contains(pet)) { call.reject("无效的桌宠图标。"); return; }
+        if (pet.equals(getContext().getSharedPreferences("cabin-launcher", 0).getString("pet", "cat"))) { call.resolve(new JSObject().put("pet", pet)); return; }
         android.content.pm.PackageManager manager = getContext().getPackageManager();
         // Enable the new launcher before disabling the old one, avoiding a gap.
         manager.setComponentEnabledSetting(new android.content.ComponentName(getContext(), getContext().getPackageName() + ".Launcher_" + pet), android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED, android.content.pm.PackageManager.DONT_KILL_APP);
@@ -100,7 +122,17 @@ public class CabinDevicePlugin extends Plugin {
         getContext().getSharedPreferences("cabin-launcher", 0).edit().putString("pet", pet).apply();
         call.resolve(new JSObject().put("pet", pet));
     }
+    @PluginMethod public void setCompanion(PluginCall call) {
+        String pet=call.getString("pet","cat"),accessory=call.getString("accessory","");
+        if(!java.util.Arrays.asList("cat","chick","bunny","bear","fox").contains(pet) || (!accessory.isEmpty() && !java.util.Arrays.asList("headphones","scarf","beanie","bow","sprout").contains(accessory))) { call.reject("伙伴资料无效"); return; }
+        final String avatar=call.getString("avatar", "");
+        storageWork.execute(()->{try{CabinWidgets.saveCompanion(getContext(),pet,accessory,avatar);CabinWidgets.refresh(getContext());call.resolve();}catch(Exception error){call.reject("伙伴头像未能保存");}});
+    }
+    @PluginMethod public void consumeWidgetCommand(PluginCall call) {
+        android.content.SharedPreferences saved=getContext().getSharedPreferences("cabin-widget",0);String action=saved.getString("command","");saved.edit().remove("command").apply();call.resolve(new JSObject().put("action",action));
+    }
     @PluginMethod public void launcherIcon(PluginCall call) { call.resolve(new JSObject().put("pet", getContext().getSharedPreferences("cabin-launcher", 0).getString("pet", "cat"))); }
+    @PluginMethod public void restartInterface(PluginCall call) { call.resolve(); new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> getActivity().recreate(), 250); }
     @PluginMethod public void syncFocus(PluginCall call) {
         CabinFocus.sync(getContext(), call.getObject("state", new JSObject())); call.resolve();
     }
@@ -119,7 +151,7 @@ public class CabinDevicePlugin extends Plugin {
     }
     @PluginMethod public void saveFile(PluginCall call) {
         String name = call.getString("filename", "Flow-Cabin.json"), data = call.getString("data", "");
-        if (name.length() > 180 || data.length() > 34 * 1024 * 1024 || !data.matches("[A-Za-z0-9+/]*={0,2}")) { call.reject("导出文件无效或过大。"); return; }
+        if (name.length() > 180 || data.length() > 44 * 1024 * 1024 || !data.matches("[A-Za-z0-9+/]*={0,2}")) { call.reject("导出文件无效或过大。"); return; }
         Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT); intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType(call.getString("mime", "application/octet-stream")); intent.putExtra(Intent.EXTRA_TITLE, name.replaceAll("[\\\\/:*?\"<>|]", "_"));
         startActivityForResult(call, intent, "fileSaved");

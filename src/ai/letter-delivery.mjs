@@ -54,6 +54,7 @@ export async function deliverLetter({ sessions, notes = '', now = Date.now(), fo
     const saved = trySaveLetter(win.localStorage, letter);
     if (!saved.ok) return null;
     win.dispatchEvent?.(new CustomEvent(LETTER_EVENT));
+    win.dispatchEvent?.(new Event('cabin:pet-deliver'));
     return letter;
   })().finally(() => {
     inflight = null;
