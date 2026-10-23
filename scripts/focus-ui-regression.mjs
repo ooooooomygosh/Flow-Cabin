@@ -310,7 +310,7 @@ try {
     const memory = backupMemory('export');
     await seedBackupMemory(page, memory); await openBackup(page);
     const exported = await downloadBackup(page);
-    assert.equal(exported.version, 4); assert.equal(exported.roomId, 'local-room');
+    assert.equal(exported.version, 5); assert.equal(exported.roomId, 'local-room');
     assert.equal(exported.items.length, items.length); assert.equal(exported.focus.notes, '原有随手记');
     for (const domain of Object.keys(backupKeys)) assert.ok(exported.memory[domain], domain + ' exported');
     assert.equal(exported.memory.playbackSessions[0].durationMs, 1000);
@@ -586,6 +586,7 @@ try {
     // A detected beat: the shared cat sprite hops once per beat, phase-locked to beatAt.
     const beatAt=await page.evaluate(()=>{const at=Date.now()-130;window.dispatchEvent(new CustomEvent('cabin:playback',{detail:{playing:true,energy:.5,bpm:120,beatAt:at}}));return at;});
     await page.waitForFunction(()=>['listen','nod','sway','dance'].includes(document.querySelector('.room-cat .pixel-cat')?.dataset.pose),null,{timeout:5000});
+    await page.waitForFunction(()=>document.querySelector('.room-cat .pixel-cat')?.getAnimations().some(a=>a.effect.getTiming().duration===500&&a.effect.getKeyframes().some(k=>k.translate)),null,{timeout:5000});
     const lock=await page.evaluate(beatAt=>{const a=document.querySelector('.room-cat .pixel-cat').getAnimations().find(x=>x.effect.getKeyframes().some(k=>k.translate));const d=a.effect.getTiming().duration;const want=((Date.now()-beatAt)%d+d)%d,at=a.currentTime%d;return {d,off:Math.min(Math.abs(at-want),d-Math.abs(at-want))};},beatAt);
     assert.equal(lock.d,500);assert.ok(lock.off<40,`groove is ${Math.round(lock.off)} ms off the beat`);
     await screenshot(page,'cat-on-the-beat');
