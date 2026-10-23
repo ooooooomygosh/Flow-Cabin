@@ -20,12 +20,12 @@ const { createInputStats } = require('./input-stats.cjs');
 const { createCollectionStore } = require('./collection-store.cjs');
 const { createMusicService } = require('./music-service.cjs');
 const { openQQLogin, openNeteaseLogin, clearQQLogin, clearNeteaseLogin } = require('./music-login.cjs');
-const { createPet } = require('./pet.cjs');
+const { createPet, prefsFromParams } = require('./pet.cjs');
 const { createNowPlaying } = require('./now-playing.cjs');
 const { createAppleMusic } = require('./apple-music.cjs');
 const { createLocalApps } = require('./local-app.cjs');
 const { createLocalMusic } = require('./local-music.cjs');
-const { sendCompanionCommand, createCompanionPoller } = require('./companion-sync.cjs');
+const { sendCompanionCommand, createCompanionPoller, readCompanion } = require('./companion-sync.cjs');
 const { cleanCompanion } = require('./wallpaper-model.cjs');
 const { statusFrom, statusIconPath, createStatusApplier } = require('./status-bar.cjs');
 const { relayPlayerCommand } = require('./mini-player.cjs');
@@ -42,6 +42,9 @@ const { createWeather, weatherScript } = require('./weather.cjs');
 const { createWeatherApi } = require('./weather-api.cjs');
 const { createLocation } = require('./location.cjs');
 const { createAi, aiScript } = require('./ai.cjs');
+// 2.2 focus: notifications, lock / sleep relay, close-to-tray while a round runs, global shortcuts.
+const { FOCUS_HOTKEYS, parseNotice, createNotifier, keepAliveOnClose, createPowerRelay, powerScript } = require('./focus-shell.cjs');
+const { Notification } = require('electron');
 
 protocol.registerSchemesAsPrivileged([{ scheme: 'album-desktop', privileges: { standard: true, secure: true, supportFetchAPI: true } }]);
 app.setName('心流小屋');
@@ -91,6 +94,19 @@ function restoreMainWindow() {
   if (mainWindow.isMinimized()) mainWindow.restore();
   mainWindow.show(); mainWindow.focus();
 }
+// --- 2.2 focus (desktop/focus-shell.cjs) ---
+const focusNotifier = createNotifier({ Notification, restore: () => restoreMainWindow(), command: (command) => sendCompanionCommand(siteView?.webContents, command), log: (...args) => writeLog(...args) });
+let closedToTrayHint = false;
+// Quitting from the tray / app menu while a round runs asks first; the window's close button only hides.
+async function requestQuit() {
+  if (!quitting && trayStatus.phase !== 'idle') {
+    const options = { type: 'question', title: '退出心流小屋', message: trayStatus.phase === 'focus' ? '专注还在进行，确定退出吗？' : '休息计时还在进行，确定退出吗？', detail: '退出后，这一轮结束时小屋就没法提醒你了。关闭窗口则会留在托盘 / 菜单栏里继续计时。', buttons: ['继续计时', '退出'], defaultId: 0, cancelId: 0, noLink: true };
+    const answer = await (mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible() ? dialog.showMessageBox(mainWindow, options) : dialog.showMessageBox(options));
+    if (answer.response !== 1) return;
+  }
+  app.quit();
+}
+// --- end 2.2 focus ---
 // One tray icon while the wallpaper or the desktop pet keeps running, while a focus round runs,
 // and always in the macOS menu bar (status: remaining time as the title, state icon).
 function companionsActive() { return Boolean(wallpaperState.active || wallpaperState.busy || petState.active || desktopMode?.active || desktopSink?.active || desktopSink?.busy); }
@@ -113,7 +129,8 @@ function refreshTray() {
       restore: restoreMainWindow, companion, checkUpdates: () => updates.checkFromMenu(),
       status: trayStatus, player: (action) => relayPlayerCommand(siteView?.webContents, action), openJournal,
       petActive: petState.active, petStart: () => pet.start().catch((error) => writeLog('pet-error', error.message)), petStop: () => pet.stop(),
-      sinkActive: Boolean(desktopSink?.active || desktopSink?.busy), sinkEnter: () => desktopSink?.enter(), sinkExit: () => desktopSink.exit(), quit: () => app.quit()
+      sinkActive: Boolean(desktopSink?.active || desktopSink?.busy), sinkEnter: () => desktopSink?.enter(), sinkExit: () => desktopSink.exit(), quit: () => requestQuit().catch((error) => writeLog('quit-error', error.message)),
+      petHidden: Boolean(pet?.hiddenUntil), petShow: () => pet?.showNow()
     }));
     if (process.platform !== 'darwin') companionTray.setContextMenu(currentTrayMenu);
     trayPet.refresh();
@@ -430,6 +447,8 @@ const siteCommands = createSiteCommands({
     repair: () => repairTypingPermission()
   },
   handleUpdateCommand: (pathname, params) => updates.handle(pathname, params),
+  notify: (params) => focusNotifier.show(parseNotice(params)),
+  petPrefs: (params) => prefsFromParams(params),
   get autostart() { return autostart; },
   get weather() { return weather; },
   get ai() { return ai(); }
@@ -478,6 +497,7 @@ function showToolbarMenu() {
 function createMenus() {
   const zoom = (step) => saveAppearance({ ...appearance, zoom: step ? appearance.zoom + step : 100 }).catch(() => {});
   Menu.setApplicationMenu(Menu.buildFromTemplate(appMenuTemplate({
+    quit: () => requestQuit().catch((error) => writeLog('quit-error', error.message)),
     companion: (command) => sendCompanionCommand(siteView?.webContents, command), toggleSettings, checkUpdates: () => updates.checkFromMenu(),
     reload: () => navigate(`${SITE_ORIGIN}/`), zoom, fullscreen: isFullscreen(), toggleFullscreen, toggleSink: () => desktopSink.toggle(),
     openData: () => shell.openPath(app.getPath('userData')),
@@ -560,8 +580,27 @@ async function createWindow() {
   mainWindow.on('maximize', () => setImmediate(resizeView));
   mainWindow.on('unmaximize', () => setImmediate(resizeView));
   mainWindow.on('move', () => { if (settingsOpen) sendState(); });
+  let closeChecked = false; // set once the page confirmed no focus round runs (see 'close')
   mainWindow.on('close', (event) => {
     if ((desktopSink?.active || desktopSink?.busy || pet?.active) && !quitting) { event.preventDefault(); mainWindow.hide(); return; }
+    // A running (or paused) focus round keeps the page alive in the tray / menu bar.
+    const hideToTray = () => {
+      setFullscreen(false); mainWindow.hide(); refreshTray();
+      if (!closedToTrayHint) { closedToTrayHint = true; focusNotifier.show({ title: '小屋还在计时', body: process.platform === 'darwin' ? '专注会继续，点菜单栏里的伙伴回来。' : '专注会继续，双击托盘里的伙伴回来。', silent: true, actions: [] }); }
+    };
+    if (keepAliveOnClose({ phase: trayStatus.phase, quitting })) { event.preventDefault(); hideToTray(); return; }
+    // The tray poll runs every few seconds while idle: a round started a moment ago may not be in
+    // trayStatus yet, so ask the page once (bounded) before really closing.
+    if (!quitting && !closeChecked) {
+      event.preventDefault();
+      Promise.race([readCompanion(siteView?.webContents).catch(() => null), new Promise((resolve) => setTimeout(() => resolve(null), 800))]).then((value) => {
+        if (!mainWindow || mainWindow.isDestroyed()) return;
+        const companion = cleanCompanion(value?.companion);
+        if (keepAliveOnClose({ phase: companion?.focus?.phase, quitting })) { trayStatus = statusFrom(companion); hideToTray(); return; }
+        closeChecked = true; mainWindow.close();
+      });
+      return;
+    }
     // Closing while the cabin is the desktop leaves desktop mode; the next launch returns to it only if the app quit while in it.
     const wasDesktop = Boolean(desktopSink?.active);
     try {
@@ -606,7 +645,9 @@ else {
     wallpaper = createWallpaper({ app, getMain: () => mainWindow, getSite: () => siteView?.webContents, status: wallpaperStatus, appearanceScript, getAppearance: () => appearance, log: writeLog, registerProtocol: registerShellProtocol });
     desktopMode = createDesktopMode({ getWindow: () => mainWindow, screen, leaveFullscreen: () => setFullscreen(false), helperPath: desktopHelperPath(), log: writeLog,
       onChange: (state) => { refreshTray(); notifySite(`document.documentElement.dataset.desktopMode = '${state.active}'; window.dispatchEvent(new CustomEvent('album-desktop-mode', {detail: ${JSON.stringify(state)}}));`); } });
-    pet = createPet({ directory: app.getPath('userData'), getSite: () => siteView?.webContents, getInputStats: () => ({ ...inputStats.snapshot(), ...typingInfo() }), status: petStatus, registerProtocol: registerShellProtocol, restoreMain: restoreMainWindow, log: writeLog });
+    pet = createPet({ directory: app.getPath('userData'), helperPath: desktopHelperPath(), getSite: () => siteView?.webContents, getInputStats: () => ({ ...inputStats.snapshot(), ...typingInfo() }), status: petStatus, registerProtocol: registerShellProtocol, restoreMain: restoreMainWindow, log: writeLog });
+    // The page's 设置 › 房间与桌宠 shows the saved pet behaviour even before the pet goes out.
+    petState = { active: false, size: pet.size, prefs: pet.prefs, hiddenUntil: pet.hiddenUntil };
     miniPlayer = createMiniPlayer({ getSite: () => siteView?.webContents, getAnchor: () => mainWindow?.getBounds(), registerProtocol: registerShellProtocol, helperPath: desktopHelperPath(), onExit: () => desktopSink.exit(), log: writeLog });
     desktopSink = createDesktopSink({ wallpaper, legacy: desktopMode, pet, mini: miniPlayer, log: writeLog,
       hideMain: () => { if (mainWindow && !mainWindow.isDestroyed()) { setFullscreen(false); mainWindow.hide(); } },
@@ -620,6 +661,12 @@ else {
     powerMonitor.on('on-battery', power); powerMonitor.on('on-ac', power);
     powerMonitor.on('lock-screen', () => desktopSink.setLowPower(true)); powerMonitor.on('unlock-screen', power);
     power();
+    // --- 2.2 focus: lock / sleep reach the page; global focus shortcuts ---
+    createPowerRelay({ powerMonitor, send: (detail) => notifySite(powerScript(detail)) });
+    const focusHotkey = (accelerator, run) => { try { if (!globalShortcut.register(accelerator, run)) writeLog('focus-hotkey', `${accelerator} is taken`); } catch (error) { writeLog('focus-hotkey', error.message); } };
+    focusHotkey(FOCUS_HOTKEYS.toggle, () => sendCompanionCommand(siteView?.webContents, trayStatus.phase === 'idle' ? 'focus-start' : 'focus-toggle'));
+    focusHotkey(FOCUS_HOTKEYS.skip, () => { if (trayStatus.phase !== 'idle') sendCompanionCommand(siteView?.webContents, 'focus-skip'); });
+    // --- end 2.2 focus ---
     collection = createCollectionStore({ directory: app.getPath('userData') });
     const search = import('./catalog-search.mjs');
     catalog = async (params) => (await search).searchCatalog(params);
@@ -627,6 +674,8 @@ else {
     const nowPlaying = createNowPlaying({ helperPath: app.isPackaged ? path.join(process.resourcesPath, 'native', 'NowPlaying.exe') : path.join(__dirname, 'native', 'bin', 'NowPlaying.exe') });
     music = createMusicService({ directory: app.getPath('userData'), safeStorage, nowPlaying, localMusic, appleMusic: createAppleMusic({ country: app.getLocaleCountryCode() }), localApps: createLocalApps({ openExternal: (url) => shell.openExternal(url), appForProtocol: (url) => app.getApplicationNameForProtocol(url) }), login: (provider) => provider === 'qq' ? openQQLogin(mainWindow) : openNeteaseLogin(mainWindow), logout: (provider) => provider === 'qq' ? clearQQLogin() : clearNeteaseLogin() });
     writeLog('started', app.getVersion()); await createWindow(); statusPoller.start(); refreshTray(); try { updates.start(); } catch (error) { writeLog('updater-error', error.message); }
+    // The desktop pet comes back out if it was out when the app last closed.
+    if (pet.wasOut) pet.start().catch((error) => writeLog('pet-error', error.message));
   }).catch((error) => {
     writeLog('startup-error', error.message);
     dialog.showErrorBox('心流小屋启动失败', '请关闭后重新打开应用。\n' + error.message);
@@ -649,5 +698,5 @@ else {
     }
     if (mainWindow) restoreMainWindow(); else createWindow().catch((error) => writeLog('startup-error', error.message));
   });
-  app.on('before-quit', (event) => { if (!quitting && dshBridge?.status().enabled) { event.preventDefault(); quitting = true; Promise.race([dshBridge.stop(), new Promise(resolve=>setTimeout(resolve,4500))]).finally(()=>app.quit()); return; } quitting = true; lyricWindow?.dispose(); petMenu?.dispose(); trayPet.stop(); dshBridge?.stop(); lan?.stop(); aiRelay?.dispose(); aiRelay = null; statusPoller.stop(); typingHook.stop(); clearTimeout(inputStatsTimer); inputStatsTimer = null; inputStats.dispose(); if (awakeBlocker !== null) { powerSaveBlocker.stop(awakeBlocker); awakeBlocker = null; } globalShortcut.unregisterAll(); desktopSink?.stop(); miniPlayer?.hide(); wallpaper?.stop(); pet?.stop(); weather.dispose(); music?.stop(); companionTray?.destroy(); companionTray = null; if (startupComplete) writeLog('closed'); });
+  app.on('before-quit', (event) => { if (!quitting && dshBridge?.status().enabled) { event.preventDefault(); quitting = true; Promise.race([dshBridge.stop(), new Promise(resolve=>setTimeout(resolve,4500))]).finally(()=>app.quit()); return; } quitting = true; focusNotifier.dispose(); pet?.quitting(); lyricWindow?.dispose(); petMenu?.dispose(); trayPet.stop(); dshBridge?.stop(); lan?.stop(); aiRelay?.dispose(); aiRelay = null; statusPoller.stop(); typingHook.stop(); clearTimeout(inputStatsTimer); inputStatsTimer = null; inputStats.dispose(); if (awakeBlocker !== null) { powerSaveBlocker.stop(awakeBlocker); awakeBlocker = null; } globalShortcut.unregisterAll(); desktopSink?.stop(); miniPlayer?.hide(); wallpaper?.stop(); pet?.stop(); weather.dispose(); music?.stop(); companionTray?.destroy(); companionTray = null; if (startupComplete) writeLog('closed'); });
 }

@@ -22,6 +22,14 @@ test('the shortcuts the desktop shell owns say so: the browser build cannot run 
   }
   assert.equal(shortcut('zen').desktop, undefined);
 });
+test('the global focus shortcuts match what the desktop shell registers', async () => {
+  const { createRequire } = await import('node:module');
+  const { FOCUS_HOTKEYS } = createRequire(import.meta.url)('../desktop/focus-shell.cjs');
+  const electron = (keys) => keys.split(' ')[0].replace('Control+', 'CommandOrControl+');
+  assert.equal(electron(shortcut('focusToggle').keys), FOCUS_HOTKEYS.toggle);
+  assert.equal(electron(shortcut('focusSkip').keys), FOCUS_HOTKEYS.skip);
+  for (const id of ['focusToggle', 'focusSkip']) { assert.equal(shortcut(id).desktop, true); assert.match(shortcut(id).action, /桌面版/); }
+});
 test('the printed label never hides a key the entry really has', () => {
   // 设置 › 快捷键 prints `label`; the shelf row also answers to Home and End.
   const shelf = shortcut('shelf');

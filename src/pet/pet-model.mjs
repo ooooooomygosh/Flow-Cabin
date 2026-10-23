@@ -63,15 +63,52 @@ export function pokeLine(random = Math.random, petId = 'cat') {
   return lines[index];
 }
 
-// The speech bubble: focus countdown first, then a new song, then pokes.
-export function bubbleText({ phase = 'idle', paused = false, remaining = 0, track = '', trackChangedAt = 0, poke = '', pokedAt = 0, now = 0, hour = 12 } = {}) {
+// How long a focus moment stays in the bubble.
+export const BUBBLE_MS = 6000;
+// The speech bubble speaks only at moments (2.2): a poke, the start of a round, halfway, the last
+// minute, the end, a pause, a new song. In between it is quiet and never covers the desktop.
+// `since`: when the phase / pause / overtime state last changed; `previous`: the phase before it.
+// `bubbles: false` silences it; 免打扰 (`quiet`) keeps only the answers to a poke.
+export function bubbleText({ phase = 'idle', paused = false, remaining = 0, duration = 0, due = false, since = 0, previous = '', track = '', trackChangedAt = 0, poke = '', pokedAt = 0, now = 0, bubbles = true, quiet = false } = {}) {
+  if (!bubbles) return '';
   if (poke && now - pokedAt < 3000) return poke;
-  if (phase === 'focus' && !paused) { const m = Math.ceil(remaining / 60000); return m > 1 ? `专注中 · 还剩 ${m} 分钟` : '最后冲刺！'; }
-  if (phase === 'focus' && paused) return '专注暂停中';
-  if (phase === 'shortBreak' || phase === 'longBreak') return `休息一下 · ${Math.ceil(remaining / 60000)} 分钟`;
-  if (track && now - trackChangedAt < 6000) return `♪ ${track}`;
-  if (isNight(hour)) return '';
+  if (quiet) return '';
+  const fresh = since > 0 && now - since >= 0 && now - since < BUBBLE_MS, minutes = Math.max(1, Math.ceil(remaining / 60000));
+  if (phase === 'focus' && paused) return fresh ? '专注暂停中，等你回来' : '';
+  if (phase === 'focus') {
+    if (due) return fresh ? '时间到啦，我还陪着你' : '';
+    if (fresh) return previous === 'focus' ? '继续加油' : '开始专注啦，我陪着你';
+    const elapsed = duration - remaining;
+    if (duration >= 4 * 60000 && elapsed >= duration / 2 && elapsed - duration / 2 < BUBBLE_MS) return `过半啦 · 还剩 ${minutes} 分钟`;
+    if (remaining <= 60000 && remaining > 60000 - BUBBLE_MS) return '最后 1 分钟！';
+    return '';
+  }
+  if (phase === 'shortBreak' || phase === 'longBreak') {
+    if (fresh) return previous === 'focus' ? `专注完成！休息 ${minutes} 分钟吧` : `休息一下 · ${minutes} 分钟`;
+    return '';
+  }
+  if (fresh && previous === 'focus') return '这一轮结束啦';
+  if (fresh && (previous === 'shortBreak' || previous === 'longBreak')) return '休息好了吗？';
+  if (track && now - trackChangedAt < BUBBLE_MS) return `♪ ${track}`;
   return '';
+}
+
+// 陪伴感: now and then (never more than once in REQUEST_GAP) the pet asks for a fish or a pat,
+// only while nothing else is going on, and never in 免打扰. Hungry when it has not eaten today,
+// lonely when its mood has dropped. `random` keeps it occasional instead of clockwork.
+export const REQUEST_GAP = 45 * 60000;
+export function petRequest({ now = 0, lastAt = 0, tier = 'ok', feedsToday = 0, fish = 0, quiet = false, phase = 'idle', hour = 12, random = Math.random } = {}) {
+  if (quiet || phase !== 'idle' || isNight(hour) || now - lastAt < REQUEST_GAP) return null;
+  if (!(random() < 0.35)) return null;
+  if (feedsToday === 0 && fish > 0) return { kind: 'food', text: '肚子有点饿…喂我一条小鱼干？' };
+  if (tier === 'droopy' || tier === 'sleepy') return { kind: 'attention', text: '摸摸我好不好？' };
+  if (tier === 'ok') return { kind: 'attention', text: '要不要起来走走？我陪你。' };
+  return null;
+}
+// The mood shows in the body, not only in words: a droopy pet dozes off between moments.
+export function moodPose(pose, tier, now = 0) {
+  if ((tier === 'droopy' || tier === 'sleepy') && pose === 'idle' && Math.floor(now / 20000) % 2 === 1) return 'sleep';
+  return pose;
 }
 
 // Brief out-and-back walks with at least 90 seconds of rest. No native window

@@ -68,7 +68,9 @@ test('cat behaviour follows focus, music, breaks and the night', async () => {
   assert.equal(petPose({ phase: 'focus', paused: true, playing: true, synced: true }), 'groove');
   assert.equal(petPose({ phase: 'shortBreak' }), 'walk'); assert.equal(petPose({ hour: 1 }), 'sleep'); assert.equal(petPose({ hour: 14 }), 'idle');
   assert.equal(petPose({ hour: 14, idleMs: 6 * MIN }), 'sleep'); assert.equal(petPose({ celebrateUntil: 10, now: 5, phase: 'focus' }), 'celebrate');
-  assert.equal(bubbleText({ phase: 'focus', remaining: 10 * MIN }), '专注中 · 还剩 10 分钟');
+  // 2.2: the bubble speaks at moments only (start, halfway, last minute, end), not the whole round.
+  assert.equal(bubbleText({ phase: 'focus', remaining: 10 * MIN, duration: 25 * MIN, now: 9e6, since: 1 }), '');
+  assert.equal(bubbleText({ phase: 'focus', remaining: 25 * MIN, duration: 25 * MIN, now: 1000, since: 500 }), '开始专注啦，我陪着你');
   assert.equal(bubbleText({ track: '晴天', trackChangedAt: 100, now: 200 }), '♪ 晴天'); assert.equal(bubbleText({ track: '晴天', trackChangedAt: 100, now: 99999 }), '');
   assert.equal(frameAt('groove', 0), 0); assert.equal(frameAt('groove', 250), 1); assert.equal(frameAt('groove', 1000), 0);
 });

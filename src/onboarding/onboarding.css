@@ -121,4 +121,15 @@
 @keyframes welcome-step-in{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
 
 .hub-row>span:first-child{gap:1px}.hub-row small{line-height:1.35}
+/* 设置 › 房间与桌宠 › 伙伴的脾气 (src/pet/PetBehaviourSettings.jsx). */
+.pet-behaviour{display:grid;gap:8px;margin:12px 0;padding:10px 12px;background:var(--ob-well);border:2px solid var(--ob-edge)}
+.pet-behaviour header{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px}
+.pet-behaviour header small,.pet-behaviour-actions small{font-size:12px;color:var(--px-ink-dim)}
+.pet-behaviour-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px 12px}
+.pet-behaviour-grid .focus-check{align-items:flex-start}
+.pet-behaviour-grid .focus-check span{display:grid;gap:1px}
+.pet-behaviour-grid .focus-check small{font-size:12px;color:var(--px-ink-dim);line-height:1.35}
+.pet-behaviour-opacity{display:flex;align-items:center;gap:8px;font-size:12px}
+.pet-behaviour-opacity input{flex:1;max-width:220px}
+.pet-behaviour-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 }

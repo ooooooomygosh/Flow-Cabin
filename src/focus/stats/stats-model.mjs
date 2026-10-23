@@ -82,6 +82,27 @@ export function yearHeatmap(sessions, now, weeks = 53) {
   return cols;
 }
 
+// 分心记录 (focus-model logDistraction): today, the last 7 days, the most distracted time of day
+// and the task it happened on most. `focusMinutes` (optional) turns the week into a per-hour rate.
+export function distractionSummary(distractions = [], now, { tasks = [], focusMinutes = 0 } = {}) {
+  const list = (Array.isArray(distractions) ? distractions : []).filter((item) => Number.isFinite(item?.at) && item.at <= now);
+  const today = dayKey(now), from = addDays(startOfDay(now), -6);
+  const week = list.filter((item) => item.at >= from), slots = new Map(), byTask = new Map();
+  for (const item of week) {
+    const hour = new Date(item.at).getHours(), slot = TIME_SLOTS.find((s) => hour >= s.from && hour < s.to);
+    slots.set(slot.id, (slots.get(slot.id) || 0) + 1);
+    if (item.taskId) byTask.set(item.taskId, (byTask.get(item.taskId) || 0) + 1);
+  }
+  const [slotId] = [...slots].sort((a, b) => b[1] - a[1])[0] || [];
+  const [taskId, taskCount] = [...byTask].sort((a, b) => b[1] - a[1])[0] || [];
+  return {
+    today: list.filter((item) => dayKey(item.at) === today).length, week: week.length,
+    perHour: focusMinutes > 0 ? Math.round(week.length / (focusMinutes / 60) * 10) / 10 : null,
+    busiest: slotId ? TIME_SLOTS.find((s) => s.id === slotId) : null,
+    task: taskId ? { name: tasks.find((t) => t.id === taskId)?.text || '已删除的待办', count: taskCount } : null
+  };
+}
+
 export function byTask(sessions, tasks = []) {
   const names = new Map(tasks.map((t) => [t.id, t])), rows = new Map();
   for (const s of sessions) {

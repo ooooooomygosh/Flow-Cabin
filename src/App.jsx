@@ -62,7 +62,7 @@ export default function App() {
     catch (cause) { notify(cause.message, { tone: 'error' }); }
   };
   if (!prepared) return <main className="app app-startup"><section aria-label="准备小屋"><small>心流小屋 · FLOW CABIN</small><h1>{loading ? '正在读取唱片…' : error ? '收藏暂时没有读到' : upgradeError ? '恢复点还没有保存' : '正在准备小屋…'}</h1>{loading || (!error && !upgradeError) ? <p role="status">{loading ? error ? '正在重新读取唱片…' : '正在取回你的收藏。' : '正在保存更新前的恢复点。'}</p> : null}{(upgradeError||error)&&<div className="app-startup-error" role="alert"><p>{error || upgradeError}</p><button type="button" className="pixel-button" disabled={loading} onClick={()=>{setUpgradeError('');setUpgradeRetry(v=>v+1);if(error)reload();}}>{loading ? '正在重试…' : error ? '重试' : '重试保存恢复点'}</button></div>}</section></main>;
-  return <RecordLibraryProvider userId={OWNER} roomId={ROOM}><FocusProvider userId={OWNER}><StudyProvider userId={OWNER}><SoundscapeProvider>
+  return <RecordLibraryProvider userId={OWNER} roomId={ROOM}><FocusProvider userId={OWNER} notify={notify}><StudyProvider userId={OWNER}><SoundscapeProvider>
     <CompanionBridge/>
     <div className="app" data-interface={mode}>
       {mode === 'classic' && <ClassicTitlebar items={items} loading={loading} onAdd={() => setAdding({query:''})} onWall={() => setWall(true)} onBeta={() => setInterfaceOpen(true)} onSettings={() => setHubRequest({section:'music',at:Date.now()})} notify={notify}/>}

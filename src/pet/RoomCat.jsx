@@ -34,13 +34,16 @@ export function useClock(interval = 1000, enabled = true) {
 }
 // Shared by the room, the wallpaper and the desktop pet: tracks celebration,
 // pokes and song changes, and returns the current pose and bubble.
-export function useCatBehaviour({ focus = {}, playing = false, track = '', lastActivity = 0, petId = 'cat', reduceMotion = false, hidden = false }) {
+export function useCatBehaviour({ focus = {}, playing = false, track = '', lastActivity = 0, petId = 'cat', reduceMotion = false, hidden = false, bubbles = true }) {
   const motion = useCatMotion(reduceMotion, hidden);
   const now = useClock(500, !hidden), [celebrate, setCelebrate] = useState(0), [poke, setPoke] = useState({ text: '', at: 0 });
   useEffect(() => { setPoke({ text: '', at: 0 }); }, [petId]);
   const fish = useRef(focus.fish), song = useRef({ track, at: 0 });
   useEffect(() => { if (fish.current !== undefined && focus.fish > fish.current) setCelebrate(celebrateUntil(Date.now())); fish.current = focus.fish; }, [focus.fish]);
   if (track !== song.current.track) song.current = { track, at: track ? Date.now() : 0 };
+  // When the focus state last changed (start, pause, overtime, end): the bubble speaks only then.
+  const stateKey = `${focus.phase || 'idle'}|${Boolean(focus.paused)}|${Boolean(focus.due)}`, change = useRef({ key: stateKey, at: 0, previous: '' });
+  if (change.current.key !== stateKey) change.current = { key: stateKey, at: Date.now(), previous: change.current.key.split('|')[0] };
   const hour = new Date(now).getHours(), remaining = focus.endsAt ? Math.max(0, focus.endsAt - now) : focus.remaining || 0;
   const synced = beatSynced({ playing });
   const basePose = petPose({ synced, playing, phase: focus.phase, paused: focus.paused, idleMs: lastActivity ? now - lastActivity : 0, hour, celebrateUntil: celebrate, now, poked: poke.at });
@@ -53,7 +56,7 @@ export function useCatBehaviour({ focus = {}, playing = false, track = '', lastA
   useEffect(() => bindPetLife(scheduler.current), []);
   const scheduled = scheduler.current.resolve({ now, focus:focus.phase==='focus'&&!focus.paused, walking:stroll.walking, base: stroll.walking ? 'walk' : basePose === 'walk' ? 'idle' : basePose, playing, synced, quiet: focus.quietMode, reduced: motion.reduced });
   const pose = scheduled.pose;
-  const bubble = bubbleText({ phase: focus.phase, paused: focus.paused, remaining, track, trackChangedAt: song.current.at, poke: poke.text, pokedAt: poke.at, now, hour });
+  const bubble = bubbleText({ phase: focus.phase, paused: focus.paused, remaining, duration: focus.duration || 0, due: focus.due, since: change.current.at, previous: change.current.previous, track, trackChangedAt: song.current.at, poke: poke.text, pokedAt: poke.at, now, bubbles, quiet: focus.quietMode });
   // The in-app cat stops hopping when the cabin is backgrounded (a minimised
   // Electron window would keep the sprite alive). The wallpaper and the desktop
   // pet are separate always-on-top surfaces: they keep living, so they must

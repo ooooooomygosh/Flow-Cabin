@@ -5,7 +5,7 @@ import { ConfirmButton } from '../ui/Confirm';
 import { useFocus, useFocusState } from './useFocus';
 import { useSoundscape } from '../audio/useSoundscape';
 import { AMBIENCE_TRACKS } from '../audio/ambience.mjs';
-import { activePreset, dayKey, focusStats, formatClock, FOCUS_PRESETS, PHASE_LABELS, STREAK_HINT } from './focus-model.mjs';
+import { activePreset, dayKey, focusStats, formatClock, FOCUS_PRESETS, PHASE_LABELS, STREAK_HINT, currentRound, overtimeMs, EXTEND_MIN } from './focus-model.mjs';
 import useFocusSessions from './stats/useFocusSessions.js';
 import FocusFace, { faceFocus } from './FocusFace';
 import FocusDisplayStage, { FaceSwitch } from './FocusDisplay';
@@ -37,16 +37,18 @@ export function FocusTimer() {
   const look = useSceneLook(), [display] = useFocusDisplay(), idle = timer.phase === 'idle';
   const sessions = useFocusSessions(focus.state.sessions);
   const now = Date.now(), day = dayKey(now), today = useMemo(() => focusStats(sessions, now), [sessions, day]), preset = activePreset(settings);
-  const task = tasks.find((item) => item.id === timer.taskId);
-  return <div className={`focus-timer phase-${timer.phase} ${timer.paused ? 'is-paused' : ''}`}>
-    <p className="focus-phase" role="status">{PHASE_LABELS[timer.phase]}{timer.paused ? ' · 已暂停' : ''}</p>
+  const task = tasks.find((item) => item.id === timer.taskId), round = currentRound(timer, now) % settings.longEvery;
+  const todayDistractions = focus.state.distractions.filter((item) => dayKey(item.at) === day).length;
+  return <div className={`focus-timer phase-${timer.phase} ${timer.paused ? 'is-paused' : ''}${timer.due ? ' is-overtime' : ''}`}>
+    <p className="focus-phase" role="status">{timer.due ? '到点了 · 还在继续计时' : PHASE_LABELS[timer.phase]}{timer.paused ? ' · 已暂停' : ''}</p>
     {/* The 番茄钟 tab counts down; 显示 › 时钟 keeps the wall clock here too. */}
     <FocusFace face={faceFor(display, look)} look={look} focus={faceFocus(focus.state)} show={display.show === 'clock' ? 'clock' : 'timer'} seconds={display.seconds} variant="dock"/>
     {idle && <small className="focus-face-note">{settings.focusMin} 分钟专注 · {settings.shortMin} 分钟休息</small>}
-    <div className="focus-rounds" aria-label={`本组第 ${timer.round % settings.longEvery + (timer.phase === 'focus' ? 1 : 0)} 轮`}>{Array.from({ length: settings.longEvery }, (_, index) => <span key={index} className={index < timer.round % settings.longEvery ? 'is-done' : index === timer.round % settings.longEvery && timer.phase === 'focus' ? 'is-active' : ''}/>)}</div>
+    <div className="focus-rounds" aria-label={`本组第 ${round + (timer.phase === 'focus' ? 1 : 0)} 轮`}>{Array.from({ length: settings.longEvery }, (_, index) => <span key={index} className={index < round ? 'is-done' : index === round && timer.phase === 'focus' ? 'is-active' : ''}/>)}</div>
     <div className="focus-controls">
       <button type="button" className="pixel-button is-primary" onClick={focus.toggle}>{idle ? <><Play size={18}/>开始专注</> : timer.paused ? <><Play size={18}/>继续</> : <><Pause size={18}/>暂停</>}</button>
-      {!idle && <button type="button" aria-label={timer.phase === 'focus' ? '提前结束本轮专注' : '跳过休息'} title={timer.phase === 'focus' ? '结束并回到待机，满一分钟的专注时间会保留（不计奖励）' : '跳过休息'} onClick={timer.phase === 'focus' ? focus.endRound : focus.skip}><Forward size={18}/></button>}
+      {!idle && <button type="button" aria-label={timer.due ? '结束这一轮，去休息' : timer.phase === 'focus' ? '提前结束本轮专注' : '跳过休息'} title={timer.due ? '这一轮算完成，超出的时间也记上' : timer.phase === 'focus' ? '结束并回到待机，满一分钟的专注时间会保留（不计奖励）' : '跳过休息'} onClick={timer.due ? focus.skip : timer.phase === 'focus' ? focus.endRound : focus.skip}><Forward size={18}/></button>}
+      {!idle && <button type="button" aria-label={`延长 ${EXTEND_MIN} 分钟`} title={timer.phase === 'focus' ? `这一轮再加 ${EXTEND_MIN} 分钟` : `多休息 ${EXTEND_MIN} 分钟`} onClick={() => focus.extend()}>+{EXTEND_MIN}</button>}
       {!idle && <ConfirmButton className="" label="重置计时" title="重置计时" icon={<Reset size={18}/>} question={timer.phase === 'focus' ? '放弃这一轮专注？' : '结束这次休息？'} confirmLabel="重置" skip={() => timer.phase !== 'focus' || (!timer.paused && Date.now() >= timer.endsAt)} onConfirm={focus.reset}/>}
       {idle && <button type="button" onClick={() => focus.start('shortBreak')}>休息一下</button>}
       <button type="button" aria-label="计时设置" aria-expanded={editing} onClick={() => setEditing(!editing)}><Settings size={18}/></button>
@@ -54,7 +56,8 @@ export function FocusTimer() {
     {idle && <Segmented className="focus-presets" label="专注节奏" value={preset} onChange={focus.preset} items={FOCUS_PRESETS.map((item) => ({ id: item.id, title: `专注 ${item.focusMin} 分钟，短休 ${item.shortMin} 分钟，长休 ${item.longMin} 分钟`, label: <><strong>{item.label}</strong><small>{item.hint}</small></> }))}/>}
     <p className="focus-today" title={STREAK_HINT} aria-label={`今天完成 ${today.todaySessions} 轮，专注 ${today.today} 分钟，当前连续 ${today.streak} 天。${STREAK_HINT}`}><span>今日</span><b>{today.todaySessions}</b> 轮<span aria-hidden="true">·</span><b>{today.today}</b> 分钟{today.streak > 1 && <><span aria-hidden="true">·</span>当前连续 <b>{today.streak}</b> 天</>}</p>
     <label className="focus-current-task">当前任务<select aria-label="当前专注任务" value={timer.taskId} onChange={(event) => focus.selectTask(event.target.value)}><option value="">自由专注</option>{tasks.filter((item) => !item.done || item.id === timer.taskId).map((item) => <option key={item.id} value={item.id}>{item.text}</option>)}</select></label>
-    {task && <p className="focus-task-now" title={task.text}>正在：{task.text}</p>}
+    {task && <p className="focus-task-now" title={task.text}>正在：{task.text}{task.estimate > 0 ? ` · ${task.pomodoros}/${task.estimate} 轮` : ''}</p>}
+    {timer.phase === 'focus' && <button type="button" className="focus-distraction" title="走神了？点一下记下来，然后回到手头的事。统计里能看到。" onClick={focus.distraction}>分心了{todayDistractions ? ` · 今天 ${todayDistractions} 次` : ''}</button>}
     {editing && <FocusSettingsForm running={!idle} faces={false}/>}
   </div>;
 }
@@ -82,7 +85,7 @@ export function SoundMixer() {
 export function FocusBadge({ onClick, open = false }) {
   const focus = useFocus(), { timer } = focus.state;
   if (timer.phase === 'idle') return <button type="button" className="focus-badge" aria-expanded={open} title="打开专注工具，开始一轮或写下待办" onClick={onClick}><Clock size={17}/>专注 · {focus.state.settings.focusMin} 分钟</button>;
-  const clock = formatClock(focus.remaining, focus.state.settings.hideSeconds);
+  const clock = timer.due ? `+${formatClock(overtimeMs(timer, focus.now))}` : formatClock(focus.remaining, focus.state.settings.hideSeconds);
   return <button type="button" className={`focus-badge is-running phase-${timer.phase}${timer.paused ? ' is-paused' : ''}${open ? ' is-open' : ''}`} aria-expanded={open} title="打开专注工具" onClick={onClick} aria-label={`${PHASE_LABELS[timer.phase]}，剩余 ${clock}`}><Clock size={17}/><span className="focus-badge-time">{clock}{timer.paused && <PausePixel size={12} className="focus-badge-paused"/>}</span>{open && <span>收起</span>}</button>;
 }
 

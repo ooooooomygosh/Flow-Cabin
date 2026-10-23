@@ -40,7 +40,9 @@ function createCompanionPoller({ getSite, clean, interval = 750, onValue }) {
 }
 
 // Sends a whitelisted command from a companion window to the business page.
-const COMMANDS = new Set(['focus-start', 'focus-pause', 'focus-toggle', 'focus-skip', 'sound-toggle', 'cat-feed', 'open-settings', 'open-onboarding', 'open-about']);
+// focus-extend (+5 分钟), focus-break / focus-next / focus-end (end-of-round choices, notification
+// buttons, tray), focus-distraction (分心了); cat-pet: the desktop pet was petted (counts for its mood).
+const COMMANDS = new Set(['focus-start', 'focus-pause', 'focus-toggle', 'focus-skip', 'focus-extend', 'focus-break', 'focus-next', 'focus-end', 'focus-distraction', 'sound-toggle', 'cat-feed', 'cat-pet', 'open-settings', 'open-onboarding', 'open-about']);
 function sendCompanionCommand(site, command) {
   if (!COMMANDS.has(command) || !site || site.isDestroyed()) return false;
   site.executeJavaScript(`window.dispatchEvent(new CustomEvent('album-companion-command', { detail: { command: ${JSON.stringify(command)} } }));`).catch(() => {});

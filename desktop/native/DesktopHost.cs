@@ -64,6 +64,32 @@ class DesktopHost {
     MSG msg; while(GetMessage(out msg,IntPtr.Zero,0,0)>0) { TranslateMessage(ref msg); DispatchMessage(ref msg); }
     timer.Dispose(); if(foreground!=IntPtr.Zero) UnhookWinEvent(foreground); if(reorder!=IntPtr.Zero) UnhookWinEvent(reorder);
   }
+  // fullscreen-watch (desktop/pet-fullscreen.cjs): the desktop pet hides while a fullscreen app is in front.
+  [DllImport("shell32.dll")] static extern int SHQueryUserNotificationState(out int state);
+  [DllImport("user32.dll")] static extern IntPtr GetForegroundWindow();
+  [DllImport("user32.dll")] static extern IntPtr GetShellWindow();
+  static bool ForegroundCoversMonitor(uint ownPid) {
+    var fg=GetForegroundWindow(); if(fg==IntPtr.Zero||fg==GetShellWindow()) return false;
+    uint pid; GetWindowThreadProcessId(fg,out pid); if(pid==ownPid) return false;
+    var cls=Class(fg); if(cls=="Progman"||cls=="WorkerW"||cls=="Shell_TrayWnd") return false;
+    RECT rect; if(!GetWindowRect(fg,out rect)) return false;
+    var info=new MONITORINFO(); info.cbSize=Marshal.SizeOf(info);
+    if(!GetMonitorInfo(MonitorFromWindow(fg,2),ref info)) return false;
+    return rect.left<=info.monitor.left&&rect.top<=info.monitor.top&&rect.right>=info.monitor.right&&rect.bottom>=info.monitor.bottom;
+  }
+  static void WatchFullscreen(IntPtr window,uint pid) {
+    var stop=new ManualResetEvent(false);
+    // The parent closes stdin (or exits) to stop; the pet window closing also stops.
+    var watcher=new Thread(delegate() { try { Console.In.ReadToEnd(); } catch {} stop.Set(); });
+    watcher.IsBackground=true; watcher.Start();
+    int last=-1;
+    while(!stop.WaitOne(1500)) {
+      if(!IsWindow(window)) break;
+      int state; bool busy=SHQueryUserNotificationState(out state)==0&&(state==2||state==3||state==4); // QUNS_BUSY, RUNNING_D3D_FULL_SCREEN, PRESENTATION_MODE
+      int now=(busy||ForegroundCoversMonitor(pid))?1:0;
+      if(now!=last) { last=now; Console.WriteLine(now==1?"{\"fullscreen\":true}":"{\"fullscreen\":false}"); Console.Out.Flush(); }
+    }
+  }
   static string Class(IntPtr h) { var s=new StringBuilder(256); GetClassName(h,s,s.Capacity); return s.ToString(); }
   static IntPtr Handle(string s) { return new IntPtr(long.Parse(s, CultureInfo.InvariantCulture)); }
   static void Guard(IntPtr window,uint expectedPid) { uint pid; GetWindowThreadProcessId(window,out pid); if(!IsWindow(window)||pid!=expectedPid||Class(window)!="Chrome_WidgetWin_1") throw new Exception("Invalid owned wallpaper window"); }
@@ -114,6 +140,7 @@ class DesktopHost {
       if(args.Length<3) throw new Exception("Command, window and owner process required");
       var window=Handle(args[1]); Guard(window,uint.Parse(args[2],CultureInfo.InvariantCulture));
       if(args[0]=="keep-bottom") { KeepBottom(window,uint.Parse(args[2],CultureInfo.InvariantCulture)); return 0; }
+      if(args[0]=="fullscreen-watch") { WatchFullscreen(window,uint.Parse(args[2],CultureInfo.InvariantCulture)); return 0; }
       if(args[0]=="attach") { if(args.Length!=4)throw new Exception("Owner window required"); Attach(window,Handle(args[3])); }
       else if(args[0]!="probe") throw new Exception("Unknown command");
       Console.WriteLine(new JavaScriptSerializer().Serialize(Probe(window))); return 0;
