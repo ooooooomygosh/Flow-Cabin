@@ -39,6 +39,11 @@ public class CabinDevicePlugin extends Plugin {
         if (!path.matches("/(config|quality|search|playlists|playlist|playlist/link|resolve|lyrics|track-cover|ma/players|ma/state|ma/control)(\\?[^#]*)?")) { call.reject("不支持此音源请求。"); return; }
         work.execute(() -> { try { call.resolve(new JSObject(CabinMusic.get(getContext()).request("/music" + path, call.getString("body")).toString())); } catch (Exception e) { call.reject(e.getMessage()); } });
     }
+    @PluginMethod public void syncRequest(PluginCall call) {
+        String path = call.getString("path", ""), body = call.getString("body");
+        if (!path.matches("/desktop-sync/(status|start|stop|invite|pair|sync|stage|revoke)") || (body != null && body.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 8 * 1024 * 1024)) { call.reject("无效的局域网同步请求。"); return; }
+        work.execute(() -> { try { call.resolve(new JSObject(CabinMusic.get(getContext()).request(path.replace("/desktop-sync/", "/sync/"), body).toString())); } catch (Exception e) { call.reject(e.getMessage()); } });
+    }
     @PluginMethod public void catalogRequest(PluginCall call) {
         String query = call.getString("query", ""); if (query.length() > 2400 || query.contains("#") || query.contains("\r") || query.contains("\n")) { call.reject("搜索条件无效。"); return; }
         work.execute(() -> { try { call.resolve(new JSObject(CabinMusic.get(getContext()).request("/catalog?" + query, null).toString())); } catch (Exception e) { call.reject(e.getMessage()); } });
@@ -62,6 +67,25 @@ public class CabinDevicePlugin extends Plugin {
     }
     @PluginMethod public void saveData(PluginCall call) {
         storageWork.execute(() -> { try { store.apply(call.getArray("changes")); call.resolve(); } catch (Exception e) { call.reject("手机数据库写入失败，请检查剩余空间后重试。"); } });
+    }
+    @PluginMethod public void setLauncherIcon(PluginCall call) {
+        String pet = call.getString("pet", "cat");
+        if (!java.util.Arrays.asList("cat", "chick", "bunny", "bear", "fox").contains(pet)) { call.reject("无效的桌宠图标。"); return; }
+        android.content.pm.PackageManager manager = getContext().getPackageManager();
+        // Enable the new launcher before disabling the old one, avoiding a gap.
+        manager.setComponentEnabledSetting(new android.content.ComponentName(getContext(), getContext().getPackageName() + ".Launcher_" + pet), android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED, android.content.pm.PackageManager.DONT_KILL_APP);
+        for (String id : new String[]{"cat", "chick", "bunny", "bear", "fox"}) if (!id.equals(pet)) manager.setComponentEnabledSetting(new android.content.ComponentName(getContext(), getContext().getPackageName() + ".Launcher_" + id), android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED, android.content.pm.PackageManager.DONT_KILL_APP);
+        getContext().getSharedPreferences("cabin-launcher", 0).edit().putString("pet", pet).apply();
+        call.resolve(new JSObject().put("pet", pet));
+    }
+    @PluginMethod public void launcherIcon(PluginCall call) { call.resolve(new JSObject().put("pet", getContext().getSharedPreferences("cabin-launcher", 0).getString("pet", "cat"))); }
+    @PluginMethod public void syncFocus(PluginCall call) {
+        CabinFocus.sync(getContext(), call.getObject("state", new JSObject())); call.resolve();
+    }
+    @PluginMethod public void requestFocusPermission(PluginCall call) {
+        if (android.os.Build.VERSION.SDK_INT >= 33 && getContext().checkSelfPermission("android.permission.POST_NOTIFICATIONS") != android.content.pm.PackageManager.PERMISSION_GRANTED)
+            getActivity().requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 720);
+        call.resolve();
     }
     @PluginMethod public void setImmersive(PluginCall call) {
         getActivity().runOnUiThread(() -> {

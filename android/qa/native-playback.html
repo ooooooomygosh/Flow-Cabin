@@ -3,9 +3,9 @@ import React,{useState} from 'react';
 import {createRoot} from 'react-dom/client';
 import useNativePlayback from '/src/mobile/useNativePlayback.jsx';
 let current={playing:false,status:'paused',position:0,duration:30,index:0,mediaId:'',title:''}, listener;
-window.calls=[];
+window.calls=[]; window.nextAlbums=[];
 window.emit=value=>{current={...current,...value};listener?.(current)};
 window.albumMobile={localTrack:(record,i)=>({uri:`content://qa/${record.id}/${i}`,title:record.tracks[i]}),player:{addListener:async(_,fn)=>{listener=fn;return {remove(){}}},state:async()=>current,queue:async value=>{window.calls.push(value);current={...current,playing:value.play,status:value.play?'playing':'paused',position:value.position,index:value.index,mediaId:value.items[value.index].uri,title:value.items[value.index].title};return current},command:async value=>{window.calls.push(value);if(value.action==='pause')current={...current,playing:false,status:'paused'};return current}}};
-function App(){const[index,setIndex]=useState(0),[record,setRecord]=useState({id:'album',tracks:['one','two','three']});const playback=useNativePlayback(record,index,'local',()=>setIndex(i=>i+1),{onNativeTrackIndex:setIndex});window.api={playback,index,setIndex,setRecord};return React.createElement('div',null,index+':'+playback.status)}
+function App(){const[index,setIndex]=useState(0),[record,setRecord]=useState({id:'album',tracks:['one','two','three']});const playback=useNativePlayback(record,index,'local',()=>setIndex(i=>i+1),{onNativeTrackIndex:setIndex,getNativeQueue:()=>window.nextAlbums,onNativeSelection:(id,i)=>{const selected=window.nextAlbums.find(item=>item.id===id);if(selected){setRecord(selected);setIndex(i)}}});window.api={playback,index,setIndex,setRecord};return React.createElement('div',null,index+':'+playback.status)}
 createRoot(document.getElementById('root')).render(React.createElement(App));
 </script></body></html>

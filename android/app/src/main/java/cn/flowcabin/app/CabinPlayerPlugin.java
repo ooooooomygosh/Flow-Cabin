@@ -5,6 +5,7 @@ import android.os.Handler;
 import android.os.Looper;
 import androidx.core.content.ContextCompat;
 import androidx.media3.common.C;
+import androidx.media3.common.Player;
 import androidx.media3.common.MediaItem;
 import androidx.media3.session.MediaController;
 import androidx.media3.session.SessionToken;
@@ -37,6 +38,8 @@ public final class CabinPlayerPlugin extends Plugin {
         MediaItem item = player.getCurrentMediaItem();
         return new JSObject().put("playing", player.isPlaying()).put("status", player.getPlayerError() != null ? "error" : player.getPlaybackState() == 4 ? "ended" : player.getPlaybackState() == 2 ? "buffering" : player.isPlaying() ? "playing" : "paused")
             .put("position", player.getCurrentPosition() / 1000.0).put("duration", player.getDuration() == C.TIME_UNSET ? 0 : player.getDuration() / 1000.0)
+            .put("repeat", player.getRepeatMode() == Player.REPEAT_MODE_ONE ? "one" : player.getRepeatMode() == Player.REPEAT_MODE_ALL ? "all" : "off").put("shuffle", player.getShuffleModeEnabled())
+            .put("recordId", item == null || item.mediaMetadata.extras == null ? "" : item.mediaMetadata.extras.getString("recordId", "")).put("trackIndex", item == null || item.mediaMetadata.extras == null ? 0 : item.mediaMetadata.extras.getInt("trackIndex", 0))
             .put("index", player.getCurrentMediaItemIndex()).put("mediaId", item == null ? "" : item.mediaId).put("title", item == null ? "" : String.valueOf(item.mediaMetadata.title))
             .put("error", player.getPlayerError() == null ? "" : "播放中断，请检查音源授权或文件权限后重试。");
     }
@@ -52,6 +55,8 @@ public final class CabinPlayerPlugin extends Plugin {
     }
     @PluginMethod public void command(PluginCall call) { withPlayer(call, () -> {
         switch (call.getString("action", "")) {
+            case "shuffle": player.setShuffleModeEnabled(call.getBoolean("enabled", false)); break;
+            case "repeat": String mode = call.getString("mode", "off"); player.setRepeatMode("one".equals(mode) ? Player.REPEAT_MODE_ONE : "all".equals(mode) ? Player.REPEAT_MODE_ALL : Player.REPEAT_MODE_OFF); break;
             case "play": if (player.getPlaybackState() == androidx.media3.common.Player.STATE_IDLE) player.prepare(); player.play(); break;
             case "pause": player.pause(); break;
             case "stop": player.stop(); player.clearMediaItems(); break;

@@ -6,6 +6,7 @@ import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.Bundle;
 import androidx.media3.common.AudioAttributes;
 import androidx.media3.common.C;
 import androidx.media3.common.MediaItem;
@@ -15,6 +16,8 @@ import androidx.media3.datasource.BaseDataSource;
 import androidx.media3.datasource.DataSpec;
 import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory;
+import androidx.media3.exoplayer.source.ShuffleOrder;
+import androidx.media3.common.Timeline;
 import androidx.media3.session.MediaSession;
 import androidx.media3.session.MediaSessionService;
 import java.io.IOException;
@@ -29,6 +32,7 @@ import org.json.JSONObject;
 public final class CabinPlaybackService extends MediaSessionService {
     private ExoPlayer player;
     private MediaSession session;
+    private boolean settingShuffle;
     private final Handler timer = new Handler(Looper.getMainLooper());
     private SharedPreferences saved;
     private final Runnable checkpoint = new Runnable() { public void run() { save(); timer.postDelayed(this, 5000); } };
@@ -53,11 +57,50 @@ public final class CabinPlaybackService extends MediaSessionService {
             for (int i = 0; i < queue.length(); i++) items.add(item(queue.getJSONObject(i)));
             if (!items.isEmpty()) { player.setMediaItems(items, Math.max(0, Math.min(saved.getInt("index", 0), items.size() - 1)), Math.max(0, saved.getLong("position", 0))); player.prepare(); }
         } catch (Exception ignored) { /* Preserve the saved queue for diagnostics; never autoplay after restart. */ }
+        player.setRepeatMode(saved.getInt("repeat", Player.REPEAT_MODE_OFF));
+        player.setShuffleModeEnabled(saved.getBoolean("shuffle", false));
         player.setPlayWhenReady(false);
         player.addListener(new Player.Listener() {
+            @Override public void onMediaItemTransition(MediaItem item, int reason) {
+                // 待播 is consumed album by album. At the final album repeat-all
+                // loops that album, never resurrecting already consumed albums.
+                int index = player.getCurrentMediaItemIndex();
+                if (item == null || item.mediaMetadata.extras == null || index <= 0) return;
+                String id = item.mediaMetadata.extras.getString("recordId", "");
+                int start = index;
+                while (start > 0) {
+                    Bundle previous = player.getMediaItemAt(start - 1).mediaMetadata.extras;
+                    if (previous == null || !id.equals(previous.getString("recordId", ""))) break;
+                    start--;
+                }
+                if (start > 0) player.removeMediaItems(0, start);
+            }
+            @Override public void onTimelineChanged(Timeline timeline, int reason) { if (reason == Player.TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED) shuffleWithinAlbums(); }
             @Override public void onEvents(Player source, Player.Events events) { save(); }
         });
+        shuffleWithinAlbums();
         timer.post(checkpoint);
+    }
+    // Keep 待播 albums in order. Random mode shuffles each album's own tracks,
+    // with the explicitly selected current song at the head of its group.
+    private void shuffleWithinAlbums() {
+        if (settingShuffle) return;
+        java.util.LinkedHashMap<String, java.util.ArrayList<Integer>> groups = new java.util.LinkedHashMap<>();
+        for (int i = 0; i < player.getMediaItemCount(); i++) {
+            Bundle extras = player.getMediaItemAt(i).mediaMetadata.extras;
+            String group = extras == null ? "" : extras.getString("recordId", "");
+            if (!groups.containsKey(group)) groups.put(group, new java.util.ArrayList<>());
+            groups.get(group).add(i);
+        }
+        int[] order = new int[player.getMediaItemCount()]; int offset = 0;
+        for (java.util.ArrayList<Integer> indices : groups.values()) {
+            int current = player.getCurrentMediaItemIndex(); boolean selected = indices.remove(Integer.valueOf(current));
+            java.util.Collections.shuffle(indices);
+            if (selected) order[offset++] = current;
+            for (int i : indices) order[offset++] = i;
+        }
+        settingShuffle = true;
+        try { player.setShuffleOrder(new ShuffleOrder.DefaultShuffleOrder(order, System.nanoTime())); } finally { settingShuffle = false; }
     }
     public static MediaItem item(JSONObject value) throws Exception {
         String provider = value.optString("provider"), id = value.optString("id"), uri;
@@ -67,8 +110,9 @@ public final class CabinPlaybackService extends MediaSessionService {
             if (!(provider.equals("qq") || provider.equals("netease")) || !id.matches("[a-zA-Z0-9]{1,64}")) throw new IOException("无效的平台曲目。");
             uri = "cabin://" + provider + "/" + id;
         }
+        Bundle extras = new Bundle(); extras.putString("recordId", value.optString("recordId")); extras.putInt("trackIndex", value.optInt("trackIndex", 0));
         return new MediaItem.Builder().setMediaId(uri).setUri(uri).setMediaMetadata(new MediaMetadata.Builder()
-            .setTitle(value.optString("title", "歌曲")).setArtist(value.optString("artist")).setAlbumTitle(value.optString("album")).build()).build();
+            .setExtras(extras).setTitle(value.optString("title", "歌曲")).setArtist(value.optString("artist")).setAlbumTitle(value.optString("album")).build()).build();
     }
     private void save() {
         if (player == null) return;
@@ -77,15 +121,18 @@ public final class CabinPlaybackService extends MediaSessionService {
             for (int i = 0; i < player.getMediaItemCount(); i++) {
                 MediaItem item = player.getMediaItemAt(i); Uri uri = Uri.parse(item.mediaId);
                 JSONObject value = new JSONObject().put("provider", "content".equals(uri.getScheme()) ? "local" : uri.getHost()).put("id", uri.getLastPathSegment())
+                    .put("recordId", item.mediaMetadata.extras == null ? "" : item.mediaMetadata.extras.getString("recordId", "")).put("trackIndex", item.mediaMetadata.extras == null ? i : item.mediaMetadata.extras.getInt("trackIndex", i))
                     .put("title", item.mediaMetadata.title).put("artist", item.mediaMetadata.artist).put("album", item.mediaMetadata.albumTitle);
                 if ("content".equals(uri.getScheme())) value.put("uri", uri.toString()); queue.put(value);
             }
             saved.edit().putString("queue", queue.toString()).putInt("index", player.getCurrentMediaItemIndex()).putLong("position", player.getCurrentPosition())
+                .putInt("repeat", player.getRepeatMode()).putBoolean("shuffle", player.getShuffleModeEnabled())
                 .putString("title", String.valueOf(player.getMediaMetadata().title)).putBoolean("playing", player.isPlaying()).apply();
+            CabinWidgets.refresh(this);
         } catch (Exception ignored) { }
     }
     @Override public MediaSession onGetSession(MediaSession.ControllerInfo controller) { return session; }
-    @Override public void onDestroy() { timer.removeCallbacksAndMessages(null); save(); if (session != null) session.release(); if (player != null) player.release(); super.onDestroy(); }
+    @Override public void onDestroy() { timer.removeCallbacksAndMessages(null); if (player != null) player.pause(); save(); if (session != null) session.release(); if (player != null) player.release(); super.onDestroy(); }
 
     static void skipFully(InputStream source, long position) throws IOException {
         while (position > 0) {

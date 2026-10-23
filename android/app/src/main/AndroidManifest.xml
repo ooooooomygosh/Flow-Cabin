@@ -21,13 +21,14 @@
             android:windowSoftInputMode="adjustResize"
             android:exported="true">
 
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
 
         </activity>
 
+        <activity-alias android:name=".Launcher_cat" android:targetActivity=".MainActivity" android:exported="true" android:enabled="true" android:icon="@drawable/launcher_cat" android:label="@string/app_name"><intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity-alias>
+        <activity-alias android:name=".Launcher_chick" android:targetActivity=".MainActivity" android:exported="true" android:enabled="false" android:icon="@drawable/launcher_chick" android:label="@string/app_name"><intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity-alias>
+        <activity-alias android:name=".Launcher_bunny" android:targetActivity=".MainActivity" android:exported="true" android:enabled="false" android:icon="@drawable/launcher_bunny" android:label="@string/app_name"><intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity-alias>
+        <activity-alias android:name=".Launcher_bear" android:targetActivity=".MainActivity" android:exported="true" android:enabled="false" android:icon="@drawable/launcher_bear" android:label="@string/app_name"><intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity-alias>
+        <activity-alias android:name=".Launcher_fox" android:targetActivity=".MainActivity" android:exported="true" android:enabled="false" android:icon="@drawable/launcher_fox" android:label="@string/app_name"><intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity-alias>
         <service android:name=".CabinPlaybackService" android:exported="true" android:foregroundServiceType="mediaPlayback">
             <intent-filter><action android:name="androidx.media3.session.MediaSessionService" /></intent-filter>
         </service>
@@ -40,10 +41,18 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths"></meta-data>
         </provider>
+        <receiver android:name=".CabinFocus" android:exported="false" />
+        <receiver android:name=".CabinWidgets" android:exported="false" android:label="Flow Cabin · 唱片">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter><meta-data android:name="android.appwidget.provider" android:resource="@xml/cabin_widget"/>
+        </receiver>
+        <receiver android:name=".CabinWidgets$Focus" android:exported="false" android:label="Flow Cabin · 专注">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter><meta-data android:name="android.appwidget.provider" android:resource="@xml/cabin_widget"/>
+        </receiver>
     </application>
 
     <!-- Permissions -->
 
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />

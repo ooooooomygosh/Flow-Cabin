@@ -17,7 +17,12 @@ export async function initializeMobile() {
   const saved = await Device.loadData(); // Never start an empty cabin after a read/corruption error.
   const previous = window.localStorage;
   const entries = saved.initialized ? saved.entries : Object.fromEntries(Array.from({ length: previous.length }, (_, i) => previous.key(i)).filter(persistentKey).map(key => [key, previous.getItem(key)]));
-  store = createMobileStorage({ entries, write: changes => Device.saveData({ changes }), onError: () => report('本机保存未完成，请保留应用并在「设置 → 数据与备份」重新保存或导出备份。') });
+  store = createMobileStorage({ entries, write: async changes => {
+    await Device.saveData({ changes });
+    for (const { key, value } of changes) if (key.startsWith('album-circle-focus-v1:')) {
+      try { await Device.syncFocus({ state: value ? JSON.parse(value) : {} }); } catch { report('系统专注提醒未能更新，请检查通知设置。'); }
+    }
+  }, onError: () => report('本机保存未完成，请保留应用并在「设置 → 数据与备份」重新保存或导出备份。') });
   Object.defineProperty(window, 'localStorage', { configurable: true, value: store.storage });
   if (!saved.initialized) await Device.saveData({ changes: Object.entries(entries).map(([key, value]) => ({ key, value })) });
   window.albumMobile = { flushStorage: store.flush, storageStatus: store.status, retrySave: store.flush, setFullscreen: async enabled => {
@@ -50,7 +55,15 @@ export async function initializeMobile() {
     if (path === '/apple/permission') return { available: false, granted: false };
     return Device.musicRequest({ path, ...(value === undefined ? {} : { body: JSON.stringify(value) }) });
   };
+  window.albumMobile.syncRequest = (path, value) => Device.syncRequest({ path: `/desktop-sync${path}`, ...(value === undefined ? {} : { body: JSON.stringify(value) }) });
   window.albumMobile.player = NativePlayer;
+  window.albumMobile.setLauncherIcon = pet => Device.setLauncherIcon({ pet });
+  window.albumMobile.launcherIcon = () => Device.launcherIcon();
+  window.albumMobile.requestFocusPermission = () => Device.requestFocusPermission();
+  window.addEventListener('album-focus-start', () => {
+    const wantsNotice = Array.from({ length: localStorage.length }, (_, i) => localStorage.key(i)).filter(key => key?.startsWith('album-circle-focus-v1:')).some(key => { try { const state = JSON.parse(localStorage.getItem(key)); return state.settings?.notify !== false && state.timer?.startedAt >= Date.now() - 1000; } catch { return false; } });
+    if (wantsNotice) Device.requestFocusPermission().catch(() => {});
+  });
   window.albumMobile.localTrack = (item, index) => { try { return JSON.parse(localStorage.getItem(MUSIC_KEY) || '{}')[item?.externalIds?.fileAlbum]?.[index] || null; } catch { return null; } };
   window.albumMobile.catalogRequest = query => Device.catalogRequest({ query });
   let connecting = false;
