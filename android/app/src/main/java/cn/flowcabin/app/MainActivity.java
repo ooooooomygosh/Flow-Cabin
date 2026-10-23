@@ -24,7 +24,8 @@ public class MainActivity extends BridgeActivity {
     static boolean cameraRequestAllowed(String origin, String[] resources, boolean scanning) {
         return scanning && ("https://localhost/".equals(origin) || "https://localhost".equals(origin)) && resources.length == 1 && android.webkit.PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(resources[0]);
     }
-    @Override public void onPause() { endCameraScan(); super.onPause(); }
+    @Override public void onPause() { endCameraScan(); CabinFocus.foreground = false; super.onPause(); }
+    @Override public void onResume() { super.onResume(); CabinFocus.foreground = true; }
 
     @Override public void onCreate(Bundle state) {
         registerPlugin(CabinDevicePlugin.class);

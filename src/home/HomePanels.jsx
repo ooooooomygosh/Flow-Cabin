@@ -9,6 +9,7 @@ import Postcard from './Postcard';
 import HomeCalendar from './HomeCalendar';
 import RoomPickers from '../RoomPickers';
 import { readLife, writeLife, waterPlant, plantStage, LIFE_CHANGED, LIFE_KEY } from './life-state.mjs';
+import { showNotice } from '../focus/focus-notice.mjs';
 const LyricsStage = lazy(() => import('../lyrics/LyricsStage'));
 
 export function HomeLyrics({ close }) {
@@ -27,7 +28,9 @@ export function LifePanel({ type }) {
 }
 export function LifeReminder() {
   const { notify } = useCabinRuntime();
-  useEffect(() => { const id = setInterval(() => { const value = readLife(); if (!document.hidden && value.reminder && value.nextDrink > 0 && Date.now() >= value.nextDrink) { try { writeLife({ nextDrink: Date.now() + value.interval * 60000 }); notify('茶还温着，起来喝口水吧。'); } catch {} } }, 30000); return () => clearInterval(id); }, [notify]);
+  // In front: a toast. In the background (window hidden, minimised or behind another app): a system
+  // notification, so the reminder still reaches the user (focus-notice showNotice).
+  useEffect(() => { const id = setInterval(() => { const value = readLife(); if (value.reminder && value.nextDrink > 0 && Date.now() >= value.nextDrink) { try { writeLife({ nextDrink: Date.now() + value.interval * 60000 }); if (document.hidden || !document.hasFocus()) showNotice({ title: '喝口水吧', body: '茶还温着，起来喝口水、舒展一下。', tag: 'cabin-water', actions: [] }); notify('茶还温着，起来喝口水吧。'); } catch {} } }, 30000); return () => clearInterval(id); }, [notify]);
   return null;
 }
 export default function HomePanels({ tool, close, filters, setFilters, visible, recordStyle, openAdd, openRecord, openWall, openSmart, onRoomChange }) {

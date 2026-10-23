@@ -24,7 +24,7 @@ export const requestFeed = () => window.dispatchEvent(new CustomEvent(care.FEED_
 // The last feed attempt, for the desktop pet (CompanionBridge → companion snapshot `care`): it plays
 // its eating frames on a new `fedAt`, or shows `note` when the feed was refused (no fish / full).
 let lastFeed = { fedAt: 0, ok: false, note: '' };
-export const careForCompanion = () => ({ ...lastFeed, tier: snapshot?.tier || '' });
+export const careForCompanion = () => ({ ...lastFeed, tier: snapshot?.tier || '', feedsToday: snapshot?.feedsToday || 0 });
 export function useCatCare() { return useSyncExternalStore(subscribe, current, current); }
 
 export function useCatCareHost() {
@@ -46,7 +46,8 @@ export function useCatCareHost() {
       window.dispatchEvent(new CustomEvent(care.FED_EVENT, { detail: { at: last.at, mood: snapshot.mood, tier: snapshot.tier, fishLeft: last.fishLeft, totalFeeds: result.care.totalFeeds } }));
     };
     // 「喂一条」 from the desktop pet (right-click menu, or a 小鱼干 dropped on it) arrives through the shell.
-    const onCommand = (event) => { if (event.detail?.command === 'cat-feed') onFeed(); };
+    // 摸摸 on the desktop pet (its own window) counts like a pet in the cabin: same event, same daily cap.
+    const onCommand = (event) => { const command = event.detail?.command; if (command === 'cat-feed') onFeed(); else if (command === 'cat-pet') window.dispatchEvent(new Event('cabin:cat-petted')); };
     window.addEventListener('album-companion-command', onCommand);
     const onStorage = (event) => { if (event.key === care.MOOD_KEY || event.key === care.META_KEY) publish(care.readCare(), ''); };
     const clock = setInterval(() => refresh(snapshot?.message || ''), 10 * 60000);

@@ -30,8 +30,13 @@ function createSiteCommands(ctx) {
     '/minimize': () => window().minimize(),
     '/maximize': () => { if (sink().active) sink().exit(); else if (ctx.isFullscreen()) ctx.setFullscreen(false); else if (window().isMaximized()) window().unmaximize(); else window().maximize(); },
     '/close': () => window().close(),
+    // A system notification from the page (end of a round, 喝水): title, body, silent, actions.
+    '/notify': ({ searchParams }) => ctx.notify?.(searchParams),
     '/pet-start': () => ctx.pet().start().catch((error) => ctx.writeLog('pet-error', error.message)),
     '/pet-stop': () => ctx.pet().stop(),
+    // 设置 › 房间与桌宠: bubbles, walk, gravity, onTop, locked, clickThrough, autoHide (true/false), opacity (0.3–1).
+    '/pet-prefs': ({ searchParams }) => ctx.pet()?.setPrefs?.(ctx.petPrefs ? ctx.petPrefs(searchParams) : {}),
+    '/pet-hide': ({ searchParams }) => { const hours = Number(searchParams.get('hours')); if (hours > 0 && hours <= 12) ctx.pet()?.hideFor?.(hours * 3600000); else if (searchParams.get('hours') === '0') ctx.pet()?.showNow?.(); },
     // A 小鱼干 drag in the cabin: the desktop pet accepts the drop while it lasts.
     '/pet-drag': ({ searchParams }) => { const active = flag(searchParams, 'active'); if (active !== null) ctx.pet()?.acceptDrops?.(active); },
     // 键鼠陪伴: setting changes use the same persisted appearance file as the

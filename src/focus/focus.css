@@ -132,6 +132,41 @@
 .focus-task-rename{display:grid;place-items:center;min-width:var(--px-hit);min-height:var(--px-hit);padding:3px;color:var(--focus-muted);background:none;border:0;opacity:0}
 .focus-task-list li:hover .focus-task-rename,.focus-task-rename:focus-visible{opacity:1}
 @media(hover:none){.focus-task-rename{opacity:.7}}
+
+/* 2.2 tasks: 今天 / 之后, estimates, subtasks, carried-over badge. */
+.focus-task-list li{flex-direction:column;align-items:stretch}
+.focus-task-row{display:flex;align-items:center;gap:6px;min-width:0}
+.focus-task-lists{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px}
+.focus-task-lists button{display:flex;align-items:center;justify-content:center;gap:6px;padding:5px 4px;color:var(--focus-cream);background:var(--focus-well);border:2px solid var(--focus-edge)}
+.focus-task-lists button[aria-checked=true]{color:var(--focus-ink);background:var(--focus-accent);border-color:var(--focus-cream)}
+.focus-task-lists small{min-width:18px;padding:0 4px;font-size:12px;color:var(--focus-ink);background:var(--focus-cream)}
+.focus-task-rounds .is-planned{opacity:.35}
+.focus-task-carried,.focus-task-subcount{padding:0 4px;font-size:12px;color:var(--focus-ink);background:var(--focus-muted)}
+.focus-task-carried{background:var(--focus-tomato)}
+.focus-task-expand{display:grid;place-items:center;min-width:var(--px-hit);min-height:var(--px-hit);padding:3px;color:var(--focus-muted);background:none;border:0}
+.focus-task-details{display:grid;gap:6px;margin:6px 0 0 30px;padding-top:6px;border-top:1px dashed var(--focus-edge)}
+.focus-task-estimate{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:12px;color:var(--focus-muted)}
+.focus-task-estimate button{display:grid;place-items:center;min-width:28px;min-height:28px;padding:2px;color:var(--focus-cream);background:var(--focus-well);border:1px solid var(--focus-edge)}
+.focus-task-estimate button:disabled{opacity:.4}
+.focus-task-estimate b{min-width:16px;text-align:center;color:var(--focus-cream);font-variant-numeric:tabular-nums}
+.focus-task-estimate .focus-task-move{margin-left:auto;padding:2px 8px}
+.focus-subtasks{list-style:none;margin:0;padding:0;display:grid;gap:3px}
+.focus-subtasks li{display:flex;align-items:center;gap:6px;padding:0;font-size:12px;background:none;border:0}
+.focus-subtasks li>span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.focus-subtasks li.is-done>span{text-decoration:line-through;color:var(--px-ink-faint)}
+.focus-subtasks .focus-task-check{width:20px;height:20px}
+.focus-subtasks li>button:last-child{display:grid;place-items:center;min-width:28px;min-height:28px;color:var(--focus-muted);background:none;border:0}
+.focus-subtask-form{display:flex;gap:6px}.focus-subtask-form input{flex:1;min-width:0;padding:3px 6px;font-size:12px}
+.focus-subtask-form button{display:grid;place-items:center;padding:0 8px;color:var(--focus-ink);background:var(--focus-accent);border:1px solid var(--focus-cream)}
+.focus-subtask-form button:disabled{opacity:.4}
+/* 2.2 timer: 分心了, overtime and the sound / lock settings. */
+.focus-distraction{justify-self:center;padding:4px 10px;font-size:12px;color:var(--focus-muted);background:none;border:1px dashed var(--focus-edge)}
+.focus-distraction:hover{color:var(--focus-cream);border-color:var(--focus-accent)}
+.focus-timer.is-overtime .focus-phase{color:var(--focus-tomato)}
+.focus-chime-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:12px}
+.focus-chime-row label,.focus-sleep-policy{display:flex;align-items:center;gap:6px;font-size:12px}
+.focus-chime-row input[type=range]{width:96px}
+.focus-settings-hint{font-size:12px;color:var(--px-ink-dim)}
 }
 
 .cat-panel .focus-rewards{margin-top:0;padding-top:0;border-top:0}

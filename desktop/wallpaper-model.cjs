@@ -18,8 +18,11 @@ const bounded = (value, max) => Number.isFinite(value) ? Math.max(0, Math.min(ma
 // Focus state shown by the wallpaper and the desktop pet: no task history.
 function cleanFocus(value) {
   if (!value || typeof value !== 'object') return null;
-  return { phase: PHASES.includes(value.phase) ? value.phase : 'idle', paused: value.paused === true, remaining: bounded(value.remaining, 4 * 3600000), endsAt: bounded(value.endsAt, 9e15),
-    round: bounded(value.round, 1e6), duration: bounded(value.duration, 3 * 3600000), longEvery: Math.max(2, Math.min(8, bounded(value.longEvery, 8) || 4)), task: string(value.task, 120), fish: bounded(value.fish, 1e9), level: bounded(value.level, 1e4),
+  const phase = PHASES.includes(value.phase) ? value.phase : 'idle';
+  return { phase, paused: value.paused === true, remaining: bounded(value.remaining, 4 * 3600000), endsAt: bounded(value.endsAt, 9e15),
+    // 2.2: 免打扰, overtime (到点后继续计时) and when the round started (pet bubble moments).
+    quietMode: value.quietMode === true, due: phase === 'focus' && value.due === true, over: bounded(value.over, 3 * 3600000), startedAt: bounded(value.startedAt, 9e15),
+    round: bounded(value.round, 1e6), duration: bounded(value.duration, 4 * 3600000), longEvery: Math.max(2, Math.min(8, bounded(value.longEvery, 8) || 4)), task: string(value.task, 120), fish: bounded(value.fish, 1e9), level: bounded(value.level, 1e4),
     hideSeconds: value.hideSeconds === true, catSkin: value.catSkin === 'black' ? 'black' : 'orange', accessory: ACCESSORIES.includes(value.accessory) ? value.accessory : '',
     unlockedAccessories: [...new Set((Array.isArray(value.unlockedAccessories) ? value.unlockedAccessories : []).filter((id) => ACCESSORIES.includes(id) && id))],
     weather: WEATHERS.includes(value.weather) ? value.weather : 'snow' };
@@ -30,10 +33,11 @@ function cleanFocusDisplay(value) {
   return { mode: FACES.includes(v.mode) ? v.mode : '', show: SHOWS.includes(v.show) ? v.show : 'auto', seconds: v.seconds === true };
 }
 // The last feed attempt (src/cat/useCatCare.js careForCompanion): display data only.
-const TIERS = ['happy', 'ok', 'sleepy'];
+// Tiers are src/cat/cat-care.mjs tierOf ('droopy' = 无精打采); 'sleepy' is kept for older pages.
+const TIERS = ['happy', 'ok', 'droopy', 'sleepy'];
 function cleanCare(value) {
   const fedAt = Number(value?.fedAt);
-  return { fedAt: Number.isFinite(fedAt) && fedAt > 0 ? Math.round(fedAt) : 0, ok: value?.ok === true, note: string(value?.note, 80), tier: TIERS.includes(value?.tier) ? value.tier : '' };
+  return { fedAt: Number.isFinite(fedAt) && fedAt > 0 ? Math.round(fedAt) : 0, ok: value?.ok === true, note: string(value?.note, 80), tier: TIERS.includes(value?.tier) ? value.tier : '', feedsToday: bounded(Number(value?.feedsToday), 99) };
 }
 function cleanCompanion(value) {
   if (!value || typeof value !== 'object') return null;

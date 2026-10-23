@@ -20,6 +20,11 @@ export function faceModel({ now = Date.now(), focus = null, show = 'auto', secon
     const hh = pad(date.getHours()), mm = pad(date.getMinutes());
     return { ...base, groups: [hh, mm], small: seconds ? pad(date.getSeconds()) : '', unit: '', label: `现在 ${hh}:${mm}`, caption: dateLine(date), clockText: `${hh}:${mm}` };
   }
+  // 到点后继续计时: past the planned end the face counts the extra time up (+mm:ss).
+  if (phase === 'focus' && f.due) {
+    const over = f.paused ? Number(f.over) || 0 : Math.max(0, now - (Number(f.endsAt) || now)), total = Math.floor(over / 1000), mm = pad(Math.floor(total / 60)), ss = pad(total % 60);
+    return { ...base, progress: 1, groups: [mm, ss], small: '', unit: '', label: `超出 ${mm}:${ss}`, caption: '专注 · 到点后继续' + (f.paused ? ' · 已暂停' : ''), clockText: `+${mm}:${ss}`, overtime: true };
+  }
   const label = formatClock(remaining, f.hideSeconds);
   if (f.hideSeconds) { const minutes = String(Math.max(0, Math.ceil(remaining / MINUTE))).padStart(2, '0'); return { ...base, groups: [minutes], small: '', unit: '分', label, caption: PHASE_LABELS[phase] + (f.paused ? ' · 已暂停' : ''), clockText: minutes }; }
   const total = Math.max(0, Math.ceil(remaining / 1000)), mm = pad(Math.floor(total / 60)), ss = pad(total % 60);

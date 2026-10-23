@@ -3,13 +3,15 @@
 export const MAX_VISIBLE = 3;
 export const durationFor = ({ tone = '', action } = {}) => tone === 'error' ? 6000 : action ? 6000 : 3200;
 let next = 0;
-export function addToast(list, text, { tone = '', action = null, at = Date.now() } = {}) {
+// `duration` (ms, 2–30 s) lets a question that needs an answer stay up longer.
+export function addToast(list, text, { tone = '', action = null, at = Date.now(), duration = 0 } = {}) {
   const message = String(text || '').trim();
   if (!message) return list;
   // The same message twice in a row only refreshes the existing toast.
   const same = list.find(t => t.text === message && t.tone === tone && !t.action && !action);
   if (same) return list.map(t => t === same ? { ...t, at, duration: durationFor({ tone }) } : t);
-  const toast = { id: `toast-${++next}`, text: message, tone, at, duration: durationFor({ tone, action }), action: action && typeof action.run === 'function' ? { label: String(action.label || '撤销'), run: action.run } : null };
+  const wanted = Number(duration), time = Number.isFinite(wanted) && wanted > 0 ? Math.max(2000, Math.min(30000, wanted)) : durationFor({ tone, action });
+  const toast = { id: `toast-${++next}`, text: message, tone, at, duration: time, action: action && typeof action.run === 'function' ? { label: String(action.label || '撤销'), run: action.run } : null };
   // Oldest non-error toasts leave first when the stack is full.
   const kept = [...list, toast];
   while (kept.length > MAX_VISIBLE) { const index = kept.findIndex(t => t.tone !== 'error'); kept.splice(index >= 0 ? index : 0, 1); }
