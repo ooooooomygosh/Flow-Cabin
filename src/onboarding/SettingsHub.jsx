@@ -24,6 +24,7 @@ import AiSettings from '../ai/AiSettings.jsx';
 import InputCompanionSettings from './InputCompanionSettings';
 import StorageStatus from '../mobile/StorageStatus';
 import PetBehaviourSettings from '../pet/PetBehaviourSettings';
+import { MiniPlayerRow, MediaKeysRows } from '../desktop/PlayerDesktopSettings';
 
 const SyncSettings = lazy(() => import('../sync/SyncSettings'));
 const PetPackSettings = lazy(() => import('../pet/PetPackSettings'));
@@ -154,6 +155,8 @@ function DisplaySection({ env, desktop }) {
     </Row>
     {env.desktop && <AutostartRow/>}
     {env.desktop && <Row title="显示与字体" hint="界面缩放、字体、减少动态效果。"><button type="button" className="pixel-button" onClick={() => desktopCommand('settings')}>打开显示与字体</button></Row>}
+    {env.desktop && <MiniPlayerRow/>}
+    {env.desktop && <MediaKeysRows/>}
     <div className="hub-row hub-shortcuts-row"><span><strong>快捷键</strong><dl className="hub-shortcuts">{SHORTCUTS.map((entry) => <div key={entry.id}><dt>{entry.label}</dt><dd>{entry.action}</dd></div>)}</dl></span></div>
   </div>;
 }

@@ -28,6 +28,9 @@ function appMenuTemplate(ctx) {
       { id: 'cabin-fullscreen', type: 'checkbox', checked: ctx.fullscreen, label: '交互全屏', accelerator: 'F11', click: ctx.toggleFullscreen },
       { label: '沉入桌面', accelerator: SINK_HOTKEY, registerAccelerator: false, click: ctx.toggleSink }
     ]},
+    // ── M3 player: 控制 menu (playback, volume, mini player) ──
+    { label: '控制', submenu: playbackMenuItems(ctx, { accelerators: true }) },
+    // ── end M3 player ──
     { label: '帮助', submenu: [
       { label: '打开数据文件夹', click: ctx.openData },
       { label: '关于心流小屋', click: ctx.about }
@@ -58,6 +61,9 @@ function trayMenuTemplate(ctx) {
     { label: status.statusLine || '心流小屋', enabled: false },
     { type: 'separator' },
     { label: status.playing ? '暂停音乐' : '播放音乐', click: () => ctx.player?.('toggle') },
+    // ── M3 player ──
+    { label: '上一首', click: () => ctx.player?.('previous') },
+    // ── end M3 player ──
     { label: '下一首', click: () => ctx.player?.('next') },
     { label: '桌面歌词', type: 'checkbox', checked: Boolean(ctx.lyricsOpen), click: () => ctx.lyricsToggle?.() },
     ...(ctx.lyricsOpen ? [{ label: '锁定桌面歌词（鼠标穿透）', type: 'checkbox', checked: Boolean(ctx.lyricsLocked), click: () => ctx.lyricsLock?.() }] : []),
@@ -73,9 +79,39 @@ function trayMenuTemplate(ctx) {
     ...(ctx.petHidden ? [{ label: '现在叫伙伴出来', click: ctx.petShow }] : []),
     ctx.petActive ? { label: '让伙伴回家', click: ctx.petStop } : { label: '伙伴出门（桌宠）', click: ctx.petStart },
     ctx.sinkActive ? { label: '浮出桌面（回到窗口）', accelerator: SINK_HOTKEY, click: ctx.sinkExit } : { label: '沉入桌面', accelerator: SINK_HOTKEY, click: ctx.sinkEnter },
+    // ── M3 player ──
+    ...(ctx.miniToggle ? [{ label: '迷你唱机', type: 'checkbox', checked: Boolean(ctx.miniShown), click: ctx.miniToggle }] : []),
+    // ── end M3 player ──
     { type: 'separator' }, { label: '退出应用', click: ctx.quit }
   ];
 }
 
+// ── M3 player ──────────────────────────────────────────────────────────────
+// Playback items shared by the 控制 menu and the macOS Dock menu. ctx.player(action)
+// relays a cabin:player-command; ctx.status.playing names 播放 / 暂停; accelerators
+// mirror the global media hotkeys (registered separately, so registerAccelerator: false).
+// ctx: { player(action), status, mediaKeys: { bindings }, miniToggle, miniShown, miniPin, miniPinned, lyricsToggle }
+function playbackMenuItems(ctx, { accelerators = false } = {}) {
+  const keys = accelerators ? ctx.mediaKeys?.enabled === false ? {} : ctx.mediaKeys?.bindings || {} : {};
+  const item = (label, action, extra = {}) => ({ label, click: () => ctx.player?.(action), ...(keys[action] ? { accelerator: keys[action], registerAccelerator: false } : {}), ...extra });
+  return [
+    item(ctx.status?.playing ? '暂停' : '播放', 'toggle'),
+    item('上一首', 'previous'), item('下一首', 'next'),
+    { type: 'separator' },
+    item('音量 +', 'volume-up'), item('音量 −', 'volume-down'),
+    ...(accelerators && (ctx.lyricsToggle || ctx.miniToggle) ? [
+      { type: 'separator' },
+      ...(ctx.lyricsToggle ? [{ label: '桌面歌词', click: ctx.lyricsToggle, ...(keys['lyrics-toggle'] ? { accelerator: keys['lyrics-toggle'], registerAccelerator: false } : {}) }] : []),
+      ...(ctx.miniToggle ? [{ label: '迷你唱机', type: 'checkbox', checked: Boolean(ctx.miniShown), click: ctx.miniToggle }, { label: '迷你唱机总在最前', type: 'checkbox', checked: Boolean(ctx.miniPinned), click: () => ctx.miniPin?.(!ctx.miniPinned) }] : [])
+    ] : [])
+  ];
+}
+// macOS Dock right-click menu: the song, then the transport.
+function dockMenuTemplate(ctx) {
+  const track = ctx.status?.playing && ctx.track ? [{ label: ctx.track.length > 40 ? `${ctx.track.slice(0, 39)}…` : ctx.track, enabled: false }, { type: 'separator' }] : [];
+  return [...track, ...playbackMenuItems(ctx).slice(0, 3), ...(ctx.miniToggle ? [{ type: 'separator' }, { label: '迷你唱机', type: 'checkbox', checked: Boolean(ctx.miniShown), click: ctx.miniToggle }] : [])];
+}
+// ── end M3 player ──────────────────────────────────────────────────────────
+
 const ABOUT_DETAIL = '像素 Lo-fi 小屋：收藏专辑、听歌和专注。\n所有收藏与专注记录保存在这台电脑。\n\n使用 HarmonyOS Sans SC 字体，Copyright 2021 Huawei Device Co., Ltd.，字体原文件与授权协议随应用打包。\nQQ / 网易云播放模块来自 Simple Music（GPL-3.0）；曲库搜索来自 iTunes Search 与 MusicBrainz。';
-module.exports = { appMenuTemplate, trayMenuTemplate, ABOUT_DETAIL, SINK_HOTKEY };
+module.exports = { appMenuTemplate, trayMenuTemplate, dockMenuTemplate, playbackMenuItems, ABOUT_DETAIL, SINK_HOTKEY };

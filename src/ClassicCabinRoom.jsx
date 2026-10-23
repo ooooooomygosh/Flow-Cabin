@@ -70,7 +70,7 @@ export default function ClassicCabinRoom({ items, loading, loadError = '', reloa
   const [mobileShelfCompact, setMobileShelfCompact] = useState(false);
   const { filters, setFilters, visible, view, selected, setSelectedId, changeRow, filtered } = useShelf({ items, look, stage, mobileSlotCount });
   const petId = normalizePetId(library?.data.rooms[library.roomId]?.petId);
-  const deck = useDeck({ items, onLoad: (item) => setSelectedId(item.id) });
+  const deck = useDeck({ items, onLoad: (item) => setSelectedId(item.id), notify });
   const { record, provider, playback, player, deckItem, effectiveSpin } = deck;
   const focus = useFocusState(), sound = useSoundscape();
   useCatCareHost();

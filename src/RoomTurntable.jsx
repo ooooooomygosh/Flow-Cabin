@@ -6,8 +6,8 @@ import { ROOM_DRAG_TYPE } from './RoomScene';
 import useTurntablePosition from './useTurntablePosition';
 import { trackNames } from './room-model.mjs';
 import { trackArtist } from './track-meta.mjs';
-import { providerLabel } from './player/providers.mjs';
-import PlayerControls, { PocketProgress } from './player/PlayerControls';
+import { providerLabel, deckCapabilities } from './player/providers.mjs';
+import PlayerControls, { PocketProgress, SystemProgress } from './player/PlayerControls';
 import { displayTitle } from './display-title.mjs';
 const LyricsStage = lazy(() => import('./lyrics/LyricsStage'));
 const EMPTY_DECK_HINT = '双击封面或拖到这里'; // Enter is spelled out on the selection strip (双击或回车放盘).
@@ -48,7 +48,8 @@ export default function RoomTurntable({ item, spinning, trackIndex = 0, style, i
     </button>
     <div className="turntable-copy"><strong title={item?.title}>{displayTitle(item?.title) || '等一张唱片'}</strong><span className="turntable-artist">{item?.type === 'playlist' ? <>{trackArtist(item, trackIndex) || '歌单'} · <em>歌单</em></> : item?.artist || ''}</span><p className={trackName === EMPTY_DECK_HINT ? 'turntable-track is-hint' : 'turntable-track'} title={trackName}>{item && names.length ? `${String(trackIndex + 1).padStart(2, '0')} · ` : ''}{displayTitle(trackName)}</p><small className="turntable-status" role="status">{statusNode(statusText || (provider === 'system' ? system?.statusText : provider === 'visual' ? (item ? spinning ? '展示中 · 无音频' : '旋转已暂停 · 无音频' : '等待放盘 · 无音频') : playback?.statusText))}</small></div>
     </div>
-    {!readOnly && item && playback && !['visual', 'system', 'ma'].includes(provider) && <PocketProgress playback={playback}/>}
+    {!readOnly && item && playback && deckCapabilities(provider, { remote: playback.remote }).progress && provider !== 'system' && <PocketProgress playback={playback} readOnly={!deckCapabilities(provider, { remote: playback.remote }).seek}/>}
+    {!readOnly && provider === 'system' && system?.active && <SystemProgress timeline={system.timeline}/>}
     </div>
     {!readOnly && provider === 'system' && system && <div className="turntable-controls turntable-system-controls">
       <button type="button" aria-label="系统播放器上一首" disabled={!system.active} onClick={() => system.control('previous')}><ChevronLeft size={18}/></button>

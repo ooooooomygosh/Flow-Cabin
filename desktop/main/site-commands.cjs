@@ -65,6 +65,23 @@ function createSiteCommands(ctx) {
     '/ai-chat': ({ searchParams }) => { ctx.ai.chat(searchParams.get('id') || '', searchParams.get('url'), searchParams.get('body'), { keyless: searchParams.get('keyless') === 'true' }).catch(() => {}); },
     '/ai-chat-cli': ({ searchParams }) => { ctx.ai.chatCli(searchParams.get('id') || '', searchParams.get('body')).catch(() => {}); },
     '/ai-cancel': ({ searchParams }) => { ctx.ai.cancel(searchParams.get('id') || ''); },
+    // ── M3 player ──
+    // 全局媒体快捷键 (desktop/media-keys.cjs): enabled=, action=<id>&accelerator=<Electron accelerator or ''>, reset=true; no params republishes.
+    '/media-keys': ({ searchParams }) => {
+      const keys = ctx.mediaKeys; if (!keys) return;
+      const enabled = flag(searchParams, 'enabled'), action = searchParams.get('action');
+      if (searchParams.get('reset') === 'true') keys.set({ reset: true });
+      else if (enabled !== null || (action && searchParams.has('accelerator'))) keys.set({ ...(enabled !== null ? { enabled } : {}), ...(action && searchParams.has('accelerator') ? { bindings: { [action]: String(searchParams.get('accelerator')).slice(0, 60) } } : {}) });
+      else keys.publish();
+    },
+    // 迷你唱机 outside 沉入桌面: shown=true|false, top=true|false (always on top).
+    '/mini-player': ({ searchParams }) => {
+      const mini = ctx.miniPlayer; if (!mini) return;
+      const shown = flag(searchParams, 'shown'), top = flag(searchParams, 'top');
+      if (top !== null) mini.setAlwaysOnTop(top);
+      if (shown === true) mini.show('user').catch((error) => ctx.writeLog('mini-player', error.message)); else if (shown === false) mini.hide('user');
+    },
+    // ── end M3 player ──
     '/weather': ({ searchParams }) => { const enabled = flag(searchParams, 'enabled'); if (enabled === null) ctx.weather.publish(); else ctx.weather.set({ enabled, lat: searchParams.get('lat'), lng: searchParams.get('lng') }).catch(() => {}); }
   };
   return {

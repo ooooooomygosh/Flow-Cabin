@@ -1,12 +1,15 @@
 // Pure pieces of the cabin deck (useRoomPlayback): volume persistence, the
 // plain-language status line and how account / setting changes affect a deck.
+import { gainToSlider } from '../player/volume-curve.mjs';
 export const VOLUME_KEY = 'album-circle-player-volume-v1';
 export const clampVolume = (value) => Math.max(0, Math.min(1, value));
+// `volume` is the slider position (perceptual, see player/volume-curve.mjs). Values saved
+// before 2.2 were the element's linear gain: they are converted so nothing gets louder or quieter.
 export function readVolume(storage = globalThis.localStorage) {
-  try { const value = JSON.parse(storage.getItem(VOLUME_KEY)); return { volume: Number.isFinite(value?.volume) ? clampVolume(value.volume) : .65, muted: Boolean(value?.muted) }; }
+  try { const value = JSON.parse(storage.getItem(VOLUME_KEY)); const volume = Number.isFinite(value?.volume) ? clampVolume(value.volume) : null; return { volume: volume === null ? .65 : value.scale === 'perceptual' ? volume : gainToSlider(volume), muted: Boolean(value?.muted) }; }
   catch { return { volume: .65, muted: false }; }
 }
-export function writeVolume(value, storage = globalThis.localStorage) { try { storage.setItem(VOLUME_KEY, JSON.stringify(value)); } catch {} }
+export function writeVolume(value, storage = globalThis.localStorage) { try { storage.setItem(VOLUME_KEY, JSON.stringify({ volume: value?.volume, muted: Boolean(value?.muted), scale: 'perceptual' })); } catch {} }
 
 // Plain-language messages for media element failures (MediaError codes).
 export const MEDIA_ERRORS = { 1: '播放被中断，请重新播放。', 2: '网络中断，音频没有加载完。检查网络后点「重试」。', 3: '这个音频文件无法解码，可能已损坏或格式不受支持。', 4: '音源地址不可用或格式不受支持。可能需要重新登录平台，或换一个音源。' };

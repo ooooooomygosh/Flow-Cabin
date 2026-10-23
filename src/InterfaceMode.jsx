@@ -7,6 +7,7 @@ import { Plus, Grid3X3, Sparkles } from './icons';
 import { interfaceMode, switchInterface } from './interface-mode.mjs';
 import { currentBackup } from './backup/upgrade.mjs';
 import { saveRecovery } from './backup/recovery.mjs';
+import { markResumeOnLoad } from './player/deck-resume.mjs';
 export function ClassicTitlebar({items,loading,onAdd,onWall,onBeta,onSettings,notify}) {
   const pet=usePetIdentity();
   return <header className="app-titlebar"><div className="app-brand"><PixelCat pose="idle" petId={pet.builtinId} accessory={pet.accessory} className="app-brand-cat" label={pet.name}/><span><h1>心流小屋</h1><small>{loading?'整理唱片中…':`${items.length} 张唱片`}</small></span></div><div className="app-actions"><button type="button" className="pixel-button album-wall-entry" aria-label="专辑墙" title="打开专辑墙" onClick={onWall}><Grid3X3 size={17}/><span>专辑墙</span></button><button type="button" className="pixel-button interface-choice-button" aria-label="回到生活小屋" title="回到生活小屋首页（可随时切换）" onClick={onBeta}><Sparkles size={17}/><span>生活小屋</span></button><button type="button" className="pixel-button is-primary" aria-label="添加到唱片架" onClick={onAdd}><Plus size={17}/><span>添加到唱片架</span></button></div><DesktopControls onSettings={onSettings} onError={text=>notify(text,{tone:'error'})}/></header>;
@@ -16,7 +17,7 @@ export function InterfaceDialog({mode,items,close}){
   const beta=mode==='beta',[busy,setBusy]=useState(false),[error,setError]=useState('');
   const change=async()=>{setBusy(true);setError('');try{
     await saveRecovery(currentBackup(items),{reason:'切换首页前'});
-    await switchInterface(beta?'classic':'beta',{flush:()=>globalThis.albumMobile?.flushStorage?.(),restart:async()=>{if(window.albumMobile?.restartInterface)await window.albumMobile.restartInterface();else if(document.documentElement.dataset.desktopClient==='true')desktopCommand('interface-restart');else window.location.reload();}});
+    await switchInterface(beta?'classic':'beta',{flush:()=>globalThis.albumMobile?.flushStorage?.(),restart:async()=>{markResumeOnLoad();if(window.albumMobile?.restartInterface)await window.albumMobile.restartInterface();else if(document.documentElement.dataset.desktopClient==='true')desktopCommand('interface-restart');else window.location.reload();}});
   }catch(e){setBusy(false);setError(`切换尚未完成：${e.message}`);}};
   return <Dialog title="选择首页" close={busy?()=>{}:close} className="interface-dialog"><h3>{beta?'改用熟悉的唱片架':'回到生活小屋'}</h3><p>{beta?'原版首页以唱片架和专辑墙为主。小屋的布局会保留，随时可以回来。':'生活小屋有听歌、工作、生活三个角落，家具就是功能入口。'}</p><p>唱片、专辑墙、手记和专注记录共用。切换前会保存恢复点，画面重新载入后正在听的歌会接着播放。</p><button type="button" className="pixel-button is-primary" disabled={busy} onClick={change}>{busy?'正在保存并切换…':beta?'改用原版唱片架':'回到生活小屋'}</button>{error&&<p role="alert">{error}</p>}</Dialog>;
 }

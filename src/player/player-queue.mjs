@@ -13,6 +13,18 @@ export const queueId = (value) => {
   return value.trim();
 };
 
+// 待播 holds whole records (their id: they play after the current record) and
+// single songs (`track:<index>:<id>`: 下一首播放 / 加入队列 — they play right
+// after the current song, then the record they interrupted carries on).
+const TRACK_ENTRY = /^track:(\d{1,4}):(.+)$/;
+export const trackEntry = (id, index) => { const value = queueId(id); return value && value.length <= 80 && !TRACK_ENTRY.test(value) && Number.isSafeInteger(index) && index >= 0 && index < 10000 ? `track:${index}:${value}` : ''; };
+export function parseEntry(entry) {
+  const value = queueId(entry), match = TRACK_ENTRY.exec(value);
+  return match ? { id: match[2], index: Number(match[1]), track: true } : { id: value, index: 0, track: false };
+}
+export const isTrackEntry = (entry) => parseEntry(entry).track;
+const validEntry = (id) => Boolean(id) && parseEntry(id).id.length <= 80;
+
 export function normalizeQueue(value) {
   const raw = value && typeof value === 'object' ? value : {};
   const ids = [];
@@ -20,7 +32,7 @@ export function normalizeQueue(value) {
     const seen = new Set();
     for (const entry of raw.ids) {
       const id = queueId(entry);
-      if (!id || id.length > 80 || seen.has(id)) continue;
+      if (!validEntry(id) || seen.has(id)) continue;
       seen.add(id);
       ids.push(id);
       if (ids.length >= QUEUE_LIMIT) break;
@@ -31,28 +43,36 @@ export function normalizeQueue(value) {
 const normalized = (queue) => normalizeQueue(queue);
 export const enqueue = (queue, id) => {
   const current = normalized(queue), value = queueId(id);
-  if (!value || value.length > 80) return current;
+  if (!validEntry(value)) return current;
   return normalizeQueue({ ...current, ids: [...current.ids.filter((entry) => entry !== value), value] });
 };
 export const playNext = (queue, id) => {
   const current = normalized(queue), value = queueId(id);
-  if (!value || value.length > 80) return current;
+  if (!validEntry(value)) return current;
   return normalizeQueue({ ...current, ids: [value, ...current.ids.filter((entry) => entry !== value)] });
 };
 // UI additions must report a full queue instead of silently dropping a record.
 export function queueAddition(queue, id, first = false) {
-  const current = normalizeQueue(queue), value = queueId(id);
-  if (!value || value.length > 80) return { error: '这张唱片无法加入待播。' };
-  if (!current.ids.includes(value) && current.ids.length >= QUEUE_LIMIT) return { error: `待播已满（${QUEUE_LIMIT} 张），请先移除一张。` };
+  const current = normalizeQueue(queue), value = queueId(id), song = isTrackEntry(value);
+  if (!validEntry(value)) return { error: song ? '这首歌无法加入待播。' : '这张唱片无法加入待播。' };
+  if (!current.ids.includes(value) && current.ids.length >= QUEUE_LIMIT) return { error: `待播已满（${QUEUE_LIMIT} 项），请先移除一项。` };
   return { queue: first ? playNext(current, value) : enqueue(current, value) };
 }
 
-export const dequeue = (queue, id) => { const current = normalizeQueue(queue), value = queueId(id); return value && value.length <= 80 ? normalizeQueue({ ...current, ids: current.ids.filter((entry) => entry !== value) }) : current; };
+export const dequeue = (queue, id) => { const current = normalizeQueue(queue), value = queueId(id); return validEntry(value) ? normalizeQueue({ ...current, ids: current.ids.filter((entry) => entry !== value) }) : current; };
 export const pruneQueue = (queue, existingIds) => {
   const set = new Set((Array.isArray(existingIds) ? existingIds : []).map(queueId).filter((id) => id && id.length <= 80));
   const current = normalizeQueue(queue);
-  return normalizeQueue({ ...current, ids: current.ids.filter((id) => set.has(id)) });
+  return normalizeQueue({ ...current, ids: current.ids.filter((id) => set.has(parseEntry(id).id)) });
 };
+// Drag-reorder in the 待播 panel: move one entry to another position.
+export function moveEntry(queue, from, to) {
+  const current = normalizeQueue(queue), ids = [...current.ids];
+  if (!Number.isInteger(from) || !Number.isInteger(to) || from < 0 || from >= ids.length) return current;
+  const [entry] = ids.splice(from, 1); ids.splice(Math.max(0, Math.min(ids.length, to)), 0, entry);
+  return normalizeQueue({ ...current, ids });
+}
+export const clearQueue = (queue) => normalizeQueue({ ...normalizeQueue(queue), ids: [] });
 export const cycleRepeat = (queue) => normalizeQueue({ ...queue, repeat: REPEAT_MODES[(REPEAT_MODES.indexOf(queue.repeat) + 1) % REPEAT_MODES.length] });
 
 // A recommendation starts a fresh session queue: the record already on the
@@ -81,9 +101,20 @@ const pickFrom = (list, random) => ({ type: 'track', index: list[Math.min(list.l
 // What happens after the current track. `manual` = the user pressed next, so
 // "repeat one" does not trap them on the same song. Shuffle draws unplayed
 // tracks; when the bag is empty it falls through to 待播 → repeat-all → stop.
-export function nextStep({ trackIndex = 0, trackCount = 0, queue, manual = false, random = Math.random, played = [trackIndex] }) {
-  const { ids, repeat, shuffle } = normalizeQueue(queue);
+//
+// Queued songs (track entries) come first, right after the current song. While
+// one of them plays (`solo`), the next step returns to `context` — where the
+// interrupted record would have gone next — once no more queued songs wait.
+export function nextStep({ trackIndex = 0, trackCount = 0, queue, manual = false, random = Math.random, played = [trackIndex], solo = false, context = null }) {
+  const normalizedQueue = normalizeQueue(queue), { repeat, shuffle } = normalizedQueue;
   if (!manual && repeat === 'one' && trackCount > 0) return { type: 'restart' };
+  const song = normalizedQueue.ids.find(isTrackEntry);
+  if (song) return { type: 'album', id: song };
+  const ids = normalizedQueue.ids;
+  if (solo) {
+    if (context?.id != null && Number.isInteger(context.index)) return { type: 'resume', id: queueId(context.id), index: context.index };
+    return ids.length ? { type: 'album', id: ids[0] } : { type: 'stop' };
+  }
   if (shuffle && trackCount > 1) {
     const seen = new Set(played), fresh = range(trackCount).filter((index) => index !== trackIndex && !seen.has(index));
     if (fresh.length) return pickFrom(fresh, random);
@@ -121,8 +152,55 @@ export function nextPlayableStep({ trackIndex = 0, trackCount = 0, queue, manual
   return step.type === 'stop' || (step.type === 'track' && blocked(step.index)) ? first : step;
 }
 
-// Like most players: past 3 s "previous" restarts the song.
-export function previousStep({ trackIndex = 0, position = 0 }) {
-  if (position > 3 || trackIndex <= 0) return { type: 'restart' };
+// Where the interrupted record goes once a queued song has played: its own next
+// step with the queued songs ignored (records in 待播 still wait their turn).
+export function contextAfter({ recordId, trackIndex = 0, trackCount = 0, queue, played = [trackIndex], random = Math.random }) {
+  const current = normalizeQueue(queue), step = nextStep({ trackIndex, trackCount, queue: { ...current, ids: current.ids.filter((id) => !isTrackEntry(id)) }, manual: true, played, random });
+  if (step.type === 'track') return { id: queueId(recordId), index: step.index };
+  return null;
+}
+
+// Like most players: past 3 s "previous" restarts the song. In shuffle (and
+// after a queued song) "previous" is the song really heard before this one,
+// from `history` (oldest first, the current song last).
+export function previousStep({ trackIndex = 0, position = 0, history = [], useHistory = false }) {
+  if (position > 3) return { type: 'restart' };
+  const back = useHistory && Array.isArray(history) && history.length > 1 ? history[history.length - 2] : null;
+  if (back && queueId(back.id) && Number.isInteger(back.index)) return { type: 'history', id: queueId(back.id), index: back.index };
+  if (trackIndex <= 0) return { type: 'restart' };
   return { type: 'track', index: trackIndex - 1 };
+}
+
+// The heard-songs trail behind 上一首: one entry per song start, newest last.
+export const HISTORY_TRAIL_LIMIT = 100;
+const sameSpot = (a, b) => Boolean(a && b) && queueId(a.id) === queueId(b.id) && a.index === b.index;
+export function pushHistory(trail, entry, limit = HISTORY_TRAIL_LIMIT) {
+  const list = Array.isArray(trail) ? trail : [], id = queueId(entry?.id);
+  if (!id || !Number.isInteger(entry?.index) || entry.index < 0) return list;
+  if (sameSpot(list.at(-1), entry)) return list;
+  return [...list, { id, index: entry.index }].slice(-limit);
+}
+// Stepping back: the current song leaves the trail, the one before it is the target.
+export const rewindHistory = (trail) => { const list = Array.isArray(trail) ? trail : []; return { target: list.length > 1 ? list[list.length - 2] : null, trail: list.slice(0, -1) }; };
+
+// 最近播放: a short persisted list of songs that really played (newest first).
+export const LISTEN_HISTORY_KEY = 'flow-cabin-listen-history-v1';
+export const LISTEN_HISTORY_LIMIT = 50;
+const historyText = (value, max = 200) => typeof value === 'string' ? value.slice(0, max) : '';
+export function normalizeListenHistory(value) {
+  const list = [];
+  for (const entry of Array.isArray(value) ? value : []) {
+    const id = queueId(entry?.id);
+    if (!id || id.length > 80 || !Number.isInteger(entry?.index) || entry.index < 0 || !Number.isFinite(entry?.at)) continue;
+    list.push({ id, index: entry.index, title: historyText(entry.title), artist: historyText(entry.artist), at: entry.at });
+    if (list.length >= LISTEN_HISTORY_LIMIT) break;
+  }
+  return list;
+}
+export function recordListen(list, entry, limit = LISTEN_HISTORY_LIMIT) {
+  const current = normalizeListenHistory(list), id = queueId(entry?.id);
+  if (!id || id.length > 80 || !Number.isInteger(entry?.index) || entry.index < 0) return current;
+  const item = { id, index: entry.index, title: historyText(entry.title), artist: historyText(entry.artist), at: Number.isFinite(entry.at) ? entry.at : Date.now() };
+  // The same song again (a pause, a reload) moves to the top instead of repeating.
+  return [item, ...current.filter((old) => !sameSpot(old, item))].slice(0, limit);
 }

@@ -1,14 +1,15 @@
-/* 沉入桌面 mini player (300×64 window): a pocket deck in the cabin's 9-slice frame.
-   48px sleeve with the 48px pixel record peeking out at 1×, two text lines; the
-   controls replace only the second line, so the track stays readable on hover. */
+/* Mini player (380×92 window): a pocket deck in the cabin's 9-slice frame.
+   The song's own cover (or its generated sleeve) with the 48px pixel record
+   peeking out, the title, the artist or the current lyric line, progress and
+   volume; the controls replace only the status line, so the song stays readable. */
 @layer guards, reset, features, skin, overrides;
 @layer features {
 html, body, #root { margin: 0; height: 100%; background: transparent; overflow: hidden; user-select: none; }
-.mini-bar { box-sizing: border-box; width: calc(100% - 2px); height: calc(100% - 2px); display: flex; align-items: center; gap: 8px; padding: 0 6px 0 3px; color: var(--px-ink); font: 400 12px/16px var(--px-font-cn); -webkit-font-smoothing: none;
+.mini-bar { box-sizing: border-box; width: calc(100% - 2px); height: calc(100% - 2px); display: flex; align-items: center; gap: 8px; padding: 0 6px 0 4px; touch-action: none; color: var(--px-ink); font: 400 12px/16px var(--px-font-cn); -webkit-font-smoothing: none;
   background: linear-gradient(var(--px-surface-2) 0 2px, var(--px-surface-card) 2px calc(100% - 4px), var(--px-surface) calc(100% - 4px)); border: 4px solid transparent; border-image: var(--px-frame-img) 2 / 4px; box-shadow: var(--px-shadow-1); cursor: default; }
 /* Pocket deck: the record sits behind the sleeve and slides out a little while it plays. */
-.mini-deck { position: relative; flex: none; width: 82px; height: 48px; }
-.mini-record { position: absolute; left: 26px; top: 0; width: 48px; height: 48px; overflow: hidden; transition: translate var(--px-dur-med) steps(3, end); }
+.mini-deck { position: relative; flex: none; width: 92px; height: 64px; }
+.mini-record { position: absolute; left: 36px; top: 8px; width: 48px; height: 48px; overflow: hidden; transition: translate var(--px-dur-med) steps(3, end); }
 .mini-bar.is-playing .mini-record { translate: 8px 0; }
 /* Lit rim (a hard 1px edge in brass, no blur) so the dark record reads against the dark frame. */
 .mini-record { filter: drop-shadow(1px 0 0 var(--px-border-hi)) drop-shadow(0 -1px 0 var(--px-border)); }
@@ -18,9 +19,18 @@ html, body, #root { margin: 0; height: 100%; background: transparent; overflow: 
 .mini-bar.is-playing .mini-sheen { opacity: 1; }
 .mini-bar.is-playing .mini-sheen svg { animation: mini-sheen 1s steps(8, end) infinite; }
 @keyframes mini-sheen { to { translate: -384px 0; } }
-.mini-sleeve.record-sleeve { position: absolute; left: 0; top: 0; z-index: 1; width: 48px; height: 48px; box-shadow: 2px 2px 0 var(--px-shadow); }
-.mini-copy { flex: 1; min-width: 0; display: grid; grid-template-rows: 16px 24px; gap: 4px; }
-.mini-track { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--px-ink); }
+.mini-sleeve.record-sleeve, .mini-cover { position: absolute; left: 0; top: 0; z-index: 1; width: 64px; height: 64px; box-shadow: 2px 2px 0 var(--px-shadow); }
+.mini-cover { display: block; object-fit: cover; background: var(--px-surface-2); image-rendering: auto; pointer-events: none; }
+.mini-copy { flex: 1; min-width: 0; display: grid; grid-template-rows: 16px 16px auto 24px; gap: 2px; align-content: center; }
+.mini-track { display: flex; gap: 4px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--px-ink); font-weight: 700; }
+.mini-liked { flex: none; font-style: normal; color: var(--px-warn); }
+.mini-artist, .mini-lyric { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--px-ink-dim); }
+.mini-lyric { color: var(--px-accent-hi); }
+.mini-progress { display: flex; align-items: center; gap: 6px; min-width: 0; height: 12px; }
+.mini-progress input[type=range] { flex: 1; min-width: 0; height: 10px; margin: 0; accent-color: var(--px-accent); cursor: pointer; }
+.mini-progress input[type=range]:disabled { cursor: default; }
+.mini-progress input.mini-volume { flex: none; width: 48px; }
+.mini-progress small { flex: none; font: 400 8px/8px var(--px-font-en); color: var(--px-ink-dim); font-variant-numeric: tabular-nums; }
 .mini-row { display: grid; min-width: 0; }
 .mini-row > * { grid-area: 1 / 1; }
 .mini-status { pointer-events: none; display: flex; align-items: center; gap: 6px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--px-ink-dim); transition: opacity var(--px-dur-fast) steps(2, end); }
@@ -29,6 +39,7 @@ html, body, #root { margin: 0; height: 100%; background: transparent; overflow: 
 .mini-actions { position: relative; z-index: 1; display: flex; align-items: center; gap: 2px; opacity: 0; transition: opacity var(--px-dur-fast) steps(2, end); }
 .mini-bar:hover .mini-actions, .mini-bar:focus-within .mini-actions { opacity: 1; }
 .mini-bar:hover .mini-status, .mini-bar:focus-within .mini-status { opacity: 0; }
+.mini-actions button[aria-pressed=true] { color: var(--px-accent-hi); background: var(--px-surface-3); }
 .mini-actions button { display: grid; place-items: center; min-width: var(--px-hit); min-height: var(--px-hit); padding: 2px 4px; color: var(--px-ink); background: var(--px-surface-2); border: 2px solid var(--px-shadow); box-shadow: inset 2px 2px 0 #ffffff14; font: inherit; cursor: pointer; }
 .mini-actions button:hover { background: var(--px-surface-3); }
 .mini-actions button:active { translate: 1px 1px; box-shadow: none; }
