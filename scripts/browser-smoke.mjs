@@ -11,6 +11,7 @@ import { openRoomSettings, openMusicSettings, chooseSource, openSettingsSection,
  * Fixtures never call external services or read a user's profile/collection.
  */
 import assert from 'node:assert/strict';
+import { companionCsp } from '../desktop/policy.cjs';
 import { verifyQQRegression } from './qq-regression-checks.mjs';
 import { verifyOnboarding } from './onboarding-checks.mjs';
 import { verifyCabinLayout, verifyCabinToolActions, verifyFocusLayout } from './cabin-layout-checks.mjs';
@@ -431,7 +432,7 @@ try {
   // pet-life hearts (data: SVG) render with no CSP violation. Only the shell's img-src is applied here:
   // vite dev needs inline scripts that the full shell CSP (built pages only) would block.
   {
-    const shellCsp = (await fs.readFile(new URL('../desktop/shell-protocol.cjs', import.meta.url), 'utf8')).match(/'pet'[\s\S]*?'Content-Security-Policy': "([^"]+)"/)[1];
+    const shellCsp = companionCsp('pet');
     const fresh = await context.newPage(); await fresh.emulateMedia({ reducedMotion: 'no-preference' }); await fresh.setViewportSize({ width: 420, height: 420 });
     // A <meta> CSP added before the stylesheets load (a routed response would trip Chromium's local-network check on vite's socket).
     const imgSrc = shellCsp.split(';').map((d) => d.trim()).find((d) => d.startsWith('img-src'));

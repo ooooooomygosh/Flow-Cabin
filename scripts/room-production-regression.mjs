@@ -50,7 +50,16 @@ try {
   await page.screenshot({ path: path.join(output, 'native-csp-desktop.png') });
   pass('production-room-renders-under-native-no-eval-csp');
   await page.setViewportSize({ width: 412, height: 915 });
-  await page.getByRole('button', { name: '小屋布置与视角', exact: true }).click();
+  await page.evaluate(() => {
+    document.documentElement.dataset.platform = 'android';
+    document.documentElement.style.setProperty('--safe-area-inset-top', '48px');
+    document.documentElement.style.setProperty('--mobile-bottom', '24px');
+  });
+  const shortcut = page.getByRole('button', { name: '小屋布置与视角', exact: true });
+  assert.ok((await shortcut.boundingBox()).y >= 48, 'room shortcuts clear the native status bar');
+  await shortcut.click();
+  const drawer = await page.getByRole('dialog', { name: '小屋布置', exact: true }).boundingBox();
+  assert.ok(drawer.y >= 48 && drawer.y + drawer.height <= 891, 'drawer controls clear both native bars');
   await page.getByLabel('房间主题').selectOption('warm');
   await page.getByRole('button', { name: '关闭小屋布置', exact: true }).click();
   await page.locator('.room2-canvas[data-art-theme=warm][data-art-ready=true]').waitFor();

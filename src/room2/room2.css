@@ -68,6 +68,11 @@
 }
 
 @layer overrides {
+  html[data-platform=android] .room2-quick { top: calc(var(--safe-area-inset-top, 0px) + 10px); right: calc(var(--mobile-right, 0px) + 10px); }
+  html[data-platform=android] .room2-quick button { width: 44px; height: 44px; }
+  html[data-platform=android] .room2-identity { top: calc(var(--safe-area-inset-top, 0px) + 24px); left: calc(var(--mobile-left, 0px) + 14px); }
+  html[data-platform=android] .room2-zone-nav { bottom: calc(var(--mobile-bottom, 0px) + 14px); }
+  html[data-platform=android] .cabin-dialog.room2-drawer { top: var(--safe-area-inset-top, 0px); bottom: var(--mobile-bottom, 0px); height: auto; max-height: calc(100% - var(--safe-area-inset-top, 0px) - var(--mobile-bottom, 0px)); }
   .room2-drawer .room2-inventory-grid button { border: 0; box-shadow: none; background: transparent; padding: 12px 4px; }
   .room2-drawer .room2-inventory-grid button:not(:disabled):hover { background: var(--px-surface-2); }
   .room2-drawer .room2-inventory-grid button:focus-visible { outline: 2px solid var(--px-focus); outline-offset: -2px; }
