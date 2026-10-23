@@ -26,8 +26,6 @@ try {
   const run=async(name,test,{native=true,dpr=1,collectionItems=items}={})=>{
     if(process.env.SHELF_FILTER&&!process.env.SHELF_FILTER.split(',').some(s=>name.includes(s)))return;
     const context=await browser.newContext({viewport:{width:1440,height:900},deviceScaleFactor:dpr,locale:'zh-CN',reducedMotion:'reduce'});
-    // These flows exercise the classic shelf; since 2.2 the life cabin is the default home.
-    await context.addInitScript(() => { if (localStorage.getItem('flow-cabin-interface-v1') === null) localStorage.setItem('flow-cabin-interface-v1', 'classic'); });
     await context.addInitScript((seed) => { window.__onboardingSeed = seed; }, onboardingSeed());
     await context.addInitScript(native=>{
       if(location.origin==='null')return;
