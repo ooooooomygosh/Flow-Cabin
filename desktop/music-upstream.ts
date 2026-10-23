@@ -248,10 +248,20 @@ import { handleQQLyric } from './vendor/simple-music/server/lib/qq-client';
 export async function lyrics(provider: string, id: string, cookie: string) {
   if (provider === 'qq') {
     const result = await handleQQLyric(cookie, id, '');
-    return { text: String(result.lyric || ''), format: 'lrc', translation: String(result.tlyric || '') };
+    // QRC arrives readable only for some songs (otherwise encrypted); use it when it is plain word timing.
+    const qrc = plainQrc(result.qrc), roma = plainQrc(result.roma);
+    return { text: qrc || String(result.lyric || ''), format: qrc ? 'qrc' : 'lrc', translation: String(result.tlyric || ''), romanization: roma };
   }
-  const result = await ncmCall('lyric', { id, cookie });
-  if (result.status >= 400) throw new Error('平台歌词暂时不可用。');
-  const body = asObj(result.body), yrc = asObj(body.yrc), lrc = asObj(body.lrc);
-  return { text: String(yrc.lyric || lrc.lyric || ''), format: yrc.lyric ? 'yrc' : 'lrc', translation: String(asObj(body.tlyric).lyric || '') };
+  // yrc = word timing; ytlrc / yromalrc are the translation and romanization timed to it.
+  const result = await Promise.resolve().then(() => ncmCall('lyric_new', { id, cookie })).catch(() => ({ status: 500, body: {} }));
+  const fallback = result.status >= 400 ? await ncmCall('lyric', { id, cookie }) : result;
+  if (fallback.status >= 400) throw new Error('平台歌词暂时不可用。');
+  const body = asObj(fallback.body), text = (key: string) => String(asObj(body[key]).lyric || '');
+  const word = Boolean(text('yrc'));
+  return { text: text('yrc') || text('lrc'), format: word ? 'yrc' : 'lrc', translation: (word && text('ytlrc')) || text('tlyric'), romanization: (word && text('yromalrc')) || text('romalrc') };
+}
+function plainQrc(value: unknown) {
+  const raw = String(value || '');
+  const content = raw.match(/LyricContent="([\s\S]*?)"\s*\/>/)?.[1] ?? raw;
+  return /\[\d+,\d+\][^\n]*\(\d+,\d+\)/.test(content) ? content : '';
 }

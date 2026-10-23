@@ -47,9 +47,11 @@ test('every animation names a keyframe that exists', () => {
   }
 });
 
-test('legacy pixel controls keep square corners and avoid blur; the 2.1 home uses its own soft panel design', () => {
+// The 2.1 home and the 2.2 lyric surfaces use their own soft, layered design.
+const SOFT_DESIGN = new Set(['home/home.css', 'lyrics/lyrics.css']);
+test('legacy pixel controls keep square corners and avoid blur; the cabin home and lyric surfaces use their own soft design', () => {
   for (const { file, css } of owned) {
-    if (file === 'home/home.css') continue;
+    if (SOFT_DESIGN.has(file)) continue;
     for (const m of css.matchAll(/border(?:-[a-z]+)*-radius\s*:\s*([^;}]+)/g)) assert.match(m[1].trim(), /^(0|0px|50%)$/, `${file}: border-radius ${m[1].trim()}`);
     assert(!/backdrop-filter\s*:\s*(?!none)/.test(css), `${file}: backdrop-filter`);
     assert(!/blur\(/.test(css), `${file}: blur()`);

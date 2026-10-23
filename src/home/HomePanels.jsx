@@ -9,11 +9,10 @@ import Postcard from './Postcard';
 import HomeCalendar from './HomeCalendar';
 import RoomPickers from '../RoomPickers';
 import { readLife, writeLife, waterPlant, plantStage, LIFE_CHANGED, LIFE_KEY } from './life-state.mjs';
-const LyricsPanel = lazy(() => import('../lyrics/LyricsPanel'));
+const LyricsStage = lazy(() => import('../lyrics/LyricsStage'));
 
 export function HomeLyrics({ close }) {
-  const { deck, lyricsTrack } = useCabinRuntime();
-  return <Suspense fallback={<Dialog title="歌词" close={close}><p>正在打开歌词册…</p></Dialog>}><LyricsPanel close={close} track={lyricsTrack} playback={deck.playback} system={deck.provider === 'system' ? deck.system : null}/></Suspense>;
+  return <Suspense fallback={<Dialog title="歌词" close={close}><p>正在打开歌词册…</p></Dialog>}><LyricsStage close={close}/></Suspense>;
 }
 export function LifePanel({ type }) {
   const { focus, look } = useCabinRuntime(), [life, setLife] = useState(readLife), [notice, setNotice] = useState('');

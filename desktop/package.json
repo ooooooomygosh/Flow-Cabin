@@ -111,6 +111,7 @@
       "assets/**/*",
       "package.json",
       "lyrics-service.cjs",
+      "lyrics-match.cjs",
       "lan-certificate.cjs",
       "lan-model.cjs",
       "lan-service.cjs",

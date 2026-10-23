@@ -66,7 +66,7 @@ function createMusicService({ directory, safeStorage, login, logout, upstream = 
     })();
     checking.set(provider,task);try{return await task;}finally{if(checking.get(provider)===task)checking.delete(provider);}
   }
-  const lyrics = createLyricsService({ upstream, cookie: provider => decode(preferences[provider]), fetch });
+  const lyrics = createLyricsService({ upstream, cookie: provider => decode(preferences[provider]), fetch, cacheFile: path.join(directory, 'lyrics-cache.json') });
   const playlists = createPlaylistLibrary({ upstream, cookies: (provider) => decode(preferences[provider]), fetch });
   // Account playlists are read on demand; a changed login discards the answer.
   async function guarded(task) { const currentRevision = revision; const result = await task(); if (currentRevision !== revision) throw new Error('平台登录已更改，请重新打开歌单。'); return result; }
