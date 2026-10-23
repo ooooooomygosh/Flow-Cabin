@@ -60,6 +60,10 @@ export default function CompanionBridge() {
         sound: s ? { enabled: s.enabled, lofi: s.lofiState === 'playing' } : null,
         playing: Boolean(room?.grooving || (s?.lofiState === 'playing')),
         track: room?.track || '',
+        // The song on the deck for the mini player, tray and taskbar (room/useDeck.js › cabinNowPlaying):
+        // title, artist, cover (https or a small data URL), position, volume. `lyric` is the current line.
+        nowPlaying: window.cabinNowPlaying?.() || null,
+        lyric: typeof window.cabinLyricLine?.current === 'string' ? window.cabinLyricLine.current : '',
         // Real audio only (see docs/events.md); `playing` above also covers lo-fi / spinning.
         musicPlaying: music.current.playing, energy: Number(music.current.energy.toFixed(2)), energyEstimated: music.current.estimated,
         // The detected beat (tempo + one beat's wall-clock time): the pet window keeps its own beat clock.

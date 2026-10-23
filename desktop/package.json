@@ -76,6 +76,8 @@
       "desktop-sink.cjs",
       "fullscreen.cjs",
       "mini-player.cjs",
+      "media-keys.cjs",
+      "thumbar.cjs",
       "mini-preload.cjs",
       "tray-icons.cjs",
       "status-bar.cjs",

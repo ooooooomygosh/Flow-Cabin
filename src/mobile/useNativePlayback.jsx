@@ -3,6 +3,8 @@ import { exactTrack, findPlayableSource, musicRequest } from '../room-playback.m
 import { trackNames } from '../room-model.mjs';
 import { createPositionStore } from '../deck/position-store.mjs';
 import { readVolume, writeVolume } from '../deck/deck-status.mjs';
+import { sliderToGain } from '../player/volume-curve.mjs';
+import { deckCapabilities } from '../player/providers.mjs';
 
 // This hook has no HTML audio source. The service is the sole Android player.
 export default function useNativePlayback(record, index, provider, onNext, options = {}) {
@@ -90,7 +92,7 @@ export default function useNativePlayback(record, index, provider, onNext, optio
     })().catch(error => { if (current()) setState(old => ({ ...old, status: 'error', error: error.message })); });
     return () => { owner.current++; controller.abort(); };
   }, [record?.id, index, provider, epoch]);
-  useEffect(() => { native.command({ action: 'volume', value: sound.muted ? 0 : sound.volume }).catch(() => {}); }, [sound]);
+  useEffect(() => { native.command({ action: 'volume', value: sound.muted ? 0 : sliderToGain(sound.volume) }).catch(() => {}); }, [sound]);
   const changeSound = patch => setSound(old => { const value = { ...old, ...patch }; writeVolume(value); return value; });
   return { ...state, ...sound, rate, clock, audio: { current: null }, events: {}, deckRefs: [() => {}, () => {}], remote: false, moved: clock.position > 0,
     syncQueue: () => { if (nativeState.current?.mediaId) { resumeAt.current = clock.position; autoStart.current = nativeState.current.playing; setEpoch(v => v + 1); } },
@@ -104,6 +106,7 @@ export default function useNativePlayback(record, index, provider, onNext, optio
     }, seek: value => command('seek', value), seekBy: delta => command('seek', clock.position + delta), restart: () => command('seek', 0),
     setRate: value => { rateState(value); command('rate', value); }, setVolume: volume => changeSound({ volume }), setMuted: muted => changeSound({ muted }),
     choose: candidate => { autoStart.current = true; return chooseRef.current?.(candidate); }, retry: () => setEpoch(v => v + 1), hold: () => { autoStart.current = false; command('pause'); },
-    startAt: value => { resumeAt.current = value; }, setAutoStart: value => { autoStart.current = value !== false; }, isBlocked: () => false, blockedVersion: 0,
+    startAt: value => { resumeAt.current = value; }, capabilities: deckCapabilities(provider), blockedReason: () => '',
+    restoreAt: (_item, _index, seconds, duration = 0) => { if (seconds > 0) { resumeAt.current = seconds; clock.set(seconds, duration, { force: true }); } }, setAutoStart: value => { autoStart.current = value !== false; }, isBlocked: () => false, blockedVersion: 0,
   };
 }

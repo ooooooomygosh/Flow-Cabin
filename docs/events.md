@@ -75,9 +75,14 @@ window.dispatchEvent(new CustomEvent('cabin:player-command', { detail: { action:
 | `play` | Play if paused; no-op when already playing |
 | `pause` | Pause if playing; no-op when already paused |
 | `next` | Same rules as the ⏭ button: album order, 待播 queue, repeat, shuffle. Unplayable tracks are still auto-skipped (max 5 in a row) |
-| `previous` | Same as ⏮: restarts the track after 3 s, otherwise the previous track |
+| `previous` | Same as ⏮: restarts the track after 3 s, otherwise the previous track (in shuffle, or after a queued song: the song really heard before) |
+| `stop` | Pause and go back to 0:00 (where the source can seek) |
+| `volume-up` / `volume-down` | One 5 % step on the perceptual volume slider (sources with a cabin volume only) |
+| `set-volume` | `detail.value` 0…1, the slider position |
+| `seek` / `seek-by` | `detail.value` seconds: absolute / relative (sources that can seek only) |
 
-Unknown actions and commands with no record on the deck are ignored. In 系统正在播放 mode only `next` / `previous` reach the deck queue; use the system transport for the external player.
+Unknown actions and commands with no record on the deck are ignored. In 系统正在播放 mode `toggle`, `play`, `pause`, `stop`, `next` and `previous` drive the system player; the others are ignored.
+The mini player, tray, 控制 menu, Dock menu, Windows thumbnail buttons and the global media hotkeys all arrive through this event.
 Code: `PLAYER_COMMAND_EVENT` / `PLAYER_COMMANDS` in `src/player/usePlayer.jsx`.
 
 Other Electron windows (the desktop-mode mini turntable) do not dispatch this themselves: the main process relays its IPC channel of the same name into the main window as this event — see [desktop.md](desktop.md).
@@ -87,6 +92,7 @@ Other Electron windows (the desktop-mode mini turntable) do not dispatch this th
 | event | direction | detail |
 | --- | --- | --- |
 | `cabin-play` | → player | `{ id, track }` put an album on the deck, optionally starting at a track (used by the album card). |
+| `cabin-enqueue` | → player | `{ id, item?, track?, next?, accepted }` add a record to 待播, or with `track` a single song (`next: true` = 下一首播放). The listener sets `accepted`. |
 | `cabin-open-music-settings` | → cabin | no detail. Opens 设置 › 音源 (used by the player's error card and the turntable's source chip). |
 | `album-quick-search` | → app | `{ query }` opens 添加到唱片架 › 曲库搜索 with that query. |
 | `album-music-account` / `album-music-settings` | desktop → page | Sign-in or source settings changed. The player re-resolves the current track. |

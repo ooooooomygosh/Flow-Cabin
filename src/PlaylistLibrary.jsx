@@ -51,13 +51,16 @@ function PlaylistGrid({ playlists, open, busyId }) {
   </section>)}</div>;
 }
 
-function TrackRow({ track, index, play }) {
+// A row plays from that song (double-click / ▶), or queues just that song:
+// 下一首播放 puts it right after the current song, 加入队列 after the songs already queued.
+function TrackRow({ track, index, play, queue, busy }) {
   return <li className="playlist-track" onDoubleClick={() => play(index)}>
     <span className="playlist-track-index"><b>{String(index + 1).padStart(2, '0')}</b><button type="button" aria-label={`从第 ${index + 1} 首《${track.title}》开始播放`} onClick={() => play(index)}><Play size={13}/></button></span>
     {track.cover ? <img className="playlist-track-cover" src={track.cover} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer"/> : <span className="playlist-track-cover is-empty" aria-hidden="true"><Music2 size={13}/></span>}
     <span className="playlist-track-copy"><strong title={track.title}>{track.title}</strong><small title={track.artist}>{track.artist || '歌手未知'}</small></span>
     <span className="playlist-track-album" title={track.album}>{track.album}</span>
     <span className="playlist-track-time">{track.duration ? formatDuration(track.duration) : ''}</span>
+    {queue && <span className="playlist-track-actions"><button type="button" disabled={busy} aria-label={`下一首播放《${track.title}》`} title="下一首播放" onClick={() => queue(index, true)}><Play size={12}/><small>下一首</small></button><button type="button" disabled={busy} aria-label={`加入队列《${track.title}》`} title="加入队列" onClick={() => queue(index, false)}><ListBullet size={12}/><small>队列</small></button></span>}
   </li>;
 }
 
@@ -90,8 +93,8 @@ function PlaylistDetail({ detail, provider, back, act, busy, saved, loadMore, lo
         : detail.page?.missingPages?.length ? null : <span>{detail.limitReason || (tracks.length >= PLAYLIST_TRACK_LIMIT ? `已达到 ${PLAYLIST_TRACK_LIMIT} 首上限，请拆分导出文件后导入剩余歌曲。` : '平台没有返回全部歌曲，可能受访问权限或接口返回范围限制；可尝试导出歌单文件。')}</span>}
     </div>}
     {tracks.length > 0 && <label className="playlist-filter"><Search size={15}/><input type="search" aria-label="在歌单中查找" placeholder="在歌单中查找歌名、歌手或专辑" value={query} onChange={(event) => setQuery(event.target.value)}/>{query && <small>{rows.length} / {tracks.length}</small>}</label>}
-    {rows.length > 0 && <div className="playlist-track-heading" aria-hidden="true"><span>#</span><span/><span>歌曲 / 歌手</span><span>专辑</span><span>时长</span></div>}
-    {rows.length ? <ol className="playlist-tracks" aria-label={`${playlist.name} 曲目`}>{visibleRows.map(({ track, index }) => <TrackRow key={`${index}-${track.title}`} track={track} index={index} play={(at) => act('play', at)}/>)}</ol>
+    {rows.length > 0 && <div className="playlist-track-heading" aria-hidden="true"><span>#</span><span/><span>歌曲 / 歌手</span><span>专辑</span><span>时长</span><span/></div>}
+    {rows.length ? <ol className="playlist-tracks" aria-label={`${playlist.name} 曲目`}>{visibleRows.map(({ track, index }) => <TrackRow key={`${index}-${track.title}`} track={track} index={index} play={(at) => act('play', at)} queue={(at, next) => act(next ? 'next-track' : 'queue-track', at)} busy={busy || loadingMore}/>)}</ol>
       : <p className="playlist-empty">{tracks.length ? '没有找到匹配的歌曲。' : '这个歌单还没有歌曲。'}</p>}
     {pages > 1 && <nav className="playlist-page-nav" aria-label="歌单曲目分页"><button type="button" className="pixel-button" disabled={activePage === 0} onClick={() => setViewPage(activePage - 1)}>上一页曲目</button><span>第 {activePage + 1} / {pages} 页 · 每页 100 首</span><button type="button" className="pixel-button" disabled={activePage === pages - 1} onClick={() => setViewPage(activePage + 1)}>下一页曲目</button></nav>}
     <p className="playlist-footnote">播放时先试平台原始曲目，再按歌名、歌手和版本匹配 QQ 音乐 / 网易云；不会用现场版或翻唱顶替。播放权限取决于平台账号、版权与地区。</p>
@@ -224,6 +227,12 @@ export default function PlaylistImport({ items, close, onAdded }) {
     try {
       const { item, refreshed } = await save(); if (current !== detailGen.current) return;
       if (action === 'save') { setNotice(refreshed ? `《${item.title}》已同步为最新的 ${item.tracks.length} 首。` : `《${item.title}》已放上唱片架，可以像专辑一样双击放盘。`); return; }
+      if (action === 'next-track' || action === 'queue-track') {
+        const next = action === 'next-track', request = { id: item.id, item, track: index, next, accepted: false };
+        window.dispatchEvent(new CustomEvent('cabin-enqueue', { detail: request }));
+        if (!request.accepted) throw new Error('未能加入待播，请检查队列容量和本地存储后重试。');
+        setNotice(next ? `《${item.tracks[index] || '这首歌'}》会在当前歌曲之后播放。` : `《${item.tracks[index] || '这首歌'}》已加入待播。`); return;
+      }
       if (action === 'queue') { const request = { id: item.id, item, accepted: false }; window.dispatchEvent(new CustomEvent('cabin-enqueue', { detail: request })); if (!request.accepted) throw new Error('未能加入待播，请检查队列容量和本地存储后重试。'); setNotice(`《${item.title}》已加入待播，当前唱片放完后接着放。`); return; }
       window.dispatchEvent(new CustomEvent('cabin-play', { detail: { id: item.id, item, track: action === 'shuffle' ? Math.floor(Math.random() * item.tracks.length) : index, shuffle: action === 'shuffle' } }));
       close();

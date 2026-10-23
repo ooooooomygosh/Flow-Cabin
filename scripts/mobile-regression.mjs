@@ -88,7 +88,7 @@ try {
   await page.getByRole('radio', { name: '本地音乐', exact: true }).tap(); await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '选择 测试歌手 的 手机离线专辑', exact: true }).dblclick();
   await page.waitForFunction(() => [...document.querySelectorAll('audio')].some(a => a.src.includes('/music/1.wav') && !a.paused && a.currentTime > .1));
-  await page.getByLabel('唱机展示曲目', { exact: true }).selectOption('1');
+  await page.getByRole('button', { name: /^选择曲目/ }).click(); await page.getByRole('listbox', { name: '唱机展示曲目', exact: true }).getByRole('option').nth(1).click();
   await page.waitForFunction(() => [...document.querySelectorAll('audio')].some(a => a.src.includes('/music/2.wav') && !a.paused && a.currentTime > .1));
   check('restored-phone-uri-plays-and-track-dropdown-autoplays-with-fixture-audio');
   for (const [width, height, left, right, top, bottom] of [[393, 852, 0, 0, 44, 28], [852, 393, 44, 0, 0, 24], [852, 393, 0, 44, 0, 24], [360, 740, 0, 0, 32, 48]]) {

@@ -121,4 +121,7 @@
 @keyframes welcome-step-in{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
 
 .hub-row>span:first-child{gap:1px}.hub-row small{line-height:1.35}
+.hub-keys{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px;margin:-4px 0 8px;padding:8px 12px;background:var(--ob-well);border:2px solid var(--ob-edge)}
+.hub-key-row{display:grid;grid-template-columns:72px minmax(0,1fr);align-items:center;gap:4px 8px;font-size:12px}.hub-key-row small{grid-column:2;font-size:12px;color:var(--px-warn)}
+.hub-key-row .hub-key{min-height:28px;justify-content:center;font-size:12px;font-variant-numeric:tabular-nums}.hub-key-row .hub-key.is-listening{color:var(--px-accent-hi);border-color:var(--px-accent)}.hub-key-row .hub-key.is-failed{border-color:var(--px-warn)}
 }

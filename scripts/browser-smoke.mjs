@@ -166,11 +166,37 @@ try {
   assert(signal.some(d => d.reason === 'track' && d.track?.index === 1)); assert(signal.every(d => d.energy >= 0 && d.energy <= 1 && typeof d.playing === 'boolean'));
   const ticks = signal.filter(d => d.reason === 'energy').map(d => d.at); if (ticks.length > 3) { const gaps = ticks.slice(1).map((t, i) => t - ticks[i]); assert(Math.min(...gaps) >= 50, 'energy ticks are throttled to ~15fps'); }
   check('cabin-playback-event-carries-real-analyser-energy');
+  // After dragging the progress bar (focus stays on the slider), Space still plays / pauses and ← / → seek 5 s, not 0.1 s.
+  const progressBox = await page.getByLabel('音乐播放进度', { exact: true }).boundingBox();
+  await page.mouse.move(progressBox.x + progressBox.width * .1, progressBox.y + progressBox.height / 2); await page.mouse.down(); await page.mouse.move(progressBox.x + progressBox.width * .2, progressBox.y + progressBox.height / 2, { steps: 4 }); await page.mouse.up();
+  assert.equal(await page.getByLabel('音乐播放进度', { exact: true }).evaluate(element => element === document.activeElement), true, 'the slider keeps focus after a drag');
+  await page.keyboard.press('Space'); await page.waitForFunction(() => document.querySelector('audio[data-deck="active"]').paused);
+  const beforeArrow = await page.locator('audio[data-deck="active"]').evaluate(a => a.currentTime);
+  await page.keyboard.press('ArrowRight'); const afterArrow = await page.locator('audio[data-deck="active"]').evaluate(a => a.currentTime);
+  assert(afterArrow - beforeArrow > 4.5 && afterArrow - beforeArrow < 5.5, `ArrowRight on the progress bar seeks 5 s (moved ${afterArrow - beforeArrow})`);
+  await page.keyboard.press('ArrowLeft'); await page.keyboard.press('Space'); await page.waitForFunction(() => !document.querySelector('audio[data-deck="active"]').paused && window.__cabinPlayback.at(-1).playing === true);
+  check('space-and-arrows-still-work-after-dragging-the-progress-slider');
   await page.evaluate(() => document.activeElement?.blur()); await page.keyboard.press('Space'); await page.waitForFunction(() => document.querySelector('audio[data-deck="active"]').paused && window.__cabinPlayback.at(-1).playing === false);
   await page.keyboard.press('m'); assert.equal(await page.locator('audio[data-deck="active"]').evaluate(a => a.muted), true); await page.keyboard.press('m'); assert.equal(await page.locator('audio[data-deck="active"]').evaluate(a => a.muted), false);
   await page.keyboard.press('Space'); await page.waitForFunction(() => !document.querySelector('audio[data-deck="active"]').paused);
   await page.keyboard.press('Shift+ArrowLeft'); await page.waitForFunction(() => document.querySelector('.turntable-track').textContent.startsWith('01'));
   check('keyboard-space-mute-and-previous');
+  // 重启后恢复: the song and its spot come back after a reload, paused, and play resumes there. No stream URL is stored.
+  await page.waitForFunction(() => { const a = document.querySelector('audio[data-deck="active"]'); return a.src.endsWith('abcdef0123456789') && !a.paused && a.currentTime > .2 && a.duration > 10; });
+  await page.evaluate(() => window.dispatchEvent(new CustomEvent('cabin:player-command', { detail: { action: 'pause' } }))); await page.waitForFunction(() => document.querySelector('audio[data-deck="active"]').paused);
+  await page.evaluate(() => window.dispatchEvent(new CustomEvent('cabin:player-command', { detail: { action: 'seek', value: 6 } })));
+  await page.waitForFunction(() => { const saved = JSON.parse(localStorage.getItem('flow-cabin-deck-resume-v1') || 'null'); return saved && saved.index === 0 && Math.abs(saved.position - 6) < .2 && saved.playing === false; });
+  const resume = await page.evaluate(() => localStorage.getItem('flow-cabin-deck-resume-v1'));
+  assert.doesNotMatch(resume, /audio|https?:|desktop-music/, 'only the song identity is stored');
+  const resumedId = JSON.parse(resume).id;
+  await page.reload(); await page.locator(`.room-turntable[data-loaded-id="${resumedId}"]`).waitFor();
+  await page.locator('.turntable-status', { hasText: '已回到上次听到的地方' }).waitFor();
+  assert.equal(await page.locator('audio[data-deck="active"]').evaluate(a => a.paused && !a.getAttribute('src')), true, 'restored paused, nothing streams before play');
+  assert(Math.abs(Number(await page.getByLabel('音乐播放进度', { exact: true }).inputValue()) - 6) < .2, 'the progress bar shows the remembered spot');
+  assert.match(await page.locator('.turntable-track').innerText(), /^01/);
+  await page.evaluate(() => document.activeElement?.blur()); await page.keyboard.press('Space');
+  await page.waitForFunction(() => { const a = document.querySelector('audio[data-deck="active"]'); return a && !a.paused && a.currentTime >= 5.8; });
+  check('reload-restores-the-song-and-spot-paused-then-resumes-there');
   await page.locator('.room-record').nth(1).click(); await page.getByRole('button', { name: '加入待播' }).click(); await page.getByRole('button', { name: '已在待播' }).waitFor();
   await page.getByRole('button', { name: '待播唱片 1 张' }).click(); await page.locator('.player-queue li', { hasText: '测试唱片 2' }).waitFor(); await screenshot('player-queue'); await page.getByRole('button', { name: '关闭待播', exact: true }).click();
   await page.setViewportSize({ width: 960, height: 600 });
@@ -392,7 +418,7 @@ try {
   await page.evaluate(({ room }) => window.__pushWallpaper({ ...room, petOut: true }), { room: companion.room }); await page.waitForTimeout(100);
   assert.equal(await page.locator('.wallpaper-room .room-cat:visible, .wallpaper-room .pixel-cat:visible').count(), 0, 'room cat hidden while the pet is out');
   check('wallpaper-hides-room-cat-while-pet-is-out'); await page.close();
-  page = await context.newPage(); await page.setViewportSize({ width: 300, height: 64 }); await page.goto(origin + '/mini.html');
+  page = await context.newPage(); await page.setViewportSize({ width: 380, height: 92 }); await page.goto(origin + '/mini.html');
   await page.locator('.mini-bar').waitFor(); await page.getByText('雪夜 · 预览').waitFor();
   assert.equal(await page.locator('.mini-actions').evaluate(e => getComputedStyle(e).opacity), '0', 'controls hidden until hover');
   await page.hover('.mini-bar'); await page.getByRole('button', { name: '上一首' }).click(); await page.getByRole('button', { name: '暂停', exact: true }).click(); await page.getByRole('button', { name: '下一首' }).click(); await page.getByRole('button', { name: '浮出桌面' }).click();
@@ -528,7 +554,9 @@ try {
   await page.mouse.move(1200, 120); await page.waitForTimeout(400); assert.equal(await deckStyle(), '0 hidden none'); await page.waitForTimeout(700); assert.deepEqual(await layoutIssues('immersive again'), []); await page.keyboard.press('Escape'); await page.waitForTimeout(700); assert.deepEqual(await layoutIssues('after immersive'), []);
   assert((await page.evaluate(() => window.__catMoves)).every(m => m === 'fade'), 'reduced motion moves the cat with a fade swap only');
   check('cat-always-on-a-surface-and-hops-off-hidden-console'); check('immersive-console-hidden-and-revealed-near-pointer');
-  { const motionPage = await context.newPage(); await motionPage.emulateMedia({ reducedMotion: 'no-preference' }); await motionPage.setViewportSize({ width: 1280, height: 800 }); await motionPage.goto(origin); await motionPage.locator('.room-record').first().waitFor(); await motionPage.evaluate(() => {
+  { const motionPage = await context.newPage(); await motionPage.emulateMedia({ reducedMotion: 'no-preference' }); await motionPage.setViewportSize({ width: 1280, height: 800 });
+    // The hop checks below start from an empty deck: since 2.2 a new window restores the last record (deck-resume.mjs).
+    await motionPage.addInitScript(() => localStorage.removeItem('flow-cabin-deck-resume-v1')); await motionPage.goto(origin); await motionPage.locator('.room-record').first().waitFor(); await motionPage.evaluate(() => {
       document.documentElement.dataset.desktopReduceMotion = 'false';
       // Earlier wallpaper/pet checks install context-wide bridge mocks. This
       // page tests a normal main window, which must not inherit their exemption.

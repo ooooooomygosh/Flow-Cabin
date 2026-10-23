@@ -42,6 +42,28 @@ const { createWeather, weatherScript } = require('./weather.cjs');
 const { createWeatherApi } = require('./weather-api.cjs');
 const { createLocation } = require('./location.cjs');
 const { createAi, aiScript } = require('./ai.cjs');
+// ── M3 player: global media hotkeys, taskbar thumbnail buttons, Dock menu, floating mini player ──
+const { createMediaKeys, mediaKeysScript } = require('./media-keys.cjs');
+const { createThumbar } = require('./thumbar.cjs');
+const { dockMenuTemplate } = require('./main/menus.cjs');
+const { miniScript } = require('./mini-player.cjs');
+let mediaKeys = null, thumbar = null, dockKey = '', menuPlaying = null;
+const relayPlayer = (action) => relayPlayerCommand(siteView?.webContents, action);
+// 'lyrics-toggle' goes to the desktop command of that name (the floating lyric window owns it);
+// until that command exists, the hotkey opens the lyric window.
+function toggleDesktopLyrics() { if (!handleSiteCommand('album-desktop://action/lyrics-toggle')) lyricWindow?.open().catch((error) => writeLog('lyric-window', error.message)); }
+function runMediaKey(id) { if (id === 'lyrics-toggle') toggleDesktopLyrics(); else relayPlayer(id); }
+const miniMenuState = () => ({ miniToggle: miniPlayer ? () => miniPlayer.toggle() : null, miniShown: Boolean(miniPlayer?.state().shown), miniPin: (on) => miniPlayer?.setAlwaysOnTop(on), miniPinned: Boolean(miniPlayer?.state().alwaysOnTop) });
+function updatePlayerChrome() {
+  const now = lastCompanion?.nowPlaying || null, playing = now ? now.playing === true : Boolean(trayStatus.playing);
+  thumbar?.update({ playing, active: Boolean(now) });
+  if (menuPlaying !== playing) { menuPlaying = playing; createMenus(); }
+  if (process.platform === 'darwin' && app.dock) {
+    const key = [playing, now?.title || '', miniPlayer?.state().shown].join('|');
+    if (key !== dockKey) { dockKey = key; try { app.dock.setMenu(Menu.buildFromTemplate(dockMenuTemplate({ player: relayPlayer, status: { playing }, track: now ? [now.title, now.artist].filter(Boolean).join(' · ') : '', ...miniMenuState() }))); } catch (error) { writeLog('dock-menu', error.message); } }
+  }
+}
+// ── end M3 player ──
 
 protocol.registerSchemesAsPrivileged([{ scheme: 'album-desktop', privileges: { standard: true, secure: true, supportFetchAPI: true } }]);
 app.setName('心流小屋');
@@ -111,7 +133,7 @@ function refreshTray() {
     const companion = (command) => sendCompanionCommand(siteView?.webContents, command);
     currentTrayMenu = Menu.buildFromTemplate(trayMenuTemplate({
       restore: restoreMainWindow, companion, checkUpdates: () => updates.checkFromMenu(),
-      status: trayStatus, player: (action) => relayPlayerCommand(siteView?.webContents, action), openJournal,
+      status: trayStatus, player: (action) => relayPlayerCommand(siteView?.webContents, action), openJournal, ...miniMenuState(),
       petActive: petState.active, petStart: () => pet.start().catch((error) => writeLog('pet-error', error.message)), petStop: () => pet.stop(),
       sinkActive: Boolean(desktopSink?.active || desktopSink?.busy), sinkEnter: () => desktopSink?.enter(), sinkExit: () => desktopSink.exit(), quit: () => app.quit()
     }));
@@ -135,6 +157,7 @@ const statusPoller = createCompanionPoller({ getSite: () => siteView?.webContent
     trayStatus = statusFrom(value); petMenu?.publish();
     const key = [trayStatus.statusLine, trayStatus.playing, trayStatus.phase, trayStatus.paused, trayWanted()].join('|');
     if (key !== trayMenuKey || !companionTray) { trayMenuKey = key; refreshTray(); } else statusBar.apply(trayStatus);
+    updatePlayerChrome(); // M3 player
   } });
 // 键鼠跟随: the global hook runs whenever the setting is on, independently of
 // whether the pet is out. It reports only a fixed kind and a timestamp. Counts
@@ -388,6 +411,7 @@ async function wireRemoteView() {
     if (desktopMode) notifySite(`document.documentElement.dataset.desktopMode = '${desktopMode.active}'; window.dispatchEvent(new CustomEvent('album-desktop-mode', {detail: {active: ${Boolean(desktopMode.active)}}}));`);
     if (desktopSink) notifySinkStatus(desktopSink.status());
     updates.push(); autostart.publish(); weather.publish(); ai().publishKey();
+    mediaKeys?.publish(); if (miniPlayer) notifySite(miniScript(miniPlayer.state())); // M3 player
     siteView.setVisible(!settingsOpen);
     if (mainWindow && !mainWindow.isDestroyed() && !contents.isDestroyed() && (!mainWindow.isVisible() || mainWindow.isMinimized())) await contents.executeJavaScript("window.dispatchEvent(new Event('blur'));").catch(() => {});
     sendState();
@@ -431,6 +455,7 @@ const siteCommands = createSiteCommands({
   },
   handleUpdateCommand: (pathname, params) => updates.handle(pathname, params),
   get autostart() { return autostart; },
+  get mediaKeys() { return mediaKeys; }, get miniPlayer() { return miniPlayer; }, // M3 player
   get weather() { return weather; },
   get ai() { return ai(); }
 });
@@ -480,6 +505,7 @@ function createMenus() {
   Menu.setApplicationMenu(Menu.buildFromTemplate(appMenuTemplate({
     companion: (command) => sendCompanionCommand(siteView?.webContents, command), toggleSettings, checkUpdates: () => updates.checkFromMenu(),
     reload: () => navigate(`${SITE_ORIGIN}/`), zoom, fullscreen: isFullscreen(), toggleFullscreen, toggleSink: () => desktopSink.toggle(),
+    player: relayPlayer, status: { playing: Boolean(menuPlaying) }, mediaKeys: mediaKeys?.state(), lyricsToggle: toggleDesktopLyrics, ...miniMenuState(), // M3 player
     openData: () => shell.openPath(app.getPath('userData')),
     about: () => dialog.showMessageBox(mainWindow, { type: 'info', title: '心流小屋', message: `心流小屋 ${app.getVersion()}`, detail: ABOUT_DETAIL })
   })));
@@ -573,6 +599,7 @@ async function createWindow() {
     if (siteView && !siteView.webContents.isDestroyed()) siteView.webContents.close();
   });
   mainWindow.on('closed', () => { mainWindow = null; siteView = null; });
+  mainWindow.on('show', () => thumbar?.reset()); // M3 player: the taskbar button is new after a hide
   await mainWindow.loadURL(SHELL_URL);
   await applyAppearance();
   syncFullscreen();
@@ -607,7 +634,9 @@ else {
     desktopMode = createDesktopMode({ getWindow: () => mainWindow, screen, leaveFullscreen: () => setFullscreen(false), helperPath: desktopHelperPath(), log: writeLog,
       onChange: (state) => { refreshTray(); notifySite(`document.documentElement.dataset.desktopMode = '${state.active}'; window.dispatchEvent(new CustomEvent('album-desktop-mode', {detail: ${JSON.stringify(state)}}));`); } });
     pet = createPet({ directory: app.getPath('userData'), getSite: () => siteView?.webContents, getInputStats: () => ({ ...inputStats.snapshot(), ...typingInfo() }), status: petStatus, registerProtocol: registerShellProtocol, restoreMain: restoreMainWindow, log: writeLog });
-    miniPlayer = createMiniPlayer({ getSite: () => siteView?.webContents, getAnchor: () => mainWindow?.getBounds(), registerProtocol: registerShellProtocol, helperPath: desktopHelperPath(), onExit: () => desktopSink.exit(), log: writeLog });
+    miniPlayer = createMiniPlayer({ getSite: () => siteView?.webContents, getAnchor: () => mainWindow?.getBounds(), registerProtocol: registerShellProtocol, helperPath: desktopHelperPath(), onExit: () => desktopSink.exit(), log: writeLog,
+      // M3 player: also a floating window outside 沉入桌面 (tray / 控制 menu / settings), position and 置顶 remembered.
+      directory: app.getPath('userData'), onRestore: restoreMainWindow, onChange: (state) => { notifySite(miniScript(state)); refreshTray(); createMenus(); dockKey = ''; updatePlayerChrome(); } });
     desktopSink = createDesktopSink({ wallpaper, legacy: desktopMode, pet, mini: miniPlayer, log: writeLog,
       hideMain: () => { if (mainWindow && !mainWindow.isDestroyed()) { setFullscreen(false); mainWindow.hide(); } },
       restoreMain: restoreMainWindow,
@@ -615,6 +644,10 @@ else {
       onChange: (state) => { refreshTray(); notifySinkStatus(state); } });
     // Exit is always one keystroke away, even with the window collapsed.
     try { globalShortcut.register(SINK_HOTKEY, () => desktopSink.toggle()); } catch (error) { writeLog('desktop-sink-hotkey', error.message); }
+    // M3 player: global media hotkeys and Windows thumbnail buttons.
+    mediaKeys = createMediaKeys({ globalShortcut, directory: app.getPath('userData'), run: runMediaKey, publish: (state) => { notifySite(mediaKeysScript(state)); createMenus(); }, log: writeLog });
+    mediaKeys.start();
+    thumbar = createThumbar({ getWindow: () => mainWindow, nativeImage, player: relayPlayer });
     // On battery the scene drops to 10 fps; on AC it returns to 30 fps.
     const power = () => desktopSink.setLowPower(powerMonitor.isOnBatteryPower?.() ?? powerMonitor.onBatteryPower);
     powerMonitor.on('on-battery', power); powerMonitor.on('on-ac', power);
@@ -626,7 +659,8 @@ else {
     localMusic = createLocalMusic({ directory: app.getPath('userData'), resizeCover: (buffer) => { const image = nativeImage.createFromBuffer(buffer); return image.isEmpty() ? null : image.resize({ width: Math.min(600, image.getSize().width), quality: 'good' }).toJPEG(86); } });
     const nowPlaying = createNowPlaying({ helperPath: app.isPackaged ? path.join(process.resourcesPath, 'native', 'NowPlaying.exe') : path.join(__dirname, 'native', 'bin', 'NowPlaying.exe') });
     music = createMusicService({ directory: app.getPath('userData'), safeStorage, nowPlaying, localMusic, appleMusic: createAppleMusic({ country: app.getLocaleCountryCode() }), localApps: createLocalApps({ openExternal: (url) => shell.openExternal(url), appForProtocol: (url) => app.getApplicationNameForProtocol(url) }), login: (provider) => provider === 'qq' ? openQQLogin(mainWindow) : openNeteaseLogin(mainWindow), logout: (provider) => provider === 'qq' ? clearQQLogin() : clearNeteaseLogin() });
-    writeLog('started', app.getVersion()); await createWindow(); statusPoller.start(); refreshTray(); try { updates.start(); } catch (error) { writeLog('updater-error', error.message); }
+    writeLog('started', app.getVersion()); await createWindow(); statusPoller.start(); refreshTray();
+    miniPlayer.restore().catch((error) => writeLog('mini-player', error.message)); // M3 player: shown at the last launch try { updates.start(); } catch (error) { writeLog('updater-error', error.message); }
   }).catch((error) => {
     writeLog('startup-error', error.message);
     dialog.showErrorBox('心流小屋启动失败', '请关闭后重新打开应用。\n' + error.message);
@@ -649,5 +683,5 @@ else {
     }
     if (mainWindow) restoreMainWindow(); else createWindow().catch((error) => writeLog('startup-error', error.message));
   });
-  app.on('before-quit', (event) => { if (!quitting && dshBridge?.status().enabled) { event.preventDefault(); quitting = true; Promise.race([dshBridge.stop(), new Promise(resolve=>setTimeout(resolve,4500))]).finally(()=>app.quit()); return; } quitting = true; lyricWindow?.dispose(); petMenu?.dispose(); trayPet.stop(); dshBridge?.stop(); lan?.stop(); aiRelay?.dispose(); aiRelay = null; statusPoller.stop(); typingHook.stop(); clearTimeout(inputStatsTimer); inputStatsTimer = null; inputStats.dispose(); if (awakeBlocker !== null) { powerSaveBlocker.stop(awakeBlocker); awakeBlocker = null; } globalShortcut.unregisterAll(); desktopSink?.stop(); miniPlayer?.hide(); wallpaper?.stop(); pet?.stop(); weather.dispose(); music?.stop(); companionTray?.destroy(); companionTray = null; if (startupComplete) writeLog('closed'); });
+  app.on('before-quit', (event) => { if (!quitting && dshBridge?.status().enabled) { event.preventDefault(); quitting = true; Promise.race([dshBridge.stop(), new Promise(resolve=>setTimeout(resolve,4500))]).finally(()=>app.quit()); return; } quitting = true; lyricWindow?.dispose(); petMenu?.dispose(); trayPet.stop(); dshBridge?.stop(); lan?.stop(); aiRelay?.dispose(); aiRelay = null; statusPoller.stop(); typingHook.stop(); clearTimeout(inputStatsTimer); inputStatsTimer = null; inputStats.dispose(); if (awakeBlocker !== null) { powerSaveBlocker.stop(awakeBlocker); awakeBlocker = null; } globalShortcut.unregisterAll(); mediaKeys?.stop(); desktopSink?.stop(); miniPlayer?.hide(); wallpaper?.stop(); pet?.stop(); weather.dispose(); music?.stop(); companionTray?.destroy(); companionTray = null; if (startupComplete) writeLog('closed'); });
 }
