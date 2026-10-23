@@ -51,6 +51,8 @@ jobs:
         run: npm run test:journey
       - name: Run browser smoke tests
         run: npm run test:browser
+      - name: Run Android playback React bridge regression
+        run: npm run test:native-playback
       - name: Run promotional page interaction tests
         run: npm run test:promo
       - name: Run silent playback regressions
@@ -75,6 +77,8 @@ jobs:
         run: npm run test:study-ui
       - name: Run room theme interaction regressions
         run: npm run test:theme
+      - name: Run modular room art and placement regressions
+        run: npm run test:room-studio
       - name: Run earned souvenir persistence and recovery regressions
         run: npm run test:souvenirs
       - name: Save browser test evidence
@@ -96,6 +100,7 @@ jobs:
             desktop/test-results/memory-deletion/
             desktop/test-results/study-ui/
             desktop/test-results/theme-interactions/
+            desktop/test-results/room-studio/
             desktop/test-results/souvenirs/
           if-no-files-found: warn
           retention-days: 14

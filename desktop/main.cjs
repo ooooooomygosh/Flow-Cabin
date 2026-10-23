@@ -65,7 +65,7 @@ let appearance = { ...DEFAULT_SETTINGS };
 let settingsOpen = false;
 let systemFonts = [];
 let wallpaper, desktopMode, desktopSink, miniPlayer, awakeBlocker = null;
-const trayPet = createTrayPet({ getTray: () => null, nativeImage }) /* v1.18: the tray shows status icons (status-bar.cjs) instead of the pet */;
+const trayPet = createTrayPet({ getTray: () => companionTray, getWindow: () => mainWindow, app, nativeImage, directory: app.getPath('userData') });
 const desktopHelperPath = () => app.isPackaged ? path.join(process.resourcesPath, 'native', 'DesktopHost.exe') : path.join(__dirname, 'native', 'bin', 'DesktopHost.exe');
 let music;
 let collection;
@@ -85,14 +85,14 @@ function restoreMainWindow() {
 // One tray icon while the wallpaper or the desktop pet keeps running, while a focus round runs,
 // and always in the macOS menu bar (status: remaining time as the title, state icon).
 function companionsActive() { return Boolean(wallpaperState.active || wallpaperState.busy || petState.active || desktopMode?.active || desktopSink?.active || desktopSink?.busy); }
-const statusBar = createStatusApplier({ getTray: () => companionTray, getWindow: () => mainWindow, app, nativeImage });
+const statusBar = createStatusApplier({ getTray: () => companionTray, getWindow: () => mainWindow, app, nativeImage, getPetId: () => trayPet.petId });
 let trayStatus = statusFrom(null);
 function trayWanted() { return companionsActive() || process.platform === 'darwin' || trayStatus.phase !== 'idle'; }
 function openJournal() { restoreMainWindow(); siteView?.webContents.executeJavaScript("window.dispatchEvent(new CustomEvent('cabin:open-journal'))").catch(() => {}); }
 function refreshTray() {
   if (trayWanted()) {
     if (!companionTray) {
-      const image = nativeImage.createFromPath(statusIconPath(trayStatus.icon));
+      const image = nativeImage.createFromPath(trayIconPath(trayPet.petId));
       if (process.platform === 'darwin') image.setTemplateImage(true);
       companionTray = new Tray(image.isEmpty() ? path.join(__dirname, 'assets', 'tray.png') : image); companionTray.__statusIcon = trayStatus.icon;
       companionTray.on('double-click', () => desktopSink?.active ? desktopSink.exit() : restoreMainWindow());
@@ -513,6 +513,7 @@ async function createWindow() {
     autoHideMenuBar: true, frame: false, thickFrame: true,
     webPreferences: { preload: path.join(__dirname, 'preload.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: true, webSecurity: true }
   });
+  trayPet.setTrayPet(trayPet.petId);
   siteView = new WebContentsView({
     // Not throttled: the focus timer, ambience and companion state keep running while hidden in the tray.
     webPreferences: { partition: 'persist:album-circle-v1', nodeIntegration: false, contextIsolation: true, sandbox: true, webSecurity: true, allowRunningInsecureContent: false, spellcheck: false, backgroundThrottling: false }

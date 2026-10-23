@@ -100,7 +100,12 @@ function RoomScene({ look = 'warm', items = [], selectedId, select, load, startR
     window.addEventListener('resize', schedule);
     [viewport.current, toolbar, footer, header, room?.querySelector('.room-turntable'), room?.querySelector('.room-shelf-navigation')].filter(Boolean).forEach((element) => observer.observe(element)); update();
     // Footer and focus panel mount/unmount as direct children of the room.
-    const mounts = new MutationObserver(() => { room.querySelectorAll(':scope > .room-now-playing, :scope > .focus-dock, .room-shelf-navigation').forEach((element) => observer.observe(element)); cancelAnimationFrame(frame); frame = requestAnimationFrame(update); });
+    const mounts = new MutationObserver(() => {
+      // Wallpaper shares the scene viewport without the main .cabin-room
+      // wrapper. Its own child mutations still need a geometry update.
+      if (room) room.querySelectorAll(':scope > .room-now-playing, :scope > .focus-dock, .room-shelf-navigation').forEach((element) => observer.observe(element));
+      cancelAnimationFrame(frame); frame = requestAnimationFrame(update);
+    });
     if (room) mounts.observe(room, { childList: true });
     mounts.observe(viewport.current, { childList: true });
     return () => { observer.disconnect(); mounts.disconnect(); window.removeEventListener('resize', schedule); cancelAnimationFrame(frame); };

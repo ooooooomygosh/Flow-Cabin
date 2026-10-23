@@ -21,7 +21,7 @@ export default function useDeck({ items, onLoad }) {
   const chosenProvider = useRef((() => { try { return Boolean(localStorage.getItem(PROVIDER_KEY)); } catch { return true; } })());
   const chooseProvider = useCallback((value) => { chosenProvider.current = true; setProvider(value); try { localStorage.setItem(PROVIDER_KEY, value); } catch {} }, []);
   const queueRef = useRef(null);
-  const playback = useRoomPlayback(record, trackIndex, provider, (manual = false) => queueRef.current?.current.next(manual), { peekNext: () => queueRef.current?.current.peekNext(), canNext: () => Boolean(queueRef.current?.current.canNext) });
+  const playback = useRoomPlayback(record, trackIndex, provider, (manual = false) => queueRef.current?.current.next(manual), { onNativeTrackIndex: setTrackIndex, peekNext: () => queueRef.current?.current.peekNext(), canNext: () => Boolean(queueRef.current?.current.canNext) });
   const system = useSystemNowPlaying(provider === 'system');
   // A playlist shows the current song's own cover on the deck, widgets and media keys.
   const shownCover = provider === 'system' ? '' : trackCover(record, trackIndex, playback.actualCover);

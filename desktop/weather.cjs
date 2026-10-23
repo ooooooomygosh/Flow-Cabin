@@ -15,7 +15,7 @@ function validPlace(lat, lng) {
   const a = num(lat), b = num(lng);
   return Number.isFinite(a) && Number.isFinite(b) && Math.abs(a) <= 90 && Math.abs(b) <= 180 ? { lat: round(a), lng: round(b) } : null;
 }
-const weatherUrl = ({ lat, lng }) => `${ENDPOINT}?latitude=${lat}&longitude=${lng}&current=weather_code,wind_speed_10m,precipitation,cloud_cover,temperature_2m,is_day&timezone=auto`;
+const weatherUrl = ({ lat, lng }) => `${ENDPOINT}?latitude=${lat}&longitude=${lng}&current=weather_code,wind_speed_10m,precipitation,cloud_cover,temperature_2m,apparent_temperature,relative_humidity_2m,is_day&timezone=auto`;
 
 // WMO weather interpretation codes → the cabin's weather kinds.
 function weatherFromReport(report) {
@@ -23,7 +23,11 @@ function weatherFromReport(report) {
   const code = Number(current.weather_code), cover = Number(current.cloud_cover), windKmh = Number(current.wind_speed_10m);
   if (!Number.isFinite(code)) return null;
   const wind = Math.round(clamp01((Number.isFinite(windKmh) ? windKmh : 10) / 50) * 100) / 100;
-  const of = (kind, intensity) => ({ kind, intensity: Math.round(clamp01(intensity) * 100) / 100, wind });
+  const readings = {};
+  for (const [name, source] of Object.entries({ temperature: 'temperature_2m', feelsLike: 'apparent_temperature', humidity: 'relative_humidity_2m', precipitation: 'precipitation' })) {
+    if (typeof current[source] === 'number' && Number.isFinite(current[source])) readings[name] = current[source];
+  }
+  const of = (kind, intensity) => ({ kind, intensity: Math.round(clamp01(intensity) * 100) / 100, wind, ...readings });
   if (code === 0) return of('clear', 0);
   if (code === 1 || code === 2) return Number.isFinite(cover) && cover >= 45 ? of('cloudy', .3 + cover / 250) : of('clear', 0);
   if (code === 3) return of('cloudy', .9);
@@ -85,6 +89,7 @@ function createWeather({ fetch, publish, now = Date.now, setTimer = setTimeout, 
 }
 const weatherScript = (value) => {
   const safe = value && typeof value === 'object' ? { kind: String(value.kind), intensity: Number(value.intensity) || 0, wind: Number(value.wind) || 0, fetchedAt: Number(value.fetchedAt) || 0, source: 'open-meteo' } : null;
+  if (safe) for (const name of ['temperature', 'feelsLike', 'humidity', 'precipitation']) { if (typeof value[name] === 'number' && Number.isFinite(value[name])) safe[name] = value[name]; }
   return `window.cabinWeather = ${JSON.stringify(safe)}; window.dispatchEvent(new CustomEvent('cabin:weather', { detail: window.cabinWeather }));`;
 };
 module.exports = { createWeather, weatherFromReport, weatherScript, weatherUrl, validPlace, WEATHER_TTL: TTL };

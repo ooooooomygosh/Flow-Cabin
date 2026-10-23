@@ -27,7 +27,14 @@ export default function useOnboardingFlow({ client, loading, loadError, firstVis
     setWizardMode(plan.mode);
     setWizard(true);
   }, [loading, loadError, firstVisit, itemCount]);
-  useEffect(() => { if (hubRequest?.section) setHub(hubRequest.section); }, [hubRequest]);
+  // An external request is an event, not persistent desired dialog state.
+  // Effect replay (including Fast Refresh) must not reopen a dismissed request.
+  const consumedHubRequest = useRef(null);
+  useEffect(() => {
+    if (!hubRequest?.section || consumedHubRequest.current === hubRequest) return;
+    consumedHubRequest.current = hubRequest;
+    setHub(hubRequest.section);
+  }, [hubRequest]);
   const restartOnboarding = useCallback(() => { setHub(''); saveOnboarding(onboardingModel.reopen(current.current)); setWizardMode('manual'); setWizard(true); }, [saveOnboarding]);
   const closeWizard = useCallback((reason = 'later') => {
     setWizard(false);

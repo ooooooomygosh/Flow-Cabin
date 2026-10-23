@@ -43,6 +43,10 @@ async function openFocus(page, tab = '随手记') {
 }
 
 async function openEntries(page) {
+  // main.jsx awaits platform initialization and imports App after document load.
+  // A new window can have readyState=complete while #root is still empty;
+  // wait for the command recipient before sending its keyboard/event entry.
+  await page.locator('.cabin-journal').waitFor({ state: 'attached' });
   const dialog = page.getByRole('dialog', { name: '小屋日记' });
   if (!await dialog.isVisible().catch(() => false)) {
     await page.evaluate(() => document.activeElement?.blur());
@@ -158,10 +162,12 @@ try {
     };
   }, { key, fail });
   const openMail = async page => {
+    await page.locator('.cabin-journal').waitFor({ state: 'attached' });
     await page.evaluate(() => window.dispatchEvent(new CustomEvent('cabin:open-journal', { detail: { tab: 'letters' } })));
     const panel = page.getByRole('tabpanel', { name: '信箱' }); await panel.waitFor(); return panel;
   };
   const openBackup = async page => {
+    await page.locator('.focus-badge').waitFor();
     await page.keyboard.press('Escape');
     await page.evaluate(() => window.dispatchEvent(new CustomEvent('cabin-open-settings', { detail: { section: 'data' } })));
     await page.getByRole('button', { name: '收藏与备份', exact: true }).click();

@@ -4,6 +4,7 @@ import { getRoomScene } from './scene-catalog.mjs';
 import { normalizePetId, getPet } from './pet/pet-catalog.mjs';
 import { setBeat } from './player/beat-clock.mjs';
 import { currentCabinPlayback, onCabinPlayback } from './scene/playback-listener.mjs';
+const ModularRoom = lazy(() => import('./room2/ModularRoom'));
 import CabinWelcome from './room/CabinWelcome';
 import { Up, Down, ArrowUpRight, Wand2, Sparkles, EyeSlash, Heart, Plus, ListBullet, Check, Computer, Play, SpeakerWave, SpeakerOff, Grid3X3, Refresh, Expand } from './icons';
 import { RecordBoxControls, useRecordLibrary, useRecordStyle } from './RecordLibrary';
@@ -71,6 +72,7 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
   const { record, provider, playback, player, deckItem, effectiveSpin } = deck;
   const focus = useFocusState(), sound = useSoundscape();
   useCatCareHost();
+  const [modularOpen, setModularOpen] = useState(false);
   const [catPanelOpen, setCatPanelOpen] = useState(false);
   const [smartOpen, setSmartOpen] = useState(false);
   const closeSmart = useCallback(() => setSmartOpen(false), []);
@@ -196,6 +198,7 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
     {/* One row of room actions, right-aligned: focus · sound · companion · 沉入桌面 · 沉浸.
         Preferences live in Settings (titlebar ⚙). */}
     <nav className="cabin-toolbar" aria-label="小屋工具">
+      {import.meta.env.DEV && new URLSearchParams(window.location.search).has('room-studio') && <button type="button" onClick={() => setModularOpen(true)}>生活小屋 · 制作中</button>}
       {focus && <span className="zen-keep cabin-toolbar-group"><FocusBadge open={dock.open && dock.tab !== 'sound'} onClick={() => saveDock({ open: !(dock.open && dock.tab !== 'sound'), ...(dock.tab === 'sound' ? { tab: 'timer' } : {}) })}/></span>}
       <span className="cabin-toolbar-group">
         {mobileShelfCompact && <button type="button" aria-label="打开播放器" title="打开唱机特写与播放控制" onClick={() => chrome.setCorner(true)}><Play size={17}/><span>播放器</span></button>}
@@ -240,6 +243,14 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
       {!record && <button type="button" className="room-load-record is-primary" aria-keyshortcuts="Enter" title="放到唱机上播放 · 双击封面或按回车也可以" onClick={() => placeRecord(selected, document.querySelector('.room-record.is-selected') || stage.current, deck.place)}><Play size={16}/><span>放到唱机</span></button>}
       {record && queueId(record.id) !== queueId(selected.id) && <button type="button" className="room-queue-add" aria-label={queued ? '已在待播' : '加入待播'} aria-pressed={queued} title="当前唱片放完后接着放" onClick={(event) => { if (queued) { player.remove(selected.id); return; } if (!player.enqueue(selected.id)) return; const queueButton = document.querySelector('.room-turntable .player-mode[aria-label^="待播唱片"]'); flyRecord({ from: document.querySelector('.room-record.is-selected') || event.currentTarget, to: queueButton, target: queueButton, cover: selected.cover, mode: 'queue' }); }}>{queued ? <><Check size={16}/><span>已在待播</span></> : <><ListBullet size={16}/><span>加入待播</span></>}</button>}<button type="button" className="room-open-album" aria-label="唱片卡片" title="唱片卡片：曲目、笔记、自定义唱片与 Discogs" onClick={() => openRecord(selected.id)}><span>唱片卡片</span><ArrowUpRight size={18}/></button></div></div>}
     {focus && <CabinJournal/>}
+    {modularOpen && <Suspense fallback={<span role="status">正在打开生活小屋…</span>}><ModularRoom close={() => setModularOpen(false)} reduceMotion={appearance.reduceMotion || reduced} look={look} petId={petId} playing={effectiveSpin} focus={focus.state.timer.phase === 'focus' && !focus.state.timer.paused} onAction={action => {
+      setModularOpen(false);
+      if (['timer', 'tasks', 'study', 'notes', 'stats'].includes(action)) saveDock({ open: true, tab: action });
+      else if (action === 'pet') setCatPanelOpen(true);
+      else if (action === 'music') chrome.setCorner(true);
+      else if (action === 'lyrics') setTimeout(() => document.querySelector('.turntable-lyrics-entry')?.click(), 0);
+      else window.dispatchEvent(new CustomEvent('cabin:open-journal', { detail: action === 'mail' ? { tab: 'letters' } : {} }));
+    }}/></Suspense>}
     {focus && <FocusDock open={dock.open} tab={dock.tab} setTab={(tab) => saveDock({ tab })} close={() => saveDock({ open: false })} onOpenSmart={openSmart}/>}
     {desktopMode ? <DesktopWidgets mode="desktop" exit={chrome.toggleDesktopMode} item={deckItem} provider={provider} playback={playback} player={player} spinning={effectiveSpin} toggleVisual={deck.toggleVisual} trackIndex={deck.shownTrackIndex}/> : zen && !chrome.zenTools && <DesktopWidgets mode="zen"/>}
     {!desktopMode && <ImmersiveChrome zen={zen} fullscreen={fullscreen} exitFullscreen={chrome.exitFullscreen} toggleZen={chrome.toggleZen} tools={chrome.zenTools} setTools={chrome.setZenTools} />}

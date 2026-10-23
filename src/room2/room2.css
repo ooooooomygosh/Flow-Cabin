@@ -1,0 +1,39 @@
+@layer guards, reset, features, skin, overrides;
+@layer features {
+  .room2-dialog { width: 100%; max-width: 100%; padding: 24px clamp(12px, 3vw, 48px); background: var(--px-bg); color: var(--px-ink); overflow: auto; }
+  .room2-header h2 { font-size: 24px; margin: 8px 0; font-weight: normal; }
+  .room2-eyebrow { color: var(--px-ink-dim); font-size: 12px; letter-spacing: 2px; }
+  .room2-theme-name { color: var(--px-ink-dim); padding: 0 16px 0 0; }
+  .room2-dialog > div { max-width: 1440px; margin-inline: auto; }
+  .room2-dialog p[role="status"] { font-size: 12px; min-height: 20px; color: var(--px-ink-dim); margin: 12px 0; }
+  .room2-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 12px; }
+  .room2-header button, .room2-tools button, .room2-tools select, .room2-tools input { background: var(--px-surface); color: var(--px-ink); border: 2px solid var(--px-accent-lo); font: inherit; padding: 8px; }
+  .room2-header button { min-height: 48px; }
+  .room2-tools button[aria-pressed="true"] { background: var(--px-surface-3); border-color: var(--px-accent-hi); }
+  .room2-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .room2-tools label { display: flex; align-items: center; gap: 4px; }
+  .room2-tools button, .room2-tools select, .room2-tools input { min-height: 48px; }
+  .room2-tools input[type="number"] { width: 80px; }
+  .room2-tools input[type="file"] { max-width: 230px; }
+  .room2-viewport { overflow: auto; width: 100%; background: var(--px-surface); overscroll-behavior: contain; }
+  .room2-world { position: relative; }
+  .room2-scaled { position: absolute; width: 1200px; height: 640px; transform-origin: top left; }
+  .room2-canvas, .room2-canvas canvas { position: absolute; width: 1200px; height: 640px; image-rendering: pixelated; }
+  .room2-canvas[data-art-ready="false"] canvas { visibility: hidden; }
+  .room2-object { position: absolute; padding: 0; border: 0; background: transparent; box-shadow: none; color: var(--px-ink); touch-action: pan-x pan-y; }
+  .room2-object span { opacity: 0; pointer-events: none; z-index: 2; position: absolute; top: 100%; left: 0; background: var(--px-surface); font-size: 12px; white-space: nowrap; padding: 2px 4px; }
+  .room2-object:hover span, .room2-object:focus-visible span { opacity: 1; }
+  .room2-object:focus-visible { outline: 3px solid var(--px-focus); }
+  .room2-fallback { position: absolute; inset: 0; z-index: 1; width: 1200px; height: 640px; background: var(--px-surface); padding: 48px; }
+  @media (max-width: 700px) { .room2-header h2 { font-size: 24px; } .room2-eyebrow { letter-spacing: 0; } .room2-tools { gap: 4px; } .room2-tools button { padding: 6px 8px; font-size: 12px; } }
+  .room2-list { margin-block: 16px; }
+  .room2-list summary { min-height: 48px; cursor: pointer; }
+}
+
+@layer overrides {
+  .cabin-modal.room2-dialog { padding: 20px clamp(12px, 3vw, 48px); }
+  .room2-dialog .room2-tools button, .room2-dialog .room2-header button { font-weight: normal; font-size: 12px; }
+  .room2-dialog .room2-header { max-width: 1440px; margin: 0 auto 16px; }
+  .room2-dialog .room2-tools { gap: 8px; }
+  .room2-dialog .room2-viewport { background: var(--px-surface-inset); }
+}

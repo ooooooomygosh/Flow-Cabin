@@ -21,6 +21,7 @@ public class MainActivity extends BridgeActivity {
 
     @Override public void onCreate(Bundle state) {
         registerPlugin(CabinDevicePlugin.class);
+        registerPlugin(CabinPlayerPlugin.class);
         super.onCreate(state);
         configureEdgeToEdge();
         getBridge().setWebViewClient(new BridgeWebViewClient(getBridge()) {

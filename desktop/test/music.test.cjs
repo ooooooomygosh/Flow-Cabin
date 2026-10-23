@@ -220,3 +220,19 @@ test('track cover: looked up once per song, https only, never for unknown provid
   assert.equal((await (await request('/track-cover?provider=netease&id=123')).json()).cover, '');
   assert.equal((await (await request('/track-cover?provider=ma&id=123')).json()).cover, ''); assert.equal(calls, 2);
 });
+
+test('locked credential store preserves encrypted accounts across settings writes and recovers', async (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'cabin-locked-'));
+  const encrypted = safeStorage.encryptString('private-cookie').toString('base64');
+  fs.writeFileSync(path.join(directory, 'music.json'), JSON.stringify({ qq: encrypted }));
+  let locked = true;
+  const service = createMusicService({ directory, safeStorage: { ...safeStorage, decryptString: b => { if (locked) throw Error('locked'); return safeStorage.decryptString(b); } }, upstream });
+  t.after(() => { service.stop(); fs.rmSync(directory, { recursive: true, force: true }); });
+  assert.deepEqual(service.config().accounts.qq, { status: 'storage-error', saved: true, decryptable: false });
+  assert.equal(service.config().qqLoggedIn, true);
+  const response = await service.proxy(new Request('https://album-circle.vercel.app/desktop-music/quality', { method: 'POST', body: JSON.stringify({ quality: 'lossless' }) }), '/quality', fetch);
+  assert.equal(response.status, 200);
+  assert.equal(JSON.parse(fs.readFileSync(path.join(directory, 'music.json'))).qq, encrypted);
+  locked = false;
+  assert.equal(service.config().accounts.qq.status, 'saved');
+});

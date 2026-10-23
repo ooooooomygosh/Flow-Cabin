@@ -6,6 +6,7 @@
 //   macOS  trayTemplate-{play,pause,focus,cat}.png + @2x — template images, the menu bar tints them;
 //   Windows tray-{play,pause,focus,cat}.ico (tray) and tray-focus-16.png (taskbar overlay).
 const path = require('node:path');
+const { trayIconPath } = require('./tray-icons.cjs');
 const ICONS = ['play', 'pause', 'focus', 'cat'];
 const pad = (n) => String(n).padStart(2, '0');
 // 1499000 → "24:59"; an hour or more → "1:02:03".
@@ -49,15 +50,16 @@ function statusIconPath(icon, platform = process.platform, base = path.join(__di
 
 // Applies a status to the tray, the Dock (macOS) and the main window's taskbar button.
 // deps: { getTray, getWindow, app, nativeImage, platform }
-function createStatusApplier({ getTray, getWindow, app, nativeImage, platform = process.platform }) {
+function createStatusApplier({ getTray, getWindow, app, nativeImage, getPetId = () => 'cat', platform = process.platform }) {
   let last = null, lastIcon = '';
   const image = (file) => { const img = nativeImage.createFromPath(file); if (platform === 'darwin') img.setTemplateImage?.(true); return img; };
   return {
     get last() { return last; },
     apply(status) {
+      const petId = getPetId();
       const tray = getTray(), win = getWindow(), ended = focusEnded(last, status);
       if (tray) {
-        if (status.icon !== lastIcon || tray.__statusIcon !== status.icon) { const img = image(statusIconPath(status.icon, platform)); if (!img.isEmpty()) { tray.setImage(img); tray.__statusIcon = status.icon; lastIcon = status.icon; } }
+        if (petId !== lastIcon || tray.__petId !== petId) { const img = image(trayIconPath(petId, platform)); if (!img.isEmpty()) { tray.setImage(img); tray.__petId = petId; lastIcon = petId; } }
         if (platform === 'darwin') tray.setTitle(status.title, { fontType: 'monospacedDigit' });
         tray.setToolTip(status.tooltip);
       }

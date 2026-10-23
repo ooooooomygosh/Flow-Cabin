@@ -238,9 +238,16 @@ try {
   await run('steady-tone-is-not-a-beat', async (page) => {
     await play(page, ['tone']); await page.waitForTimeout(8000);
     const s = await music(page); assert.equal(s, 'free');
-    const listening = await sampleFrames(page, 4500, ['listen']);
+    const listening = await sampleFrames(page, 13000, ['listen', 'idle']);
     report.tone = { music: s, samples: listening.rows.length, frames: listening.frames };
-    assert.ok(listening.frames.length >= 2, 'steady tone: actual listening frames animate without groove frames');
+    assert.ok(listening.frames.some(frame => frame.startsWith('idle:')), 'steady tone must return to open-eyed idle');
+    let closedAt = null, longestClosed = 0;
+    for (const [time, , frame] of listening.rows) {
+      if (frame.startsWith('listen:')) { closedAt ??= time; longestClosed = Math.max(longestClosed, time - closedAt); }
+      else closedAt = null;
+    }
+    assert.ok(longestClosed <= 2000, `closed-eye listening exceeded two seconds: ${longestClosed}`);
+    assert.ok(listening.frames.length >= 2, 'steady tone: breathing animates without fabricated groove frames');
     assert.equal(await page.evaluate(async () => (await import('/src/player/beat-clock.mjs')).currentBeat().known), false);
   });
   await run('seek-resets-and-relocks', async (page) => {
@@ -248,7 +255,7 @@ try {
     // 3.25 s = 6.5 beats: the beats now fall half a beat away from where they were.
     const t0 = Date.now(); await page.locator('audio[data-deck="active"]').evaluate((a) => { a.currentTime += 3.25; });
     await page.waitForFunction(() => document.querySelector('button.room-cat').dataset.music === 'free', null, { timeout: 2000 });
-    const listening = await sampleFrames(page, 100, ['listen']); report.seekListeningFrames = listening.frames;
+    const listening = await sampleFrames(page, 100, ['listen', 'idle']); report.seekListeningFrames = listening.frames;
     await lockedWithin(page, 7000); report.seekRelockMs = Date.now() - t0; await page.waitForTimeout(1500); await settled(page);
     const m = await measure(page, 120, 6000); report.seek = m; console.log('seek', report.seekRelockMs, JSON.stringify(m)); gate('after seek', m, 120);
   });
@@ -257,7 +264,7 @@ try {
     const t0 = Date.now(); await page.evaluate(() => window.dispatchEvent(new CustomEvent('cabin:player-command', { detail: { action: 'next' } })));
     await page.waitForFunction(() => document.querySelector('button.room-cat').dataset.music !== 'beat', null, { timeout: 3000 });
     await page.waitForFunction(() => document.querySelector('button.room-cat').dataset.music === 'free', null, { timeout: 2000 });
-    const listening = await sampleFrames(page, 100, ['listen']); report.skipListeningFrames = listening.frames;
+    const listening = await sampleFrames(page, 100, ['listen', 'idle']); report.skipListeningFrames = listening.frames;
     await lockedWithin(page, 9000); report.skipRelockMs = Date.now() - t0; await page.waitForTimeout(1500); await settled(page, 8000, 90);
     const m = await measure(page, 90, 6000); report.skip = m; console.log('skip', report.skipRelockMs, JSON.stringify(m)); gate('after skip', m, 90);
     // A single estimate can briefly use the coarse autocorrelation grid between

@@ -1,3 +1,4 @@
+import useNativePlayback from './mobile/useNativePlayback';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { findPlayableSource, musicRequest } from './room-playback.mjs';
 import { createMatchMemory, matchKey } from './player/auto-match.mjs';
@@ -41,6 +42,10 @@ const keyOf = (provider, item, index) => resolutionKey(provider, identityItem(it
 // With 歌曲过渡 on, the idle deck starts early and the two overlap, the old
 // one fading out. `audio.current` is always the live deck.
 export default function useRoomPlayback(record, trackIndex, provider, onNext, options = {}) {
+  // Platform is fixed before React mounts; hooks never switch during a component lifetime.
+  return window.albumMobile?.player ? useNativePlayback(record, trackIndex, provider, onNext, options) : useWebRoomPlayback(record, trackIndex, provider, onNext, options);
+}
+function useWebRoomPlayback(record, trackIndex, provider, onNext, options = {}) {
   const playbackLog = useRef(null), remotePoller = useRef(null);
   playbackLog.current ||= createPlaybackLog();
   const logTrack = (title) => record ? { id: record.id, index: trackIndex, title: title || trackNames(record)[trackIndex] || record.title, artist: record.artist, album: record.title } : null;
@@ -134,12 +139,12 @@ export default function useRoomPlayback(record, trackIndex, provider, onNext, op
         remote.current = candidate.provider;
         appleHandoff.current = candidate.provider === 'appleMusic' && result.catalog ? { target: candidate, bound: null } : null;
         if (element.getAttribute('src')) resetAudio(element);
-        clock.reset(); update({ status: appleHandoff.current ? 'handoff' : 'loading', handoff: Boolean(appleHandoff.current), playing: false, actualTrack: '', remote: true, resolvedProvider: candidate.provider, notice: result.notice || '' });
+        clock.reset(); update({ status: appleHandoff.current ? 'handoff' : 'loading', handoff: Boolean(appleHandoff.current), playing: false, actualTrack: '', remote: true, resolvedProvider: candidate.provider, resolvedId: candidate.id, resolvedAlbum: candidate.album, resolvedArtist: candidate.artist, notice: result.notice || '' });
         remotePoller.current?.wake();
       }
       else {
         remote.current = false;
-        update({ playing: false, status: 'loading', error: '', trial: result.trial, quality: result.quality, remote: false, resolvedProvider: candidate.provider, actualTrack: candidate.title, actualCover: candidate.cover || '' });
+        update({ playing: false, status: 'loading', error: '', trial: result.trial, quality: result.quality, remote: false, resolvedProvider: candidate.provider, resolvedId: candidate.id, resolvedAlbum: candidate.album, resolvedArtist: candidate.artist, actualTrack: candidate.title, actualCover: candidate.cover || '' });
         // A playlist song without saved art: ask the platform for its album cover.
         if (record?.type === 'playlist' && !candidate.cover && !record.trackDetails?.[trackIndex]?.cover && ['qq', 'netease'].includes(candidate.provider))
           musicRequest(`/track-cover?provider=${candidate.provider}&id=${encodeURIComponent(candidate.id)}`, undefined, controller.signal).then((found) => { if (owns() && found?.cover) update({ actualCover: found.cover }); }, () => {});

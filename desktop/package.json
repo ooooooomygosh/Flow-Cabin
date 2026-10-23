@@ -107,7 +107,8 @@
       "web/**/*",
       "renderer/**/*",
       "assets/**/*",
-      "package.json"
+      "package.json",
+      "lyrics-service.cjs"
     ],
     "win": {
       "target": [

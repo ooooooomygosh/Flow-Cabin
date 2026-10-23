@@ -60,3 +60,8 @@ test('NetEase user_account fallback uses server identity', async () => {
   const api = load('music-upstream.cjs', { NeteaseCloudMusicApi: { login_status: async () => ({ status: 200, body: { data: { profile: null } } }), user_account: async () => ({ status: 200, body: { code: 200, account: { id: 7 }, profile: { userId: 7, vipType: 1 } } }) } });
   const info = await api.getNeteaseLoginInfo('MUSIC_U=TEST_ONLY'); assert.equal(info.loggedIn, true); assert.equal(info.userId, 7); assert.equal(info.isVip, true);
 });
+
+test('NetEase offline verification is retryable and never becomes a logout', async () => {
+  const api = load('music-upstream.cjs', { NeteaseCloudMusicApi: { login_status: async () => { throw Error('offline'); }, user_account: async () => { throw Error('offline'); } } });
+  await assert.rejects(api.getNeteaseLoginInfo('MUSIC_U=TEST_ONLY'), /暂时无法验证/);
+});

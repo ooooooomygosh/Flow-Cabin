@@ -4,6 +4,7 @@ import { createMobileStorage, persistentKey } from './storage.mjs';
 
 export const isAndroid = () => Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
 const Device = registerPlugin('CabinDevice');
+const NativePlayer = registerPlugin('CabinPlayer');
 let store;
 const report = text => window.dispatchEvent(new CustomEvent('cabin:mobile-notice', { detail: text }));
 export async function initializeMobile() {
@@ -49,6 +50,8 @@ export async function initializeMobile() {
     if (path === '/apple/permission') return { available: false, granted: false };
     return Device.musicRequest({ path, ...(value === undefined ? {} : { body: JSON.stringify(value) }) });
   };
+  window.albumMobile.player = NativePlayer;
+  window.albumMobile.localTrack = (item, index) => { try { return JSON.parse(localStorage.getItem(MUSIC_KEY) || '{}')[item?.externalIds?.fileAlbum]?.[index] || null; } catch { return null; } };
   window.albumMobile.catalogRequest = query => Device.catalogRequest({ query });
   let connecting = false;
   window.albumMobile.platformAccount = async (provider, logout = false) => {

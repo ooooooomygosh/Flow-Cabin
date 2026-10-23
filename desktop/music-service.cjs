@@ -1,6 +1,7 @@
 'use strict';
 const fs = require('node:fs'), path = require('node:path'), crypto = require('node:crypto'), http = require('node:http');
 const { safeAudioURL, serverURL, candidate } = require('./music-policy.cjs');
+const { createLyricsService } = require('./lyrics-service.cjs');
 const { createPlaylistLibrary } = require('./playlists.cjs');
 // Requested tier; the platform answers with the best tier the account may
 // play (VIP → FLAC, guest → 128k) and the deck shows that actual tier.
@@ -12,7 +13,16 @@ function createMusicService({ directory, safeStorage, login, logout, upstream = 
   let revision = 0;
   const prefsPath = path.join(directory, 'music.json'); let preferences = { maURL: '', maToken: '', playerId: '', qq: '', netease: '', quality: 'exhigh' }, server, port, opening;
   try { preferences = { ...preferences, ...JSON.parse(fs.readFileSync(prefsPath, 'utf8')) }; } catch {}
-  const decode = (value) => { try { return value ? safeStorage.decryptString(Buffer.from(value, 'base64')) : ''; } catch { return ''; } };
+  const decode = (value) => {
+    if (!value) return '';
+    try { return safeStorage.decryptString(Buffer.from(value, 'base64')); }
+    catch { throw new Error('本机凭据暂时无法解密；已保留保存的数据，请解锁系统凭据存储后重试。'); }
+  };
+  const accountState = (provider) => {
+    if (!preferences[provider]) return { status: 'empty', saved: false, decryptable: false };
+    try { decode(preferences[provider]); return { status: 'saved', saved: true, decryptable: true }; }
+    catch { return { status: 'storage-error', saved: true, decryptable: false }; }
+  };
   function invalidate() { revision++; cache.clear(); streams.clear(); for (const controller of activeStreams) controller.abort(); activeStreams.clear(); }
   function save(next) { fs.mkdirSync(directory, { recursive: true }); fs.writeFileSync(prefsPath + '.tmp', JSON.stringify(next), { mode: 0o600 }); fs.renameSync(prefsPath + '.tmp', prefsPath); preferences = next; invalidate(); }
   const encrypt = (value) => {
@@ -20,11 +30,12 @@ function createMusicService({ directory, safeStorage, login, logout, upstream = 
     if (!safeStorage.isEncryptionAvailable() || safeStorage.getSelectedStorageBackend?.() === 'basic_text') throw new Error('本机安全凭据存储不可用，无法保存平台登录。');
     return safeStorage.encryptString(value).toString('base64');
   };
+  const lyrics = createLyricsService({ upstream, cookie: provider => decode(preferences[provider]), fetch });
   const playlists = createPlaylistLibrary({ upstream, cookies: (provider) => decode(preferences[provider]), fetch });
   // Account playlists are read on demand; a changed login discards the answer.
   async function guarded(task) { const currentRevision = revision; const result = await task(); if (currentRevision !== revision) throw new Error('平台登录已更改，请重新打开歌单。'); return result; }
   const quality = () => QUALITIES.includes(preferences.quality) ? preferences.quality : 'exhigh';
-  const config = () => ({ quality: quality(), qualities: QUALITY_OPTIONS, appleMusicAvailable: Boolean(appleMusic?.available), localApps: localApps?.status() || {}, qqLoggedIn: Boolean(decode(preferences.qq)), neteaseLoggedIn: Boolean(decode(preferences.netease)), maURL: preferences.maURL, maTokenSet: Boolean(decode(preferences.maToken)), playerId: preferences.playerId });
+  const config = () => ({ accounts: { qq: accountState('qq'), netease: accountState('netease') }, quality: quality(), qualities: QUALITY_OPTIONS, appleMusicAvailable: Boolean(appleMusic?.available), localApps: localApps?.status() || {}, qqLoggedIn: accountState('qq').saved, neteaseLoggedIn: accountState('netease').saved, maURL: preferences.maURL, maTokenSet: Boolean(preferences.maToken), playerId: preferences.playerId });
   async function ma(command, args = {}) {
     if (!preferences.maURL || !decode(preferences.maToken)) throw new Error('请在音源设置中配置 Music Assistant 服务器与访问令牌。');
     const response = await fetch(serverURL(preferences.maURL) + '/api', { method: 'POST', redirect: 'error', signal: AbortSignal.timeout(15000), headers: { 'Authorization': 'Bearer ' + decode(preferences.maToken), 'Content-Type': 'application/json' }, body: JSON.stringify({ command, args }) });
@@ -164,6 +175,7 @@ function createMusicService({ directory, safeStorage, login, logout, upstream = 
     const origin = req.headers.origin; if (origin && origin !== 'https://album-circle.vercel.app') return json(res, { error: 'Forbidden origin' }, 403);
     const url = new URL(req.url, 'http://127.0.0.1');
     try {
+      if (req.method === 'POST' && url.pathname === '/lyrics') { const input = await body(req); return json(res, await guarded(() => lyrics.get(input))); }
       if (req.method === 'GET' && url.pathname === '/config') return json(res, config());
       if (req.method === 'POST' && url.pathname === '/config') { const value = await body(req); const maURL = value.maURL ? serverURL(String(value.maURL)) : ''; const playerId = String(value.playerId || '').slice(0, 160); const maToken = value.clearToken ? '' : value.maToken ? encrypt(String(value.maToken).slice(0, 8192)) : maURL === preferences.maURL ? preferences.maToken : ''; save({ ...preferences, maURL, maToken, playerId }); return json(res, config()); }
       if (req.method === 'POST' && url.pathname === '/quality') { const value = String((await body(req)).quality || ''); if (!QUALITIES.includes(value)) throw new Error('不支持此音质。'); save({ ...preferences, quality: value }); return json(res, config()); }

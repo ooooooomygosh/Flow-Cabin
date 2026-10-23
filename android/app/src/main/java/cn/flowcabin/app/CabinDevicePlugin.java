@@ -36,7 +36,7 @@ public class CabinDevicePlugin extends Plugin {
     }
     @PluginMethod public void musicRequest(PluginCall call) {
         String path = call.getString("path", "");
-        if (!path.matches("/(config|quality|search|playlists|playlist|playlist/link|resolve|track-cover|ma/players|ma/state|ma/control)(\\?[^#]*)?")) { call.reject("不支持此音源请求。"); return; }
+        if (!path.matches("/(config|quality|search|playlists|playlist|playlist/link|resolve|lyrics|track-cover|ma/players|ma/state|ma/control)(\\?[^#]*)?")) { call.reject("不支持此音源请求。"); return; }
         work.execute(() -> { try { call.resolve(new JSObject(CabinMusic.get(getContext()).request("/music" + path, call.getString("body")).toString())); } catch (Exception e) { call.reject(e.getMessage()); } });
     }
     @PluginMethod public void catalogRequest(PluginCall call) {

@@ -71,6 +71,10 @@ public final class CabinMusic {
             JSONObject result = new JSONObject(output.toString("UTF-8")); if (status >= 400 || result.has("error")) throw new IOException(result.optString("error", "音源请求失败。")); return result;
         } finally { connection.disconnect(); }
     }
+    public HttpURLConnection mediaConnection(String path, long position) throws Exception {
+        if (!path.matches("/audio/[a-f0-9]{48}")) throw new IOException("Invalid audio path");
+        return open("/music" + path, null, "bytes=" + Math.max(0, position) + "-");
+    }
     public WebResourceResponse audio(String path, String range) throws Exception {
         if (!path.matches("/audio/[a-f0-9]{48}")) throw new IOException("Invalid audio path");
         HttpURLConnection connection = open("/music" + path, null, range); int status = connection.getResponseCode();

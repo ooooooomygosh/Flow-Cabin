@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "packs": [
+    {
+      "petId": "cat",
+      "name": "奶糖",
+      "manifest": "cat/manifest.json",
+      "atlas": "cat/atlas.png",
+      "frameCount": 16,
+      "qa": {
+        "transparentBackground": true,
+        "fullyTransparentFraction": 0.5101,
+        "edgeWarnings": [],
+        "visuallyReviewed": true
+      }
+    },
+    {
+      "petId": "chick",
+      "name": "蛋挞",
+      "manifest": "chick/manifest.json",
+      "atlas": "chick/atlas.png",
+      "frameCount": 16,
+      "qa": {
+        "transparentBackground": true,
+        "fullyTransparentFraction": 0.5009,
+        "edgeWarnings": [],
+        "visuallyReviewed": true
+      }
+    },
+    {
+      "petId": "bunny",
+      "name": "棉花",
+      "manifest": "bunny/manifest.json",
+      "atlas": "bunny/atlas.png",
+      "frameCount": 16,
+      "qa": {
+        "transparentBackground": true,
+        "fullyTransparentFraction": 0.457,
+        "edgeWarnings": [],
+        "visuallyReviewed": true
+      }
+    },
+    {
+      "petId": "bear",
+      "name": "可可",
+      "manifest": "bear/manifest.json",
+      "atlas": "bear/atlas.png",
+      "frameCount": 16,
+      "qa": {
+        "transparentBackground": true,
+        "fullyTransparentFraction": 0.5141,
+        "edgeWarnings": [],
+        "visuallyReviewed": true
+      }
+    },
+    {
+      "petId": "fox",
+      "name": "枫糖",
+      "manifest": "fox/manifest.json",
+      "atlas": "fox/atlas.png",
+      "frameCount": 16,
+      "qa": {
+        "transparentBackground": true,
+        "fullyTransparentFraction": 0.446,
+        "edgeWarnings": [],
+        "visuallyReviewed": true
+      }
+    },
+    {
+      "petId": "accessories",
+      "name": "旅行与日常配饰",
+      "manifest": "accessories/manifest.json",
+      "atlas": "accessories/atlas.png",
+      "frameCount": 16,
+      "qa": {
+        "transparentBackground": true,
+        "visuallyReviewed": true,
+        "edgeWarnings": []
+      }
+    }
+  ]
+}

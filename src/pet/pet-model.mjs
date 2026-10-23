@@ -35,7 +35,9 @@ export function petPose({ synced = false, playing = false, phase = 'idle', pause
   if (now < celebrateUntil) return 'celebrate';
   if (poked && now - poked < 1500) return 'celebrate';
   if (phase === 'focus' && !paused) return 'focus';
-  if (playing) return synced ? 'groove' : LISTEN_POSE;
+  // A brief listening expression, followed by open-eyed breathing. This is
+  // natural idle motion, never a fabricated beat.
+  if (playing) return synced ? 'groove' : (Math.max(0, now) % 12000 < 1500 ? LISTEN_POSE : 'idle');
   if (phase === 'shortBreak' || phase === 'longBreak') return 'walk';
   if (isNight(hour) || idleMs > IDLE_SLEEP_MS) return 'sleep';
   return 'idle';

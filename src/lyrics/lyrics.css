@@ -1,0 +1,14 @@
+@layer guards, reset, features, skin, overrides;
+@layer features {
+  .cabin-lyrics-tools { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .cabin-lyrics-tools label { display: flex; gap: 6px; align-items: center; font-size: 14px; }
+  .cabin-lyrics-tools input[type="number"] { width: 90px; }
+  .cabin-lyrics-tools input[type="file"] { max-width: 230px; }
+  .cabin-lyrics-tools button, .cabin-lyrics-tools input { min-height: 48px; }
+  .cabin-lyrics-stage { height: min(55vh, 560px); min-height: 200px; overflow: auto; margin-block: 16px; white-space: pre-wrap; }
+  .cabin-amll { height: 100%; width: 100%; --amll-lyric-player-font-size: 1em; }
+  .cabin-lyric-list { display: grid; gap: 12px; }
+  .cabin-lyric-list button { display: grid; text-align: start; padding: 12px; min-height: 48px; font-size: inherit; opacity: .65; }
+  .cabin-lyric-list button[aria-current="true"] { opacity: 1; outline: 2px solid currentColor; }
+  .cabin-lyric-list small { font-size: .65em; }
+}
