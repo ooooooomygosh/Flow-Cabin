@@ -268,9 +268,10 @@ export default function SmartTurntable({ open, close, items = [], onStart, onSav
                   <strong>{fallbackInfo.title}</strong>
                   <p>{fallbackInfo.reason}</p>
                   <small>{fallbackFollowUp(result)}</small>
-                  {(fallbackInfo.canRetry || (['auth', 'setup', 'off'].includes(fallbackInfo.kind) && onNeedAiSettings)) && <span className="st-fallback-actions">
+                  {/* 配置 AI sits in the footer while AI is off or unfinished; a rejected key needs its own way there. */}
+                  {(fallbackInfo.canRetry || (fallbackInfo.kind === 'auth' && onNeedAiSettings)) && <span className="st-fallback-actions">
                     {fallbackInfo.canRetry && <button type="button" className="st-refresh" disabled={!query.trim()} onClick={() => ask()}><Refresh size={14}/>再请 AI 试一次</button>}
-                    {['auth', 'setup', 'off'].includes(fallbackInfo.kind) && onNeedAiSettings && <button type="button" className="st-refresh" onClick={() => onNeedAiSettings()}><Settings size={14}/>{fallbackInfo.kind === 'off' ? '开启 AI' : '检查 AI 设置'}</button>}
+                    {fallbackInfo.kind === 'auth' && onNeedAiSettings && <button type="button" className="st-refresh" onClick={() => onNeedAiSettings()}><Settings size={14}/>检查 AI 设置</button>}
                   </span>}
                 </div>}
                 <div className="st-summary">
