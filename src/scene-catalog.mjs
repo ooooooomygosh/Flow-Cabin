@@ -50,3 +50,8 @@ export const ROOM_SCENE_IDS = Object.freeze(ROOM_SCENES.map(({ id }) => id));
 const byId = new Map(ROOM_SCENES.map((scene) => [scene.id, scene]));
 export function normalizeRoomSceneId(id) { return byId.has(id) ? id : 'pixel'; }
 export function getRoomScene(id) { return byId.get(normalizeRoomSceneId(id)); }
+
+// Classic shelves use their original six illustrated geometries. Beta-only rooms
+// retain their saved identity while classic displays the closest original room.
+export const CLASSIC_ROOM_SCENES = Object.freeze(ROOM_SCENES.filter(scene => !['rain-train', 'greenhouse'].includes(scene.id)));
+export const classicSceneId = id => id === 'rain-train' ? 'warm' : id === 'greenhouse' ? 'forest' : CLASSIC_ROOM_SCENES.some(scene => scene.id === id) ? id : 'pixel';

@@ -106,7 +106,7 @@ try {
   await verifyCabinLayout({ page, check }); await verifyCabinToolActions({ page, check });
   for (const [width, height] of [[1440, 900], [960, 600]]) { await page.setViewportSize({ width, height }); await screenshot(`cabin-${width}x${height}`); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'page must not overflow horizontally'); check(`viewport-${width}x${height}`); }
   await page.setViewportSize({ width: 1440, height: 900 });
-  const { ROOM_SCENES } = await import('../src/scene-catalog.mjs');
+  const { CLASSIC_ROOM_SCENES: ROOM_SCENES } = await import('../src/scene-catalog.mjs');
   const { PETS } = await import('../src/pet/pet-catalog.mjs');
   assert.equal(ROOM_SCENES.length, 6); assert.equal(PETS.length, 5);
   await openRoomSettings(page);

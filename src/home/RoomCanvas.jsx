@@ -9,7 +9,7 @@ import { createLivingPet, bindPetLife } from '../pet/living-pet.mjs';
 import { useInputPresence } from '../pet/useInputPresence';
 import { useLife } from './useLife';
 import { useCatMotion } from '../pet/useCatMotion';
-import { loadPetArt, loadPetAccessories, artFrame, drawPetArt } from '../pet/pet-art-v21.mjs';
+import { loadPetArt, loadPetAccessories, artFrame, artBeatFrame, MUSIC_ART_ACTIONS, drawPetArt } from '../pet/pet-art-v21.mjs';
 
 const json = async url => { const r = await fetch(url); if (!r.ok) throw Error('小屋素材尚未加载完成。'); return r.json(); };
 const leases = new Map();
@@ -125,7 +125,7 @@ export default function RoomCanvas({ layout, selected, reduced, dim, active = tr
       const pose = behaviour.pose;
       if(state.identity.pack) setImportedPose(previous=>previous===pose?previous:pose);
       if (petArt?.id === state.identity.builtinId) {
-        const sample = artFrame(petArt.body.manifest, pose, behaviour.elapsed, reduced);
+        const sample = (!reduced && !state.quiet && state.playing && MUSIC_ART_ACTIONS.includes(pose) ? artBeatFrame(petArt.body.manifest, now, beat) : null) || artFrame(petArt.body.manifest, pose, behaviour.elapsed, reduced);
         const frameKey = `${sample.key}:${state.identity.accessory}`;
         if (lastFrame !== frameKey) { drawPetArt(petContext, petArt.body, sample, state.identity.accessory, petArt.gear); petTexture.source.update(); lastFrame = frameKey; }
       }

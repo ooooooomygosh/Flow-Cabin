@@ -30,3 +30,10 @@ test('Failed restart rolls back the previous Beta choice and flushes that rollba
   assert.equal(interfaceMode(saved), 'beta'); assert.deepEqual(flushed, ['classic', 'beta']);
   await assert.rejects(switchInterface('other', { storage: saved }), /未知/);
 });
+
+test('Classic fallback preserves the eight-theme catalog and only uses supported shelf geometry', async () => {
+  const { ROOM_SCENES, CLASSIC_ROOM_SCENES, classicSceneId } = await import('../scene-catalog.mjs');
+  assert.equal(ROOM_SCENES.length, 8); assert.equal(CLASSIC_ROOM_SCENES.length, 6);
+  for (const scene of ROOM_SCENES) assert.ok(CLASSIC_ROOM_SCENES.some(s => s.id === classicSceneId(scene.id)));
+  assert.equal(classicSceneId('rain-train'), 'warm'); assert.equal(classicSceneId('greenhouse'), 'forest');
+});

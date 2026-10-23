@@ -52,3 +52,20 @@ test('sleep fade uses absolute deadline; cancelling restores volume/light and fa
  controller.start(1);now=106000;await next();assert.equal(audible,false);assert.equal(rest,true);assert.equal(controller.getSnapshot().completed,true);
  audible=true;runtime.commands.play=async()=>{throw Error('播放器断线');};controller.start(1);now=170000;await next();assert.equal(controller.getSnapshot().completed,undefined);assert.match(controller.getSnapshot().error,/断线/);
 });
+
+test('New pet artwork changes only on heard half-beats and never invents a tempo', async () => {
+  const { artBeatFrame, MUSIC_ART_ACTIONS } = await import('../pet/pet-art-v21.mjs');
+  const manifest = { clips:Object.fromEntries(MUSIC_ART_ACTIONS.map(action => [action,{frames:[{id:0},{id:1}]}])) };
+  assert.equal(artBeatFrame(manifest,9000,{known:false,bpm:120,beatAt:8000}),null);
+  for (const bpm of [90,120]) {
+    const beat = {known:true,bpm,beatAt:8000}, half=30000/bpm;
+    for (let i=0;i<50;i++) {
+      const at=8000+i*half, before=artBeatFrame(manifest,at+10,beat), after=artBeatFrame(manifest,at+half-10,beat);
+      assert.equal(before.key,after.key);assert.ok(Math.abs(before.wait-(half-10))<.001);
+      const next=artBeatFrame(manifest,at+half+10,beat);assert.notEqual(next.key,before.key);
+    }
+  }
+  const pet=createLivingPet();
+  assert.equal(pet.resolve({now:5000,playing:true,synced:false}).pose,'idle');
+  assert.equal(pet.resolve({now:12100,playing:true,synced:false}).pose,'listen');
+});

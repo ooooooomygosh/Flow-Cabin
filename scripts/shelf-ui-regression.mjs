@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
 import { hasViteLocalOrigin } from './vite-readiness.mjs';
 import { showcaseAlbums } from './showcase-albums.mjs';
-import { ROOM_SCENES } from '../src/scene-catalog.mjs';
+import { CLASSIC_ROOM_SCENES as ROOM_SCENES } from '../src/scene-catalog.mjs';
 import { onboardingSeed } from './app-version.mjs';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const output = process.env.SHELF_OUTPUT || path.join(root, 'desktop/test-results/shelf-ui');

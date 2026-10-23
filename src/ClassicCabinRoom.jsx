@@ -2,7 +2,7 @@ import { selectPack } from './pet/imported-pack.mjs';
 import { CabinRuntimeProvider } from './runtime/CabinRuntime';
 import React, { Suspense, lazy, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { reportTrayPet } from './desktop/desktop-sink-client.mjs';
-import { getRoomScene } from './scene-catalog.mjs';
+import { getRoomScene, classicSceneId } from './scene-catalog.mjs';
 import { normalizePetId, getPet } from './pet/pet-catalog.mjs';
 import { setBeat } from './player/beat-clock.mjs';
 import { currentCabinPlayback, onCabinPlayback } from './scene/playback-listener.mjs';
@@ -65,7 +65,7 @@ export default function ClassicCabinRoom({ items, loading, loadError = '', reloa
   const stage = useRef(null);
   const flow = useOnboardingFlow({ client: appearance.client, loading, loadError, firstVisit, itemCount: items.length, hubRequest, notify });
   const chrome = useRoomChrome({ client: appearance.client, notify });
-  const library = useRecordLibrary(), look = library?.data.rooms[library.roomId]?.look || 'pixel';
+  const library = useRecordLibrary(), look = classicSceneId(library?.data.rooms[library.roomId]?.look);
   const [mobileSlotCount, setMobileSlotCount] = useState(null);
   const [mobileShelfCompact, setMobileShelfCompact] = useState(false);
   const { filters, setFilters, visible, view, selected, setSelectedId, changeRow, filtered } = useShelf({ items, look, stage, mobileSlotCount });

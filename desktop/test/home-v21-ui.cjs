@@ -37,8 +37,10 @@ async function choosePet(id, name) {
 (async () => {
   await launch();
   assert.equal(await page.locator('.cabin-home').count(),0,'The released shelf remains the default');
-  await page.evaluate(()=>{localStorage.setItem('flow-cabin-welcome-v1','true');});
-  for(let i=0;i<3&&await page.locator('dialog[open]').count();i++)await page.keyboard.press('Escape');
+  // The fresh profile's lazy guide may mount after the shelf. Wait for it
+  // explicitly, then dismiss through its visible action before using the header.
+  const guide=page.getByRole('dialog',{name:'新手引导',exact:true});
+  await guide.waitFor({timeout:30000});await guide.getByRole('button',{name:'跳过引导',exact:true}).click();await guide.waitFor({state:'hidden'});
   await page.getByRole('button',{name:'专辑墙',exact:true}).first().click();await page.getByRole('dialog',{name:'专辑墙编辑器',exact:true}).waitFor();await page.keyboard.press('Escape');
   await application.evaluate(({app})=>{globalThis.__originalQuit=app.quit.bind(app);globalThis.__originalRelaunch=app.relaunch.bind(app);app.relaunch=()=>{globalThis.__restartRequested=true;};app.quit=()=>{};});
   await page.getByRole('button',{name:'体验 Beta 小屋',exact:true}).click();await page.getByRole('button',{name:'切换为 Beta 并重启',exact:true}).click();

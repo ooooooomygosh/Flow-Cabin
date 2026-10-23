@@ -28,7 +28,7 @@ export function createLivingPet() {
       else if (c.input === 'keyboard') pose = 'type';
       else if (c.input === 'click') pose = 'petresponse';
       else if (work) pose = ['read','read','write','read','think'][Math.floor(now / 14000) % 5];
-      else if (c.playing) pose = c.synced ? ['listen','nod','sway','dance'][Math.floor(now / 8000) % 4] : 'listen';
+      else if (c.playing) pose = c.synced ? ['listen','nod','sway','dance'][Math.floor(now / 8000) % 4] : (now % 12000 < 1500 ? 'listen' : 'idle');
       else {
         const slot = Math.floor(now / 30000);
         if (slot !== idleSlot) { idleSlot = slot; request(['observe','stretch','yawn','greet'][slot % 4], now, 1800); }

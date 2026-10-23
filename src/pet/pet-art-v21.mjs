@@ -10,6 +10,18 @@ export function artFrame(manifest, pose, elapsed = 0, reduced = false) {
   while (index < frames.length-1 && time >= frames[index].durationMs) time -= frames[index++].durationMs;
   return { action, frame:frames[index], index, key:`${action}:${index}`, wait:reduced || (clip.loop === false && index === frames.length-1) ? Infinity : Math.max(16,frames[index].durationMs-time) };
 }
+export const MUSIC_ART_ACTIONS = Object.freeze(['listen','nod','sway','dance']);
+// Every surface uses the heard beat's wall-clock anchor. Only the next half-beat
+// can change either the drawing or the music clip; delayed timers skip frames.
+export function artBeatFrame(manifest, now, beat) {
+  if (!beat?.known || !(beat.bpm >= 40 && beat.bpm <= 220)) return null;
+  const half = 30000 / beat.bpm, cycle = half * 4;
+  const phase = ((now - beat.beatAt) % cycle + cycle) % cycle;
+  const into = phase % half, boundary = now - into;
+  const action = MUSIC_ART_ACTIONS[((Math.floor(boundary / 8000) % 4) + 4) % 4];
+  const frames = manifest.clips[action].frames, index = Math.floor(phase / half) % frames.length;
+  return { action, frame:frames[index], index, key:`${action}:${index}`, wait:Math.max(1, half - into) };
+}
 export function validatePetArt(manifest) {
   if (manifest?.version !== 2 || !Number.isInteger(manifest.width) || !Number.isInteger(manifest.height) || manifest.width > 4096 || manifest.height > 4096) throw Error('伙伴动画规格不正确。');
   for (const action of ART_ACTIONS) {

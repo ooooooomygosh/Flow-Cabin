@@ -6,10 +6,11 @@ import { cachedPetFrame, drawPetFrame, petOpaqueAt, SIZE } from './pet-sprites.m
 import { getPet, normalizePetId } from './pet-catalog.mjs';
 import { useCatMotion } from './useCatMotion';
 import { startPetAnimation } from './pet-animation.mjs';
-import { loadPetArt, loadPetAccessories, artFrame, drawPetArt } from './pet-art-v21.mjs';
+import { currentBeat } from '../player/beat-clock.mjs';
+import { loadPetArt, loadPetAccessories, artFrame, artBeatFrame, MUSIC_ART_ACTIONS, artAction, drawPetArt } from './pet-art-v21.mjs';
 
 export const opaqueAt = (pose,index,accessory,rx,ry,petId='cat') => petOpaqueAt(petId,pose,index,accessory,rx,ry);
-export default function PixelCat({ petId='cat',skin='orange',pose='idle',accessory='',reduceMotion=false,className='',label,onFrame,origin=0,packOverride,packBase,onAlpha,...props }) {
+export default function PixelCat({ petId='cat',skin='orange',pose='idle',musicBeat=false,accessory='',reduceMotion=false,className='',label,onFrame,origin=0,packOverride,packBase,onAlpha,...props }) {
   const [savedPack,setPack]=useState(selectedPack), [failedPack,setFailedPack]=useState(''), [videoFallback,setVideoFallback]=useState('');
   useEffect(()=>{const update=()=>setPack(selectedPack());window.addEventListener(PACK_CHANGED,update);window.addEventListener('storage',update);return()=>{window.removeEventListener(PACK_CHANGED,update);window.removeEventListener('storage',update);};},[]);
   const pack=packOverride===undefined ? savedPack : cleanPetPack(packOverride), packKey=JSON.stringify(pack);
@@ -32,9 +33,9 @@ export default function PixelCat({ petId='cat',skin='orange',pose='idle',accesso
       return()=>{disposed=true;clearTimeout(timer);atlas.onload=atlas.onerror=null;};
     }
     Promise.all([loadPetArt(id),accessory?loadPetAccessories().catch(()=>null):null]).then(([art,gear])=>{
-      let last='';const paint=()=>{if(disposed || !motion.visible)return;const sample=artFrame(art.manifest,pose,performance.now()-start,motion.reduced);if(sample.key!==last){last=sample.key;drawPetArt(context,art,sample,accessory,gear);report(sample.index);}if(Number.isFinite(sample.wait))timer=setTimeout(paint,sample.wait);};paint();
+      let last='';const paint=()=>{if(disposed || !motion.visible)return;const sample=(!motion.reduced && musicBeat && MUSIC_ART_ACTIONS.includes(artAction(pose)) ? artBeatFrame(art.manifest,Date.now()+16,currentBeat()) : null) || artFrame(art.manifest,pose,performance.now()-start,motion.reduced);if(sample.key!==last){last=sample.key;drawPetArt(context,art,sample,accessory,gear);report(sample.index);}if(Number.isFinite(sample.wait))timer=setTimeout(paint,sample.wait);};paint();
     }).catch(()=>{if(!disposed)paintLegacy();});
     return()=>{disposed=true;clearTimeout(timer);stopFallback?.();};
-  },[id,pose,accessory,skin,origin,motion.visible,motion.reduced,packKey,failedPack,videoFallback,packBase,packOverride===undefined]);
+  },[id,pose,musicBeat,accessory,skin,origin,motion.visible,motion.reduced,packKey,failedPack,videoFallback,packBase,packOverride===undefined]);
   return <canvas ref={canvas} width={256} height={256} className={`pixel-cat ${className}`} role="img" aria-label={label || (pack ? `${pack.name || '导入的伙伴'}${failedPack===pack.id ? ' · 素材缺失，显示内置替代伙伴' : ''}` : `${getPet(id).name} · ${getPet(id).species}`)} data-reduced-motion={motion.reduced} data-motion-enabled={motion.visible} data-pet-id={id} data-pose={pose} data-accessory={accessory} data-video-fallback={Boolean(pack && videoFallback===pack.id)} data-pack-unavailable={Boolean(pack && failedPack===pack.id)} {...props}/>;
 }
