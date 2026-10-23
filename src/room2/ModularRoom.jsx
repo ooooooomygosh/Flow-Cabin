@@ -25,6 +25,7 @@ export default function ModularRoom({ close, look, petId, playing, focus, onActi
   const wakeChrome = () => { setShowChrome(true); clearTimeout(chromeTimer.current); chromeTimer.current = setTimeout(() => setShowChrome(false), 3200); };
   useEffect(() => { wakeChrome(); return () => clearTimeout(chromeTimer.current); }, []);
   const host = useRef(null), history = useRef(null), drag = useRef(null), hold = useRef(null), holdOrigin = useRef(null), osReduced = useReducedMotion();
+  const compactViewport = useRef(innerWidth < 700);
   const reduced = reduceMotion || osReduced;
   history.current ||= createLayoutHistory(layout);
   const viewWidth = zone < 0 ? 1200 : 400, scale = Math.min(width / viewWidth, zone < 0 ? Math.max(240, viewportHeight - 16) / 640 : Infinity) * zoom, offset = zone < 0 ? 0 : zone * 400;
@@ -38,7 +39,11 @@ export default function ModularRoom({ close, look, petId, playing, focus, onActi
     host.current.scrollLeft = 0;
     host.current.scrollTop = Math.max(0, (petHome.y + 22) * scale - host.current.clientHeight / 2);
   }, [petReturnRequest]);
-  useEffect(() => { const resize = () => setViewportHeight(innerHeight); const observer = new ResizeObserver(([entry]) => setWidth(entry.contentRect.width)); observer.observe(host.current); window.addEventListener('resize', resize); return () => { observer.disconnect(); window.removeEventListener('resize', resize); clearTimeout(hold.current); }; }, []);
+  useEffect(() => { const resize = () => {
+    setViewportHeight(innerHeight);
+    const compact = innerWidth < 700;
+    if (compact !== compactViewport.current) { compactViewport.current = compact; setZone(compact ? 1 : -1); setZoom(1); }
+  }; const observer = new ResizeObserver(([entry]) => setWidth(entry.contentRect.width)); observer.observe(host.current); window.addEventListener('resize', resize); return () => { observer.disconnect(); window.removeEventListener('resize', resize); clearTimeout(hold.current); }; }, []);
   const persist = next => {
     try { localStorage.setItem(key(next.theme), JSON.stringify(next)); setMessage('布局已保存'); return true; }
     catch { setMessage('布局尚未保存；请导出后再关闭。'); return false; }

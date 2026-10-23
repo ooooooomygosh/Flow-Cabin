@@ -66,6 +66,13 @@ try {
   await page.getByRole('button', { name: '回到宠物', exact: true }).click();
   await page.screenshot({ path: path.join(output, 'native-csp-phone.png') });
   pass('production-phone-room-and-drawer-work-under-native-csp');
+  await page.setViewportSize({ width: 915, height: 412 });
+  await page.waitForFunction(() => { const r = document.querySelector('.room2-world').getBoundingClientRect(); return r.width <= innerWidth + 1 && r.height <= innerHeight + 1; });
+  await shortcut.click();
+  await page.getByRole('dialog', { name: '小屋布置', exact: true }).waitFor();
+  await page.getByRole('button', { name: '关闭小屋布置', exact: true }).click();
+  await page.screenshot({ path: path.join(output, 'native-csp-landscape.png') });
+  pass('portrait-to-landscape-returns-to-full-room-and-keeps-controls-reachable');
   assert.deepEqual(report.pageErrors, []); assert.deepEqual(report.consoleErrors, []); assert.deepEqual(report.externalRequests, []);
   pass('no-script-eval-worker-or-rendering-errors');
 } catch (error) {
