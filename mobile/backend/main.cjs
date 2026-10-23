@@ -1,22 +1,41 @@
 'use strict';
 // The same music service and platform adapters shipped by Windows Portable.
 const http = require('node:http'), crypto = require('node:crypto');
+const { createWeather } = require('../../desktop/weather.cjs');
+const { createWeatherApi } = require('../../desktop/weather-api.cjs');
+const { createLanService } = require('../../desktop/lan-service.cjs');
+const path = require('node:path');
 const { createMusicService } = require('../../desktop/music-service.cjs');
 const { createQQMusic, extractLink, isQQUrl } = require('../../desktop/qq-music.cjs');
 const { searchCatalog } = require('../../desktop/catalog-search.mjs');
 
 async function startCabinBackend({ directory, token, safeStorage, upstream, fetch = globalThis.fetch }) {
   let nextLogin = null;
+  const lan = createLanService({ directory: path.join(directory, 'lan-sync') });
   const music = createMusicService({ directory, safeStorage, ...(upstream ? { upstream } : {}), fetch,
     login: async provider => { const entry = nextLogin; nextLogin = null; return entry?.provider === provider ? { ok: true, cookie: entry.cookie } : { ok: false, cancelled: true }; }, logout: async () => {} });
   const qq = createQQMusic(fetch);
+  const weather = createWeather({ fetch, publish: () => {} });
+  const weatherApi = createWeatherApi({ fetch, weather });
   const json = (res, value, status = 200) => { res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(value)); };
   const server = http.createServer(async (req, res) => {
     const supplied = Buffer.from(String(req.headers['x-cabin-native-token'] || '')), expected = Buffer.from(token);
     if (supplied.length !== expected.length || !crypto.timingSafeEqual(supplied, expected)) return json(res, { error: 'Unauthorized' }, 401);
     try {
       const url = new URL(req.url, 'http://127.0.0.1');
-      let body = ''; for await (const chunk of req) { body += chunk; if (body.length > 32768) return json(res, { error: 'Too large' }, 413); }
+      const chunks = []; let bytes = 0; const limit = url.pathname.startsWith('/sync/') ? 8 * 1024 * 1024 : 32768;
+      for await (const chunk of req) { bytes += chunk.length; if (bytes > limit) return json(res, { error: 'Too large' }, 413); chunks.push(chunk); }
+      const body = Buffer.concat(chunks).toString('utf8');
+      if (url.pathname.startsWith('/sync/')) {
+        const request = new Request('http://127.0.0.1' + req.url, { method: req.method, ...(req.method === 'POST' ? { body } : {}) });
+        const response = await lan.routeLocal(request, url.pathname.slice('/sync'.length));
+        res.writeHead(response.status, Object.fromEntries(response.headers)); res.end(await response.text()); return;
+      }
+      if (url.pathname.startsWith('/weather/')) {
+        const request = new Request('http://127.0.0.1' + req.url, { method: req.method, ...(req.method === 'POST' ? { body } : {}) });
+        const response = await weatherApi.route(request, url.pathname.slice('/weather'.length));
+        res.writeHead(response.status, Object.fromEntries(response.headers)); res.end(await response.text()); return;
+      }
       if (req.method === 'POST' && url.pathname === '/native/session') {
         const data = JSON.parse(body); if (!['qq', 'netease'].includes(data.provider) || typeof data.cookie !== 'string' || data.cookie.length > 16384) return json(res, { error: 'Invalid session' }, 400);
         if (!data.cookie) { await music.logout(data.provider); return json(res, { ok: true }); }
@@ -37,7 +56,7 @@ async function startCabinBackend({ directory, token, safeStorage, upstream, fetc
     } catch { if (!res.headersSent) json(res, { error: '音乐服务请求失败，请检查网络、登录与播放权限后重试。' }, 502); else res.destroy(); }
   });
   await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
-  return { port: server.address().port, music, stop: () => { music.stop(); server.closeAllConnections(); server.close(); } };
+  return { port: server.address().port, music, lan, stop: () => { lan.stop(); weather.dispose(); music.stop(); server.closeAllConnections(); server.close(); } };
 }
 module.exports = { startCabinBackend };
 if (globalThis.cabinOptions) {

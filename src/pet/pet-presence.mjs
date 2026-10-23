@@ -1,10 +1,10 @@
 // One pose resolver for the room; skins and accessories stay in the same sprite
 // renderer as the desktop companion. A care action always finishes before input.
 export function roomPetPose({ base = 'idle', eating = false, full = false, input = false, inputType = 'keyboard', petId = 'cat' } = {}) {
-  if (eating) return petId === 'cat' ? 'eat' : 'celebrate';
+  if (eating) return 'eat';
   if (full) return 'celebrate';
   if (base === 'celebrate') return base;
-  if (input && petId === 'cat') return inputType === 'click' ? 'click' : 'typing';
+  if (input) return inputType === 'click' ? 'click' : 'typing';
   return base;
 }
 

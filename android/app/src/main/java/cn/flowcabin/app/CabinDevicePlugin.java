@@ -24,7 +24,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
 import java.util.LinkedHashSet;
 
-@CapacitorPlugin(name = "CabinDevice")
+@CapacitorPlugin(name = "CabinDevice", permissions = { @com.getcapacitor.annotation.Permission(alias = "camera", strings = { android.Manifest.permission.CAMERA }) })
 public class CabinDevicePlugin extends Plugin {
     private CabinStore store;
     private final java.util.concurrent.ExecutorService work = java.util.concurrent.Executors.newFixedThreadPool(4);
@@ -36,9 +36,31 @@ public class CabinDevicePlugin extends Plugin {
     }
     @PluginMethod public void musicRequest(PluginCall call) {
         String path = call.getString("path", "");
-        if (!path.matches("/(config|quality|search|playlists|playlist|playlist/link|resolve|lyrics|track-cover|ma/players|ma/state|ma/control)(\\?[^#]*)?")) { call.reject("不支持此音源请求。"); return; }
+        if (!path.matches("/(config|quality|accounts/validate|search|playlists|playlist|playlist/link|resolve|lyrics|track-cover|ma/players|ma/state|ma/control)(\\?[^#]*)?")) { call.reject("不支持此音源请求。"); return; }
         work.execute(() -> { try { call.resolve(new JSObject(CabinMusic.get(getContext()).request("/music" + path, call.getString("body")).toString())); } catch (Exception e) { call.reject(e.getMessage()); } });
     }
+    @PluginMethod public void ambienceState(PluginCall call) { try { call.resolve(new JSObject(CabinAmbienceService.state(getContext()).toString())); } catch (Exception e) { call.reject("无法读取环境音状态。"); } }
+    @PluginMethod public void ambience(PluginCall call) {
+        JSObject config = call.getObject("config", new JSObject());
+        getContext().getSharedPreferences("cabin-ambience",0).edit().putString("mix", config.optJSONObject("mix") == null ? "{}" : config.optJSONObject("mix").toString()).apply();
+        if (!config.optBoolean("enabled")) getContext().stopService(new Intent(getContext(), CabinAmbienceService.class));
+        else androidx.core.content.ContextCompat.startForegroundService(getContext(), new Intent(getContext(), CabinAmbienceService.class).putExtra("config", config.toString()));
+        call.resolve();
+    }
+    @PluginMethod public void weatherRequest(PluginCall call) {
+        String path = call.getString("path", ""), body = call.getString("body");
+        if (!path.matches("/desktop-weather/(search|status|set)(\\?[^#\\r\\n]*)?") || path.length() > 2048 || (body != null && body.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 1024)) { call.reject("无效的天气请求。"); return; }
+        work.execute(() -> { try { String result = CabinMusic.get(getContext()).request(path.replace("/desktop-weather/", "/weather/"), body).toString(); if (result.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 256 * 1024) throw new java.io.IOException("天气响应过大。"); call.resolve(new JSObject(result)); } catch (Exception e) { call.reject(e.getMessage()); } });
+    }
+    @PluginMethod public void beginCameraScan(PluginCall call) {
+        if (getPermissionState("camera") != com.getcapacitor.PermissionState.GRANTED) { requestPermissionForAlias("camera", call, "cameraPermission"); return; }
+        ((MainActivity)getActivity()).beginCameraScan(); call.resolve();
+    }
+    @com.getcapacitor.annotation.PermissionCallback private void cameraPermission(PluginCall call) {
+        if (getPermissionState("camera") != com.getcapacitor.PermissionState.GRANTED) { call.reject("请允许相机权限后重试。"); return; }
+        beginCameraScan(call);
+    }
+    @PluginMethod public void endCameraScan(PluginCall call) { ((MainActivity)getActivity()).endCameraScan(); call.resolve(); }
     @PluginMethod public void syncRequest(PluginCall call) {
         String path = call.getString("path", ""), body = call.getString("body");
         if (!path.matches("/desktop-sync/(status|start|stop|invite|pair|sync|stage|revoke)") || (body != null && body.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 8 * 1024 * 1024)) { call.reject("无效的局域网同步请求。"); return; }

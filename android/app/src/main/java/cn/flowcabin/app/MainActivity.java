@@ -18,12 +18,29 @@ import com.getcapacitor.BridgeWebViewClient;
 public class MainActivity extends BridgeActivity {
     private Insets safeInsets = Insets.NONE;
     private boolean imeVisible;
+    private long cameraScanUntil;
+    void beginCameraScan() { cameraScanUntil = android.os.SystemClock.elapsedRealtime() + 120000; }
+    void endCameraScan() { cameraScanUntil = 0; }
+    static boolean cameraRequestAllowed(String origin, String[] resources, boolean scanning) {
+        return scanning && ("https://localhost/".equals(origin) || "https://localhost".equals(origin)) && resources.length == 1 && android.webkit.PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(resources[0]);
+    }
+    @Override public void onPause() { endCameraScan(); super.onPause(); }
 
     @Override public void onCreate(Bundle state) {
         registerPlugin(CabinDevicePlugin.class);
         registerPlugin(CabinPlayerPlugin.class);
         super.onCreate(state);
         configureEdgeToEdge();
+        getBridge().getWebView().setWebChromeClient(new com.getcapacitor.BridgeWebChromeClient(getBridge()) {
+            @Override public void onPermissionRequest(android.webkit.PermissionRequest request) {
+                runOnUiThread(() -> {
+                    boolean active = cameraScanUntil > android.os.SystemClock.elapsedRealtime() && !isFinishing() && getLifecycle().getCurrentState().isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED);
+                    if (cameraRequestAllowed(request.getOrigin().toString(), request.getResources(), active) && checkSelfPermission(android.Manifest.permission.CAMERA) == android.content.pm.PackageManager.PERMISSION_GRANTED)
+                        request.grant(new String[]{android.webkit.PermissionRequest.RESOURCE_VIDEO_CAPTURE});
+                    else request.deny();
+                });
+            }
+        });
         getBridge().setWebViewClient(new BridgeWebViewClient(getBridge()) {
             @Override public void onPageCommitVisible(WebView view, String url) {
                 super.onPageCommitVisible(view, url);

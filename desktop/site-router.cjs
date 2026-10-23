@@ -17,7 +17,7 @@ function isTrustedCover(image) {
   return host && image.protocol === 'https:' && !image.username && !image.password && !image.port;
 }
 
-function createSiteRouter({ webRoot, forward, qq, music, collection, catalog, getAppearance = () => ({}) }) {
+function createSiteRouter({ webRoot, forward, qq, music, collection, catalog, lan, pets, weatherApi, getAppearance = () => ({}) }) {
   const files = new Map();
   function list(directory, prefix = '') {
     for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
@@ -33,9 +33,12 @@ function createSiteRouter({ webRoot, forward, qq, music, collection, catalog, ge
     const url = new URL(request.url);
     // Other hosts are catalog artwork and similar public resources.
     if (url.origin !== SITE_ORIGIN) return forward(request);
+    if (url.pathname.startsWith('/desktop-weather/')) return weatherApi ? weatherApi.route(request, url.pathname.slice('/desktop-weather'.length)) : json({ error: '天气服务暂不可用' }, 503);
+    if (url.pathname.startsWith('/desktop-pets/')) return pets ? pets(request) : json({ error: '桌宠动画包暂不可用' }, 503);
+    if (url.pathname.startsWith('/desktop-sync/')) return lan ? lan.routeLocal(request, url.pathname.slice('/desktop-sync'.length)) : json({ error: '局域网同步暂不可用' }, 503);
     if (request.method === 'GET' && url.pathname === '/desktop-bootstrap.js') {
       const settings = getAppearance();
-      return new Response(`(() => { const settings = ${JSON.stringify(settings)}; window.albumDesktopAppearance = settings; document.documentElement.dataset.desktopClient = 'true'; document.documentElement.dataset.desktopReduceMotion = String(settings.reduceMotion === true); })();`, { headers: { 'Content-Type': 'text/javascript', 'Cache-Control': 'no-store' } });
+      return new Response(`(() => { const settings = ${JSON.stringify(settings)}; window.albumDesktopCapabilities = ${JSON.stringify({ lanSync: Boolean(lan), petPacks: typeof pets === 'function' })}; window.albumDesktopAppearance = settings; document.documentElement.dataset.desktopClient = 'true'; document.documentElement.dataset.desktopReduceMotion = String(settings.reduceMotion === true); })();`, { headers: { 'Content-Type': 'text/javascript', 'Cache-Control': 'no-store' } });
     }
     if (url.pathname === '/api/items' || url.pathname === '/api/items/import') return collection ? routeCollection(collection, request) : json({ error: '收藏暂不可用。' }, 503);
     if (request.method === 'GET' && url.pathname === '/api/search') {

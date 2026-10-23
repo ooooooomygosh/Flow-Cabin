@@ -56,6 +56,12 @@ export async function initializeMobile() {
     return Device.musicRequest({ path, ...(value === undefined ? {} : { body: JSON.stringify(value) }) });
   };
   window.albumMobile.syncRequest = (path, value) => Device.syncRequest({ path: `/desktop-sync${path}`, ...(value === undefined ? {} : { body: JSON.stringify(value) }) });
+  window.albumMobile.weatherRequest = (path, value) => Device.weatherRequest({ path: `/desktop-weather${path}`, ...(value === undefined ? {} : { body: JSON.stringify(value) }) });
+  window.albumMobile.ambience = config => Device.ambience({ config });
+  window.albumMobile.ambienceState = () => Device.ambienceState();
+  window.albumMobile.beginCameraScan = () => Device.beginCameraScan();
+  window.albumMobile.endCameraScan = () => Device.endCameraScan();
+  window.albumMobile.playbackEnergy = () => { const sample = window.albumMobile.nativeEnergy; return sample && performance.now() - sample.at < 500 ? sample.value : 0; };
   window.albumMobile.player = NativePlayer;
   window.albumMobile.setLauncherIcon = pet => Device.setLauncherIcon({ pet });
   window.albumMobile.launcherIcon = () => Device.launcherIcon();

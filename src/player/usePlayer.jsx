@@ -141,7 +141,8 @@ export function usePlaybackBroadcast({ playing, provider, spinning, record, trac
   const sample = () => {
     const now = latest.current, graph = analyserFor(audio?.current);
     let value = 0, estimated = false;
-    if (now.playing) { if (graph && audio.current && !audio.current.paused) value = rmsEnergy(graph.read()); else { value = estimatedEnergy(performance.now()); estimated = true; } }
+    if (now.playing && window.albumMobile?.playbackEnergy) value = window.albumMobile.playbackEnergy();
+    else if (now.playing) { if (graph && audio.current && !audio.current.paused) value = rmsEnergy(graph.read()); else { value = estimatedEnergy(performance.now()); estimated = true; } }
     energy.current = smoothEnergy(energy.current, value);
     // The beat, on the wall clock so other windows (the desktop pet) can share it.
     // Tracker times are performance.now() of the analyser reads (smooth; the element's currentTime is

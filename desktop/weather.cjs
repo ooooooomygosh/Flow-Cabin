@@ -44,7 +44,7 @@ function weatherFromReport(report) {
 }
 
 function createWeather({ fetch, publish, now = Date.now, setTimer = setTimeout, clearTimer = clearTimeout, writeLog = () => {} }) {
-  let enabled = false, place = null, value = null, timer = null, inflight = null;
+  let enabled = false, place = null, value = null, timer = null, inflight = null, inflightKey = null;
   const cache = new Map(); // "lat,lng" → { weather, fetchedAt }
   const key = (p) => `${p.lat},${p.lng}`;
   const state = () => enabled && value ? value : null;
@@ -53,22 +53,23 @@ function createWeather({ fetch, publish, now = Date.now, setTimer = setTimeout, 
   async function refresh() {
     if (!enabled || !place) return state();
     const wanted = place, hit = cache.get(key(wanted));
-    if (hit && now() - hit.fetchedAt < TTL) { value = { ...hit.weather, fetchedAt: hit.fetchedAt, source: 'open-meteo' }; emit(); schedule(hit.fetchedAt + TTL - now()); return state(); }
-    if (inflight) return inflight;
+    if (hit && now() - hit.fetchedAt < TTL) { value = { ...hit.weather, fetchedAt: hit.fetchedAt, source: 'open-meteo', lat: wanted.lat, lng: wanted.lng }; emit(); schedule(hit.fetchedAt + TTL - now()); return state(); }
+    if (inflight) return inflightKey === key(wanted) ? inflight : inflight.then(() => enabled && place && key(place) === key(wanted) ? refresh() : state());
+    inflightKey = key(wanted);
     inflight = (async () => {
       const controller = new AbortController(), abort = setTimer(() => controller.abort(), TIMEOUT);
       try {
-        const response = await fetch(weatherUrl(wanted), { signal: controller.signal, headers: { accept: 'application/json' } });
+        const response = await fetch(weatherUrl(wanted), { signal: controller.signal, redirect: 'error', headers: { accept: 'application/json' } });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const weather = weatherFromReport(await response.json());
         if (!weather) throw new Error('unrecognised report');
         const fetchedAt = now(); cache.set(key(wanted), { weather, fetchedAt });
-        if (enabled && place && key(place) === key(wanted)) { value = { ...weather, fetchedAt, source: 'open-meteo' }; emit(); }
+        if (enabled && place && key(place) === key(wanted)) { value = { ...weather, fetchedAt, source: 'open-meteo', lat: wanted.lat, lng: wanted.lng }; emit(); }
         schedule(TTL);
       } catch (error) {
         writeLog('weather-error', error.message || String(error));
         schedule(RETRY); // keep the last report (the page lets it go stale after 3 h)
-      } finally { clearTimer(abort); inflight = null; }
+      } finally { clearTimer(abort); inflight = null; inflightKey = null; }
       return state();
     })();
     return inflight;
@@ -89,7 +90,7 @@ function createWeather({ fetch, publish, now = Date.now, setTimer = setTimeout, 
 }
 const weatherScript = (value) => {
   const safe = value && typeof value === 'object' ? { kind: String(value.kind), intensity: Number(value.intensity) || 0, wind: Number(value.wind) || 0, fetchedAt: Number(value.fetchedAt) || 0, source: 'open-meteo' } : null;
-  if (safe) for (const name of ['temperature', 'feelsLike', 'humidity', 'precipitation']) { if (typeof value[name] === 'number' && Number.isFinite(value[name])) safe[name] = value[name]; }
+  if (safe) for (const name of ['temperature', 'feelsLike', 'humidity', 'precipitation', 'lat', 'lng']) { if (typeof value[name] === 'number' && Number.isFinite(value[name])) safe[name] = value[name]; }
   return `window.cabinWeather = ${JSON.stringify(safe)}; window.dispatchEvent(new CustomEvent('cabin:weather', { detail: window.cabinWeather }));`;
 };
 module.exports = { createWeather, weatherFromReport, weatherScript, weatherUrl, validPlace, WEATHER_TTL: TTL };

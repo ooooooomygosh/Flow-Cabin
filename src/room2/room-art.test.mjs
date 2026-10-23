@@ -32,3 +32,22 @@ test('invalid and cross-theme manifests cannot load arbitrary or mismatched asse
   assert.throws(() => checkedFrame([0, 0, 1255, 1254], 1254, 1254), /边界/);
   assert.throws(() => checkedFrame([NaN, 0, 20, 20], 1254, 1254), /无效/);
 });
+
+test('all themes expose exactly eight real optional physical object frames, never weather sky tokens', () => {
+  for (const theme of ART_THEMES) {
+    const spec = roomArtSpec(theme, read(`room-scenes/modular/${theme}/asset-manifest.json`));
+    assert.equal(Object.keys(spec.extras.frames).length, 8);
+    assert.deepEqual(pngSize(spec.extras.url), spec.extras.size);
+    for (const frame of Object.values(spec.extras.frames)) checkedFrame(frame, ...spec.extras.size);
+    assert.equal(spec.extras.frames.sun, undefined);
+  }
+});
+test('painted pets listen briefly, stay awake, and groove only to a detected phase anchor', async () => {
+  const { roomPetPose } = await import('./room-art.mjs');
+  assert.equal(roomPetPose({ playing: true, now: 1000 }), 'listen');
+  assert.equal(roomPetPose({ playing: true, now: 2000 }), 'idle');
+  assert.equal(roomPetPose({ playing: true, now: 13000 }), 'listen');
+  assert.equal(roomPetPose({ playing: true, now: 2000, beat: { bpm: 100, known: true, detected: false, beatAt: 0 } }), 'idle');
+  assert.equal(roomPetPose({ playing: true, beat: { bpm: 100, detected: true, beatAt: 1000 } }), 'groove');
+  assert.equal(roomPetPose({ playing: true, reduced: true, beat: { bpm: 100, detected: true, beatAt: 1000 } }), 'idle');
+});

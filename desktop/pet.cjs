@@ -4,6 +4,7 @@
 // commands back to the business page. It never holds credentials.
 const { BrowserWindow, ipcMain, Menu, screen } = require('electron');
 const fs = require('node:fs'), path = require('node:path');
+const { createPetAtlasRoute }=require('./pet-atlas.cjs');
 const { cleanCompanion } = require('./wallpaper-model.cjs');
 const { createCompanionPoller, sendCompanionCommand } = require('./companion-sync.cjs');
 const { createPetPhysics, floorOf, ceilingOf } = require('./pet-physics.cjs');
@@ -76,6 +77,12 @@ function createPet({ directory, getSite, getFocus, getInputStats, status, regist
     try {
       created.setAlwaysOnTop(true, 'floating'); created.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: false });
       if (!(await created.webContents.session.protocol.isProtocolHandled('album-desktop'))) registerProtocol(created.webContents.session.protocol);
+      const petProtocol=created.webContents.session.protocol;
+      if (!petProtocol.__cabinPetAtlas) {
+        if(await petProtocol.isProtocolHandled('https'))petProtocol.unhandle('https');
+        petProtocol.handle('https',createPetAtlasRoute({getSite}));
+        petProtocol.__cabinPetAtlas=true;
+      }
       if (window !== created || created.isDestroyed()) return;
       created.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
       created.webContents.on('will-navigate', (event) => event.preventDefault());

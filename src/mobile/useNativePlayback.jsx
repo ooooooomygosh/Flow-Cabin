@@ -31,6 +31,7 @@ export default function useNativePlayback(record, index, provider, onNext, optio
       else if (value.status !== 'ended') ended.current = '';
     }
     nativeState.current = value;
+    window.albumMobile.nativeEnergy = { value: Number(value.measuredEnergy) || 0, at: performance.now() };
     const selected = context?.items[value.index];
     clock.set(value.position, value.duration, { force: true });
     setState(old => ({ ...old, ...value, ...(selected && value.mediaId === context.mediaIds[value.index] ? { resolvedProvider: selected.provider, resolvedId: selected.id, resolvedAlbum: selected.album, resolvedArtist: selected.artist } : {}), actualTrack: value.title || old.actualTrack }));

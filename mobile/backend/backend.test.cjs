@@ -21,3 +21,30 @@ test('Portable backend survives login/restart, streams entitled fixtures, reject
     await request('/native/session', { provider: 'qq', cookie: '' }); assert.equal((await request('/music/config')).body.qqLoggedIn, false);
   } finally { service?.stop(); await fs.rm(directory, { recursive: true, force: true }); }
 });
+
+test('Android native token bridge pairs its real HTTPS LAN service with a desktop instance and exchanges all sync domains', async () => {
+  const { createLanService } = require('../../desktop/lan-service.cjs');
+  const { emptySnapshot } = require('../../desktop/lan-model.cjs');
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'cabin-mobile-lan-'));
+  const desktop = createLanService({ directory: path.join(directory, 'desktop') });
+  const token = 'android-private-control-token';
+  const safeStorage = { isEncryptionAvailable: () => true, encryptString: v => Buffer.from(v), decryptString: v => v.toString() };
+  const service = await startCabinBackend({ directory: path.join(directory, 'mobile'), token, safeStorage, upstream: {} });
+  const request = async (route, body, authorized = true) => {
+    const response = await fetch(`http://127.0.0.1:${service.port}/sync${route}`, { headers: { ...(authorized ? { 'x-cabin-native-token': token } : {}), 'content-type': 'application/json' }, ...(body === undefined ? {} : { method: 'POST', body: JSON.stringify(body) }) });
+    return { status: response.status, value: await response.json() };
+  };
+  try {
+    assert.equal((await request('/start', {}, false)).status, 401);
+    assert.equal((await request('/status')).value.enabled, false);
+    assert.equal((await request('/start', {})).value.enabled, true);
+    const invite = await desktop.invite();
+    assert.equal((await request('/pair', { address: desktop.status().addresses[0], pin: invite.pin, token: invite.token })).status, 200);
+    const value = { ...emptySnapshot(), notes: [{ id: 'n', device: 'mobile', rev: 1, at: 1, deleted: false, value: { body: '手机手记' } }], layouts: [{ id: 'warm', device: 'mobile', rev: 1, at: 1, deleted: false, value: { theme: 'warm', items: [] } }], focus: [{ id: 's1', device: 'mobile', rev: 1, at: 1, deleted: false, value: { start: 1, end: 2 } }] };
+    const synced = await request('/sync', { peerId: desktop.status().id, snapshot: value });
+    assert.equal(synced.status, 200); assert.deepEqual(synced.value, value); assert.deepEqual(desktop.stage(emptySnapshot()), value);
+    desktop.revoke((await request('/status')).value.id);
+    assert.equal((await request('/sync', { peerId: desktop.status().id, snapshot: value })).status, 400);
+    assert.equal((await request('/stop', {})).value.enabled, false);
+  } finally { service.stop(); await desktop.stop(); await fs.rm(directory, { recursive: true, force: true }); }
+});

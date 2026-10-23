@@ -32,6 +32,7 @@ var music_upstream_exports = {};
 __export(music_upstream_exports, {
   audioProxyHeadersFor: () => audioProxyHeadersFor,
   call: () => call,
+  getAccountSession: () => getAccountSession,
   getNeteaseLoginInfo: () => getNeteaseLoginInfo,
   getQQLoginInfo: () => getQQLoginInfo,
   getQQMediaMid: () => getQQMediaMid,
@@ -998,6 +999,68 @@ function asNum(v) {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 }
+var COOKIE_ATTRIBUTE_NAMES = /* @__PURE__ */ new Set([
+  "path",
+  "domain",
+  "expires",
+  "max-age",
+  "samesite",
+  "secure",
+  "httponly"
+]);
+function collectCookiePair(picked, key, value) {
+  const k = String(key || "").trim();
+  if (!k || COOKIE_ATTRIBUTE_NAMES.has(k.toLowerCase())) return;
+  if (value === null || value === void 0) return;
+  picked.set(k, String(value).trim());
+}
+function collectCookieInput(input, picked) {
+  if (input === null || input === void 0) return;
+  if (Array.isArray(input)) {
+    input.forEach((item) => collectCookieInput(item, picked));
+    return;
+  }
+  if (typeof input === "object") {
+    const obj = input;
+    if (obj.name && Object.prototype.hasOwnProperty.call(obj, "value")) {
+      collectCookiePair(picked, obj.name, obj.value);
+      return;
+    }
+    Object.keys(obj).forEach((key) => {
+      const value = obj[key];
+      if (value && typeof value === "object" && Object.prototype.hasOwnProperty.call(value, "value")) {
+        collectCookiePair(picked, key, value.value);
+      } else if (typeof value !== "object") {
+        collectCookiePair(picked, key, value);
+      }
+    });
+    return;
+  }
+  String(input).split(/\r?\n/).forEach((line) => {
+    line.split(";").forEach((part) => {
+      const raw = String(part || "").trim();
+      const idx = raw.indexOf("=");
+      if (idx <= 0) return;
+      collectCookiePair(picked, raw.slice(0, idx), raw.slice(idx + 1));
+    });
+  });
+}
+function normalizeCookieHeader(input) {
+  const picked = /* @__PURE__ */ new Map();
+  collectCookieInput(input, picked);
+  return Array.from(picked.entries()).filter(([key, value]) => key && value != null && String(value) !== "").map(([key, value]) => `${key}=${value}`).join("; ");
+}
+function readCookieFromResponse(resp) {
+  const r = asObj(resp);
+  const body = asObj(r.body);
+  const data = asObj(body.data);
+  const candidates = [r.cookie, body.cookie, data.cookie, data.cookies];
+  for (const candidate of candidates) {
+    const cookie = normalizeCookieHeader(candidate);
+    if (cookie) return cookie;
+  }
+  return "";
+}
 function mapArtists(raw) {
   return asArr(raw).map((a) => {
     const o = asObj(a);
@@ -1308,13 +1371,29 @@ async function getNeteaseLoginInfo(cookie) {
       if (response.status === 401 || Number(data.code) === 301 || Number(body.code) === 301) confirmedExpired = true;
       if (response.status >= 400 || data.code != null && Number(data.code) !== 200 || body.code != null && Number(body.code) !== 200) continue;
       const info = normalizeLoginInfo(data.profile || body.profile, data.account || body.account, data);
-      if (info.loggedIn) return info;
-      confirmedExpired = true;
+      if (info.loggedIn) {
+        const renewedCookie = readCookieFromResponse(response);
+        return { ...info, sessionStatus: "valid", ...renewedCookie ? { renewedCookie, renewalVerified: true } : {} };
+      }
+      if (data.profile === null || data.account === null) confirmedExpired = true;
     } catch {
     }
   }
-  if (confirmedExpired) return { loggedIn: false };
+  if (confirmedExpired) return { loggedIn: false, sessionStatus: "expired" };
   throw new Error("\u6682\u65F6\u65E0\u6CD5\u9A8C\u8BC1\u7F51\u6613\u4E91\u8D26\u53F7\uFF0C\u5DF2\u4FDD\u5B58\u7684\u767B\u5F55\u4ECD\u4FDD\u7559\uFF0C\u8BF7\u7A0D\u540E\u91CD\u8BD5\u3002");
+}
+async function getAccountSession(provider, cookie) {
+  if (!cookie) return { status: "empty" };
+  if (provider === "netease") {
+    const info = await getNeteaseLoginInfo(cookie);
+    return { status: info.loggedIn ? "valid" : info.sessionStatus === "expired" ? "expired" : "saved", ...info.loggedIn && info.renewalVerified === true ? { renewedCookie: info.renewedCookie, renewalVerified: true } : {} };
+  }
+  if (provider === "qq") {
+    const info = await getQQLoginInfo(cookie);
+    if (info.profileUnavailable) return { status: info.loggedIn ? "offline" : "expired" };
+    return { status: info.loggedIn && info.profileSource === "qq-profile" ? "valid" : "saved" };
+  }
+  return { status: "empty" };
 }
 var NCM_PLAYLIST_LIMIT = 5e3;
 var NCM_PAGE = 500;
@@ -1529,6 +1608,7 @@ async function lyrics(provider, id, cookie) {
 0 && (module.exports = {
   audioProxyHeadersFor,
   call,
+  getAccountSession,
   getNeteaseLoginInfo,
   getQQLoginInfo,
   getQQMediaMid,

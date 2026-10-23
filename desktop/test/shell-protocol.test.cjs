@@ -11,7 +11,7 @@ function fixture() {
     readFileSync() { if (missing) throw new Error('ENOENT'); return Buffer.from('<html>wallpaper</html>'); }
   };
   const module = { exports: {} };
-  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../shell-protocol.cjs'), 'utf8'), { module, __dirname: '/packaged/desktop', Buffer, Response, URL, require: (name) => name === 'electron' ? { protocol } : name === 'node:fs' ? fakeFS : require(name) });
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../shell-protocol.cjs'), 'utf8'), { module, __dirname: '/packaged/desktop', Buffer, Response, URL, require: (name) => name === 'electron' ? { protocol } : name === 'node:fs' ? fakeFS : name === './policy.cjs' ? require('../policy.cjs') : require(name) });
   module.exports.registerShellProtocol(protocol);
   return { fetch: (url, method = 'GET') => route({ url, method }), breakAsset: () => { missing = true; } };
 }
@@ -37,10 +37,11 @@ test('shell route keeps exact authority, method and HEAD restrictions after extr
   f.breakAsset();
   for (const method of ['GET', 'HEAD']) assert.equal(f.fetch('album-desktop://shell/index.html', method).status, 404);
 });
-test('desk pet CSP allows data: images (pet-life hearts / sparkles) and nothing else new', async () => {
+test('desk pet CSP keeps effects and fixed local atlas source while excluding arbitrary HTTPS', async () => {
   const f = fixture(), csp = f.fetch('album-desktop://pet/pet.html').headers.get('Content-Security-Policy');
   const directives = Object.fromEntries(csp.split(';').map((d) => d.trim().split(/\s+/)).map(([name, ...values]) => [name, values]));
-  assert.deepEqual(directives['img-src'], ["'self'", 'https:', 'data:']);
+  assert.deepEqual(directives['img-src'], ["'self'", require('../policy.cjs').SITE_ORIGIN, 'data:']);
+  assert.ok(!directives['img-src'].includes('https:'));
   for (const [name, values] of Object.entries(directives)) if (name !== 'img-src') assert.ok(!values.includes('data:') && !values.includes('*') && !values.includes("'unsafe-eval'"), `${name} stays strict`);
   assert.deepEqual(directives['script-src'], ["'self'"]); assert.deepEqual(directives['connect-src'], ["'none'"]); assert.deepEqual(directives['default-src'], ["'self'"]);
 });

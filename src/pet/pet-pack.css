@@ -1,0 +1,9 @@
+@layer guards, reset, features, skin, overrides;
+@layer features {
+.pet-pack-settings { display: grid; gap: 14px; max-width: 38rem; }
+.pet-pack-settings h3, .pet-pack-settings p { margin: 0; }
+.pet-pack-settings label { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.pet-pack-stage { min-height: 160px; max-height: 360px; overflow: auto; display: grid; place-items: end center; border-bottom: 1px solid currentColor; }
+.pet-pack-stage > span { display: block; image-rendering: pixelated; flex-shrink: 0; }
+
+}

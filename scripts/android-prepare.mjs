@@ -7,7 +7,7 @@ const index = path.join(web, 'index.html');
 let html = await fs.readFile(index, 'utf8');
 // Native builds have no Vercel headers. Do not allow injected scripts or remote frames
 // to acquire the native bridge; images and explicitly requested HTTPS APIs remain usable.
-const csp = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data: blob:; font-src 'self'; media-src 'self' https: blob:; connect-src 'self' https:; object-src 'none'; frame-src 'none'; base-uri 'self'; form-action 'none'";
+const csp = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data: blob:; font-src 'self'; media-src 'self' https: blob:; connect-src 'self' https:; worker-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'self'; form-action 'none'";
 html = html.replace(/<meta name="flow-cabin-native-csp"[^>]*>/, '');
 html = html.replace('<head>', `<head>\n    <meta name="flow-cabin-native-csp" http-equiv="Content-Security-Policy" content="${csp}">`);
 await fs.writeFile(index, html);

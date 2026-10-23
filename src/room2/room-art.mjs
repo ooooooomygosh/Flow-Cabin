@@ -17,8 +17,17 @@ export function roomArtSpec(theme, manifest) {
   if (shell?.file !== 'shell.png' || furniture?.file !== 'furniture.png') throw Error('房间素材路径无效。');
   const [width, height] = furniture.size || [furniture.width, furniture.height];
   if (![width, height].every(n => Number.isInteger(n) && n > 0 && n <= 8192)) throw Error('图集尺寸无效。');
-  const frames = Object.fromEntries(Object.keys(FURNITURE).map(name => [name, checkedFrame(furniture.frames?.[name], width, height)]));
-  return { theme, shell: base + shell.file, furniture: base + furniture.file, frames };
+  const frames = Object.fromEntries(Object.keys(FURNITURE).filter(name => FURNITURE[name].atlas !== 'extras').map(name => [name, checkedFrame(furniture.frames?.[name], width, height)]));
+  const extras = manifest.assets.extras;
+  let extra = null;
+  if (extras) {
+    if (extras.file !== 'extras.png') throw Error('扩展家具路径无效。');
+    const size = extras.size || [extras.width, extras.height];
+    if (!size.every(n => Number.isInteger(n) && n > 0 && n <= 8192)) throw Error('扩展图集尺寸无效。');
+    const extraFrames = Object.fromEntries(Object.keys(FURNITURE).filter(name => FURNITURE[name].atlas === 'extras').map(name => [name, checkedFrame(extras.frames?.[name] || extras.frames?.[({ cover: 'sleeve', timer: 'pomodoro' })[name]], ...size)]));
+    extra = { url: base + extras.file, frames: extraFrames, size };
+  }
+  return { theme, shell: base + shell.file, furniture: base + furniture.file, frames, furnitureSize: [width, height], extras: extra };
 }
 
 export function petArtSpec(petId, manifest) {
@@ -28,4 +37,11 @@ export function petArtSpec(petId, manifest) {
     return [pose, checkedFrame(f && [f.x, f.y, f.w, f.h], manifest.width, manifest.height)];
   }));
   return { atlas: `/pet-art/v2/${petId}/atlas.png`, frames };
+}
+
+export function roomPetPose({ playing = false, focus = false, beat, now = Date.now(), origin = 0, reduced = false } = {}) {
+  if (focus) return 'focus';
+  if (!playing || reduced) return 'idle';
+  if (beat?.detected === true && Number.isFinite(beat.beatAt) && beat.beatAt > 0 && beat.bpm >= 40 && beat.bpm <= 220) return 'groove';
+  return ((now - origin) % 12000 + 12000) % 12000 < 1500 ? 'listen' : 'idle';
 }

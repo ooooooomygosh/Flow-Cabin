@@ -1,3 +1,4 @@
+import { startLanBridge } from './sync/storage.mjs';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Plus } from './icons';
 import { isNewCabin } from './onboarding/onboarding-model.mjs';
@@ -27,6 +28,7 @@ function useToast() {
 }
 
 export default function App() {
+  useEffect(() => { if (window.albumMobile?.syncRequest || window.albumDesktopCapabilities?.lanSync) return startLanBridge(); }, []);
   const [firstVisit] = useState(() => isNewCabin(localStorage));
   const [hubRequest, setHubRequest] = useState(null);
   const [items, setItems] = useState([]), [loading, setLoading] = useState(true), [error, setError] = useState('');

@@ -17,3 +17,6 @@ No dsh-pet animations, prompts, or source videos are bundled. Imported media
 retains its own author's licensing terms; importing does not grant redistribution.
 Lyrics copyright remains with its original authors. LRCLIB is only a matching
 service; local and platform lyrics are not redistributed with the application.
+
+QR generation: qrcode 1.5.4 (MIT), bundled /licenses/QRCode-MIT.txt.
+QR decoding: jsQR 1.4.0 (Apache-2.0), bundled /licenses/jsQR-Apache-2.0.txt.

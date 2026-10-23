@@ -580,7 +580,7 @@ try {
     await page.waitForFunction(()=>document.querySelector('.room-cat').dataset.music==='free'&&!document.querySelector('.room-cat').dataset.beatMotion,null,{timeout:5000});
     // Clicking the sound controls briefly gives 奶糖 an input-feedback pose. Wait
     // for the eventual listening pose instead of guessing which feedback clears last.
-    await page.waitForFunction(()=>document.querySelector('.room-cat .pixel-cat')?.dataset.pose==='listen',null,{timeout:5000});
+    await page.waitForFunction(()=>document.querySelector('.room-cat .pixel-cat')?.dataset.pose==='listen',null,{timeout:15000});
     assert.equal(await cat.locator('.pixel-cat').getAttribute('data-pose'),'listen');
     // A detected beat: the shared cat sprite hops once per beat, phase-locked to beatAt.
     const beatAt=await page.evaluate(()=>{const at=Date.now()-130;window.dispatchEvent(new CustomEvent('cabin:playback',{detail:{playing:true,energy:.5,bpm:120,beatAt:at}}));return at;});

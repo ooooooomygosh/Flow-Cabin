@@ -1,6 +1,6 @@
 {
   "name": "album-circle-desktop",
-  "version": "1.21.6",
+  "version": "2.0.0",
   "description": "心流小屋 · Flow Cabin — a pixel lo-fi cabin for your favourite albums, focus timer and desktop cat",
   "productName": "心流小屋",
   "author": "Flow Cabin",
@@ -108,7 +108,15 @@
       "renderer/**/*",
       "assets/**/*",
       "package.json",
-      "lyrics-service.cjs"
+      "lyrics-service.cjs",
+      "lan-certificate.cjs",
+      "lan-model.cjs",
+      "lan-service.cjs",
+      "pet-pack.cjs",
+      "dsh-bridge.cjs",
+      "weather-api.cjs",
+      "pet-pack-metadata.cjs",
+      "pet-atlas.cjs"
     ],
     "win": {
       "target": [

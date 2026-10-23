@@ -31,6 +31,7 @@ import org.json.JSONObject;
 @androidx.media3.common.util.UnstableApi
 public final class CabinPlaybackService extends MediaSessionService {
     private ExoPlayer player;
+    static final CabinPcmEnergy energy = new CabinPcmEnergy();
     private MediaSession session;
     private boolean settingShuffle;
     private final Handler timer = new Handler(Looper.getMainLooper());
@@ -38,7 +39,11 @@ public final class CabinPlaybackService extends MediaSessionService {
     private final Runnable checkpoint = new Runnable() { public void run() { save(); timer.postDelayed(this, 5000); } };
     @Override public void onCreate() {
         super.onCreate(); saved = getSharedPreferences("cabin-playback-v1", MODE_PRIVATE);
-        player = new ExoPlayer.Builder(this)
+        player = new ExoPlayer.Builder(this, new androidx.media3.exoplayer.DefaultRenderersFactory(this) {
+            @Override protected androidx.media3.exoplayer.audio.AudioSink buildAudioSink(android.content.Context context, boolean floatOutput, boolean playbackParams) {
+                return new androidx.media3.exoplayer.audio.DefaultAudioSink.Builder(context).setAudioProcessors(new androidx.media3.common.audio.AudioProcessor[]{new androidx.media3.exoplayer.audio.TeeAudioProcessor(energy)}).build();
+            }
+        })
             .setMediaSourceFactory(new DefaultMediaSourceFactory(() -> new CabinSource()))
             .setAudioAttributes(new AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MUSIC).build(), true)
             .setHandleAudioBecomingNoisy(true).setWakeMode(C.WAKE_MODE_LOCAL).build();
@@ -61,6 +66,11 @@ public final class CabinPlaybackService extends MediaSessionService {
         player.setShuffleModeEnabled(saved.getBoolean("shuffle", false));
         player.setPlayWhenReady(false);
         player.addListener(new Player.Listener() {
+            @Override public void onPlayWhenReadyChanged(boolean ready, int reason) {
+                if (reason == Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_FOCUS_LOSS) CabinAmbienceService.focusSuppressed = true;
+                else if (ready) CabinAmbienceService.focusSuppressed = false;
+            }
+            @Override public void onPlaybackSuppressionReasonChanged(int reason) { CabinAmbienceService.focusSuppressed = reason != Player.PLAYBACK_SUPPRESSION_REASON_NONE; }
             @Override public void onMediaItemTransition(MediaItem item, int reason) {
                 // 待播 is consumed album by album. At the final album repeat-all
                 // loops that album, never resurrecting already consumed albums.

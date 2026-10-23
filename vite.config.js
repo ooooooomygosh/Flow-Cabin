@@ -12,6 +12,8 @@ const chunkGroups = [
 
 export default defineConfig({
   plugins: [react()],
+  optimizeDeps: { include: ['qrcode', 'jsqr', 'pixi.js', 'motion/react', '@applemusic-like-lyrics/react', '@applemusic-like-lyrics/lyric'] },
+  server: { watch: { ignored: ['**/android/**/build/**', '**/android/.gradle/**'] } },
   // Offline test copies can share dependencies, but must not share Vite's mutable cache.
   cacheDir: process.env.FLOW_CABIN_VITE_CACHE_DIR || undefined,
   build: { rollupOptions: {

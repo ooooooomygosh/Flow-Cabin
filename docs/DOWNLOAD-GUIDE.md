@@ -4,14 +4,14 @@
 
 ## 下载安装包
 
-始终从[官方最新 Release](https://github.com/ooooooomygosh/Flow-Cabin/releases/latest)下载。下面是 **v1.21.6** 的安装包文件名，实际大小以 Release 页面列出的资产为准。
+始终从[官方最新 Release](https://github.com/ooooooomygosh/Flow-Cabin/releases/latest)下载。下面是 **v2.0.0** 的安装包文件名，实际大小以 Release 页面列出的资产为准。
 
 | 设备 | 文件 |
 | --- | --- |
-| Mac · Apple Silicon（M 系列） | `FlowCabin-1.21.6-mac-arm64.dmg` |
-| Mac · Intel | `FlowCabin-1.21.6-mac-x64.dmg` |
-| Windows · x64 安装版 | `FlowCabin-1.21.6-x64-setup.exe` |
-| Windows · x64 便携版 | `FlowCabin-1.21.6-x64-portable.exe` |
+| Mac · Apple Silicon（M 系列） | `FlowCabin-2.0.0-mac-arm64.dmg` |
+| Mac · Intel | `FlowCabin-2.0.0-mac-x64.dmg` |
+| Windows · x64 安装版 | `FlowCabin-2.0.0-x64-setup.exe` |
+| Windows · x64 便携版 | `FlowCabin-2.0.0-x64-portable.exe` |
 
 Mac 在「关于本机」查看芯片。Windows 在「设置 → 系统 → 系统信息」查看系统类型。Mac 也提供对应的 ZIP；`.blockmap`、`latest*.yml` 是更新器使用的辅助文件，不是安装包。`SHA256SUMS.txt` 可用于核对下载文件的校验值。
 

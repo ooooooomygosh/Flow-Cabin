@@ -76,3 +76,16 @@ test('measured temperature and humidity survive both adapters; absent values are
   assert.match(weatherScript(value), /"temperature":-3/);
   assert.equal(weatherFromReport(report(0)).temperature, undefined);
 });
+
+test('switching location during an in-flight request immediately fetches the newly selected place', async () => {
+  const calls = []; let finish;
+  const weather = createWeather({ fetch: url => { calls.push(url); return calls.length === 1 ? new Promise(resolve => { finish = resolve; }) : Promise.resolve({ ok: true, json: async () => report(0, { temperature_2m: 25, apparent_temperature: 27, relative_humidity_2m: 60 }) }); }, publish: () => {} });
+  try {
+    const first = weather.set({ enabled: true, lat: 31.23, lng: 121.47 });
+    const second = weather.set({ enabled: true, lat: -33.87, lng: 151.21 });
+    finish({ ok: true, json: async () => report(63) }); await first; await second;
+    assert.equal(calls.length, 2); assert.match(calls[1], /latitude=-33.87/);
+    assert.equal(weather.state().lat, -33.87); assert.equal(weather.state().temperature, 25);
+    assert.equal(weather.state().humidity, 60);
+  } finally { weather.dispose(); }
+});

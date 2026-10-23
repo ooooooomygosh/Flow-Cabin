@@ -217,3 +217,15 @@ test('window weather drift stays continuous when the 窗景 or real weather chan
   let diff = 0; for (let i = 3; i < size; i += 4) if (a[i] !== b[i]) diff++;
   assert.ok(diff / (size / 4) < .03, `clouds changed on ${(100 * diff / (size / 4)).toFixed(1)}% of pixels in one frame`);
 });
+
+test('custom place keeps v1 settings compatible, validates IANA timezone, and binds solar sky to rounded coordinates', async () => {
+  const { normalizeCustomPlace, resolveSkyCity, placeDescription } = await import('./sky-cities.mjs');
+  const { normalizeSkySettings } = await import('./sky-clock.mjs');
+  const customPlace = { name: '我的城市', lat: '-33.8688', lng: '151.2093', zone: 'Australia/Sydney', country: '澳大利亚', admin1: '新南威尔士州' };
+  const settings = normalizeSkySettings({ place: 'custom', realWeather: true, customPlace });
+  const city = resolveSkyCity(settings.place, 'Asia/Shanghai', settings.customPlace);
+  assert.equal(city.name, '我的城市'); assert.equal(city.lat, -33.87); assert.equal(city.zone, 'Australia/Sydney');
+  assert.match(placeDescription(city), /新南威尔士州/);
+  for (const patch of [{ lat: '' }, { lat: 91 }, { lng: 181 }, { zone: 'Invalid/Zone' }, { name: '' }]) assert.equal(normalizeCustomPlace({ ...customPlace, ...patch }), null);
+  assert.deepEqual(normalizeSkySettings({ place: 'shanghai', realWeather: false }), { place: 'shanghai', realWeather: false });
+});

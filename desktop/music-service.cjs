@@ -11,6 +11,7 @@ const QUALITY_OPTIONS = [{ id: 'standard', label: '标准 · 128k' }, { id: 'exh
 function createMusicService({ directory, safeStorage, login, logout, upstream = require('./music-upstream.cjs'), fetch = globalThis.fetch, nowPlaying = null, localMusic = null, appleMusic = null, localApps = null }) {
   const token = crypto.randomBytes(32).toString('hex'), streams = new Map(), cache = new Map(), pending = new Map(), activeStreams = new Set(), accountVersions = { qq: 0, netease: 0 };
   let revision = 0;
+  const sessions = { qq: 'saved', netease: 'saved' }, checking = new Map();
   const prefsPath = path.join(directory, 'music.json'); let preferences = { maURL: '', maToken: '', playerId: '', qq: '', netease: '', quality: 'exhigh' }, server, port, opening;
   try { preferences = { ...preferences, ...JSON.parse(fs.readFileSync(prefsPath, 'utf8')) }; } catch {}
   const decode = (value) => {
@@ -20,7 +21,7 @@ function createMusicService({ directory, safeStorage, login, logout, upstream = 
   };
   const accountState = (provider) => {
     if (!preferences[provider]) return { status: 'empty', saved: false, decryptable: false };
-    try { decode(preferences[provider]); return { status: 'saved', saved: true, decryptable: true }; }
+    try { decode(preferences[provider]); return { status: sessions[provider] || 'saved', saved: true, decryptable: true }; }
     catch { return { status: 'storage-error', saved: true, decryptable: false }; }
   };
   function invalidate() { revision++; cache.clear(); streams.clear(); for (const controller of activeStreams) controller.abort(); activeStreams.clear(); }
@@ -30,6 +31,41 @@ function createMusicService({ directory, safeStorage, login, logout, upstream = 
     if (!safeStorage.isEncryptionAvailable() || safeStorage.getSelectedStorageBackend?.() === 'basic_text') throw new Error('本机安全凭据存储不可用，无法保存平台登录。');
     return safeStorage.encryptString(value).toString('base64');
   };
+  function mergedCookie(original, renewal) {
+    if (typeof renewal !== 'string' || renewal.length > 32768 || /[\r\n]/.test(renewal)) throw Error('无效的续期凭据');
+    const values = new Map();
+    for (const entry of [original, renewal]) for (const pair of entry.split(';')) {
+      const at=pair.indexOf('='); if(at<1) continue; const key=pair.slice(0,at).trim(),value=pair.slice(at+1).trim();
+      if (!/^[a-zA-Z0-9_.-]+$/.test(key) || ['path','domain','expires','max-age','samesite','secure','httponly'].includes(key.toLowerCase())) continue;
+      values.set(key,value);
+    }
+    return [...values].map(([key,value])=>`${key}=${value}`).join('; ');
+  }
+  async function checkAccount(provider) {
+    if (!['qq','netease'].includes(provider)) throw Error('不支持此平台。');
+    if (checking.has(provider)) return checking.get(provider);
+    const version=accountVersions[provider], encrypted=preferences[provider];
+    const task=(async()=>{
+      if(!encrypted) return accountState(provider);
+      let cookie;
+      try { cookie=decode(encrypted); } catch { return accountState(provider); }
+      if(!upstream.getAccountSession) return accountState(provider);
+      try {
+        const result=await upstream.getAccountSession(provider,cookie);
+        if(version!==accountVersions[provider] || preferences[provider]!==encrypted) return accountState(provider);
+        const state=['valid','expired','offline','saved'].includes(result?.status)?result.status:'saved';
+        sessions[provider]=state;
+        // A renewal must come from server-validated session evidence. Current
+        // adapters may pass a real successful response cookie, never a guessed refresh token.
+        if(state==='valid' && result.renewedCookie && result.renewalVerified===true) {
+          const merged=mergedCookie(cookie,result.renewedCookie);
+          if(merged!==cookie) {try {save({...preferences,[provider]:encrypt(merged)});}catch {sessions[provider]='storage-error';}}
+        }
+      } catch { if(version===accountVersions[provider] && preferences[provider]===encrypted) sessions[provider]='offline'; }
+      return accountState(provider);
+    })();
+    checking.set(provider,task);try{return await task;}finally{if(checking.get(provider)===task)checking.delete(provider);}
+  }
   const lyrics = createLyricsService({ upstream, cookie: provider => decode(preferences[provider]), fetch });
   const playlists = createPlaylistLibrary({ upstream, cookies: (provider) => decode(preferences[provider]), fetch });
   // Account playlists are read on demand; a changed login discards the answer.
@@ -113,11 +149,14 @@ function createMusicService({ directory, safeStorage, login, logout, upstream = 
         ensureCurrent();
       }
       result = await upstream.handleQQSongUrl(cookie, id, mediaMid, quality(), body.fee);
+      if (currentRevision===revision && ['login_expired','session_expired'].includes(result?.reason)) sessions.qq='expired';
     }
     else if (provider === 'netease') {
       const cookie = decode(preferences.netease);
       const info = upstream.getNeteaseLoginInfo ? await upstream.getNeteaseLoginInfo(cookie) : { loggedIn: false };
       if (currentRevision !== revision) throw new Error('音源设置已更改，请重新播放。');
+      if(info.sessionStatus==='expired')sessions.netease='expired';
+      else if(info.loggedIn)sessions.netease='valid';
       result = await upstream.handleSongUrl(id, info, quality(), cookie);
     }
     else throw new Error('不支持此音乐来源。');
@@ -176,6 +215,7 @@ function createMusicService({ directory, safeStorage, login, logout, upstream = 
     const url = new URL(req.url, 'http://127.0.0.1');
     try {
       if (req.method === 'POST' && url.pathname === '/lyrics') { const input = await body(req); return json(res, await guarded(() => lyrics.get(input))); }
+      if (req.method === 'POST' && url.pathname === '/accounts/validate') { const input=await body(req); await checkAccount(input.provider); return json(res,config()); }
       if (req.method === 'GET' && url.pathname === '/config') return json(res, config());
       if (req.method === 'POST' && url.pathname === '/config') { const value = await body(req); const maURL = value.maURL ? serverURL(String(value.maURL)) : ''; const playerId = String(value.playerId || '').slice(0, 160); const maToken = value.clearToken ? '' : value.maToken ? encrypt(String(value.maToken).slice(0, 8192)) : maURL === preferences.maURL ? preferences.maToken : ''; save({ ...preferences, maURL, maToken, playerId }); return json(res, config()); }
       if (req.method === 'POST' && url.pathname === '/quality') { const value = String((await body(req)).quality || ''); if (!QUALITIES.includes(value)) throw new Error('不支持此音质。'); save({ ...preferences, quality: value }); return json(res, config()); }
@@ -210,24 +250,24 @@ function createMusicService({ directory, safeStorage, login, logout, upstream = 
       return json(res, { error: 'Not found' }, 404);
     } catch (error) { if (!res.headersSent) json(res, { error: error.message || '音源请求失败。' }, 502); else if (!res.destroyed) res.destroy(); }
   }
-  async function start() { if (port) return port; if (opening) return opening; opening = new Promise((resolve, reject) => { server = http.createServer(route); server.on('error', reject); server.listen(0, '127.0.0.1', () => { port = server.address().port; resolve(port); }); }); return opening; }
+  async function start() { if (!server && !opening) void Promise.allSettled(['qq','netease'].map(checkAccount)); if (port) return port; if (opening) return opening; opening = new Promise((resolve, reject) => { server = http.createServer(route); server.on('error', reject); server.listen(0, '127.0.0.1', () => { port = server.address().port; resolve(port); }); }); return opening; }
   async function proxy(request, pathname, netFetch) {
     const currentPort = await start(), headers = { 'x-album-music-token': token }; if (request.headers.get('range')) headers.Range = request.headers.get('range');
     if (!['GET', 'POST', 'HEAD'].includes(request.method)) return new Response('Method not allowed', { status: 405 });
     if (request.method === 'POST') headers['Content-Type'] = 'application/json';
     return netFetch('http://127.0.0.1:' + currentPort + pathname, { method: request.method, headers, ...(request.method === 'POST' ? { body: await request.text() } : {}), signal: request.signal });
   }
-  return { start, proxy, config,
+  return { start, proxy, config, checkAccount,
     async login(provider) {
       if (!['qq', 'netease'].includes(provider)) throw new Error('不支持此平台。');
       const version = ++accountVersions[provider], result = await login(provider);
       if (version !== accountVersions[provider]) return { ok: false, cancelled: true, error: '' };
-      if (result.ok && result.cookie) save({ ...preferences, [provider]: encrypt(result.cookie) });
+      if (result.ok && result.cookie) { save({ ...preferences, [provider]: encrypt(result.cookie) }); sessions[provider]='saved'; checking.delete(provider); void checkAccount(provider); }
       return { ok: Boolean(result.ok && result.cookie), cancelled: Boolean(result.cancelled), error: result.error || result.message || '' };
     },
     async logout(provider) {
       if (!['qq', 'netease'].includes(provider)) throw new Error('不支持此平台。');
-      accountVersions[provider]++;
+      accountVersions[provider]++;checking.delete(provider);sessions[provider]='saved';
       // Invalidate local credentials and in-flight playback even if browser cleanup fails.
       save({ ...preferences, [provider]: '' });
       await logout(provider);

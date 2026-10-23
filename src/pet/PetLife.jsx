@@ -48,7 +48,7 @@ const writeHop = (node, energy) => {
 // when the app is in the background. The desktop pet and the wallpaper are
 // always-on-top surfaces that are supposed to keep living, so they leave it
 // off — and their beat/tempo must keep updating either way.
-export default function PetLife({ pose = 'idle', pokedAt = 0, reduced = false, pauseInBackground = false, children }) {
+export default function PetLife({ pose = 'idle', musicBeat = false, pokedAt = 0, reduced = false, pauseInBackground = false, children }) {
   const root = useRef(null), [burst, setBurst] = useState(0), first = useRef(true);
   const level = useRef(null);
   useEffect(() => {
@@ -64,11 +64,12 @@ export default function PetLife({ pose = 'idle', pokedAt = 0, reduced = false, p
   }, []);
   useEffect(() => {
     const host = root.current, cat = host?.querySelector(':scope > .pixel-cat');
-    if (pose !== 'groove' || reduced || !cat?.animate) return;
+    if (!(pose === 'groove' || (pose === 'focus' && musicBeat)) || reduced || !cat?.animate) return;
     let hop = null, shadow = null, timer = null, background = false;
     const stop = () => { hop?.cancel(); shadow?.cancel(); hop = null; shadow = null; };
     const sync = () => {
       if (pauseInBackground && background) return;
+      if (!currentBeat().known) { stop(); return; }
       const length = beatLength(currentBeat()), phase = sinceBeat(Date.now());
       if (!hop) { hop = cat.animate(BOP, { duration: length, iterations: Infinity }); try { shadow = host.animate(SHADOW, { duration: length, iterations: Infinity, pseudoElement: '::before' }); } catch { shadow = null; } }
       else if (Math.abs(hop.effect.getTiming().duration - length) > 2) { hop.effect.updateTiming({ duration: length }); shadow?.effect.updateTiming({ duration: length }); }
@@ -90,7 +91,7 @@ export default function PetLife({ pose = 'idle', pokedAt = 0, reduced = false, p
       else { startTimer(); sync(); }
     });
     return () => { off(); offBackground(); clearInterval(timer); timer = null; stop(); };
-  }, [pose, reduced, pauseInBackground]);
+  }, [pose, musicBeat, reduced, pauseInBackground]);
   useEffect(() => {
     if (first.current) { first.current = false; return; }
     if (!pokedAt) return;

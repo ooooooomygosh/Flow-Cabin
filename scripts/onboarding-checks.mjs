@@ -76,7 +76,7 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
 
     // 2. 重新引导 from the hub, motion preferences.
     await button(page, '设置').click(); await hubOf(page).waitFor();
-    assert.deepEqual(await hubOf(page).getByRole('tab').allInnerTexts(), ['音源', '房间与桌宠', '键鼠陪伴', '专注工具', '显示与桌面', '数据与备份', 'AI（Beta）', '关于']);
+    assert.deepEqual(await hubOf(page).getByRole('tab').allInnerTexts(), ['音源', '房间与桌宠', '键鼠陪伴', '专注工具', '同步与设备', '显示与桌面', '数据与备份', 'AI（Beta）', '关于']);
     await page.getByRole('tab', { name: '关于' }).click(); await button(page, '重新引导').click();
     await wizardOf(page).waitFor(); await heading(page).filter({ hasText: '欢迎来到心流小屋' }).waitFor();
     assert.equal(await hubOf(page).count(), 0);
@@ -150,9 +150,9 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
   try {
     await page.goto(origin);
     const updateWizard = wizardOf(page, '版本更新'); await updateWizard.waitFor();
-    await heading(page).filter({ hasText: '你离开的这段时间，小屋更新了 9 个版本' }).waitFor();
+    await heading(page).filter({ hasText: '你离开的这段时间，小屋更新了 10 个版本' }).waitFor();
     assert.deepEqual(await updateWizard.locator('.onboarding-progress li').allInnerTexts(), ['1\n更新', '2\n音源', '3\n权限', '4\n房间', '5\n试听', '6\n完成']);
-    assert.deepEqual(await updateWizard.locator('.onboarding-release header span').allInnerTexts(), ['v1.21.6', 'v1.21.5', 'v1.21.4', 'v1.21.3', 'v1.21.1', 'v1.21.0', 'v1.20.0', 'v1.19.0', 'v1.18.0']);
+    assert.deepEqual(await updateWizard.locator('.onboarding-release header span').allInnerTexts(), ['v2.0.0', 'v1.21.6', 'v1.21.5', 'v1.21.4', 'v1.21.3', 'v1.21.1', 'v1.21.0', 'v1.20.0', 'v1.19.0', 'v1.18.0']);
     await updateWizard.getByText('「键鼠陪伴」进入「设置」一级入口', { exact: false }).waitFor();
     await button(page, '稍后继续').waitFor();
     assert.equal(await button(page, '开始设置').count(), 0);

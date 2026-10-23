@@ -36,7 +36,7 @@ public final class CabinPlayerPlugin extends Plugin {
     }
     private JSObject snapshot() {
         MediaItem item = player.getCurrentMediaItem();
-        return new JSObject().put("playing", player.isPlaying()).put("status", player.getPlayerError() != null ? "error" : player.getPlaybackState() == 4 ? "ended" : player.getPlaybackState() == 2 ? "buffering" : player.isPlaying() ? "playing" : "paused")
+        return new JSObject().put("measuredEnergy", player.isPlaying() ? CabinPlaybackService.energy.current() * player.getVolume() : 0).put("playing", player.isPlaying()).put("status", player.getPlayerError() != null ? "error" : player.getPlaybackState() == 4 ? "ended" : player.getPlaybackState() == 2 ? "buffering" : player.isPlaying() ? "playing" : "paused")
             .put("position", player.getCurrentPosition() / 1000.0).put("duration", player.getDuration() == C.TIME_UNSET ? 0 : player.getDuration() / 1000.0)
             .put("repeat", player.getRepeatMode() == Player.REPEAT_MODE_ONE ? "one" : player.getRepeatMode() == Player.REPEAT_MODE_ALL ? "all" : "off").put("shuffle", player.getShuffleModeEnabled())
             .put("recordId", item == null || item.mediaMetadata.extras == null ? "" : item.mediaMetadata.extras.getString("recordId", "")).put("trackIndex", item == null || item.mediaMetadata.extras == null ? 0 : item.mediaMetadata.extras.getInt("trackIndex", 0))

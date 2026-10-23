@@ -23,6 +23,14 @@ export const FURNITURE = Object.freeze({
   bed: { name: '宠物窝', surface: 'floor', w: 144, h: 96, action: 'pet' },
   photo: { name: '相框', surface: 'wall', w: 80, h: 80, action: 'stats' },
   lamp: { name: '台灯', surface: 'desk', w: 64, h: 96, action: 'lamp' },
+  vinyl: { name: '黑胶唱片', surface: 'desk', w: 48, h: 48, action: 'music', atlas: 'extras' },
+  cover: { name: '唱片封套', surface: 'desk', w: 48, h: 56, action: 'music', atlas: 'extras' },
+  player: { name: '随身播放器', surface: 'desk', w: 88, h: 56, action: 'music', atlas: 'extras' },
+  headphones: { name: '耳机', surface: 'desk', w: 48, h: 56, action: 'music', atlas: 'extras' },
+  timer: { name: '桌面番茄钟', surface: 'desk', w: 40, h: 48, action: 'timer', atlas: 'extras' },
+  journal: { name: '手账本', surface: 'desk', w: 48, h: 40, action: 'journal', atlas: 'extras' },
+  keyboard: { name: '机械键盘', surface: 'desk', w: 80, h: 32, action: 'tasks', atlas: 'extras' },
+  mouse: { name: '鼠标', surface: 'desk', w: 32, h: 32, action: 'tasks', atlas: 'extras' },
 });
 export const SURFACES = Object.freeze({ wall: { x: 16, y: 56, w: 1168, h: 256 }, desk: { x: 16, y: 232, w: 1168, h: 112 }, floor: { x: 16, y: 384, w: 1168, h: 248 } });
 const clone = value => JSON.parse(JSON.stringify(value));
@@ -58,4 +66,20 @@ export function validateLayout(value) {
 export function createLayoutHistory(initial, limit = 50) {
   let present = validateLayout(initial), past = [], future = [];
   return { get: () => clone(present), apply(next) { const safe = validateLayout(next); past.push(present); if (past.length > limit) past.shift(); present = safe; future = []; return clone(present); }, undo() { if (past.length) { future.push(present); present = past.pop(); } return clone(present); }, redo() { if (future.length) { past.push(present); present = future.pop(); } return clone(present); }, get canUndo() { return past.length > 0; }, get canRedo() { return future.length > 0; } };
+}
+
+export function addFurniture(layout, type) {
+  const spec = FURNITURE[type]; if (!spec) throw Error('不支持的家具。');
+  if (layout.items.some(item => item.type === type)) throw Error('这件家具已经放在小屋里。');
+  if (layout.items.length >= 50) throw Error('家具数量已满。');
+  const area = SURFACES[spec.surface], id = layout.items.some(item => item.id === type) ? `${type}-added` : type;
+  const candidate = { ...layout, items: [...layout.items, { id, type, x: area.x, y: area.y, rotation: 0 }] };
+  for (let y = area.y; y <= area.y + area.h - spec.h; y += 8) for (let x = area.x; x <= area.x + area.w - spec.w; x += 8) {
+    try { return placement(candidate, id, x, y, 0); } catch {}
+  }
+  throw Error('承托面上没有足够空位，请先移动或收起其他家具。');
+}
+export function removeFurniture(layout, id) {
+  if (!layout.items.some(item => item.id === id)) throw Error('找不到家具。');
+  return { ...layout, revision: layout.revision + 1, items: layout.items.filter(item => item.id !== id) };
 }

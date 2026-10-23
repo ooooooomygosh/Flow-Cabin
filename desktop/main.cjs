@@ -29,11 +29,15 @@ const { statusFrom, statusIconPath, createStatusApplier } = require('./status-ba
 const { relayPlayerCommand } = require('./mini-player.cjs');
 // The main process is split by concern: page commands, the page session, updates, menus, login item.
 const { createSiteCommands } = require('./main/site-commands.cjs');
+const { createLanService } = require('./lan-service.cjs');
+const { createPetPackStore, createPetPackRoute } = require('./pet-pack.cjs');
+const { createDshBridge } = require('./dsh-bridge.cjs');
 const { wireSiteSession } = require('./main/site-session.cjs');
 const { createUpdates } = require('./main/updates.cjs');
 const { appMenuTemplate, trayMenuTemplate, ABOUT_DETAIL, SINK_HOTKEY } = require('./main/menus.cjs');
 const { createAutostart, autostartScript } = require('./main/autostart.cjs');
 const { createWeather, weatherScript } = require('./weather.cjs');
+const { createWeatherApi } = require('./weather-api.cjs');
 const { createAi, aiScript } = require('./ai.cjs');
 
 protocol.registerSchemesAsPrivileged([{ scheme: 'album-desktop', privileges: { standard: true, secure: true, supportFetchAPI: true } }]);
@@ -68,6 +72,7 @@ let wallpaper, desktopMode, desktopSink, miniPlayer, awakeBlocker = null;
 const trayPet = createTrayPet({ getTray: () => companionTray, getWindow: () => mainWindow, app, nativeImage, directory: app.getPath('userData') });
 const desktopHelperPath = () => app.isPackaged ? path.join(process.resourcesPath, 'native', 'DesktopHost.exe') : path.join(__dirname, 'native', 'bin', 'DesktopHost.exe');
 let music;
+let lan, petPackRoute, dshBridge, dshSnapshot = { paused: true };
 let collection;
 let catalog;
 let companionTray;
@@ -116,6 +121,8 @@ let trayMenuKey = '';
 const statusPoller = createCompanionPoller({ getSite: () => siteView?.webContents, clean: cleanCompanion,
   interval: (value) => value?.focus && value.focus.phase !== 'idle' ? 1000 : 3000,
   onValue: (value) => {
+    const focusActive = value?.focus?.phase === 'focus' && !value.focus.paused;
+    dshSnapshot = { pose: focusActive ? 'focus' : Date.now() - (value?.typingAt || 0) < 900 ? 'typing' : value?.playing || value?.musicPlaying ? (value?.bpm && value?.beatAt ? 'groove' : 'listen') : 'idle', quiet: appearance.reduceMotion === true, paused: loading || !siteView };
     trayStatus = statusFrom(value);
     const key = [trayStatus.statusLine, trayStatus.playing, trayStatus.phase, trayStatus.paused, trayWanted()].join('|');
     if (key !== trayMenuKey || !companionTray) { trayMenuKey = key; refreshTray(); } else statusBar.apply(trayStatus);
@@ -398,7 +405,7 @@ async function wireRemoteView() {
     if (input.alt && input.key === 'ArrowLeft' && contents.navigationHistory.canGoBack()) { event.preventDefault(); contents.navigationHistory.goBack(); }
     if (input.alt && input.key === 'ArrowRight' && contents.navigationHistory.canGoForward()) { event.preventDefault(); contents.navigationHistory.goForward(); }
   });
-  await wireSiteSession({ contents, net, webRoot: path.join(__dirname, 'web'), collection, catalog, music: () => music, getAppearance: () => ({ ...appearance, platform: process.platform }), downloads: () => app.getPath('downloads'), writeLog,
+  await wireSiteSession({ contents, net, webRoot: path.join(__dirname, 'web'), collection, catalog, music: () => music, lan, weatherApi, pets: request => petPackRoute ? petPackRoute(request) : new Response('Unavailable', { status: 503 }), getAppearance: () => ({ ...appearance, platform: process.platform, lanSync: true, petPacks: true }), downloads: () => app.getPath('downloads'), writeLog,
     onDocumentFailed: () => { documentHttpFailed = true; setImmediate(() => showFailure('小屋暂时没能打开，请重新载入。')); } });
 }
 
@@ -438,6 +445,7 @@ let aiRelay = null;
 // Created lazily: userData is only final once the app is ready.
 const ai = () => aiRelay || (aiRelay = createAi({ directory: app.getPath('userData'), safeStorage, fetch: (url, options) => net.fetch(url, options), publish: (detail) => notifySite(aiScript(detail)), writeLog }));
 const weather = createWeather({ fetch: (url, options) => net.fetch(url, options), publish: (state) => notifySite(weatherScript(state)), writeLog });
+const weatherApi = createWeatherApi({ fetch: (url, options) => net.fetch(url, options), weather });
 function notifySite(script) {
   if (siteView && !siteView.webContents.isDestroyed()) siteView.webContents.executeJavaScript(script).catch(() => {});
 }
@@ -578,6 +586,9 @@ else {
       sendState();
       wallpaper?.reposition(); pet?.reposition(); desktopMode?.refit(); miniPlayer?.reposition();
     });
+    try { lan = createLanService({ directory: path.join(app.getPath('userData'), 'lan-sync') }); } catch (error) { writeLog('lan-unavailable', error.message); }
+    dshBridge = createDshBridge({ getSnapshot: () => dshSnapshot });
+    petPackRoute = createPetPackRoute({ store: createPetPackStore({ directory: path.join(app.getPath('userData'), 'pet-packs') }), bridge: dshBridge });
     registerShellProtocol(); registerIpc();
     wallpaper = createWallpaper({ app, getMain: () => mainWindow, getSite: () => siteView?.webContents, status: wallpaperStatus, appearanceScript, getAppearance: () => appearance, log: writeLog, registerProtocol: registerShellProtocol });
     desktopMode = createDesktopMode({ getWindow: () => mainWindow, screen, leaveFullscreen: () => setFullscreen(false), helperPath: desktopHelperPath(), log: writeLog,
@@ -625,5 +636,5 @@ else {
     }
     if (mainWindow) restoreMainWindow(); else createWindow().catch((error) => writeLog('startup-error', error.message));
   });
-  app.on('before-quit', () => { quitting = true; aiRelay?.dispose(); aiRelay = null; statusPoller.stop(); typingHook.stop(); clearTimeout(inputStatsTimer); inputStatsTimer = null; inputStats.dispose(); if (awakeBlocker !== null) { powerSaveBlocker.stop(awakeBlocker); awakeBlocker = null; } globalShortcut.unregisterAll(); desktopSink?.stop(); miniPlayer?.hide(); wallpaper?.stop(); pet?.stop(); weather.dispose(); music?.stop(); companionTray?.destroy(); companionTray = null; if (startupComplete) writeLog('closed'); });
+  app.on('before-quit', () => { quitting = true; dshBridge?.stop(); lan?.stop(); aiRelay?.dispose(); aiRelay = null; statusPoller.stop(); typingHook.stop(); clearTimeout(inputStatsTimer); inputStatsTimer = null; inputStats.dispose(); if (awakeBlocker !== null) { powerSaveBlocker.stop(awakeBlocker); awakeBlocker = null; } globalShortcut.unregisterAll(); desktopSink?.stop(); miniPlayer?.hide(); wallpaper?.stop(); pet?.stop(); weather.dispose(); music?.stop(); companionTray?.destroy(); companionTray = null; if (startupComplete) writeLog('closed'); });
 }

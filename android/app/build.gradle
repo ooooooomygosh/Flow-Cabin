@@ -14,7 +14,7 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode cabinParts[0] * 1000000 + cabinParts[1] * 10000 + cabinParts[2] * 100 + 3
-        versionName cabinVersion + "-android.3"
+        versionName cabinVersion
         ndk { abiFilters 'arm64-v8a', 'x86_64' }
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
