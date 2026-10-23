@@ -111,8 +111,6 @@ try {
   const run = async (name, test, { notes = '原有随手记', journalSeed = null } = {}) => {
     if (process.env.MEMORY_DELETE_FILTER && !name.includes(process.env.MEMORY_DELETE_FILTER)) return;
     const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'zh-CN', reducedMotion: 'reduce' });
-    // These flows exercise the classic shelf; since 2.2 the life cabin is the default home.
-    await context.addInitScript(() => { if (localStorage.getItem('flow-cabin-interface-v1') === null) localStorage.setItem('flow-cabin-interface-v1', 'classic'); });
     await context.addInitScript((seed) => { window.__onboardingSeed = seed; }, onboardingSeed());
     await context.addInitScript(({ focusKey, journalKey, notes, journalSeed }) => {
       if (location.origin === 'null') return;

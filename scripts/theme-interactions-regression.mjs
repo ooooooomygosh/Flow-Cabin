@@ -82,8 +82,6 @@ try {
   report.servedThemeModel = 'the-new-starlight-geometry';
   browser = await launchChromium();
   context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'zh-CN' });
-  // These flows exercise the classic shelf; since 2.2 the life cabin is the default home.
-  await context.addInitScript(() => { if (localStorage.getItem('flow-cabin-interface-v1') === null) localStorage.setItem('flow-cabin-interface-v1', 'classic'); });
   const page = await context.newPage();
   page.on('pageerror', error => report.pageErrors.push(error.message));
   page.on('console', message => { if (message.type() === 'error') report.consoleErrors.push(message.text()); });
