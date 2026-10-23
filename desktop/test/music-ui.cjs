@@ -3,7 +3,7 @@ const { _electron } = require('playwright'), fs = require('node:fs'), path = req
 const { mountFixture, albums, openMusicSettings, closeSettings, chooseSource } = require('./ui-fixture.cjs');
 const desktop = path.resolve(__dirname, '..'), output = path.join(desktop, 'test-results');
 const env = { ...process.env, ALBUM_DESKTOP_TEST_PROFILE: path.join(output, `music-ui-profile-${Date.now()}`) }; delete env.ELECTRON_RUN_AS_NODE;
-const executablePath = process.env.ALBUM_QA_EXE || path.join(desktop, 'node_modules/electron/dist/electron.exe');
+const executablePath = process.env.ALBUM_QA_EXE || require(path.join(desktop, 'node_modules/electron'));
 const report = { executablePath, startedAt: new Date().toISOString(), fixtureData: true, syntheticSilentAudio: true, actualPlatformLoginTested: false, paidAIRequests: 0, productionWrites: 0, checks: [], pageErrors: [] };
 const check = (name) => { report.checks.push({ name, passed: true }); console.log('PASS ' + name); }; let app, site, host;
 (async () => {

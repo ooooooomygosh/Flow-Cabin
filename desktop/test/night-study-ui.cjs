@@ -46,7 +46,7 @@ async function startWallpaper() {
   await wallpaper.waitForFunction(() => Array.from(document.images).every(i => i.complete && i.naturalWidth > 0));
 }
 (async () => {
-  app = await _electron.launch({ executablePath: process.env.ALBUM_QA_EXE || path.join(desktop, 'node_modules/electron/dist/electron.exe'), args: process.env.ALBUM_QA_EXE ? [] : [desktop], env }); app.context().setDefaultTimeout(20000); await app.firstWindow();
+  app = await _electron.launch({ executablePath: process.env.ALBUM_QA_EXE || require(path.join(desktop, 'node_modules/electron')), args: process.env.ALBUM_QA_EXE ? [] : [desktop], env }); app.context().setDefaultTimeout(20000); await app.firstWindow();
   for (let i = 0; i < 100; i++) { site = app.context().pages().find(p => p.url().startsWith('https://album-circle.vercel.app')); host = app.context().pages().find(p => p.url() === 'album-desktop://shell/index.html'); if (site && host) break; await new Promise(r => setTimeout(r, 100)); }
   site.on('pageerror', e => report.pageErrors.push(e.message)); await mountFixture(app, site, { items, music: true, autoMusic: true });
   await site.locator('.cabin-night-study .study-writing-hand').waitFor(); assert.equal(await site.locator('.room-record-slot').count(), 9);

@@ -6,7 +6,7 @@ const { _electron } = require('playwright'), fs = require('node:fs'), path = req
 const { mountFixture, chooseRoomScene, openAddToShelf } = require('./ui-fixture.cjs');
 const desktop = path.resolve(__dirname, '..'), output = path.join(desktop, '..', 'docs', 'images'); fs.mkdirSync(output, { recursive: true });
 const env = { ...process.env, ALBUM_DESKTOP_TEST_PROFILE: path.join(desktop, 'test-results', `screenshots-profile-${Date.now()}`) }; delete env.ELECTRON_RUN_AS_NODE;
-const executablePath = process.env.ALBUM_QA_EXE || path.join(desktop, 'node_modules/electron/dist/electron.exe');
+const executablePath = process.env.ALBUM_QA_EXE || require(path.join(desktop, 'node_modules/electron'));
 
 const ALBUMS = [
   ['Snowfall Tapes', 'Hazel Lane', '#24324f', '#f2d7a6', 'moon'], ['Ember & Oak', 'The Kindling', '#5a2a17', '#f4a259', 'fire'],

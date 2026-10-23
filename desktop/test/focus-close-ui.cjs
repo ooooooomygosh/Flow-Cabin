@@ -5,7 +5,7 @@
 const { _electron } = require('playwright'), fs = require('node:fs'), path = require('node:path'), assert = require('node:assert/strict');
 const desktop = path.resolve(__dirname, '..'), output = path.join(desktop, 'test-results'); fs.mkdirSync(output, { recursive: true });
 const env = { ...process.env, ALBUM_DESKTOP_TEST_PROFILE: path.join(output, `focus-close-profile-${Date.now()}`) }; delete env.ELECTRON_RUN_AS_NODE;
-const executablePath = process.env.ALBUM_QA_EXE || path.join(desktop, 'node_modules/electron/dist/electron.exe');
+const executablePath = process.env.ALBUM_QA_EXE || require(path.join(desktop, 'node_modules/electron'));
 const check = (name) => console.log('PASS ' + name);
 const mainWindow = (BrowserWindow) => BrowserWindow.getAllWindows().find((w) => w.webContents.getURL() === 'album-desktop://shell/index.html');
 let app;

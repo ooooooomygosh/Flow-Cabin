@@ -5,7 +5,7 @@ const { _electron } = require('playwright'), fs = require('node:fs'), path = req
 const { mountFixture } = require('./ui-fixture.cjs');
 const desktop = path.resolve(__dirname, '..'), output = path.join(desktop, 'test-results'); fs.mkdirSync(output, { recursive: true });
 const env = { ...process.env, ALBUM_DESKTOP_TEST_PROFILE: path.join(output, `pet-ui-profile-${Date.now()}`) }; delete env.ELECTRON_RUN_AS_NODE;
-const executablePath = process.env.ALBUM_QA_EXE || path.join(desktop, 'node_modules/electron/dist/electron.exe');
+const executablePath = process.env.ALBUM_QA_EXE || require(path.join(desktop, 'node_modules/electron'));
 const report = { executablePath, startedAt: new Date().toISOString(), fixtureData: true, checks: [], pageErrors: [] };
 const check = (name, detail = {}) => { report.checks.push({ name, passed: true, ...detail }); console.log('PASS ' + name); };
 let app, site, host;
@@ -108,7 +108,8 @@ let app, site, host;
 
   await pet.evaluate(() => window.albumPet.command('focus-start'));
   await site.locator('.focus-badge.is-running').waitFor();
-  await pet.locator('.pixel-cat[data-pose="focus"]').waitFor(); await pet.locator('.pet-bubble', { hasText: '开始专注啦' }).waitFor(); // 2.2: the bubble speaks at the start, not the whole round
+  // Since 2.1 the focusing pet cycles through its work poses rather than one 'focus' pose.
+  await pet.locator(['focus', 'read', 'write', 'think'].map(pose => `.pixel-cat[data-pose="${pose}"]`).join(', ')).first().waitFor(); await pet.locator('.pet-bubble', { hasText: '开始专注啦' }).waitFor(); // 2.2: the bubble speaks at the start, not the whole round
   check('pet-starts-focus-and-mirrors-it');
   await pet.evaluate(() => window.albumPet.command('evil-command')); await pet.evaluate(() => window.albumPet.command('focus-pause'));
   await site.locator('.focus-badge.is-paused').waitFor(); assert.equal(await site.evaluate(() => window.albumCompanionSnapshot().focus.paused), true); check('pet-commands-are-whitelisted');
