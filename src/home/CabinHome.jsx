@@ -11,6 +11,7 @@ import { readLights, setRoomLight } from './recipes.mjs';
 import { SleepIndicator } from './SceneTools';
 import HomeCorner from './HomeCorner';
 import { ClockReadout, CalendarReadout, LyricsReadout } from './HomeReadouts';
+import { FURNITURE_EXTRAS, FurnitureExtra } from './FurnitureExtras';
 import useBackLayer from '../ui/useBackLayer';
 import { shouldShowHomeNotice, dismissHomeNotice } from '../interface-mode.mjs';
 import './home.css';
@@ -19,6 +20,7 @@ const ZONES = [{ id: 'music', name: '听歌角', x: 335, y: 454 }, { id: 'work',
 const shortDate = date => date.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' });
 function FurnitureContents({ item }) {
   const { deck, focus, sky } = useCabinRuntime();
+  if (FURNITURE_EXTRAS[item.type]) return <FurnitureExtra item={item}/>;
   if (['clock', 'timer'].includes(item.type)) return <ClockReadout/>;
   if (item.type === 'calendar') return <CalendarReadout/>;
   if (item.type === 'weather') { const weather = sky.settings.realWeather && sky.real; return <span className="home-weather-readout"><b>{Number.isFinite(weather?.temperature) ? `${Math.round(weather.temperature)}°` : '天气'}</b><small>{weather ? sky.city?.name || '附近' : '选择地区'}</small></span>; }

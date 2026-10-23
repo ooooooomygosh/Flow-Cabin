@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Clock, Music2, Play, Refresh, Settings, Sparkles, X } from '../icons';
+import { Check, Clock, Music2, Play, Refresh, Settings, Sparkles, X } from '../icons';
 import { aiConnectionReady } from './ai-model.mjs';
 import { chat, isDesktopShell } from './ai-transport.mjs';
 import { useAiSettings } from './useCabinLetters.js';
@@ -8,6 +8,7 @@ import {
   EXAMPLE_REQUESTS, buildAiMessages, localRecommendation, normalizePlaybackPlan, normalizePlaylistPlaybackPlan,
   parseAiPlaylist, parseIntent, smartPlaylistItem
 } from './smart-turntable.mjs';
+import { fallbackFollowUp, fallbackNotice, progressSteps } from './smart-progress.mjs';
 import './smart-turntable.css';
 
 const FOCUSABLE = 'button:not(:disabled), textarea:not(:disabled), input:not(:disabled), [tabindex]:not([tabindex="-1"])';
@@ -26,6 +27,10 @@ export default function SmartTurntable({ open, close, items = [], onStart, onSav
   const [starting, setStarting] = useState(false);
   const [result, setResult] = useState(null);
   const [note, setNote] = useState('');
+  // While busy: which step is running, what it is working with, and for how long.
+  const [progress, setProgress] = useState(null), [elapsed, setElapsed] = useState(0);
+  // Why AI did not deliver, shown above the local recommendation that replaced it.
+  const [fallbackInfo, setFallbackInfo] = useState(null);
   const panel = useRef(null), input = useRef(null), previousFocus = useRef(null), sequence = useRef(0), request = useRef(null);
   const shelf = Array.isArray(items) ? items.filter((item) => item && typeof item === 'object') : [];
   const configured = aiConnectionReady(settings, key, { desktop: isDesktopShell() });
@@ -42,6 +47,8 @@ export default function SmartTurntable({ open, close, items = [], onStart, onSav
       setQuery('');
       setResult(null);
       setNote('');
+      setProgress(null);
+      setFallbackInfo(null);
       return;
     }
     previousFocus.current = document.activeElement;
@@ -53,6 +60,13 @@ export default function SmartTurntable({ open, close, items = [], onStart, onSav
       previousFocus.current?.focus?.({ preventScroll: true });
     };
   }, [open]);
+
+  useEffect(() => {
+    if (!busy || !progress?.startedAt) return undefined;
+    const tick = () => setElapsed(Date.now() - progress.startedAt);
+    tick(); const timer = window.setInterval(tick, 1000);
+    return () => window.clearInterval(timer);
+  }, [busy, progress?.startedAt]);
 
   if (!open || typeof document === 'undefined') return null;
 
@@ -66,16 +80,20 @@ export default function SmartTurntable({ open, close, items = [], onStart, onSav
     setStarting(false);
     setNote('');
     setResult(null);
+    setFallbackInfo(null);
+    setProgress({ stage: 'shelf', intent, shelfCount: shelf.length, startedAt: Date.now() });
+    setElapsed(0);
 
-    const fallback = (message) => {
+    const fallback = (notice) => {
       setResult(localRecommendation(intent, shelf));
-      if (message) setNote(message);
+      setFallbackInfo(notice);
     };
     if (!configured) {
-      fallback(settings.enabled ? 'AI 配置还没有完成，已先用唱片架做本机推荐。' : 'AI 未启用，已按唱片架做本机推荐。');
+      fallback(fallbackNotice({ configured: false, enabled: settings.enabled }));
       setBusy(false);
       return;
     }
+    setProgress((value) => value && { ...value, stage: 'ai' });
 
     const controller = new AbortController();
     request.current = controller;
@@ -88,19 +106,18 @@ export default function SmartTurntable({ open, close, items = [], onStart, onSav
         signal: controller.signal
       });
       if (requestId !== sequence.current) return;
+      setProgress((value) => value && { ...value, stage: 'check' });
       const selection = reply.ok ? parseAiPlaylist(reply.text, intent) : null;
       const item = selection ? smartPlaylistItem(selection, selection.tracks) : null;
       if (selection && item) {
         setResult({ ...selection, item, reason: selection.description });
         setNote('歌单已经排好，可以直接收进唱片架，或开始这一轮。');
       } else {
-        fallback(reply.ok
-          ? 'AI 没有返回可用的歌单，已先用唱片架做本机推荐。'
-          : `AI 这次没有接上：${reply.error} 已先用唱片架做本机推荐。`);
+        fallback(fallbackNotice(reply.ok ? { invalid: true } : { reply }));
       }
     } catch {
       if (requestId !== sequence.current) return;
-      fallback('AI 这次没有接上，已先用唱片架做本机推荐。');
+      fallback(fallbackNotice({ thrown: true }));
     } finally {
       if (request.current === controller) request.current = null;
       if (requestId === sequence.current) setBusy(false);
@@ -235,10 +252,27 @@ export default function SmartTurntable({ open, close, items = [], onStart, onSav
           </div>
 
           <div className="st-output" aria-live="polite" aria-busy={busy}>
-            {busy && <div className="st-placeholder"><span className="st-loading" aria-hidden="true"/><p>小屋正在挑歌、排顺序…</p></div>}
+            {busy && <div className="st-progress">
+              <ol className="st-steps" aria-label="编排进度">{progressSteps(progress?.stage, { intent: progress?.intent, shelfCount: progress?.shelfCount, elapsedMs: elapsed }).map((step) => (
+                <li key={step.id} className={`st-step is-${step.state}`} aria-current={step.state === 'active' ? 'step' : undefined}>
+                  <span className="st-step-mark" aria-hidden="true">{step.state === 'done' ? <Check size={12}/> : step.state === 'active' ? <span className="st-loading"/> : null}</span>
+                  <span className="st-step-copy"><strong>{step.label}</strong>{step.detail && <small>{step.detail}</small>}</span>
+                </li>
+              ))}</ol>
+              {progress?.stage === 'ai' && <button type="button" className="st-refresh" onClick={abortRequest}>不等了，用唱片架推荐</button>}
+            </div>}
             {!busy && !result && <p className="st-placeholder">写下计划，或者点一句示例。不会发送你的待办或笔记内容。</p>}
             {!busy && result && (
               <div className="st-result">
+                {fallbackInfo && <div className={`st-fallback is-${fallbackInfo.kind}`} role="status">
+                  <strong>{fallbackInfo.title}</strong>
+                  <p>{fallbackInfo.reason}</p>
+                  <small>{fallbackFollowUp(result)}</small>
+                  {(fallbackInfo.canRetry || (['auth', 'setup', 'off'].includes(fallbackInfo.kind) && onNeedAiSettings)) && <span className="st-fallback-actions">
+                    {fallbackInfo.canRetry && <button type="button" className="st-refresh" disabled={!query.trim()} onClick={() => ask()}><Refresh size={14}/>再请 AI 试一次</button>}
+                    {['auth', 'setup', 'off'].includes(fallbackInfo.kind) && onNeedAiSettings && <button type="button" className="st-refresh" onClick={() => onNeedAiSettings()}><Settings size={14}/>{fallbackInfo.kind === 'off' ? '开启 AI' : '检查 AI 设置'}</button>}
+                  </span>}
+                </div>}
                 <div className="st-summary">
                   <span className="st-chip"><Clock size={14}/>{result.minutes} 分钟</span>
                   <span className="st-chip"><Music2 size={14}/>{result.activity?.label || '专注'}</span>

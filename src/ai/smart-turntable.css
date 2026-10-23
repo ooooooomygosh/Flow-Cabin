@@ -233,6 +233,26 @@
     75% { translate: 0 6px; background: var(--px-accent); }
   }
   .st-result { display: grid; gap: 10px; }
+  /* 编排进度: one row per step, so a long wait reads as work, not a stall. */
+  .st-progress { display: grid; gap: 8px; padding: 12px; background: rgba(22, 13, 7, .36); border: 1px dashed var(--px-border-subtle); }
+  .st-steps { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+  .st-step { display: flex; align-items: flex-start; gap: 10px; font-family: var(--px-font-body); font-size: 12px; line-height: 1.5; color: var(--px-ink-faint); }
+  .st-step-mark { flex: none; display: grid; place-items: center; width: 18px; height: 18px; margin-top: 1px; border: 1px solid var(--px-border-subtle); color: var(--px-good); }
+  .st-step-mark .st-loading { width: 6px; height: 6px; margin: 0; box-shadow: none; }
+  .st-step-copy { display: grid; gap: 1px; min-width: 0; }
+  .st-step-copy strong { font-weight: 700; }
+  .st-step.is-done { color: var(--px-ink-dim); }
+  .st-step.is-done .st-step-mark { border-color: var(--px-good); }
+  .st-step.is-active { color: var(--px-ink); }
+  .st-step.is-active .st-step-mark { border-color: var(--px-accent); }
+  .st-step.is-pending { opacity: .55; }
+  /* AI 没排成: the reason first, then what the cabin did instead. */
+  .st-fallback { display: grid; gap: 4px; padding: 10px 12px; background: rgba(22, 13, 7, .36); border: 1px solid var(--px-border-subtle); border-left: 4px solid var(--px-warn); font-family: var(--px-font-body); font-size: 12px; line-height: 1.6; }
+  .st-fallback.is-off, .st-fallback.is-cancelled { border-left-color: var(--px-border-hi); }
+  .st-fallback strong { color: var(--px-ink); font-weight: 700; }
+  .st-fallback p { margin: 0; color: var(--px-ink-dim); overflow-wrap: anywhere; }
+  .st-fallback small { color: var(--px-ink-faint); font-size: 12px; }
+  .st-fallback-actions { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
   .st-summary { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   .st-chip {
     min-height: 24px;
