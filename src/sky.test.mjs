@@ -173,13 +173,13 @@ test('frame budget: nothing moving means no frames; falling weather 12 fps (8 on
 });
 
 test('sky settings: off by default, normalised, stored under one key; minute ticks align', () => {
-  assert.deepEqual(normalizeSkySettings(null), { place: 'auto', realWeather: false });
-  assert.deepEqual(normalizeSkySettings({ place: '../x', realWeather: 'yes' }), { place: 'auto', realWeather: false });
-  assert.deepEqual(normalizeSkySettings({ place: 'tokyo', realWeather: true }), { place: 'tokyo', realWeather: true });
+  assert.deepEqual(normalizeSkySettings(null), { place: 'clock', realWeather: false, locationSource: 'manual' });
+  assert.deepEqual(normalizeSkySettings({ place: '../x', realWeather: 'yes' }), { place: 'clock', realWeather: false, locationSource: 'manual' });
+  assert.deepEqual(normalizeSkySettings({ place: 'tokyo', realWeather: true, locationSource: 'manual' }), { place: 'tokyo', realWeather: true, locationSource: 'manual' });
   const store = new Map(), storage = { getItem: (k) => store.get(k) ?? null, setItem: (k, v) => store.set(k, v) };
-  assert.deepEqual(readSkySettings(storage), { place: 'auto', realWeather: false });
-  writeSkySettings({ place: 'beijing' }, storage); assert.deepEqual(JSON.parse(store.get(SKY_SETTINGS_KEY)), { place: 'beijing', realWeather: false });
-  store.set(SKY_SETTINGS_KEY, '{oops'); assert.deepEqual(readSkySettings(storage), { place: 'auto', realWeather: false });
+  assert.deepEqual(readSkySettings(storage), { place: 'clock', realWeather: false, locationSource: 'manual' });
+  writeSkySettings({ place: 'beijing' }, storage); assert.deepEqual(JSON.parse(store.get(SKY_SETTINGS_KEY)), { place: 'beijing', realWeather: false, locationSource: 'manual' });
+  store.set(SKY_SETTINGS_KEY, '{oops'); assert.deepEqual(readSkySettings(storage), { place: 'clock', realWeather: false, locationSource: 'manual' });
   assert.equal(msToNextMinute(120000), 60050); assert.equal(msToNextMinute(179999), 51);
 });
 
@@ -227,5 +227,5 @@ test('custom place keeps v1 settings compatible, validates IANA timezone, and bi
   assert.equal(city.name, '我的城市'); assert.equal(city.lat, -33.87); assert.equal(city.zone, 'Australia/Sydney');
   assert.match(placeDescription(city), /新南威尔士州/);
   for (const patch of [{ lat: '' }, { lat: 91 }, { lng: 181 }, { zone: 'Invalid/Zone' }, { name: '' }]) assert.equal(normalizeCustomPlace({ ...customPlace, ...patch }), null);
-  assert.deepEqual(normalizeSkySettings({ place: 'shanghai', realWeather: false }), { place: 'shanghai', realWeather: false });
+  assert.deepEqual(normalizeSkySettings({ place: 'shanghai', realWeather: false, locationSource: 'manual' }), { place: 'shanghai', realWeather: false, locationSource: 'manual' });
 });

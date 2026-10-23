@@ -1,3 +1,4 @@
+import { invalidateRecovery } from '../backup/recovery.mjs';
 import { dayKey } from '../lib/local-calendar.mjs';
 
 export const JOURNAL_KEY = 'flow-cabin-journal-v1';
@@ -127,6 +128,7 @@ export function purgeJournalEntry({ storage, id, expectedVersion, now = Date.now
     if (!entry || entry.purgedAt != null || entry.version !== expectedVersion) return conflict();
     if (entry.deletedAt == null) return { ok: false, error: '只能永久删除回收站里的手记。' };
     if (!date(now)) throw new Error();
+    invalidateRecovery(storage);
     write(storage, entries.map((item) => item.id === id ? { id, purgedAt: Math.max(now, entry.updatedAt) } : item), target);
     return { ok: true };
   } catch { return { ok: false, error: '永久删除失败，手记正文和历史仍保留。请检查本机存储后重试。' }; }

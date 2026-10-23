@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useMemo, useRef, useState 
 import { recordEnd } from './session-log.mjs';
 import * as model from './focus-model.mjs';
 import { playChime } from '../lib/chime.mjs';
+import { focusHeld, transferTimer } from '../sync/focus-handoff.mjs';
 
 // Two contexts: the record and its actions change only on commits; the clock
 // ticks once per displayed second while a timer runs. Only the time displays
@@ -63,10 +64,13 @@ export function FocusProvider({ userId, children }) {
   };
   // A user can click immediately after wake, before the first interval fires.
   // Settle the expired phase first rather than pausing/skipping a finished round.
-  const applyTimer = (change) => apply((state, time) => {
+  const applyTimer = (change) => {
+    if (focusHeld(current.current.timer)) { setError('这轮专注正在交接，先在设备联动中确认接收状态。'); return false; }
+    return apply((state, time) => {
     const elapsed = model.tick(state, time);
     return elapsed.event ? elapsed : change(state, time);
-  }, { volatile: true });
+    }, { volatile: true });
+  };
   useEffect(() => {
     const running = state.timer.phase !== 'idle' && !state.timer.paused;
     if (!running) return;
@@ -112,6 +116,9 @@ export function FocusProvider({ userId, children }) {
   }, []);
   // Actions only use refs and state setters: built once per storage key.
   const actions = useMemo(() => ({
+    prepareTransfer: () => { const time=Date.now(),data=transferTimer(current.current.timer,time); const next=model.pause(current.current,time); if(!commit({...next,timer:{...next.timer,sessionId:data.sessionId,ownerVersion:data.version}}).persisted)throw Error('暂停专注未能保存，未开始交接。');return data; },
+    acceptTransfer: data => { if(current.current.timer.phase!=='idle')throw Error('这台设备已有计时，不能接收专注。');if(!data?.sessionId || !(data.remaining>0 && data.remaining<=data.duration && data.duration<=10800000))throw Error('专注交接时间无效。');const time=Date.now();if(!commit({...current.current,timer:{phase:data.phase,sessionId:data.sessionId,ownerVersion:data.version,duration:data.duration,remaining:data.remaining,endsAt:time+data.remaining,startedAt:time-(data.duration-data.remaining),paused:false,round:current.current.timer.round,taskId:''}}).persisted)throw Error('接收计时未能保存。');return true; },
+    releaseTransfer: id => { if(current.current.timer.sessionId!==id)return false;return commit(model.reset(current.current)).persisted; },
     toggle: () => { if (current.current.settings.notify && 'Notification' in window && Notification.permission === 'default') Notification.requestPermission().catch?.(() => {}); return applyTimer(model.toggle); },
     start: (phase = 'focus', taskId) => applyTimer((s, t) => model.startPhase(s, phase, t, taskId)),
     skip: () => applyTimer(model.skip),

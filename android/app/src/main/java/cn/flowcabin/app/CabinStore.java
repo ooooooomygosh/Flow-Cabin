@@ -22,7 +22,7 @@ final class CabinStore extends SQLiteOpenHelper {
     }
     @Override public void onConfigure(SQLiteDatabase db) { db.execSQL("PRAGMA synchronous=FULL"); }
     static boolean allowed(String key) {
-        return key != null && key.length() <= 240 && (key.startsWith("album-circle-") || key.startsWith("flow-cabin-")) && !key.equals("flow-cabin-ai-key-v1");
+        return key != null && key.length() <= 240 && (key.startsWith("album-circle-") || key.startsWith("flow-cabin-") || key.equals("cabin.petPack.v1")) && !key.equals("flow-cabin-ai-key-v1");
     }
     synchronized JSONObject read() throws Exception {
         SQLiteDatabase db = getReadableDatabase(); JSONObject values = new JSONObject();

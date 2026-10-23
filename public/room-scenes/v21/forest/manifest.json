@@ -1,0 +1,429 @@
+{
+  "schemaVersion": 1,
+  "theme": "forest",
+  "label": "林间小屋",
+  "kind": "empty-room-shell",
+  "image": "shell.png",
+  "imageSize": {
+    "width": 1536,
+    "height": 1024
+  },
+  "logicalSize": {
+    "width": 1200,
+    "height": 800
+  },
+  "camera": {
+    "kind": "fixed-oblique",
+    "floorMapping": "bilinear-quad",
+    "elevationAxis": [
+      0,
+      -1
+    ],
+    "worldExtent": {
+      "u": [
+        0,
+        800
+      ],
+      "v": [
+        0,
+        800
+      ]
+    },
+    "mapping": "s=u/800, t=v/800; p=(1-s)(1-t)*back+s(1-t)*right+s*t*front+(1-s)*t*left; elevation subtracts from p.y."
+  },
+  "geometry": {
+    "floor": {
+      "coordinateSpace": "logical",
+      "corners": {
+        "back": [
+          600,
+          321.9
+        ],
+        "right": [
+          1096.1,
+          511.7
+        ],
+        "front": [
+          592.2,
+          756.3
+        ],
+        "left": [
+          101.6,
+          507.8
+        ]
+      },
+      "polygon": [
+        [
+          600,
+          321.9
+        ],
+        [
+          1096.1,
+          511.7
+        ],
+        [
+          592.2,
+          756.3
+        ],
+        [
+          101.6,
+          507.8
+        ]
+      ],
+      "sourcePixelPolygon": [
+        [
+          768,
+          412
+        ],
+        [
+          1403,
+          655
+        ],
+        [
+          758,
+          968
+        ],
+        [
+          130,
+          650
+        ]
+      ]
+    },
+    "walls": [
+      {
+        "id": "left-wall",
+        "polygon": [
+          [
+            101,
+            247
+          ],
+          [
+            584,
+            72
+          ],
+          [
+            584,
+            311.9
+          ],
+          [
+            101,
+            483.8
+          ]
+        ],
+        "usablePolygons": [
+          [
+            [
+              516,
+              132
+            ],
+            [
+              574,
+              109
+            ],
+            [
+              574,
+              248
+            ],
+            [
+              516,
+              271
+            ]
+          ]
+        ]
+      },
+      {
+        "id": "right-wall",
+        "polygon": [
+          [
+            619,
+            73
+          ],
+          [
+            1093,
+            250
+          ],
+          [
+            1093,
+            486.7
+          ],
+          [
+            619,
+            311.9
+          ]
+        ],
+        "usablePolygons": [
+          [
+            [
+              630,
+              115
+            ],
+            [
+              775,
+              170
+            ],
+            [
+              775,
+              280
+            ],
+            [
+              630,
+              228
+            ]
+          ]
+        ]
+      }
+    ],
+    "fixedObstacles": [
+      {
+        "id": "fireplace",
+        "kind": "built-in-hearth",
+        "floorPolygon": [
+          [
+            760.2,
+            378.1
+          ],
+          [
+            889.1,
+            443.8
+          ],
+          [
+            921.1,
+            421.9
+          ],
+          [
+            799.2,
+            361.7
+          ]
+        ],
+        "occluderPolygon": [
+          [
+            772.7,
+            273.4
+          ],
+          [
+            812.5,
+            258.6
+          ],
+          [
+            812.5,
+            142.2
+          ],
+          [
+            904.7,
+            169.5
+          ],
+          [
+            904.7,
+            295.3
+          ],
+          [
+            923.4,
+            311.7
+          ],
+          [
+            921.1,
+            421.9
+          ],
+          [
+            889.1,
+            443.8
+          ],
+          [
+            760.2,
+            378.1
+          ]
+        ]
+      }
+    ],
+    "floorUsablePolygon": [
+      [
+        599.8,
+        350.4
+      ],
+      [
+        1021.1,
+        515.5
+      ],
+      [
+        593.2,
+        719.6
+      ],
+      [
+        175.8,
+        512.2
+      ]
+    ],
+    "emptyDeskSurfaces": true
+  },
+  "anchors": {
+    "floor": [
+      {
+        "id": "music-zone",
+        "worldPosition": {
+          "u": 180,
+          "v": 520
+        },
+        "position": [
+          386.9,
+          494
+        ],
+        "radius": 100
+      },
+      {
+        "id": "work-zone",
+        "worldPosition": {
+          "u": 260,
+          "v": 170
+        },
+        "position": [
+          654.9,
+          427.1
+        ],
+        "radius": 80
+      },
+      {
+        "id": "life-zone",
+        "worldPosition": {
+          "u": 650,
+          "v": 550
+        },
+        "position": [
+          657.4,
+          636.7
+        ],
+        "radius": 90
+      },
+      {
+        "id": "pet-start",
+        "worldPosition": {
+          "u": 440,
+          "v": 600
+        },
+        "position": [
+          496.8,
+          589.9
+        ],
+        "radius": 45
+      }
+    ],
+    "wall": [
+      {
+        "id": "left-clock",
+        "wall": "left-wall",
+        "position": [
+          545,
+          204
+        ],
+        "maxSize": [
+          54,
+          80
+        ]
+      },
+      {
+        "id": "right-board",
+        "wall": "right-wall",
+        "position": [
+          702,
+          209
+        ],
+        "maxSize": [
+          124,
+          98
+        ]
+      }
+    ],
+    "desk": [],
+    "deskNote": "No desk is baked into the shell. Use support surfaces supplied by separately placed furniture.",
+    "window": [
+      {
+        "id": "window-1",
+        "polygon": [
+          [
+            160,
+            260
+          ],
+          [
+            492,
+            151
+          ],
+          [
+            492,
+            322
+          ],
+          [
+            160,
+            444
+          ]
+        ]
+      },
+      {
+        "id": "window-2",
+        "polygon": [
+          [
+            937,
+            245
+          ],
+          [
+            1087,
+            299
+          ],
+          [
+            1087,
+            413
+          ],
+          [
+            937,
+            353
+          ]
+        ]
+      }
+    ],
+    "fireplace": [
+      {
+        "id": "hearth",
+        "position": [
+          842.4,
+          401.4
+        ]
+      }
+    ]
+  },
+  "source": {
+    "generator": "image_gen.imagegen",
+    "generatedAt": "2026-10-23",
+    "reference": "/room-scenes/v21/pixel/shell.png",
+    "referenceSha256": "05bb654bb6ea2c5328e372ea2ec0c9bf9247491e823a2eba3d2fa8b492d14372",
+    "promptFile": "prompt.txt",
+    "originalFile": "exec-7525c32e-8c23-4b07-9c28-59c1f7148130.png",
+    "imageEditedAfterGeneration": false
+  },
+  "verification": {
+    "visual": "Full two-wall cutaway, empty floor, no movable furniture, no pet, no text or UI.",
+    "architecture": "Cedar structure, sage lime plaster, diamond-mullioned forest window, river-stone hearth.",
+    "alpha": {
+      "theme": "forest",
+      "size": [
+        1536,
+        1024
+      ],
+      "mode": "RGBA",
+      "alphaExtrema": [
+        0,
+        254
+      ],
+      "transparentPixels": 623949,
+      "nearlyOpaquePixels": 915982,
+      "totalPixels": 1572864,
+      "alpha8Bounds": [
+        78,
+        12,
+        1459,
+        1005
+      ],
+      "edgeAlpha": 1,
+      "sha256": "6ec3f4814b534af25234299cc17ccfb69e5487904cd41e718b98144d395f507e",
+      "bytes": 2385054
+    },
+    "geometry": "Floor and obstacle polygons manually traced from this generated image; allow ±4 logical pixels of visual tracing tolerance. Use this theme's actual quad rather than assuming the reference parallelogram."
+  }
+}

@@ -38,9 +38,9 @@ const SHADOW = [{ scale: '1.1 1', opacity: .3, offset: 0, easing: 'steps(1, end)
 // (hopArtPixels / hopDownArtPixels live in pet-motion.mjs so they can be tested.)
 // Writes --pet-hop only when it changes: a style write per tick would undo
 // the point of quantising the energy.
-const writeHop = (node, energy) => {
+const writeHop = (node, energy, maximum = Infinity) => {
   if (!node) return;
-  const hop = hopArtPixels(energy), down = hopDownArtPixels(hop);
+  const hop = Math.min(maximum, hopArtPixels(energy)), down = hopDownArtPixels(hop);
   if (node.style.getPropertyValue('--pet-hop') !== String(hop)) node.style.setProperty('--pet-hop', String(hop));
   if (node.style.getPropertyValue('--pet-hop-down') !== String(down)) node.style.setProperty('--pet-hop-down', String(down));
 };
@@ -50,21 +50,23 @@ const writeHop = (node, energy) => {
 // off — and their beat/tempo must keep updating either way.
 export default function PetLife({ pose = 'idle', musicBeat = false, pokedAt = 0, reduced = false, pauseInBackground = false, children }) {
   const root = useRef(null), [burst, setBurst] = useState(0), first = useRef(true);
-  const level = useRef(null);
+  const level = useRef(null), quietWork = useRef(false);
+  quietWork.current = ['focus','read','write','type','think'].includes(pose);
   useEffect(() => {
     // ~15 Hz in, eight levels out: the hop is stepped, and the style is only
     // touched when the level really changes.
     return onCabinPlayback((detail) => {
       const next = detail.playing ? Math.max(.125, quantiseEnergy(detail, 8)) : 0;
-      if (next === level.current) return;
-      level.current = next;
+      const signature = `${next}:${quietWork.current}`;
+      if (signature === level.current) return;
+      level.current = signature;
       root.current?.style.setProperty('--pet-energy', String(next));
-      writeHop(root.current, next);
+      writeHop(root.current, next, quietWork.current ? 1 : Infinity);
     });
   }, []);
   useEffect(() => {
     const host = root.current, cat = host?.querySelector(':scope > .pixel-cat');
-    if (!(pose === 'groove' || (pose === 'focus' && musicBeat)) || reduced || !cat?.animate) return;
+    if (!(musicBeat && ['groove','listen','nod','sway','dance','focus','read','write','type','think'].includes(pose)) || reduced || !cat?.animate) return;
     let hop = null, shadow = null, timer = null, background = false;
     const stop = () => { hop?.cancel(); shadow?.cancel(); hop = null; shadow = null; };
     const sync = () => {

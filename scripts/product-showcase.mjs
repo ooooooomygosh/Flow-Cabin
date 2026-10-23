@@ -89,7 +89,7 @@ try {
   await shot('personalization', true); await closeSettings(page);
   await page.keyboard.press('h'); assert(await page.evaluate(() => document.documentElement.classList.contains('room-zen'))); await shot('immersive'); await page.keyboard.press('Escape'); check('immersive-enter-and-exit');
   await page.setViewportSize({ width: 960, height: 600 }); await shot('cabin-960x600');
-  const { ROOM_SCENES } = await import('../src/scene-catalog.mjs');
+  const { CLASSIC_ROOM_SCENES: ROOM_SCENES } = await import('../src/scene-catalog.mjs');
   for (const scene of ROOM_SCENES) {
     await openRoomSettings(page); await page.getByRole('button', { name: `选择场景 ${scene.label}`, exact: true }).click(); await closeSettings(page); await shot(`scene-${scene.id}-960x600`);
     for (const name of ['设置', '添加到唱片架']) await fits(page.getByRole('button', { name, exact: true }));

@@ -8,7 +8,7 @@ export const FACE_LABELS = Object.freeze({ flip: '琥珀翻页钟', ring: '像�
 export const FACE_HINTS = Object.freeze({ flip: '胡桃木与黄铜，数字一张张翻过去', ring: '一圈小珠子，跟着这一轮慢慢点亮', record: '一轮专注是一面唱片，唱臂走到内圈就结束', minimal: '只留下大大的数字', window: '窗外天色跟着时间走，数字凝在玻璃上', growth: '专注时小苗一点点长高' });
 export const SHOW_MODES = Object.freeze([['auto', '自动'], ['clock', '时钟'], ['timer', '计时']]);
 // The face a scene opens with (琥珀/像素: the flip clock; window scenes: the window).
-export const SCENE_FACES = Object.freeze({ warm: 'flip', pixel: 'flip', 'night-study': 'window', starlight: 'window', seaside: 'window', forest: 'growth' });
+export const SCENE_FACES = Object.freeze({ warm: 'flip', pixel: 'flip', 'night-study': 'window', starlight: 'window', seaside: 'window', forest: 'growth', 'rain-train': 'window', greenhouse: 'growth' });
 export const DEFAULT_DISPLAY = Object.freeze({ mode: '', show: 'auto', seconds: false, autoEnter: false });
 
 export function normalizeDisplay(value) {

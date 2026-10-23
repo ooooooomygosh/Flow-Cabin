@@ -33,7 +33,9 @@ export default function useShelf({ items, look, stage, mobileSlotCount = null })
   useEffect(() => { if (pageSize !== null) { const index = visible.findIndex(item => item.id === selectedId); setRow(Math.floor(Math.max(0, index) / pageSize)); } }, [pageSize]);
   useEffect(() => { setRow(0); setSelectedId(visible[0]?.id || ''); }, [signature, look]);
   useEffect(() => {
-    const wheel = { amount: 0, time: 0 }, element = stage.current;
+    const wheel = { amount: 0, time: 0 }, element = stage?.current;
+    // The home library uses the filtering model without a legacy shelf camera.
+    if (!element) return;
     const blocked = (target) => target?.closest?.('input,textarea,select,[contenteditable="true"],dialog,.room-turntable,.shelf-filters,.focus-dock') || document.querySelector('dialog[open]');
     const keydown = (event) => {
       if (blocked(event.target) || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;

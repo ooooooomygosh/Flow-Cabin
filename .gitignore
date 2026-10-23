@@ -37,3 +37,7 @@ desktop/native/mac-input.node
 .workbuddy/
 work/
 desktop/release/
+
+desktop/native/mac-location.node
+__pycache__/
+outputs/

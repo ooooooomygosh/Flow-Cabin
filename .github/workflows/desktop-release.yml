@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - 'src/**'
+      - 'public/**'
       - 'desktop/**'
       - 'scripts/**'
       - 'package*.json'
@@ -133,7 +134,7 @@ jobs:
         if: always()
         with:
           name: checks-${{ matrix.platform }}-${{ matrix.arch }}
-          path: desktop/test-results/client/
+          path: desktop/test-results/home-v21-native/
   publish:
     needs: build
     # A pushed v* tag publishes. So does a manual run on main given release_tag:

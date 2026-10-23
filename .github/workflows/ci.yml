@@ -45,12 +45,14 @@ jobs:
       - name: Install Chromium
         working-directory: desktop
         run: npx playwright install --with-deps chromium
+      - name: Verify classic default, explicit Beta restart and shared album wall
+        run: npm run test:interface
+      - name: Regress original shelf, focus, playback feedback and themes
+        run: npm run test:journey && npm run test:browser && npm run test:focus-ui && npm run test:shelf-ui && npm run test:beat && npm run test:theme
       - name: Run static web collection without a backend
         run: npm run test:web-static
-      - name: Run record, focus, journal and return journey
-        run: npm run test:journey
-      - name: Run browser smoke tests
-        run: npm run test:browser
+      - name: Run full-screen home, persistent playback and furniture regressions
+        run: npm run test:home && npm run test:home-interactions
       - name: Run Android playback React bridge regression
         run: npm run test:native-playback
       - name: Run promotional page interaction tests
@@ -61,12 +63,6 @@ jobs:
         run: node --test src/player/playback-log.test.mjs
         env:
           PLAYBACK_LOG_BROWSER: '1'
-      - name: Run focus and mode regressions
-        run: npm run test:focus-ui
-      - name: Run cat beat-sync regressions (click tracks, tone, seek, skip)
-        run: npm run test:beat
-      - name: Run shelf and window-control regressions
-        run: npm run test:shelf-ui
       - name: Run AI settings and letter regressions
         run: npm run test:ai
       - name: Run journal entry and recovery regressions
@@ -75,12 +71,8 @@ jobs:
         run: npm run test:memory
       - name: Run wordbook provenance and flip clock regressions
         run: npm run test:study-ui
-      - name: Run room theme interaction regressions
-        run: npm run test:theme
       - name: Run production living room under native CSP
         run: npm run test:room-production
-      - name: Run modular room art and placement regressions
-        run: npm run test:room-studio
       - name: Run native device settings and local QR regression
         run: npm run test:devices-ui
       - name: Run earned souvenir persistence and recovery regressions
@@ -91,6 +83,9 @@ jobs:
         with:
           name: browser-smoke
           path: |
+            desktop/test-results/interface-mode/
+            desktop/test-results/home-v21/
+            desktop/test-results/home-interactions/
             desktop/test-results/web-static/
             desktop/test-results/journey/
             desktop/test-results/browser/

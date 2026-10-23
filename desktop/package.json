@@ -1,6 +1,6 @@
 {
   "name": "album-circle-desktop",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "心流小屋 · Flow Cabin — a pixel lo-fi cabin for your favourite albums, focus timer and desktop cat",
   "productName": "心流小屋",
   "author": "Flow Cabin",
@@ -27,7 +27,7 @@
     "dist:mac": "npm run build:native && npm run build:music && npm run build:web && electron-builder --mac dmg zip --arm64 --x64 --publish never",
     "dist:win": "npm run dist -- --publish never",
     "pack:mac": "npm run build:music && npm run build:web && electron-builder --mac --arm64 --dir --publish never",
-    "test:client": "node test/client-ui.cjs",
+    "test:client": "node test/home-v21-ui.cjs",
     "test:backup": "node test/backup-profile-ui.cjs",
     "test:focus": "node test/focus-ui.cjs",
     "test:cat-focus": "node test/cat-focus-ui.cjs",
@@ -49,7 +49,8 @@
     "asar": true,
     "asarUnpack": [
       "node_modules/uiohook-napi/**",
-      "native/mac-input.node"
+      "native/mac-input.node",
+      "native/mac-location.node"
     ],
     "directories": {
       "output": "release"
@@ -62,6 +63,7 @@
       "main/menus.cjs",
       "main/autostart.cjs",
       "weather.cjs",
+      "qweather.cjs",
       "ai.cjs",
       "codex-cli.cjs",
       "policy.cjs",
@@ -112,11 +114,18 @@
       "lan-certificate.cjs",
       "lan-model.cjs",
       "lan-service.cjs",
+      "live-session.cjs",
       "pet-pack.cjs",
       "dsh-bridge.cjs",
       "weather-api.cjs",
       "pet-pack-metadata.cjs",
-      "pet-atlas.cjs"
+      "pet-atlas.cjs",
+      "pet-menu.cjs",
+      "lyric-window.cjs",
+      "lyric-preload.cjs",
+      "pet-menu-preload.cjs",
+      "location.cjs",
+      "webm-pet.cjs"
     ],
     "win": {
       "target": [
@@ -141,7 +150,8 @@
           "to": "native",
           "filter": [
             "DesktopHost.exe",
-            "NowPlaying.exe"
+            "NowPlaying.exe",
+            "ApproximateLocation.exe"
           ]
         }
       ]
@@ -175,7 +185,9 @@
       "hardenedRuntime": false,
       "artifactName": "FlowCabin-${version}-mac-${arch}.${ext}",
       "extendInfo": {
-        "NSAppleEventsUsageDescription": "心流小屋读取并控制 Music 或 Spotify 正在播放的歌曲，用于在小屋唱机上显示。"
+        "NSAppleEventsUsageDescription": "心流小屋读取并控制 Music 或 Spotify 正在播放的歌曲，用于在小屋唱机上显示。",
+        "NSLocationWhenInUseUsageDescription": "使用大致位置显示附近天气与日出日落。仅在你使用小屋时获取，不持续追踪。",
+        "NSLocationUsageDescription": "使用大致位置显示附近天气与日出日落。"
       }
     },
     "publish": [
@@ -192,8 +204,9 @@
     "electron-updater": "6.8.9",
     "music-metadata": "11.16.1",
     "NeteaseCloudMusicApi": "4.32.0",
+    "node-forge": "file:./vendor/node-forge-encrypt-only",
     "uiohook-napi": "1.5.5",
-    "node-forge": "file:./vendor/node-forge-encrypt-only"
+    "ws": "8.22.0"
   },
   "overrides": {
     "music-metadata": "$music-metadata",

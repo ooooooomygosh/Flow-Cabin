@@ -408,7 +408,7 @@ test('backup reads only memory allowlist and drops arbitrary credential-bearing 
     study: { apiKey: 'DO_NOT_EXPORT_KEY' }, sound: { rain: .5, apiKey: 'DO_NOT_EXPORT_KEY' },
     items: [{ id: 'album', title: 'Night', artist: 'Artist', credential: 'DO_NOT_EXPORT_KEY', externalIds: { itunesTrackId: '123', apiKey: 'DO_NOT_EXPORT_KEY' },
       trackDetails: [{ title: 'Track', credential: 'DO_NOT_EXPORT_KEY' }] }] });
-  assert.deepEqual(storage.reads, [SESSION_LOG_KEY, MOOD_KEY, META_KEY, LETTERS_KEY, PLAYBACK_LOG_KEY, JOURNAL_KEY, ...SOUVENIR_KEYS]);
+  assert.deepEqual(storage.reads, [...['pixel','warm','night-study','forest','seaside','starlight','rain-train','greenhouse'].flatMap(theme => [`flow-cabin-room-layout-v2:${theme}`, `flow-cabin-room-layout-v2:original:${theme}`, `flow-cabin-room-layout-art-v2:${theme}`]), 'flow-cabin-life-v1','flow-cabin-sky-v1','flow-cabin-location-v1','flow-cabin-recipes-v1','flow-cabin-lights-v1','cabin.petPack.v1', SESSION_LOG_KEY, MOOD_KEY, META_KEY, LETTERS_KEY, PLAYBACK_LOG_KEY, JOURNAL_KEY, ...SOUVENIR_KEYS]);
   assert.ok(!JSON.stringify(backup).includes('DO_NOT_EXPORT_KEY'));
   assert.equal(backup.memory.journalEntries[0].body, '第二稿。');
   assert.equal(backup.items[0].externalIds.itunesTrackId, '123');
@@ -450,8 +450,8 @@ test('preview and parsing never write, and memory replacement requires an availa
 });
 
 test('UTF-8 byte limits apply to parsing and the actual formatted export', () => {
-  assert.throws(() => parseBackup(`{"kind":"FlowCabinBackup","items":[],"padding":"${'猫'.repeat(Math.ceil(MAX_BACKUP_BYTES / 3))}"}`), /8 MB/);
-  assert.throws(() => buildBackup({ storage: null, items: [{ id: 'oversize', title: '猫'.repeat(Math.ceil(MAX_BACKUP_BYTES / 3)) }] }), /8 MB/);
+  assert.throws(() => parseBackup(`{"kind":"FlowCabinBackup","items":[],"padding":"${'猫'.repeat(Math.ceil(MAX_BACKUP_BYTES / 3))}"}`), /32 MB/);
+  assert.throws(() => buildBackup({ storage: null, items: [{ id: 'oversize', title: '猫'.repeat(Math.ceil(MAX_BACKUP_BYTES / 3)) }] }), /32 MB/);
 });
 
 test('failed writes roll back every committed store and emit no refresh', () => {
@@ -599,7 +599,7 @@ test('v4 deletion markers beat old and future-dated backups; fresh profiles can 
   organizeLetterThread({ storage, id: 'outgoing-letter', action: 'trash' });
   assert.equal(purgeLetterThread({ storage, id: 'outgoing-letter', expectedOrganizedAt: readLetters(storage).find((x) => x.id === 'outgoing-letter').organizedAt }).ok, true);
   const clean = buildBackup({ storage });
-  assert.equal(clean.version, 4); assert.ok(!JSON.stringify(clean).includes('private-'));
+  assert.equal(clean.version, BACKUP_VERSION); assert.ok(!JSON.stringify(clean).includes('private-'));
   for (const version of [1, 2, 3, 4]) {
     const saved = parseBackup(JSON.stringify({ ...old, version }));
     saved.memory.journalEntries[0].updatedAt = at + 99999;
@@ -669,7 +669,7 @@ test('every shipped backup version still imports, and a newer one is refused', (
   const storage = memoryStorage();
   const focus = { tasks: [{ id: 't', text: '读书' }], notes: '随手记', settings: { focusMin: 30 } };
   const study = { decks: [{ id: 'd', name: '英语' }], cards: [], countdowns: [] };
-  for (const version of [undefined, 1, 2, 3, BACKUP_VERSION]) {
+  for (const version of [undefined, 1, 2, 3, 4, BACKUP_VERSION]) {
     const file = JSON.stringify({ kind: 'FlowCabinBackup', ...(version === undefined ? {} : { version }), items: [],
       focus, study, sound: { rain: 0.5 } });
     const parsed = parseBackup(file);
@@ -682,7 +682,7 @@ test('every shipped backup version still imports, and a newer one is refused', (
     assert.equal(parsed.memory, null, 'older files carry no memory domain');
     assert.deepEqual(restoreBackupMemory(parsed, { storage }), { changed: [] }, 'an old file never touches the memory store');
   }
-  for (const version of [0, -1, 5, 99, '4', 2.5, null, true]) {
+  for (const version of [0, -1, BACKUP_VERSION + 1, 99, '4', 2.5, null, true]) {
     assert.throws(() => parseBackup(JSON.stringify({ kind: 'FlowCabinBackup', version, items: [] })), /版本/);
   }
 });

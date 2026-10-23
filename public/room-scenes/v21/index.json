@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "title": "Flow Cabin 2.1 architectural shells",
+  "logicalSize": {
+    "width": 1200,
+    "height": 800
+  },
+  "sourceImageSize": {
+    "width": 1536,
+    "height": 1024
+  },
+  "themes": [
+    {
+      "id": "pixel",
+      "label": "像素小屋",
+      "manifest": "pixel/manifest.json",
+      "image": "pixel/shell.png",
+      "sha256": "05bb654bb6ea2c5328e372ea2ec0c9bf9247491e823a2eba3d2fa8b492d14372"
+    },
+    {
+      "id": "warm",
+      "label": "琥珀小屋",
+      "manifest": "warm/manifest.json",
+      "image": "warm/shell.png",
+      "sha256": "6b8d76705f5baffc0349bdaf9d3f0bfbde6829d8345ab62c8d93435ceaa9e52e"
+    },
+    {
+      "id": "night-study",
+      "label": "月夜书房",
+      "manifest": "night-study/manifest.json",
+      "image": "night-study/shell.png",
+      "sha256": "e3a18424be32dc67a8125bb85b2cd6a5cf01e46fef1513f2dc526efad0458074"
+    },
+    {
+      "id": "forest",
+      "label": "林间小屋",
+      "manifest": "forest/manifest.json",
+      "image": "forest/shell.png",
+      "sha256": "6ec3f4814b534af25234299cc17ccfb69e5487904cd41e718b98144d395f507e"
+    },
+    {
+      "id": "seaside",
+      "label": "海边小屋",
+      "manifest": "seaside/manifest.json",
+      "image": "seaside/shell.png",
+      "sha256": "44a4866e64c0da7f9d1d0de88e43e220486c8590afe426ba59171f58134345d5"
+    },
+    {
+      "id": "starlight",
+      "label": "星光观测室",
+      "manifest": "starlight/manifest.json",
+      "image": "starlight/shell.png",
+      "sha256": "4e12a1045421e6ad900472723ae79323e39e3224adb5fc7b6a5ace6031f8e249"
+    },
+    {
+      "id": "rain-train",
+      "label": "雨夜列车",
+      "manifest": "rain-train/manifest.json",
+      "image": "rain-train/shell.png",
+      "sha256": "6fcd9b92ee3c479c314b6d5cc1ca71bd2e00af8bf38ef33843d06920fb6c9bb6"
+    },
+    {
+      "id": "greenhouse",
+      "label": "晨光温室",
+      "manifest": "greenhouse/manifest.json",
+      "image": "greenhouse/shell.png",
+      "sha256": "bdc0c583c581204d5a3820c1f2f7c6af94c3a512e7c607385d1c1ac53593553d"
+    }
+  ],
+  "notes": [
+    "True RGBA originals; no resizing, recoloring, cutting or image post-processing was applied.",
+    "Furniture, pets, clocks, calendars, text and UI are deliberately absent. All live content must be drawn by the app.",
+    "Every shell uses the flagship pixel camera reference. Per-theme actual floor quads and fixed-obstacle polygons are recorded in each manifest.",
+    "The generator produced alpha 254 at opaque interiors and alpha 0–1 at outer corners; retain PNG alpha for correct composition.",
+    "Rain-train has a fixed radiator and a door step in place of a masonry fireplace.",
+    "Greenhouse large boards should use freestanding furniture so glass views remain clear."
+  ]
+}

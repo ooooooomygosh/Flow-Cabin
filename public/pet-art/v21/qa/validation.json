@@ -1,0 +1,99 @@
+{
+  "version": 2,
+  "pets": {
+    "cat": {
+      "clips": 24,
+      "frames": 50,
+      "atlas": [
+        2048,
+        1792
+      ],
+      "alphaAndGutters": "passed",
+      "identitySizes": "passed",
+      "frameUniqueness": "passed",
+      "landmarkSources": {
+        "detected-eye-pair": 37,
+        "low-pose-template": 4,
+        "curled-template": 2,
+        "pose-template": 1,
+        "profile-template": 4,
+        "turn-template": 2
+      }
+    },
+    "chick": {
+      "clips": 24,
+      "frames": 50,
+      "atlas": [
+        2048,
+        1792
+      ],
+      "alphaAndGutters": "passed",
+      "identitySizes": "passed",
+      "frameUniqueness": "passed",
+      "landmarkSources": {
+        "detected-eye-pair": 38,
+        "low-pose-template": 4,
+        "curled-template": 2,
+        "profile-template": 4,
+        "turn-template": 2
+      }
+    },
+    "bunny": {
+      "clips": 24,
+      "frames": 50,
+      "atlas": [
+        2048,
+        1792
+      ],
+      "alphaAndGutters": "passed",
+      "identitySizes": "passed",
+      "frameUniqueness": "passed",
+      "landmarkSources": {
+        "detected-eye-pair": 38,
+        "low-pose-template": 4,
+        "curled-template": 2,
+        "profile-template": 4,
+        "turn-template": 2
+      }
+    },
+    "bear": {
+      "clips": 24,
+      "frames": 50,
+      "atlas": [
+        2048,
+        1792
+      ],
+      "alphaAndGutters": "passed",
+      "identitySizes": "passed",
+      "frameUniqueness": "passed",
+      "landmarkSources": {
+        "detected-eye-pair": 37,
+        "low-pose-template": 4,
+        "curled-template": 2,
+        "profile-template": 4,
+        "turn-template": 2,
+        "reviewed-pose-landmarks": 1
+      }
+    },
+    "fox": {
+      "clips": 24,
+      "frames": 50,
+      "atlas": [
+        2048,
+        1792
+      ],
+      "alphaAndGutters": "passed",
+      "identitySizes": "passed",
+      "frameUniqueness": "passed",
+      "landmarkSources": {
+        "detected-eye-pair": 37,
+        "reviewed-pose-landmarks": 1,
+        "low-pose-template": 4,
+        "curled-template": 2,
+        "profile-template": 4,
+        "turn-template": 2
+      }
+    }
+  },
+  "scope": "PNG alpha, frame rectangles, clip coverage, independent pixels, actual-size identity and rendered overlay review. Native OS surfaces are validated by application QA."
+}

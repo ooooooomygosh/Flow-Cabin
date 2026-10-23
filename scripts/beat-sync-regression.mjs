@@ -136,21 +136,25 @@ const music = (page) => page.evaluate(() => document.querySelector('button.room-
 async function sampleFrames(page, ms, poses, startupTimeoutMs = 0) {
   await page.locator('button.room-cat canvas.pixel-cat').waitFor({ state: 'visible' });
   return page.evaluate(async ({ ms, poses, startupTimeoutMs }) => {
-    const { cachedPetFrame, drawPetFrame, SIZE, POSES, CAT_ONLY_FRAMES } = await import('/src/pet/pet-sprites.mjs');
+    const { loadPetArt, loadPetAccessories, drawPetArt, MUSIC_ART_ACTIONS } = await import('/src/pet/pet-art-v21.mjs');
+    const SIZE = 256;
     const { currentBeat } = await import('/src/player/beat-clock.mjs');
     const canvas = document.querySelector('button.room-cat canvas.pixel-cat'), context = canvas.getContext('2d');
     if (!context || canvas.width !== SIZE || canvas.height !== SIZE) throw new Error('Room PixelCat must have a readable native-size canvas');
     const reference = document.createElement('canvas'); reference.width = reference.height = SIZE;
     const referenceContext = reference.getContext('2d'), frames = [];
+    const wordsOf = data => new Uint32Array(data.buffer, data.byteOffset, data.byteLength / 4);
+    const hash = words => { let value = 2166136261; for (let i=0;i<words.length;i++) value=Math.imul(value ^ words[i],16777619); return value; };
+    const equal = (a,b) => { for(let i=0;i<a.length;i++)if(a[i]!==b[i])return false; return true; };
     // These attributes select the reference's cosmetics only; the pose and frame come from pixels.
     const { petId = 'cat', skin = 'orange', accessory = '' } = canvas.dataset;
     if (petId !== 'cat') throw new Error(`Expected the fixture's cat, got ${petId}`);
-    for (const pose of new Set([...Object.keys(POSES), ...Object.keys(CAT_ONLY_FRAMES)])) {
-      const count = CAT_ONLY_FRAMES[pose] || POSES[pose];
-      if (!count) throw new Error(`Unknown reference pose: ${pose}`);
-      for (let index = 0; index < count; index++) {
-        drawPetFrame(referenceContext, cachedPetFrame(petId, pose, index, accessory), petId, 1, skin);
-        frames.push({ id: `${pose}:${index}`, pose, pixels: referenceContext.getImageData(0, 0, SIZE, SIZE).data });
+    const art = await loadPetArt(petId), gear = await loadPetAccessories();
+    for (const [pose, clip] of Object.entries(art.manifest.clips)) {
+      for (let index = 0; index < clip.frames.length; index++) {
+        drawPetArt(referenceContext, art, { frame:clip.frames[index] }, accessory, gear);
+        const words=wordsOf(referenceContext.getImageData(0,0,SIZE,SIZE).data);
+        frames.push({ id:`${pose}:${index}`, pose, words, hash:hash(words) });
       }
     }
     const audio = document.querySelector('audio[data-deck="active"]'), graph = (await import('/src/player/audio-graph.mjs')).analyserFor(audio);
@@ -170,8 +174,9 @@ async function sampleFrames(page, ms, poses, startupTimeoutMs = 0) {
           if (t0 === null && n - started >= startupTimeoutMs) throw timeoutError();
           if (!canvas.isConnected) throw new Error('Room canvas disappeared during sampling');
           const pixels = context.getImageData(0, 0, SIZE, SIZE).data;
-          const matches = frames.filter((candidate) => candidate.pixels.every((value, i) => value === pixels[i]));
-          const frame = matches.find((candidate) => poses.includes(candidate.pose));
+          const words=wordsOf(pixels), value=hash(words);
+          const matches = frames.filter(candidate => candidate.hash === value && equal(candidate.words,words));
+          const frame = matches.find((candidate) => poses.includes(candidate.pose) || (poses.includes('groove') && MUSIC_ART_ACTIONS.includes(candidate.pose)));
           const snapshot = () => ({ ...window.__beatSnapshot(), matches: matches.map((candidate) => candidate.id), expected: poses, samples: rows.length, elapsedMs: t0 === null ? null : Math.round(n - t0) });
           if (!frame && t0 === null) { window.__beatFrameFailure = snapshot(); startup.unmatchedSamples++; frameRequest = requestAnimationFrame(step); return; }
           if (!frame) { window.__beatFrameFailure = snapshot(); throw new Error(`Room canvas matched ${matches.map((candidate) => candidate.id).join('/') || 'no known pose'}, expected ${poses.join('/')} after ${rows.length} samples (${Math.round(n - t0)} ms into measurement)`); }
@@ -202,7 +207,7 @@ async function measure(page, bpm, ms = 8000) {
 }
 const gate = (name, m, bpm) => {
   const v = m.canvas; assert.ok(v.changes >= 8, `${name} canvas: frames change (${v.changes})`);
-  assert.equal(m.frames.length, 4, `${name} canvas: all four groove frames are painted`);
+  assert.ok(new Set(m.frames.map(frame => frame.split(':')[1])).size >= 2, `${name} canvas: both independently drawn music frames are painted`);
   assert.ok(Math.abs(v.interval - 30000 / bpm) < 30000 / bpm * .08, `${name} canvas: one frame per half beat (${v.interval} ms)`);
   assert.ok(v.mean < 20, `${name} canvas: mean ${v.mean} ms`); assert.ok(Math.abs(v.bias) < 20, `${name} canvas: frames sit ${v.bias} ms off the heard click (click media time + output latency ${m.latency} ms)`); assert.ok(v.p95 < 50, `${name} canvas: p95 ${v.p95} ms`);
 };
@@ -232,7 +237,7 @@ try {
     const m = await measure(page, BPM[file]); report[file] = m; console.log(file, JSON.stringify(m)); gate(file, m, BPM[file]);
     await page.locator('audio[data-deck="active"]').evaluate((a) => a.pause()); await page.waitForTimeout(2500);
     assert.equal(await music(page), '', 'paused: no music pose');
-    const paused = await sampleFrames(page, 1200, ['idle', 'sleep', 'walk']);
+    const paused = await sampleFrames(page, 1200, ['idle', 'sleep', 'walk', 'observe', 'stretch', 'yawn', 'greet']);
     report[`${file}Paused`] = { samples: paused.rows.length, frames: paused.frames };
   });
   await run('steady-tone-is-not-a-beat', async (page) => {

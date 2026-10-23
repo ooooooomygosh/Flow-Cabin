@@ -86,7 +86,7 @@ export function FocusBadge({ onClick, open = false }) {
   return <button type="button" className={`focus-badge is-running phase-${timer.phase}${timer.paused ? ' is-paused' : ''}${open ? ' is-open' : ''}`} aria-expanded={open} title="打开专注工具" onClick={onClick} aria-label={`${PHASE_LABELS[timer.phase]}，剩余 ${clock}`}><Clock size={17}/><span className="focus-badge-time">{clock}{timer.paused && <PausePixel size={12} className="focus-badge-paused"/>}</span>{open && <span>收起</span>}</button>;
 }
 
-export default function FocusDock({ open, close, tab, setTab, onOpenSmart }) {
+export default function FocusDock({ open, close, tab, setTab, onOpenSmart, embedded = false }) {
   const tabId = useId(), focus = useFocusState(), study = useStudy();
   useEffect(() => {
     if (!open) return;
@@ -96,9 +96,9 @@ export default function FocusDock({ open, close, tab, setTab, onOpenSmart }) {
   }, [open, close]);
   useEffect(() => { if (open) loadStudy().catch(() => {}); }, [open]);
   const Panel = TABS.find(([id]) => id === tab)?.[3] || FocusTimer;
-  return <><FocusDisplayStage/>{open && <aside className="focus-dock" aria-label="专注工具">
+  return <>{!embedded && <FocusDisplayStage/>}{open && <aside className="focus-dock" aria-label="专注工具">
     <header className="focus-dock-header">
-      <FaceSwitch/>
+      {(!embedded || tab === 'timer') && <FaceSwitch/>}
       <div className="focus-dock-tabs"><Tabs label="专注工具" idPrefix={tabId} value={tab} onChange={setTab} items={TAB_ITEMS}/>
         <button type="button" className="focus-dock-close" aria-label="收起专注工具" onClick={close}><X size={18}/></button></div>
     </header>

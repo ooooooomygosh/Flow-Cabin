@@ -77,6 +77,7 @@ export async function verifyBenchmarkCabin(browser, origin, { output, check = ()
       const json = value => route.fulfill({ json: value });
       if (url.origin !== origin) { report.unexpectedRequests.push({ size, url: url.href }); return route.abort(); }
       if (pathname === '/api/items') return json({ items });
+      if (pathname === '/desktop-music/lyrics') return json({ text: '', source: 'fixture', reason: 'No fixture lyrics' });
       if (pathname === '/desktop-music/config') return json({ qqLoggedIn: false, neteaseLoggedIn: false });
       if (['/desktop-music/now-playing', '/desktop-music/apple/permission'].includes(pathname)) return json({ available: false });
       if (pathname === '/desktop-music/local/summary') return json({ folders: [], albumCount: 0, trackCount: 0 });

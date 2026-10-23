@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import '../styles/tokens.css';
 import './mini.css';
 import { PlayPixel, PausePixel, PreviousPixel, NextPixel, NotePixel, ClockPixel } from '../pixel-icons';
+import PixelCat from '../pet/PixelCat';
 import RecordSleeve from '../ui/RecordSleeve';
 import PixelRecord from '../ui/PixelRecord';
 import { sleeveTone } from '../player/pixel-cover.mjs';
@@ -29,7 +30,7 @@ export function MiniPlayer({ snapshot, command, player = () => {}, exit }) {
       <span className="mini-record"><PixelRecord base="#2b2420" label={tone} seed={record.title}/><span className="mini-sheen"><svg viewBox="0 0 384 48" shapeRendering="crispEdges">{SHEEN.map(([x, y, ox, oy], i) => <g key={i} fill="#e4dfcc"><rect x={i * 48 + x - 1} y={y - 1} width="2" height="2"/><rect x={i * 48 + ox} y={oy} width="1" height="1" opacity=".6"/></g>)}</svg></span></span>
       <RecordSleeve item={record} title={false} className="mini-sleeve"/>
     </span>
-    <span className="mini-copy">
+    <span className="mini-pet"><PixelCat petId={snapshot?.petId} packOverride={snapshot?.petPack || null} accessory={snapshot?.focus?.accessory || ''} pose={phase === 'focus' ? 'read' : playing ? 'listen' : 'idle'} reduceMotion={snapshot?.reduceMotion}/></span><span className="mini-copy">
       <span className="mini-track">{track}</span>
       <span className="mini-row">
         <span className="mini-status"><i className="mini-led"/>{status}</span>

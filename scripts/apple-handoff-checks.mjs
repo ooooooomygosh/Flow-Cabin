@@ -33,6 +33,7 @@ export async function verifyAppleHandoff({ browser, origin, output, check }) {
       const u = new URL(route.request().url()), json = value => route.fulfill({ json: value });
       if (u.origin !== origin) { errors.push('external request blocked'); return route.abort(); }
       if (u.pathname === '/api/items') return json({ items: [normalizeItem({ id: 'apple-single', type: 'song', title: selected.title, artist: selected.artist, ...(initial === 'legacy' ? {} : { albumTitle: selected.album, trackTimeMillis: selected.duration * 1000 }), tracks: [selected.title], trackDetails: [], externalIds: { itunesTrackId: '1234567890' }, source: 'iTunes Search', cover: '' })] });
+      if (u.pathname === '/desktop-music/lyrics') return json({ text:'', source:'fixture', reason:'No fixture lyrics' });
       if (u.pathname === '/desktop-music/config') return json({ appleMusicAvailable: true, qqLoggedIn: false, neteaseLoggedIn: false });
       if (u.pathname === '/desktop-music/apple/permission') return json({ available: true, granted: true });
       if (u.pathname === '/desktop-music/now-playing') return json({ available: false });

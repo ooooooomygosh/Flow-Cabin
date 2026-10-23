@@ -34,3 +34,8 @@ html, body, #root { margin: 0; height: 100%; background: transparent; overflow: 
 .mini-actions button:active { translate: 1px 1px; box-shadow: none; }
 .mini-actions button.is-primary { margin-left: 2px; color: var(--px-ink-on-accent); background: var(--px-accent); box-shadow: inset 2px 2px 0 var(--px-accent-hi), inset -2px -2px 0 var(--px-accent-lo); }
 }
+
+@layer overrides {
+.mini-pet{width:34px;height:40px;flex-shrink:0}.mini-pet .pixel-cat{width:100%;height:100%}
+
+}

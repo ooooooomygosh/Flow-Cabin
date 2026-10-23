@@ -5,6 +5,7 @@
 // request per place per 30 minutes at most, and nothing at all while the setting is off. The
 // page sees { kind, intensity, wind, fetchedAt, … } as window.cabinWeather and 'cabin:weather'
 // (src/sky-clock.mjs); null means "use the equipped 窗景".
+const { createWeatherProfile, qweatherReport } = require('./qweather.cjs');
 const ENDPOINT = 'https://api.open-meteo.com/v1/forecast';
 const TTL = 30 * 60 * 1000, TIMEOUT = 10000, RETRY = 5 * 60 * 1000;
 const round = (value) => Math.round(value * 100) / 100;
@@ -43,31 +44,32 @@ function weatherFromReport(report) {
   return null;
 }
 
-function createWeather({ fetch, publish, now = Date.now, setTimer = setTimeout, clearTimer = clearTimeout, writeLog = () => {} }) {
+function createWeather({ fetch, publish, now = Date.now, setTimer = setTimeout, clearTimer = clearTimeout, writeLog = () => {}, directory, safeStorage }) {
   let enabled = false, place = null, value = null, timer = null, inflight = null, inflightKey = null;
+  const profile = createWeatherProfile({ directory, safeStorage });
   const cache = new Map(); // "lat,lng" → { weather, fetchedAt }
-  const key = (p) => `${p.lat},${p.lng}`;
+  const key = (p) => `${profile.state().provider}:${profile.state().revision}:${p.lat},${p.lng}`;
   const state = () => enabled && value ? value : null;
   const emit = () => publish(state());
   const schedule = (ms) => { clearTimer(timer); timer = enabled ? setTimer(refresh, ms) : null; timer?.unref?.(); };
   async function refresh() {
     if (!enabled || !place) return state();
-    const wanted = place, hit = cache.get(key(wanted));
-    if (hit && now() - hit.fetchedAt < TTL) { value = { ...hit.weather, fetchedAt: hit.fetchedAt, source: 'open-meteo', lat: wanted.lat, lng: wanted.lng }; emit(); schedule(hit.fetchedAt + TTL - now()); return state(); }
-    if (inflight) return inflightKey === key(wanted) ? inflight : inflight.then(() => enabled && place && key(place) === key(wanted) ? refresh() : state());
-    inflightKey = key(wanted);
+    const wanted = place, wantedKey = key(place), config = profile.read(), source = config ? 'qweather' : 'open-meteo', hit = cache.get(wantedKey);
+    if (hit && now() - hit.fetchedAt < TTL) { value = { ...hit.weather, fetchedAt: hit.fetchedAt, source, lat: wanted.lat, lng: wanted.lng }; emit(); schedule(hit.fetchedAt + TTL - now()); return state(); }
+    if (inflight) return inflightKey === wantedKey ? inflight : inflight.then(() => enabled && place && key(place) === key(wanted) ? refresh() : state());
+    inflightKey = wantedKey;
     inflight = (async () => {
       const controller = new AbortController(), abort = setTimer(() => controller.abort(), TIMEOUT);
       try {
-        const response = await fetch(weatherUrl(wanted), { signal: controller.signal, redirect: 'error', headers: { accept: 'application/json' } });
+        const response = await fetch(config ? `https://${config.host}/weather/v1/current/${wanted.lat}/${wanted.lng}?lang=zh` : weatherUrl(wanted), { signal: controller.signal, redirect: 'error', headers: { accept: 'application/json', ...(config ? { 'X-QW-Api-Key': config.key } : {}) } });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const weather = weatherFromReport(await response.json());
+        const weather = (config ? qweatherReport : weatherFromReport)(await response.json());
         if (!weather) throw new Error('unrecognised report');
-        const fetchedAt = now(); cache.set(key(wanted), { weather, fetchedAt });
-        if (enabled && place && key(place) === key(wanted)) { value = { ...weather, fetchedAt, source: 'open-meteo', lat: wanted.lat, lng: wanted.lng }; emit(); }
+        const fetchedAt = now(); cache.set(wantedKey, { weather, fetchedAt });
+        if (enabled && place && key(place) === wantedKey) { value = { ...weather, fetchedAt, source, lat: wanted.lat, lng: wanted.lng }; emit(); }
         schedule(TTL);
       } catch (error) {
-        writeLog('weather-error', error.message || String(error));
+        writeLog('weather-error', error.name === 'AbortError' ? 'timeout' : 'request-failed');
         schedule(RETRY); // keep the last report (the page lets it go stale after 3 h)
       } finally { clearTimer(abort); inflight = null; inflightKey = null; }
       return state();
@@ -76,12 +78,15 @@ function createWeather({ fetch, publish, now = Date.now, setTimer = setTimeout, 
   }
   return {
     state,
+    profile: profile.state,
+    async configure(value) { profile.set(value); cache.clear(); await refresh(); return profile.state(); },
     // set({ enabled, lat, lng }): off forgets the report and stops the timer.
-    set({ enabled: on, lat, lng } = {}) {
+    set({ enabled: on, lat, lng, force = false } = {}) {
       const next = on ? validPlace(lat, lng) : null;
       if (!next) { enabled = false; place = null; value = null; schedule(0); emit(); return Promise.resolve(null); }
       if (!enabled || !place || key(place) !== key(next)) value = null;
       enabled = true; place = next;
+      if (force) cache.delete(key(next));
       return refresh();
     },
     publish() { emit(); return state(); },
@@ -89,7 +94,7 @@ function createWeather({ fetch, publish, now = Date.now, setTimer = setTimeout, 
   };
 }
 const weatherScript = (value) => {
-  const safe = value && typeof value === 'object' ? { kind: String(value.kind), intensity: Number(value.intensity) || 0, wind: Number(value.wind) || 0, fetchedAt: Number(value.fetchedAt) || 0, source: 'open-meteo' } : null;
+  const safe = value && typeof value === 'object' ? { kind: String(value.kind), intensity: Number(value.intensity) || 0, wind: Number(value.wind) || 0, fetchedAt: Number(value.fetchedAt) || 0, source: value.source === 'qweather' ? 'qweather' : 'open-meteo' } : null;
   if (safe) for (const name of ['temperature', 'feelsLike', 'humidity', 'precipitation', 'lat', 'lng']) { if (typeof value[name] === 'number' && Number.isFinite(value[name])) safe[name] = value[name]; }
   return `window.cabinWeather = ${JSON.stringify(safe)}; window.dispatchEvent(new CustomEvent('cabin:weather', { detail: window.cabinWeather }));`;
 };

@@ -1,6 +1,7 @@
+import { desktopCommand } from '../desktop/desktop-command.mjs';
 import React, { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import Dialog from '../Dialog';
-import { musicRequest } from '../room-playback.mjs';
+import { loadLyrics, invalidateLyrics, playbackPosition, LYRIC_CHANGED } from './lyric-session.mjs';
 import { onBackgroundChange, frameClock } from '../frame-clock.mjs';
 import { activeLyric, lyricTrackKey, MAX_LYRIC_BYTES, parseLyrics } from './lyrics-model.mjs';
 import './lyrics.css';
@@ -22,17 +23,7 @@ export default function LyricsPanel({ track, playback, system, close }) {
   useEffect(() => { setOffset(saved.offset || 0); }, [key]);
   useEffect(() => {
     const id = ++generation.current; setError(''); setDoc(null); setBusy(true);
-    const load = async () => {
-      const value = saved.text ? saved : await musicRequest('/lyrics', track);
-      if (generation.current !== id) return;
-      const next = value.text ? parseLyrics(value.text, value.format || 'lrc', value.source || 'local') : { lines: [], plain: '', precision: 'plain', source: value.source || 'none', instrumental: value.instrumental, reason: value.reason };
-      if (value.translation && next.lines.length) {
-        const translations = parseLyrics(value.translation).lines;
-        next.lines = next.lines.map(line => ({ ...line, translatedLyric: translations.find(t => Math.abs(t.startTime - line.startTime) < 100)?.words.map(w => w.word).join('') || line.translatedLyric }));
-      }
-      setDoc(next);
-    };
-    load().catch(e => { if (generation.current === id) setError(e.message); }).finally(() => { if (generation.current === id) setBusy(false); });
+    loadLyrics(track, retry > 0).then(value => { if (generation.current === id) setDoc(value); }).catch(e => { if (generation.current === id) setError(e.message); }).finally(() => { if (generation.current === id) setBusy(false); });
     return () => { generation.current++; };
   }, [key, retry]);
   useEffect(() => onBackgroundChange(setBackground), []);
@@ -40,12 +31,11 @@ export default function LyricsPanel({ track, playback, system, close }) {
     if (background) return;
     return frameClock().subscribe(() => {
       const { playback: p, system: s } = current.current;
-      const position = s ? s.timeline?.position() : p?.audio?.current?.getAttribute('src') ? p.audio.current.currentTime : p?.clock?.position;
-      setTime(Number.isFinite(position) ? position * 1000 : null);
+      setTime(playbackPosition(p, s));
     }, { fps: 30 });
   }, [background]);
   const persist = patch => {
-    try { localStorage.setItem(storageKey(key), JSON.stringify({ ...readSaved(key), ...patch })); return true; }
+    try { localStorage.setItem(storageKey(key), JSON.stringify({ ...readSaved(key), ...patch })); if ('text' in patch) invalidateLyrics(track); else window.dispatchEvent(new Event(LYRIC_CHANGED)); return true; }
     catch { setError('歌词设置没有保存，请检查本机存储空间。'); return false; }
   };
   const importFile = async event => {
@@ -72,6 +62,7 @@ export default function LyricsPanel({ track, playback, system, close }) {
       <label>字号<input type="range" min="18" max="48" value={font} onChange={e => setFont(Number(e.target.value))}/></label>
       <label><input type="checkbox" checked={translation} onChange={e => setTranslation(e.target.checked)}/>翻译</label>
       <label><input type="checkbox" checked={immersive} onChange={e => setImmersive(e.target.checked)}/>沉浸歌词</label>
+      {document.documentElement.dataset.desktopClient==='true' && <button type="button" onClick={()=>desktopCommand('lyrics-open')}>独立伴随歌词</button>}
       <button type="button" onClick={() => setRetry(v => v + 1)}>重试</button>
       {saved.text && <button type="button" onClick={() => { if (persist({ text: '', format: '' })) setRetry(v => v + 1); }}>清除本地歌词</button>}
     </div>

@@ -156,6 +156,7 @@ test('the source never logs or forwards key or mouse details', () => {
 
 test('CompanionBridge fallback keeps keyboard and click separate, ignores Proxy content and cleans up', async () => {
   const {selectedPack}=await import('../../src/pet/imported-pack.mjs');
+  const {createLivingPet,bindPetLife}=await import('../../src/pet/living-pet.mjs');
   const packStorage={getItem:()=>JSON.stringify({id:'qa-pack',media:{type:'spritesheet',width:32,height:32,frameWidth:32,frameHeight:32},animations:{idle:{frames:[0],fps:2}},url:'https://untrusted.invalid',data:'DO_NOT_RELAY'})};
   const source = fs.readFileSync(path.join(__dirname, '../../src/CompanionBridge.jsx'), 'utf8')
     .replace(/^import [^\n]*\n/gm, '').replace('export default function', 'function');
@@ -165,7 +166,7 @@ test('CompanionBridge fallback keeps keyboard and click separate, ignores Proxy 
     removeEventListener(name, fn, capture) { listeners.set(name, (listeners.get(name) || []).filter(entry => entry.fn !== fn || entry.capture !== capture)); }
   };
   vm.runInNewContext(`${source}\nCompanionBridge();`, {
-    window, Date: { now: () => clock }, useRef: current => ({ current }), useEffect: fn => effects.push(fn),
+    window, document:{documentElement:{dataset:{}}},createLivingPet,bindPetLife:machine=>bindPetLife(machine,window,()=>clock),readLife:()=>({resting:false}), Date: { now: () => clock }, useRef: current => ({ current }), useEffect: fn => effects.push(fn),
     useFocus: () => null, useSoundscape: () => null, PLAYBACK_EVENT: 'playback',
     currentFocusDisplay: () => 'scene', careForCompanion: () => null, selectedPack:()=>selectedPack(packStorage)
   });

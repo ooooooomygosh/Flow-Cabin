@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
 import { hasViteLocalOrigin } from './vite-readiness.mjs';
 import { showcaseAlbums } from './showcase-albums.mjs';
-import { ROOM_SCENES } from '../src/scene-catalog.mjs';
+import { CLASSIC_ROOM_SCENES as ROOM_SCENES } from '../src/scene-catalog.mjs';
 import { onboardingSeed } from './app-version.mjs';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const output = process.env.SHELF_OUTPUT || path.join(root, 'desktop/test-results/shelf-ui');
@@ -35,7 +35,7 @@ try {
       const init=()=>{document.documentElement.dataset.desktopClient=String(native);document.documentElement.dataset.desktopReduceMotion='true';};
       if(document.documentElement)init();else new MutationObserver((_,o)=>{if(document.documentElement){init();o.disconnect();}}).observe(document,{childList:true});
     },native);
-    await context.route('**/*',route=>{const u=new URL(route.request().url()),p=u.pathname;if(u.origin!==origin){report.unexpectedRequests.push(u.href);return route.abort();}if(p==='/api/items')return route.fulfill({json:{items:collectionItems}});if(p==='/desktop-music/config')return route.fulfill({json:{qqLoggedIn:false,neteaseLoggedIn:false}});if(p==='/desktop-music/now-playing'||p==='/desktop-music/apple/permission')return route.fulfill({json:{available:false}});if(p==='/desktop-music/local/summary')return route.fulfill({json:{folders:[],albumCount:0,trackCount:0}});if(p.startsWith('/api/')||p.startsWith('/desktop-music/')){report.unexpectedRequests.push(p);return route.fulfill({status:500,json:{error:'Unimplemented fixture'}});}return route.continue();});
+    await context.route('**/*',route=>{const u=new URL(route.request().url()),p=u.pathname;if(u.origin!==origin){report.unexpectedRequests.push(u.href);return route.abort();}if(p==='/api/items')return route.fulfill({json:{items:collectionItems}});if(p==='/desktop-music/lyrics')return route.fulfill({json:{text:'',source:'fixture',reason:'No fixture lyrics'}});if(p==='/desktop-music/config')return route.fulfill({json:{qqLoggedIn:false,neteaseLoggedIn:false}});if(p==='/desktop-music/now-playing'||p==='/desktop-music/apple/permission')return route.fulfill({json:{available:false}});if(p==='/desktop-music/local/summary')return route.fulfill({json:{folders:[],albumCount:0,trackCount:0}});if(p.startsWith('/api/')||p.startsWith('/desktop-music/')){report.unexpectedRequests.push(p);return route.fulfill({status:500,json:{error:'Unimplemented fixture'}});}return route.continue();});
     const page=await context.newPage();page.setDefaultTimeout(12000);page.on('pageerror',e=>report.pageErrors.push(e.message));
     try{await page.goto(origin,{waitUntil:'domcontentloaded'});await page.locator('.room-record').first().waitFor();await test(page);report.checks.push({name,passed:true});console.log(`PASS ${name}`);}
     catch(e){const state=await page.evaluate(()=>({fullscreen:Boolean(document.fullscreenElement),native:document.documentElement.dataset.desktopFullscreen,client:document.documentElement.dataset.desktopClient,zen:document.documentElement.classList.contains('room-zen'),dock:document.querySelector('.focus-badge')?.getAttribute('aria-expanded'),active:document.activeElement?.getAttribute('aria-label'),trace:window.__fullscreenTrace})).catch(()=>null);report.checks.push({name,passed:false,error:e.stack,state});await shot(page,`${name}-failure`).catch(()=>{});console.error(`FAIL ${name}: ${e.message}`);}

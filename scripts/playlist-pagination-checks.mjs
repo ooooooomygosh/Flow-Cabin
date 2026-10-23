@@ -21,6 +21,7 @@ export async function verifyPlaylistPagination({ browser, origin, check }) {
       }
       if (request.method() === 'PATCH') { const item = items.find(i => i.id === url.searchParams.get('id')); Object.assign(item, body); return json({ item }); }
     }
+    if (p === '/desktop-music/lyrics') return json({ text: '', source: 'fixture', reason: 'No fixture lyrics' });
     if (p === '/desktop-music/config') return json({ neteaseLoggedIn: true, qqLoggedIn: false });
     if (p === '/desktop-music/playlists') { if (delayList) { delayList = false; await new Promise(resolve => { listPending = resolve; }); } return json({ loggedIn: true, playlists: [playlist] }); }
     if (p === '/desktop-music/playlist') {

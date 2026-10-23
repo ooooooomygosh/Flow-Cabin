@@ -80,7 +80,7 @@ function normalizeTimer(value = {}, settings = DEFAULT_SETTINGS) {
   const v = value && typeof value === 'object' ? value : {};
   const phase = PHASES.includes(v.phase) ? v.phase : 'idle';
   if (phase === 'idle') return { phase, endsAt: 0, remaining: 0, paused: false, startedAt: 0, round: clamp(v.round, 0, 1e6, 0), taskId: text(v.taskId, 40) };
-  return { phase, duration: clamp(v.duration, 1, 180 * MINUTE, phaseDuration(settings, phase)), endsAt: clamp(v.endsAt, 0, 9e15, 0), remaining: clamp(v.remaining, 0, 180 * MINUTE, 0), paused: v.paused === true, startedAt: clamp(v.startedAt, 0, 9e15, 0), round: clamp(v.round, 0, 1e6, 0), taskId: text(v.taskId, 40) };
+  return { phase, duration: clamp(v.duration, 1, 180 * MINUTE, phaseDuration(settings, phase)), endsAt: clamp(v.endsAt, 0, 9e15, 0), remaining: clamp(v.remaining, 0, 180 * MINUTE, 0), paused: v.paused === true, startedAt: clamp(v.startedAt, 0, 9e15, 0), round: clamp(v.round, 0, 1e6, 0), taskId: text(v.taskId, 40), ...(typeof v.sessionId==='string' && /^[\w-]{1,100}$/.test(v.sessionId) ? {sessionId:v.sessionId,ownerVersion:clamp(v.ownerVersion,0,1e9,0)} : {}) };
 }
 function normalizeTask(value, factory) {
   if (!value || typeof value !== 'object' || !text(value.text, 120)) return null;
@@ -128,8 +128,9 @@ export function formatClock(ms, hideSeconds = false) {
 
 export function startPhase(state, phase, now, taskId = state.timer.taskId) {
   const duration = phaseDuration(state.settings, phase);
-  if (!duration) return { ...state, timer: { ...state.timer, phase: 'idle', endsAt: 0, remaining: 0, paused: false, startedAt: 0 } };
-  return { ...state, timer: { ...state.timer, phase, duration, endsAt: now + duration, remaining: duration, paused: false, startedAt: now, taskId: taskId || '' } };
+  const { sessionId: previousSession, ownerVersion: previousOwner, ...timer } = state.timer;
+  if (!duration) return { ...state, timer: { ...timer, phase: 'idle', endsAt: 0, remaining: 0, paused: false, startedAt: 0 } };
+  return { ...state, timer: { ...timer, phase, duration, endsAt: now + duration, remaining: duration, paused: false, startedAt: now, taskId: taskId || '' } };
 }
 export function pause(state, now) {
   if (state.timer.phase === 'idle' || state.timer.paused) return state;

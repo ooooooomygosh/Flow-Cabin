@@ -359,7 +359,7 @@ try {
     const downloaded = page.waitForEvent('download'); await dialog.getByRole('button', { name: '导出备份', exact: true }).click();
     const file = path.join(output, 'synthetic-deleted-backup.json'); await (await downloaded).saveAs(file);
     const text = await fs.readFile(file, 'utf8'), clean = JSON.parse(text);
-    assert.equal(clean.version, 4); assert.ok(!text.includes('PRIVATE-SYNTHETIC'));
+    assert.equal(clean.version, 5); assert.ok(!text.includes('PRIVATE-SYNTHETIC'));
     assert.deepEqual(clean.memory.souvenirs, old.memory.souvenirs);
     await page.keyboard.press('Escape');
     await importBackup(page, old);

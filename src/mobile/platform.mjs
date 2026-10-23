@@ -43,7 +43,7 @@ export async function initializeMobile() {
   // A WebView does not implement anchor downloads. Keep this bridge narrow:
   // a native system save picker writes only the file the user explicitly chose.
   window.albumMobile.saveFile = async (blob, filename) => {
-    if (blob.size > 24 * 1024 * 1024) throw new Error('文件超过 24 MB，请减小导出尺寸后重试。');
+    if (blob.size > 32 * 1024 * 1024) throw new Error('文件超过 32 MB，请减小导出尺寸后重试。');
     const data = await new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result).split(',')[1]); reader.onerror = reject; reader.readAsDataURL(blob); });
     const result = await Device.saveFile({ filename, mime: blob.type || 'application/octet-stream', data });
     if (!result.cancelled) report('文件已保存到你选择的位置。');
@@ -57,6 +57,8 @@ export async function initializeMobile() {
   };
   window.albumMobile.syncRequest = (path, value) => Device.syncRequest({ path: `/desktop-sync${path}`, ...(value === undefined ? {} : { body: JSON.stringify(value) }) });
   window.albumMobile.weatherRequest = (path, value) => Device.weatherRequest({ path: `/desktop-weather${path}`, ...(value === undefined ? {} : { body: JSON.stringify(value) }) });
+  window.albumMobile.restartInterface = () => Device.restartInterface();
+  window.albumMobile.approximateLocation = () => Device.approximateLocation();
   window.albumMobile.ambience = config => Device.ambience({ config });
   window.albumMobile.ambienceState = () => Device.ambienceState();
   window.albumMobile.beginCameraScan = () => Device.beginCameraScan();
@@ -64,6 +66,10 @@ export async function initializeMobile() {
   window.albumMobile.playbackEnergy = () => { const sample = window.albumMobile.nativeEnergy; return sample && performance.now() - sample.at < 500 ? sample.value : 0; };
   window.albumMobile.player = NativePlayer;
   window.albumMobile.setLauncherIcon = pet => Device.setLauncherIcon({ pet });
+  window.albumMobile.setCompanion = value => Device.setCompanion(value);
+  window.albumMobile.consumeWidgetCommand = () => Device.consumeWidgetCommand();
+  window.albumMobile.petRequest = (path,body) => Device.petRequest({path,...(body===undefined?{}:{body:JSON.stringify(body)})});
+  window.albumMobile.pinPetShortcut = value => Device.pinPetShortcut(value);
   window.albumMobile.launcherIcon = () => Device.launcherIcon();
   window.albumMobile.requestFocusPermission = () => Device.requestFocusPermission();
   window.addEventListener('album-focus-start', () => {

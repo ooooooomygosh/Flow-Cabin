@@ -1,3 +1,5 @@
+import { createLivingPet, bindPetLife } from './pet/living-pet.mjs';
+import { readLife } from './home/life-state.mjs';
 import { selectedPack } from './pet/imported-pack.mjs';
 import { useEffect, useRef } from 'react';
 import { useFocusState as useFocus } from './focus/useFocus'; // read on demand: no clock re-renders
@@ -15,6 +17,8 @@ const ENERGY_STEP = 0.05;
 // display data only: no session, platform cookies or audio URLs.
 export default function CompanionBridge() {
   const focus = useFocus(), sound = useSoundscape(), latest = useRef({}), music = useRef({ playing: false, energy: 0, estimated: false, bpm: 0, beatAt: 0 });
+  const life = useRef(null); life.current ||= createLivingPet();
+  useEffect(() => bindPetLife(life.current), []);
   useEffect(() => {
     const receive = (event) => { const d = event.detail || {}, energy = Number(d.energy); music.current = { playing: d.playing === true, energy: d.playing === true && Number.isFinite(energy) ? Math.round(Math.max(0, Math.min(1, energy)) / ENERGY_STEP) * ENERGY_STEP : 0, estimated: d.estimated === true, bpm: d.playing === true ? Number(d.bpm) || 0 : 0, beatAt: d.playing === true ? Number(d.beatAt) || 0 : 0 }; };
     window.addEventListener(PLAYBACK_EVENT, receive); return () => window.removeEventListener(PLAYBACK_EVENT, receive);
@@ -44,8 +48,10 @@ export default function CompanionBridge() {
   useEffect(() => {
     const getter = () => {
       const { focus: f, sound: s } = latest.current, room = window.albumRoomSnapshot?.() || null;
+      const now=Date.now(), timer=f?.state.timer;
+      const pose=life.current.resolve({now,focus:timer?.phase==='focus'&&!timer.paused,playing:music.current.playing||s?.lofiState==='playing',synced:Boolean(music.current.bpm&&music.current.beatAt),resting:readLife().resting,input:now-typedAt.current<900?'keyboard':now-clickedAt.current<500?'click':'',reduced:document.documentElement.dataset.desktopReduceMotion==='true'}).pose;
       return {
-        room,
+        room, pose,
         petId: room?.petId || 'cat',
         petPack: selectedPack(),
         focus: f ? focusSnapshot(f.state, Date.now()) : null,

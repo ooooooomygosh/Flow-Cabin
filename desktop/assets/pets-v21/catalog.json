@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "pets": {
+    "cat": "cat/manifest.json",
+    "chick": "chick/manifest.json",
+    "bunny": "bunny/manifest.json",
+    "bear": "bear/manifest.json",
+    "fox": "fox/manifest.json"
+  }
+}

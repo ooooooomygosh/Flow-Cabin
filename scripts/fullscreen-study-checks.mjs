@@ -19,6 +19,7 @@ export async function verifyFullscreenStudy({ browser, origin, output, check }) 
     if (u.origin !== origin) { errors.push('external request blocked'); return route.abort(); }
     const json = value => route.fulfill({ json: value });
     if (u.pathname === '/api/items') return json({ items });
+    if (u.pathname === '/desktop-music/lyrics') return json({ text: '', source: 'fixture', reason: 'No fixture lyrics' });
     if (u.pathname === '/desktop-music/config') return json({ qqLoggedIn: false, neteaseLoggedIn: false });
     if (u.pathname === '/desktop-music/now-playing') return json({ available: false });
     if (u.pathname === '/desktop-music/local/summary') return json({ folders: [], albumCount: 0, trackCount: 0 });

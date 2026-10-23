@@ -95,6 +95,7 @@ try {
     if (url.origin !== origin) { report.unexpectedRequests.push(url.href); return route.abort(); }
     if (url.pathname === '/api/items') return route.fulfill({ json: { items } });
     if (url.pathname === '/api/items/import') return route.fulfill({ json: { added: 0, total: 1 } });
+    if (url.pathname === '/desktop-music/lyrics') return route.fulfill({ json: { text: '', source: 'fixture', reason: 'No fixture lyrics' } });
     if (url.pathname === '/desktop-music/config') return route.fulfill({ json: { qqLoggedIn: false, neteaseLoggedIn: false } });
     if (url.pathname === '/desktop-music/now-playing' || url.pathname === '/desktop-music/apple/permission') return route.fulfill({ json: { available: false } });
     if (url.pathname === '/desktop-music/local/summary') return route.fulfill({ json: { folders: [], albumCount: 0, trackCount: 0 } });

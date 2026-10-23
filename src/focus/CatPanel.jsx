@@ -62,7 +62,7 @@ function InputCompanion({ stats, petName }) {
   </section>;
 }
 
-function CatPanelBody({ close, souvenirs }) {
+function CatPanelBody({ close, souvenirs, onChoosePet }) {
   const focus = useFocus(), { rewards } = focus.state, library = useRecordLibrary();
   const petId = normalizePetId(library?.data.rooms[library.roomId]?.petId), cat = petId === 'cat', pet = getPet(petId);
   const level = levelInfo(rewards.xp), unlocked = unlockedIds(rewards.xp, rewards.bought), mood = useCatCare(), [confirming, setConfirming] = useState('');
@@ -73,6 +73,7 @@ function CatPanelBody({ close, souvenirs }) {
       <PixelCat petId={petId} skin={focus.state.settings.catSkin} accessory={rewards.equipped.accessory || ''} pose="idle" label={`${pet.name}的当前装扮`}/>
       <div><strong>{pet.name}</strong><p>你做你的事，我在这里陪你。<br/>偶尔摸摸头，就很好。</p><small>打字或点鼠标，我会跟着敲敲。</small></div>
     </div>
+    {onChoosePet && <button type="button" className="pixel-button" onClick={onChoosePet}>选择伙伴</button>}
     <InputCompanion stats={input} petName={pet.name}/>
     <section className="focus-rewards" aria-label="小屋奖励">
       <header><strong>Lv.{level.level} 小屋主人</strong><span><FishPixel size={12}/>{rewards.fish} 小鱼干</span></header>
@@ -110,7 +111,7 @@ function placeNearCat() {
   const { x, y, maxH } = catPanelPlace(rect, { w, h: node?.scrollHeight || h }, { w: innerWidth, h: innerHeight });
   root.style.setProperty('--cat-panel-x', `${Math.round(x)}px`); root.style.setProperty('--cat-panel-y', `${Math.round(y)}px`); root.style.setProperty('--cat-panel-max-h', `${Math.floor(maxH)}px`);
 }
-export default function CatPanel({ open, onClose }) {
+export default function CatPanel({ open, onClose, onChoosePet }) {
   const souvenirs = useSouvenirs();
   useLayoutEffect(() => {
     document.querySelectorAll('.room-cat').forEach((node) => node.setAttribute('aria-expanded', String(open)));
@@ -137,5 +138,5 @@ export default function CatPanel({ open, onClose }) {
     document.addEventListener('dragover', over); document.addEventListener('drop', drop); document.addEventListener('dragend', end);
     return () => { mark(false); document.removeEventListener('dragover', over); document.removeEventListener('drop', drop); document.removeEventListener('dragend', end); };
   }, [open]);
-  return open ? <CatPanelBody souvenirs={souvenirs} close={onClose}/> : null;
+  return open ? <CatPanelBody souvenirs={souvenirs} close={onClose} onChoosePet={onChoosePet}/> : null;
 }

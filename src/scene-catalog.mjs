@@ -40,7 +40,9 @@ const scenes = [
   { id: 'night-study', floor: 1000, labelEn: 'Moonlit Study', label: '月夜书桌', description: '暖灯下写几行字，停下来转一转笔', art: '/room-scenes/night-study-pixel.png', alt: '月夜窗边戴耳机写字的女孩，右侧九格木质唱片架', band: { top: 150, bottom: 781, left: 740, right: 1410 }, geometry: { columns: [[846, 170], [1038, 170], [1230, 170]], rows: [[162, 174], [384, 174], [607, 174]] }, pixel: true, style: { accent: '#dba668', background: '#24160f' } },
   { id: 'forest', floor: 900, labelEn: 'Forest Glade', label: '林间书屋', description: '浇浇窗边的植物，转半圈花盆再读几页', art: '/room-scenes/forest-cabin.svg', pixelArt: '/room-scenes/forest-cabin-pixel.png', alt: '林间书屋，拱形森林窗、植物、十二格唱片架与绿色沙发', band: DECK_BAND, geometry: pixelGeometry, pixel: true, style: { accent: '#b7c59a', background: '#3d4e43' } },
   { id: 'seaside', floor: 900, labelEn: 'Seaside', label: '海边慢屋', description: '推开圆窗，让海风陪午后的唱片', art: '/room-scenes/seaside-cabin.svg', pixelArt: '/room-scenes/seaside-cabin-pixel.png', alt: '海边慢屋，圆形海景窗、阳台、浅木唱片架与条纹亚麻椅', band: DECK_BAND, geometry: pixelGeometry, pixel: true, style: { accent: '#bcd4c3', background: '#718b85' } },
-  { id: 'starlight', floor: 900, labelEn: 'Starry Night', label: '星夜阁楼', description: '抬起望远镜，亲手连一张想象星图', art: '/room-scenes/starlight-cabin.svg', pixelArt: '/room-scenes/starlight-cabin-pixel.png', alt: '星夜阁楼，星空圆窗、望远镜、十二格唱片架与暖灯阅读椅', band: DECK_BAND, geometry: pixelGeometry, pixel: true, style: { accent: '#c1b7db', background: '#303b50' } }
+  { id: 'starlight', floor: 900, labelEn: 'Starry Night', label: '星夜阁楼', description: '抬起望远镜，亲手连一张想象星图', art: '/room-scenes/starlight-cabin.svg', pixelArt: '/room-scenes/starlight-cabin-pixel.png', alt: '星夜阁楼，星空圆窗、望远镜、十二格唱片架与暖灯阅读椅', band: DECK_BAND, geometry: pixelGeometry, pixel: true, style: { accent: '#c1b7db', background: '#303b50' } },
+  { id: 'rain-train', floor: 900, labelEn: 'Rainy Night Train', label: '雨夜列车书房', description: '雨滴掠过车窗，暖灯陪你写下下一站', art: '/room-scenes/v21/rain-train/shell.png', alt: '雨夜列车车厢，雨窗、暖气和木质地板', band: DECK_BAND, geometry: pixelGeometry, pixel: true, style: { accent: '#c6a078', background: '#252e3c' } },
+  { id: 'greenhouse', floor: 900, labelEn: 'Rooftop Greenhouse', label: '屋顶温室', description: '阳光穿过玻璃，和植物一起慢慢生长', art: '/room-scenes/v21/greenhouse/shell.png', alt: '屋顶玻璃温室，透光屋顶与木地板', band: DECK_BAND, geometry: pixelGeometry, pixel: true, style: { accent: '#d3dbab', background: '#465f48' } }
 ];
 
 export const ROOM_SCENES = Object.freeze(scenes.map((scene) => Object.freeze({ ...scene, view: scene.pixelArt || scene.art, geometry: freezeGeometry(scene.geometry), band: Object.freeze({ ...scene.band }), shelfFrame: Object.freeze(scene.id === 'night-study' ? { left: 800, right: 1424 } : { left: DECK_BAND.left, right: DECK_BAND.right }), style: Object.freeze(scene.style), windows: deepFreeze(WINDOWS[scene.id] || []) })));
@@ -48,3 +50,8 @@ export const ROOM_SCENE_IDS = Object.freeze(ROOM_SCENES.map(({ id }) => id));
 const byId = new Map(ROOM_SCENES.map((scene) => [scene.id, scene]));
 export function normalizeRoomSceneId(id) { return byId.has(id) ? id : 'pixel'; }
 export function getRoomScene(id) { return byId.get(normalizeRoomSceneId(id)); }
+
+// Classic shelves use their original six illustrated geometries. Beta-only rooms
+// retain their saved identity while classic displays the closest original room.
+export const CLASSIC_ROOM_SCENES = Object.freeze(ROOM_SCENES.filter(scene => !['rain-train', 'greenhouse'].includes(scene.id)));
+export const classicSceneId = id => id === 'rain-train' ? 'warm' : id === 'greenhouse' ? 'forest' : CLASSIC_ROOM_SCENES.some(scene => scene.id === id) ? id : 'pixel';

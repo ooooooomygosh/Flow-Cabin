@@ -16,6 +16,7 @@ const DEFAULT_REPO = 'ooooooomygosh/Flow-Cabin';
 export const PLATFORMS = [
   ['macOS', 'Apple Silicon · Intel（DMG 或 ZIP）'],
   ['Windows', 'x64 安装版 · 便携版'],
+  ['Android', 'APK · arm64 / x86_64'],
 ];
 
 const bare = (value) => String(value || '').trim().replace(/^v/i, '');

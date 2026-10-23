@@ -67,9 +67,17 @@ public final class CabinMusic {
         HttpURLConnection connection = open(path, body, null);
         try { int status = connection.getResponseCode(); InputStream stream = status < 400 ? connection.getInputStream() : connection.getErrorStream();
             if (stream == null) throw new IOException("音源服务未返回数据。");
-            ByteArrayOutputStream output = new ByteArrayOutputStream(); try (stream) { byte[] chunk = new byte[8192]; int size; while ((size = stream.read(chunk)) != -1) { if (output.size() + size > 8 * 1024 * 1024) throw new IOException("响应过大。"); output.write(chunk, 0, size); } }
+            ByteArrayOutputStream output = new ByteArrayOutputStream(); try (stream) { byte[] chunk = new byte[8192]; int size; while ((size = stream.read(chunk)) != -1) { if (output.size() + size > (path.startsWith("/pets/") ? 24 : 8) * 1024 * 1024) throw new IOException("响应过大。"); output.write(chunk, 0, size); } }
             JSONObject result = new JSONObject(output.toString("UTF-8")); if (status >= 400 || result.has("error")) throw new IOException(result.optString("error", "音源请求失败。")); return result;
         } finally { connection.disconnect(); }
+    }
+    public WebResourceResponse petMedia(String path) throws Exception {
+        if(!path.matches("/pets/packs/[a-z0-9_-]{1,64}/(atlas[.]png|[a-z]+[.]webm)"))throw new IOException("Invalid pet path");
+        HttpURLConnection connection=open(path,null,null);int status=connection.getResponseCode();
+        if(status!=200){connection.disconnect();throw new IOException("Pet media unavailable");}
+        InputStream stream=new FilterInputStream(connection.getInputStream()){@Override public void close() throws IOException{try{super.close();}finally{connection.disconnect();}}};
+        Map<String,String> headers=new HashMap<>();headers.put("Cache-Control","no-store");headers.put("X-Content-Type-Options","nosniff");
+        return new WebResourceResponse(path.endsWith(".webm")?"video/webm":"image/png",null,200,"OK",headers,stream);
     }
     public HttpURLConnection mediaConnection(String path, long position) throws Exception {
         if (!path.matches("/audio/[a-f0-9]{48}")) throw new IOException("Invalid audio path");

@@ -17,9 +17,9 @@ const drawn = (draw, value, width = 96, height = 96) => {
   const canvas = fakeCanvas(width, height); draw(canvas.context, value); return canvas.calls;
 };
 
-test('all six scenes keep stable IDs and four non-study themes have distinct objects', () => {
-  assert.deepEqual(ROOM_SCENE_IDS, ['pixel', 'warm', 'night-study', 'forest', 'seaside', 'starlight']);
-  assert.equal(ROOM_SCENES.length, 6);
+test('all eight scenes keep stable IDs and four non-study themes have distinct objects', () => {
+  assert.deepEqual(ROOM_SCENE_IDS, ['pixel', 'warm', 'night-study', 'forest', 'seaside', 'starlight', 'rain-train', 'greenhouse']);
+  assert.equal(ROOM_SCENES.length, 8);
   assert.deepEqual(Object.keys(THEME_OBJECTS).sort(), ['forest', 'seaside', 'starlight', 'warm']);
   const labels = Object.values(THEME_OBJECTS).map(item => item.label);
   assert.equal(new Set(labels).size, labels.length);

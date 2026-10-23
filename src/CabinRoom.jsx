@@ -1,3 +1,4 @@
+import { selectPack } from './pet/imported-pack.mjs';
 import React, { Suspense, lazy, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { reportTrayPet } from './desktop/desktop-sink-client.mjs';
 import { getRoomScene } from './scene-catalog.mjs';
@@ -33,6 +34,9 @@ import { useCatCareHost } from './cat/useCatCare';
 import { coverThumb } from './focus/session-log.mjs';
 import './companion-room.css';
 import Dialog from './Dialog';
+import { CabinRuntimeProvider } from './runtime/CabinRuntime';
+import CabinHome from './home/CabinHome';
+import HomePanels, { HomeLyrics, LifeReminder } from './home/HomePanels';
 
 // Opened on demand: Settings (with 音源 › 账户与文件夹), the first-run guide and
 // 唱机特写 load on first use (prefetched once the room is idle).
@@ -61,8 +65,8 @@ const buildSnapshot = ({ items, record, look, ...rest }) => ({ ...rest, look, ro
 export default function CabinRoom({ items, loading, loadError = '', reload, openRecord, openAdd, firstVisit = false, hubRequest = null, openBackup, openWall, notify, saveToShelf }) {
   const appearance = useDesktopAppearance(), reduced = useReducedMotion();
   const stage = useRef(null);
-  const flow = useOnboardingFlow({ client: appearance.client, loading, loadError, firstVisit, itemCount: items.length, hubRequest, notify });
-  const chrome = useRoomChrome({ client: appearance.client, notify });
+  const flow = useOnboardingFlow({ client: appearance.client, loading, loadError, firstVisit, itemCount: items.length, hubRequest, notify, homeFirst: true });
+  const chrome = useRoomChrome({ client: appearance.client, notify, restoreDock: false });
   const library = useRecordLibrary(), look = library?.data.rooms[library.roomId]?.look || 'pixel';
   const [mobileSlotCount, setMobileSlotCount] = useState(null);
   const [mobileShelfCompact, setMobileShelfCompact] = useState(false);
@@ -72,7 +76,7 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
   const { record, provider, playback, player, deckItem, effectiveSpin } = deck;
   const focus = useFocusState(), sound = useSoundscape();
   useCatCareHost();
-  const [modularOpen, setModularOpen] = useState(false);
+  const [tool, setTool] = useState(''), [lyricsOpen, setLyricsOpen] = useState(false), [editRequest, setEditRequest] = useState(0);
   const [catPanelOpen, setCatPanelOpen] = useState(false);
   const [smartOpen, setSmartOpen] = useState(false);
   const closeSmart = useCallback(() => setSmartOpen(false), []);
@@ -113,7 +117,7 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
     return () => { clearInterval(timer); off(); };
   }, [lofiBpm]);
   useCompanionSnapshot({ look, petId, petOut: Boolean(pet.active), weather, accessory: catFocus.accessory || '', grooving, track: deck.nowTrack, startRow: view.startRow, items: view.items, selectedId: selected?.id || '', record: deckItem, recordStyle, spinning: effectiveSpin, trackIndex: deck.shownTrackIndex, reduceMotion: appearance.reduceMotion, statusText: deck.statusText, actualTrack: deck.actualTrack, provider }, buildSnapshot, (state) => setWallpaperError(state.error || ''));
-  const personalizeRoom = (patch) => library?.update((old) => ({ ...old, rooms: { ...old.rooms, [library.roomId]: { ...(old.rooms[library.roomId] || {}), ...patch } } }));
+  const personalizeRoom = (patch) => { const saved = library?.update((old) => ({ ...old, rooms: { ...old.rooms, [library.roomId]: { ...(old.rooms[library.roomId] || {}), ...patch } } })); if (saved !== false && patch.petId) { try { selectPack(null); } catch(error) { notify(error.message); return false; } } return saved; };
   // Starting is explicit: persist the focus settings and timer first, then put
   // the AI playlist or the first shelf pick on the deck.
   const startSmartSession = (plan) => {
@@ -193,73 +197,36 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
   const cat = <RoomCat petId={petId} focus={catFocus} playing={grooving} track={deck.nowTrack} reduceMotion={reduced} hidden={Boolean(pet.active)}/>;
   const petLabel = pet.active ? '让伙伴回家' : '伙伴出门', petName = getPet(petId).name;
   const queued = deck.isQueued(selected?.id);
-  return <div className={`listening-room cabin-room cabin-${look}`} style={{ '--scene-accent': getRoomScene(look).style.accent }}>
-    {look === 'pixel' && <CabinWelcome petName={petName} onNotes={() => saveDock({ open: true, tab: 'notes' })}/>}
-    {/* One row of room actions, right-aligned: focus · sound · companion · 沉入桌面 · 沉浸.
-        Preferences live in Settings (titlebar ⚙). */}
-    <nav className="cabin-toolbar" aria-label="小屋工具">
-      {import.meta.env.DEV && new URLSearchParams(window.location.search).has('room-studio') && <button type="button" onClick={() => setModularOpen(true)}>生活小屋 · 制作中</button>}
-      {focus && <span className="zen-keep cabin-toolbar-group"><FocusBadge open={dock.open && dock.tab !== 'sound'} onClick={() => saveDock({ open: !(dock.open && dock.tab !== 'sound'), ...(dock.tab === 'sound' ? { tab: 'timer' } : {}) })}/></span>}
-      <span className="cabin-toolbar-group">
-        {mobileShelfCompact && <button type="button" aria-label="打开播放器" title="打开唱机特写与播放控制" onClick={() => chrome.setCorner(true)}><Play size={17}/><span>播放器</span></button>}
-        {sound && <button type="button" className={sound.enabled ? 'is-on' : ''} aria-label={sound.enabled ? '小屋声音（开）' : '小屋声音（关）'} aria-expanded={dock.open && dock.tab === 'sound'} title="Lo-fi 电台与环境音" onClick={() => saveDock(dock.open && dock.tab === 'sound' ? { open: false } : { open: true, tab: 'sound' })}>{sound.enabled ? <SpeakerWave size={17}/> : <SpeakerOff size={17}/>}<span>声音</span></button>}
-        <button type="button" aria-label={petLabel} title={pet.active ? `让${petName}回家` : `${petName}出门：到桌面上散步`} aria-pressed={Boolean(pet.active)} onClick={() => desktopCommand(pet.active ? 'pet-stop' : 'pet-start')}><Heart size={17}/><span>{petLabel}</span></button>
-        <button type="button" aria-label={sink.busy ? '取消沉入桌面' : sink.active ? '浮出桌面' : '沉入桌面'} aria-pressed={Boolean(sink.active)} disabled={appearance.client && !sink.supported} title={sink.active ? '浮出桌面：回到小屋窗口 · Ctrl/⌘+Alt+D' : sink.reason || '沉入桌面：窗口收起，小屋变成桌面背景，伙伴和迷你唱机还能点 · Ctrl/⌘+Alt+D'} onClick={chrome.toggleDesktopMode}><Computer size={17}/><span>{sink.busy ? '正在沉入…' : sink.active ? '浮出桌面' : '沉入桌面'}</span></button>
-        <button type="button" aria-keyshortcuts="Z" title="沉浸：窗口变成专注画面（翻页钟等），Esc 或点空白处返回 · Z" onClick={() => window.dispatchEvent(new CustomEvent('cabin-focus-display', { detail: { open: true } }))}><Expand size={17}/><span>沉浸</span></button>
-        {!zen && !fullscreen && <button type="button" aria-pressed={false} aria-keyshortcuts="H" title="收起工具：只留房间和时钟 · H" onClick={chrome.toggleZen}><EyeSlash size={17}/><span>收起工具</span></button>}
-      </span>
-    </nav>
-    {filtersOpen && <section id="cabin-shelf-filters" className="shelf-filters" aria-label="整理唱片架">
-      <header className="shelf-filters-header"><strong>整理唱片架</strong><button type="button" aria-label="收起整理唱片架" onClick={() => setFiltersOpen(false)}>收起</button></header>
-      <div className="shelf-filter-row">
-        <label>排序<select aria-label="排序方式" value={filters.sort} onChange={(event) => setFilters({ ...filters, sort: event.target.value })}>{Object.entries(SORTS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-        <label>类型<select aria-label="筛选类型" value={filters.type} onChange={(event) => setFilters({ ...filters, type: event.target.value })}><option value="all">全部</option><option value="album">专辑</option><option value="song">单曲</option><option value="playlist">歌单</option></select></label>
-      </div>
-      <RecordBoxControls items={items} filters={filters} setFilters={(change) => setFilters((old) => ({ ...old, ...(typeof change === 'function' ? change(old) : change) }))} count={visible.length}/>
-      <div className="shelf-filter-wall"><span>挑几张唱片，拼成一张专辑墙图片。</span><button type="button" onClick={() => { setFiltersOpen(false); openWall?.(); }}><Grid3X3 size={16}/>专辑墙</button></div>
-    </section>}
-    {library?.error && flow.hub !== 'room' && !flow.wizard && !filtersOpen && <p className="room-preferences-error" role="alert">设置未保存：{library.error}</p>}
+  const openTool = action => {
+    if (['timer', 'tasks', 'study', 'notes', 'stats', 'sound'].includes(action)) { setTool(''); saveDock({ open: true, tab: action }); return; }
+    saveDock({ open: false });
+    if (action === 'wall') { setTool(''); openWall?.(); return; }
+    if (action === 'interface') { setTool(''); window.dispatchEvent(new Event('cabin:interface-choice')); return; }
+    if (action === 'backup') { setTool(''); openBackup?.(); return; }
+    if (action === 'pet') { setTool(''); setCatPanelOpen(true); return; }
+    if (action === 'settings' || action === 'music-settings') { setTool(''); flow.setHub('music'); return; }
+    if (action === 'lyrics') { setLyricsOpen(true); return; }
+    if (action === 'journal' || action === 'mail') { window.dispatchEvent(new CustomEvent('cabin:open-journal', { detail: { tab: action === 'mail' ? 'letters' : 'entries' } })); return; }
+    setTool(action);
+  };
+  return <CabinRuntimeProvider deck={deck} items={items} look={look} onNavigate={openTool} onRoomChange={personalizeRoom} notify={notify}>
+    <CabinHome reduced={appearance.reduceMotion || reduced} editRequest={editRequest} focusOpen={dock.open} petOpen={catPanelOpen}/>
+    <LifeReminder/>
+    {library?.error && <p className="home-layout-error" role="alert">设置未保存：{library.error}</p>}
     {wallpaperError && <p className="wallpaper-error" role="alert">{wallpaperError}<button type="button" aria-label="关闭动态背景提示" onClick={() => setWallpaperError('')}>×</button></p>}
-    {/* Under the opaque 唱机特写 the room is skipped entirely: no style, layout or paint work. */}
-    <div ref={stage} className="cabin-stage-wrap"><RoomScene look={look} items={view.items} selectedId={selected?.id} select={setSelectedId} load={deck.place} startRow={view.startRow} weather={weather} cat={cat} onShelfCapacity={setMobileSlotCount} onShelfCompact={setMobileShelfCompact}>
-      <RoomTurntable item={deckItem} spinning={effectiveSpin} system={deck.system} trackIndex={deck.shownTrackIndex} style={recordStyle} items={items} load={deck.load} toggle={deck.toggleVisual} track={deck.setTrackIndex} eject={deck.eject} provider={provider} setProvider={deck.chooseProvider} playback={playback} player={player} tools={<nav className="turntable-room-tools" aria-label="唱片架">
-        <button type="button" aria-label="整理唱片架" title="排序、筛选、唱片盒与专辑墙" aria-controls="cabin-shelf-filters" aria-expanded={filtersOpen} className={filtered ? 'is-active' : ''} onClick={() => setFiltersOpen(!filtersOpen)}><Wand2 size={17}/><span>整理唱片架{filtered ? ` · ${visible.length}` : ''}</span></button>
-        <button type="button" aria-label="智能唱片机" title="说出计划，让小屋按场景编排一张可播放歌单" onClick={openSmart}><Sparkles size={17}/><span>智能唱片机</span></button>
-      </nav>}/>
-      {!visible.length && <div className="room-empty">
-        {/* A failed read is explained once, in the titlebar alert; the shelf offers the way back. */}
-        {loadError && !loading ? <button type="button" onClick={reload}><Refresh size={16}/>重新读取唱片</button> : <p>{loading ? '正在整理唱片…' : items.length ? '没有符合筛选的唱片。' : '木屋的唱片架，等你放上第一张。'}</p>}
-        {!loading && !loadError && (items.length ? <button type="button" onClick={() => setFilters({ ...filters, ...DEFAULT_FILTERS, sort: filters.sort })}>清除筛选</button> : <>
-          <small>也可以先专注一会儿，收藏慢慢来。</small>
-          <div className="room-welcome-actions"><button type="button" onClick={() => openAdd()}><Plus size={16}/>添加第一张专辑</button>{focus && <button type="button" className="room-welcome-focus" onClick={() => saveDock({ open: true, tab: 'timer' })}>先专注一会儿</button>}</div>
-          <small className="room-welcome-tip">在标题栏「设置 › 房间与桌宠」里换场景和伙伴。</small>
-        </>)}
-      </div>}
-      {(view.mode === 'page' ? view.rows > 1 : view.rows > 3) && <div className="room-shelf-navigation" aria-label="唱片架浏览"><button type="button" aria-label={view.mode === 'page' ? '上一页唱片' : '上一排唱片'} disabled={view.startRow === 0} onClick={() => changeRow(view.startRow - 1)}><Up/></button><span>{view.mode === 'page' ? `${view.startRow + 1} / ${view.rows} 页` : `${view.startRow + 1}–${Math.min(view.rows, view.startRow + 3)} / ${view.rows} 排`}</span><button type="button" aria-label={view.mode === 'page' ? '下一页唱片' : '下一排唱片'} disabled={view.startRow >= view.maxRow} onClick={() => changeRow(view.startRow + 1)}><Down/></button><small>{view.mode === 'page' ? '翻页浏览' : '↑↓ 或滚轮翻排'}</small></div>}
-    </RoomScene></div>
-    {selected && <div className="room-now-playing"><div className="room-selection-copy"><small>唱片架 · 双击或回车放盘</small><h2 title={selected.title}>{displayTitle(selected.title)}</h2><p title={selected.type === 'playlist' ? `歌单 · ${selected.artist} · ${selected.tracks?.length || 0} 首` : `${selected.artist} · ${selected.year || '年份待补充'} · ${selected.tracks?.length || 0} 首曲目`}>{selected.type === 'playlist' ? `歌单 · ${selected.artist} · ${selected.tracks?.length || 0} 首` : `${selected.artist} · ${selected.year || '年份待补充'} · ${selected.tracks?.length || 0} 首曲目`}</p></div><div className="room-selection-actions">
-      {/* An empty deck: the visible keyboard / pointer path to play. With a record
-          already on, 加入待播 leads (and Enter / double-click still load). */}
-      {!record && <button type="button" className="room-load-record is-primary" aria-keyshortcuts="Enter" title="放到唱机上播放 · 双击封面或按回车也可以" onClick={() => placeRecord(selected, document.querySelector('.room-record.is-selected') || stage.current, deck.place)}><Play size={16}/><span>放到唱机</span></button>}
-      {record && queueId(record.id) !== queueId(selected.id) && <button type="button" className="room-queue-add" aria-label={queued ? '已在待播' : '加入待播'} aria-pressed={queued} title="当前唱片放完后接着放" onClick={(event) => { if (queued) { player.remove(selected.id); return; } if (!player.enqueue(selected.id)) return; const queueButton = document.querySelector('.room-turntable .player-mode[aria-label^="待播唱片"]'); flyRecord({ from: document.querySelector('.room-record.is-selected') || event.currentTarget, to: queueButton, target: queueButton, cover: selected.cover, mode: 'queue' }); }}>{queued ? <><Check size={16}/><span>已在待播</span></> : <><ListBullet size={16}/><span>加入待播</span></>}</button>}<button type="button" className="room-open-album" aria-label="唱片卡片" title="唱片卡片：曲目、笔记、自定义唱片与 Discogs" onClick={() => openRecord(selected.id)}><span>唱片卡片</span><ArrowUpRight size={18}/></button></div></div>}
+    <HomePanels tool={tool} close={() => setTool('')} filters={filters} setFilters={setFilters} visible={visible} recordStyle={recordStyle} openAdd={openAdd} openRecord={openRecord} openWall={openWall} openSmart={openSmart} onRoomChange={personalizeRoom}/>
     {focus && <CabinJournal/>}
-    {modularOpen && <Suspense fallback={<span role="status">正在打开生活小屋…</span>}><ModularRoom close={() => setModularOpen(false)} reduceMotion={appearance.reduceMotion || reduced} look={look} petId={petId} playing={effectiveSpin} focus={focus.state.timer.phase === 'focus' && !focus.state.timer.paused} onAction={action => {
-      setModularOpen(false);
-      if (['timer', 'tasks', 'study', 'notes', 'stats'].includes(action)) saveDock({ open: true, tab: action });
-      else if (action === 'pet') setCatPanelOpen(true);
-      else if (action === 'music') chrome.setCorner(true);
-      else if (action === 'lyrics') setTimeout(() => document.querySelector('.turntable-lyrics-entry')?.click(), 0);
-      else window.dispatchEvent(new CustomEvent('cabin:open-journal', { detail: action === 'mail' ? { tab: 'letters' } : {} }));
-    }}/></Suspense>}
-    {focus && <FocusDock open={dock.open} tab={dock.tab} setTab={(tab) => saveDock({ tab })} close={() => saveDock({ open: false })} onOpenSmart={openSmart}/>}
+    {focus && <FocusDock open={false}/>}
+    {focus && dock.open && <Dialog title={dock.tab === 'notes' ? '随手记' : '专注与日常'} close={() => saveDock({ open: false })} className="home-tool home-focus-dialog" size="lg"><FocusDock embedded open tab={dock.tab} setTab={tab => saveDock({ tab })} close={() => saveDock({ open: false })} onOpenSmart={openSmart}/></Dialog>}
+    {lyricsOpen && <HomeLyrics close={() => setLyricsOpen(false)}/>}
     {desktopMode ? <DesktopWidgets mode="desktop" exit={chrome.toggleDesktopMode} item={deckItem} provider={provider} playback={playback} player={player} spinning={effectiveSpin} toggleVisual={deck.toggleVisual} trackIndex={deck.shownTrackIndex}/> : zen && !chrome.zenTools && <DesktopWidgets mode="zen"/>}
-    {!desktopMode && <ImmersiveChrome zen={zen} fullscreen={fullscreen} exitFullscreen={chrome.exitFullscreen} toggleZen={chrome.toggleZen} tools={chrome.zenTools} setTools={chrome.setZenTools} />}
+    {!desktopMode && <ImmersiveChrome zen={zen} fullscreen={fullscreen} exitFullscreen={chrome.exitFullscreen} toggleZen={chrome.toggleZen} tools={chrome.zenTools} setTools={chrome.setZenTools}/>}
     <Suspense fallback={null}>
-      <Suspense fallback={null}><CatPanel open={catPanelOpen} onClose={() => setCatPanelOpen(false)}/></Suspense>
+      <CatPanel open={catPanelOpen} onClose={() => setCatPanelOpen(false)} onChoosePet={() => { setCatPanelOpen(false); setTool('companions'); }}/>
       <SmartTurntable open={smartOpen} close={closeSmart} items={items} onStart={startSmartSession} onSave={saveToShelf} onNeedAiSettings={() => { setSmartOpen(false); flow.setHub('ai'); }}/>
-      {corner && <Suspense fallback={<Dialog title="唱机特写" close={() => chrome.setCorner(false)} returnFocus=".focus-badge" size="sm"><p role="status">正在点亮唱机旁的台灯…</p></Dialog>}><ListeningCorner item={deckItem} items={visible} vinyl={recordStyle} provider={provider} spinning={effectiveSpin} trackIndex={deck.shownTrackIndex} setTrackIndex={deck.setTrackIndex} playback={playback} player={player} toggleVisual={deck.toggleVisual} load={deck.load} close={() => chrome.setCorner(false)} reduceMotion={reduced}/></Suspense>}
-      {flow.hub && <SettingsHub openStudio={() => { flow.setHub(''); setModularOpen(true); }} section={flow.hub} setSection={flow.setHub} close={() => flow.setHub('')} env={flow.env} player={flow.playerAdapter} provider={provider} useSource={deck.chooseProvider} look={look} petId={petId} onRoomChange={personalizeRoom} reduceMotion={appearance.reduceMotion} error={library?.error} desktop={chrome.desktop} openBackup={() => { flow.setHub(''); openBackup?.(); }} restartOnboarding={flow.restartOnboarding}/>}
+      {corner && <Suspense fallback={<Dialog title="唱机特写" close={() => chrome.setCorner(false)}><p role="status">正在点亮唱机旁的台灯…</p></Dialog>}><ListeningCorner item={deckItem} items={visible} vinyl={recordStyle} provider={provider} spinning={effectiveSpin} trackIndex={deck.shownTrackIndex} setTrackIndex={deck.setTrackIndex} playback={playback} player={player} toggleVisual={deck.toggleVisual} load={deck.load} close={() => chrome.setCorner(false)} reduceMotion={reduced}/></Suspense>}
+      {flow.hub && <SettingsHub openStudio={() => { flow.setHub(''); setEditRequest(value => value + 1); }} section={flow.hub} setSection={flow.setHub} close={() => flow.setHub('')} env={flow.env} player={flow.playerAdapter} provider={provider} useSource={deck.chooseProvider} look={look} petId={petId} onRoomChange={personalizeRoom} reduceMotion={appearance.reduceMotion} error={library?.error} desktop={chrome.desktop} openBackup={() => { flow.setHub(''); openBackup?.(); }} restartOnboarding={flow.restartOnboarding}/>}
       {flow.wizard && <OnboardingWizard state={flow.onboarding} update={flow.saveOnboarding} env={flow.env} player={flow.playerAdapter} look={look} petId={petId} onRoomChange={personalizeRoom} useSource={deck.chooseProvider} openMusicSettings={flow.openMusicSettings} openAdd={() => { flow.closeWizard('later'); openAdd(); }} close={flow.closeWizard} reduceMotion={appearance.reduceMotion} error={library?.error}/>}
     </Suspense>
-  </div>;
+  </CabinRuntimeProvider>;
 }

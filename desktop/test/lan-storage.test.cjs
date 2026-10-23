@@ -40,3 +40,14 @@ test('purged notes remain tombstones; corrupt incoming data leaves all local sto
   assert.throws(() => applyIfUnchanged(snapshot, fingerprint, a), /本机内容发生变化/);
   assert.match(a.getItem('flow-cabin-journal-v1'), /edited during transfer/);
 });
+test('v2 favorites keep stable revisions and exclude local media; deletion and companion/layout changes survive export/apply',async()=>{
+ const {exportSnapshot,applySnapshot}=await import('../../src/sync/storage.mjs');
+ const {defaultLayout,LAYOUT_PREFIX}=await import('../../src/home/spatial-layout.mjs');
+ const a=new Storage(),b=new Storage();
+ a.setItem('flow-cabin-web-collection-v1',JSON.stringify({items:[{id:'local-id',title:'record',artist:'artist',addedAt:'2026-01-01T00:00:00.000Z',notes:'private',trackDetails:[{title:'track',source:'local',providerId:'/Users/private.mp3',mediaMid:'/secret'}]}]}));
+ a.setItem('album-circle-library-v1:local-owner',JSON.stringify({rooms:{'local-room':{petId:'fox',look:'pixel'}}}));
+ a.setItem(LAYOUT_PREFIX+'pixel',JSON.stringify(defaultLayout('pixel')));
+ const first=await exportSnapshot(a),second=await exportSnapshot(a);assert.deepEqual(first,second);assert.doesNotMatch(JSON.stringify(first),/private|secret/);assert.equal(first.layouts[0].id,'spatial:pixel');
+ applySnapshot(first,b);assert.equal(JSON.parse(b.getItem(LAYOUT_PREFIX+'pixel')).version,2);assert.ok(b.getItem('flow-cabin-lan-favorites-v1').includes('record'));
+ a.setItem('flow-cabin-web-collection-v1',JSON.stringify({items:[]}));const deleted=await exportSnapshot(a);assert.equal(deleted.favorites[0].deleted,true);applySnapshot(deleted,b);assert.equal(JSON.parse(b.getItem('flow-cabin-lan-favorites-v1')).deleted.length,1);
+});

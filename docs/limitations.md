@@ -1,6 +1,19 @@
 # 使用边界与验证状态
 
-当前版本基线：`v1.21.6`（2026-10-21）。`v1.21.5` 是上一个已发布版本；tag、安装资产与签名状态以 [GitHub Releases](https://github.com/ooooooomygosh/Flow-Cabin/releases) 为准。#61 已在当前主线解决。
+当前版本基线：`v2.1.0`（2026-10-23）。具体验证证据见 [2.1 实施记录](v2.1-implementation.md)，已发布 tag、资产与签名以 [GitHub Releases](https://github.com/ooooooomygosh/Flow-Cabin/releases) 为准。
+
+## 2.1 的验收边界
+
+- 八主题的桌面、竖屏与横屏已做实际页面截图检查；全屏角落支持昼夜调色，但窗景日月仍在插画中，尚未独立运动。
+- 五只内置伙伴有实际绘制的 24 类动作。外部伙伴只播放作者包内存在的动作；缺失或透明视频解码失败时明确回退到 PNG，不会凭空补动画。
+- 本机 macOS Electron 已检查真实头像、Dock、菜单栏控制、歌词窗口、WebM、备份及进程重启。真实 macOS/Windows 定位授权撤销、Windows Geolocator 和真实和风账号未完成实机验收。
+- 设备会话已用两个实际 HTTPS/WSS 服务与故障注入验证；这不等于 Android 与桌面在真实 Wi-Fi、休眠与漫游环境的完整实测。
+- Android 模拟器和原生测试验证不覆盖物理蓝牙、耳机、电话与各厂商省电策略；平台真实音乐账号、版权/会员路径和旧安装器同路径覆盖仍待对应环境验证。
+- 独立伴随歌词窗口目前在桌面版提供；网页没有原生系统图标或本机音乐账号桥。Android ZIP 导入先通过桌面转换，手机直接导入 JSON 包。
+- 不含云端中继、多人共享小屋和 Android 跨应用悬浮宠物。
+
+以下旧版验证快照为历史记录，不代表 2.1 全平台实测结论。
+
 
 本页区分「已实现」「自动化或隔离页面已验证」和「真实设备已验证」。旧提交的测试数字不会自动套用到当前版本。
 
@@ -47,7 +60,7 @@ HTTP 模板的智能唱片机请求使用 `response_format: {"type":"json_object
 
 - 手记和**整组往来信**只能从回收站永久删除，并需要第二次确认。普通移除仍可恢复。
 - 永久删除后只保留 `{ id, purgedAt }` 标记，正文、标签、历史和回信正文不再保存；旧窗口、旧草稿和迟到回信不能复活内容。
-- 备份格式为 v4：保留删除标记，但不包含已删除正文。没有删除记录的新 profile 仍可导入外部旧备份；外部旧备份不能推断或撤销从未记录过的永久删除。
+- 备份格式为 v5（兼容 v1–v4）：保留删除标记，但不包含已删除正文。没有删除记录的新 profile 仍可导入外部旧备份；外部旧备份不能推断或撤销从未记录过的永久删除。
 - 纪念物独立保存，不因清理手记、整组信件或信箱回收站而消失。
 - 收藏、笔记、专注记录、待办、随手记、手记与信件保存在本机。备份用于本机迁移和恢复，不是音乐登录会话或云端同步工具。
 
@@ -92,7 +105,7 @@ HTTP 模板的智能唱片机请求使用 `response_format: {"type":"json_object
 - **根项目采用 GPL-3.0-only**，许可证全文在仓库根目录的 [LICENSE](../LICENSE)（逐字收录 GNU GPL v3 正文，未作改动，GitHub 可据此识别）。选择 GPL-3.0-only 不是偏好问题：桌面发行包组合了 GPL-3.0-only 的 Simple Music 模块并随包分发，组合作品本身必须以 GPL-3.0-only 提供。
 - 组合的 Simple Music 模块为 **GPL-3.0-only**。其许可证与来源保留在 [LICENSE](../desktop/vendor/simple-music/LICENSE) 与 [SOURCE.txt](../desktop/vendor/simple-music/SOURCE.txt)（固定在提交 `da4db22e8e15cf400ff23fc261686ae73a4f8197`）。源码提供义务由本公开仓库满足：对应版本的完整源码可从仓库取得，发行包与已发布 tag 一一对应。已有 Release 不表示这些问题已解决。
 - 当前锁文件下，根项目与桌面生产依赖的 `npm audit` 记录为 0 个已知公告（`music-metadata 11.16.1`、`basic-ftp` 覆盖 `6.2.3`、本地 encrypt-only `node-forge` 适配层）。这是对特定审计数据库与时间的记录，不是「无漏洞」保证。详情见[依赖安全审查](security-dependencies.md)。
-- 字体与其他素材许可保留在 [public/licenses](../public/licenses)。新增 SVG 场景与像素伙伴是项目代码绘制，不使用参考产品的角色素材。
+- 字体与其他素材许可保留在 [public/licenses](../public/licenses)。2.1 房间、家具和伙伴素材由 ImageGen 生成并整理；制作记录在 scripts/art-v21 与素材目录中。不分发 dsh-pet 的第三方动画。
 
 ## 证据入口
 

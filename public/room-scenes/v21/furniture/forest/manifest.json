@@ -1,0 +1,2668 @@
+{
+  "version": 1,
+  "theme": "forest",
+  "title": "林间木屋",
+  "style": "Mossy forest cottage. Pale birch and natural mid-tone oak, moss and sage linen, warm cream paper, wicker woven panels and a few natural wood joints. Airy gentle organic forms, friendly rounded corners, refined craft. A lush compact woodland fern in an unglazed mossy stone pot. No mushrooms or fantasy clutter.",
+  "projection": {
+    "kind": "fixed-oblique",
+    "screenRatio": "2:1",
+    "light": "upper-left",
+    "rotationSupported": false
+  },
+  "geometryCalibration": {
+    "reference": "pixel",
+    "units": "normalized-to-trimmed-frame",
+    "precision": "visual-reference-sample"
+  },
+  "facingGuide": {
+    "se": "Long front edge rises toward screen-right; furniture faces lower-left.",
+    "nw": "Long front edge falls toward screen-right; furniture faces lower-right."
+  },
+  "world": {
+    "width": 1200,
+    "height": 800
+  },
+  "pixelPolicy": "Preserve source pixel art; uniform fit to logical dimensions. Use explicit facing frames; never rotate a flat sprite by 90 degrees.",
+  "atlases": {
+    "atlas.webp": {
+      "width": 1664,
+      "height": 1664,
+      "cellSize": 416,
+      "columns": 4,
+      "rows": 4,
+      "alpha": true,
+      "sourceWidth": 1448,
+      "sourceHeight": 1086,
+      "sourceTransparentFraction": 0.4785,
+      "generator": "image_gen.imagegen",
+      "sourceOrigin": "exec-8400cb9e-a0e6-4198-aaf8-5560276640b4.png",
+      "sourceSha256": "c2cf333b931889dc86300b6e89cf2a5412db7b2781ea1b6cbf9154053901664d",
+      "encoding": "lossless-webp",
+      "originalRgbaPreserved": true
+    },
+    "extras.webp": {
+      "width": 1664,
+      "height": 1248,
+      "cellSize": 416,
+      "columns": 4,
+      "rows": 3,
+      "alpha": true,
+      "sourceWidth": 1254,
+      "sourceHeight": 1254,
+      "sourceTransparentFraction": 0.6652,
+      "generator": "image_gen.imagegen",
+      "sourceOrigin": "exec-0fe353eb-f3c9-4130-8ef5-1293a51440b2.png",
+      "sourceSha256": "5a8478fe6778547c24f99c57f9ab696c154cb2b9fe692cca9be1bb5b7b3e0824",
+      "encoding": "lossless-webp",
+      "originalRgbaPreserved": true
+    },
+    "atlas-nw.webp": {
+      "width": 1664,
+      "height": 1664,
+      "cellSize": 416,
+      "columns": 4,
+      "rows": 4,
+      "alpha": true,
+      "sourceWidth": 1254,
+      "sourceHeight": 1254,
+      "sourceTransparentFraction": 0.5926,
+      "generator": "image_gen.imagegen",
+      "sourceOrigin": "exec-96ded418-9515-455f-a0b7-7a1f20e129d3.png",
+      "sourceSha256": "8bd4b5ef026e18cce58c2d2381b88402a38a0d38e6d1a8e2fd0e49f688905923",
+      "encoding": "lossless-webp",
+      "originalRgbaPreserved": true
+    },
+    "extras-nw.webp": {
+      "width": 1664,
+      "height": 1664,
+      "cellSize": 416,
+      "columns": 4,
+      "rows": 4,
+      "alpha": true,
+      "sourceWidth": 1254,
+      "sourceHeight": 1254,
+      "sourceTransparentFraction": 0.6565,
+      "generator": "image_gen.imagegen",
+      "sourceOrigin": "exec-df329388-3d3b-4a25-a81e-438911966217.png",
+      "sourceSha256": "6669ebfc765011a3a8fcdf51bb00390d4acc09de6b225114c2a80b2015c660c6",
+      "encoding": "lossless-webp",
+      "originalRgbaPreserved": true
+    }
+  },
+  "frames": {
+    "deck-se": {
+      "type": "deck",
+      "file": "atlas.webp",
+      "frame": [
+        67,
+        104,
+        281,
+        300
+      ],
+      "cell": [
+        0,
+        0,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 220,
+        "height": 170
+      },
+      "surface": "floor",
+      "facing": "se",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        59,
+        6,
+        281,
+        300
+      ],
+      "supportAnchor": {
+        "x": 0.5,
+        "y": 0.43
+      },
+      "turntableDisc": {
+        "cx": 0.47,
+        "cy": 0.395,
+        "rx": 0.19,
+        "ry": 0.1,
+        "rotation": -12
+      }
+    },
+    "desk-se": {
+      "type": "desk",
+      "file": "atlas.webp",
+      "frame": [
+        443,
+        145,
+        362,
+        259
+      ],
+      "cell": [
+        416,
+        0,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 250,
+        "height": 174
+      },
+      "surface": "floor",
+      "facing": "se",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        403,
+        37,
+        362,
+        259
+      ],
+      "supportAnchor": {
+        "x": 0.49,
+        "y": 0.27
+      },
+      "supportPolygon": [
+        [
+          0.02,
+          0.27
+        ],
+        [
+          0.68,
+          0.02
+        ],
+        [
+          0.98,
+          0.23
+        ],
+        [
+          0.22,
+          0.52
+        ]
+      ]
+    },
+    "chair-se": {
+      "type": "chair",
+      "file": "atlas.webp",
+      "frame": [
+        920,
+        151,
+        240,
+        253
+      ],
+      "cell": [
+        832,
+        0,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 90,
+        "height": 110
+      },
+      "surface": "floor",
+      "facing": "se",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        0,
+        0,
+        482,
+        509
+      ],
+      "sourceOverride": {
+        "generator": "image_gen.imagegen",
+        "sourceOrigin": "chair-se.png",
+        "sourceSha256": "9da7bbfe5f508dfce10689ac36732239570e31bfd23ed9dea5fda71562152340",
+        "sourceDimensions": [
+          482,
+          509
+        ],
+        "sourceRect": [
+          0,
+          0,
+          482,
+          509
+        ],
+        "fit": "nearest-neighbor",
+        "packedDimensions": [
+          240,
+          253
+        ],
+        "repair": "Redraw SE facing to match desk/deck perspective: long front edge rises toward screen-right; left exterior panel visible.",
+        "imageGenOriginal": {
+          "sourceOrigin": "exec-88e07d5e-8c79-4d5e-9f80-3f8b841e0611.png",
+          "sourceSha256": "4bf0085bd23eb3cd59a3d6d724e802cf53eebc275a1d2da74f9381655bcca635",
+          "sourceDimensions": [
+            2172,
+            724
+          ],
+          "cropRect": [
+            44,
+            172,
+            482,
+            509
+          ],
+          "repair": "Redraw SE facing to match desk/deck perspective: long front edge rises toward screen-right; left exterior panel visible.",
+          "orientation": {
+            "frontEdge": "rises-toward-screen-right",
+            "visibleSide": "left"
+          }
+        }
+      }
+    },
+    "books-se": {
+      "type": "books",
+      "file": "atlas.webp",
+      "frame": [
+        1347,
+        77,
+        218,
+        327
+      ],
+      "cell": [
+        1248,
+        0,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 145,
+        "height": 185
+      },
+      "surface": "floor",
+      "facing": "se",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        0,
+        0,
+        436,
+        662
+      ],
+      "sourceOverride": {
+        "generator": "image_gen.imagegen",
+        "sourceOrigin": "books-se.png",
+        "sourceSha256": "3d7d91ff50845c5fcea5c24a57452c001497cc15fddd242b7470061cc00f324b",
+        "sourceDimensions": [
+          436,
+          662
+        ],
+        "sourceRect": [
+          0,
+          0,
+          436,
+          662
+        ],
+        "fit": "nearest-neighbor",
+        "packedDimensions": [
+          218,
+          327
+        ],
+        "repair": "Redraw SE facing to match desk/deck perspective: long front edge rises toward screen-right; left exterior panel visible.",
+        "imageGenOriginal": {
+          "sourceOrigin": "exec-88e07d5e-8c79-4d5e-9f80-3f8b841e0611.png",
+          "sourceSha256": "4bf0085bd23eb3cd59a3d6d724e802cf53eebc275a1d2da74f9381655bcca635",
+          "sourceDimensions": [
+            2172,
+            724
+          ],
+          "cropRect": [
+            592,
+            27,
+            436,
+            662
+          ],
+          "repair": "Redraw SE facing to match desk/deck perspective: long front edge rises toward screen-right; left exterior panel visible.",
+          "orientation": {
+            "frontEdge": "rises-toward-screen-right",
+            "visibleSide": "left"
+          }
+        }
+      }
+    },
+    "speaker-se": {
+      "type": "speaker",
+      "file": "atlas.webp",
+      "frame": [
+        116,
+        564,
+        183,
+        256
+      ],
+      "cell": [
+        0,
+        416,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 70,
+        "height": 90
+      },
+      "surface": "floor",
+      "facing": "se",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        0,
+        0,
+        319,
+        452
+      ],
+      "sourceOverride": {
+        "generator": "image_gen.imagegen",
+        "sourceOrigin": "speaker-se.png",
+        "sourceSha256": "e2e439e2b4b6bc7a110b9b323e565daba53f305c18e347339a4d62a103bf7e7a",
+        "sourceDimensions": [
+          319,
+          452
+        ],
+        "sourceRect": [
+          0,
+          0,
+          319,
+          452
+        ],
+        "fit": "nearest-neighbor",
+        "packedDimensions": [
+          183,
+          256
+        ],
+        "repair": "Redraw SE facing to match desk/deck perspective: long front edge rises toward screen-right; left exterior panel visible.",
+        "imageGenOriginal": {
+          "sourceOrigin": "exec-88e07d5e-8c79-4d5e-9f80-3f8b841e0611.png",
+          "sourceSha256": "4bf0085bd23eb3cd59a3d6d724e802cf53eebc275a1d2da74f9381655bcca635",
+          "sourceDimensions": [
+            2172,
+            724
+          ],
+          "cropRect": [
+            1095,
+            216,
+            319,
+            452
+          ],
+          "repair": "Redraw SE facing to match desk/deck perspective: long front edge rises toward screen-right; left exterior panel visible.",
+          "orientation": {
+            "frontEdge": "rises-toward-screen-right",
+            "visibleSide": "left"
+          }
+        }
+      }
+    },
+    "records-se": {
+      "type": "records",
+      "file": "atlas.webp",
+      "frame": [
+        460,
+        560,
+        327,
+        260
+      ],
+      "cell": [
+        416,
+        416,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 180,
+        "height": 116
+      },
+      "surface": "floor",
+      "facing": "se",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        0,
+        0,
+        645,
+        509
+      ],
+      "supportAnchor": {
+        "x": 0.5,
+        "y": 0.19
+      },
+      "sourceOverride": {
+        "generator": "image_gen.imagegen",
+        "sourceOrigin": "records-se.png",
+        "sourceSha256": "c8df1bb413979adb7c35a5c948b902340a81b548c153f166408d1bce264faf6d",
+        "sourceDimensions": [
+          645,
+          509
+        ],
+        "sourceRect": [
+          0,
+          0,
+          645,
+          509
+        ],
+        "fit": "nearest-neighbor",
+        "packedDimensions": [
+          327,
+          260
+        ],
+        "repair": "Redraw SE facing to match desk/deck perspective: long front edge rises toward screen-right; left exterior panel visible.",
+        "imageGenOriginal": {
+          "sourceOrigin": "exec-88e07d5e-8c79-4d5e-9f80-3f8b841e0611.png",
+          "sourceSha256": "4bf0085bd23eb3cd59a3d6d724e802cf53eebc275a1d2da74f9381655bcca635",
+          "sourceDimensions": [
+            2172,
+            724
+          ],
+          "cropRect": [
+            1480,
+            180,
+            645,
+            509
+          ],
+          "repair": "Redraw SE facing to match desk/deck perspective: long front edge rises toward screen-right; left exterior panel visible.",
+          "orientation": {
+            "frontEdge": "rises-toward-screen-right",
+            "visibleSide": "left"
+          }
+        }
+      }
+    },
+    "bed-se": {
+      "type": "bed",
+      "file": "atlas.webp",
+      "frame": [
+        887,
+        612,
+        306,
+        208
+      ],
+      "cell": [
+        832,
+        416,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 135,
+        "height": 85
+      },
+      "surface": "floor",
+      "facing": "se",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        799,
+        346,
+        306,
+        208
+      ]
+    },
+    "plant-se": {
+      "type": "plant",
+      "file": "atlas.webp",
+      "frame": [
+        1324,
+        547,
+        264,
+        273
+      ],
+      "cell": [
+        1248,
+        416,
+        416,
+        416
+      ],
+      "sprite": "sprites/plant-se.webp",
+      "logical": {
+        "width": 95,
+        "height": 118
+      },
+      "surface": "floor",
+      "facing": "se",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        1146,
+        292,
+        264,
+        273
+      ]
+    },
+    "clock-se": {
+      "type": "clock",
+      "file": "atlas.webp",
+      "frame": [
+        105,
+        1008,
+        205,
+        228
+      ],
+      "cell": [
+        0,
+        832,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 44,
+        "height": 55
+      },
+      "surface": "table",
+      "facing": "se",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        96,
+        575,
+        205,
+        228
+      ],
+      "blankRect": {
+        "x": 0.29,
+        "y": 0.27,
+        "width": 0.47,
+        "height": 0.48
+      },
+      "blankEllipse": {
+        "cx": 0.57,
+        "cy": 0.52,
+        "rx": 0.31,
+        "ry": 0.36
+      }
+    },
+    "tasks-se": {
+      "type": "tasks",
+      "file": "atlas.webp",
+      "frame": [
+        462,
+        998,
+        324,
+        238
+      ],
+      "cell": [
+        416,
+        832,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 155,
+        "height": 108
+      },
+      "surface": "wall",
+      "facing": "se",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        412,
+        565,
+        324,
+        238
+      ],
+      "blankRect": {
+        "x": 0.12,
+        "y": 0.2,
+        "width": 0.76,
+        "height": 0.61
+      }
+    },
+    "calendar-se": {
+      "type": "calendar",
+      "file": "atlas.webp",
+      "frame": [
+        956,
+        994,
+        167,
+        242
+      ],
+      "cell": [
+        832,
+        832,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 62,
+        "height": 90
+      },
+      "surface": "wall",
+      "facing": "se",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        856,
+        560,
+        167,
+        242
+      ],
+      "blankRect": {
+        "x": 0.17,
+        "y": 0.28,
+        "width": 0.68,
+        "height": 0.56
+      }
+    },
+    "weather-se": {
+      "type": "weather",
+      "file": "atlas.webp",
+      "frame": [
+        1330,
+        1052,
+        251,
+        184
+      ],
+      "cell": [
+        1248,
+        832,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 92,
+        "height": 64
+      },
+      "surface": "wall",
+      "facing": "se",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        0,
+        0,
+        267,
+        193
+      ],
+      "blankRect": {
+        "x": 0.28,
+        "y": 0.36,
+        "width": 0.55,
+        "height": 0.24
+      },
+      "blankQuad": [
+        [
+          0.25,
+          0.44
+        ],
+        [
+          0.88,
+          0.25
+        ],
+        [
+          0.88,
+          0.59
+        ],
+        [
+          0.25,
+          0.79
+        ]
+      ],
+      "sourceOverride": {
+        "generator": "image_gen.imagegen",
+        "sourceOrigin": "forest-weather-se.png",
+        "sourceSha256": "1c140460cce51103034eff580107c0ba339b981026f0ca1f5c47e8aff6cfff39",
+        "sourceDimensions": [
+          267,
+          193
+        ],
+        "sourceRect": [
+          0,
+          0,
+          267,
+          193
+        ],
+        "fit": "nearest-neighbor",
+        "packedDimensions": [
+          251,
+          184
+        ],
+        "repair": "Redraw SE facing to match desk/deck perspective: long front edge rises toward screen-right; left exterior panel visible.",
+        "imageGenOriginal": {
+          "sourceOrigin": "exec-fd53f60e-8e01-4087-93fc-d264496a3702.png",
+          "sourceSha256": "84951f1316ffebdd2b7c33c8bebaa7d31038a4a44193c992594dd0fe8cfdeee4",
+          "sourceDimensions": [
+            1536,
+            1024
+          ],
+          "cropRect": [
+            843,
+            298,
+            267,
+            193
+          ],
+          "repair": "Redraw SE facing to match desk/deck perspective: long front edge rises toward screen-right; left exterior panel visible.",
+          "orientation": {
+            "frontEdge": "rises-toward-screen-right",
+            "visibleSide": "left"
+          }
+        }
+      }
+    },
+    "lyrics-se": {
+      "type": "lyrics",
+      "file": "atlas.webp",
+      "frame": [
+        27,
+        1419,
+        362,
+        233
+      ],
+      "cell": [
+        0,
+        1248,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 75,
+        "height": 54
+      },
+      "surface": "table",
+      "facing": "se",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        37,
+        822,
+        362,
+        233
+      ]
+    },
+    "notes-se": {
+      "type": "notes",
+      "file": "atlas.webp",
+      "frame": [
+        452,
+        1443,
+        343,
+        209
+      ],
+      "cell": [
+        416,
+        1248,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 70,
+        "height": 52
+      },
+      "surface": "table",
+      "facing": "se",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        416,
+        844,
+        343,
+        209
+      ]
+    },
+    "mail-se": {
+      "type": "mail",
+      "file": "atlas.webp",
+      "frame": [
+        953,
+        1468,
+        173,
+        184
+      ],
+      "cell": [
+        832,
+        1248,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 55,
+        "height": 75
+      },
+      "surface": "wall",
+      "facing": "se",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        0,
+        0,
+        197,
+        210
+      ],
+      "sourceOverride": {
+        "generator": "image_gen.imagegen",
+        "sourceOrigin": "forest-mail-se.png",
+        "sourceSha256": "5bf6d4dfaf115a062a1ebb028c3704e6a26983897d95b47a0813012a4eb6d7a1",
+        "sourceDimensions": [
+          197,
+          210
+        ],
+        "sourceRect": [
+          0,
+          0,
+          197,
+          210
+        ],
+        "fit": "nearest-neighbor",
+        "packedDimensions": [
+          173,
+          184
+        ],
+        "repair": "Redraw SE facing to match desk/deck perspective: long front edge rises toward screen-right; left exterior panel visible.",
+        "imageGenOriginal": {
+          "sourceOrigin": "exec-fd53f60e-8e01-4087-93fc-d264496a3702.png",
+          "sourceSha256": "84951f1316ffebdd2b7c33c8bebaa7d31038a4a44193c992594dd0fe8cfdeee4",
+          "sourceDimensions": [
+            1536,
+            1024
+          ],
+          "cropRect": [
+            1248,
+            275,
+            197,
+            210
+          ],
+          "repair": "Redraw SE facing to match desk/deck perspective: long front edge rises toward screen-right; left exterior panel visible.",
+          "orientation": {
+            "frontEdge": "rises-toward-screen-right",
+            "visibleSide": "left"
+          }
+        }
+      }
+    },
+    "lamp-se": {
+      "type": "lamp",
+      "file": "atlas.webp",
+      "frame": [
+        1338,
+        1386,
+        236,
+        266
+      ],
+      "cell": [
+        1248,
+        1248,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 64,
+        "height": 92
+      },
+      "surface": "table",
+      "facing": "se",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        1161,
+        790,
+        236,
+        266
+      ]
+    },
+    "tea-se": {
+      "type": "tea",
+      "file": "extras.webp",
+      "frame": [
+        32,
+        157,
+        352,
+        247
+      ],
+      "cell": [
+        0,
+        0,
+        416,
+        416
+      ],
+      "sprite": "sprites/tea-se.webp",
+      "logical": {
+        "width": 64,
+        "height": 48
+      },
+      "surface": "table",
+      "facing": "se",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        7,
+        182,
+        352,
+        247
+      ]
+    },
+    "photo-se": {
+      "type": "photo",
+      "file": "extras.webp",
+      "frame": [
+        522,
+        178,
+        203,
+        226
+      ],
+      "cell": [
+        416,
+        0,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 60,
+        "height": 75
+      },
+      "surface": "table",
+      "facing": "se",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        401,
+        185,
+        203,
+        226
+      ],
+      "blankRect": {
+        "x": 0.24,
+        "y": 0.2,
+        "width": 0.43,
+        "height": 0.54
+      }
+    },
+    "curtain-se": {
+      "type": "curtain",
+      "file": "extras.webp",
+      "frame": [
+        901,
+        122,
+        277,
+        282
+      ],
+      "cell": [
+        832,
+        0,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 150,
+        "height": 126
+      },
+      "surface": "wall",
+      "facing": "se",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        647,
+        125,
+        277,
+        282
+      ]
+    },
+    "rug-se": {
+      "type": "rug",
+      "file": "extras.webp",
+      "frame": [
+        1293,
+        192,
+        325,
+        212
+      ],
+      "cell": [
+        1248,
+        0,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 195,
+        "height": 98
+      },
+      "surface": "floor",
+      "facing": "se",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        153,
+        110,
+        1306,
+        839
+      ],
+      "sourceOverride": {
+        "generator": "image_gen.imagegen",
+        "sourceOrigin": "exec-b707bfa8-a9bb-4922-80e1-20660e06e6d5.png",
+        "sourceSha256": "48fa8bfe412ba83c5c104baba8d5ebd3aea0a0788117c02f50fa6dc30c1c23e8",
+        "sourceDimensions": [
+          1575,
+          998
+        ],
+        "sourceRect": [
+          153,
+          110,
+          1306,
+          839
+        ],
+        "fit": "nearest-neighbor",
+        "packedDimensions": [
+          325,
+          212
+        ],
+        "repair": "Complete previously clipped rug fringe and restore transparent margin."
+      }
+    },
+    "vinyl-se": {
+      "type": "vinyl",
+      "file": "extras.webp",
+      "frame": [
+        71,
+        648,
+        274,
+        172
+      ],
+      "cell": [
+        0,
+        416,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 45,
+        "height": 30
+      },
+      "surface": "table",
+      "facing": "se",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        45,
+        604,
+        274,
+        172
+      ]
+    },
+    "cover-se": {
+      "type": "cover",
+      "file": "extras.webp",
+      "frame": [
+        520,
+        558,
+        207,
+        262
+      ],
+      "cell": [
+        416,
+        416,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 48,
+        "height": 54
+      },
+      "surface": "table",
+      "facing": "se",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        390,
+        541,
+        207,
+        262
+      ]
+    },
+    "player-se": {
+      "type": "player",
+      "file": "extras.webp",
+      "frame": [
+        877,
+        512,
+        325,
+        308
+      ],
+      "cell": [
+        832,
+        416,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 90,
+        "height": 76
+      },
+      "surface": "table",
+      "facing": "se",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        666,
+        507,
+        325,
+        308
+      ],
+      "turntableDisc": {
+        "cx": 0.54,
+        "cy": 0.54,
+        "rx": 0.23,
+        "ry": 0.13,
+        "rotation": -12
+      }
+    },
+    "headphones-se": {
+      "type": "headphones",
+      "file": "extras.webp",
+      "frame": [
+        1350,
+        579,
+        212,
+        241
+      ],
+      "cell": [
+        1248,
+        416,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 50,
+        "height": 55
+      },
+      "surface": "table",
+      "facing": "se",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        1019,
+        560,
+        212,
+        241
+      ]
+    },
+    "timer-se": {
+      "type": "timer",
+      "file": "extras.webp",
+      "frame": [
+        112,
+        1044,
+        191,
+        192
+      ],
+      "cell": [
+        0,
+        832,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 40,
+        "height": 45
+      },
+      "surface": "table",
+      "facing": "se",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        62,
+        959,
+        191,
+        192
+      ],
+      "blankRect": {
+        "x": 0.51,
+        "y": 0.41,
+        "width": 0.35,
+        "height": 0.35
+      }
+    },
+    "journal-se": {
+      "type": "journal",
+      "file": "extras.webp",
+      "frame": [
+        487,
+        1041,
+        273,
+        195
+      ],
+      "cell": [
+        416,
+        832,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 50,
+        "height": 38
+      },
+      "surface": "table",
+      "facing": "se",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        338,
+        965,
+        273,
+        195
+      ]
+    },
+    "keyboard-se": {
+      "type": "keyboard",
+      "file": "extras.webp",
+      "frame": [
+        868,
+        1020,
+        344,
+        216
+      ],
+      "cell": [
+        832,
+        832,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 80,
+        "height": 38
+      },
+      "surface": "table",
+      "facing": "se",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        637,
+        942,
+        344,
+        216
+      ]
+    },
+    "mouse-se": {
+      "type": "mouse",
+      "file": "extras.webp",
+      "frame": [
+        1352,
+        1084,
+        207,
+        152
+      ],
+      "cell": [
+        1248,
+        832,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 28,
+        "height": 28
+      },
+      "surface": "table",
+      "facing": "se",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        1024,
+        986,
+        207,
+        152
+      ]
+    },
+    "sun-se": {
+      "type": "sun",
+      "file": "extras-nw.webp",
+      "frame": [
+        112,
+        1471,
+        191,
+        181
+      ],
+      "cell": [
+        0,
+        1248,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 40,
+        "height": 40
+      },
+      "surface": "wall",
+      "facing": "neutral",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        61,
+        1020,
+        191,
+        181
+      ],
+      "supportedFacings": [
+        "se",
+        "nw"
+      ],
+      "aliasOf": "sun-nw"
+    },
+    "moon-se": {
+      "type": "moon",
+      "file": "extras-nw.webp",
+      "frame": [
+        547,
+        1492,
+        153,
+        160
+      ],
+      "cell": [
+        416,
+        1248,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 35,
+        "height": 40
+      },
+      "surface": "wall",
+      "facing": "neutral",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        388,
+        1033,
+        153,
+        160
+      ],
+      "supportedFacings": [
+        "se",
+        "nw"
+      ],
+      "aliasOf": "moon-nw"
+    },
+    "cloud-se": {
+      "type": "cloud",
+      "file": "extras-nw.webp",
+      "frame": [
+        919,
+        1506,
+        242,
+        146
+      ],
+      "cell": [
+        832,
+        1248,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 48,
+        "height": 32
+      },
+      "surface": "wall",
+      "facing": "neutral",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        662,
+        1046,
+        242,
+        146
+      ],
+      "supportedFacings": [
+        "se",
+        "nw"
+      ],
+      "aliasOf": "cloud-nw"
+    },
+    "rain-se": {
+      "type": "rain",
+      "file": "extras-nw.webp",
+      "frame": [
+        1351,
+        1486,
+        209,
+        166
+      ],
+      "cell": [
+        1248,
+        1248,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 43,
+        "height": 40
+      },
+      "surface": "wall",
+      "facing": "neutral",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        995,
+        1031,
+        209,
+        166
+      ],
+      "supportedFacings": [
+        "se",
+        "nw"
+      ],
+      "aliasOf": "rain-nw"
+    },
+    "deck-nw": {
+      "type": "deck",
+      "file": "atlas-nw.webp",
+      "frame": [
+        87,
+        123,
+        242,
+        281
+      ],
+      "cell": [
+        0,
+        0,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 220,
+        "height": 170
+      },
+      "surface": "floor",
+      "facing": "nw",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        44,
+        55,
+        242,
+        281
+      ],
+      "supportAnchor": {
+        "x": 0.5,
+        "y": 0.43
+      },
+      "turntableDisc": {
+        "cx": 0.51,
+        "cy": 0.395,
+        "rx": 0.19,
+        "ry": 0.1,
+        "rotation": 12
+      }
+    },
+    "desk-nw": {
+      "type": "desk",
+      "file": "atlas-nw.webp",
+      "frame": [
+        474,
+        162,
+        300,
+        242
+      ],
+      "cell": [
+        416,
+        0,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 250,
+        "height": 174
+      },
+      "surface": "floor",
+      "facing": "nw",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        340,
+        94,
+        300,
+        242
+      ],
+      "supportAnchor": {
+        "x": 0.49,
+        "y": 0.28
+      },
+      "supportPolygon": [
+        [
+          0.02,
+          0.21
+        ],
+        [
+          0.31,
+          0.02
+        ],
+        [
+          0.98,
+          0.35
+        ],
+        [
+          0.71,
+          0.55
+        ]
+      ]
+    },
+    "chair-nw": {
+      "type": "chair",
+      "file": "atlas-nw.webp",
+      "frame": [
+        931,
+        158,
+        217,
+        246
+      ],
+      "cell": [
+        832,
+        0,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 90,
+        "height": 110
+      },
+      "surface": "floor",
+      "facing": "nw",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        705,
+        91,
+        217,
+        246
+      ]
+    },
+    "books-nw": {
+      "type": "books",
+      "file": "atlas-nw.webp",
+      "frame": [
+        1361,
+        115,
+        190,
+        289
+      ],
+      "cell": [
+        1248,
+        0,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 145,
+        "height": 185
+      },
+      "surface": "floor",
+      "facing": "nw",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        1008,
+        59,
+        190,
+        289
+      ]
+    },
+    "speaker-nw": {
+      "type": "speaker",
+      "file": "atlas-nw.webp",
+      "frame": [
+        126,
+        590,
+        163,
+        230
+      ],
+      "cell": [
+        0,
+        416,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 70,
+        "height": 90
+      },
+      "surface": "floor",
+      "facing": "nw",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        78,
+        411,
+        163,
+        230
+      ]
+    },
+    "records-nw": {
+      "type": "records",
+      "file": "atlas-nw.webp",
+      "frame": [
+        476,
+        554,
+        295,
+        266
+      ],
+      "cell": [
+        416,
+        416,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 180,
+        "height": 116
+      },
+      "surface": "floor",
+      "facing": "nw",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        337,
+        402,
+        295,
+        266
+      ],
+      "supportAnchor": {
+        "x": 0.5,
+        "y": 0.19
+      }
+    },
+    "bed-nw": {
+      "type": "bed",
+      "file": "atlas-nw.webp",
+      "frame": [
+        907,
+        618,
+        265,
+        202
+      ],
+      "cell": [
+        832,
+        416,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 135,
+        "height": 85
+      },
+      "surface": "floor",
+      "facing": "nw",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        671,
+        448,
+        265,
+        202
+      ]
+    },
+    "plant-nw": {
+      "type": "plant",
+      "file": "atlas-nw.webp",
+      "frame": [
+        1321,
+        568,
+        270,
+        252
+      ],
+      "cell": [
+        1248,
+        416,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 95,
+        "height": 118
+      },
+      "surface": "floor",
+      "facing": "nw",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        969,
+        408,
+        270,
+        252
+      ]
+    },
+    "clock-nw": {
+      "type": "clock",
+      "file": "atlas-nw.webp",
+      "frame": [
+        111,
+        1028,
+        193,
+        208
+      ],
+      "cell": [
+        0,
+        832,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 44,
+        "height": 55
+      },
+      "surface": "table",
+      "facing": "nw",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        60,
+        737,
+        193,
+        208
+      ],
+      "blankRect": {
+        "x": 0.18,
+        "y": 0.27,
+        "width": 0.47,
+        "height": 0.48
+      },
+      "blankEllipse": {
+        "cx": 0.45,
+        "cy": 0.52,
+        "rx": 0.31,
+        "ry": 0.36
+      }
+    },
+    "tasks-nw": {
+      "type": "tasks",
+      "file": "atlas-nw.webp",
+      "frame": [
+        483,
+        1005,
+        281,
+        231
+      ],
+      "cell": [
+        416,
+        832,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 155,
+        "height": 108
+      },
+      "surface": "wall",
+      "facing": "nw",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        349,
+        725,
+        281,
+        231
+      ],
+      "blankRect": {
+        "x": 0.12,
+        "y": 0.2,
+        "width": 0.76,
+        "height": 0.61
+      }
+    },
+    "calendar-nw": {
+      "type": "calendar",
+      "file": "atlas-nw.webp",
+      "frame": [
+        968,
+        1006,
+        144,
+        230
+      ],
+      "cell": [
+        832,
+        832,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 62,
+        "height": 90
+      },
+      "surface": "wall",
+      "facing": "nw",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        733,
+        723,
+        144,
+        230
+      ],
+      "blankRect": {
+        "x": 0.17,
+        "y": 0.28,
+        "width": 0.68,
+        "height": 0.56
+      }
+    },
+    "weather-nw": {
+      "type": "weather",
+      "file": "atlas-nw.webp",
+      "frame": [
+        1346,
+        1041,
+        219,
+        195
+      ],
+      "cell": [
+        1248,
+        832,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 92,
+        "height": 64
+      },
+      "surface": "wall",
+      "facing": "nw",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        998,
+        749,
+        219,
+        195
+      ],
+      "blankRect": {
+        "x": 0.15,
+        "y": 0.43,
+        "width": 0.62,
+        "height": 0.23
+      },
+      "blankQuad": [
+        [
+          0.12,
+          0.32
+        ],
+        [
+          0.8,
+          0.42
+        ],
+        [
+          0.8,
+          0.77
+        ],
+        [
+          0.12,
+          0.68
+        ]
+      ]
+    },
+    "lyrics-nw": {
+      "type": "lyrics",
+      "file": "atlas-nw.webp",
+      "frame": [
+        52,
+        1441,
+        311,
+        211
+      ],
+      "cell": [
+        0,
+        1248,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 75,
+        "height": 54
+      },
+      "surface": "table",
+      "facing": "nw",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        21,
+        1013,
+        311,
+        211
+      ]
+    },
+    "notes-nw": {
+      "type": "notes",
+      "file": "atlas-nw.webp",
+      "frame": [
+        469,
+        1464,
+        309,
+        188
+      ],
+      "cell": [
+        416,
+        1248,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 70,
+        "height": 52
+      },
+      "surface": "table",
+      "facing": "nw",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        339,
+        1043,
+        309,
+        188
+      ]
+    },
+    "mail-nw": {
+      "type": "mail",
+      "file": "atlas-nw.webp",
+      "frame": [
+        966,
+        1453,
+        147,
+        199
+      ],
+      "cell": [
+        832,
+        1248,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 55,
+        "height": 75
+      },
+      "surface": "wall",
+      "facing": "nw",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        730,
+        1010,
+        147,
+        199
+      ]
+    },
+    "lamp-nw": {
+      "type": "lamp",
+      "file": "atlas-nw.webp",
+      "frame": [
+        1358,
+        1419,
+        195,
+        233
+      ],
+      "cell": [
+        1248,
+        1248,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 64,
+        "height": 92
+      },
+      "surface": "table",
+      "facing": "nw",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        1003,
+        995,
+        195,
+        233
+      ]
+    },
+    "tea-nw": {
+      "type": "tea",
+      "file": "extras-nw.webp",
+      "frame": [
+        58,
+        216,
+        300,
+        188
+      ],
+      "cell": [
+        0,
+        0,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 64,
+        "height": 48
+      },
+      "surface": "table",
+      "facing": "nw",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        28,
+        152,
+        300,
+        188
+      ]
+    },
+    "photo-nw": {
+      "type": "photo",
+      "file": "extras-nw.webp",
+      "frame": [
+        533,
+        211,
+        181,
+        193
+      ],
+      "cell": [
+        416,
+        0,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 60,
+        "height": 75
+      },
+      "surface": "table",
+      "facing": "nw",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        391,
+        136,
+        181,
+        193
+      ],
+      "blankRect": {
+        "x": 0.24,
+        "y": 0.2,
+        "width": 0.43,
+        "height": 0.54
+      }
+    },
+    "curtain-nw": {
+      "type": "curtain",
+      "file": "extras-nw.webp",
+      "frame": [
+        915,
+        175,
+        249,
+        229
+      ],
+      "cell": [
+        832,
+        0,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 150,
+        "height": 126
+      },
+      "surface": "wall",
+      "facing": "nw",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        672,
+        113,
+        249,
+        229
+      ]
+    },
+    "rug-nw": {
+      "type": "rug",
+      "file": "extras-nw.webp",
+      "frame": [
+        1313,
+        228,
+        286,
+        176
+      ],
+      "cell": [
+        1248,
+        0,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 195,
+        "height": 98
+      },
+      "surface": "floor",
+      "facing": "nw",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        953,
+        177,
+        286,
+        176
+      ]
+    },
+    "vinyl-nw": {
+      "type": "vinyl",
+      "file": "extras-nw.webp",
+      "frame": [
+        85,
+        670,
+        246,
+        150
+      ],
+      "cell": [
+        0,
+        416,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 45,
+        "height": 30
+      },
+      "surface": "table",
+      "facing": "nw",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        55,
+        500,
+        246,
+        150
+      ]
+    },
+    "cover-nw": {
+      "type": "cover",
+      "file": "extras-nw.webp",
+      "frame": [
+        530,
+        594,
+        187,
+        226
+      ],
+      "cell": [
+        416,
+        416,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 48,
+        "height": 54
+      },
+      "surface": "table",
+      "facing": "nw",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        388,
+        433,
+        187,
+        226
+      ]
+    },
+    "player-nw": {
+      "type": "player",
+      "file": "extras-nw.webp",
+      "frame": [
+        899,
+        560,
+        282,
+        260
+      ],
+      "cell": [
+        832,
+        416,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 90,
+        "height": 76
+      },
+      "surface": "table",
+      "facing": "nw",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        648,
+        410,
+        282,
+        260
+      ],
+      "turntableDisc": {
+        "cx": 0.46,
+        "cy": 0.54,
+        "rx": 0.23,
+        "ry": 0.13,
+        "rotation": 12
+      }
+    },
+    "headphones-nw": {
+      "type": "headphones",
+      "file": "extras-nw.webp",
+      "frame": [
+        1353,
+        583,
+        206,
+        237
+      ],
+      "cell": [
+        1248,
+        416,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 50,
+        "height": 55
+      },
+      "surface": "table",
+      "facing": "nw",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        991,
+        440,
+        206,
+        237
+      ]
+    },
+    "timer-nw": {
+      "type": "timer",
+      "file": "extras-nw.webp",
+      "frame": [
+        121,
+        1057,
+        173,
+        179
+      ],
+      "cell": [
+        0,
+        832,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 40,
+        "height": 45
+      },
+      "surface": "table",
+      "facing": "nw",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        79,
+        764,
+        173,
+        179
+      ],
+      "blankRect": {
+        "x": 0.23,
+        "y": 0.41,
+        "width": 0.35,
+        "height": 0.35
+      }
+    },
+    "journal-nw": {
+      "type": "journal",
+      "file": "extras-nw.webp",
+      "frame": [
+        499,
+        1046,
+        249,
+        190
+      ],
+      "cell": [
+        416,
+        832,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 50,
+        "height": 38
+      },
+      "surface": "table",
+      "facing": "nw",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        351,
+        759,
+        249,
+        190
+      ]
+    },
+    "keyboard-nw": {
+      "type": "keyboard",
+      "file": "extras-nw.webp",
+      "frame": [
+        871,
+        1047,
+        338,
+        189
+      ],
+      "cell": [
+        832,
+        832,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 80,
+        "height": 38
+      },
+      "surface": "table",
+      "facing": "nw",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        633,
+        779,
+        338,
+        189
+      ]
+    },
+    "mouse-nw": {
+      "type": "mouse",
+      "file": "extras-nw.webp",
+      "frame": [
+        1360,
+        1089,
+        191,
+        147
+      ],
+      "cell": [
+        1248,
+        832,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 28,
+        "height": 28
+      },
+      "surface": "table",
+      "facing": "nw",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        1018,
+        801,
+        191,
+        147
+      ]
+    },
+    "sun-nw": {
+      "type": "sun",
+      "file": "extras-nw.webp",
+      "frame": [
+        112,
+        1471,
+        191,
+        181
+      ],
+      "cell": [
+        0,
+        1248,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 40,
+        "height": 40
+      },
+      "surface": "wall",
+      "facing": "neutral",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        61,
+        1020,
+        191,
+        181
+      ],
+      "supportedFacings": [
+        "se",
+        "nw"
+      ]
+    },
+    "moon-nw": {
+      "type": "moon",
+      "file": "extras-nw.webp",
+      "frame": [
+        547,
+        1492,
+        153,
+        160
+      ],
+      "cell": [
+        416,
+        1248,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 35,
+        "height": 40
+      },
+      "surface": "wall",
+      "facing": "neutral",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        388,
+        1033,
+        153,
+        160
+      ],
+      "supportedFacings": [
+        "se",
+        "nw"
+      ]
+    },
+    "cloud-nw": {
+      "type": "cloud",
+      "file": "extras-nw.webp",
+      "frame": [
+        919,
+        1506,
+        242,
+        146
+      ],
+      "cell": [
+        832,
+        1248,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 48,
+        "height": 32
+      },
+      "surface": "wall",
+      "facing": "neutral",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        662,
+        1046,
+        242,
+        146
+      ],
+      "supportedFacings": [
+        "se",
+        "nw"
+      ]
+    },
+    "rain-nw": {
+      "type": "rain",
+      "file": "extras-nw.webp",
+      "frame": [
+        1351,
+        1486,
+        209,
+        166
+      ],
+      "cell": [
+        1248,
+        1248,
+        416,
+        416
+      ],
+      "logical": {
+        "width": 43,
+        "height": 40
+      },
+      "surface": "wall",
+      "facing": "neutral",
+      "anchor": [
+        0.5,
+        1
+      ],
+      "sourceRect": [
+        995,
+        1031,
+        209,
+        166
+      ],
+      "supportedFacings": [
+        "se",
+        "nw"
+      ]
+    }
+  },
+  "provenance": {
+    "catalog": "scripts/art-v21/furniture-provenance.json",
+    "archiveGroup": "art-v21-furniture/sources/forest",
+    "sourceFilesAreRuntimeAssets": false
+  },
+  "packaging": {
+    "format": "lossless-webp",
+    "exactRgbaRoundtrip": true,
+    "standaloneSprites": [
+      "plant-se",
+      "tea-se"
+    ],
+    "weatherAliases": [
+      "sun",
+      "moon",
+      "cloud",
+      "rain"
+    ]
+  }
+}

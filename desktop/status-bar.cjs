@@ -50,16 +50,16 @@ function statusIconPath(icon, platform = process.platform, base = path.join(__di
 
 // Applies a status to the tray, the Dock (macOS) and the main window's taskbar button.
 // deps: { getTray, getWindow, app, nativeImage, platform }
-function createStatusApplier({ getTray, getWindow, app, nativeImage, getPetId = () => 'cat', platform = process.platform }) {
+function createStatusApplier({ getTray, getWindow, app, nativeImage, getPetId = () => 'cat', applyPetIcon, platform = process.platform }) {
   let last = null, lastIcon = '';
-  const image = (file) => { const img = nativeImage.createFromPath(file); if (platform === 'darwin') img.setTemplateImage?.(true); return img; };
+  const image = (file) => { const img = nativeImage.createFromPath(file); if (platform === 'darwin') img.setTemplateImage?.(false); return img; };
   return {
     get last() { return last; },
     apply(status) {
       const petId = getPetId();
       const tray = getTray(), win = getWindow(), ended = focusEnded(last, status);
       if (tray) {
-        if (petId !== lastIcon || tray.__petId !== petId) { const img = image(trayIconPath(petId, platform)); if (!img.isEmpty()) { tray.setImage(img); tray.__petId = petId; lastIcon = petId; } }
+        if (!applyPetIcon && (petId !== lastIcon || tray.__petId !== petId)) { const img = image(trayIconPath(petId, platform)); if (!img.isEmpty()) { tray.setImage(img); tray.__petId = petId; lastIcon = petId; } }
         if (platform === 'darwin') tray.setTitle(status.title, { fontType: 'monospacedDigit' });
         tray.setToolTip(status.tooltip);
       }

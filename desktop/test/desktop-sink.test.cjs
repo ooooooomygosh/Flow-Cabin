@@ -69,15 +69,15 @@ test('old 桌面模式 / 动态背景 preferences migrate to 沉入桌面', () =
   assert.deepEqual(migrateDesktopPreferences(null), { desktopSink: false });
 });
 
-test('every pet has tray icons: macOS template @1x/@2x and a Windows ICO', () => {
+test('every pet has tray icons: macOS colour 18/36px and a Windows ICO', () => {
   for (const id of PET_IDS) {
     const mac = trayIconPath(id, 'darwin'), win = trayIconPath(id, 'win32');
-    assert.match(mac, new RegExp(`${id}Template\\.png$`)); assert.ok(fs.existsSync(mac)); assert.ok(fs.existsSync(mac.replace('.png', '@2x.png')));
+    assert.ok(mac.replaceAll('\\','/').endsWith(`/${id}/menu-idle.png`)); assert.ok(fs.existsSync(mac)); assert.ok(fs.existsSync(mac.replace('.png', '@2x.png')));
     const ico = fs.readFileSync(win); assert.equal(ico.readUInt16LE(2), 1); assert.equal(ico.readUInt16LE(4), 2);
-    const png = fs.readFileSync(mac); assert.equal(png.readUInt32BE(16), 16);
-    assert.equal(fs.readFileSync(mac.replace('.png', '@2x.png')).readUInt32BE(16), 32);
+    const png = fs.readFileSync(mac); assert.equal(png.readUInt32BE(16), 18);
+    assert.equal(fs.readFileSync(mac.replace('.png', '@2x.png')).readUInt32BE(16), 36);
   }
-  assert.match(trayIconPath('dragon', 'darwin'), /catTemplate\.png$/);
+  assert.match(trayIconPath('dragon', 'darwin'), /cat[/\\]menu-idle\.png$/);
 });
 
 test('tray icon updates live when the pet changes', () => {
@@ -85,7 +85,7 @@ test('tray icon updates live when the pet changes', () => {
   const nativeImage = { createFromPath: (p) => ({ path: p, isEmpty: () => false, setTemplateImage() {} }) };
   const trayPet = createTrayPet({ getTray: () => tray, nativeImage, platform: 'darwin' });
   trayPet.setTrayPet('fox'); trayPet.setTrayPet('fox'); trayPet.setTrayPet('bunny');
-  assert.equal(images.length, 2); assert.match(images[0], /foxTemplate/); assert.match(images[1], /bunnyTemplate/);
+  assert.equal(images.length, 2); assert.match(images[0], /fox[/\\]menu-idle/); assert.match(images[1], /bunny[/\\]menu-idle/);
   assert.equal(trayPet.petId, 'bunny');
 });
 

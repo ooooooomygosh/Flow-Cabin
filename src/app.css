@@ -21,6 +21,12 @@ a{color:var(--px-accent-hi)}
 
 /* Title bar */
 .app{position:fixed;inset:0;overflow:hidden}
+.app-startup{display:grid;place-items:center;padding:24px;font-family:var(--px-font-body);box-sizing:border-box}
+.app-startup section{width:min(100%,440px);padding:28px;box-sizing:border-box;background:var(--px-surface-2);border:1px solid var(--px-border);border-radius:0}
+.app-startup small{font-size:12px;letter-spacing:.08em;color:var(--px-ink-dim)}
+.app-startup h1{margin:18px 0 12px;font-size:22px;line-height:1.4}
+.app-startup p{line-height:1.7;overflow-wrap:anywhere;color:var(--px-ink-dim)}
+.app-startup-error button{min-height:48px;margin-top:8px}
 .app-titlebar{position:absolute;inset:0 0 auto;z-index:30;height:var(--px-titlebar);display:flex;align-items:center;gap:14px;padding:0 10px 0 14px;background:linear-gradient(#1c120bf5,#1c120bd9);border-bottom:2px solid #8a5a3299;box-shadow:0 4px 0 #0d080555;-webkit-app-region:drag;user-select:none}
 .app-titlebar button,.app-titlebar a,.app-titlebar input{-webkit-app-region:no-drag}
 .app-brand{display:flex;align-items:center;gap:10px;min-width:0}
@@ -162,5 +168,7 @@ a{color:var(--px-accent-hi)}
   .app-actions{gap:4px}.app-actions .pixel-button{padding:7px 9px}
   .app-actions .pixel-button.is-primary span{display:none}
   .desktop-controls button{width:30px}
+  .app-actions :is(.album-wall-entry,.interface-choice-button) span{display:inline;font-size:12px}
+  .app-actions :is(.album-wall-entry,.interface-choice-button) svg{display:none}
 }
 }

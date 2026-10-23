@@ -30,6 +30,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(CabinDevicePlugin.class);
         registerPlugin(CabinPlayerPlugin.class);
         super.onCreate(state);
+        CabinWidgets.acceptIntent(this,getIntent());
         configureEdgeToEdge();
         getBridge().getWebView().setWebChromeClient(new com.getcapacitor.BridgeWebChromeClient(getBridge()) {
             @Override public void onPermissionRequest(android.webkit.PermissionRequest request) {
@@ -57,9 +58,16 @@ public class MainActivity extends BridgeActivity {
                     try { return CabinMusic.get(MainActivity.this).audio(uri.getPath().substring("/desktop-music".length()), request.getRequestHeaders().get("Range")); }
                     catch (Exception error) { return new WebResourceResponse("text/plain", "UTF-8", 503, "Unavailable", java.util.Collections.emptyMap(), new java.io.ByteArrayInputStream(new byte[0])); }
                 }
+                if ("https".equals(uri.getScheme()) && "localhost".equals(uri.getHost()) && "GET".equals(request.getMethod()) && uri.getPath()!=null && uri.getPath().matches("/desktop-pets/packs/[a-z0-9_-]{1,64}/(atlas[.]png|[a-z]+[.]webm)")) {
+                    try{return CabinMusic.get(MainActivity.this).petMedia(uri.getPath().replace("/desktop-pets/","/pets/"));}catch(Exception error){return new WebResourceResponse("text/plain","UTF-8",404,"Not found",java.util.Collections.emptyMap(),new java.io.ByteArrayInputStream(new byte[0]));}
+                }
                 return super.shouldInterceptRequest(view, request);
             }
         });
+    }
+
+    @Override protected void onNewIntent(android.content.Intent intent) {
+        super.onNewIntent(intent);setIntent(intent);if(CabinWidgets.acceptIntent(this,intent) && getBridge()!=null)getBridge().getWebView().evaluateJavascript("window.dispatchEvent(new Event('cabin:widget-command'))",null);
     }
 
     @SuppressWarnings("deprecation")

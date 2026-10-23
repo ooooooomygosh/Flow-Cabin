@@ -4,9 +4,9 @@ import { CAMERA_ANCHOR, DECK_BAND, ROOM_SCENE_IDS, ROOM_SCENES, getRoomScene, no
 
 // 六间房、唱片格几何与安全区是同一份事实：这里把不变式钉住，
 // 免得某个房间改了行数或 band，布局和避让测试却还以为没变。
-test('the cabin keeps exactly six stable scenes', () => {
-  assert.deepEqual([...ROOM_SCENE_IDS], ['pixel', 'warm', 'night-study', 'forest', 'seaside', 'starlight']);
-  assert.equal(new Set(ROOM_SCENE_IDS).size, 6, 'no duplicated id');
+test('the cabin keeps exactly eight stable scenes', () => {
+  assert.deepEqual([...ROOM_SCENE_IDS], ['pixel', 'warm', 'night-study', 'forest', 'seaside', 'starlight', 'rain-train', 'greenhouse']);
+  assert.equal(new Set(ROOM_SCENE_IDS).size, 8, 'no duplicated id');
   for (const id of ROOM_SCENE_IDS) {
     const scene = getRoomScene(id);
     assert.equal(scene.id, id);
@@ -22,7 +22,7 @@ test('the cabin keeps exactly six stable scenes', () => {
 test('the shelf holds twelve records, and the moonlit study holds nine', () => {
   const slots = Object.fromEntries(ROOM_SCENES.map((scene) => [scene.id, scene.geometry.columns.length * scene.geometry.rows.length]));
   assert.equal(slots['night-study'], 9);
-  for (const id of ['pixel', 'warm', 'forest', 'seaside', 'starlight']) assert.equal(slots[id], 12, id);
+  for (const id of ['pixel', 'warm', 'forest', 'seaside', 'starlight', 'rain-train', 'greenhouse']) assert.equal(slots[id], 12, id);
 });
 
 test('every scene band covers its own shelf', () => {

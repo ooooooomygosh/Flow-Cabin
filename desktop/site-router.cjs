@@ -9,7 +9,7 @@ const { SITE_ORIGIN } = require('./policy.cjs');
 const { extractLink, isQQUrl } = require('./qq-music.cjs');
 const { routeCollection } = require('./collection-store.cjs');
 const CSP = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data: blob:; font-src 'self' data:; connect-src 'self'; media-src 'self' blob:; worker-src 'self' blob:; frame-src 'none'; object-src 'none'; base-uri 'self'";
-const mimeTypes = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.json': 'application/json', '.woff2': 'font/woff2', '.ttf': 'font/ttf', '.txt': 'text/plain' };
+const mimeTypes = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.webp': 'image/webp', '.webm': 'video/webm', '.png': 'image/png', '.json': 'application/json', '.woff2': 'font/woff2', '.ttf': 'font/ttf', '.txt': 'text/plain' };
 const TRUSTED_COVERS = ['y.gtimg.cn', 'coverartarchive.org', 'archive.org'];
 
 function isTrustedCover(image) {

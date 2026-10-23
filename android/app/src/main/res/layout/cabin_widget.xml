@@ -1,6 +1,11 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/widget_root" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:gravity="center_vertical" android:background="@drawable/widget_background">
-<TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="FLOW CABIN" android:textSize="11sp" android:textColor="#D9AF79"/>
-<TextView android:id="@+id/widget_title" android:layout_width="match_parent" android:layout_height="wrap_content" android:maxLines="2" android:ellipsize="end" android:textSize="19sp" android:textColor="#FFF0D4" android:layout_marginTop="8dp"/>
-<Chronometer android:id="@+id/widget_clock" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="30sp" android:textColor="#FFF0D4"/>
-<TextView android:id="@+id/widget_status" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="12sp" android:textColor="#D0BFA5" android:layout_marginTop="8dp"/>
+<LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal">
+<ImageView android:id="@+id/widget_pet" android:layout_width="48dp" android:layout_height="48dp" android:contentDescription="小屋伙伴" android:scaleType="fitCenter"/>
+<TextView android:id="@+id/widget_title" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:maxLines="2" android:ellipsize="end" android:textSize="17sp" android:textColor="#FFF0D4" android:layout_marginStart="8dp"/>
 </LinearLayout>
+<Chronometer android:id="@+id/widget_clock" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="27sp" android:textColor="#FFF0D4"/>
+<TextView android:id="@+id/widget_status" android:layout_width="match_parent" android:layout_height="wrap_content" android:maxLines="1" android:ellipsize="end" android:textSize="12sp" android:textColor="#D0BFA5"/>
+<LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+<Button android:id="@+id/widget_primary" android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp" android:text="播放" android:textSize="14sp"/>
+<Button android:id="@+id/widget_next" android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp" android:text="下一首" android:textSize="14sp"/>
+</LinearLayout></LinearLayout>

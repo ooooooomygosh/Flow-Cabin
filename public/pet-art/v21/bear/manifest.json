@@ -1,0 +1,6362 @@
+{
+  "version": 2,
+  "petId": "bear",
+  "identityRevision": "2.1.0-art-1",
+  "avatar": "avatar-256.png",
+  "dock": {
+    "1024": "dock-1024.png",
+    "512": "dock-512.png",
+    "256": "dock-256.png",
+    "128": "dock-128.png",
+    "64": "dock-64.png"
+  },
+  "menu": {
+    "logicalSize": 18,
+    "template": false,
+    "states": {
+      "idle": {
+        "one": "menu-idle.png",
+        "two": "menu-idle@2x.png"
+      },
+      "blink": {
+        "one": "menu-blink.png",
+        "two": "menu-blink@2x.png"
+      },
+      "listen": {
+        "one": "menu-listen.png",
+        "two": "menu-listen@2x.png"
+      },
+      "focus": {
+        "one": "menu-focus.png",
+        "two": "menu-focus@2x.png"
+      }
+    },
+    "blinkDurationMs": 130,
+    "idleIntervalMs": 9000,
+    "reducedMotion": "idle"
+  },
+  "artDirection": "Warm outlined pixel companion; no equipped accessory baked into identity.",
+  "sourceMaster": "../sources/bear-dock.png",
+  "sourceMasterSize": [
+    1254,
+    1254
+  ],
+  "provenance": {
+    "tool": "image_gen.imagegen",
+    "generatedDate": "2026-10-23",
+    "model": "Tool-managed current image model; model identifier not returned",
+    "transparentBackground": true
+  },
+  "qa": {
+    "identityVisuallyReviewed": true,
+    "animationVisuallyReviewed": true,
+    "actions": 24,
+    "independentFrames": 50,
+    "pairs": [
+      {
+        "action": "idle",
+        "uniqueFrames": 2,
+        "frameHashes": [
+          "32a2c9d9ae57798a2bf8d3ad5078fe4dfb47a82cd6c61ec7e67c4524e4201191",
+          "e3b30d7ca893bb975dc974b3607fc999d3ac2850493a3ffa60103921c6e53004"
+        ]
+      },
+      {
+        "action": "observe",
+        "uniqueFrames": 2,
+        "frameHashes": [
+          "50c6fece121894804772c06406c284973a0aa03fc868520c1638cbfa8cc5277b",
+          "698f8702ff4990aa765903e835955c39170a3477cbc8affaaf53c77d5dd5c0fa"
+        ]
+      },
+      {
+        "action": "stretch",
+        "uniqueFrames": 2,
+        "frameHashes": [
+          "da6579817ff030060b32471dc7142bbf0aeff758a0973aec14e0e60583e03705",
+          "dbbaab64bef2694b4c07a7f656fce4e5cc4401eb55889c9f215c9e1488dd6175"
+        ]
+      },
+      {
+        "action": "yawn",
+        "uniqueFrames": 2,
+        "frameHashes": [
+          "5759a1329db40c53f789b24cd2a9430ba96e3daad1dc65eb2972a884543bedbe",
+          "d9a58c171d367f3605d2efe7399fd90c125f746ed4f31250d0ce6f6b1f41f42e"
+        ]
+      },
+      {
+        "action": "sleep",
+        "uniqueFrames": 2,
+        "frameHashes": [
+          "5de6b25ee962e4c51e4c317a4f9161ffcd1244d77b375a8e991a12e913623282",
+          "d5c2a237848214f28a1d871caa0bc87c8c215ff8d201ed8d4dd97579df680c4d"
+        ]
+      },
+      {
+        "action": "wake",
+        "uniqueFrames": 2,
+        "frameHashes": [
+          "e9a3f1afc3d05fd6151d2bceccba2edd926637e472d7702f965023705b722a6f",
+          "77ebcd38c1d46ad79bdce86013d2cb5fe382230d7199199c9411e2d2cbdfd0b1"
+        ]
+      },
+      {
+        "action": "walk",
+        "uniqueFrames": 4,
+        "frameHashes": [
+          "d2dab0876081f50140555a1141f30c330d08650af887cdd203f7e11980c49d75",
+          "f6c75efac26a36c0368045c323eacf404af1bd7d0dade7c00b3d996424e1051c",
+          "ea1779c3e9be90553276ff607c66ba6a8599fa87b9cc63b75095133108aa96c7",
+          "fa840373a6886b092bb5346fdbae413867ce074fcaa22e9ecb792d2af5393520"
+        ]
+      },
+      {
+        "action": "turn",
+        "uniqueFrames": 2,
+        "frameHashes": [
+          "1b53e580608c736fbbc1f901ff3803b12382991c11453cee6f5101b9dad810d6",
+          "d35538b3d9c2b4b7e9df2ba3bfdff0e6b4f4e8a25b7c26b444312020e4423e7d"
+        ]
+      },
+      {
+        "action": "greet",
+        "uniqueFrames": 2,
+        "frameHashes": [
+          "3ff31ec164242cdbc51494446db7463a24fb6a679a745cb4a22dc542d1e9e3a3",
+          "26ddb447c715e67e64186ed27c391a58a3a29f7c6897600239a9ac5121447de2"
+        ]
+      },
+      {
+        "action": "petresponse",
+        "uniqueFrames": 2,
+        "frameHashes": [
+          "aefc19c07a21cf7367fe07499071ac05219c1c1cf1d2a35d37ddda5dbf627335",
+          "91a8b69ac2f28e177649987fc2e60b4b4bfb75a7841035d480bb5ddf8b9754a5"
+        ]
+      },
+      {
+        "action": "dragged",
+        "uniqueFrames": 2,
+        "frameHashes": [
+          "1dc6479386297ba054d90be857d7f8e36e3a580fcd4fc0f132e360eb36d8e13d",
+          "f6af88a0ae7334a31a4d5390dff2cd86df46f1e759d4b0005848bcdf8a91b212"
+        ]
+      },
+      {
+        "action": "land",
+        "uniqueFrames": 2,
+        "frameHashes": [
+          "606e3672579b0bff529590a5366573d61b3ddac90f9c04126e855e7f56be4a1e",
+          "c17806c1c8eb89f1b44693fedd375af95f75d16fef2a7ba0c804177da9fed5ef"
+        ]
+      },
+      {
+        "action": "read",
+        "uniqueFrames": 2,
+        "frameHashes": [
+          "c2434ecaca4ec99eee35c2f8daffffa4098b4cf80af6d94c0cda0e2ac993d8bc",
+          "df8f8273c6d0d9cfae0ed6e6eab8d93ada99970361f108117d712c952dafa945"
+        ]
+      },
+      {
+        "action": "write",
+        "uniqueFrames": 2,
+        "frameHashes": [
+          "dd809939f6f71a0cd998977458f0a30441788f6dc8dc9bdfff7dc43926bccc8f",
+          "f95a9a711600880c92dfc94320e923ceafd532b1a5936e1ddc2087e81b9193fe"
+        ]
+      },
+      {
+        "action": "type",
+        "uniqueFrames": 2,
+        "frameHashes": [
+          "b135130ea022163cbbeea4e905eafef0330d955ebd847b79e35bc912d1ca0fc4",
+          "da487065e6149a03b05fe956d1902918f36fa00cd9e2de88432cbe6648f4f215"
+        ]
+      },
+      {
+        "action": "think",
+        "uniqueFrames": 2,
+        "frameHashes": [
+          "fce62e6eccb31f46fc3b75c1271475f07e1e607171d4fed2fddfdd237301a843",
+          "1bff032f18ec07f473fcd6a231a96a2e3118e75a3e5124e89cba53e7955079cb"
+        ]
+      },
+      {
+        "action": "listen",
+        "uniqueFrames": 2,
+        "frameHashes": [
+          "b85c2dbacbc6804b447188b38fa4f97edd1b5d13edcb610484346c14ef50a30a",
+          "553c788963e8509dccfb5032fe2eee2005719f5ded746386e61c37b51a29df4c"
+        ]
+      },
+      {
+        "action": "nod",
+        "uniqueFrames": 2,
+        "frameHashes": [
+          "02d61a6a9ca4831e02807c69ab7032e0938ba5595d1b8a188277e7303989da4f",
+          "bdb49c60501607b5e0e9c34fbc1298605aca4a6d66dcfb5eb453ef569f99e149"
+        ]
+      },
+      {
+        "action": "sway",
+        "uniqueFrames": 2,
+        "frameHashes": [
+          "518eaa5c5ec029bd8b4b9100fbaad74fe1b43af20fca4e0dde97a251b40b885b",
+          "da4307615f2e9019b971efc04c8de839b0cbf1da6612dea1897299106896a2b9"
+        ]
+      },
+      {
+        "action": "dance",
+        "uniqueFrames": 2,
+        "frameHashes": [
+          "c34ab16cfd27545b9b90570675f15f3fc3c995d5b43cc4ef36bb2bc09d3ca246",
+          "298a3af87a1b7fe2820afa6de3ec7be948c7c464c332646ad72545da588632bf"
+        ]
+      },
+      {
+        "action": "eat",
+        "uniqueFrames": 2,
+        "frameHashes": [
+          "d20d36d70678d216c8b106e5bc8242f193eb3b191358a972f50130ab86aab6f4",
+          "661193d4c6111590ebf1afb29fe72c61b5d3538bb14e540966b4d9efae78c8ec"
+        ]
+      },
+      {
+        "action": "satisfied",
+        "uniqueFrames": 2,
+        "frameHashes": [
+          "85ad90d3dec9f6e8f0f31336bedc7081868e6979f90c91981a295adc9eb2a760",
+          "88bcfac0826c52148f6345df2cd010301ef235673c074ad26de23155016b3c18"
+        ]
+      },
+      {
+        "action": "celebrate",
+        "uniqueFrames": 2,
+        "frameHashes": [
+          "7839230f6705b0b7741c4c7a1f04ee33dc8d7d79afc541d29db14705707602ef",
+          "1e8bff13450dbd85a24e60d4122a72daeba40a794f76b424c3a8633ceb8bc473"
+        ]
+      },
+      {
+        "action": "deliver",
+        "uniqueFrames": 2,
+        "frameHashes": [
+          "ed746964c7b4e5e2ccb570562c2b38525ce5988d7824f14313fe572846c8b1d3",
+          "9bcbb02ee27c5db7d246715452e6a85461246cad1f5d576c84fffa0a4a76d904"
+        ]
+      }
+    ],
+    "accessoryLimitations": "Landmarks use detected front eye pairs and separate profile/curled templates. Overlay QA is recorded in qa/; renderer should rotate around the supplied landmark.",
+    "equippedIdentityRevision": "2.1.0-equipped-1"
+  },
+  "atlas": "atlas.png",
+  "width": 2048,
+  "height": 1792,
+  "frameSize": 256,
+  "frameCount": 50,
+  "anchor": {
+    "x": 0.5,
+    "y": 0.9375
+  },
+  "frames": {
+    "idle-0": {
+      "x": 0,
+      "y": 0,
+      "w": 256,
+      "h": 256,
+      "durationMs": 2600,
+      "duration": 2600,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 46,
+        "y": 48,
+        "w": 164,
+        "h": 192
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "detected-eye-pair",
+        "orientation": "front",
+        "rotationDegrees": 9.13,
+        "head": {
+          "x": 0.45508,
+          "y": 0.41081,
+          "width": 0.60764,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.45508,
+          "y": 0.70855,
+          "width": 0.38889,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.45508,
+          "y": 0.33181,
+          "width": 0.54688,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.69206,
+          "y": 0.35004,
+          "width": 0.15191,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 44,
+        "y0": 25,
+        "x1": 246,
+        "y1": 261
+      },
+      "sourceSheet": "A"
+    },
+    "idle-1": {
+      "x": 256,
+      "y": 0,
+      "w": 256,
+      "h": 256,
+      "durationMs": 160,
+      "duration": 160,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 47,
+        "y": 47,
+        "w": 162,
+        "h": 193
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "detected-eye-pair",
+        "orientation": "front",
+        "rotationDegrees": 12.69,
+        "head": {
+          "x": 0.43066,
+          "y": 0.40283,
+          "width": 0.60221,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.43066,
+          "y": 0.69792,
+          "width": 0.38542,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.43066,
+          "y": 0.32454,
+          "width": 0.54199,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.66553,
+          "y": 0.34261,
+          "width": 0.15055,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 301,
+        "y0": 23,
+        "x1": 501,
+        "y1": 261
+      },
+      "sourceSheet": "A"
+    },
+    "observe-0": {
+      "x": 512,
+      "y": 0,
+      "w": 256,
+      "h": 256,
+      "durationMs": 900,
+      "duration": 900,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 43,
+        "y": 47,
+        "w": 169,
+        "h": 193
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "detected-eye-pair",
+        "orientation": "front",
+        "rotationDegrees": 16.48,
+        "head": {
+          "x": 0.38281,
+          "y": 0.40169,
+          "width": 0.53168,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.38281,
+          "y": 0.66222,
+          "width": 0.34028,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.38281,
+          "y": 0.33257,
+          "width": 0.47852,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.59017,
+          "y": 0.34852,
+          "width": 0.13292,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 545,
+        "y0": 23,
+        "x1": 753,
+        "y1": 261
+      },
+      "sourceSheet": "A"
+    },
+    "observe-1": {
+      "x": 768,
+      "y": 0,
+      "w": 256,
+      "h": 256,
+      "durationMs": 900,
+      "duration": 900,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 45,
+        "y": 48,
+        "w": 165,
+        "h": 192
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "detected-eye-pair",
+        "orientation": "front",
+        "rotationDegrees": -16.98,
+        "head": {
+          "x": 0.6084,
+          "y": 0.40804,
+          "width": 0.51541,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.6084,
+          "y": 0.66059,
+          "width": 0.32986,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.6084,
+          "y": 0.34104,
+          "width": 0.46387,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.80941,
+          "y": 0.3565,
+          "width": 0.12885,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 783,
+        "y0": 24,
+        "x1": 986,
+        "y1": 261
+      },
+      "sourceSheet": "A"
+    },
+    "stretch-0": {
+      "x": 1024,
+      "y": 0,
+      "w": 256,
+      "h": 256,
+      "durationMs": 600,
+      "duration": 600,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 36,
+        "y": 63,
+        "w": 183,
+        "h": 177
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "low-pose-template",
+        "orientation": "front",
+        "rotationDegrees": 0,
+        "head": {
+          "x": 0.39797,
+          "y": 0.68005,
+          "width": 0.4718,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.39797,
+          "y": 0.91123,
+          "width": 0.30195,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.39797,
+          "y": 0.61872,
+          "width": 0.42462,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.58197,
+          "y": 0.63287,
+          "width": 0.11795,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 23,
+        "y0": 289,
+        "x1": 249,
+        "y1": 507
+      },
+      "sourceSheet": "A"
+    },
+    "stretch-1": {
+      "x": 1280,
+      "y": 0,
+      "w": 256,
+      "h": 256,
+      "durationMs": 650,
+      "duration": 650,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 35,
+        "y": 50,
+        "w": 186,
+        "h": 190
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "low-pose-template",
+        "orientation": "front",
+        "rotationDegrees": 0,
+        "head": {
+          "x": 0.39828,
+          "y": 0.66518,
+          "width": 0.47953,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.39828,
+          "y": 0.90015,
+          "width": 0.3069,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.39828,
+          "y": 0.60284,
+          "width": 0.43158,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.5853,
+          "y": 0.61723,
+          "width": 0.11988,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 280,
+        "y0": 276,
+        "x1": 509,
+        "y1": 510
+      },
+      "sourceSheet": "A"
+    },
+    "yawn-0": {
+      "x": 1536,
+      "y": 0,
+      "w": 256,
+      "h": 256,
+      "durationMs": 500,
+      "duration": 500,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 44,
+        "y": 48,
+        "w": 167,
+        "h": 192
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "detected-eye-pair",
+        "orientation": "front",
+        "rotationDegrees": 12.85,
+        "head": {
+          "x": 0.44141,
+          "y": 0.40918,
+          "width": 0.61849,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.44141,
+          "y": 0.71224,
+          "width": 0.39583,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.44141,
+          "y": 0.32878,
+          "width": 0.55664,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.68262,
+          "y": 0.34733,
+          "width": 0.15462,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 557,
+        "y0": 272,
+        "x1": 763,
+        "y1": 509
+      },
+      "sourceSheet": "A"
+    },
+    "yawn-1": {
+      "x": 1792,
+      "y": 0,
+      "w": 256,
+      "h": 256,
+      "durationMs": 900,
+      "duration": 900,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 49,
+        "y": 53,
+        "w": 158,
+        "h": 187
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "detected-eye-pair",
+        "orientation": "front",
+        "rotationDegrees": 8.56,
+        "head": {
+          "x": 0.49707,
+          "y": 0.37695,
+          "width": 0.5925,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.49707,
+          "y": 0.66727,
+          "width": 0.3792,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.49707,
+          "y": 0.29992,
+          "width": 0.53325,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.72815,
+          "y": 0.3177,
+          "width": 0.14813,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 806,
+        "y0": 280,
+        "x1": 1001,
+        "y1": 510
+      },
+      "sourceSheet": "A"
+    },
+    "sleep-0": {
+      "x": 0,
+      "y": 256,
+      "w": 256,
+      "h": 256,
+      "durationMs": 1400,
+      "duration": 1400,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 34,
+        "y": 100,
+        "w": 188,
+        "h": 140
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "curled-template",
+        "orientation": "front",
+        "rotationDegrees": 0,
+        "head": {
+          "x": 0.3825,
+          "y": 0.64715,
+          "width": 0.47734,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.43978,
+          "y": 0.73784,
+          "width": 0.21003,
+          "layer": "behind"
+        },
+        "crown": {
+          "x": 0.3825,
+          "y": 0.58509,
+          "width": 0.42961,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.56866,
+          "y": 0.59941,
+          "width": 0.11934,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 31,
+        "y0": 563,
+        "x1": 263,
+        "y1": 736
+      },
+      "sourceSheet": "A"
+    },
+    "sleep-1": {
+      "x": 256,
+      "y": 256,
+      "w": 256,
+      "h": 256,
+      "durationMs": 1400,
+      "duration": 1400,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 38,
+        "y": 100,
+        "w": 180,
+        "h": 140
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "curled-template",
+        "orientation": "front",
+        "rotationDegrees": 0,
+        "head": {
+          "x": 0.3875,
+          "y": 0.6502,
+          "width": 0.45703,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.44234,
+          "y": 0.73703,
+          "width": 0.20109,
+          "layer": "behind"
+        },
+        "crown": {
+          "x": 0.3875,
+          "y": 0.59078,
+          "width": 0.41133,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.56574,
+          "y": 0.60449,
+          "width": 0.11426,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 296,
+        "y0": 559,
+        "x1": 518,
+        "y1": 731
+      },
+      "sourceSheet": "A"
+    },
+    "wake-0": {
+      "x": 512,
+      "y": 256,
+      "w": 256,
+      "h": 256,
+      "durationMs": 550,
+      "duration": 550,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 44,
+        "y": 45,
+        "w": 167,
+        "h": 195
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "detected-eye-pair",
+        "orientation": "front",
+        "rotationDegrees": 18.92,
+        "head": {
+          "x": 0.45605,
+          "y": 0.4165,
+          "width": 0.56966,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.45605,
+          "y": 0.69564,
+          "width": 0.36458,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.45605,
+          "y": 0.34245,
+          "width": 0.5127,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.67822,
+          "y": 0.35954,
+          "width": 0.14242,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 549,
+        "y0": 509,
+        "x1": 755,
+        "y1": 749
+      },
+      "sourceSheet": "A"
+    },
+    "wake-1": {
+      "x": 768,
+      "y": 256,
+      "w": 256,
+      "h": 256,
+      "durationMs": 800,
+      "duration": 800,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 46,
+        "y": 49,
+        "w": 164,
+        "h": 191
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "detected-eye-pair",
+        "orientation": "front",
+        "rotationDegrees": 5.01,
+        "head": {
+          "x": 0.46289,
+          "y": 0.4058,
+          "width": 0.615,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.46289,
+          "y": 0.70715,
+          "width": 0.3936,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.46289,
+          "y": 0.32585,
+          "width": 0.5535,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.70274,
+          "y": 0.3443,
+          "width": 0.15375,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 797,
+        "y0": 513,
+        "x1": 999,
+        "y1": 748
+      },
+      "sourceSheet": "A"
+    },
+    "walk-0": {
+      "x": 1024,
+      "y": 256,
+      "w": 256,
+      "h": 256,
+      "durationMs": 140,
+      "duration": 140,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 60,
+        "y": 70,
+        "w": 136,
+        "h": 170
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "profile-template",
+        "orientation": "right",
+        "rotationDegrees": 0,
+        "head": {
+          "x": 0.47641,
+          "y": 0.50586,
+          "width": 0.23715,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.44581,
+          "y": 0.64356,
+          "width": 0.2448,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.52231,
+          "y": 0.40258,
+          "width": 0.34425,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.45346,
+          "y": 0.44848,
+          "width": 0.09563,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 137,
+        "y0": 668,
+        "x1": 327,
+        "y1": 905
+      },
+      "sourceSheet": "walk-cycles"
+    },
+    "walk-1": {
+      "x": 1280,
+      "y": 256,
+      "w": 256,
+      "h": 256,
+      "durationMs": 140,
+      "duration": 140,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 64,
+        "y": 66,
+        "w": 127,
+        "h": 174
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "profile-template",
+        "orientation": "right",
+        "rotationDegrees": 0,
+        "head": {
+          "x": 0.47602,
+          "y": 0.4957,
+          "width": 0.22146,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.44745,
+          "y": 0.62429,
+          "width": 0.2286,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.51888,
+          "y": 0.39926,
+          "width": 0.32147,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.45459,
+          "y": 0.44213,
+          "width": 0.0893,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 472,
+        "y0": 665,
+        "x1": 649,
+        "y1": 907
+      },
+      "sourceSheet": "walk-cycles"
+    },
+    "walk-2": {
+      "x": 1536,
+      "y": 256,
+      "w": 256,
+      "h": 256,
+      "durationMs": 140,
+      "duration": 140,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 65,
+        "y": 70,
+        "w": 125,
+        "h": 170
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "profile-template",
+        "orientation": "right",
+        "rotationDegrees": 0,
+        "head": {
+          "x": 0.47637,
+          "y": 0.50586,
+          "width": 0.21797,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.44824,
+          "y": 0.63242,
+          "width": 0.225,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.51855,
+          "y": 0.41094,
+          "width": 0.31641,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.45527,
+          "y": 0.45312,
+          "width": 0.08789,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 804,
+        "y0": 668,
+        "x1": 978,
+        "y1": 905
+      },
+      "sourceSheet": "walk-cycles"
+    },
+    "walk-3": {
+      "x": 1792,
+      "y": 256,
+      "w": 256,
+      "h": 256,
+      "durationMs": 140,
+      "duration": 140,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 66,
+        "y": 69,
+        "w": 123,
+        "h": 171
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "profile-template",
+        "orientation": "right",
+        "rotationDegrees": 0,
+        "head": {
+          "x": 0.47671,
+          "y": 0.50332,
+          "width": 0.21448,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.44904,
+          "y": 0.62786,
+          "width": 0.2214,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.51823,
+          "y": 0.40992,
+          "width": 0.31134,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.45596,
+          "y": 0.45143,
+          "width": 0.08648,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 1151,
+        "y0": 668,
+        "x1": 1323,
+        "y1": 907
+      },
+      "sourceSheet": "walk-cycles"
+    },
+    "turn-0": {
+      "x": 0,
+      "y": 512,
+      "w": 256,
+      "h": 256,
+      "durationMs": 320,
+      "duration": 320,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 46,
+        "y": 57,
+        "w": 164,
+        "h": 183
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "turn-template",
+        "orientation": "quarter",
+        "rotationDegrees": -5.91,
+        "head": {
+          "x": 0.51922,
+          "y": 0.39267,
+          "width": 0.48688,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.51922,
+          "y": 0.63124,
+          "width": 0.3116,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.51922,
+          "y": 0.32938,
+          "width": 0.43819,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.7091,
+          "y": 0.34398,
+          "width": 0.12172,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 563,
+        "y0": 754,
+        "x1": 765,
+        "y1": 979
+      },
+      "sourceSheet": "A"
+    },
+    "turn-1": {
+      "x": 256,
+      "y": 512,
+      "w": 256,
+      "h": 256,
+      "durationMs": 450,
+      "duration": 450,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 47,
+        "y": 58,
+        "w": 161,
+        "h": 182
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "turn-template",
+        "orientation": "quarter",
+        "rotationDegrees": -22,
+        "head": {
+          "x": 0.51691,
+          "y": 0.39659,
+          "width": 0.47797,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.51691,
+          "y": 0.63079,
+          "width": 0.3059,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.51691,
+          "y": 0.33445,
+          "width": 0.43017,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.70332,
+          "y": 0.34879,
+          "width": 0.11949,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 797,
+        "y0": 755,
+        "x1": 995,
+        "y1": 979
+      },
+      "sourceSheet": "A"
+    },
+    "greet-0": {
+      "x": 512,
+      "y": 512,
+      "w": 256,
+      "h": 256,
+      "durationMs": 400,
+      "duration": 400,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 47,
+        "y": 36,
+        "w": 161,
+        "h": 204
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "detected-eye-pair",
+        "orientation": "front",
+        "rotationDegrees": 8.13,
+        "head": {
+          "x": 0.46875,
+          "y": 0.33717,
+          "width": 0.60375,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.46875,
+          "y": 0.63301,
+          "width": 0.3864,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.46875,
+          "y": 0.25868,
+          "width": 0.54338,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.70421,
+          "y": 0.2768,
+          "width": 0.15094,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 40,
+        "y0": 986,
+        "x1": 238,
+        "y1": 1237
+      },
+      "sourceSheet": "A"
+    },
+    "greet-1": {
+      "x": 768,
+      "y": 512,
+      "w": 256,
+      "h": 256,
+      "durationMs": 400,
+      "duration": 400,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 43,
+        "y": 47,
+        "w": 170,
+        "h": 193
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "detected-eye-pair",
+        "orientation": "front",
+        "rotationDegrees": 12.09,
+        "head": {
+          "x": 0.44922,
+          "y": 0.3776,
+          "width": 0.60764,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.44922,
+          "y": 0.67535,
+          "width": 0.38889,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.44922,
+          "y": 0.29861,
+          "width": 0.54688,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.6862,
+          "y": 0.31684,
+          "width": 0.15191,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 292,
+        "y0": 991,
+        "x1": 501,
+        "y1": 1229
+      },
+      "sourceSheet": "A"
+    },
+    "petresponse-0": {
+      "x": 1024,
+      "y": 512,
+      "w": 256,
+      "h": 256,
+      "durationMs": 650,
+      "duration": 650,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 43,
+        "y": 48,
+        "w": 169,
+        "h": 192
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "detected-eye-pair",
+        "orientation": "front",
+        "rotationDegrees": 7.24,
+        "head": {
+          "x": 0.46582,
+          "y": 0.49929,
+          "width": 0.34328,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.46582,
+          "y": 0.6675,
+          "width": 0.2197,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.46582,
+          "y": 0.45466,
+          "width": 0.30895,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.5997,
+          "y": 0.46496,
+          "width": 0.08582,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 557,
+        "y0": 992,
+        "x1": 765,
+        "y1": 1229
+      },
+      "sourceSheet": "A"
+    },
+    "petresponse-1": {
+      "x": 1280,
+      "y": 512,
+      "w": 256,
+      "h": 256,
+      "durationMs": 650,
+      "duration": 650,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 45,
+        "y": 48,
+        "w": 165,
+        "h": 192
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "detected-eye-pair",
+        "orientation": "front",
+        "rotationDegrees": -11.13,
+        "head": {
+          "x": 0.52637,
+          "y": 0.49855,
+          "width": 0.33516,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.52637,
+          "y": 0.66278,
+          "width": 0.2145,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.52637,
+          "y": 0.45498,
+          "width": 0.30164,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.65708,
+          "y": 0.46504,
+          "width": 0.08379,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 783,
+        "y0": 992,
+        "x1": 986,
+        "y1": 1229
+      },
+      "sourceSheet": "A"
+    },
+    "dragged-0": {
+      "x": 1536,
+      "y": 512,
+      "w": 256,
+      "h": 256,
+      "durationMs": 260,
+      "duration": 260,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 54,
+        "y": 16,
+        "w": 148,
+        "h": 224
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "detected-eye-pair",
+        "orientation": "front",
+        "rotationDegrees": 8.29,
+        "head": {
+          "x": 0.46973,
+          "y": 0.23609,
+          "width": 0.555,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.46973,
+          "y": 0.50804,
+          "width": 0.3552,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.46973,
+          "y": 0.16394,
+          "width": 0.4995,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.68618,
+          "y": 0.18059,
+          "width": 0.13875,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 48,
+        "y0": 1235,
+        "x1": 230,
+        "y1": 1511
+      },
+      "sourceSheet": "A"
+    },
+    "dragged-1": {
+      "x": 1792,
+      "y": 512,
+      "w": 256,
+      "h": 256,
+      "durationMs": 260,
+      "duration": 260,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 42,
+        "y": 27,
+        "w": 172,
+        "h": 213
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "detected-eye-pair",
+        "orientation": "front",
+        "rotationDegrees": 12.41,
+        "head": {
+          "x": 0.49414,
+          "y": 0.27409,
+          "width": 0.54253,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.49414,
+          "y": 0.53993,
+          "width": 0.34722,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.49414,
+          "y": 0.20356,
+          "width": 0.48828,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.70573,
+          "y": 0.21984,
+          "width": 0.13563,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 281,
+        "y0": 1236,
+        "x1": 493,
+        "y1": 1499
+      },
+      "sourceSheet": "A"
+    },
+    "land-0": {
+      "x": 0,
+      "y": 768,
+      "w": 256,
+      "h": 256,
+      "durationMs": 180,
+      "duration": 180,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 32,
+        "y": 73,
+        "w": 192,
+        "h": 167
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "low-pose-template",
+        "orientation": "front",
+        "rotationDegrees": 0,
+        "head": {
+          "x": 0.395,
+          "y": 0.63493,
+          "width": 0.495,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.395,
+          "y": 0.87748,
+          "width": 0.3168,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.395,
+          "y": 0.57058,
+          "width": 0.4455,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.58805,
+          "y": 0.58543,
+          "width": 0.12375,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 500,
+        "y0": 1283,
+        "x1": 736,
+        "y1": 1489
+      },
+      "sourceSheet": "A"
+    },
+    "land-1": {
+      "x": 256,
+      "y": 768,
+      "w": 256,
+      "h": 256,
+      "durationMs": 460,
+      "duration": 460,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 31,
+        "y": 48,
+        "w": 193,
+        "h": 192
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "low-pose-template",
+        "orientation": "front",
+        "rotationDegrees": 0,
+        "head": {
+          "x": 0.3925,
+          "y": 0.60036,
+          "width": 0.49758,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.3925,
+          "y": 0.84418,
+          "width": 0.31845,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.3925,
+          "y": 0.53568,
+          "width": 0.44782,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.58656,
+          "y": 0.55061,
+          "width": 0.12439,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 766,
+        "y0": 1252,
+        "x1": 1004,
+        "y1": 1489
+      },
+      "sourceSheet": "A"
+    },
+    "read-0": {
+      "x": 512,
+      "y": 768,
+      "w": 256,
+      "h": 256,
+      "durationMs": 1400,
+      "duration": 1400,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 42,
+        "y": 53,
+        "w": 171,
+        "h": 187
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "detected-eye-pair",
+        "orientation": "front",
+        "rotationDegrees": 10.86,
+        "head": {
+          "x": 0.44434,
+          "y": 0.44971,
+          "width": 0.53711,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.44434,
+          "y": 0.71289,
+          "width": 0.34375,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.44434,
+          "y": 0.37988,
+          "width": 0.4834,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.65381,
+          "y": 0.396,
+          "width": 0.13428,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 50,
+        "y0": 35,
+        "x1": 261,
+        "y1": 266
+      },
+      "sourceSheet": "B"
+    },
+    "read-1": {
+      "x": 768,
+      "y": 768,
+      "w": 256,
+      "h": 256,
+      "durationMs": 550,
+      "duration": 550,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 47,
+        "y": 53,
+        "w": 162,
+        "h": 187
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "detected-eye-pair",
+        "orientation": "front",
+        "rotationDegrees": 14.57,
+        "head": {
+          "x": 0.44531,
+          "y": 0.45378,
+          "width": 0.54253,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.44531,
+          "y": 0.71962,
+          "width": 0.34722,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.44531,
+          "y": 0.38325,
+          "width": 0.48828,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.6569,
+          "y": 0.39952,
+          "width": 0.13563,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 295,
+        "y0": 35,
+        "x1": 495,
+        "y1": 266
+      },
+      "sourceSheet": "B"
+    },
+    "write-0": {
+      "x": 1024,
+      "y": 768,
+      "w": 256,
+      "h": 256,
+      "durationMs": 300,
+      "duration": 300,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 49,
+        "y": 53,
+        "w": 158,
+        "h": 187
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "detected-eye-pair",
+        "orientation": "front",
+        "rotationDegrees": 14.72,
+        "head": {
+          "x": 0.43262,
+          "y": 0.46436,
+          "width": 0.53711,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.43262,
+          "y": 0.72754,
+          "width": 0.34375,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.43262,
+          "y": 0.39453,
+          "width": 0.4834,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.64209,
+          "y": 0.41064,
+          "width": 0.13428,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 549,
+        "y0": 35,
+        "x1": 744,
+        "y1": 266
+      },
+      "sourceSheet": "B"
+    },
+    "write-1": {
+      "x": 1280,
+      "y": 768,
+      "w": 256,
+      "h": 256,
+      "durationMs": 300,
+      "duration": 300,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 45,
+        "y": 53,
+        "w": 166,
+        "h": 187
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "detected-eye-pair",
+        "orientation": "front",
+        "rotationDegrees": 15.64,
+        "head": {
+          "x": 0.44336,
+          "y": 0.45378,
+          "width": 0.54253,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.44336,
+          "y": 0.71962,
+          "width": 0.34722,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.44336,
+          "y": 0.38325,
+          "width": 0.48828,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.65495,
+          "y": 0.39952,
+          "width": 0.13563,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 788,
+        "y0": 35,
+        "x1": 993,
+        "y1": 266
+      },
+      "sourceSheet": "B"
+    },
+    "type-0": {
+      "x": 1536,
+      "y": 768,
+      "w": 256,
+      "h": 256,
+      "durationMs": 180,
+      "duration": 180,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 38,
+        "y": 59,
+        "w": 179,
+        "h": 181
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "detected-eye-pair",
+        "orientation": "front",
+        "rotationDegrees": 10.21,
+        "head": {
+          "x": 0.45996,
+          "y": 0.47217,
+          "width": 0.60221,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.45996,
+          "y": 0.76725,
+          "width": 0.38542,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.45996,
+          "y": 0.39388,
+          "width": 0.54199,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.69482,
+          "y": 0.41195,
+          "width": 0.15055,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 35,
+        "y0": 284,
+        "x1": 255,
+        "y1": 507
+      },
+      "sourceSheet": "B"
+    },
+    "type-1": {
+      "x": 1792,
+      "y": 768,
+      "w": 256,
+      "h": 256,
+      "durationMs": 180,
+      "duration": 180,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 39,
+        "y": 59,
+        "w": 178,
+        "h": 181
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "detected-eye-pair",
+        "orientation": "front",
+        "rotationDegrees": 11.73,
+        "head": {
+          "x": 0.45898,
+          "y": 0.47624,
+          "width": 0.57509,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.45898,
+          "y": 0.75803,
+          "width": 0.36806,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.45898,
+          "y": 0.40148,
+          "width": 0.51758,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.68327,
+          "y": 0.41873,
+          "width": 0.14377,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 285,
+        "y0": 284,
+        "x1": 504,
+        "y1": 507
+      },
+      "sourceSheet": "B"
+    },
+    "think-0": {
+      "x": 0,
+      "y": 1024,
+      "w": 256,
+      "h": 256,
+      "durationMs": 1300,
+      "duration": 1300,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 46,
+        "y": 53,
+        "w": 164,
+        "h": 187
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "detected-eye-pair",
+        "orientation": "front",
+        "rotationDegrees": 20.42,
+        "head": {
+          "x": 0.42188,
+          "y": 0.44206,
+          "width": 0.50998,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.42188,
+          "y": 0.69195,
+          "width": 0.32639,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.42188,
+          "y": 0.37576,
+          "width": 0.45898,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.62077,
+          "y": 0.39106,
+          "width": 0.1275,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 551,
+        "y0": 283,
+        "x1": 753,
+        "y1": 513
+      },
+      "sourceSheet": "B"
+    },
+    "think-1": {
+      "x": 256,
+      "y": 1024,
+      "w": 256,
+      "h": 256,
+      "durationMs": 1000,
+      "duration": 1000,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 47,
+        "y": 54,
+        "w": 161,
+        "h": 186
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "detected-eye-pair",
+        "orientation": "front",
+        "rotationDegrees": 19.37,
+        "head": {
+          "x": 0.4209,
+          "y": 0.43962,
+          "width": 0.49371,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.4209,
+          "y": 0.68153,
+          "width": 0.31597,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.4209,
+          "y": 0.37543,
+          "width": 0.44434,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.61344,
+          "y": 0.39025,
+          "width": 0.12343,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 804,
+        "y0": 284,
+        "x1": 1002,
+        "y1": 513
+      },
+      "sourceSheet": "B"
+    },
+    "listen-0": {
+      "x": 512,
+      "y": 1024,
+      "w": 256,
+      "h": 256,
+      "durationMs": 1300,
+      "duration": 1300,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 47,
+        "y": 61,
+        "w": 161,
+        "h": 179
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "detected-eye-pair",
+        "orientation": "front",
+        "rotationDegrees": 9.03,
+        "head": {
+          "x": 0.4502,
+          "y": 0.45687,
+          "width": 0.58051,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.4502,
+          "y": 0.74132,
+          "width": 0.37153,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.4502,
+          "y": 0.3814,
+          "width": 0.52246,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.6766,
+          "y": 0.39882,
+          "width": 0.14513,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 46,
+        "y0": 532,
+        "x1": 244,
+        "y1": 753
+      },
+      "sourceSheet": "B"
+    },
+    "listen-1": {
+      "x": 768,
+      "y": 1024,
+      "w": 256,
+      "h": 256,
+      "durationMs": 1300,
+      "duration": 1300,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 41,
+        "y": 53,
+        "w": 173,
+        "h": 187
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "reviewed-pose-landmarks",
+        "orientation": "front",
+        "rotationDegrees": 22,
+        "head": {
+          "x": 0.45885,
+          "y": 0.45972,
+          "width": 0.50684,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.45885,
+          "y": 0.70807,
+          "width": 0.32438,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.45885,
+          "y": 0.39383,
+          "width": 0.45615,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.65652,
+          "y": 0.40903,
+          "width": 0.12671,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 299,
+        "y0": 523,
+        "x1": 512,
+        "y1": 753
+      },
+      "sourceSheet": "B"
+    },
+    "nod-0": {
+      "x": 1024,
+      "y": 1024,
+      "w": 256,
+      "h": 256,
+      "durationMs": 400,
+      "duration": 400,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 47,
+        "y": 57,
+        "w": 161,
+        "h": 183
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "detected-eye-pair",
+        "orientation": "front",
+        "rotationDegrees": 19.93,
+        "head": {
+          "x": 0.43066,
+          "y": 0.43864,
+          "width": 0.49371,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.43066,
+          "y": 0.68056,
+          "width": 0.31597,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.43066,
+          "y": 0.37446,
+          "width": 0.44434,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.62321,
+          "y": 0.38927,
+          "width": 0.12343,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 552,
+        "y0": 527,
+        "x1": 750,
+        "y1": 753
+      },
+      "sourceSheet": "B"
+    },
+    "nod-1": {
+      "x": 1280,
+      "y": 1024,
+      "w": 256,
+      "h": 256,
+      "durationMs": 400,
+      "duration": 400,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 49,
+        "y": 81,
+        "w": 157,
+        "h": 159
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "detected-eye-pair",
+        "orientation": "front",
+        "rotationDegrees": 3.93,
+        "head": {
+          "x": 0.44922,
+          "y": 0.54102,
+          "width": 0.55339,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.44922,
+          "y": 0.81217,
+          "width": 0.35417,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.44922,
+          "y": 0.46908,
+          "width": 0.49805,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.66504,
+          "y": 0.48568,
+          "width": 0.13835,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 805,
+        "y0": 557,
+        "x1": 998,
+        "y1": 753
+      },
+      "sourceSheet": "B"
+    },
+    "sway-0": {
+      "x": 1536,
+      "y": 1024,
+      "w": 256,
+      "h": 256,
+      "durationMs": 480,
+      "duration": 480,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 41,
+        "y": 57,
+        "w": 173,
+        "h": 183
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "detected-eye-pair",
+        "orientation": "front",
+        "rotationDegrees": 7.85,
+        "head": {
+          "x": 0.47656,
+          "y": 0.56057,
+          "width": 0.35141,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.47656,
+          "y": 0.73276,
+          "width": 0.2249,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.47656,
+          "y": 0.51489,
+          "width": 0.31627,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.61361,
+          "y": 0.52543,
+          "width": 0.08785,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 43,
+        "y0": 769,
+        "x1": 256,
+        "y1": 995
+      },
+      "sourceSheet": "B"
+    },
+    "sway-1": {
+      "x": 1792,
+      "y": 1024,
+      "w": 256,
+      "h": 256,
+      "durationMs": 480,
+      "duration": 480,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 33,
+        "y": 59,
+        "w": 189,
+        "h": 181
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "detected-eye-pair",
+        "orientation": "front",
+        "rotationDegrees": 11.11,
+        "head": {
+          "x": 0.5332,
+          "y": 0.55081,
+          "width": 0.38391,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.5332,
+          "y": 0.73893,
+          "width": 0.2457,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.5332,
+          "y": 0.5009,
+          "width": 0.34552,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.68293,
+          "y": 0.51242,
+          "width": 0.09598,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 273,
+        "y0": 772,
+        "x1": 506,
+        "y1": 995
+      },
+      "sourceSheet": "B"
+    },
+    "dance-0": {
+      "x": 0,
+      "y": 1280,
+      "w": 256,
+      "h": 256,
+      "durationMs": 240,
+      "duration": 240,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 45,
+        "y": 37,
+        "w": 165,
+        "h": 203
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "detected-eye-pair",
+        "orientation": "front",
+        "rotationDegrees": 18.8,
+        "head": {
+          "x": 0.46289,
+          "y": 0.34928,
+          "width": 0.50998,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.46289,
+          "y": 0.59918,
+          "width": 0.32639,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.46289,
+          "y": 0.28299,
+          "width": 0.45898,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.66178,
+          "y": 0.29829,
+          "width": 0.1275,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 544,
+        "y0": 760,
+        "x1": 747,
+        "y1": 1010
+      },
+      "sourceSheet": "B"
+    },
+    "dance-1": {
+      "x": 256,
+      "y": 1280,
+      "w": 256,
+      "h": 256,
+      "durationMs": 240,
+      "duration": 240,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 45,
+        "y": 44,
+        "w": 166,
+        "h": 196
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "detected-eye-pair",
+        "orientation": "front",
+        "rotationDegrees": -1.82,
+        "head": {
+          "x": 0.50098,
+          "y": 0.41943,
+          "width": 0.3418,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.50098,
+          "y": 0.58691,
+          "width": 0.21875,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.50098,
+          "y": 0.375,
+          "width": 0.30762,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.63428,
+          "y": 0.38525,
+          "width": 0.08545,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 797,
+        "y0": 769,
+        "x1": 1002,
+        "y1": 1010
+      },
+      "sourceSheet": "B"
+    },
+    "eat-0": {
+      "x": 512,
+      "y": 1280,
+      "w": 256,
+      "h": 256,
+      "durationMs": 550,
+      "duration": 550,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 40,
+        "y": 84,
+        "w": 176,
+        "h": 156
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "detected-eye-pair",
+        "orientation": "front",
+        "rotationDegrees": 3.24,
+        "head": {
+          "x": 0.40625,
+          "y": 0.59928,
+          "width": 0.57509,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.40625,
+          "y": 0.88108,
+          "width": 0.36806,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.40625,
+          "y": 0.52452,
+          "width": 0.51758,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.63053,
+          "y": 0.54178,
+          "width": 0.14377,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 44,
+        "y0": 1042,
+        "x1": 261,
+        "y1": 1234
+      },
+      "sourceSheet": "B"
+    },
+    "eat-1": {
+      "x": 768,
+      "y": 1280,
+      "w": 256,
+      "h": 256,
+      "durationMs": 700,
+      "duration": 700,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 44,
+        "y": 63,
+        "w": 168,
+        "h": 177
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "detected-eye-pair",
+        "orientation": "front",
+        "rotationDegrees": 11.94,
+        "head": {
+          "x": 0.43164,
+          "y": 0.46615,
+          "width": 0.56424,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.43164,
+          "y": 0.74262,
+          "width": 0.36111,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.43164,
+          "y": 0.3928,
+          "width": 0.50781,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.65169,
+          "y": 0.40972,
+          "width": 0.14106,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 299,
+        "y0": 1015,
+        "x1": 506,
+        "y1": 1233
+      },
+      "sourceSheet": "B"
+    },
+    "satisfied-0": {
+      "x": 1024,
+      "y": 1280,
+      "w": 256,
+      "h": 256,
+      "durationMs": 800,
+      "duration": 800,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 46,
+        "y": 62,
+        "w": 163,
+        "h": 178
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "detected-eye-pair",
+        "orientation": "front",
+        "rotationDegrees": -4.76,
+        "head": {
+          "x": 0.47266,
+          "y": 0.53725,
+          "width": 0.33109,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.47266,
+          "y": 0.69949,
+          "width": 0.2119,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.47266,
+          "y": 0.49421,
+          "width": 0.29798,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.60178,
+          "y": 0.50414,
+          "width": 0.08277,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 552,
+        "y0": 1015,
+        "x1": 753,
+        "y1": 1234
+      },
+      "sourceSheet": "B"
+    },
+    "satisfied-1": {
+      "x": 1280,
+      "y": 1280,
+      "w": 256,
+      "h": 256,
+      "durationMs": 800,
+      "duration": 800,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 43,
+        "y": 59,
+        "w": 170,
+        "h": 181
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "detected-eye-pair",
+        "orientation": "front",
+        "rotationDegrees": -2.91,
+        "head": {
+          "x": 0.49707,
+          "y": 0.46676,
+          "width": 0.34531,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.49707,
+          "y": 0.63596,
+          "width": 0.221,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.49707,
+          "y": 0.42187,
+          "width": 0.31078,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.63174,
+          "y": 0.43223,
+          "width": 0.08633,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 793,
+        "y0": 1015,
+        "x1": 1002,
+        "y1": 1238
+      },
+      "sourceSheet": "B"
+    },
+    "celebrate-0": {
+      "x": 1536,
+      "y": 1280,
+      "w": 256,
+      "h": 256,
+      "durationMs": 350,
+      "duration": 350,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 38,
+        "y": 34,
+        "w": 179,
+        "h": 206
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "detected-eye-pair",
+        "orientation": "front",
+        "rotationDegrees": 11.53,
+        "head": {
+          "x": 0.47461,
+          "y": 0.34603,
+          "width": 0.53168,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.47461,
+          "y": 0.60655,
+          "width": 0.34028,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.47461,
+          "y": 0.27691,
+          "width": 0.47852,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.68197,
+          "y": 0.29286,
+          "width": 0.13292,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 34,
+        "y0": 1247,
+        "x1": 255,
+        "y1": 1501
+      },
+      "sourceSheet": "B"
+    },
+    "celebrate-1": {
+      "x": 1792,
+      "y": 1280,
+      "w": 256,
+      "h": 256,
+      "durationMs": 350,
+      "duration": 350,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 41,
+        "y": 33,
+        "w": 173,
+        "h": 207
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "detected-eye-pair",
+        "orientation": "front",
+        "rotationDegrees": -5.53,
+        "head": {
+          "x": 0.53125,
+          "y": 0.37893,
+          "width": 0.35141,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.53125,
+          "y": 0.55112,
+          "width": 0.2249,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.53125,
+          "y": 0.33325,
+          "width": 0.31627,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.6683,
+          "y": 0.34379,
+          "width": 0.08785,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 284,
+        "y0": 1239,
+        "x1": 497,
+        "y1": 1494
+      },
+      "sourceSheet": "B"
+    },
+    "deliver-0": {
+      "x": 0,
+      "y": 1536,
+      "w": 256,
+      "h": 256,
+      "durationMs": 700,
+      "duration": 700,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 48,
+        "y": 42,
+        "w": 159,
+        "h": 198
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "detected-eye-pair",
+        "orientation": "front",
+        "rotationDegrees": 0.0,
+        "head": {
+          "x": 0.45703,
+          "y": 0.35905,
+          "width": 0.57509,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.45703,
+          "y": 0.64084,
+          "width": 0.36806,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.45703,
+          "y": 0.28429,
+          "width": 0.51758,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.68132,
+          "y": 0.30154,
+          "width": 0.14377,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 553,
+        "y0": 1260,
+        "x1": 749,
+        "y1": 1504
+      },
+      "sourceSheet": "B"
+    },
+    "deliver-1": {
+      "x": 256,
+      "y": 1536,
+      "w": 256,
+      "h": 256,
+      "durationMs": 850,
+      "duration": 850,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.9375
+      },
+      "contentBounds": {
+        "x": 38,
+        "y": 34,
+        "w": 180,
+        "h": 206
+      },
+      "accessoryAnchors": {
+        "supported": true,
+        "revision": "2.1.0-fit-2",
+        "source": "detected-eye-pair",
+        "orientation": "front",
+        "rotationDegrees": -14.89,
+        "head": {
+          "x": 0.54492,
+          "y": 0.32878,
+          "width": 0.50998,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.54492,
+          "y": 0.57867,
+          "width": 0.32639,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.54492,
+          "y": 0.26248,
+          "width": 0.45898,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.74382,
+          "y": 0.27778,
+          "width": 0.1275,
+          "layer": "front"
+        }
+      },
+      "sourceRegion": {
+        "x0": 788,
+        "y0": 1250,
+        "x1": 1010,
+        "y1": 1504
+      },
+      "sourceSheet": "B"
+    }
+  },
+  "clips": {
+    "idle": {
+      "frames": [
+        {
+          "x": 0,
+          "y": 0,
+          "w": 256,
+          "h": 256,
+          "durationMs": 2600,
+          "duration": 2600,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 46,
+            "y": 48,
+            "w": 164,
+            "h": 192
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "detected-eye-pair",
+            "orientation": "front",
+            "rotationDegrees": 9.13,
+            "head": {
+              "x": 0.45508,
+              "y": 0.41081,
+              "width": 0.60764,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.45508,
+              "y": 0.70855,
+              "width": 0.38889,
+              "layer": "front"
+            },
+            "crown": {
+              "x": 0.45508,
+              "y": 0.33181,
+              "width": 0.54688,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.69206,
+              "y": 0.35004,
+              "width": 0.15191,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 44,
+            "y0": 25,
+            "x1": 246,
+            "y1": 261
+          },
+          "sourceSheet": "A"
+        },
+        {
+          "x": 256,
+          "y": 0,
+          "w": 256,
+          "h": 256,
+          "durationMs": 160,
+          "duration": 160,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 47,
+            "y": 47,
+            "w": 162,
+            "h": 193
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "detected-eye-pair",
+            "orientation": "front",
+            "rotationDegrees": 12.69,
+            "head": {
+              "x": 0.43066,
+              "y": 0.40283,
+              "width": 0.60221,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.43066,
+              "y": 0.69792,
+              "width": 0.38542,
+              "layer": "front"
+            },
+            "crown": {
+              "x": 0.43066,
+              "y": 0.32454,
+              "width": 0.54199,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.66553,
+              "y": 0.34261,
+              "width": 0.15055,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 301,
+            "y0": 23,
+            "x1": 501,
+            "y1": 261
+          },
+          "sourceSheet": "A"
+        }
+      ],
+      "loop": true
+    },
+    "observe": {
+      "frames": [
+        {
+          "x": 512,
+          "y": 0,
+          "w": 256,
+          "h": 256,
+          "durationMs": 900,
+          "duration": 900,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 43,
+            "y": 47,
+            "w": 169,
+            "h": 193
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "detected-eye-pair",
+            "orientation": "front",
+            "rotationDegrees": 16.48,
+            "head": {
+              "x": 0.38281,
+              "y": 0.40169,
+              "width": 0.53168,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.38281,
+              "y": 0.66222,
+              "width": 0.34028,
+              "layer": "front"
+            },
+            "crown": {
+              "x": 0.38281,
+              "y": 0.33257,
+              "width": 0.47852,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.59017,
+              "y": 0.34852,
+              "width": 0.13292,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 545,
+            "y0": 23,
+            "x1": 753,
+            "y1": 261
+          },
+          "sourceSheet": "A"
+        },
+        {
+          "x": 768,
+          "y": 0,
+          "w": 256,
+          "h": 256,
+          "durationMs": 900,
+          "duration": 900,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 45,
+            "y": 48,
+            "w": 165,
+            "h": 192
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "detected-eye-pair",
+            "orientation": "front",
+            "rotationDegrees": -16.98,
+            "head": {
+              "x": 0.6084,
+              "y": 0.40804,
+              "width": 0.51541,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.6084,
+              "y": 0.66059,
+              "width": 0.32986,
+              "layer": "front"
+            },
+            "crown": {
+              "x": 0.6084,
+              "y": 0.34104,
+              "width": 0.46387,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.80941,
+              "y": 0.3565,
+              "width": 0.12885,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 783,
+            "y0": 24,
+            "x1": 986,
+            "y1": 261
+          },
+          "sourceSheet": "A"
+        }
+      ],
+      "loop": true
+    },
+    "stretch": {
+      "frames": [
+        {
+          "x": 1024,
+          "y": 0,
+          "w": 256,
+          "h": 256,
+          "durationMs": 600,
+          "duration": 600,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 36,
+            "y": 63,
+            "w": 183,
+            "h": 177
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "low-pose-template",
+            "orientation": "front",
+            "rotationDegrees": 0,
+            "head": {
+              "x": 0.39797,
+              "y": 0.68005,
+              "width": 0.4718,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.39797,
+              "y": 0.91123,
+              "width": 0.30195,
+              "layer": "front"
+            },
+            "crown": {
+              "x": 0.39797,
+              "y": 0.61872,
+              "width": 0.42462,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.58197,
+              "y": 0.63287,
+              "width": 0.11795,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 23,
+            "y0": 289,
+            "x1": 249,
+            "y1": 507
+          },
+          "sourceSheet": "A"
+        },
+        {
+          "x": 1280,
+          "y": 0,
+          "w": 256,
+          "h": 256,
+          "durationMs": 650,
+          "duration": 650,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 35,
+            "y": 50,
+            "w": 186,
+            "h": 190
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "low-pose-template",
+            "orientation": "front",
+            "rotationDegrees": 0,
+            "head": {
+              "x": 0.39828,
+              "y": 0.66518,
+              "width": 0.47953,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.39828,
+              "y": 0.90015,
+              "width": 0.3069,
+              "layer": "front"
+            },
+            "crown": {
+              "x": 0.39828,
+              "y": 0.60284,
+              "width": 0.43158,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.5853,
+              "y": 0.61723,
+              "width": 0.11988,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 280,
+            "y0": 276,
+            "x1": 509,
+            "y1": 510
+          },
+          "sourceSheet": "A"
+        }
+      ],
+      "loop": false
+    },
+    "yawn": {
+      "frames": [
+        {
+          "x": 1536,
+          "y": 0,
+          "w": 256,
+          "h": 256,
+          "durationMs": 500,
+          "duration": 500,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 44,
+            "y": 48,
+            "w": 167,
+            "h": 192
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "detected-eye-pair",
+            "orientation": "front",
+            "rotationDegrees": 12.85,
+            "head": {
+              "x": 0.44141,
+              "y": 0.40918,
+              "width": 0.61849,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.44141,
+              "y": 0.71224,
+              "width": 0.39583,
+              "layer": "front"
+            },
+            "crown": {
+              "x": 0.44141,
+              "y": 0.32878,
+              "width": 0.55664,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.68262,
+              "y": 0.34733,
+              "width": 0.15462,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 557,
+            "y0": 272,
+            "x1": 763,
+            "y1": 509
+          },
+          "sourceSheet": "A"
+        },
+        {
+          "x": 1792,
+          "y": 0,
+          "w": 256,
+          "h": 256,
+          "durationMs": 900,
+          "duration": 900,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 49,
+            "y": 53,
+            "w": 158,
+            "h": 187
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "detected-eye-pair",
+            "orientation": "front",
+            "rotationDegrees": 8.56,
+            "head": {
+              "x": 0.49707,
+              "y": 0.37695,
+              "width": 0.5925,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.49707,
+              "y": 0.66727,
+              "width": 0.3792,
+              "layer": "front"
+            },
+            "crown": {
+              "x": 0.49707,
+              "y": 0.29992,
+              "width": 0.53325,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.72815,
+              "y": 0.3177,
+              "width": 0.14813,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 806,
+            "y0": 280,
+            "x1": 1001,
+            "y1": 510
+          },
+          "sourceSheet": "A"
+        }
+      ],
+      "loop": false
+    },
+    "sleep": {
+      "frames": [
+        {
+          "x": 0,
+          "y": 256,
+          "w": 256,
+          "h": 256,
+          "durationMs": 1400,
+          "duration": 1400,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 34,
+            "y": 100,
+            "w": 188,
+            "h": 140
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "curled-template",
+            "orientation": "front",
+            "rotationDegrees": 0,
+            "head": {
+              "x": 0.3825,
+              "y": 0.64715,
+              "width": 0.47734,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.43978,
+              "y": 0.73784,
+              "width": 0.21003,
+              "layer": "behind"
+            },
+            "crown": {
+              "x": 0.3825,
+              "y": 0.58509,
+              "width": 0.42961,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.56866,
+              "y": 0.59941,
+              "width": 0.11934,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 31,
+            "y0": 563,
+            "x1": 263,
+            "y1": 736
+          },
+          "sourceSheet": "A"
+        },
+        {
+          "x": 256,
+          "y": 256,
+          "w": 256,
+          "h": 256,
+          "durationMs": 1400,
+          "duration": 1400,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 38,
+            "y": 100,
+            "w": 180,
+            "h": 140
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "curled-template",
+            "orientation": "front",
+            "rotationDegrees": 0,
+            "head": {
+              "x": 0.3875,
+              "y": 0.6502,
+              "width": 0.45703,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.44234,
+              "y": 0.73703,
+              "width": 0.20109,
+              "layer": "behind"
+            },
+            "crown": {
+              "x": 0.3875,
+              "y": 0.59078,
+              "width": 0.41133,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.56574,
+              "y": 0.60449,
+              "width": 0.11426,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 296,
+            "y0": 559,
+            "x1": 518,
+            "y1": 731
+          },
+          "sourceSheet": "A"
+        }
+      ],
+      "loop": true
+    },
+    "wake": {
+      "frames": [
+        {
+          "x": 512,
+          "y": 256,
+          "w": 256,
+          "h": 256,
+          "durationMs": 550,
+          "duration": 550,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 44,
+            "y": 45,
+            "w": 167,
+            "h": 195
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "detected-eye-pair",
+            "orientation": "front",
+            "rotationDegrees": 18.92,
+            "head": {
+              "x": 0.45605,
+              "y": 0.4165,
+              "width": 0.56966,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.45605,
+              "y": 0.69564,
+              "width": 0.36458,
+              "layer": "front"
+            },
+            "crown": {
+              "x": 0.45605,
+              "y": 0.34245,
+              "width": 0.5127,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.67822,
+              "y": 0.35954,
+              "width": 0.14242,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 549,
+            "y0": 509,
+            "x1": 755,
+            "y1": 749
+          },
+          "sourceSheet": "A"
+        },
+        {
+          "x": 768,
+          "y": 256,
+          "w": 256,
+          "h": 256,
+          "durationMs": 800,
+          "duration": 800,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 46,
+            "y": 49,
+            "w": 164,
+            "h": 191
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "detected-eye-pair",
+            "orientation": "front",
+            "rotationDegrees": 5.01,
+            "head": {
+              "x": 0.46289,
+              "y": 0.4058,
+              "width": 0.615,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.46289,
+              "y": 0.70715,
+              "width": 0.3936,
+              "layer": "front"
+            },
+            "crown": {
+              "x": 0.46289,
+              "y": 0.32585,
+              "width": 0.5535,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.70274,
+              "y": 0.3443,
+              "width": 0.15375,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 797,
+            "y0": 513,
+            "x1": 999,
+            "y1": 748
+          },
+          "sourceSheet": "A"
+        }
+      ],
+      "loop": false
+    },
+    "walk": {
+      "frames": [
+        {
+          "x": 1024,
+          "y": 256,
+          "w": 256,
+          "h": 256,
+          "durationMs": 140,
+          "duration": 140,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 60,
+            "y": 70,
+            "w": 136,
+            "h": 170
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "profile-template",
+            "orientation": "right",
+            "rotationDegrees": 0,
+            "head": {
+              "x": 0.47641,
+              "y": 0.50586,
+              "width": 0.23715,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.44581,
+              "y": 0.64356,
+              "width": 0.2448,
+              "layer": "front"
+            },
+            "crown": {
+              "x": 0.52231,
+              "y": 0.40258,
+              "width": 0.34425,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.45346,
+              "y": 0.44848,
+              "width": 0.09563,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 137,
+            "y0": 668,
+            "x1": 327,
+            "y1": 905
+          },
+          "sourceSheet": "walk-cycles"
+        },
+        {
+          "x": 1280,
+          "y": 256,
+          "w": 256,
+          "h": 256,
+          "durationMs": 140,
+          "duration": 140,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 64,
+            "y": 66,
+            "w": 127,
+            "h": 174
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "profile-template",
+            "orientation": "right",
+            "rotationDegrees": 0,
+            "head": {
+              "x": 0.47602,
+              "y": 0.4957,
+              "width": 0.22146,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.44745,
+              "y": 0.62429,
+              "width": 0.2286,
+              "layer": "front"
+            },
+            "crown": {
+              "x": 0.51888,
+              "y": 0.39926,
+              "width": 0.32147,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.45459,
+              "y": 0.44213,
+              "width": 0.0893,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 472,
+            "y0": 665,
+            "x1": 649,
+            "y1": 907
+          },
+          "sourceSheet": "walk-cycles"
+        },
+        {
+          "x": 1536,
+          "y": 256,
+          "w": 256,
+          "h": 256,
+          "durationMs": 140,
+          "duration": 140,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 65,
+            "y": 70,
+            "w": 125,
+            "h": 170
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "profile-template",
+            "orientation": "right",
+            "rotationDegrees": 0,
+            "head": {
+              "x": 0.47637,
+              "y": 0.50586,
+              "width": 0.21797,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.44824,
+              "y": 0.63242,
+              "width": 0.225,
+              "layer": "front"
+            },
+            "crown": {
+              "x": 0.51855,
+              "y": 0.41094,
+              "width": 0.31641,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.45527,
+              "y": 0.45312,
+              "width": 0.08789,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 804,
+            "y0": 668,
+            "x1": 978,
+            "y1": 905
+          },
+          "sourceSheet": "walk-cycles"
+        },
+        {
+          "x": 1792,
+          "y": 256,
+          "w": 256,
+          "h": 256,
+          "durationMs": 140,
+          "duration": 140,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 66,
+            "y": 69,
+            "w": 123,
+            "h": 171
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "profile-template",
+            "orientation": "right",
+            "rotationDegrees": 0,
+            "head": {
+              "x": 0.47671,
+              "y": 0.50332,
+              "width": 0.21448,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.44904,
+              "y": 0.62786,
+              "width": 0.2214,
+              "layer": "front"
+            },
+            "crown": {
+              "x": 0.51823,
+              "y": 0.40992,
+              "width": 0.31134,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.45596,
+              "y": 0.45143,
+              "width": 0.08648,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 1151,
+            "y0": 668,
+            "x1": 1323,
+            "y1": 907
+          },
+          "sourceSheet": "walk-cycles"
+        }
+      ],
+      "loop": true
+    },
+    "turn": {
+      "frames": [
+        {
+          "x": 0,
+          "y": 512,
+          "w": 256,
+          "h": 256,
+          "durationMs": 320,
+          "duration": 320,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 46,
+            "y": 57,
+            "w": 164,
+            "h": 183
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "turn-template",
+            "orientation": "quarter",
+            "rotationDegrees": -5.91,
+            "head": {
+              "x": 0.51922,
+              "y": 0.39267,
+              "width": 0.48688,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.51922,
+              "y": 0.63124,
+              "width": 0.3116,
+              "layer": "front"
+            },
+            "crown": {
+              "x": 0.51922,
+              "y": 0.32938,
+              "width": 0.43819,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.7091,
+              "y": 0.34398,
+              "width": 0.12172,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 563,
+            "y0": 754,
+            "x1": 765,
+            "y1": 979
+          },
+          "sourceSheet": "A"
+        },
+        {
+          "x": 256,
+          "y": 512,
+          "w": 256,
+          "h": 256,
+          "durationMs": 450,
+          "duration": 450,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 47,
+            "y": 58,
+            "w": 161,
+            "h": 182
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "turn-template",
+            "orientation": "quarter",
+            "rotationDegrees": -22,
+            "head": {
+              "x": 0.51691,
+              "y": 0.39659,
+              "width": 0.47797,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.51691,
+              "y": 0.63079,
+              "width": 0.3059,
+              "layer": "front"
+            },
+            "crown": {
+              "x": 0.51691,
+              "y": 0.33445,
+              "width": 0.43017,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.70332,
+              "y": 0.34879,
+              "width": 0.11949,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 797,
+            "y0": 755,
+            "x1": 995,
+            "y1": 979
+          },
+          "sourceSheet": "A"
+        }
+      ],
+      "loop": false
+    },
+    "greet": {
+      "frames": [
+        {
+          "x": 512,
+          "y": 512,
+          "w": 256,
+          "h": 256,
+          "durationMs": 400,
+          "duration": 400,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 47,
+            "y": 36,
+            "w": 161,
+            "h": 204
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "detected-eye-pair",
+            "orientation": "front",
+            "rotationDegrees": 8.13,
+            "head": {
+              "x": 0.46875,
+              "y": 0.33717,
+              "width": 0.60375,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.46875,
+              "y": 0.63301,
+              "width": 0.3864,
+              "layer": "front"
+            },
+            "crown": {
+              "x": 0.46875,
+              "y": 0.25868,
+              "width": 0.54338,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.70421,
+              "y": 0.2768,
+              "width": 0.15094,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 40,
+            "y0": 986,
+            "x1": 238,
+            "y1": 1237
+          },
+          "sourceSheet": "A"
+        },
+        {
+          "x": 768,
+          "y": 512,
+          "w": 256,
+          "h": 256,
+          "durationMs": 400,
+          "duration": 400,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 43,
+            "y": 47,
+            "w": 170,
+            "h": 193
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "detected-eye-pair",
+            "orientation": "front",
+            "rotationDegrees": 12.09,
+            "head": {
+              "x": 0.44922,
+              "y": 0.3776,
+              "width": 0.60764,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.44922,
+              "y": 0.67535,
+              "width": 0.38889,
+              "layer": "front"
+            },
+            "crown": {
+              "x": 0.44922,
+              "y": 0.29861,
+              "width": 0.54688,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.6862,
+              "y": 0.31684,
+              "width": 0.15191,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 292,
+            "y0": 991,
+            "x1": 501,
+            "y1": 1229
+          },
+          "sourceSheet": "A"
+        }
+      ],
+      "loop": false
+    },
+    "petresponse": {
+      "frames": [
+        {
+          "x": 1024,
+          "y": 512,
+          "w": 256,
+          "h": 256,
+          "durationMs": 650,
+          "duration": 650,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 43,
+            "y": 48,
+            "w": 169,
+            "h": 192
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "detected-eye-pair",
+            "orientation": "front",
+            "rotationDegrees": 7.24,
+            "head": {
+              "x": 0.46582,
+              "y": 0.49929,
+              "width": 0.34328,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.46582,
+              "y": 0.6675,
+              "width": 0.2197,
+              "layer": "front"
+            },
+            "crown": {
+              "x": 0.46582,
+              "y": 0.45466,
+              "width": 0.30895,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.5997,
+              "y": 0.46496,
+              "width": 0.08582,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 557,
+            "y0": 992,
+            "x1": 765,
+            "y1": 1229
+          },
+          "sourceSheet": "A"
+        },
+        {
+          "x": 1280,
+          "y": 512,
+          "w": 256,
+          "h": 256,
+          "durationMs": 650,
+          "duration": 650,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 45,
+            "y": 48,
+            "w": 165,
+            "h": 192
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "detected-eye-pair",
+            "orientation": "front",
+            "rotationDegrees": -11.13,
+            "head": {
+              "x": 0.52637,
+              "y": 0.49855,
+              "width": 0.33516,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.52637,
+              "y": 0.66278,
+              "width": 0.2145,
+              "layer": "front"
+            },
+            "crown": {
+              "x": 0.52637,
+              "y": 0.45498,
+              "width": 0.30164,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.65708,
+              "y": 0.46504,
+              "width": 0.08379,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 783,
+            "y0": 992,
+            "x1": 986,
+            "y1": 1229
+          },
+          "sourceSheet": "A"
+        }
+      ],
+      "loop": false
+    },
+    "dragged": {
+      "frames": [
+        {
+          "x": 1536,
+          "y": 512,
+          "w": 256,
+          "h": 256,
+          "durationMs": 260,
+          "duration": 260,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 54,
+            "y": 16,
+            "w": 148,
+            "h": 224
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "detected-eye-pair",
+            "orientation": "front",
+            "rotationDegrees": 8.29,
+            "head": {
+              "x": 0.46973,
+              "y": 0.23609,
+              "width": 0.555,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.46973,
+              "y": 0.50804,
+              "width": 0.3552,
+              "layer": "front"
+            },
+            "crown": {
+              "x": 0.46973,
+              "y": 0.16394,
+              "width": 0.4995,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.68618,
+              "y": 0.18059,
+              "width": 0.13875,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 48,
+            "y0": 1235,
+            "x1": 230,
+            "y1": 1511
+          },
+          "sourceSheet": "A"
+        },
+        {
+          "x": 1792,
+          "y": 512,
+          "w": 256,
+          "h": 256,
+          "durationMs": 260,
+          "duration": 260,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 42,
+            "y": 27,
+            "w": 172,
+            "h": 213
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "detected-eye-pair",
+            "orientation": "front",
+            "rotationDegrees": 12.41,
+            "head": {
+              "x": 0.49414,
+              "y": 0.27409,
+              "width": 0.54253,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.49414,
+              "y": 0.53993,
+              "width": 0.34722,
+              "layer": "front"
+            },
+            "crown": {
+              "x": 0.49414,
+              "y": 0.20356,
+              "width": 0.48828,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.70573,
+              "y": 0.21984,
+              "width": 0.13563,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 281,
+            "y0": 1236,
+            "x1": 493,
+            "y1": 1499
+          },
+          "sourceSheet": "A"
+        }
+      ],
+      "loop": true
+    },
+    "land": {
+      "frames": [
+        {
+          "x": 0,
+          "y": 768,
+          "w": 256,
+          "h": 256,
+          "durationMs": 180,
+          "duration": 180,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 32,
+            "y": 73,
+            "w": 192,
+            "h": 167
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "low-pose-template",
+            "orientation": "front",
+            "rotationDegrees": 0,
+            "head": {
+              "x": 0.395,
+              "y": 0.63493,
+              "width": 0.495,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.395,
+              "y": 0.87748,
+              "width": 0.3168,
+              "layer": "front"
+            },
+            "crown": {
+              "x": 0.395,
+              "y": 0.57058,
+              "width": 0.4455,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.58805,
+              "y": 0.58543,
+              "width": 0.12375,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 500,
+            "y0": 1283,
+            "x1": 736,
+            "y1": 1489
+          },
+          "sourceSheet": "A"
+        },
+        {
+          "x": 256,
+          "y": 768,
+          "w": 256,
+          "h": 256,
+          "durationMs": 460,
+          "duration": 460,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 31,
+            "y": 48,
+            "w": 193,
+            "h": 192
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "low-pose-template",
+            "orientation": "front",
+            "rotationDegrees": 0,
+            "head": {
+              "x": 0.3925,
+              "y": 0.60036,
+              "width": 0.49758,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.3925,
+              "y": 0.84418,
+              "width": 0.31845,
+              "layer": "front"
+            },
+            "crown": {
+              "x": 0.3925,
+              "y": 0.53568,
+              "width": 0.44782,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.58656,
+              "y": 0.55061,
+              "width": 0.12439,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 766,
+            "y0": 1252,
+            "x1": 1004,
+            "y1": 1489
+          },
+          "sourceSheet": "A"
+        }
+      ],
+      "loop": false
+    },
+    "read": {
+      "frames": [
+        {
+          "x": 512,
+          "y": 768,
+          "w": 256,
+          "h": 256,
+          "durationMs": 1400,
+          "duration": 1400,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 42,
+            "y": 53,
+            "w": 171,
+            "h": 187
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "detected-eye-pair",
+            "orientation": "front",
+            "rotationDegrees": 10.86,
+            "head": {
+              "x": 0.44434,
+              "y": 0.44971,
+              "width": 0.53711,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.44434,
+              "y": 0.71289,
+              "width": 0.34375,
+              "layer": "front"
+            },
+            "crown": {
+              "x": 0.44434,
+              "y": 0.37988,
+              "width": 0.4834,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.65381,
+              "y": 0.396,
+              "width": 0.13428,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 50,
+            "y0": 35,
+            "x1": 261,
+            "y1": 266
+          },
+          "sourceSheet": "B"
+        },
+        {
+          "x": 768,
+          "y": 768,
+          "w": 256,
+          "h": 256,
+          "durationMs": 550,
+          "duration": 550,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 47,
+            "y": 53,
+            "w": 162,
+            "h": 187
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "detected-eye-pair",
+            "orientation": "front",
+            "rotationDegrees": 14.57,
+            "head": {
+              "x": 0.44531,
+              "y": 0.45378,
+              "width": 0.54253,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.44531,
+              "y": 0.71962,
+              "width": 0.34722,
+              "layer": "front"
+            },
+            "crown": {
+              "x": 0.44531,
+              "y": 0.38325,
+              "width": 0.48828,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.6569,
+              "y": 0.39952,
+              "width": 0.13563,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 295,
+            "y0": 35,
+            "x1": 495,
+            "y1": 266
+          },
+          "sourceSheet": "B"
+        }
+      ],
+      "loop": true
+    },
+    "write": {
+      "frames": [
+        {
+          "x": 1024,
+          "y": 768,
+          "w": 256,
+          "h": 256,
+          "durationMs": 300,
+          "duration": 300,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 49,
+            "y": 53,
+            "w": 158,
+            "h": 187
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "detected-eye-pair",
+            "orientation": "front",
+            "rotationDegrees": 14.72,
+            "head": {
+              "x": 0.43262,
+              "y": 0.46436,
+              "width": 0.53711,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.43262,
+              "y": 0.72754,
+              "width": 0.34375,
+              "layer": "front"
+            },
+            "crown": {
+              "x": 0.43262,
+              "y": 0.39453,
+              "width": 0.4834,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.64209,
+              "y": 0.41064,
+              "width": 0.13428,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 549,
+            "y0": 35,
+            "x1": 744,
+            "y1": 266
+          },
+          "sourceSheet": "B"
+        },
+        {
+          "x": 1280,
+          "y": 768,
+          "w": 256,
+          "h": 256,
+          "durationMs": 300,
+          "duration": 300,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 45,
+            "y": 53,
+            "w": 166,
+            "h": 187
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "detected-eye-pair",
+            "orientation": "front",
+            "rotationDegrees": 15.64,
+            "head": {
+              "x": 0.44336,
+              "y": 0.45378,
+              "width": 0.54253,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.44336,
+              "y": 0.71962,
+              "width": 0.34722,
+              "layer": "front"
+            },
+            "crown": {
+              "x": 0.44336,
+              "y": 0.38325,
+              "width": 0.48828,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.65495,
+              "y": 0.39952,
+              "width": 0.13563,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 788,
+            "y0": 35,
+            "x1": 993,
+            "y1": 266
+          },
+          "sourceSheet": "B"
+        }
+      ],
+      "loop": true
+    },
+    "type": {
+      "frames": [
+        {
+          "x": 1536,
+          "y": 768,
+          "w": 256,
+          "h": 256,
+          "durationMs": 180,
+          "duration": 180,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 38,
+            "y": 59,
+            "w": 179,
+            "h": 181
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "detected-eye-pair",
+            "orientation": "front",
+            "rotationDegrees": 10.21,
+            "head": {
+              "x": 0.45996,
+              "y": 0.47217,
+              "width": 0.60221,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.45996,
+              "y": 0.76725,
+              "width": 0.38542,
+              "layer": "front"
+            },
+            "crown": {
+              "x": 0.45996,
+              "y": 0.39388,
+              "width": 0.54199,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.69482,
+              "y": 0.41195,
+              "width": 0.15055,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 35,
+            "y0": 284,
+            "x1": 255,
+            "y1": 507
+          },
+          "sourceSheet": "B"
+        },
+        {
+          "x": 1792,
+          "y": 768,
+          "w": 256,
+          "h": 256,
+          "durationMs": 180,
+          "duration": 180,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 39,
+            "y": 59,
+            "w": 178,
+            "h": 181
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "detected-eye-pair",
+            "orientation": "front",
+            "rotationDegrees": 11.73,
+            "head": {
+              "x": 0.45898,
+              "y": 0.47624,
+              "width": 0.57509,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.45898,
+              "y": 0.75803,
+              "width": 0.36806,
+              "layer": "front"
+            },
+            "crown": {
+              "x": 0.45898,
+              "y": 0.40148,
+              "width": 0.51758,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.68327,
+              "y": 0.41873,
+              "width": 0.14377,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 285,
+            "y0": 284,
+            "x1": 504,
+            "y1": 507
+          },
+          "sourceSheet": "B"
+        }
+      ],
+      "loop": true
+    },
+    "think": {
+      "frames": [
+        {
+          "x": 0,
+          "y": 1024,
+          "w": 256,
+          "h": 256,
+          "durationMs": 1300,
+          "duration": 1300,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 46,
+            "y": 53,
+            "w": 164,
+            "h": 187
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "detected-eye-pair",
+            "orientation": "front",
+            "rotationDegrees": 20.42,
+            "head": {
+              "x": 0.42188,
+              "y": 0.44206,
+              "width": 0.50998,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.42188,
+              "y": 0.69195,
+              "width": 0.32639,
+              "layer": "front"
+            },
+            "crown": {
+              "x": 0.42188,
+              "y": 0.37576,
+              "width": 0.45898,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.62077,
+              "y": 0.39106,
+              "width": 0.1275,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 551,
+            "y0": 283,
+            "x1": 753,
+            "y1": 513
+          },
+          "sourceSheet": "B"
+        },
+        {
+          "x": 256,
+          "y": 1024,
+          "w": 256,
+          "h": 256,
+          "durationMs": 1000,
+          "duration": 1000,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 47,
+            "y": 54,
+            "w": 161,
+            "h": 186
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "detected-eye-pair",
+            "orientation": "front",
+            "rotationDegrees": 19.37,
+            "head": {
+              "x": 0.4209,
+              "y": 0.43962,
+              "width": 0.49371,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.4209,
+              "y": 0.68153,
+              "width": 0.31597,
+              "layer": "front"
+            },
+            "crown": {
+              "x": 0.4209,
+              "y": 0.37543,
+              "width": 0.44434,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.61344,
+              "y": 0.39025,
+              "width": 0.12343,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 804,
+            "y0": 284,
+            "x1": 1002,
+            "y1": 513
+          },
+          "sourceSheet": "B"
+        }
+      ],
+      "loop": true
+    },
+    "listen": {
+      "frames": [
+        {
+          "x": 512,
+          "y": 1024,
+          "w": 256,
+          "h": 256,
+          "durationMs": 1300,
+          "duration": 1300,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 47,
+            "y": 61,
+            "w": 161,
+            "h": 179
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "detected-eye-pair",
+            "orientation": "front",
+            "rotationDegrees": 9.03,
+            "head": {
+              "x": 0.4502,
+              "y": 0.45687,
+              "width": 0.58051,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.4502,
+              "y": 0.74132,
+              "width": 0.37153,
+              "layer": "front"
+            },
+            "crown": {
+              "x": 0.4502,
+              "y": 0.3814,
+              "width": 0.52246,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.6766,
+              "y": 0.39882,
+              "width": 0.14513,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 46,
+            "y0": 532,
+            "x1": 244,
+            "y1": 753
+          },
+          "sourceSheet": "B"
+        },
+        {
+          "x": 768,
+          "y": 1024,
+          "w": 256,
+          "h": 256,
+          "durationMs": 1300,
+          "duration": 1300,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 41,
+            "y": 53,
+            "w": 173,
+            "h": 187
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "reviewed-pose-landmarks",
+            "orientation": "front",
+            "rotationDegrees": 22,
+            "head": {
+              "x": 0.45885,
+              "y": 0.45972,
+              "width": 0.50684,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.45885,
+              "y": 0.70807,
+              "width": 0.32438,
+              "layer": "front"
+            },
+            "crown": {
+              "x": 0.45885,
+              "y": 0.39383,
+              "width": 0.45615,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.65652,
+              "y": 0.40903,
+              "width": 0.12671,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 299,
+            "y0": 523,
+            "x1": 512,
+            "y1": 753
+          },
+          "sourceSheet": "B"
+        }
+      ],
+      "loop": true
+    },
+    "nod": {
+      "frames": [
+        {
+          "x": 1024,
+          "y": 1024,
+          "w": 256,
+          "h": 256,
+          "durationMs": 400,
+          "duration": 400,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 47,
+            "y": 57,
+            "w": 161,
+            "h": 183
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "detected-eye-pair",
+            "orientation": "front",
+            "rotationDegrees": 19.93,
+            "head": {
+              "x": 0.43066,
+              "y": 0.43864,
+              "width": 0.49371,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.43066,
+              "y": 0.68056,
+              "width": 0.31597,
+              "layer": "front"
+            },
+            "crown": {
+              "x": 0.43066,
+              "y": 0.37446,
+              "width": 0.44434,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.62321,
+              "y": 0.38927,
+              "width": 0.12343,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 552,
+            "y0": 527,
+            "x1": 750,
+            "y1": 753
+          },
+          "sourceSheet": "B"
+        },
+        {
+          "x": 1280,
+          "y": 1024,
+          "w": 256,
+          "h": 256,
+          "durationMs": 400,
+          "duration": 400,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 49,
+            "y": 81,
+            "w": 157,
+            "h": 159
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "detected-eye-pair",
+            "orientation": "front",
+            "rotationDegrees": 3.93,
+            "head": {
+              "x": 0.44922,
+              "y": 0.54102,
+              "width": 0.55339,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.44922,
+              "y": 0.81217,
+              "width": 0.35417,
+              "layer": "front"
+            },
+            "crown": {
+              "x": 0.44922,
+              "y": 0.46908,
+              "width": 0.49805,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.66504,
+              "y": 0.48568,
+              "width": 0.13835,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 805,
+            "y0": 557,
+            "x1": 998,
+            "y1": 753
+          },
+          "sourceSheet": "B"
+        }
+      ],
+      "loop": true
+    },
+    "sway": {
+      "frames": [
+        {
+          "x": 1536,
+          "y": 1024,
+          "w": 256,
+          "h": 256,
+          "durationMs": 480,
+          "duration": 480,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 41,
+            "y": 57,
+            "w": 173,
+            "h": 183
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "detected-eye-pair",
+            "orientation": "front",
+            "rotationDegrees": 7.85,
+            "head": {
+              "x": 0.47656,
+              "y": 0.56057,
+              "width": 0.35141,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.47656,
+              "y": 0.73276,
+              "width": 0.2249,
+              "layer": "front"
+            },
+            "crown": {
+              "x": 0.47656,
+              "y": 0.51489,
+              "width": 0.31627,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.61361,
+              "y": 0.52543,
+              "width": 0.08785,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 43,
+            "y0": 769,
+            "x1": 256,
+            "y1": 995
+          },
+          "sourceSheet": "B"
+        },
+        {
+          "x": 1792,
+          "y": 1024,
+          "w": 256,
+          "h": 256,
+          "durationMs": 480,
+          "duration": 480,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 33,
+            "y": 59,
+            "w": 189,
+            "h": 181
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "detected-eye-pair",
+            "orientation": "front",
+            "rotationDegrees": 11.11,
+            "head": {
+              "x": 0.5332,
+              "y": 0.55081,
+              "width": 0.38391,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.5332,
+              "y": 0.73893,
+              "width": 0.2457,
+              "layer": "front"
+            },
+            "crown": {
+              "x": 0.5332,
+              "y": 0.5009,
+              "width": 0.34552,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.68293,
+              "y": 0.51242,
+              "width": 0.09598,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 273,
+            "y0": 772,
+            "x1": 506,
+            "y1": 995
+          },
+          "sourceSheet": "B"
+        }
+      ],
+      "loop": true
+    },
+    "dance": {
+      "frames": [
+        {
+          "x": 0,
+          "y": 1280,
+          "w": 256,
+          "h": 256,
+          "durationMs": 240,
+          "duration": 240,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 45,
+            "y": 37,
+            "w": 165,
+            "h": 203
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "detected-eye-pair",
+            "orientation": "front",
+            "rotationDegrees": 18.8,
+            "head": {
+              "x": 0.46289,
+              "y": 0.34928,
+              "width": 0.50998,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.46289,
+              "y": 0.59918,
+              "width": 0.32639,
+              "layer": "front"
+            },
+            "crown": {
+              "x": 0.46289,
+              "y": 0.28299,
+              "width": 0.45898,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.66178,
+              "y": 0.29829,
+              "width": 0.1275,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 544,
+            "y0": 760,
+            "x1": 747,
+            "y1": 1010
+          },
+          "sourceSheet": "B"
+        },
+        {
+          "x": 256,
+          "y": 1280,
+          "w": 256,
+          "h": 256,
+          "durationMs": 240,
+          "duration": 240,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 45,
+            "y": 44,
+            "w": 166,
+            "h": 196
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "detected-eye-pair",
+            "orientation": "front",
+            "rotationDegrees": -1.82,
+            "head": {
+              "x": 0.50098,
+              "y": 0.41943,
+              "width": 0.3418,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.50098,
+              "y": 0.58691,
+              "width": 0.21875,
+              "layer": "front"
+            },
+            "crown": {
+              "x": 0.50098,
+              "y": 0.375,
+              "width": 0.30762,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.63428,
+              "y": 0.38525,
+              "width": 0.08545,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 797,
+            "y0": 769,
+            "x1": 1002,
+            "y1": 1010
+          },
+          "sourceSheet": "B"
+        }
+      ],
+      "loop": true
+    },
+    "eat": {
+      "frames": [
+        {
+          "x": 512,
+          "y": 1280,
+          "w": 256,
+          "h": 256,
+          "durationMs": 550,
+          "duration": 550,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 40,
+            "y": 84,
+            "w": 176,
+            "h": 156
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "detected-eye-pair",
+            "orientation": "front",
+            "rotationDegrees": 3.24,
+            "head": {
+              "x": 0.40625,
+              "y": 0.59928,
+              "width": 0.57509,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.40625,
+              "y": 0.88108,
+              "width": 0.36806,
+              "layer": "front"
+            },
+            "crown": {
+              "x": 0.40625,
+              "y": 0.52452,
+              "width": 0.51758,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.63053,
+              "y": 0.54178,
+              "width": 0.14377,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 44,
+            "y0": 1042,
+            "x1": 261,
+            "y1": 1234
+          },
+          "sourceSheet": "B"
+        },
+        {
+          "x": 768,
+          "y": 1280,
+          "w": 256,
+          "h": 256,
+          "durationMs": 700,
+          "duration": 700,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 44,
+            "y": 63,
+            "w": 168,
+            "h": 177
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "detected-eye-pair",
+            "orientation": "front",
+            "rotationDegrees": 11.94,
+            "head": {
+              "x": 0.43164,
+              "y": 0.46615,
+              "width": 0.56424,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.43164,
+              "y": 0.74262,
+              "width": 0.36111,
+              "layer": "front"
+            },
+            "crown": {
+              "x": 0.43164,
+              "y": 0.3928,
+              "width": 0.50781,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.65169,
+              "y": 0.40972,
+              "width": 0.14106,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 299,
+            "y0": 1015,
+            "x1": 506,
+            "y1": 1233
+          },
+          "sourceSheet": "B"
+        }
+      ],
+      "loop": true
+    },
+    "satisfied": {
+      "frames": [
+        {
+          "x": 1024,
+          "y": 1280,
+          "w": 256,
+          "h": 256,
+          "durationMs": 800,
+          "duration": 800,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 46,
+            "y": 62,
+            "w": 163,
+            "h": 178
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "detected-eye-pair",
+            "orientation": "front",
+            "rotationDegrees": -4.76,
+            "head": {
+              "x": 0.47266,
+              "y": 0.53725,
+              "width": 0.33109,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.47266,
+              "y": 0.69949,
+              "width": 0.2119,
+              "layer": "front"
+            },
+            "crown": {
+              "x": 0.47266,
+              "y": 0.49421,
+              "width": 0.29798,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.60178,
+              "y": 0.50414,
+              "width": 0.08277,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 552,
+            "y0": 1015,
+            "x1": 753,
+            "y1": 1234
+          },
+          "sourceSheet": "B"
+        },
+        {
+          "x": 1280,
+          "y": 1280,
+          "w": 256,
+          "h": 256,
+          "durationMs": 800,
+          "duration": 800,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 43,
+            "y": 59,
+            "w": 170,
+            "h": 181
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "detected-eye-pair",
+            "orientation": "front",
+            "rotationDegrees": -2.91,
+            "head": {
+              "x": 0.49707,
+              "y": 0.46676,
+              "width": 0.34531,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.49707,
+              "y": 0.63596,
+              "width": 0.221,
+              "layer": "front"
+            },
+            "crown": {
+              "x": 0.49707,
+              "y": 0.42187,
+              "width": 0.31078,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.63174,
+              "y": 0.43223,
+              "width": 0.08633,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 793,
+            "y0": 1015,
+            "x1": 1002,
+            "y1": 1238
+          },
+          "sourceSheet": "B"
+        }
+      ],
+      "loop": false
+    },
+    "celebrate": {
+      "frames": [
+        {
+          "x": 1536,
+          "y": 1280,
+          "w": 256,
+          "h": 256,
+          "durationMs": 350,
+          "duration": 350,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 38,
+            "y": 34,
+            "w": 179,
+            "h": 206
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "detected-eye-pair",
+            "orientation": "front",
+            "rotationDegrees": 11.53,
+            "head": {
+              "x": 0.47461,
+              "y": 0.34603,
+              "width": 0.53168,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.47461,
+              "y": 0.60655,
+              "width": 0.34028,
+              "layer": "front"
+            },
+            "crown": {
+              "x": 0.47461,
+              "y": 0.27691,
+              "width": 0.47852,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.68197,
+              "y": 0.29286,
+              "width": 0.13292,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 34,
+            "y0": 1247,
+            "x1": 255,
+            "y1": 1501
+          },
+          "sourceSheet": "B"
+        },
+        {
+          "x": 1792,
+          "y": 1280,
+          "w": 256,
+          "h": 256,
+          "durationMs": 350,
+          "duration": 350,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 41,
+            "y": 33,
+            "w": 173,
+            "h": 207
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "detected-eye-pair",
+            "orientation": "front",
+            "rotationDegrees": -5.53,
+            "head": {
+              "x": 0.53125,
+              "y": 0.37893,
+              "width": 0.35141,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.53125,
+              "y": 0.55112,
+              "width": 0.2249,
+              "layer": "front"
+            },
+            "crown": {
+              "x": 0.53125,
+              "y": 0.33325,
+              "width": 0.31627,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.6683,
+              "y": 0.34379,
+              "width": 0.08785,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 284,
+            "y0": 1239,
+            "x1": 497,
+            "y1": 1494
+          },
+          "sourceSheet": "B"
+        }
+      ],
+      "loop": false
+    },
+    "deliver": {
+      "frames": [
+        {
+          "x": 0,
+          "y": 1536,
+          "w": 256,
+          "h": 256,
+          "durationMs": 700,
+          "duration": 700,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 48,
+            "y": 42,
+            "w": 159,
+            "h": 198
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "detected-eye-pair",
+            "orientation": "front",
+            "rotationDegrees": 0.0,
+            "head": {
+              "x": 0.45703,
+              "y": 0.35905,
+              "width": 0.57509,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.45703,
+              "y": 0.64084,
+              "width": 0.36806,
+              "layer": "front"
+            },
+            "crown": {
+              "x": 0.45703,
+              "y": 0.28429,
+              "width": 0.51758,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.68132,
+              "y": 0.30154,
+              "width": 0.14377,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 553,
+            "y0": 1260,
+            "x1": 749,
+            "y1": 1504
+          },
+          "sourceSheet": "B"
+        },
+        {
+          "x": 256,
+          "y": 1536,
+          "w": 256,
+          "h": 256,
+          "durationMs": 850,
+          "duration": 850,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.9375
+          },
+          "contentBounds": {
+            "x": 38,
+            "y": 34,
+            "w": 180,
+            "h": 206
+          },
+          "accessoryAnchors": {
+            "supported": true,
+            "revision": "2.1.0-fit-2",
+            "source": "detected-eye-pair",
+            "orientation": "front",
+            "rotationDegrees": -14.89,
+            "head": {
+              "x": 0.54492,
+              "y": 0.32878,
+              "width": 0.50998,
+              "layer": "front"
+            },
+            "neck": {
+              "x": 0.54492,
+              "y": 0.57867,
+              "width": 0.32639,
+              "layer": "front"
+            },
+            "crown": {
+              "x": 0.54492,
+              "y": 0.26248,
+              "width": 0.45898,
+              "layer": "front"
+            },
+            "temple": {
+              "x": 0.74382,
+              "y": 0.27778,
+              "width": 0.1275,
+              "layer": "front"
+            }
+          },
+          "sourceRegion": {
+            "x0": 788,
+            "y0": 1250,
+            "x1": 1010,
+            "y1": 1504
+          },
+          "sourceSheet": "B"
+        }
+      ],
+      "loop": false
+    }
+  },
+  "accessories": "../accessories/manifest.json",
+  "coordinateSpace": {
+    "frameRects": "atlas-pixels",
+    "contentBounds": "frame-pixels",
+    "anchor": "normalized-frame",
+    "accessoryAnchors": "normalized-frame",
+    "identityAnchors": "normalized-image"
+  },
+  "identityAnchors": {
+    "avatar": {
+      "supported": true,
+      "revision": "2.1.0-fit-2",
+      "source": "detected-eye-pair",
+      "orientation": "front",
+      "rotationDegrees": 11.65,
+      "head": {
+        "x": 0.43066,
+        "y": 0.30062,
+        "width": 0.71072,
+        "layer": "front"
+      },
+      "neck": {
+        "x": 0.43066,
+        "y": 0.64887,
+        "width": 0.45486,
+        "layer": "front"
+      },
+      "crown": {
+        "x": 0.43066,
+        "y": 0.24322,
+        "width": 0.53091,
+        "layer": "front"
+      },
+      "temple": {
+        "x": 0.70785,
+        "y": 0.22955,
+        "width": 0.17768,
+        "layer": "front"
+      }
+    },
+    "dock": {
+      "supported": true,
+      "revision": "2.1.0-fit-2",
+      "source": "detected-eye-pair",
+      "orientation": "front",
+      "rotationDegrees": 11.65,
+      "head": {
+        "x": 0.43066,
+        "y": 0.30062,
+        "width": 0.71072,
+        "layer": "front"
+      },
+      "neck": {
+        "x": 0.43066,
+        "y": 0.64887,
+        "width": 0.45486,
+        "layer": "front"
+      },
+      "crown": {
+        "x": 0.43066,
+        "y": 0.24322,
+        "width": 0.53091,
+        "layer": "front"
+      },
+      "temple": {
+        "x": 0.70785,
+        "y": 0.22955,
+        "width": 0.17768,
+        "layer": "front"
+      }
+    },
+    "menu": {
+      "idle": {
+        "supported": true,
+        "revision": "2.1.0-equipped-1",
+        "source": "reviewed-menu-portrait-landmarks",
+        "orientation": "front",
+        "rotationDegrees": 0,
+        "head": {
+          "x": 0.49902,
+          "y": 0.35709,
+          "width": 0.79439,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.49902,
+          "y": 0.74635,
+          "width": 0.5243,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.49902,
+          "y": 0.26971,
+          "width": 0.61168,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.80089,
+          "y": 0.31737,
+          "width": 0.21449,
+          "layer": "front"
+        }
+      },
+      "blink": {
+        "supported": true,
+        "revision": "2.1.0-equipped-1",
+        "source": "reviewed-menu-portrait-landmarks",
+        "orientation": "front",
+        "rotationDegrees": 0,
+        "head": {
+          "x": 0.49902,
+          "y": 0.35709,
+          "width": 0.79439,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.49902,
+          "y": 0.74635,
+          "width": 0.5243,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.49902,
+          "y": 0.26971,
+          "width": 0.61168,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.80089,
+          "y": 0.31737,
+          "width": 0.21449,
+          "layer": "front"
+        }
+      },
+      "listen": {
+        "supported": true,
+        "revision": "2.1.0-equipped-1",
+        "source": "reviewed-menu-portrait-landmarks",
+        "orientation": "front",
+        "rotationDegrees": 16,
+        "head": {
+          "x": 0.45851,
+          "y": 0.33379,
+          "width": 0.80135,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.45851,
+          "y": 0.72645,
+          "width": 0.52889,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.45851,
+          "y": 0.24564,
+          "width": 0.61704,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.76302,
+          "y": 0.29372,
+          "width": 0.21636,
+          "layer": "front"
+        }
+      },
+      "focus": {
+        "supported": true,
+        "revision": "2.1.0-equipped-1",
+        "source": "reviewed-menu-portrait-landmarks",
+        "orientation": "front",
+        "rotationDegrees": 0,
+        "head": {
+          "x": 0.49902,
+          "y": 0.35554,
+          "width": 0.80135,
+          "layer": "front"
+        },
+        "neck": {
+          "x": 0.49902,
+          "y": 0.7482,
+          "width": 0.52889,
+          "layer": "front"
+        },
+        "crown": {
+          "x": 0.49902,
+          "y": 0.26739,
+          "width": 0.61704,
+          "layer": "front"
+        },
+        "temple": {
+          "x": 0.80354,
+          "y": 0.31547,
+          "width": 0.21636,
+          "layer": "front"
+        }
+      }
+    }
+  },
+  "equipped": {
+    "headphones": {
+      "accessory": "headphones",
+      "revision": "2.1.0-equipped-1",
+      "avatar": "equipped/headphones/avatar-256.png",
+      "dock": {
+        "512": "equipped/headphones/dock-512.png",
+        "1024": "equipped/headphones/dock-1024.png"
+      },
+      "menu": {
+        "logicalSize": 18,
+        "template": false,
+        "states": {
+          "idle": {
+            "one": "equipped/headphones/menu-idle.png",
+            "two": "equipped/headphones/menu-idle@2x.png"
+          },
+          "blink": {
+            "one": "equipped/headphones/menu-blink.png",
+            "two": "equipped/headphones/menu-blink@2x.png"
+          },
+          "listen": {
+            "one": "equipped/headphones/menu-listen.png",
+            "two": "equipped/headphones/menu-listen@2x.png"
+          },
+          "focus": {
+            "one": "equipped/headphones/menu-focus.png",
+            "two": "equipped/headphones/menu-focus@2x.png"
+          }
+        },
+        "blinkDurationMs": 130,
+        "idleIntervalMs": 9000,
+        "reducedMotion": "idle",
+        "equipmentOpticalScale": 1
+      }
+    },
+    "scarf": {
+      "accessory": "scarf",
+      "revision": "2.1.0-equipped-1",
+      "avatar": "equipped/scarf/avatar-256.png",
+      "dock": {
+        "512": "equipped/scarf/dock-512.png",
+        "1024": "equipped/scarf/dock-1024.png"
+      },
+      "menu": {
+        "logicalSize": 18,
+        "template": false,
+        "states": {
+          "idle": {
+            "one": "equipped/scarf/menu-idle.png",
+            "two": "equipped/scarf/menu-idle@2x.png"
+          },
+          "blink": {
+            "one": "equipped/scarf/menu-blink.png",
+            "two": "equipped/scarf/menu-blink@2x.png"
+          },
+          "listen": {
+            "one": "equipped/scarf/menu-listen.png",
+            "two": "equipped/scarf/menu-listen@2x.png"
+          },
+          "focus": {
+            "one": "equipped/scarf/menu-focus.png",
+            "two": "equipped/scarf/menu-focus@2x.png"
+          }
+        },
+        "blinkDurationMs": 130,
+        "idleIntervalMs": 9000,
+        "reducedMotion": "idle",
+        "equipmentOpticalScale": 1
+      }
+    },
+    "beanie": {
+      "accessory": "beanie",
+      "revision": "2.1.0-equipped-1",
+      "avatar": "equipped/beanie/avatar-256.png",
+      "dock": {
+        "512": "equipped/beanie/dock-512.png",
+        "1024": "equipped/beanie/dock-1024.png"
+      },
+      "menu": {
+        "logicalSize": 18,
+        "template": false,
+        "states": {
+          "idle": {
+            "one": "equipped/beanie/menu-idle.png",
+            "two": "equipped/beanie/menu-idle@2x.png"
+          },
+          "blink": {
+            "one": "equipped/beanie/menu-blink.png",
+            "two": "equipped/beanie/menu-blink@2x.png"
+          },
+          "listen": {
+            "one": "equipped/beanie/menu-listen.png",
+            "two": "equipped/beanie/menu-listen@2x.png"
+          },
+          "focus": {
+            "one": "equipped/beanie/menu-focus.png",
+            "two": "equipped/beanie/menu-focus@2x.png"
+          }
+        },
+        "blinkDurationMs": 130,
+        "idleIntervalMs": 9000,
+        "reducedMotion": "idle",
+        "equipmentOpticalScale": 1
+      }
+    },
+    "bow": {
+      "accessory": "bow",
+      "revision": "2.1.0-equipped-1",
+      "avatar": "equipped/bow/avatar-256.png",
+      "dock": {
+        "512": "equipped/bow/dock-512.png",
+        "1024": "equipped/bow/dock-1024.png"
+      },
+      "menu": {
+        "logicalSize": 18,
+        "template": false,
+        "states": {
+          "idle": {
+            "one": "equipped/bow/menu-idle.png",
+            "two": "equipped/bow/menu-idle@2x.png"
+          },
+          "blink": {
+            "one": "equipped/bow/menu-blink.png",
+            "two": "equipped/bow/menu-blink@2x.png"
+          },
+          "listen": {
+            "one": "equipped/bow/menu-listen.png",
+            "two": "equipped/bow/menu-listen@2x.png"
+          },
+          "focus": {
+            "one": "equipped/bow/menu-focus.png",
+            "two": "equipped/bow/menu-focus@2x.png"
+          }
+        },
+        "blinkDurationMs": 130,
+        "idleIntervalMs": 9000,
+        "reducedMotion": "idle",
+        "equipmentOpticalScale": 1.4
+      }
+    },
+    "sprout": {
+      "accessory": "sprout",
+      "revision": "2.1.0-equipped-1",
+      "avatar": "equipped/sprout/avatar-256.png",
+      "dock": {
+        "512": "equipped/sprout/dock-512.png",
+        "1024": "equipped/sprout/dock-1024.png"
+      },
+      "menu": {
+        "logicalSize": 18,
+        "template": false,
+        "states": {
+          "idle": {
+            "one": "equipped/sprout/menu-idle.png",
+            "two": "equipped/sprout/menu-idle@2x.png"
+          },
+          "blink": {
+            "one": "equipped/sprout/menu-blink.png",
+            "two": "equipped/sprout/menu-blink@2x.png"
+          },
+          "listen": {
+            "one": "equipped/sprout/menu-listen.png",
+            "two": "equipped/sprout/menu-listen@2x.png"
+          },
+          "focus": {
+            "one": "equipped/sprout/menu-focus.png",
+            "two": "equipped/sprout/menu-focus@2x.png"
+          }
+        },
+        "blinkDurationMs": 130,
+        "idleIntervalMs": 9000,
+        "reducedMotion": "idle",
+        "equipmentOpticalScale": 1.5
+      }
+    }
+  }
+}

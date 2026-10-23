@@ -1,0 +1,40 @@
+{
+  "generator": {
+    "tool": "image_gen.imagegen",
+    "generatedDate": "2026-10-23",
+    "model": "Tool-managed current image model; model identifier not returned",
+    "transparentBackground": true
+  },
+  "dock": {
+    "cat": {
+      "sourceImage": "exec-e642cba6-b361-4580-97e6-dcafd637b64d.png",
+      "reference": "public/pet-art/v2/cat/atlas.png",
+      "promptSummary": "Create one finished macOS Dock character icon on a truly transparent background. Retain the original species palette and character identity, match the cat master warm brown stepped contour and coherent large crisp pixel clusters, broad readable facial features, restrained warm shading and front three-quarter full body pose. Keep 8% transparent margin; no headphones, clothing, book, accessory, text, floor, background or panel. Dedicated large source master, not a 32px sprite enlargement."
+    },
+    "chick": {
+      "sourceImage": "exec-f5a23724-ac6e-4e42-b115-b5a3578a1d2c.png",
+      "reference": "public/pet-art/v2/chick/atlas.png",
+      "promptSummary": "Create one finished macOS Dock character icon on a truly transparent background. Retain the original species palette and character identity, match the cat master warm brown stepped contour and coherent large crisp pixel clusters, broad readable facial features, restrained warm shading and front three-quarter full body pose. Keep 8% transparent margin; no headphones, clothing, book, accessory, text, floor, background or panel. Dedicated large source master, not a 32px sprite enlargement."
+    },
+    "bunny": {
+      "sourceImage": "exec-73eeb20f-54c0-4ab5-a328-376a417f5f51.png",
+      "reference": "public/pet-art/v2/bunny/atlas.png",
+      "promptSummary": "Create one finished macOS Dock character icon on a truly transparent background. Retain the original species palette and character identity, match the cat master warm brown stepped contour and coherent large crisp pixel clusters, broad readable facial features, restrained warm shading and front three-quarter full body pose. Keep 8% transparent margin; no headphones, clothing, book, accessory, text, floor, background or panel. Dedicated large source master, not a 32px sprite enlargement."
+    },
+    "bear": {
+      "sourceImage": "exec-9974b79d-5f75-4f0c-a4c8-a13c4f03722b.png",
+      "reference": "public/pet-art/v2/bear/atlas.png",
+      "promptSummary": "Create one finished macOS Dock character icon on a truly transparent background. Retain the original species palette and character identity, match the cat master warm brown stepped contour and coherent large crisp pixel clusters, broad readable facial features, restrained warm shading and front three-quarter full body pose. Keep 8% transparent margin; no headphones, clothing, book, accessory, text, floor, background or panel. Dedicated large source master, not a 32px sprite enlargement."
+    },
+    "fox": {
+      "sourceImage": "exec-37ed0213-e36a-4a53-8d8b-ae7e1fdc2bf7.png",
+      "reference": "public/pet-art/v2/fox/atlas.png",
+      "promptSummary": "Create one finished macOS Dock character icon on a truly transparent background. Retain the original species palette and character identity, match the cat master warm brown stepped contour and coherent large crisp pixel clusters, broad readable facial features, restrained warm shading and front three-quarter full body pose. Keep 8% transparent margin; no headphones, clothing, book, accessory, text, floor, background or panel. Dedicated large source master, not a 32px sprite enlargement."
+    }
+  },
+  "menu": {
+    "sourceImage": "exec-e3269c91-6f7b-41f5-9bb9-4c68b8811522.png",
+    "promptSummary": "Production sprite sheet exactly four columns and five rows: rows cat, chick, bunny, bear, fox; columns idle eyes open, blink eyes shut, listening head tilt, quiet focus lowered eyes. Specially simplified colored 18-pixel-scale face and tiny chest glyphs, bold brown contour, large deliberate pixels, solid species colors. Transparent, evenly spaced cells; no captions, symbols, accessories, panels, gradients or background. Front face crop, coherent shape and palette within each row."
+  },
+  "processing": "Crop alpha bounds; fit high resolution dock artwork to 1024/512/256/128/64. Separately crop generated menu glyphs and resample to 18/36. No procedural redraw of character artwork."
+}

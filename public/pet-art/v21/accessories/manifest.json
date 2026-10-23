@@ -1,0 +1,202 @@
+{
+  "version": 2,
+  "atlas": "atlas.png",
+  "width": 1280,
+  "height": 768,
+  "coordinateSpace": {
+    "frameRects": "atlas-pixels",
+    "anchor": "normalized-image"
+  },
+  "items": {
+    "headphones": {
+      "variants": {
+        "front": {
+          "image": "headphones-front.png",
+          "frame": {
+            "x": 0,
+            "y": 0,
+            "w": 256,
+            "h": 256
+          }
+        },
+        "quarter": {
+          "image": "headphones-quarter.png",
+          "frame": {
+            "x": 0,
+            "y": 256,
+            "w": 256,
+            "h": 256
+          }
+        },
+        "right": {
+          "image": "headphones-right.png",
+          "frame": {
+            "x": 0,
+            "y": 512,
+            "w": 256,
+            "h": 256
+          }
+        }
+      },
+      "target": "head",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "widthMultiplier": 1.3
+    },
+    "scarf": {
+      "variants": {
+        "front": {
+          "image": "scarf-front.png",
+          "frame": {
+            "x": 256,
+            "y": 0,
+            "w": 256,
+            "h": 256
+          }
+        },
+        "quarter": {
+          "image": "scarf-quarter.png",
+          "frame": {
+            "x": 256,
+            "y": 256,
+            "w": 256,
+            "h": 256
+          }
+        },
+        "right": {
+          "image": "scarf-right.png",
+          "frame": {
+            "x": 256,
+            "y": 512,
+            "w": 256,
+            "h": 256
+          }
+        }
+      },
+      "target": "neck",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.3
+      },
+      "widthMultiplier": 1
+    },
+    "beanie": {
+      "variants": {
+        "front": {
+          "image": "beanie-front.png",
+          "frame": {
+            "x": 512,
+            "y": 0,
+            "w": 256,
+            "h": 256
+          }
+        },
+        "quarter": {
+          "image": "beanie-quarter.png",
+          "frame": {
+            "x": 512,
+            "y": 256,
+            "w": 256,
+            "h": 256
+          }
+        },
+        "right": {
+          "image": "beanie-right.png",
+          "frame": {
+            "x": 512,
+            "y": 512,
+            "w": 256,
+            "h": 256
+          }
+        }
+      },
+      "target": "crown",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "widthMultiplier": 1
+    },
+    "bow": {
+      "variants": {
+        "front": {
+          "image": "bow-front.png",
+          "frame": {
+            "x": 768,
+            "y": 0,
+            "w": 256,
+            "h": 256
+          }
+        },
+        "quarter": {
+          "image": "bow-quarter.png",
+          "frame": {
+            "x": 768,
+            "y": 256,
+            "w": 256,
+            "h": 256
+          }
+        },
+        "right": {
+          "image": "bow-right.png",
+          "frame": {
+            "x": 768,
+            "y": 512,
+            "w": 256,
+            "h": 256
+          }
+        }
+      },
+      "target": "temple",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "widthMultiplier": 1
+    },
+    "sprout": {
+      "variants": {
+        "front": {
+          "image": "sprout-front.png",
+          "frame": {
+            "x": 1024,
+            "y": 0,
+            "w": 256,
+            "h": 256
+          }
+        },
+        "quarter": {
+          "image": "sprout-quarter.png",
+          "frame": {
+            "x": 1024,
+            "y": 256,
+            "w": 256,
+            "h": 256
+          }
+        },
+        "right": {
+          "image": "sprout-right.png",
+          "frame": {
+            "x": 1024,
+            "y": 512,
+            "w": 256,
+            "h": 256
+          }
+        }
+      },
+      "target": "crown",
+      "anchor": {
+        "x": 0.5,
+        "y": 0.88
+      },
+      "widthMultiplier": 0.32
+    }
+  },
+  "qa": {
+    "transparentBackground": true,
+    "visuallyReviewed": true
+  },
+  "usage": "Use each frame accessoryAnchors and orientation; rotate the overlay around its supplied anchor by rotationDegrees. No accessory is baked into pet identity."
+}

@@ -1,4 +1,5 @@
 'use strict';
+const { createLyricWindow } = require('./lyric-window.cjs');
 
 const { app, BrowserWindow, WebContentsView, Menu, Tray, dialog, ipcMain, clipboard, shell, protocol, screen, net, safeStorage, nativeImage, powerSaveBlocker, globalShortcut, powerMonitor } = require('electron');
 const fs = require('node:fs');
@@ -13,6 +14,7 @@ const { createDesktopMode } = require('./desktop-mode.cjs');
 const { createDesktopSink, migrateDesktopPreferences } = require('./desktop-sink.cjs');
 const { createMiniPlayer } = require('./mini-player.cjs');
 const { trayIconPath, createTrayPet } = require('./tray-icons.cjs');
+const { createPetMenu } = require('./pet-menu.cjs');
 const { createTypingHook } = require('./typing-hook.cjs');
 const { createInputStats } = require('./input-stats.cjs');
 const { createCollectionStore } = require('./collection-store.cjs');
@@ -38,6 +40,7 @@ const { appMenuTemplate, trayMenuTemplate, ABOUT_DETAIL, SINK_HOTKEY } = require
 const { createAutostart, autostartScript } = require('./main/autostart.cjs');
 const { createWeather, weatherScript } = require('./weather.cjs');
 const { createWeatherApi } = require('./weather-api.cjs');
+const { createLocation } = require('./location.cjs');
 const { createAi, aiScript } = require('./ai.cjs');
 
 protocol.registerSchemesAsPrivileged([{ scheme: 'album-desktop', privileges: { standard: true, secure: true, supportFetchAPI: true } }]);
@@ -68,14 +71,15 @@ let preferences = {};
 let appearance = { ...DEFAULT_SETTINGS };
 let settingsOpen = false;
 let systemFonts = [];
-let wallpaper, desktopMode, desktopSink, miniPlayer, awakeBlocker = null;
+let lyricWindow, wallpaper, desktopMode, desktopSink, miniPlayer, awakeBlocker = null;
 const trayPet = createTrayPet({ getTray: () => companionTray, getWindow: () => mainWindow, app, nativeImage, directory: app.getPath('userData') });
 const desktopHelperPath = () => app.isPackaged ? path.join(process.resourcesPath, 'native', 'DesktopHost.exe') : path.join(__dirname, 'native', 'bin', 'DesktopHost.exe');
 let music;
 let lan, petPackRoute, dshBridge, dshSnapshot = { paused: true };
 let collection;
 let catalog;
-let companionTray;
+let companionTray, petMenu, currentTrayMenu;
+let lastCompanion = null;
 let pet;
 let localMusic;
 let petState = { active: false };
@@ -90,7 +94,7 @@ function restoreMainWindow() {
 // One tray icon while the wallpaper or the desktop pet keeps running, while a focus round runs,
 // and always in the macOS menu bar (status: remaining time as the title, state icon).
 function companionsActive() { return Boolean(wallpaperState.active || wallpaperState.busy || petState.active || desktopMode?.active || desktopSink?.active || desktopSink?.busy); }
-const statusBar = createStatusApplier({ getTray: () => companionTray, getWindow: () => mainWindow, app, nativeImage, getPetId: () => trayPet.petId });
+const statusBar = createStatusApplier({ getTray: () => companionTray, getWindow: () => mainWindow, app, nativeImage, getPetId: () => trayPet.petId, applyPetIcon: true });
 let trayStatus = statusFrom(null);
 function trayWanted() { return companionsActive() || process.platform === 'darwin' || trayStatus.phase !== 'idle'; }
 function openJournal() { restoreMainWindow(); siteView?.webContents.executeJavaScript("window.dispatchEvent(new CustomEvent('cabin:open-journal'))").catch(() => {}); }
@@ -98,32 +102,37 @@ function refreshTray() {
   if (trayWanted()) {
     if (!companionTray) {
       const image = nativeImage.createFromPath(trayIconPath(trayPet.petId));
-      if (process.platform === 'darwin') image.setTemplateImage(true);
+      if (process.platform === 'darwin') image.setTemplateImage(false);
       companionTray = new Tray(image.isEmpty() ? path.join(__dirname, 'assets', 'tray.png') : image); companionTray.__statusIcon = trayStatus.icon;
+      companionTray.on('click', () => { if (process.platform === 'darwin') petMenu?.toggle().catch(error => writeLog('pet-menu', error.message)); });
+      companionTray.on('right-click', () => { if (process.platform === 'darwin' && currentTrayMenu) companionTray.popUpContextMenu(currentTrayMenu); });
       companionTray.on('double-click', () => desktopSink?.active ? desktopSink.exit() : restoreMainWindow());
     }
     const companion = (command) => sendCompanionCommand(siteView?.webContents, command);
-    companionTray.setContextMenu(Menu.buildFromTemplate(trayMenuTemplate({
+    currentTrayMenu = Menu.buildFromTemplate(trayMenuTemplate({
       restore: restoreMainWindow, companion, checkUpdates: () => updates.checkFromMenu(),
       status: trayStatus, player: (action) => relayPlayerCommand(siteView?.webContents, action), openJournal,
       petActive: petState.active, petStart: () => pet.start().catch((error) => writeLog('pet-error', error.message)), petStop: () => pet.stop(),
       sinkActive: Boolean(desktopSink?.active || desktopSink?.busy), sinkEnter: () => desktopSink?.enter(), sinkExit: () => desktopSink.exit(), quit: () => app.quit()
-    })));
+    }));
+    if (process.platform !== 'darwin') companionTray.setContextMenu(currentTrayMenu);
+    trayPet.refresh();
     statusBar.apply(trayStatus);
   } else if (companionTray) {
-    companionTray.destroy(); companionTray = null;
+    trayPet.stop(); companionTray.destroy(); companionTray = null;
     if (!quitting && mainWindow && !mainWindow.isVisible()) restoreMainWindow();
   }
 }
 // Status poll: every second while a round runs (the title counts down), slower otherwise.
 // The menu is rebuilt only when what it shows changes; title / Dock / taskbar follow every tick.
 let trayMenuKey = '';
-const statusPoller = createCompanionPoller({ getSite: () => siteView?.webContents, clean: cleanCompanion,
-  interval: (value) => value?.focus && value.focus.phase !== 'idle' ? 1000 : 3000,
+const statusPoller = createCompanionPoller({ getSite: () => siteView?.webContents, clean: value => cleanCompanion(value?.companion),
+  interval: (value) => dshBridge?.status().enabled ? 500 : value?.focus && value.focus.phase !== 'idle' ? 1000 : 3000,
   onValue: (value) => {
     const focusActive = value?.focus?.phase === 'focus' && !value.focus.paused;
-    dshSnapshot = { pose: focusActive ? 'focus' : Date.now() - (value?.typingAt || 0) < 900 ? 'typing' : value?.playing || value?.musicPlaying ? (value?.bpm && value?.beatAt ? 'groove' : 'listen') : 'idle', quiet: appearance.reduceMotion === true, paused: loading || !siteView };
-    trayStatus = statusFrom(value);
+    dshSnapshot = { pose: value?.pose || (focusActive ? 'focus' : Date.now() - (value?.typingAt || 0) < 900 ? 'typing' : value?.playing || value?.musicPlaying ? (value?.bpm && value?.beatAt ? 'groove' : 'listen') : 'idle'), quiet: appearance.reduceMotion === true, paused: loading || !siteView };
+    lastCompanion = value; trayPet.setCompanion(value);
+    trayStatus = statusFrom(value); petMenu?.publish();
     const key = [trayStatus.statusLine, trayStatus.playing, trayStatus.phase, trayStatus.paused, trayWanted()].join('|');
     if (key !== trayMenuKey || !companionTray) { trayMenuKey = key; refreshTray(); } else statusBar.apply(trayStatus);
   } });
@@ -410,6 +419,8 @@ async function wireRemoteView() {
 }
 
 const siteCommands = createSiteCommands({
+  restartInterface: async () => { await siteView?.webContents.session.flushStorageData(); app.relaunch(); app.quit(); },
+  openLyrics: () => lyricWindow?.open().catch(error=>writeLog('lyric-window', error.message)),
   isSitePage: () => isSiteUrl(siteView?.webContents.getURL()), mainWindow: () => mainWindow, desktopSink: () => desktopSink, pet: () => pet, music: () => music, appearance: () => appearance, trayPet,
   toggleSettings, toggleFullscreen, setFullscreen, isFullscreen, chooseMusicFolder, notifyMusic, saveAppearance, writeLog,
   typing: {
@@ -444,8 +455,8 @@ const autostart = createAutostart({ app, publish: (state) => notifySite(autostar
 let aiRelay = null;
 // Created lazily: userData is only final once the app is ready.
 const ai = () => aiRelay || (aiRelay = createAi({ directory: app.getPath('userData'), safeStorage, fetch: (url, options) => net.fetch(url, options), publish: (detail) => notifySite(aiScript(detail)), writeLog }));
-const weather = createWeather({ fetch: (url, options) => net.fetch(url, options), publish: (state) => notifySite(weatherScript(state)), writeLog });
-const weatherApi = createWeatherApi({ fetch: (url, options) => net.fetch(url, options), weather });
+const weather = createWeather({ directory: app.getPath('userData'), safeStorage, fetch: (url, options) => net.fetch(url, options), publish: (state) => notifySite(weatherScript(state)), writeLog });
+const weatherApi = createWeatherApi({ fetch: (url, options) => net.fetch(url, options), weather, location: createLocation({ packaged: app.isPackaged }) });
 function notifySite(script) {
   if (siteView && !siteView.webContents.isDestroyed()) siteView.webContents.executeJavaScript(script).catch(() => {});
 }
@@ -587,9 +598,11 @@ else {
       wallpaper?.reposition(); pet?.reposition(); desktopMode?.refit(); miniPlayer?.reposition();
     });
     try { lan = createLanService({ directory: path.join(app.getPath('userData'), 'lan-sync') }); } catch (error) { writeLog('lan-unavailable', error.message); }
-    dshBridge = createDshBridge({ getSnapshot: () => dshSnapshot });
+    dshBridge = createDshBridge({ directory: app.getPath('userData'), getSnapshot: () => dshSnapshot });
     petPackRoute = createPetPackRoute({ store: createPetPackStore({ directory: path.join(app.getPath('userData'), 'pet-packs') }), bridge: dshBridge });
     registerShellProtocol(); registerIpc();
+    lyricWindow = createLyricWindow({getSite:()=>siteView?.webContents,registerProtocol:registerShellProtocol});
+    petMenu = createPetMenu({ getTray: () => companionTray, registerProtocol: registerShellProtocol, getState: () => ({ status: trayStatus, track: lastCompanion?.track || '', avatar: trayPet.avatar }), command: action => { if (action === 'home') restoreMainWindow(); else if (action === 'focus') sendCompanionCommand(siteView?.webContents, trayStatus.phase === 'idle' ? 'focus-start' : 'focus-toggle'); else relayPlayerCommand(siteView?.webContents, action); } });
     wallpaper = createWallpaper({ app, getMain: () => mainWindow, getSite: () => siteView?.webContents, status: wallpaperStatus, appearanceScript, getAppearance: () => appearance, log: writeLog, registerProtocol: registerShellProtocol });
     desktopMode = createDesktopMode({ getWindow: () => mainWindow, screen, leaveFullscreen: () => setFullscreen(false), helperPath: desktopHelperPath(), log: writeLog,
       onChange: (state) => { refreshTray(); notifySite(`document.documentElement.dataset.desktopMode = '${state.active}'; window.dispatchEvent(new CustomEvent('album-desktop-mode', {detail: ${JSON.stringify(state)}}));`); } });
@@ -636,5 +649,5 @@ else {
     }
     if (mainWindow) restoreMainWindow(); else createWindow().catch((error) => writeLog('startup-error', error.message));
   });
-  app.on('before-quit', () => { quitting = true; dshBridge?.stop(); lan?.stop(); aiRelay?.dispose(); aiRelay = null; statusPoller.stop(); typingHook.stop(); clearTimeout(inputStatsTimer); inputStatsTimer = null; inputStats.dispose(); if (awakeBlocker !== null) { powerSaveBlocker.stop(awakeBlocker); awakeBlocker = null; } globalShortcut.unregisterAll(); desktopSink?.stop(); miniPlayer?.hide(); wallpaper?.stop(); pet?.stop(); weather.dispose(); music?.stop(); companionTray?.destroy(); companionTray = null; if (startupComplete) writeLog('closed'); });
+  app.on('before-quit', (event) => { if (!quitting && dshBridge?.status().enabled) { event.preventDefault(); quitting = true; Promise.race([dshBridge.stop(), new Promise(resolve=>setTimeout(resolve,4500))]).finally(()=>app.quit()); return; } quitting = true; lyricWindow?.dispose(); petMenu?.dispose(); trayPet.stop(); dshBridge?.stop(); lan?.stop(); aiRelay?.dispose(); aiRelay = null; statusPoller.stop(); typingHook.stop(); clearTimeout(inputStatsTimer); inputStatsTimer = null; inputStats.dispose(); if (awakeBlocker !== null) { powerSaveBlocker.stop(awakeBlocker); awakeBlocker = null; } globalShortcut.unregisterAll(); desktopSink?.stop(); miniPlayer?.hide(); wallpaper?.stop(); pet?.stop(); weather.dispose(); music?.stop(); companionTray?.destroy(); companionTray = null; if (startupComplete) writeLog('closed'); });
 }

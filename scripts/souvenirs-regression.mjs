@@ -61,7 +61,8 @@ const stored = page => page.evaluate(keys => keys.flatMap(key => {
 }), SOUVENIR_KEYS);
 const section = page => page.getByRole('region', { name: '小屋纪念物', exact: true });
 async function openPanel(page) {
-  await page.locator('.room-cat').dblclick();
+  const intro=page.getByRole('button',{name:'知道了',exact:true});if(await intro.isVisible())await intro.click();
+  await page.locator('.home-pet-portrait').click();
   await page.locator('.cat-panel[open]').waitFor();
   await section(page).waitFor();
 }
@@ -98,6 +99,7 @@ async function newPage(context, label, { open = true } = {}) {
 async function run(name, test, { open = true, prepare } = {}) {
   if (process.env.SOUVENIR_FILTER && !name.includes(process.env.SOUVENIR_FILTER)) return;
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'zh-CN', reducedMotion: 'reduce' });
+  await context.addInitScript(()=>localStorage.setItem('flow-cabin-interface-v1','beta'));
   await context.addInitScript((seed) => { window.__onboardingSeed = seed; }, onboardingSeed());
   await context.addInitScript(focusKey => {
     if (location.origin === 'null') return;
@@ -149,26 +151,26 @@ try {
   let releasePanel, heldRequests = 0;
   const panelGate = new Promise(resolve => { releasePanel = resolve; });
   try {
-    await run('cold-cat-panel-first-double-click-and-controls', async page => {
-      const cat = page.locator('button.room-cat'), panel = page.locator('.cat-panel[open]');
+    await run('cold-pet-panel-first-click-and-controls', async page => {
+      const cat = page.locator('button.home-pet-portrait'), panel = page.locator('.cat-panel[open]');
       await cat.waitFor({ state: 'visible' });
       assert.equal(heldRequests, 1, 'CatPanel module is still blocked when the cat becomes visible');
-      await cat.dblclick();
+      const intro=page.getByRole('button',{name:'知道了',exact:true});if(await intro.isVisible())await intro.click();await cat.click();
       const beforeRelease = await page.evaluate(() => ({ ...window.__catOpenEvents, dialogs: document.querySelectorAll('.cat-panel').length }));
-      assert.deepEqual(beforeRelease, { doubleClicks: 1, openEvents: 1, dialogs: 0 });
+      assert.deepEqual(beforeRelease, { doubleClicks: 0, openEvents: 0, dialogs: 0 });
       report.coldLoad = { heldRequests, beforeRelease };
       await shot(page, '00-cold-module-held');
       releasePanel();
       await panel.waitFor({ timeout: 5000 });
       await section(page).waitFor();
-      assert.deepEqual(await page.evaluate(() => window.__catOpenEvents), { doubleClicks: 1, openEvents: 1 }, 'opens after release without another input or event');
+      assert.deepEqual(await page.evaluate(() => window.__catOpenEvents), { doubleClicks: 0, openEvents: 0 }, 'opens after release without another input or event');
       assert.equal(await cat.getAttribute('aria-expanded'), 'true');
       await shot(page, '00-cold-first-open');
 
       await page.keyboard.press('Escape'); await panel.waitFor({ state: 'detached' });
       assert.equal(await cat.getAttribute('aria-expanded'), 'false');
       assert.equal(await cat.evaluate(node => document.activeElement === node), true, 'Escape returns focus to the cat');
-      await cat.click({ button: 'right' }); await panel.waitFor();
+      await cat.click(); await panel.waitFor();
       const portrait = panel.locator('.cat-portrait canvas');
       const pixels = node => Array.from(node.getContext('2d').getImageData(0, 0, node.width, node.height).data);
       const beforeAccessory = await portrait.evaluate(pixels);
@@ -185,7 +187,7 @@ try {
       await page.waitForFunction(() => document.querySelector('.cat-portrait canvas')?.dataset.accessory === '');
       await page.keyboard.press('Escape'); await panel.waitFor({ state: 'detached' });
       assert.equal(await cat.getAttribute('aria-expanded'), 'false');
-      report.coldLoad.controls = ['Escape and focus return', 'right click', 'accessory pixels and persistence', 'close button', 'normal double click', 'unequip'];
+      report.coldLoad.controls = ['Escape and focus return', 'portrait click', 'accessory pixels and persistence', 'close button', 'normal portrait click', 'unequip'];
     }, { open: false, prepare: async context => {
       await context.addInitScript(() => {
         window.__catOpenEvents = { doubleClicks: 0, openEvents: 0 };
