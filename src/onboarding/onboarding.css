@@ -105,6 +105,7 @@
 .settings-hub-search:focus-within{border-color:var(--ob-accent);color:var(--ob-ink)}
 .settings-hub-search input{flex:1;min-width:0;width:100%;height:28px;padding:0;color:var(--ob-ink);background:none;border:0;outline:0;font-size:12px}
 .settings-hub-search input::-webkit-search-cancel-button{display:none}
+.settings-hub .settings-hub-search input,.settings-hub .settings-hub-search input:focus,.settings-hub .settings-hub-search input:focus-visible{border:0;outline:0;box-shadow:none;background:none;min-height:0}
 .settings-hub-clear{display:grid;place-items:center;width:20px;height:20px;padding:0;color:var(--ob-dim);background:none;border:0;cursor:pointer}.settings-hub-clear:hover{color:var(--ob-ink)}
 .settings-hub-count{margin-left:6px;padding:0 4px;color:var(--px-bg);background:var(--ob-accent);font-size:12px;line-height:16px}
 .settings-hub-nav button:disabled{opacity:.4;cursor:default}

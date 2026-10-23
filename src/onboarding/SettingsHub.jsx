@@ -68,7 +68,7 @@ export default function SettingsHub({ section = 'music', setSection, close, env,
           else if (event.key === 'Escape' && query) { event.preventDefault(); event.stopPropagation(); setQuery(''); }
           else if (event.key === 'ArrowDown' && results[0]) { event.preventDefault(); panel.current?.querySelector('.settings-hub-results button')?.focus(); }
         }}/>{query && <button type="button" className="settings-hub-clear" aria-label="清除搜索" onClick={() => { setQuery(''); searchBox.current?.focus(); }}><X size={12}/></button>}</label>
-        <Tabs className="settings-hub-nav" label="设置分区" idPrefix="hub-tab" orientation={compact ? 'horizontal' : 'vertical'} arrows="both" items={tabs} value={tab} onChange={(id) => { setQuery(''); setSection(id); }}/>
+        <Tabs className="settings-hub-nav" label="设置分区" idPrefix="hub-tab" orientation={compact ? 'horizontal' : 'vertical'} arrows="both" items={tabs} value={searching ? '' : tab} onChange={(id) => { setQuery(''); setSection(id); }}/>
       </div>
       <section ref={panel} {...tabPanelProps('hub-tab', tab)} className="settings-hub-panel">
         {searching ? <SearchResults query={query} results={results} labels={labels} jump={jump}/> : <>

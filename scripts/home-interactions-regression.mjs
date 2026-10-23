@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { launchChromium } from './launch-browser.mjs';
+import { onboardingSeed } from './app-version.mjs';
 const origin='http://127.0.0.1:4295',output=path.resolve('desktop/test-results/home-interactions');
 await fs.mkdir(output,{recursive:true});let browser,server,page;
 const report={checks:[],errors:[],fixture:true},pass=name=>{report.checks.push(name);console.log('PASS '+name);};
@@ -41,6 +42,7 @@ try{
  await page.screenshot({path:path.join(output,'mobile-work.png')});
  const fallback=await browser.newContext({viewport:{width:1440,height:900},reducedMotion:'reduce'});
  await fallback.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());
+ await fallback.addInitScript(seed=>localStorage.setItem('flow-cabin-onboarding-v1',seed),onboardingSeed()); // the first-run guide is covered by onboarding-checks
  await fallback.addInitScript(()=>{
    localStorage.setItem('flow-cabin-interface-v1','beta');localStorage.setItem('flow-cabin-home-intro-v1','done');
    const getContext=HTMLCanvasElement.prototype.getContext;

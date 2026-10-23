@@ -49,7 +49,7 @@ test('every animation names a keyframe that exists', () => {
 
 test('legacy pixel controls keep square corners and avoid blur; the 2.1 home uses its own soft panel design', () => {
   for (const { file, css } of owned) {
-    if (file === 'home/home.css') continue;
+    if (file.startsWith('home/')) continue; // home.css and the 2.2 home tools (home-tools.css)
     for (const m of css.matchAll(/border(?:-[a-z]+)*-radius\s*:\s*([^;}]+)/g)) assert.match(m[1].trim(), /^(0|0px|50%)$/, `${file}: border-radius ${m[1].trim()}`);
     assert(!/backdrop-filter\s*:\s*(?!none)/.test(css), `${file}: backdrop-filter`);
     assert(!/blur\(/.test(css), `${file}: blur()`);
