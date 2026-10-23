@@ -12,7 +12,7 @@ await fs.mkdir(output, { recursive: true });
 try {
   server = spawn(process.execPath, ['node_modules/vite/bin/vite.js', 'preview', '--host', '127.0.0.1', '--port', '4296', '--strictPort'], { stdio: 'ignore' });
   for (let i = 0; !await fetch(origin).then(r => r.ok, () => false); i++) { if (i > 100 || server.exitCode !== null) throw Error('Preview failed'); await new Promise(r => setTimeout(r, 100)); }
-  browser = await launchChromium();
+  browser = await launchChromium({ defaultHome: null });
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce', acceptDownloads: true });
   await context.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
   await context.addInitScript(seed => {
