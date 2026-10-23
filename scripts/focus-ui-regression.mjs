@@ -81,7 +81,7 @@ try {
     });
     const page=await context.newPage();page.setDefaultTimeout(12000);page.on('pageerror',e=>report.pageErrors.push(e.message));
     let phase='initial-render';
-    try {await page.goto(origin,{waitUntil:'domcontentloaded',timeout:30000});await page.locator('.focus-badge').waitFor({timeout:30000});phase='interaction';await test(page);report.checks.push({name,passed:true});console.log(`PASS ${name}`);}
+    try {await page.goto(origin,{waitUntil:'domcontentloaded',timeout:30000});await page.locator(collection ? '.focus-badge, .app-startup-error' : '.focus-badge').first().waitFor({timeout:30000});phase='interaction';await test(page);report.checks.push({name,passed:true});console.log(`PASS ${name}`);}
     catch(error){report.checks.push({name,passed:false,phase,error:error.stack});console.error(`FAIL ${name}: ${error.message}`);await screenshot(page,`${name}-failure`).catch(()=>{});}
     finally{await context.close();}
   };
@@ -481,11 +481,12 @@ try {
   });
   let calls=0,pending;
   await run('collection-error-retry-has-distinct-states',async page=>{
-    await page.getByRole('alert').filter({hasText:'模拟收藏读取失败'}).waitFor();assert.doesNotMatch(await page.locator('.room-empty').innerText(),/正在整理/,'failed collection is not still loading');
+    await page.getByRole('alert').filter({hasText:'模拟收藏读取失败'}).waitFor();assert.equal(await page.getByRole('status').count(),0,'failed collection is not still loading');
+    assert.equal(await page.locator('.cabin-room').count(),0,'migration does not mount mutating providers before collection and recovery point are ready');
     assert.equal(await page.locator('.onboarding-wizard').count(),0);await screenshot(page,'collection-error');
-    await page.getByRole('button',{name:'重试',exact:true}).click();await page.waitForFunction(()=>document.querySelector('.app-error button')?.disabled);
-    assert.match(await page.locator('.room-empty').innerText(),/正在整理/);await screenshot(page,'collection-retrying');await pending.fulfill({json:{items}});
-    await page.locator('.room-record').first().waitFor();assert.equal(await page.locator('.app-error').count(),0);await screenshot(page,'collection-retry-success');
+    await page.getByRole('button',{name:'重试',exact:true}).click();await page.waitForFunction(()=>document.querySelector('.app-startup-error button')?.disabled);
+    assert.match(await page.getByRole('status').innerText(),/正在重新读取/);await screenshot(page,'collection-retrying');await pending.fulfill({json:{items}});
+    await page.locator('.room-record').first().waitFor();assert.equal(await page.locator('.app-startup-error, .app-error').count(),0);await screenshot(page,'collection-retry-success');
   },{firstVisit:true,collection:route=>++calls===1?route.fulfill({status:503,json:{error:'模拟收藏读取失败'}}):(pending=route,undefined)});
   const STUDY_KEY = 'album-circle-study-v1:local-owner';
   const studyState = page => page.evaluate(key => JSON.parse(localStorage.getItem(key) || '{}'), STUDY_KEY);
