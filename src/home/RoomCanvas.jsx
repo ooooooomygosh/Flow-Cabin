@@ -20,13 +20,23 @@ async function lease(url) {
   entry.refs++; entry.used = Date.now();
   try { return await entry.promise; } catch (error) { entry.refs--; leases.delete(url); throw error; }
 }
+// Warm the HTTP cache with a theme's room art while the person is still choosing it.
+const warmed = new Set();
+export function prefetchRoomArt(theme) {
+  if (!theme || warmed.has(theme)) return; warmed.add(theme);
+  const base = `/room-scenes/v21/furniture/${theme}/`, get = url => fetch(url, { priority: 'low' });
+  get(`/room-scenes/v21/${theme}/shell.png`).catch(() => warmed.delete(theme));
+  get(base + 'manifest.json').then(r => r.ok ? r.json() : null).then(m => m && [...new Set(Object.values(m.frames || {}).map(f => f.file))].forEach(file => get(base + file).catch(() => {}))).catch(() => warmed.delete(theme));
+}
 function release(url) {
   const entry = leases.get(url); if (entry) entry.refs = Math.max(0, entry.refs - 1);
   const unused = [...leases].filter(([, e]) => !e.refs).sort((a, b) => a[1].used - b[1].used);
   while (unused.length > 4) { const [key, value] = unused.shift(); leases.delete(key); value.promise.then(() => { if (!leases.has(key)) return Assets.unload(key); }).catch(() => {}); }
 }
 
-export default function RoomCanvas({ layout, selected, reduced, dim, active = true, onPetPosition }) {
+// `active` false (a corner or a full-window panel covers the room) pauses the ticker; the last frame stays.
+// `onArtReady(theme)` fires once the stage shows `layout.theme`, '' while it still shows another one.
+export default function RoomCanvas({ layout, selected, reduced, dim, active = true, onPetPosition, onArtReady, onRetry }) {
   const { deck, focus, identity, sceneCapture } = useCabinRuntime();
   const motion = useCatMotion(reduced, !active), life = useLife(), input = useInputPresence(active);
   const living = useRef(createLivingPet()), importedHost = useRef(null);
@@ -34,7 +44,8 @@ export default function RoomCanvas({ layout, selected, reduced, dim, active = tr
   const host = useRef(null), fallbackHost = useRef(null), application = useRef(null), live = useRef(null), petPosition = useRef({ u: 640, v: 600 });
   const [importedPose,setImportedPose]=useState('idle');
   const [ready, setReady] = useState(false), [error, setError] = useState(''), [art, setArt] = useState(null), [petArt, setPetArt] = useState(null);
-  const [rendererError, setRendererError] = useState(false);
+  const [rendererError, setRendererError] = useState(false), [attempt, setAttempt] = useState(0);
+  const visible = useRef(motion.visible), runner = useRef(null), artReadyRef = useRef(onArtReady); visible.current = motion.visible; artReadyRef.current = onArtReady;
   const playing = deck.audible, concentrating = focus.state.timer.phase === 'focus' && !focus.state.timer.paused;
   live.current = { playing, concentrating, identity, onPetPosition, life, input, quiet:focus.state.settings.quietMode };
   useEffect(() => {
@@ -67,9 +78,9 @@ export default function RoomCanvas({ layout, selected, reduced, dim, active = tr
         objects[`${frame.type}:${facing}`] = texture;
       }
       shell.source.scaleMode = 'nearest'; setArt({ theme: layout.theme, shell, objects });
-    })().catch(e => { if (!disposed) setError(e.message); });
+    })().catch(e => { if (!disposed) setError(e.message === 'Failed to fetch' ? '小屋素材没有加载成功。' : e.message); });
     return () => { disposed = true; textures.forEach(t => t.destroy()); owned.forEach(release); };
-  }, [layout.theme]);
+  }, [layout.theme, attempt]);
   useEffect(() => {
     let disposed=false;
     Promise.all([loadPetArt(identity.builtinId), loadPetAccessories().catch(() => null)]).then(([body,gear]) => { if (!disposed) setPetArt({ id:identity.builtinId, body, gear }); }).catch(() => {});
@@ -148,13 +159,20 @@ export default function RoomCanvas({ layout, selected, reduced, dim, active = tr
       if (now - lastOverlay > 120) { state.onPetPosition?.({ ...point, pose, walking: !!path.length }); lastOverlay = now; }
     };
     app.ticker.add(animate);
-    const visibility = () => { if (!motion.visible || reduced) { app.stop(); if (motion.visible) { animate(); app.render(); } } else app.start(); };
-    document.addEventListener('visibilitychange', visibility); visibility(); animate(); app.render();
-    return () => { document.removeEventListener('visibilitychange', visibility); if (application.current === app) { app.stop(); app.ticker.remove(animate); petTexture.destroy(true); app.stage.removeChildren().forEach(child => child.destroy({ children: true })); } };
-  }, [ready, art, layout, selected, reduced, dim, petArt, identity.pack, motion.visible, reduced && playing, reduced && concentrating, reduced && life.resting]);
-  return <div ref={host} className="home-canvas" aria-hidden="true" data-art-ready={(ready || rendererError) && art?.theme === layout.theme && !error} data-art-theme={art?.theme} data-renderer={rendererError ? 'canvas2d' : 'webgl'}>
-    {rendererError && <div ref={fallbackHost} className="home-static-scene"/>}
-    {identity.pack && <div ref={importedHost} className="home-imported-pet" style={{ left: project(petPosition.current).x - 43, top: project(petPosition.current).y - 87 }}><PixelCat petId={identity.builtinId} accessory={identity.accessory} pose={importedPose} reduceMotion={reduced}/></div>}
-    {error && <span className="home-scene-error">{error}</span>}
-  </div>;
+    const sync = () => { if (!visible.current || reduced) { app.stop(); if (visible.current) { animate(); app.render(); } } else app.start(); };
+    runner.current = sync; document.addEventListener('visibilitychange', sync); sync(); animate(); app.render();
+    return () => { document.removeEventListener('visibilitychange', sync); if (runner.current === sync) runner.current = null; if (application.current === app) { app.stop(); app.ticker.remove(animate); petTexture.destroy(true); app.stage.removeChildren().forEach(child => child.destroy({ children: true })); } };
+  }, [ready, art, layout, selected, reduced, dim, petArt, identity.pack, reduced && playing, reduced && concentrating, reduced && life.resting]);
+  // Covering the room only pauses or resumes the ticker; the stage is not rebuilt.
+  useEffect(() => { runner.current?.(); }, [motion.visible]);
+  const artReady = (ready || rendererError) && art?.theme === layout.theme && !error;
+  useEffect(() => { artReadyRef.current?.(artReady ? layout.theme : ''); }, [artReady, layout.theme]);
+  const retry = () => { setError(''); setAttempt(n => n + 1); onRetry?.(); };
+  return <>
+    <div ref={host} className="home-canvas" aria-hidden="true" data-art-ready={artReady} data-art-theme={art?.theme} data-renderer={rendererError ? 'canvas2d' : 'webgl'} data-running={motion.visible && !reduced}>
+      {rendererError && <div ref={fallbackHost} className="home-static-scene"/>}
+      {identity.pack && <div ref={importedHost} className="home-imported-pet" style={{ left: project(petPosition.current).x - 43, top: project(petPosition.current).y - 87 }}><PixelCat petId={identity.builtinId} accessory={identity.accessory} pose={importedPose} reduceMotion={reduced}/></div>}
+    </div>
+    {error && <p className="home-scene-error" role="alert"><span>{error}</span><button type="button" onClick={retry}>重试</button></p>}
+  </>;
 }
