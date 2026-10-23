@@ -5,6 +5,8 @@ import { AUDIO_EXTENSIONS, TAG_READ_BYTES, groupAlbums, readTags } from './audio
 import { generatedCover, pixelCover, hashString } from './pixel-cover.mjs';
 import { registerSessionAlbum } from './session-files.mjs';
 import './player.css';
+import { isAndroid } from '../mobile/platform.mjs';
+import MobileMusicImport from '../mobile/MusicImport';
 
 const MAX_FILES = 2000;
 // The file-import identity (externalIds.fileAlbum); not the album wall's key.
@@ -36,7 +38,7 @@ async function compactCover(src) {
 
 // Pick audio files or a folder in the page: tags are read here, files stay in
 // place and play for this session only. Nothing is uploaded or copied.
-export default function FileImport({ items = [], onAdded, desktop = false }) {
+function BrowserFileImport({ items = [], onAdded, desktop = false }) {
   const [albums, setAlbums] = useState([]), [status, setStatus] = useState(''), [busy, setBusy] = useState(''), [pixel, setPixel] = useState(true);
   const filesInput = useRef(null), folderInput = useRef(null), urls = useRef([]), generation = useRef(0);
   // A new pick (or unmount) frees the previous pick's cover URLs and stops its tag / preview loop.
@@ -101,3 +103,4 @@ export default function FileImport({ items = [], onAdded, desktop = false }) {
     })}</ul>}
   </section>;
 }
+export default function FileImport(props) { return isAndroid() ? <MobileMusicImport {...props}/> : <BrowserFileImport {...props}/>; }

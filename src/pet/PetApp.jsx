@@ -49,6 +49,7 @@ function PetApp() {
   const api = window.albumPet, [snapshot, setSnapshot] = useState(null), [inputStats, setInputStats] = useState(null), [size, setSize] = useState(192), [motion, setMotion] = useState({ mode: 'idle', facing: 1 });
   const petId = normalizePetId(snapshot?.petId || snapshot?.focus?.petId);
   const cat = useCatBehaviour({ petId, focus: snapshot?.focus || {}, playing: Boolean(snapshot?.playing), track: snapshot?.track || '', lastActivity: 0, reduceMotion: Boolean(snapshot?.reduceMotion) });
+  const packAlpha=useRef(null);
   const box = useRef(null), frame = useRef(0), hit = useRef(false), drag = useRef(null), [dragging, setDragging] = useState(false);
   // A one-shot action over the usual pose: eat (fed from the menu, a dropped 小鱼干 or the cabin) or hop.
   const [hookTypingAt, setHookTypingAt] = useState(0), [hookClickAt, setHookClickAt] = useState(0), [action, setAction] = useState(null), [note, setNote] = useState(''), lastClick = useRef(-Infinity), mounted = useRef(Date.now()), seenFeed = useRef(0);
@@ -90,7 +91,10 @@ function PetApp() {
   const acting = action ? action.pose : '', pose = acting || (travelling ? 'walk' : input.pose || cat.pose), accessory = snapshot?.focus?.accessory || '';
   const overCat = (event) => {
     const rect = box.current?.getBoundingClientRect(); if (!rect) return false;
-    return opaqueAt(pose, frame.current, accessory, (event.clientX - rect.left) / rect.width, (event.clientY - rect.top) / rect.height, petId);
+    const canvas=box.current?.querySelector('.pixel-cat'), bounds=canvas?.getBoundingClientRect() || rect;
+    const rawX=(event.clientX-bounds.left)/bounds.width,rx=(travelling || airborne) && motion.facing<0?1-rawX:rawX,ry=(event.clientY-bounds.top)/bounds.height;
+    if(packAlpha.current){if(rx<0 || ry<0 || rx>=1 || ry>=1)return false;const image=packAlpha.current;return image.data[(Math.floor(ry*image.height)*image.width+Math.floor(rx*image.width))*4+3]>0;}
+    return opaqueAt(pose, frame.current, accessory, rx, ry, petId);
   };
   useEffect(() => {
     const move = (event) => {
@@ -191,7 +195,7 @@ function PetApp() {
       </div>
     </aside>}
     <div ref={box} style={{ transform: `translateX(${dragging || travelling || airborne || panelOpen ? 0 : cat.x}px) scaleX(${travelling || airborne ? motion.facing : 1})` }} className={`pet-cat ${dragging ? 'is-dragging' : ''} ${airborne ? 'is-falling' : ''} ${motion.mode === 'land' ? 'is-landing' : ''}`} role="button" tabIndex={0} aria-expanded={panelOpen} aria-label={`摸摸${getPet(petId).species}${getPet(petId).name}，单击打开陪伴面板，双击打开小屋`} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); cat.poke(); setPanelOpen(!panelOpenRef.current); } }} onPointerDown={down} onPointerMove={moveDrag} onPointerUp={up} onPointerCancel={up} onLostPointerCapture={up} onDoubleClick={(event) => { if (overCat(event)) api?.open(); }}>
-      <PetLife pose={dragging || airborne ? 'drag' : pose} pokedAt={cat.pokedAt} reduced={cat.reduced}><PixelCat petId={petId} pose={pose} origin={acting ? action.at : 0} accessory={accessory} skin={snapshot?.focus?.catSkin} reduceMotion={cat.reduced} onFrame={(index) => { frame.current = index; }}/></PetLife>
+      <PetLife pose={dragging || airborne ? 'drag' : pose} musicBeat={Boolean(snapshot?.playing) && cat.synced} pokedAt={cat.pokedAt} reduced={cat.reduced}><PixelCat petId={petId} packOverride={snapshot?.petPack || null} onAlpha={image=>{packAlpha.current=image;}} pose={pose} origin={acting ? action.at : 0} accessory={accessory} skin={snapshot?.focus?.catSkin} reduceMotion={cat.reduced} onFrame={(index) => { frame.current = index; }}/></PetLife>
     </div>
   </div>;
 }

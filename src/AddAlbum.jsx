@@ -9,6 +9,7 @@ import { desktopCommand, useDesktopAppearance } from './desktop-client';
 import FileImport from './player/FileImport';
 import PlaylistImport from './PlaylistLibrary';
 import { generatedCover } from './player/pixel-cover.mjs';
+import { isAndroid } from './mobile/platform.mjs';
 
 // Every way onto the shelf, in one dialog: catalog search, account playlists / links /
 // files, scanned local folders and picked files, or typed by hand.
@@ -34,7 +35,7 @@ function CatalogSearch({ initialQuery, onAdded, added, browserOnly = false }) {
     const controller = new AbortController(); request.current = controller;
     setStatus('searching'); setResults([]);
     try {
-      const response = await fetch('/api/search?' + new URLSearchParams(params), { signal: controller.signal });
+      const response = globalThis.albumMobile ? { ok: true, json: () => globalThis.albumMobile.catalogRequest(String(new URLSearchParams(params))) } : await fetch('/api/search?' + new URLSearchParams(params), { signal: controller.signal });
       const data = await response.json();
       if (!response.ok || data.error) throw new Error(data.error || '搜索失败，请稍后重试。');
       if (controller.signal.aborted || request.current !== controller) return;
@@ -75,7 +76,8 @@ function CatalogSearch({ initialQuery, onAdded, added, browserOnly = false }) {
 }
 
 // Scanned local folders: catalog artwork is preferred because it also suits the album wall.
-function LocalImport({ items, onAdded }) {
+function LocalImport(props) { return isAndroid() ? <FileImport {...props}/> : <FolderImport {...props}/>; }
+function FolderImport({ items, onAdded }) {
   const desktop = useDesktopAppearance().client, folderHint = useId();
   const [state, setState] = useState(null), [busy, setBusy] = useState(''), [message, setMessage] = useState('');
   const load = async () => { try { setState(normalizeLocalLibrary(await musicRequest('/local/albums'))); } catch (error) { setState({ error: error.message, albums: [] }); } };
@@ -147,7 +149,7 @@ function ManualAdd({ onAdded }) {
 }
 
 export default function AddAlbum({ items, close, initialQuery = '', initialTab = 'catalog', onAdded }) {
-  const browserOnly = usesBrowserCollection();
+  const browserOnly = usesBrowserCollection() && !isAndroid();
   const [tab, setTab] = useState(() => browserOnly && initialTab === 'catalog' ? 'manual' : ADD_TABS.some(({ id }) => id === initialTab) ? initialTab : 'catalog'), [added, setAdded] = useState(() => new Set()), [notice, setNotice] = useState('');
   const handleAdded = (item, duplicate, candidateId) => {
     setAdded((old) => new Set([...old, candidateId || item.id]));

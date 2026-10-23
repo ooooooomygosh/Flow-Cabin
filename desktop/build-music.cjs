@@ -8,5 +8,8 @@ const BUILDS = [
   { entryPoints: [path.join(__dirname, 'music-upstream.ts')], outfile: path.join(__dirname, 'music-upstream.cjs'), bundle: true, platform: 'node', format: 'cjs', target: 'node24', packages: 'external', drop: ['console'], legalComments: 'eof', banner: banner('desktop/music-upstream.ts') },
   { entryPoints: [path.join(__dirname, 'vendor/simple-music/electron/modules/login-manager.ts')], outfile: path.join(__dirname, 'music-login.cjs'), bundle: true, platform: 'node', format: 'cjs', target: 'node24', external: ['electron'], drop: ['console'], legalComments: 'eof', banner: banner('desktop/vendor/simple-music/electron/modules/login-manager.ts') }
 ];
+// Keep generated source comments stable whether invoked from the repository
+// root, npm --prefix desktop, or the release validation runner.
+for (const options of BUILDS) options.absWorkingDir = __dirname;
 module.exports = { BUILDS };
 if (require.main === module) Promise.all(BUILDS.map((options) => esbuild.build(options))).catch((error) => { console.error(error.message); process.exitCode = 1; });

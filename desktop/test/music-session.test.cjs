@@ -60,3 +60,16 @@ test('NetEase user_account fallback uses server identity', async () => {
   const api = load('music-upstream.cjs', { NeteaseCloudMusicApi: { login_status: async () => ({ status: 200, body: { data: { profile: null } } }), user_account: async () => ({ status: 200, body: { code: 200, account: { id: 7 }, profile: { userId: 7, vipType: 1 } } }) } });
   const info = await api.getNeteaseLoginInfo('MUSIC_U=TEST_ONLY'); assert.equal(info.loggedIn, true); assert.equal(info.userId, 7); assert.equal(info.isVip, true);
 });
+
+test('NetEase offline verification is retryable and never becomes a logout', async () => {
+  const api = load('music-upstream.cjs', { NeteaseCloudMusicApi: { login_status: async () => { throw Error('offline'); }, user_account: async () => { throw Error('offline'); } } });
+  await assert.rejects(api.getNeteaseLoginInfo('MUSIC_U=TEST_ONLY'), /暂时无法验证/);
+});
+
+test('NetEase only forwards actual renewed cookies from a successful account response', async () => {
+  const api = load('music-upstream.cjs', { NeteaseCloudMusicApi: { login_status: async () => ({ status: 200, cookie: ['MUSIC_U=NEW_ONLY; Path=/; HttpOnly'], body: { data: { code: 200, profile: { userId: 42 } } } }) } });
+  const result=await api.getAccountSession('netease','MUSIC_U=OLD_ONLY');
+  assert.equal(result.status,'valid');assert.equal(result.renewalVerified,true);assert.equal(result.renewedCookie,'MUSIC_U=NEW_ONLY');
+  const invalid=load('music-upstream.cjs',{NeteaseCloudMusicApi:{login_status:async()=>({status:401,cookie:['MUSIC_U=UNTRUSTED'],body:{code:301}}),user_account:async()=>({status:401,body:{code:301}})}});
+  const rejected=await invalid.getAccountSession('netease','MUSIC_U=OLD_ONLY');assert.equal(rejected.status,'expired');assert.equal(rejected.renewedCookie,undefined);
+});

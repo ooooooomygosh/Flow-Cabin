@@ -1,0 +1,79 @@
+@layer guards, reset, features, skin, overrides;
+@layer features {
+  .room2-sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .room2-experience { position: relative; width: 100%; height: 100%; isolation: isolate; }
+  .room2-viewport { position: relative; overflow: auto; width: 100%; overscroll-behavior: contain; scrollbar-width: none; }
+  .room2-viewport::-webkit-scrollbar { display: none; }
+  .room2-world { position: relative; }
+  .room2-scaled { position: absolute; width: 1200px; height: 640px; transform-origin: top left; }
+  .room2-canvas, .room2-canvas canvas { position: absolute; width: 1200px; height: 640px; image-rendering: pixelated; }
+  .room2-canvas[data-art-ready="false"] canvas { visibility: hidden; }
+  .room2-object { position: absolute; padding: 0; border: 0; background: transparent; box-shadow: none; color: var(--px-ink); }
+  .room2-object span { opacity: 0; pointer-events: none; z-index: 2; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: var(--px-surface-hud); font-size: 12px; white-space: nowrap; padding: 6px 10px; }
+  .room2-object:hover span, .room2-object:focus-visible span { opacity: 1; }
+  .room2-object:focus-visible { outline: 2px solid var(--px-focus); outline-offset: 3px; }
+  .room2-hud { position: absolute; z-index: 4; top: 14px; color: var(--px-ink); opacity: .15; transition: opacity .25s; }
+  .chrome-awake .room2-hud, .room2-hud:hover, .room2-hud:focus-within { opacity: 1; }
+  .room2-identity { left: 20px; display: flex; align-items: center; gap: 8px; font-size: 12px; text-shadow: 0 1px 4px var(--px-bg); pointer-events: none; }
+  .room2-presence { width: 4px; height: 4px; background: var(--px-accent-hi); }
+  .room2-quick { right: 16px; display: flex; gap: 4px; }
+  .room2-quick button { width: 38px; height: 38px; display: grid; place-items: center; }
+  .room2-notice { position: absolute; z-index: 6; pointer-events: none; bottom: 60px; left: 50%; transform: translateX(-50%); max-width: min(440px, 90vw); width: max-content; padding: 12px 16px; background: var(--px-surface-hud); font-size: 12px; opacity: 0; }
+  .room2-notice.is-visible { opacity: 1; }
+  .room2-edit-hint { position: absolute; z-index: 5; top: 16px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; padding: 8px 12px; background: var(--px-surface-hud); font-size: 12px; white-space: nowrap; }
+  .room2-edit-hint button { display: flex; align-items: center; gap: 6px; }
+  .room2-zone-nav { position: absolute; z-index: 4; bottom: 14px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; background: transparent; padding: 0; }
+  .room2-zone-nav button { min-height: 40px; width: 40px; font-size: 12px; }
+  .room2-zone-nav button::after { content: ""; display: block; width: 14px; height: 3px; background: var(--px-ink-dim); }
+  .room2-zone-nav button[aria-pressed="true"]::after { background: var(--px-accent-hi); }
+  .room2-zone-nav button[aria-pressed="true"] { color: var(--px-accent-hi); }
+  .room2-field { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 16px 0; font-size: 12px; }
+  .room2-panel-intro { font-size: 12px; color: var(--px-ink-dim); margin-bottom: 20px; }
+  .room2-theme-gallery { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .room2-theme-gallery button { padding: 0 0 8px; text-align: left; font-size: 12px; }
+  .room2-theme-gallery img { display: block; width: 100%; aspect-ratio: 15/8; object-fit: cover; image-rendering: pixelated; margin-bottom: 8px; }
+  .room2-theme-gallery button[aria-pressed="true"] { color: var(--px-accent-hi); box-shadow: 0 1px var(--px-accent-hi); }
+  .room2-panel-actions { display: flex; gap: 16px; margin: 24px 0; }
+  .room2-tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding-block: 12px; font-size: 12px; }
+  .room2-tools label { display: flex; align-items: center; gap: 6px; }
+  .room2-tools input[type="number"] { width: 68px; }
+  .room2-tools input[type="file"] { width: 100%; }
+  .room2-inventory { margin-block: 20px; }
+  .room2-inventory h3 { margin: 0; font-size: 16px; }
+  .room2-inventory p { color: var(--px-ink-dim); font-size: 12px; }
+  .room2-inventory-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .room2-inventory-grid button { min-width: 0; padding: 8px 4px; display: grid; gap: 4px; justify-items: center; font-size: 12px; background: var(--px-surface-card); }
+  .room2-inventory-grid button:disabled { opacity: .45; cursor: default; }
+  .room2-inventory-grid small { font-size: 12px; color: var(--px-ink-dim); }
+  .room2-furniture-thumb { width: 64px; height: 64px; image-rendering: pixelated; }
+  .room2-imported-pet { position: absolute; width: 96px; height: 96px; pointer-events: none; }
+  .room2-imported-pet canvas { position: static; width: 96px; height: 96px; image-rendering: pixelated; }
+  .room2-list { font-size: 12px; margin-top: 24px; color: var(--px-ink-dim); }
+  .room2-list summary { min-height: 40px; cursor: pointer; }
+  .room2-fallback { position: absolute; inset: 0; z-index: 1; width: 1200px; height: 640px; background: var(--px-surface); padding: 48px; display: grid; place-items: center; text-align: center; }
+  .room2-fallback span { max-width: 280px; }
+  @media (max-width: 700px) { .room2-identity { left: 14px; top: 24px; } .room2-quick { top: 10px; right: 10px; } .room2-edit-hint { top: auto; bottom: 72px; gap: 8px; } .room2-edit-hint span { max-width: 180px; white-space: normal; } }
+  @media (prefers-reduced-motion: reduce) { .room2-hud { transition: none; } }
+}
+@layer overrides {
+  .cabin-modal.room2-dialog { position: fixed; inset: 0; margin: 0; width: 100%; max-width: 100%; height: 100%; max-height: 100%; padding: 0; overflow: hidden; background: var(--px-bg); color: var(--px-ink); border: 0; }
+  .room2-dialog .room2-object, .room2-dialog .room2-hud button, .room2-dialog .room2-zone-nav button, .room2-dialog .room2-edit-hint button { border: 0; background: transparent; box-shadow: none; color: inherit; padding: 6px; font-weight: normal; }
+  .room2-dialog .room2-object { padding: 0; }
+  .room2-dialog .room2-quick button { background: var(--px-surface-hud); }
+  .room2-dialog .room2-quick button:hover { background: var(--px-surface-3); }
+  .cabin-dialog.room2-drawer { position: fixed; margin: 0 0 0 auto; top: 0; right: 0; height: 100%; max-height: 100%; width: min(360px, 100vw); max-width: 100vw; background: var(--px-surface-inset); border: 0; border-left: 1px solid var(--px-accent-lo); box-shadow: -16px 0 48px #0005; }
+  .room2-drawer .cabin-dialog-title { font-size: 18px; }
+  .room2-drawer .room2-theme-gallery button, .room2-drawer .room2-panel-actions button, .room2-drawer .room2-tools button { background: transparent; border: 0; color: var(--px-ink); font-weight: normal; }
+  .room2-drawer .room2-panel-actions button, .room2-drawer .room2-tools button { padding: 8px 0; border-bottom: 1px solid var(--px-accent-lo); }
+}
+
+@layer overrides {
+  html[data-platform=android] .room2-quick { top: calc(var(--safe-area-inset-top, 0px) + 10px); right: calc(var(--mobile-right, 0px) + 10px); }
+  html[data-platform=android] .room2-quick button { width: 44px; height: 44px; }
+  html[data-platform=android] .room2-identity { top: calc(var(--safe-area-inset-top, 0px) + 24px); left: calc(var(--mobile-left, 0px) + 14px); }
+  html[data-platform=android] .room2-zone-nav { bottom: calc(var(--mobile-bottom, 0px) + 14px); }
+  html[data-platform=android] .cabin-dialog.room2-drawer { top: var(--safe-area-inset-top, 0px); bottom: var(--mobile-bottom, 0px); height: auto; max-height: calc(100% - var(--safe-area-inset-top, 0px) - var(--mobile-bottom, 0px)); }
+  .room2-drawer .room2-inventory-grid button { border: 0; box-shadow: none; background: transparent; padding: 12px 4px; }
+  .room2-drawer .room2-inventory-grid button:not(:disabled):hover { background: var(--px-surface-2); }
+  .room2-drawer .room2-inventory-grid button:focus-visible { outline: 2px solid var(--px-focus); outline-offset: -2px; }
+}

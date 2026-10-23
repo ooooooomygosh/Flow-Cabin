@@ -154,7 +154,9 @@ test('the source never logs or forwards key or mouse details', () => {
   assert.ok(pkg.build.files.includes('native/*.node'), 'each platform packages only the native modules it ships');
 });
 
-test('CompanionBridge fallback keeps keyboard and click separate, ignores Proxy content and cleans up', () => {
+test('CompanionBridge fallback keeps keyboard and click separate, ignores Proxy content and cleans up', async () => {
+  const {selectedPack}=await import('../../src/pet/imported-pack.mjs');
+  const packStorage={getItem:()=>JSON.stringify({id:'qa-pack',media:{type:'spritesheet',width:32,height:32,frameWidth:32,frameHeight:32},animations:{idle:{frames:[0],fps:2}},url:'https://untrusted.invalid',data:'DO_NOT_RELAY'})};
   const source = fs.readFileSync(path.join(__dirname, '../../src/CompanionBridge.jsx'), 'utf8')
     .replace(/^import [^\n]*\n/gm, '').replace('export default function', 'function');
   const listeners = new Map(), effects = []; let clock = 1000;
@@ -165,12 +167,13 @@ test('CompanionBridge fallback keeps keyboard and click separate, ignores Proxy 
   vm.runInNewContext(`${source}\nCompanionBridge();`, {
     window, Date: { now: () => clock }, useRef: current => ({ current }), useEffect: fn => effects.push(fn),
     useFocus: () => null, useSoundscape: () => null, PLAYBACK_EVENT: 'playback',
-    currentFocusDisplay: () => 'scene', careForCompanion: () => null
+    currentFocusDisplay: () => 'scene', careForCompanion: () => null, selectedPack:()=>selectedPack(packStorage)
   });
   const cleanup = effects.map(fn => fn());
   const fire = name => listeners.get(name).forEach(({ fn }) => fn(sealedEvent()));
   const snapshot = () => window.albumCompanionSnapshot();
   assert.equal(snapshot().typingAt, 0); assert.equal(snapshot().clickAt, 0);
+  assert.equal(snapshot().petPack.id,'qa-pack');assert.doesNotMatch(JSON.stringify(snapshot().petPack),/untrusted|DO_NOT_RELAY/);
   for (const name of ['keydown', 'pointerdown']) {
     assert.equal(listeners.get(name).length, 1); assert.equal(listeners.get(name)[0].capture, true);
   }

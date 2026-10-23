@@ -1,11 +1,10 @@
+import { PET_ACTIONS, ACTION_FRAMES } from './pet-actions.mjs';
 // Original hand-built pixel silhouettes. No image assets or remote requests.
 // Shared palette semantics let every accessory work on every species.
 import { catFrame, SIZE, PALETTE, CAT_PALETTES, POSES, ACCESSORIES, LISTEN_POSE, LISTEN_FRAMES, TYPING_POSE, TYPING_FRAMES, CLICK_POSE, CLICK_FRAMES, EAT_POSE, EAT_FRAMES, HOP_POSE, HOP_FRAMES, DELIVER_POSE, DELIVER_FRAMES } from './cat-sprites.mjs';
 const CAT_ACTIONS = { [TYPING_POSE]: TYPING_FRAMES, [CLICK_POSE]: CLICK_FRAMES, [EAT_POSE]: EAT_FRAMES, [HOP_POSE]: HOP_FRAMES, [DELIVER_POSE]: DELIVER_FRAMES };
 // beauty's cat-only poses (not in POSES): drawn with catFrame(pose, i, acc), never through normalizeFrame.
 export const CAT_ONLY_FRAMES = Object.freeze({ [LISTEN_POSE]: LISTEN_FRAMES, ...CAT_ACTIONS });
-// What other pets draw for the cat-only actions.
-const ACTION_FALLBACK = { [TYPING_POSE]: 'idle', [CLICK_POSE]: 'idle', [EAT_POSE]: 'celebrate', [HOP_POSE]: 'celebrate', [DELIVER_POSE]: 'walk' };
 import { normalizePetId } from './pet-catalog.mjs';
 export { SIZE, POSES, ACCESSORIES };
 const palette = (fur, light, shade, blush = '#ed9c9c') => Object.freeze(PALETTE.map((c, i) => ({ 2: fur, 3: light, 4: shade, 5: blush }[i] || c)));
@@ -87,29 +86,61 @@ function effects(g, pose, i) {
     for (const y of [27, 29]) { rect(g, 15, y, 4, 1, 4); rect(g, 23, y, 4 - i, 1, 4); }
   }
 }
+function actionDetails(g, pose, i, pet) {
+  const phase = i % 4, paw = pet === 'chick' ? 4 : 2;
+  const line = (x, y, w, c = 6) => rect(g, x, y, w, 1, c);
+  if (['typing', 'click'].includes(pose)) {
+    rect(g, pose === 'typing' ? 5 : 23, 27, pose === 'typing' ? 22 : 6, 4, 9);
+    if (pose === 'typing') for (let x = 7; x < 25; x += 3) put(g, x, 29, 7);
+    oval(g, phase % 2 ? 20 : 10, 26 - phase % 2, 2, 2, paw);
+  }
+  if (pose === 'eat' || pose === 'drink') {
+    rect(g, 10, 27, 12, 4, pose === 'eat' ? 8 : 9); line(11, 27, 10, 7);
+    if (pose === 'eat') { oval(g, 16, 26 - phase % 2, 3, 1, 4); put(g, 21, 23 + phase, 4); }
+    else { rect(g, 20, 25, 3, 3, 9); line(14, 25 - phase % 2, 3, 7); }
+  }
+  if (pose === 'deliver' || pose === 'return') { rect(g, 8 + phase, 22, 12, 8, 12); line(8 + phase, 22, 12, 8); rect(g, 13 + phase, 22, 2, 8, 8); }
+  if (pose === 'listen') { rect(g, 3, 12 + phase % 2, 2, 2, 13); rect(g, 5, 8 + phase % 2, 1, 5, 13); }
+  if (pose === 'return') { line(2, 29, 4, 4); line(4, 26, 3, 4); }
+  if (pose === 'hop') { line(4, 30, 3, 4); line(25, 30, 3, 4); const dy = [0, -3, -2, 0][phase]; if (dy) { const copy = g.map(row => [...row]); for (let y = 0; y < SIZE; y++) for (let x = 0; x < SIZE; x++) g[y][x] = copy[y - dy]?.[x] || 0; } }
+  if (pose === 'stretch') { rect(g, 3, 20 - phase, 8, 3, paw); rect(g, 21, 20 - phase, 8, 3, paw); }
+  if (pose === 'yawn') oval(g, 16, 19, 1 + phase % 2, 2, 6);
+  if (pose === 'groom') { oval(g, 9 + phase % 2, 18, 3, 2, paw); put(g, 10, 15 - phase % 2, 7); }
+  if (pose === 'wave') { rect(g, 24, 12 + phase % 2 * 2, 3, 9, paw); line(27, 10 + phase, 3, 13); }
+  if (pose === 'nod') { line(12, 18 + phase % 2, 8, 3); line(14, 20 + phase % 2, 4, 6); }
+  if (pose === 'curious') { line(25, 5 + phase % 2, 3, 13); put(g, 28, 6 + phase % 2, 13); put(g, 27, 8 + phase % 2, 13); put(g, 27, 10 + phase % 2, 13); }
+  if (pose === 'shy') { oval(g, 12, 19 + phase % 2, 3, 2, paw); oval(g, 20, 19 + phase % 2, 3, 2, paw); }
+  if (pose === 'happy') { rect(g, 25, 8 + phase, 3, 2, 5); rect(g, 26, 10 + phase, 1, 2, 5); }
+  if (pose === 'sad') { rect(g, 22, 18 + phase, 1, 3, 9); put(g, 21, 21 + phase, 9); }
+  if (pose === 'blink') { line(10, 16, 3, 3); line(18, 16, 3, 3); line(10, 17, 3, 6); line(18, 17, 3, 6); }
+  return g;
+}
 export function normalizeFrame(pose = 'idle', index = 0) {
-  const safePose = Object.hasOwn(POSES, pose) ? pose : 'idle';
+  const safePose = PET_ACTIONS.includes(pose) ? pose : 'idle';
   const integer = Number.isFinite(index) ? Math.floor(index) : 0;
-  return { pose: safePose, index: ((integer % POSES[safePose]) + POSES[safePose]) % POSES[safePose] };
+  return { pose: safePose, index: ((integer % (POSES[safePose] || ACTION_FRAMES[safePose])) + (POSES[safePose] || ACTION_FRAMES[safePose])) % (POSES[safePose] || ACTION_FRAMES[safePose]) };
 }
 export function petFrame(petId = 'cat', pose = 'idle', index = 0, acc = '') {
   const pet = normalizePetId(petId);
-  // The cat's 听歌 pose lives outside POSES (cat-sprites.mjs); other pets idle instead.
+  // Preserve the original cat art; other species use their own anatomy below.
   if (pet === 'cat' && pose === LISTEN_POSE) { const i = Number.isFinite(index) ? Math.floor(index) : 0; return catFrame(LISTEN_POSE, ((i % LISTEN_FRAMES) + LISTEN_FRAMES) % LISTEN_FRAMES, ACCESSORIES.includes(acc) ? acc : ''); }
   if (Object.hasOwn(CAT_ACTIONS, pose)) {
     if (pet === 'cat') { const n = CAT_ACTIONS[pose], i = Number.isFinite(index) ? Math.floor(index) : 0; return catFrame(pose, ((i % n) + n) % n, ACCESSORIES.includes(acc) ? acc : ''); }
-    pose = ACTION_FALLBACK[pose];
+    // Every species keeps the action; its own anatomy is rendered below.
   }
   const normalized = normalizeFrame(pose, index);
   pose = normalized.pose; index = normalized.index;
   acc = ACCESSORIES.includes(acc) ? acc : '';
-  if (pet === 'cat') return catFrame(pose, index, acc);
+  if (pet === 'cat') {
+    if (Object.hasOwn(POSES, pose)) return catFrame(pose, index, acc);
+    return actionDetails(catFrame('idle', index % POSES.idle, acc).map(row => [...row]), pose, index, pet);
+  }
   let g = grid();
   const resting = pose === 'sleep', focus = pose === 'focus';
   const dx = pose === 'walk' ? (index ? 1 : -1) : pose === 'groove' ? [-1, 0, 1, 0][index] : 0;
   const dy = pose === 'celebrate' ? [0, -2, -1][index] : pose === 'groove' ? index % 2 : 0;
   const x = 15 + dx, y = (resting ? 23 : pet === 'bunny' ? 17 : 14) + dy + (pose === 'idle' && index === 1 ? 1 : 0);
-  const mood = resting || (pose === 'idle' && index === 3) ? 'closed' : ['groove', 'celebrate'].includes(pose) ? 'happy' : 'open';
+  const mood = resting || (['idle', 'blink', 'listen', 'yawn'].includes(pose) && index === 3) ? 'closed' : ['groove', 'celebrate'].includes(pose) ? 'happy' : 'open';
   // Tail silhouettes: cotton puff, bear nub, and the fox's broad white-tipped brush.
   if (pet === 'fox') { oval(g, 25, resting ? 27 : 24 + dy, 4, resting ? 3 : 6, 2); oval(g, 27, resting ? 26 : 19 + dy - index % 2, 2, 3, 3); }
   if (pet === 'bunny') oval(g, x + 8, 27 + dy, 3, 3, 3);
@@ -125,7 +156,7 @@ export function petFrame(petId = 'cat', pose = 'idle', index = 0, acc = '') {
   accessory(g, acc, resting ? x - 3 : x, y, pet);
   // Focus reads as attentive sitting, with a book at the front; sleeping lowers the entire silhouette.
   if (focus) oval(g, x - 6, 26, 2, 1, 3);
-  g = outline(g); effects(g, pose, index);
+  g = outline(g); effects(g, pose, index); actionDetails(g, pose, index, pet);
   return g;
 }
 const cache = new Map();
@@ -138,7 +169,7 @@ export function cachedPetFrame(petId, pose, index, acc) {
     if (!cache.has(key)) cache.set(key, catFrame(pose, frame, accessory));
     return cache.get(key);
   }
-  const safe = normalizeFrame(Object.hasOwn(CAT_ACTIONS, pose) ? ACTION_FALLBACK[pose] : pose, index); // other pets: same fallback as petFrame
+  const safe = normalizeFrame(pose, index);
   const key = `${pet}:${safe.pose}:${safe.index}:${accessory}`;
   if (!cache.has(key)) cache.set(key, petFrame(pet, safe.pose, safe.index, accessory));
   return cache.get(key);

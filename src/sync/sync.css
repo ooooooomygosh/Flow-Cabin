@@ -1,0 +1,15 @@
+@layer guards, reset, features, skin, overrides;
+@layer features {
+.lan-settings { display: grid; gap: 14px; max-width: 680px; }
+.lan-settings h3,.lan-settings p { margin: 0; }
+.lan-settings p,.lan-settings small { font-size: 12px; line-height: 1.8; color: var(--px-ink-dim); }
+.lan-settings label { display: grid; gap: 6px; font-size: 13px; }
+.lan-settings textarea,.lan-settings input { width: 100%; min-width: 0; box-sizing: border-box; padding: 10px 12px; background: var(--px-surface-2); border: 1px solid var(--px-border); color: var(--px-ink); font: inherit; }
+.lan-settings code { display: block; overflow-wrap: anywhere; font-size: 12px; line-height: 1.8; color: var(--px-ink-faint); }
+.lan-settings button { min-height: 38px; padding: 8px 12px; cursor: pointer; }
+.lan-settings button:disabled { opacity: .4; cursor: default; }
+.lan-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.lan-peer { display: flex; align-items: center; gap: 10px; border-top: 1px solid var(--px-border); padding-top: 12px; }
+.lan-peer span { min-width: 0; flex: 1; }.lan-peer small { display: block; }
+@media (max-width: 480px) { .lan-peer { flex-wrap: wrap; }.lan-peer span { flex-basis: 100%; } }
+}

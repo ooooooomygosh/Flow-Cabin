@@ -1,23 +1,44 @@
 export { handleQQSearch, handleQQSongUrl, getQQLoginInfo, parseCookieString, qqCookieUin, qqCookieMusicKey } from './vendor/simple-music/server/lib/qq-client';
-import { qqMusicRequest } from './vendor/simple-music/server/lib/qq-client';
+import { getQQLoginInfo as qqAccountInfo, qqMusicRequest } from './vendor/simple-music/server/lib/qq-client';
 export { handleSearch, handleSongUrl, normalizeLoginInfo, call, audioProxyHeadersFor } from './vendor/simple-music/server/lib/netease-client';
 
 // Flow Cabin adapter: stored cookies are not proof of an authenticated account.
-import { call as ncmCall, normalizeLoginInfo as normalizeNcmLogin, asObj } from './vendor/simple-music/server/lib/netease-client';
+import { call as ncmCall, normalizeLoginInfo as normalizeNcmLogin, readCookieFromResponse, asObj } from './vendor/simple-music/server/lib/netease-client';
 export async function getNeteaseLoginInfo(cookie: string) {
   if (!cookie) return { loggedIn: false };
+  let confirmedExpired = false;
   for (const endpoint of ['login_status', 'user_account']) {
     try {
       const response = await ncmCall(endpoint, { cookie, timestamp: Date.now() });
       const body = asObj(response.body), data = asObj(body.data || body);
+      if (response.status === 401 || Number(data.code) === 301 || Number(body.code) === 301) confirmedExpired = true;
       if (response.status >= 400 || (data.code != null && Number(data.code) !== 200) || (body.code != null && Number(body.code) !== 200)) continue;
       const info = normalizeNcmLogin(data.profile || body.profile, data.account || body.account, data);
-      if (info.loggedIn) return info;
+      if (info.loggedIn) { const renewedCookie=readCookieFromResponse(response); return { ...info, sessionStatus: 'valid', ...(renewedCookie ? { renewedCookie, renewalVerified: true } : {}) }; }
+      if (data.profile === null || data.account === null) confirmedExpired = true;
     } catch { /* No entitlement is inferred from an unavailable status endpoint. */ }
   }
-  return { loggedIn: false };
+  if (confirmedExpired) return { loggedIn: false, sessionStatus: 'expired' };
+  throw new Error('暂时无法验证网易云账号，已保存的登录仍保留，请稍后重试。');
 }
 
+
+// Session evidence is separate from song entitlement. No synthetic refresh calls:
+// preserve cookies only when a successful account response actually provides them.
+export async function getAccountSession(provider: string, cookie: string) {
+  if (!cookie) return { status: 'empty' };
+  if (provider === 'netease') {
+    const info = await getNeteaseLoginInfo(cookie);
+    return { status: info.loggedIn ? 'valid' : info.sessionStatus === 'expired' ? 'expired' : 'saved', ...(info.loggedIn && info.renewalVerified === true ? { renewedCookie: info.renewedCookie, renewalVerified: true } : {}) };
+  }
+  if (provider === 'qq') {
+    const info = await qqAccountInfo(cookie);
+    if (info.profileUnavailable) return { status: info.loggedIn ? 'offline' : 'expired' };
+    // Cookie-derived identity does not prove server acceptance.
+    return { status: info.loggedIn && info.profileSource === 'qq-profile' ? 'valid' : 'saved' };
+  }
+  return { status: 'empty' };
+}
 // ---------- Flow Cabin: "my playlists" for the playlist library ----------
 // QQ already has user / playlist handlers in Simple Music; NetEase needs a thin
 // adapter over NeteaseCloudMusicApi's user_playlist / playlist_detail /
@@ -221,4 +242,16 @@ export async function trackCover(provider: string, id: string, cookie = '') {
     return asStr(song.id) === id ? httpsCover(asObj(song.al).picUrl) : '';
   }
   return '';
+}
+
+import { handleQQLyric } from './vendor/simple-music/server/lib/qq-client';
+export async function lyrics(provider: string, id: string, cookie: string) {
+  if (provider === 'qq') {
+    const result = await handleQQLyric(cookie, id, '');
+    return { text: String(result.lyric || ''), format: 'lrc', translation: String(result.tlyric || '') };
+  }
+  const result = await ncmCall('lyric', { id, cookie });
+  if (result.status >= 400) throw new Error('平台歌词暂时不可用。');
+  const body = asObj(result.body), yrc = asObj(body.yrc), lrc = asObj(body.lrc);
+  return { text: String(yrc.lyric || lrc.lyric || ''), format: yrc.lyric ? 'yrc' : 'lrc', translation: String(asObj(body.tlyric).lyric || '') };
 }

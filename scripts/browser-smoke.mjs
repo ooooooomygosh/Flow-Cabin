@@ -11,6 +11,7 @@ import { openRoomSettings, openMusicSettings, chooseSource, openSettingsSection,
  * Fixtures never call external services or read a user's profile/collection.
  */
 import assert from 'node:assert/strict';
+import { companionCsp } from '../desktop/policy.cjs';
 import { verifyQQRegression } from './qq-regression-checks.mjs';
 import { verifyOnboarding } from './onboarding-checks.mjs';
 import { verifyCabinLayout, verifyCabinToolActions, verifyFocusLayout } from './cabin-layout-checks.mjs';
@@ -98,7 +99,7 @@ try {
   catch (error) { report.benchmarkCabin = error.report; throw error; }
   await verifyFullscreenStudy({ browser, origin, output, check });
   await verifyPlaylistPagination({ browser, origin, check });
-  context.on('page', watched => { watched.on('pageerror', error => report.pageErrors.push(error.message)); watched.on('console', message => { if (message.type() === 'error') report.consoleErrors.push(message.text()); }); watched.on('requestfailed', request => { if (request.failure()?.errorText !== 'net::ERR_ABORTED') report.failedRequests.push({ url: request.url(), error: request.failure()?.errorText }); }); });
+  context.on('page', watched => { watched.on('pageerror', error => report.pageErrors.push(error.stack || error.message)); watched.on('console', message => { if (message.type() === 'error') report.consoleErrors.push(message.text()); }); watched.on('requestfailed', request => { if (request.failure()?.errorText !== 'net::ERR_ABORTED') report.failedRequests.push({ url: request.url(), error: request.failure()?.errorText }); }); });
   page = await context.newPage(); page.setDefaultTimeout(12000); await page.clock.install({ time: new Date('2026-10-08T10:00:00Z') });
   /* context captures errors across the main, wallpaper and pet renderers. */
   await page.goto(origin); await page.locator('.room-record').first().waitFor(); check('renderer-mounts-with-offline-collection');
@@ -367,6 +368,17 @@ try {
   }, { companion });
   const mainPage = page;
   page = await context.newPage(); await page.goto(origin + '/wallpaper.html'); await page.locator('.wallpaper-room').waitFor();
+  // Wallpaper mounts RoomScene without the main .cabin-room wrapper. Dynamic
+  // viewport children must still schedule geometry without querying a null room.
+  const wallpaperErrors = []; const wallpaperError = error => wallpaperErrors.push(error.stack || error.message);
+  page.on('pageerror', wallpaperError);
+  await page.evaluate(() => {
+    const scene = document.querySelector('.wallpaper-room .cabin-scene'), probe = document.createElement('span');
+    scene.appendChild(probe); queueMicrotask(() => probe.remove());
+    return new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  });
+  assert.deepEqual(wallpaperErrors, [], 'wallpaper viewport child mutations must not query a missing main room');
+  page.off('pageerror', wallpaperError); check('wallpaper-viewport-mutations-without-main-room-wrapper');
   for (const scene of ROOM_SCENES) {
     await page.evaluate(({ room, look }) => window.__pushWallpaper({ ...room, look }), { room: companion.room, look: scene.id });
     await page.locator(`.cabin-scene[data-room-look="${scene.id}"]`).waitFor(); assert.equal(await page.locator('.room-record').count(), Math.min(companion.room.items.length, scene.geometry.columns.length * scene.geometry.rows.length)); await screenshot(`wallpaper-${scene.id}`);
@@ -420,7 +432,7 @@ try {
   // pet-life hearts (data: SVG) render with no CSP violation. Only the shell's img-src is applied here:
   // vite dev needs inline scripts that the full shell CSP (built pages only) would block.
   {
-    const shellCsp = (await fs.readFile(new URL('../desktop/shell-protocol.cjs', import.meta.url), 'utf8')).match(/'pet'[\s\S]*?'Content-Security-Policy': "([^"]+)"/)[1];
+    const shellCsp = companionCsp('pet');
     const fresh = await context.newPage(); await fresh.emulateMedia({ reducedMotion: 'no-preference' }); await fresh.setViewportSize({ width: 420, height: 420 });
     // A <meta> CSP added before the stylesheets load (a routed response would trip Chromium's local-network check on vite's socket).
     const imgSrc = shellCsp.split(';').map((d) => d.trim()).find((d) => d.startsWith('img-src'));
@@ -482,11 +494,18 @@ try {
   await page.locator('.focus-badge').click(); await page.getByRole('tab', { name: '番茄钟' }).click();
   const startFocus = page.getByRole('button', { name: '开始专注', exact: true }); if (await startFocus.count()) { await startFocus.click(); await page.locator('.focus-display').waitFor(); await page.keyboard.press('Escape'); }
   await page.getByRole('button', { name: '收起专注工具', exact: true }).click(); await page.locator('.room-cat-bubble').waitFor();
+  await page.evaluate(() => {
+    window.__layoutTrace = [];
+    const record = (kind, detail) => { window.__layoutTrace.push({ kind, detail, at: performance.now() }); if (window.__layoutTrace.length > 50) window.__layoutTrace.shift(); };
+    document.addEventListener('click', e => record('click', e.target.closest('button')?.getAttribute('aria-label') || e.target.closest('button')?.textContent || e.target.tagName), true);
+    new MutationObserver(() => record('dialogs', [...document.querySelectorAll('dialog[open]')].map(d => d.getAttribute('aria-label') || d.textContent.slice(0, 60)))).observe(document.body, { childList: true });
+  });
   for (const scene of ROOM_SCENES) {
     await page.setViewportSize({ width: 1440, height: 900 }); await openRoomSettings(page); await page.getByRole('button', { name: `选择场景 ${scene.label}`, exact: true }).click(); await closeSettings(page);
     for (const [width, height] of [[1280, 720], [1280, 800], [1366, 768], [1440, 900], [1920, 1080]]) {
       await page.setViewportSize({ width, height }); await page.waitForTimeout(700);
       const issues = await layoutIssues('bubble');
+      assert.equal(await page.locator('dialog[open]').count(), 0, `${scene.id} ${width}x${height}: settings must stay closed before opening focus; actions: ${JSON.stringify(await page.evaluate(() => window.__layoutTrace))}`);
       await page.locator('.focus-badge').click(); await page.locator('.focus-dock').waitFor(); await page.waitForTimeout(700); issues.push(...await layoutIssues('focus panel'));
       await verifyCabinLayout({ page }); await verifyFocusLayout({ page });
       await page.getByRole('button', { name: '收起专注工具', exact: true }).click(); await page.waitForTimeout(150);

@@ -139,3 +139,13 @@ test('beat clock: one stable anchor — jittery estimates never flip beat parity
   clock.setBeat({ bpm: 0 }); assert.equal(clock.currentBeat().known, false, 'bpm 0 (seek / skip / estimated) → listen');
   clock.resetBeat();
 });
+
+test('unmeasured music never holds the closed-eye listening pose for two seconds', async () => {
+  const { petPose } = await import('../pet/pet-model.mjs');
+  let closed = 0;
+  for (let now = 0; now < 180000; now += 100) {
+    closed = petPose({ playing: true, now }) === 'listen' ? closed + 100 : 0;
+    assert.ok(closed <= 1500);
+    assert.equal(petPose({ playing: true, phase: 'focus', now }), 'focus');
+  }
+});

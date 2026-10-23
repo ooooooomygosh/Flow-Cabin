@@ -70,7 +70,8 @@ function Welcome({ heading, env }) {
     <ul className="onboarding-list">
       <li><b>1</b>选一个音乐来源并连接</li><li><b>2</b>打开需要的权限（通知{env.desktop ? '、键鼠陪伴、开机启动' : ''}）</li><li><b>3</b>挑房间和陪你的小伙伴</li><li><b>4</b>放一段声音，确认能听到</li>
     </ul>
-    {!env.desktop && <p className="onboarding-hint">你在用网页版：QQ 音乐 / 网易云登录、系统播放器和开机启动需要桌面版。</p>}
+    {env.mobile && <p className="onboarding-hint">手机版支持 QQ 音乐 / 网易云登录、本地音乐和后台播放。跨应用桌宠与开机启动可在电脑桌面版使用。</p>}
+    {!env.desktop && !env.mobile && <p className="onboarding-hint">你在用网页版：QQ 音乐 / 网易云登录、系统播放器和开机启动需要桌面版。</p>}
   </>;
 }
 

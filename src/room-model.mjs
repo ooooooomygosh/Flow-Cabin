@@ -52,6 +52,50 @@ export function roomGeometryAroundPanel(width, height, safeArea, geometry, panel
   candidates.sort((a, b) => b.width - a.width || (Math.abs(a.left - base.left) + Math.abs(a.top - base.top)) - (Math.abs(b.left - base.left) + Math.abs(b.top - base.top)));
   return candidates[0] || base;
 }
+// The Android camera fills the screen with ONE illustration. The slots still
+// use the illustration's coordinates; a narrow screen pages through the slots
+// which fit between the actual controls, instead of shrinking the whole room.
+export function mobileRoomGeometry(width, height, safeArea, geometry, fallbackArea = safeArea) {
+  const scale = Math.max(width / ROOM_SIZE.width, height / ROOM_SIZE.height);
+  const artWidth = ROOM_SIZE.width * scale, artHeight = ROOM_SIZE.height * scale;
+  const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+  const anchor = {
+    left: clamp(width / 2 - CAMERA_ANCHOR.x * scale, width - artWidth, 0),
+    top: clamp(height / 2 - CAMERA_ANCHOR.y * scale, height - artHeight, 0)
+  };
+  const cells = geometry.rows.flatMap(([y, h], row) => geometry.columns.map(([x, w], column) => ({ index: row * geometry.columns.length + column, x: x * scale, y: y * scale, width: w * scale, height: h * scale })));
+  const solve = (insets) => {
+    const safe = { left: Math.max(0, insets?.left || 0), top: Math.max(0, insets?.top || 0), right: width - Math.max(0, insets?.right || 0), bottom: height - Math.max(0, insets?.bottom || 0) };
+    const xs = new Set([anchor.left]), ys = new Set([anchor.top]);
+    for (const cell of cells) {
+      for (const value of [safe.left - cell.x, safe.right - cell.x - cell.width, (safe.left + safe.right - cell.width) / 2 - cell.x]) xs.add(clamp(value, width - artWidth, 0));
+      for (const value of [safe.top - cell.y, safe.bottom - cell.y - cell.height, (safe.top + safe.bottom - cell.height) / 2 - cell.y]) ys.add(clamp(value, height - artHeight, 0));
+    }
+    let best = { geometry: { width: artWidth, height: artHeight, ...anchor }, slots: [], distance: Infinity };
+    for (const left of xs) for (const top of ys) {
+      const slots = cells.filter(cell => left + cell.x >= safe.left - .5 && left + cell.x + cell.width <= safe.right + .5 && top + cell.y >= safe.top - .5 && top + cell.y + cell.height <= safe.bottom + .5).map(cell => cell.index);
+      const distance = Math.abs(left - anchor.left) + Math.abs(top - anchor.top);
+      if (slots.length > best.slots.length || (slots.length === best.slots.length && distance < best.distance)) best = { geometry: { width: artWidth, height: artHeight, left, top }, slots, distance };
+    }
+    return best;
+  };
+  let result = solve(safeArea), compact = false;
+  // Very short windows temporarily fold the bottom console, keeping at least
+  // one shelf cell available. The caller uses this flag to fold that chrome.
+  if (!result.slots.length) { result = solve(fallbackArea); compact = true; }
+  if (!result.slots.length) {
+    // Even an unusually tiny window keeps a route to the collection. This
+    // final camera centres one original cell without changing its geometry.
+    const cell = cells[0];
+    if (cell) result = { geometry: { width: artWidth, height: artHeight, left: clamp(width / 2 - cell.x - cell.width / 2, width - artWidth, 0), top: clamp(height / 2 - cell.y - cell.height / 2, height - artHeight, 0) }, slots: [cell.index] };
+  }
+  return { geometry: result.geometry, slots: result.slots, compact };
+}
+export function shelfPage(items, page, capacity) {
+  const list = Array.isArray(items) ? items : [], size = Math.max(1, Math.floor(capacity) || 1);
+  const pages = Math.max(1, Math.ceil(list.length / size)), startRow = Math.max(0, Math.min(pages - 1, Math.round(page) || 0));
+  return { mode: 'page', startRow, maxRow: pages - 1, rows: pages, capacity: size, items: list.slice(startRow * size, (startRow + 1) * size) };
+}
 export function shelfWindow(items, row, columns = 4, visibleRows = 3) {
   const list = Array.isArray(items) ? items : [];
   const cols = Number.isFinite(columns) && columns > 0 ? Math.floor(columns) : 4;

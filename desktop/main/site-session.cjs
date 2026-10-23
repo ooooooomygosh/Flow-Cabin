@@ -9,14 +9,14 @@ const { createSiteRouter } = require('../site-router.cjs');
 const PERMISSIONS = ['clipboard-sanitized-write', 'notifications']; // notifications announce the end of a focus round
 const CSP = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data: blob:; font-src 'self' https: data:; connect-src 'self' https:; media-src 'self' https: blob:; worker-src 'self' blob:; frame-src 'none'; object-src 'none'; base-uri 'self'";
 
-async function wireSiteSession({ contents, net, webRoot, collection, catalog, music, getAppearance, downloads, writeLog, onDocumentFailed }) {
+async function wireSiteSession({ contents, net, webRoot, collection, catalog, music, lan, pets, weatherApi, getAppearance, downloads, writeLog, onDocumentFailed }) {
   const session = contents.session;
   const qq = createQQMusic((url, options) => net.fetch(url, { ...options, bypassCustomProtocolHandlers: true }));
   if (await session.protocol.isProtocolHandled('https')) session.protocol.unhandle('https');
   const route = createSiteRouter({
     webRoot,
     forward: (request) => session.fetch(request, { bypassCustomProtocolHandlers: true }),
-    qq, collection, catalog, getAppearance,
+    qq, collection, catalog, lan, pets, weatherApi, getAppearance,
     music: (request, pathname) => music().proxy(request, pathname, (url, options) => net.fetch(url, options))
   });
   session.protocol.handle('https', async (request) => {

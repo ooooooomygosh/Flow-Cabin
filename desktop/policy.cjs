@@ -6,6 +6,7 @@
 const SITE_ORIGIN = 'https://album-circle.vercel.app';
 const SHELL_ORIGIN = 'album-desktop://shell';
 const SHELL_URL = `${SHELL_ORIGIN}/index.html`;
+const companionCsp = hostname => `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' ${hostname === 'pet' ? SITE_ORIGIN : 'https:'} data:; font-src 'self'; connect-src 'none'; media-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'none'`;
 
 function parseUrl(value) {
   try { return new URL(value); } catch { return null; }
@@ -55,4 +56,4 @@ function safeSavedWindow(value, workArea) {
   return { width, height, ...(visible ? { x: Math.max(workArea.x, Math.min(x, workArea.x + workArea.width - width)), y: Math.max(workArea.y, Math.min(y, workArea.y + workArea.height - height)) } : {}) };
 }
 
-module.exports = { SITE_ORIGIN, SHELL_ORIGIN, SHELL_URL, isSiteUrl, isShellUrl, isExternalUrl, safeSavedWindow, localDownloadType, saveDialog };
+module.exports = { SITE_ORIGIN, SHELL_ORIGIN, SHELL_URL, companionCsp, isSiteUrl, isShellUrl, isExternalUrl, safeSavedWindow, localDownloadType, saveDialog };

@@ -14,12 +14,12 @@ test('the latest input wins, then a still-fresh typing hold resumes after a clic
   assert.deepEqual(activeInputPose({ typingAt: now - 100, clickAt: now - 50, now: typing }), { pose: '', until: 0 });
 });
 
-test('care actions take priority; cat-only actions never replace another species', () => {
+test('care actions take priority and all species respond to input', () => {
   assert.equal(roomPetPose({ eating: true, input: true }), 'eat');
-  assert.equal(roomPetPose({ eating: true, petId: 'chick' }), 'celebrate');
+  assert.equal(roomPetPose({ eating: true, petId: 'chick' }), 'eat');
   assert.equal(roomPetPose({ base: 'listen', input: true }), 'typing');
   assert.equal(roomPetPose({ base: 'listen', input: true, inputType: 'click' }), 'click');
-  assert.equal(roomPetPose({ base: 'sleep', input: true, petId: 'chick' }), 'sleep');
+  assert.equal(roomPetPose({ base: 'sleep', input: true, petId: 'chick' }), 'typing');
   assert.equal(roomPetPose({ full: true, input: true }), 'celebrate');
 });
 

@@ -1,0 +1,330 @@
+{
+  "version": 1,
+  "petId": "fox",
+  "name": "枫糖",
+  "atlas": "atlas.png",
+  "sourceImage": "exec-e7695904-2af7-4f8d-8a12-79758853d17e.png",
+  "width": 1254,
+  "height": 1254,
+  "alphaThresholdForBounds": 64,
+  "frames": {
+    "idle": {
+      "frame": {
+        "x": 57,
+        "y": 45,
+        "w": 247,
+        "h": 288
+      },
+      "sourceRegion": {
+        "x": 0,
+        "y": 0,
+        "w": 320,
+        "h": 348
+      },
+      "kind": "pose",
+      "anchor": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "listen": {
+      "frame": {
+        "x": 331,
+        "y": 32,
+        "w": 278,
+        "h": 301
+      },
+      "sourceRegion": {
+        "x": 320,
+        "y": 0,
+        "w": 312,
+        "h": 348
+      },
+      "kind": "pose",
+      "anchor": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "groove": {
+      "frame": {
+        "x": 641,
+        "y": 32,
+        "w": 297,
+        "h": 313
+      },
+      "sourceRegion": {
+        "x": 632,
+        "y": 0,
+        "w": 334,
+        "h": 360
+      },
+      "kind": "pose",
+      "anchor": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "focus": {
+      "frame": {
+        "x": 984,
+        "y": 48,
+        "w": 252,
+        "h": 285
+      },
+      "sourceRegion": {
+        "x": 966,
+        "y": 0,
+        "w": 288,
+        "h": 348
+      },
+      "kind": "pose",
+      "anchor": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "sleep": {
+      "frame": {
+        "x": 23,
+        "y": 421,
+        "w": 281,
+        "h": 270
+      },
+      "sourceRegion": {
+        "x": 0,
+        "y": 348,
+        "w": 320,
+        "h": 354
+      },
+      "kind": "pose",
+      "anchor": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "stretch": {
+      "frame": {
+        "x": 330,
+        "y": 355,
+        "w": 278,
+        "h": 321
+      },
+      "sourceRegion": {
+        "x": 320,
+        "y": 348,
+        "w": 312,
+        "h": 354
+      },
+      "kind": "pose",
+      "anchor": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "celebrate": {
+      "frame": {
+        "x": 651,
+        "y": 378,
+        "w": 281,
+        "h": 306
+      },
+      "sourceRegion": {
+        "x": 632,
+        "y": 360,
+        "w": 302,
+        "h": 342
+      },
+      "kind": "pose",
+      "anchor": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "walk": {
+      "frame": {
+        "x": 947,
+        "y": 402,
+        "w": 292,
+        "h": 259
+      },
+      "sourceRegion": {
+        "x": 934,
+        "y": 348,
+        "w": 320,
+        "h": 354
+      },
+      "kind": "pose",
+      "anchor": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "scarf": {
+      "frame": {
+        "x": 40,
+        "y": 721,
+        "w": 251,
+        "h": 231
+      },
+      "sourceRegion": {
+        "x": 0,
+        "y": 702,
+        "w": 316,
+        "h": 252
+      },
+      "kind": "accessory",
+      "anchor": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "glasses": {
+      "frame": {
+        "x": 348,
+        "y": 786,
+        "w": 267,
+        "h": 130
+      },
+      "sourceRegion": {
+        "x": 316,
+        "y": 702,
+        "w": 316,
+        "h": 260
+      },
+      "kind": "accessory",
+      "anchor": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "headphones": {
+      "frame": {
+        "x": 655,
+        "y": 713,
+        "w": 260,
+        "h": 244
+      },
+      "sourceRegion": {
+        "x": 632,
+        "y": 702,
+        "w": 312,
+        "h": 260
+      },
+      "kind": "accessory",
+      "anchor": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "backpack": {
+      "frame": {
+        "x": 975,
+        "y": 721,
+        "w": 252,
+        "h": 233
+      },
+      "sourceRegion": {
+        "x": 944,
+        "y": 702,
+        "w": 310,
+        "h": 260
+      },
+      "kind": "accessory",
+      "anchor": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "hat": {
+      "frame": {
+        "x": 26,
+        "y": 963,
+        "w": 252,
+        "h": 258
+      },
+      "sourceRegion": {
+        "x": 0,
+        "y": 954,
+        "w": 316,
+        "h": 300
+      },
+      "kind": "accessory",
+      "anchor": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "leaf-pin": {
+      "frame": {
+        "x": 401,
+        "y": 1014,
+        "w": 163,
+        "h": 189
+      },
+      "sourceRegion": {
+        "x": 316,
+        "y": 962,
+        "w": 316,
+        "h": 292
+      },
+      "kind": "accessory",
+      "anchor": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "teacup": {
+      "frame": {
+        "x": 668,
+        "y": 965,
+        "w": 229,
+        "h": 243
+      },
+      "sourceRegion": {
+        "x": 632,
+        "y": 962,
+        "w": 288,
+        "h": 292
+      },
+      "kind": "accessory",
+      "anchor": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "bed": {
+      "frame": {
+        "x": 940,
+        "y": 1012,
+        "w": 305,
+        "h": 204
+      },
+      "sourceRegion": {
+        "x": 920,
+        "y": 962,
+        "w": 334,
+        "h": 292
+      },
+      "kind": "accessory",
+      "anchor": {
+        "x": 0.5,
+        "y": 1
+      }
+    }
+  },
+  "artDirection": "Cozy pixel companion, warm brown outline, original species palette, upper-left warm light, forest-green/teal/brass accessories.",
+  "status": "static-pose-and-accessory-library",
+  "limitations": [
+    "Eight static poses; not a completed animation cycle.",
+    "Use supplied individual frame rectangles; generated spacing is not an equal grid.",
+    "Accessories require per-pose anchor calibration before attachment; do not auto-fit by full-image size.",
+    "Do not replace the existing 32-pixel animation set until animation and scale review pass."
+  ],
+  "qa": {
+    "transparentBackground": true,
+    "fullyTransparentFraction": 0.446,
+    "edgeWarnings": [],
+    "visuallyReviewed": true
+  }
+}

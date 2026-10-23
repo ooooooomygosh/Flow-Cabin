@@ -1,0 +1,317 @@
+{
+  "version": 1,
+  "theme": "forest",
+  "style": "Moss painted wood, weathered oak, aged bronze, cream linen; golden upper-left dawn forest light.",
+  "generator": "ImageGen",
+  "alphaThreshold": 64,
+  "worldSize": [
+    1200,
+    640
+  ],
+  "geometry": {
+    "desktopBaseline": 336,
+    "floorPlacementY": [
+      384,
+      632
+    ],
+    "windows": [
+      [
+        112,
+        76,
+        208,
+        212
+      ],
+      [
+        500,
+        76,
+        204,
+        212
+      ],
+      [
+        896,
+        76,
+        200,
+        212
+      ]
+    ],
+    "note": "Forest/seaside preserve amber shell alignment. Greenhouse table top is about 7 world px lower; 336 baseline remains within desktop surface. Greenhouse window bottoms extend about 13 world px lower."
+  },
+  "assets": {
+    "shell": {
+      "file": "shell.png",
+      "source": "exec-8c54b6e8-6eb4-4fb5-b232-a370976b697d.png",
+      "size": [
+        1717,
+        916
+      ]
+    },
+    "furniture": {
+      "file": "furniture.png",
+      "source": "exec-ba3ad238-99ed-4697-b7d7-4e653c784c9b.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "frames": {
+        "clock": [
+          48,
+          36,
+          234,
+          288
+        ],
+        "calendar": [
+          361,
+          47,
+          219,
+          261
+        ],
+        "weather": [
+          657,
+          41,
+          250,
+          279
+        ],
+        "deck": [
+          958,
+          51,
+          275,
+          264
+        ],
+        "lyrics": [
+          30,
+          374,
+          271,
+          225
+        ],
+        "tasks": [
+          339,
+          362,
+          264,
+          248
+        ],
+        "books": [
+          638,
+          343,
+          282,
+          292
+        ],
+        "notes": [
+          952,
+          393,
+          291,
+          224
+        ],
+        "mail": [
+          33,
+          644,
+          247,
+          252
+        ],
+        "tea": [
+          317,
+          685,
+          300,
+          211
+        ],
+        "plant": [
+          637,
+          650,
+          280,
+          269
+        ],
+        "bed": [
+          951,
+          703,
+          290,
+          195
+        ],
+        "photo": [
+          35,
+          948,
+          251,
+          257
+        ],
+        "lamp": [
+          358,
+          946,
+          213,
+          268
+        ],
+        "bookstack": [
+          628,
+          992,
+          309,
+          198
+        ],
+        "speaker": [
+          998,
+          941,
+          193,
+          268
+        ]
+      },
+      "layout": {
+        "rows": 4,
+        "columns": 4,
+        "order": [
+          "clock",
+          "calendar",
+          "weather",
+          "deck",
+          "lyrics",
+          "tasks",
+          "books",
+          "notes",
+          "mail",
+          "tea",
+          "plant",
+          "bed",
+          "photo",
+          "lamp",
+          "bookstack",
+          "speaker"
+        ],
+        "equalCells": false
+      },
+      "transparentFraction": 0.461
+    },
+    "extras": {
+      "file": "extras.png",
+      "source": "exec-5f65e193-8642-4eb3-8234-53772d08519d.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "frames": {
+        "vinyl": [
+          37,
+          82,
+          260,
+          256
+        ],
+        "sleeve": [
+          341,
+          75,
+          259,
+          260
+        ],
+        "player": [
+          637,
+          123,
+          306,
+          216
+        ],
+        "headphones": [
+          979,
+          57,
+          253,
+          284
+        ],
+        "pomodoro": [
+          34,
+          404,
+          258,
+          240
+        ],
+        "journal": [
+          330,
+          376,
+          263,
+          303
+        ],
+        "keyboard": [
+          611,
+          435,
+          386,
+          186
+        ],
+        "mouse": [
+          1033,
+          421,
+          199,
+          235
+        ],
+        "play": [
+          40,
+          697,
+          244,
+          235
+        ],
+        "pause": [
+          354,
+          697,
+          244,
+          235
+        ],
+        "next": [
+          660,
+          693,
+          254,
+          239
+        ],
+        "volume": [
+          986,
+          713,
+          228,
+          218
+        ],
+        "sun": [
+          48,
+          962,
+          232,
+          238
+        ],
+        "moon": [
+          367,
+          968,
+          208,
+          224
+        ],
+        "cloud": [
+          637,
+          990,
+          275,
+          183
+        ],
+        "rain": [
+          967,
+          976,
+          258,
+          232
+        ]
+      },
+      "layout": {
+        "rows": 4,
+        "columns": 4,
+        "order": [
+          "vinyl",
+          "sleeve",
+          "player",
+          "headphones",
+          "pomodoro",
+          "journal",
+          "keyboard",
+          "mouse",
+          "play",
+          "pause",
+          "next",
+          "volume",
+          "sun",
+          "moon",
+          "cloud",
+          "rain"
+        ],
+        "equalCells": false
+      },
+      "transparentFraction": 0.508
+    }
+  },
+  "review": {
+    "status": "generated-and-inspected-not-runtime-verified",
+    "notes": [
+      "Use actual frames; generated atlases do not obey perfect equal-cell margins.",
+      "Pixels in almost transparent edge fringe may contain saturated RGB. Alpha threshold64 used only for bounds; original PNGs preserved.",
+      "Illustrated clock hands and calendar marks are decorative; overlay live values separately."
+    ]
+  }
+}

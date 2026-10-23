@@ -48,7 +48,7 @@
 /* Zen mode keeps only the room, the cat, the timer badge and an exit. */
 .room-zen:not(.room-zen-tools) .app-titlebar,.room-zen:not(.room-zen-tools) .cabin-room .room-now-playing,.room-zen:not(.room-zen-tools) .room-shelf-navigation,.room-zen:not(.room-zen-tools) .cabin-room .cabin-toolbar>:not(.zen-keep),.room-zen:not(.room-zen-tools) .shelf-filters{display:none!important}
 .room-zen:not(.room-zen-tools) .cabin-room .cabin-toolbar{top:14px;left:auto;right:16px;background:#27180d99}
-.room-zen:not(.room-zen-tools) .room-turntable{opacity:.08;transition:opacity .3s}.room-zen:not(.room-zen-tools) .room-turntable:hover,.room-zen:not(.room-zen-tools) .room-turntable:focus-within{opacity:1}
+/* Console visibility and proximity reveal are owned by cabin-room.css. */
 /* The focus dock covers the shelf buttons; the wheel and arrow keys still page. */
 .room-focus-open .room-shelf-navigation{display:none}
 .cabin-toolbar-group{display:flex;gap:8px;align-items:center}

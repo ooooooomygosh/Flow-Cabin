@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { lazy, Suspense, useRef, useState } from 'react';
 import { VinylDisc } from './RecordLibrary';
 import SceneDeck from './scene/SceneDeck';
 import { ChevronLeft, ChevronRight, Disc3, Pause, Play, Plus, PlayPixel, PausePixel, RepeatPixel, RepeatOnePixel, ShufflePixel, GripPixel } from './icons';
@@ -9,6 +9,7 @@ import { trackArtist } from './track-meta.mjs';
 import { providerLabel } from './player/providers.mjs';
 import PlayerControls, { PocketProgress } from './player/PlayerControls';
 import { displayTitle } from './display-title.mjs';
+const LyricsPanel = lazy(() => import('./lyrics/LyricsPanel'));
 const EMPTY_DECK_HINT = '双击封面或拖到这里'; // Enter is spelled out on the selection strip (双击或回车放盘).
 // Wrap the quality token (无损 / FLAC / Hi-Res / 320k MP3…) of a status line in a small badge; the text stays whole.
 const QUALITY = /(\d{2,4}\s?k(?:bps)?(?:\s?(?:MP3|AAC|OGG))?|Hi-?Res|FLAC|无损)/i;
@@ -16,6 +17,7 @@ const statusNode = (text) => { const match = typeof text === 'string' && QUALITY
 
 export default function RoomTurntable({ item, spinning, trackIndex = 0, style, items = [], load, toggle, track, eject, readOnly = false, provider = 'visual', setProvider, playback, statusText, actualTrack, system, player, tools }) {
   const [dragging, setDragging] = useState(false), names = trackNames(item), deckAnchor = useRef(null);
+  const [lyricsOpen, setLyricsOpen] = useState(false);
   const placement = useTurntablePosition(readOnly);
   const trackName = actualTrack || playback?.actualTrack || names[trackIndex] || (item ? '暂无曲目信息' : EMPTY_DECK_HINT);
   const audible = provider !== 'visual' && provider !== 'system';
@@ -57,6 +59,8 @@ export default function RoomTurntable({ item, spinning, trackIndex = 0, style, i
     {!readOnly && item && provider !== 'system' && <PlayerControls item={item} items={items} provider={provider} spinning={spinning} trackIndex={trackIndex} track={track} toggle={toggle} eject={eject} playback={playback} player={player} setProvider={setProvider}/>}
     {!readOnly && !['visual', 'system'].includes(provider) && playback?.candidates.length > 0 && <div className="turntable-matches" aria-label="选择曲目版本">{playback.candidates.map((candidate) => <button type="button" key={`${candidate.provider}:${candidate.id}`} onClick={() => playback.choose(candidate)}><strong>{candidate.title}</strong><span>{candidate.artist} · {candidate.album || '专辑未知'}</span></button>)}</div>}
     {!readOnly && playback?.localApp && <p className="turntable-local-app"><button type="button" onClick={() => playback.openInLocalApp()} title="小屋内播放失败时的备用办法：在平台 App（未安装时为官方网页）中打开这首歌。声音由该 App 播放，小屋不会显示进度。">{playback.localApp.label}</button><small>交给平台 App 播放 · 小屋不显示进度</small></p>}
+    {!readOnly && item && provider !== 'visual' && <button type="button" className="turntable-lyrics-entry" onClick={() => setLyricsOpen(true)}>歌词</button>}
+    {lyricsOpen && <Suspense fallback={<span role="status">正在打开歌词…</span>}><LyricsPanel close={() => setLyricsOpen(false)} playback={playback} system={provider === 'system' ? system : null} track={{ provider: playback?.resolvedProvider || provider, id: provider === 'system' ? '' : playback?.resolvedId || '', title: trackName, artist: system?.artist || playback?.resolvedArtist || trackArtist(item, trackIndex), album: system?.album || playback?.resolvedAlbum || item?.albumTitle || (item?.type === 'album' ? item.title : ''), duration: provider === 'system' ? system?.timeline?.getSnapshot().duration || 0 : playback?.duration || 0 }}/></Suspense>}
     {!readOnly && playback?.notice && <p className="turntable-local-app-notice" role="status">{playback.notice}</p>}
       </div>
     </div>

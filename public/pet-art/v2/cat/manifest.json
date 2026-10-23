@@ -1,0 +1,330 @@
+{
+  "version": 1,
+  "petId": "cat",
+  "name": "奶糖",
+  "atlas": "atlas.png",
+  "sourceImage": "exec-1da266b8-db56-4612-be2f-4f1cf09dff17.png",
+  "width": 1254,
+  "height": 1254,
+  "alphaThresholdForBounds": 64,
+  "frames": {
+    "idle": {
+      "frame": {
+        "x": 47,
+        "y": 90,
+        "w": 248,
+        "h": 253
+      },
+      "sourceRegion": {
+        "x": 0,
+        "y": 0,
+        "w": 320,
+        "h": 374
+      },
+      "kind": "pose",
+      "anchor": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "listen": {
+      "frame": {
+        "x": 355,
+        "y": 70,
+        "w": 248,
+        "h": 273
+      },
+      "sourceRegion": {
+        "x": 320,
+        "y": 0,
+        "w": 316,
+        "h": 374
+      },
+      "kind": "pose",
+      "anchor": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "groove": {
+      "frame": {
+        "x": 658,
+        "y": 61,
+        "w": 280,
+        "h": 290
+      },
+      "sourceRegion": {
+        "x": 636,
+        "y": 0,
+        "w": 328,
+        "h": 374
+      },
+      "kind": "pose",
+      "anchor": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "focus": {
+      "frame": {
+        "x": 981,
+        "y": 96,
+        "w": 244,
+        "h": 250
+      },
+      "sourceRegion": {
+        "x": 964,
+        "y": 0,
+        "w": 290,
+        "h": 374
+      },
+      "kind": "pose",
+      "anchor": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "sleep": {
+      "frame": {
+        "x": 28,
+        "y": 451,
+        "w": 279,
+        "h": 223
+      },
+      "sourceRegion": {
+        "x": 0,
+        "y": 374,
+        "w": 320,
+        "h": 326
+      },
+      "kind": "pose",
+      "anchor": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "stretch": {
+      "frame": {
+        "x": 333,
+        "y": 407,
+        "w": 285,
+        "h": 270
+      },
+      "sourceRegion": {
+        "x": 320,
+        "y": 374,
+        "w": 316,
+        "h": 326
+      },
+      "kind": "pose",
+      "anchor": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "celebrate": {
+      "frame": {
+        "x": 645,
+        "y": 402,
+        "w": 274,
+        "h": 272
+      },
+      "sourceRegion": {
+        "x": 636,
+        "y": 374,
+        "w": 308,
+        "h": 326
+      },
+      "kind": "pose",
+      "anchor": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "walk": {
+      "frame": {
+        "x": 958,
+        "y": 435,
+        "w": 274,
+        "h": 239
+      },
+      "sourceRegion": {
+        "x": 944,
+        "y": 374,
+        "w": 310,
+        "h": 326
+      },
+      "kind": "pose",
+      "anchor": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "scarf": {
+      "frame": {
+        "x": 42,
+        "y": 734,
+        "w": 253,
+        "h": 218
+      },
+      "sourceRegion": {
+        "x": 0,
+        "y": 700,
+        "w": 316,
+        "h": 266
+      },
+      "kind": "accessory",
+      "anchor": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "glasses": {
+      "frame": {
+        "x": 335,
+        "y": 791,
+        "w": 274,
+        "h": 136
+      },
+      "sourceRegion": {
+        "x": 316,
+        "y": 700,
+        "w": 316,
+        "h": 266
+      },
+      "kind": "accessory",
+      "anchor": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "headphones": {
+      "frame": {
+        "x": 648,
+        "y": 730,
+        "w": 258,
+        "h": 228
+      },
+      "sourceRegion": {
+        "x": 632,
+        "y": 700,
+        "w": 304,
+        "h": 266
+      },
+      "kind": "accessory",
+      "anchor": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "backpack": {
+      "frame": {
+        "x": 961,
+        "y": 723,
+        "w": 251,
+        "h": 233
+      },
+      "sourceRegion": {
+        "x": 936,
+        "y": 700,
+        "w": 318,
+        "h": 266
+      },
+      "kind": "accessory",
+      "anchor": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "hat": {
+      "frame": {
+        "x": 45,
+        "y": 973,
+        "w": 240,
+        "h": 239
+      },
+      "sourceRegion": {
+        "x": 0,
+        "y": 966,
+        "w": 316,
+        "h": 288
+      },
+      "kind": "accessory",
+      "anchor": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "leaf-pin": {
+      "frame": {
+        "x": 399,
+        "y": 1021,
+        "w": 171,
+        "h": 171
+      },
+      "sourceRegion": {
+        "x": 316,
+        "y": 966,
+        "w": 308,
+        "h": 288
+      },
+      "kind": "accessory",
+      "anchor": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "teacup": {
+      "frame": {
+        "x": 679,
+        "y": 1040,
+        "w": 202,
+        "h": 144
+      },
+      "sourceRegion": {
+        "x": 624,
+        "y": 966,
+        "w": 292,
+        "h": 288
+      },
+      "kind": "accessory",
+      "anchor": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "bed": {
+      "frame": {
+        "x": 935,
+        "y": 1005,
+        "w": 295,
+        "h": 204
+      },
+      "sourceRegion": {
+        "x": 916,
+        "y": 966,
+        "w": 338,
+        "h": 288
+      },
+      "kind": "accessory",
+      "anchor": {
+        "x": 0.5,
+        "y": 1
+      }
+    }
+  },
+  "artDirection": "Cozy pixel companion, warm brown outline, original species palette, upper-left warm light, forest-green/teal/brass accessories.",
+  "status": "static-pose-and-accessory-library",
+  "limitations": [
+    "Eight static poses; not a completed animation cycle.",
+    "Use supplied individual frame rectangles; generated spacing is not an equal grid.",
+    "Accessories require per-pose anchor calibration before attachment; do not auto-fit by full-image size.",
+    "Do not replace the existing 32-pixel animation set until animation and scale review pass."
+  ],
+  "qa": {
+    "transparentBackground": true,
+    "fullyTransparentFraction": 0.5101,
+    "edgeWarnings": [],
+    "visuallyReviewed": true
+  }
+}

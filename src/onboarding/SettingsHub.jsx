@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { PERFORMANCE_MODES, performanceMode, performanceLevel, setPerformanceMode, onPerformanceChange } from '../perf-profile.mjs';
 import Dialog from '../Dialog';
 import { Tabs, Segmented, tabPanelProps } from '../ui/Roving';
@@ -20,10 +20,14 @@ import { CROSSFADE_OPTIONS, crossfadeSeconds, setCrossfadeSeconds, onCrossfadeCh
 import { SHORTCUTS } from '../shortcuts.mjs';
 import AiSettings from '../ai/AiSettings.jsx';
 import InputCompanionSettings from './InputCompanionSettings';
+import StorageStatus from '../mobile/StorageStatus';
+
+const SyncSettings = lazy(() => import('../sync/SyncSettings'));
+const PetPackSettings = lazy(() => import('../pet/PetPackSettings'));
 
 export const HUB_SECTIONS = Object.freeze([
   { id: 'music', label: '音源' }, { id: 'room', label: '房间与桌宠' }, { id: 'companion', label: '键鼠陪伴' }, { id: 'focus', label: '专注工具' },
-  { id: 'desktop', label: '显示与桌面' }, { id: 'data', label: '数据与备份' }, { id: 'ai', label: 'AI（Beta）' }, { id: 'about', label: '关于' }
+  { id: 'sync', label: '同步与设备' }, { id: 'desktop', label: '显示与桌面' }, { id: 'data', label: '数据与备份' }, { id: 'ai', label: 'AI（Beta）' }, { id: 'about', label: '关于' }
 ]);
 // A section may open on a sub-page: 'music/accounts' is 音源 › 账户与文件夹.
 export const hubTab = (section = '') => String(section).split('/')[0] || 'music';
@@ -31,7 +35,7 @@ export const hubTab = (section = '') => String(section).split('/')[0] || 'music'
 // Preferences, in one place; actions (timer, album wall, the companion going
 // out, fullscreen) stay in the room. Tray / menu / deck shortcuts open this
 // dialog on their section.
-export default function SettingsHub({ section = 'music', setSection, close, env, player, provider, useSource, look, petId, onRoomChange, reduceMotion, error, desktop, openBackup, restartOnboarding }) {
+export default function SettingsHub({ section = 'music', setSection, close, env, player, provider, useSource, look, petId, onRoomChange, reduceMotion, error, desktop, openBackup, restartOnboarding, openStudio }) {
   const tab = hubTab(section);
   const [compact, setCompact] = useState(() => window.matchMedia('(max-width: 700px)').matches);
   useEffect(() => {
@@ -48,11 +52,13 @@ export default function SettingsHub({ section = 'music', setSection, close, env,
           <button type="button" className="hub-back" onClick={() => setSection('music')}><ChevronLeft size={14}/>音源</button>
           <MusicAccounts/>
         </div>}
-        {tab === 'room' && <><p className="personalization-intro">选一个今天想待着的地方，再找一位安静的伙伴。换装不会打断音乐和专注。</p><RoomPickers look={look} petId={petId} onChange={onRoomChange} reduceMotion={reduceMotion}/><SkySettings/>{error && <p role="alert" className="record-error">{error}</p>}</>}
+        {tab === 'room' && <><Row title="生活小屋" hint="走进完整房间，轻触家具听歌、专注和记录。"><button type="button" className="pixel-button" onClick={openStudio}>走进生活小屋</button></Row><p className="personalization-intro">选一个今天想待着的地方，再找一位安静的伙伴。换装不会打断音乐和专注。</p><RoomPickers look={look} petId={petId} onChange={onRoomChange} reduceMotion={reduceMotion}/><SkySettings/><Suspense fallback={<p role="status">正在整理桌宠衣柜…</p>}>{window.albumDesktopCapabilities?.petPacks && <PetPackSettings/>}</Suspense>{window.albumMobile?.setLauncherIcon && <Row title="桌宠启动图标" hint="使用当前伙伴作为启动器图标；系统图标缓存可能稍后更新。"><button type="button" className="pixel-button" onClick={() => window.albumMobile.setLauncherIcon(petId)}>使用当前桌宠图标</button></Row>}{error && <p role="alert" className="record-error">{error}</p>}</>}
+        {tab === 'sync' && <Suspense fallback={<p role="status">正在打开同步设置…</p>}><SyncSettings/></Suspense>}
         {tab === 'companion' && <CompanionSection env={env} player={player}/>}
         {tab === 'focus' && <><p className="personalization-intro">番茄钟的时长和提醒。计时、待办、学习和声音在右上角「专注」里。</p><FocusSettingsForm className="hub-focus-settings"/><DailyGoalField/></>}
         {tab === 'desktop' && <DisplaySection env={env} desktop={desktop}/>}
         {tab === 'data' && <div className="hub-rows">
+          {env.mobile && <StorageStatus/>}
           <Row title="收藏与备份" hint="导出 / 导入唱片、歌单、专注记录。备份文件只保存在你选的位置。"><button type="button" className="pixel-button" onClick={openBackup}>收藏与备份</button></Row>
           {env.desktop && <Row title="本地音乐文件夹" hint="添加或移除扫描的文件夹。"><button type="button" className="pixel-button" onClick={() => setSection('music/accounts')}>管理文件夹<ChevronRight size={14}/></button></Row>}
         </div>}
@@ -73,7 +79,7 @@ function CompanionSection({ env, player }) {
     <p className="personalization-intro">奶糖会在你使用其他应用时，陪着你打字和点鼠标。这里可以直接开关、检查授权，并确认今天的记录是否真的在增加。</p>
     {env.desktop
       ? <InputCompanionSettings player={player} env={env}/>
-      : <div className="onboarding-hint">跨应用键鼠陪伴需要心流小屋桌面版。网页版仍会在小屋窗口内回应键盘和鼠标。</div>}
+      : <div className="onboarding-hint">{env.mobile ? '手机版的小猫在小屋内陪伴你；跨应用键鼠统计与独立桌宠需要电脑桌面版。' : '跨应用键鼠陪伴需要心流小屋桌面版。网页版仍会在小屋窗口内回应键盘和鼠标。'}</div>}
     {env.desktop && <Row title="统计位置" hint="今天的键盘、点击、连续天数与最近 7 天，也在奶糖的小猫面板、右上角「专注 › 统计」和「小屋日记」里。"/>}
   </>;
 }
@@ -84,10 +90,10 @@ function MusicSection({ env, player, provider, useSource, openAccounts }) {
   const { sources, status, quality, setQuality } = useSourceStatus(player, env);
   const rows = [
     { id: 'visual', available: true, hint: '唱片转动、显示曲目，不出声。' },
-    { id: 'auto', available: Boolean(env.desktop), hint: '按唱片在已连接的音源里找能播放的版本。', reason: '需要心流小屋桌面版' },
+    { id: 'auto', available: Boolean(env.desktop || env.mobile), hint: '按唱片在已连接的音源里找能播放的版本。', reason: '需要心流小屋桌面版' },
     ...sources.map((source) => ({ id: source.provider || providerFor(source.id), source: source.id, available: source.available, hint: status[source.id]?.detail || source.hint, reason: source.reason, connected: status[source.id]?.connected })),
     { id: 'ma', available: Boolean(env.desktop), hint: '由家里的 Music Assistant 服务器出声，在「账户与文件夹」里连接。', reason: '需要心流小屋桌面版' }
-  ].filter((row, index, list) => PROVIDERS.some((item) => item.id === row.id) && list.findIndex((other) => other.id === row.id) === index);
+  ].filter((row, index, list) => (!env.mobile || ['visual', 'auto', 'local', 'qq', 'netease'].includes(row.id)) && PROVIDERS.some((item) => item.id === row.id) && list.findIndex((other) => other.id === row.id) === index);
   const move = (event) => {
     const keys = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }; if (!keys[event.key]) return;
     const enabled = rows.filter((row) => row.available), index = enabled.findIndex((row) => row.id === provider);
@@ -98,7 +104,7 @@ function MusicSection({ env, player, provider, useSource, openAccounts }) {
     <div className="hub-sources" role="radiogroup" aria-label="唱机音源" onKeyDown={move}>{rows.map((row) => { const on = row.id === provider; return <button type="button" role="radio" key={row.id} id={`hub-source-${row.id}`} aria-checked={on} tabIndex={on || (!rows.some((item) => item.id === provider) && row.id === 'visual') ? 0 : -1} disabled={!row.available} aria-label={providerLabel(row.id)} onClick={() => useSource(row.id)}>
       <i className={`hub-led ${row.available && (on || row.connected) ? 'is-on' : ''}`} aria-hidden="true"/><span><strong>{providerLabel(row.id)}</strong><small>{row.available ? row.hint : row.reason}</small></span>{on && <span className="onboarding-ok"><Check size={14}/>唱机在用</span>}
     </button>; })}</div>
-    {env.desktop && <Row title="账户与文件夹" hint="登录 QQ 音乐 / 网易云、管理本地文件夹、连接 Music Assistant。"><button type="button" className="pixel-button" onClick={openAccounts}>账户与文件夹<ChevronRight size={14}/></button></Row>}
+    {(env.desktop || env.mobile) && <Row title="账户与文件夹" hint={env.mobile ? '登录 QQ 音乐 / 网易云，凭据加密保存在这台手机。' : '登录 QQ 音乐 / 网易云、管理本地文件夹、连接 Music Assistant。'}><button type="button" className="pixel-button" onClick={openAccounts}>账户与文件夹<ChevronRight size={14}/></button></Row>}
     {quality?.options?.length > 0 && <Row title="音质" hint="QQ 音乐 / 网易云向平台请求的音质。没有会员或没有该音质时，自动换成能播放的最高一档。">
       <select aria-label="音质" value={quality.current || quality.options[0].id} onChange={(event) => setQuality(event.target.value)}>{quality.options.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</select>
     </Row>}

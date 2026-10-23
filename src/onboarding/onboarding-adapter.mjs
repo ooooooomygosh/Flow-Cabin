@@ -54,15 +54,16 @@ export function createPlayerAdapter({ api = playerSources, env = {}, request, wi
       const result = await call(api, 'listSources', { mac: Boolean(env.mac) });
       if (!Array.isArray(result.value)) return local;
       const known = new Map(local.map((item) => [item.id, item]));
-      return result.value.filter((item) => item && typeof item.id === 'string' && item.supported !== false && item.id !== 'ma').map((item) => {
+      return result.value.filter((item) => item && typeof item.id === 'string' && item.supported !== false && item.id !== 'ma' && (!env.mobile || ['local', 'qq', 'netease'].includes(item.id))).map((item) => {
         const base = known.get(item.id) || { id: item.id, hint: '', provider: item.id };
         const needsDesktop = base.desktopOnly ?? item.id !== 'local';
-        return { ...base, label: base.label || item.label, kind: item.kind, login: Boolean(item.login), provider: base.provider || item.id, available: !needsDesktop || Boolean(env.desktop), reason: needsDesktop && !env.desktop ? '需要心流小屋桌面版' : '' };
+        const available = !needsDesktop || Boolean(env.desktop) || Boolean(env.mobile && ['qq', 'netease'].includes(item.id));
+        return { ...base, label: base.label || item.label, kind: item.kind, login: Boolean(item.login), provider: base.provider || item.id, available, reason: available ? '' : '需要心流小屋桌面版' };
       });
     },
     async connectSource(id) {
-      if (!env.desktop) {
-        if (id === 'local') return { ok: false, fallback: 'add-album', error: '网页版请在「添加到唱片架 › 本地音乐」里直接选择音乐文件。' };
+      if (!env.desktop && !(env.mobile && ['qq', 'netease'].includes(id))) {
+        if (id === 'local') return { ok: false, fallback: 'add-album', error: env.mobile ? '请在「添加到唱片架 › 本地音乐」里选择手机歌曲。' : '网页版请在「添加到唱片架 › 本地音乐」里直接选择音乐文件。' };
         return { ok: false, error: '需要在心流小屋桌面版中连接。' };
       }
       if (id === 'system' || id === 'appleMusic') return { ok: true };
@@ -141,7 +142,7 @@ export function createPlayerAdapter({ api = playerSources, env = {}, request, wi
     },
     // The tier the platforms are asked for; an older music server that lists none gets the three standard tiers.
     async qualities() {
-      if (!env.desktop || !request) return null;
+      if ((!env.desktop && !env.mobile) || !request) return null;
       try {
         const c = await request('/config');
         const list = Array.isArray(c.qualities) && c.qualities.length ? c.qualities : DEFAULT_QUALITIES;

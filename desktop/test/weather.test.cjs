@@ -21,7 +21,7 @@ test('WMO codes map onto the cabin weather kinds; junk is null', () => {
 test('only rounded, valid coordinates reach the request', () => {
   assert.deepEqual(validPlace('31.2304', '121.4737'), { lat: 31.23, lng: 121.47 });
   for (const [lat, lng] of [['', ''], [null, 1], ['91', '0'], ['0', '181'], ['1e400', '0'], ['a', 'b']]) assert.equal(validPlace(lat, lng), null);
-  assert.equal(weatherUrl({ lat: 31.23, lng: 121.47 }), 'https://api.open-meteo.com/v1/forecast?latitude=31.23&longitude=121.47&current=weather_code,wind_speed_10m,precipitation,cloud_cover,temperature_2m,is_day&timezone=auto');
+  assert.equal(weatherUrl({ lat: 31.23, lng: 121.47 }), 'https://api.open-meteo.com/v1/forecast?latitude=31.23&longitude=121.47&current=weather_code,wind_speed_10m,precipitation,cloud_cover,temperature_2m,apparent_temperature,relative_humidity_2m,is_day&timezone=auto');
 });
 
 function rig() {
@@ -68,4 +68,24 @@ test('the page script carries only the whitelisted fields', () => {
   const script = weatherScript({ kind: 'rain', intensity: .5, wind: .2, fetchedAt: 9, extra: '<x>' });
   assert.match(script, /^window\.cabinWeather = \{"kind":"rain","intensity":0\.5,"wind":0\.2,"fetchedAt":9,"source":"open-meteo"\}; window\.dispatchEvent\(new CustomEvent\('cabin:weather'/);
   assert.match(weatherScript(null), /^window\.cabinWeather = null;/);
+});
+
+test('measured temperature and humidity survive both adapters; absent values are not zero', () => {
+  const value = weatherFromReport(report(0, { temperature_2m: -3, apparent_temperature: -7, relative_humidity_2m: 80, precipitation: 0 }));
+  assert.equal(value.temperature, -3); assert.equal(value.feelsLike, -7); assert.equal(value.humidity, 80);
+  assert.match(weatherScript(value), /"temperature":-3/);
+  assert.equal(weatherFromReport(report(0)).temperature, undefined);
+});
+
+test('switching location during an in-flight request immediately fetches the newly selected place', async () => {
+  const calls = []; let finish;
+  const weather = createWeather({ fetch: url => { calls.push(url); return calls.length === 1 ? new Promise(resolve => { finish = resolve; }) : Promise.resolve({ ok: true, json: async () => report(0, { temperature_2m: 25, apparent_temperature: 27, relative_humidity_2m: 60 }) }); }, publish: () => {} });
+  try {
+    const first = weather.set({ enabled: true, lat: 31.23, lng: 121.47 });
+    const second = weather.set({ enabled: true, lat: -33.87, lng: 151.21 });
+    finish({ ok: true, json: async () => report(63) }); await first; await second;
+    assert.equal(calls.length, 2); assert.match(calls[1], /latitude=-33.87/);
+    assert.equal(weather.state().lat, -33.87); assert.equal(weather.state().temperature, 25);
+    assert.equal(weather.state().humidity, 60);
+  } finally { weather.dispose(); }
 });

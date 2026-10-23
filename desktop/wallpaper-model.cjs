@@ -1,4 +1,5 @@
 'use strict';
+const { cleanPetPack }=require('./pet-pack-metadata.cjs');
 const string = (value, max = 300) => typeof value === 'string' ? value.slice(0, max).replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '') : '';
 function safeCover(value) {
   try { const url = new URL(value); if (url.protocol !== 'https:' || url.username || url.password || url.port) return ''; return url.href.length <= 4000 ? url.href : ''; } catch { return ''; }
@@ -38,7 +39,7 @@ function cleanCompanion(value) {
   if (!value || typeof value !== 'object') return null;
   const musicPlaying = value.musicPlaying === true, energy = Number(value.energy), bpm = Number(value.bpm), beatAt = Number(value.beatAt), lofiBpm = Number(value.lofiBpm);
   const beat = musicPlaying && bpm >= 40 && bpm <= 220 && Number.isFinite(beatAt) && beatAt > 0 ? { bpm: Math.round(bpm * 10) / 10, beatAt: Math.round(beatAt) } : { bpm: 0, beatAt: 0 };
-  return { petId: petId(value.petId), focus: cleanFocus(value.focus), playing: value.playing === true, track: string(value.track, 200), reduceMotion: value.reduceMotion === true,
+  return { petId: petId(value.petId), petPack: cleanPetPack(value.petPack), focus: cleanFocus(value.focus), playing: value.playing === true, track: string(value.track, 200), reduceMotion: value.reduceMotion === true,
     lofiBpm: !musicPlaying && value.playing === true && Number.isFinite(lofiBpm) && lofiBpm >= 40 && lofiBpm <= 220 ? Math.round(lofiBpm * 10) / 10 : 0,
     musicPlaying, energy: musicPlaying && Number.isFinite(energy) ? Math.round(Math.max(0, Math.min(1, energy)) * 100) / 100 : 0, energyEstimated: musicPlaying && value.energyEstimated === true, ...beat, care: cleanCare(value.care),
     // 键鼠跟随 fallback: when the cabin last saw a keydown / pointerdown (a time only).

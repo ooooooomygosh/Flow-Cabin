@@ -24,7 +24,7 @@ jobs:
   test:
     name: Unit tests, production build and browser regressions
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -51,6 +51,8 @@ jobs:
         run: npm run test:journey
       - name: Run browser smoke tests
         run: npm run test:browser
+      - name: Run Android playback React bridge regression
+        run: npm run test:native-playback
       - name: Run promotional page interaction tests
         run: npm run test:promo
       - name: Run silent playback regressions
@@ -75,6 +77,12 @@ jobs:
         run: npm run test:study-ui
       - name: Run room theme interaction regressions
         run: npm run test:theme
+      - name: Run production living room under native CSP
+        run: npm run test:room-production
+      - name: Run modular room art and placement regressions
+        run: npm run test:room-studio
+      - name: Run native device settings and local QR regression
+        run: npm run test:devices-ui
       - name: Run earned souvenir persistence and recovery regressions
         run: npm run test:souvenirs
       - name: Save browser test evidence
@@ -96,6 +104,9 @@ jobs:
             desktop/test-results/memory-deletion/
             desktop/test-results/study-ui/
             desktop/test-results/theme-interactions/
+            desktop/test-results/room-production/
+            desktop/test-results/room-studio/
+            desktop/test-results/devices-ui/
             desktop/test-results/souvenirs/
           if-no-files-found: warn
           retention-days: 14

@@ -31,7 +31,14 @@ export async function verifyFullscreenStudy({ browser, origin, output, check }) 
   const state = async on => page.evaluate(on => { document.documentElement.dataset.desktopFullscreen = String(on); window.dispatchEvent(new CustomEvent('album-desktop-fullscreen', { detail: on })); }, on);
   const shot = async name => { if (output) await page.screenshot({ path: path.join(output, name+'.png'), animations: 'disabled' }); };
   // 学习 is a focus-dock tab, opened from the toolbar's 专注 badge (the one entry, also in immersive + 显示工具).
-  const openStudy = async () => { if (!await page.locator('.focus-dock').count()) await page.locator('.cabin-toolbar .focus-badge').click(); await page.getByRole('tab', { name: '学习', exact: true }).click(); };
+  const openStudy = async () => {
+    // Reload restores the persisted open dock. Wait for its toolbar to mount
+    // before deciding whether to toggle; count() before hydration races it shut.
+    const badge = page.locator('.cabin-toolbar .focus-badge');
+    await badge.waitFor();
+    if (await badge.getAttribute('aria-expanded') !== 'true') await badge.click();
+    await page.getByRole('tab', { name: '学习', exact: true }).click();
+  };
   const studyState = () => page.evaluate(() => JSON.parse(localStorage.getItem('album-circle-study-v1:local-owner') || '{}'));
   try {
     await page.goto(origin); await page.locator('.room-record').first().waitFor();

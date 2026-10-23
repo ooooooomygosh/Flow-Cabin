@@ -36,7 +36,20 @@ export function cityForZone(zone) {
 }
 export function systemZone() { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch { return ''; } }
 // place: 'auto' (system zone, else the fixed clock), 'clock' or a city id → a city or null (fixed clock).
-export function resolveSkyCity(place = 'auto', zone = systemZone()) {
+export function resolveSkyCity(place = 'auto', zone = systemZone(), customPlace = null) {
   if (place === 'clock') return null;
+  if (place === 'custom') return normalizeCustomPlace(customPlace);
   return getSkyCity(place) || cityForZone(zone);
 }
+
+export function normalizeCustomPlace(value) {
+  if (!value || typeof value.name !== 'string' || !value.name.trim() || value.name.length > 80) return null;
+  const numeric = v => typeof v === 'number' || (typeof v === 'string' && /^-?\d{1,3}(\.\d+)?$/.test(v)) ? Number(v) : NaN;
+  const lat = numeric(value.lat), lng = numeric(value.lng), zone = value.zone ?? value.timezone;
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180 || typeof zone !== 'string' || zone.length > 80) return null;
+  try { new Intl.DateTimeFormat('en', { timeZone: zone }).format(0); } catch { return null; }
+  const result = { id: 'custom', name: value.name.trim(), lat: Math.round(lat * 100) / 100, lng: Math.round(lng * 100) / 100, zone };
+  for (const key of ['admin1', 'admin2', 'country']) if (typeof value[key] === 'string' && value[key].trim()) result[key] = value[key].trim().slice(0, 80);
+  return result;
+}
+export const placeDescription = place => [...new Set([place?.country, place?.admin1, place?.admin2, place?.name].filter(Boolean))].join(' · ');

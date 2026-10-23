@@ -1,0 +1,6 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/widget_root" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:gravity="center_vertical" android:background="@drawable/widget_background">
+<TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="FLOW CABIN" android:textSize="11sp" android:textColor="#D9AF79"/>
+<TextView android:id="@+id/widget_title" android:layout_width="match_parent" android:layout_height="wrap_content" android:maxLines="2" android:ellipsize="end" android:textSize="19sp" android:textColor="#FFF0D4" android:layout_marginTop="8dp"/>
+<Chronometer android:id="@+id/widget_clock" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="30sp" android:textColor="#FFF0D4"/>
+<TextView android:id="@+id/widget_status" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="12sp" android:textColor="#D0BFA5" android:layout_marginTop="8dp"/>
+</LinearLayout>

@@ -32,6 +32,7 @@ var music_upstream_exports = {};
 __export(music_upstream_exports, {
   audioProxyHeadersFor: () => audioProxyHeadersFor,
   call: () => call,
+  getAccountSession: () => getAccountSession,
   getNeteaseLoginInfo: () => getNeteaseLoginInfo,
   getQQLoginInfo: () => getQQLoginInfo,
   getQQMediaMid: () => getQQMediaMid,
@@ -41,6 +42,7 @@ __export(music_upstream_exports, {
   handleQQUserPlaylists: () => handleQQUserPlaylists,
   handleSearch: () => handleSearch,
   handleSongUrl: () => handleSongUrl,
+  lyrics: () => lyrics,
   mapQQSearchSong: () => mapQQSearchSong,
   neteasePlaylistTracks: () => neteasePlaylistTracks,
   neteaseUserPlaylists: () => neteaseUserPlaylists,
@@ -417,6 +419,28 @@ function mapQQPlaylistTrack(raw) {
     fee: pay && numOf(pay.pay_play) ? 1 : 0,
     playable: false
   };
+}
+function decodeHtmlEntities(text) {
+  return String(text || "").replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16))).replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(parseInt(dec, 10))).replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&").replace(/&nbsp;/g, " ");
+}
+function decodeQQLyricText(text) {
+  let raw = decodeHtmlEntities(String(text || "").trim());
+  if (!raw) return "";
+  const compact = raw.replace(/\s+/g, "");
+  const looksBase64 = compact.length >= 8 && compact.length % 4 === 0 && /^[A-Za-z0-9+/]+={0,2}$/.test(compact);
+  if (looksBase64 && !/^\s*\[/.test(raw)) {
+    try {
+      const decoded = Buffer.from(compact, "base64").toString("utf8").replace(/^﻿/, "");
+      if (decoded && (decoded.includes("[") || /[一-龥]/.test(decoded))) raw = decoded;
+    } catch (e) {
+    }
+  }
+  return decodeHtmlEntities(raw).replace(/\r\n/g, "\n").trim();
+}
+function normalizeQQSongId(id) {
+  const raw = String(id || "").trim();
+  if (!/^\d+$/.test(raw)) return 0;
+  return Number(raw);
 }
 async function qqMusicRequest(cookie, payload, opts = {}) {
   const body = JSON.stringify(payload);
@@ -873,6 +897,81 @@ async function handleQQSongUrl(cookie, mid, mediaMid, qualityPreference, feeHint
     requestedQuality
   };
 }
+async function handleQQLyric(cookie, mid, id) {
+  const songMID = String(mid || "").trim();
+  const songID = normalizeQQSongId(id);
+  if (!songMID && !songID) return { provider: "qq", error: "Missing QQ song mid or id", lyric: "" };
+  let lyricText = "";
+  let transText = "";
+  let qrcText = "";
+  let romaText = "";
+  let source = "qq-musicu";
+  try {
+    const param = {};
+    if (songMID) param.songMID = songMID;
+    if (songID) param.songID = songID;
+    const json = rec(
+      await qqMusicRequest(
+        cookie,
+        {
+          comm: { ct: 24, cv: 0 },
+          lyric: {
+            module: "music.musichallSong.PlayLyricInfo",
+            method: "GetPlayLyricInfo",
+            param
+          }
+        },
+        { cookie: true }
+      )
+    );
+    const data = rec(rec(json.lyric).data);
+    lyricText = decodeQQLyricText(data.lyric);
+    transText = decodeQQLyricText(data.trans);
+    qrcText = decodeQQLyricText(data.qrc);
+    romaText = decodeQQLyricText(data.roma);
+  } catch (e) {
+  }
+  if (!lyricText && songMID) {
+    try {
+      const body = rec(
+        await qqGetJSON(
+          cookie,
+          "https://c.y.qq.com/lyric/fcgi-bin/fcg_query_lyric_new.fcg",
+          {
+            songmid: songMID,
+            songtype: "0",
+            format: "json",
+            nobase64: "1",
+            g_tk: "5381",
+            loginUin: qqCookieUin(parseCookieString(cookie)) || "0",
+            hostUin: "0",
+            inCharset: "utf8",
+            outCharset: "utf-8",
+            notice: "0",
+            platform: "yqq.json",
+            needNewCode: "0"
+          },
+          { headers: { Referer: "https://y.qq.com/portal/player.html" } }
+        )
+      );
+      lyricText = decodeQQLyricText(body.lyric);
+      transText = decodeQQLyricText(body.trans || body.tlyric) || transText;
+      source = "qq-legacy";
+    } catch (e) {
+    }
+  }
+  return {
+    provider: "qq",
+    id: songID || "",
+    mid: songMID,
+    lyric: lyricText,
+    tlyric: transText,
+    yrc: "",
+    qrc: qrcText,
+    roma: romaText,
+    source: lyricText ? source : "qq-empty"
+  };
+}
 
 // vendor/simple-music/server/lib/netease-client.ts
 var NCM = __toESM(require("NeteaseCloudMusicApi"));
@@ -899,6 +998,68 @@ function asStr(v) {
 function asNum(v) {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
+}
+var COOKIE_ATTRIBUTE_NAMES = /* @__PURE__ */ new Set([
+  "path",
+  "domain",
+  "expires",
+  "max-age",
+  "samesite",
+  "secure",
+  "httponly"
+]);
+function collectCookiePair(picked, key, value) {
+  const k = String(key || "").trim();
+  if (!k || COOKIE_ATTRIBUTE_NAMES.has(k.toLowerCase())) return;
+  if (value === null || value === void 0) return;
+  picked.set(k, String(value).trim());
+}
+function collectCookieInput(input, picked) {
+  if (input === null || input === void 0) return;
+  if (Array.isArray(input)) {
+    input.forEach((item) => collectCookieInput(item, picked));
+    return;
+  }
+  if (typeof input === "object") {
+    const obj = input;
+    if (obj.name && Object.prototype.hasOwnProperty.call(obj, "value")) {
+      collectCookiePair(picked, obj.name, obj.value);
+      return;
+    }
+    Object.keys(obj).forEach((key) => {
+      const value = obj[key];
+      if (value && typeof value === "object" && Object.prototype.hasOwnProperty.call(value, "value")) {
+        collectCookiePair(picked, key, value.value);
+      } else if (typeof value !== "object") {
+        collectCookiePair(picked, key, value);
+      }
+    });
+    return;
+  }
+  String(input).split(/\r?\n/).forEach((line) => {
+    line.split(";").forEach((part) => {
+      const raw = String(part || "").trim();
+      const idx = raw.indexOf("=");
+      if (idx <= 0) return;
+      collectCookiePair(picked, raw.slice(0, idx), raw.slice(idx + 1));
+    });
+  });
+}
+function normalizeCookieHeader(input) {
+  const picked = /* @__PURE__ */ new Map();
+  collectCookieInput(input, picked);
+  return Array.from(picked.entries()).filter(([key, value]) => key && value != null && String(value) !== "").map(([key, value]) => `${key}=${value}`).join("; ");
+}
+function readCookieFromResponse(resp) {
+  const r = asObj(resp);
+  const body = asObj(r.body);
+  const data = asObj(body.data);
+  const candidates = [r.cookie, body.cookie, data.cookie, data.cookies];
+  for (const candidate of candidates) {
+    const cookie = normalizeCookieHeader(candidate);
+    if (cookie) return cookie;
+  }
+  return "";
 }
 function mapArtists(raw) {
   return asArr(raw).map((a) => {
@@ -1202,17 +1363,37 @@ async function handleSongUrl(id, loginInfo, qualityPreference, cookie) {
 var import_node_crypto = require("node:crypto");
 async function getNeteaseLoginInfo(cookie) {
   if (!cookie) return { loggedIn: false };
+  let confirmedExpired = false;
   for (const endpoint of ["login_status", "user_account"]) {
     try {
       const response = await call(endpoint, { cookie, timestamp: Date.now() });
       const body = asObj(response.body), data = asObj(body.data || body);
+      if (response.status === 401 || Number(data.code) === 301 || Number(body.code) === 301) confirmedExpired = true;
       if (response.status >= 400 || data.code != null && Number(data.code) !== 200 || body.code != null && Number(body.code) !== 200) continue;
       const info = normalizeLoginInfo(data.profile || body.profile, data.account || body.account, data);
-      if (info.loggedIn) return info;
+      if (info.loggedIn) {
+        const renewedCookie = readCookieFromResponse(response);
+        return { ...info, sessionStatus: "valid", ...renewedCookie ? { renewedCookie, renewalVerified: true } : {} };
+      }
+      if (data.profile === null || data.account === null) confirmedExpired = true;
     } catch {
     }
   }
-  return { loggedIn: false };
+  if (confirmedExpired) return { loggedIn: false, sessionStatus: "expired" };
+  throw new Error("\u6682\u65F6\u65E0\u6CD5\u9A8C\u8BC1\u7F51\u6613\u4E91\u8D26\u53F7\uFF0C\u5DF2\u4FDD\u5B58\u7684\u767B\u5F55\u4ECD\u4FDD\u7559\uFF0C\u8BF7\u7A0D\u540E\u91CD\u8BD5\u3002");
+}
+async function getAccountSession(provider, cookie) {
+  if (!cookie) return { status: "empty" };
+  if (provider === "netease") {
+    const info = await getNeteaseLoginInfo(cookie);
+    return { status: info.loggedIn ? "valid" : info.sessionStatus === "expired" ? "expired" : "saved", ...info.loggedIn && info.renewalVerified === true ? { renewedCookie: info.renewedCookie, renewalVerified: true } : {} };
+  }
+  if (provider === "qq") {
+    const info = await getQQLoginInfo(cookie);
+    if (info.profileUnavailable) return { status: info.loggedIn ? "offline" : "expired" };
+    return { status: info.loggedIn && info.profileSource === "qq-profile" ? "valid" : "saved" };
+  }
+  return { status: "empty" };
 }
 var NCM_PLAYLIST_LIMIT = 5e3;
 var NCM_PAGE = 500;
@@ -1413,10 +1594,21 @@ async function trackCover(provider, id, cookie = "") {
   }
   return "";
 }
+async function lyrics(provider, id, cookie) {
+  if (provider === "qq") {
+    const result2 = await handleQQLyric(cookie, id, "");
+    return { text: String(result2.lyric || ""), format: "lrc", translation: String(result2.tlyric || "") };
+  }
+  const result = await call("lyric", { id, cookie });
+  if (result.status >= 400) throw new Error("\u5E73\u53F0\u6B4C\u8BCD\u6682\u65F6\u4E0D\u53EF\u7528\u3002");
+  const body = asObj(result.body), yrc = asObj(body.yrc), lrc = asObj(body.lrc);
+  return { text: String(yrc.lyric || lrc.lyric || ""), format: yrc.lyric ? "yrc" : "lrc", translation: String(asObj(body.tlyric).lyric || "") };
+}
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   audioProxyHeadersFor,
   call,
+  getAccountSession,
   getNeteaseLoginInfo,
   getQQLoginInfo,
   getQQMediaMid,
@@ -1426,6 +1618,7 @@ async function trackCover(provider, id, cookie = "") {
   handleQQUserPlaylists,
   handleSearch,
   handleSongUrl,
+  lyrics,
   mapQQSearchSong,
   neteasePlaylistTracks,
   neteaseUserPlaylists,

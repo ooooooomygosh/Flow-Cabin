@@ -1,3 +1,4 @@
+import { selectedPack } from './pet/imported-pack.mjs';
 import { useEffect, useRef } from 'react';
 import { useFocusState as useFocus } from './focus/useFocus'; // read on demand: no clock re-renders
 import { useSoundscape } from './audio/useSoundscape';
@@ -46,6 +47,7 @@ export default function CompanionBridge() {
       return {
         room,
         petId: room?.petId || 'cat',
+        petPack: selectedPack(),
         focus: f ? focusSnapshot(f.state, Date.now()) : null,
         // The 专注画面 choice, so the wallpaper shows the same face (its own partition cannot read it).
         focusDisplay: currentFocusDisplay(),

@@ -1,0 +1,226 @@
+{
+  "version": 1,
+  "theme": "warm",
+  "style": "Amber pine, aged brass, cream paper, forest-green enamel. Upper-left warm light.",
+  "generator": "ImageGen",
+  "worldSize": [
+    1200,
+    640
+  ],
+  "assets": {
+    "shell": {
+      "file": "shell.png",
+      "size": [
+        1717,
+        916
+      ],
+      "source": "exec-a9d53474-54d2-4c4d-8c7f-72e8abe1ec2a.png"
+    },
+    "furniture": {
+      "file": "furniture.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "frames": {
+        "clock": [
+          48,
+          24,
+          240,
+          288
+        ],
+        "calendar": [
+          352,
+          32,
+          232,
+          280
+        ],
+        "weather": [
+          656,
+          32,
+          248,
+          280
+        ],
+        "deck": [
+          952,
+          32,
+          302,
+          280
+        ],
+        "lyrics": [
+          16,
+          344,
+          296,
+          248
+        ],
+        "tasks": [
+          328,
+          344,
+          296,
+          264
+        ],
+        "books": [
+          632,
+          312,
+          304,
+          320
+        ],
+        "notes": [
+          944,
+          352,
+          310,
+          256
+        ],
+        "mail": [
+          24,
+          632,
+          272,
+          272
+        ],
+        "tea": [
+          312,
+          664,
+          312,
+          232
+        ],
+        "plant": [
+          632,
+          632,
+          304,
+          352
+        ],
+        "bed": [
+          936,
+          672,
+          318,
+          224
+        ],
+        "photo": [
+          24,
+          936,
+          272,
+          280
+        ],
+        "lamp": [
+          352,
+          928,
+          248,
+          296
+        ]
+      }
+    },
+    "extras": {
+      "file": "extras.png",
+      "source": "exec-2e12e9f7-0ebb-4a95-a88a-b923e51fb9bc.png",
+      "width": 1254,
+      "height": 1254,
+      "alpha": true,
+      "transparentFraction": 0.529,
+      "frames": {
+        "vinyl": [
+          41,
+          91,
+          267,
+          265
+        ],
+        "cover": [
+          346,
+          89,
+          260,
+          263
+        ],
+        "player": [
+          638,
+          152,
+          287,
+          198
+        ],
+        "headphones": [
+          950,
+          61,
+          277,
+          292
+        ],
+        "timer": [
+          47,
+          448,
+          229,
+          216
+        ],
+        "journal": [
+          347,
+          410,
+          226,
+          278
+        ],
+        "keyboard": [
+          602,
+          474,
+          377,
+          183
+        ],
+        "mouse": [
+          1024,
+          464,
+          182,
+          200
+        ],
+        "play": [
+          78,
+          736,
+          201,
+          195
+        ],
+        "pause": [
+          378,
+          736,
+          199,
+          195
+        ],
+        "next": [
+          666,
+          735,
+          199,
+          196
+        ],
+        "volume": [
+          910,
+          795,
+          324,
+          96
+        ],
+        "sun": [
+          64,
+          971,
+          226,
+          217
+        ],
+        "moon": [
+          378,
+          979,
+          188,
+          196
+        ],
+        "cloud": [
+          638,
+          1002,
+          269,
+          171
+        ],
+        "rain": [
+          966,
+          976,
+          249,
+          218
+        ]
+      }
+    }
+  },
+  "review": {
+    "status": "runtime-review-pending",
+    "notes": [
+      "One moon in right window only.",
+      "Frames retain generated pixels; runtime trims alpha padding."
+    ]
+  }
+}

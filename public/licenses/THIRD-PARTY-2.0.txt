@@ -1,0 +1,22 @@
+Flow Cabin combined distribution
+
+Flow Cabin original code remains GPL-3.0-only. AMLL core 0.6.0, React 0.6.0,
+and lyric 1.1.0 are AGPL-3.0-only, not relicensed as GPL. The combined work
+is distributed subject to GPLv3 section 13 and AGPLv3 section 13.
+AMLL license: /licenses/AMLL-AGPL-3.0.txt
+AMLL source: https://github.com/amll-dev/applemusic-like-lyrics
+Flow Cabin corresponding source and build instructions:
+https://github.com/ooooooomygosh/Flow-Cabin (use the release's tagged commit)
+Locked component versions and integrity hashes are in package-lock.json.
+
+PixiJS 8.14.3 and Motion 12.23.24: MIT. Their license texts are bundled as
+/licenses/PixiJS-MIT.txt and /licenses/Motion-MIT.txt. No AMLL background
+renderer or Pixi objects are passed into the cabin's PixiJS 8 renderer.
+
+No dsh-pet animations, prompts, or source videos are bundled. Imported media
+retains its own author's licensing terms; importing does not grant redistribution.
+Lyrics copyright remains with its original authors. LRCLIB is only a matching
+service; local and platform lyrics are not redistributed with the application.
+
+QR generation: qrcode 1.5.4 (MIT), bundled /licenses/QRCode-MIT.txt.
+QR decoding: jsQR 1.4.0 (Apache-2.0), bundled /licenses/jsQR-Apache-2.0.txt.

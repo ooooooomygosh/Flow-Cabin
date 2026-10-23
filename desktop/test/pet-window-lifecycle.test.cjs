@@ -10,13 +10,14 @@ const { EventEmitter } = require('node:events');
 // is touched; these assertions do not claim native click-through acceptance.
 function fixture() {
   let push, timerId = 0, singleDisplay = false;
+  const protocols=new Map(),protocolCalls=[];
   const jobs = new Map(), ipcMain = new EventEmitter(); const handlers = {}; ipcMain.handle = (name, fn) => { handlers[name] = fn; };
   const primary = { workArea: { x: 0, y: 0, width: 1920, height: 1080 } };
   const builtin = { workArea: { x: 1920, y: 0, width: 1728, height: 1080 } };
   class Window extends EventEmitter {
     constructor(options) {
       super(); this.options = options; this.bounds = { x: options.x, y: options.y, width: options.width, height: options.height }; this.destroyed = false;
-      this.webContents = new EventEmitter(); Object.assign(this.webContents, { mainFrame: { url: 'album-desktop://pet/pet.html' }, setWindowOpenHandler() {}, send() {}, session: { protocol: { isProtocolHandled: async () => true }, setPermissionRequestHandler() {}, setPermissionCheckHandler() {} } });
+      this.webContents = new EventEmitter(); Object.assign(this.webContents, { mainFrame: { url: 'album-desktop://pet/pet.html' }, setWindowOpenHandler() {}, send() {}, session: { protocol: { isProtocolHandled: async () => true, unhandle(scheme) {protocolCalls.push(['unhandle',scheme]);}, handle(scheme,route) {protocolCalls.push(['handle',scheme]);protocols.set(scheme,route);} }, setPermissionRequestHandler() {}, setPermissionCheckHandler() {} } });
     }
     getBounds() { return { ...this.bounds }; }
     setBounds(value) { this.bounds = { ...value }; }
@@ -33,7 +34,7 @@ function fixture() {
   };
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../pet.cjs'), 'utf8'), sandbox);
   const pet = sandbox.module.exports.createPet({ directory: '/fixture', getSite: () => ({ getBounds: () => ({ x: 2100, y: 40, width: 1000, height: 700 }), isDestroyed: () => false }), status() {}, registerProtocol() {} });
-  return { pet, jobs, handlers, removeDisplay: () => { singleDisplay = true; }, push: value => push(value), event: (name, ...args) => { const sender = pet.window.webContents; ipcMain.emit(name, { sender, senderFrame: sender.mainFrame }, ...args); } };
+  return { pet, jobs, handlers, protocols,protocolCalls, removeDisplay: () => { singleDisplay = true; }, push: value => push(value), event: (name, ...args) => { const sender = pet.window.webContents; ipcMain.emit(name, { sender, senderFrame: sender.mainFrame }, ...args); } };
 }
 
 test('new desktop pet starts on the main cabin display, not always the primary display', async () => {
@@ -65,3 +66,5 @@ test('a freshly shown pet takes the first click (macOS) and can hit-test a point
   await assert.rejects(async () => f.handlers['pet:cursor']({ sender: {}, senderFrame: {} }));
   f.pet.stop();
 });
+
+test('isolated pet installs a fixed atlas-only HTTPS handler before loading its page',async()=>{const f=fixture();await f.pet.start();assert.deepEqual(f.protocolCalls,[['unhandle','https'],['handle','https']]);assert.equal((await f.protocols.get('https')(new Request('https://untrusted.invalid/atlas.png'))).status,403);f.pet.stop();});

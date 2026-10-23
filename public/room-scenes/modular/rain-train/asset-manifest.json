@@ -1,0 +1,236 @@
+{
+  "version": 1,
+  "theme": "rain-train",
+  "style": "Dark teal enamel, riveted aged brass, walnut, oxblood leather; rain-blue windows and amber carriage lighting.",
+  "world": {
+    "width": 1200,
+    "height": 640,
+    "deskBaselineY": 336,
+    "floorRange": [
+      384,
+      632
+    ],
+    "notes": "Front facing with slight visible top surfaces. Windows align with amber shell. Native generated sprite edges contain fine semi-transparent pixels; use actual frames rather than equal grid."
+  },
+  "assets": {
+    "shell": {
+      "file": "shell.png",
+      "source": "exec-41c1ad0d-2b6a-4825-a547-1df59c8b9652.png",
+      "width": 1717,
+      "height": 916,
+      "alpha": false
+    },
+    "furniture": {
+      "file": "furniture.png",
+      "source": "exec-9f822a67-eff0-4bef-ab0d-19358c2346bd.png",
+      "width": 1254,
+      "height": 1254,
+      "alpha": true,
+      "transparentFraction": 0.4132,
+      "frames": {
+        "clock": [
+          63,
+          40,
+          245,
+          309
+        ],
+        "calendar": [
+          367,
+          59,
+          218,
+          279
+        ],
+        "weather": [
+          656,
+          59,
+          223,
+          291
+        ],
+        "deck": [
+          933,
+          76,
+          281,
+          270
+        ],
+        "lyrics": [
+          50,
+          373,
+          261,
+          254
+        ],
+        "tasks": [
+          347,
+          372,
+          255,
+          262
+        ],
+        "books": [
+          632,
+          369,
+          287,
+          296
+        ],
+        "notes": [
+          944,
+          427,
+          291,
+          225
+        ],
+        "mail": [
+          63,
+          657,
+          242,
+          252
+        ],
+        "tea": [
+          336,
+          685,
+          297,
+          221
+        ],
+        "plant": [
+          643,
+          675,
+          267,
+          275
+        ],
+        "bed": [
+          934,
+          721,
+          302,
+          186
+        ],
+        "photo": [
+          53,
+          944,
+          278,
+          254
+        ],
+        "lamp": [
+          388,
+          926,
+          207,
+          275
+        ],
+        "bookstack": [
+          629,
+          985,
+          308,
+          206
+        ],
+        "speaker": [
+          990,
+          945,
+          200,
+          255
+        ]
+      }
+    },
+    "extras": {
+      "file": "extras.png",
+      "source": "exec-ae7aa185-476e-4c49-a64d-0d2d07a3bcdd.png",
+      "width": 1254,
+      "height": 1254,
+      "alpha": true,
+      "transparentFraction": 0.4376,
+      "frames": {
+        "vinyl": [
+          30,
+          76,
+          273,
+          268
+        ],
+        "cover": [
+          336,
+          68,
+          271,
+          278
+        ],
+        "player": [
+          628,
+          140,
+          314,
+          216
+        ],
+        "headphones": [
+          956,
+          61,
+          276,
+          295
+        ],
+        "timer": [
+          32,
+          396,
+          272,
+          260
+        ],
+        "journal": [
+          339,
+          376,
+          270,
+          306
+        ],
+        "keyboard": [
+          626,
+          451,
+          377,
+          182
+        ],
+        "mouse": [
+          1025,
+          423,
+          209,
+          233
+        ],
+        "play": [
+          49,
+          706,
+          240,
+          226
+        ],
+        "pause": [
+          349,
+          706,
+          240,
+          227
+        ],
+        "next": [
+          658,
+          706,
+          242,
+          226
+        ],
+        "volume": [
+          933,
+          769,
+          296,
+          134
+        ],
+        "sun": [
+          35,
+          950,
+          268,
+          258
+        ],
+        "moon": [
+          350,
+          966,
+          235,
+          237
+        ],
+        "cloud": [
+          631,
+          996,
+          289,
+          184
+        ],
+        "rain": [
+          950,
+          965,
+          273,
+          248
+        ]
+      }
+    }
+  }
+}

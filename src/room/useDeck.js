@@ -20,8 +20,10 @@ export default function useDeck({ items, onLoad }) {
   const [provider, setProvider] = useState(readProvider);
   const chosenProvider = useRef((() => { try { return Boolean(localStorage.getItem(PROVIDER_KEY)); } catch { return true; } })());
   const chooseProvider = useCallback((value) => { chosenProvider.current = true; setProvider(value); try { localStorage.setItem(PROVIDER_KEY, value); } catch {} }, []);
-  const queueRef = useRef(null);
-  const playback = useRoomPlayback(record, trackIndex, provider, (manual = false) => queueRef.current?.current.next(manual), { peekNext: () => queueRef.current?.current.peekNext(), canNext: () => Boolean(queueRef.current?.current.canNext) });
+  const queueRef = useRef(null), nativeConsumed = useRef(false);
+  const playback = useRoomPlayback(record, trackIndex, provider, (manual = false) => queueRef.current?.current.next(manual), { onNativeTrackIndex: setTrackIndex,
+    getNativeQueue: () => (queueRef.current?.current.queue.ids || []).map(id => itemsRef.current.find(item => sameRecord(item.id, id))).filter(item => item && !sameRecord(item.id, record?.id)),
+    onNativeSelection: (id, index) => { const item = itemsRef.current.find(entry => sameRecord(entry.id, id)); if (item) { setRecord(item); setTrackIndex(index); onLoad?.(item); const api = queueRef.current?.current; const last = api?.queue.ids.indexOf(String(id)); if (last >= 0) { nativeConsumed.current = true; for (const consumed of api.queue.ids.slice(0, last + 1)) api.remove(consumed); } } }, peekNext: () => queueRef.current?.current.peekNext(), canNext: () => Boolean(queueRef.current?.current.canNext) });
   const system = useSystemNowPlaying(provider === 'system');
   // A playlist shows the current song's own cover on the deck, widgets and media keys.
   const shownCover = provider === 'system' ? '' : trackCover(record, trackIndex, playback.actualCover);
@@ -60,6 +62,10 @@ export default function useDeck({ items, onLoad }) {
   }), [items]);
   const [player, playerRef] = usePlayerQueue({ items: queueItems, record, trackIndex, setTrackIndex, loadAlbum: place, playback, provider });
   queueRef.current = playerRef;
+  useEffect(() => { playback.setModes?.(player.queue); }, [player.queue.shuffle, player.queue.repeat]);
+  const nativeQueueSignature = player.queue.ids.join('|');
+  const priorNativeQueue = useRef(nativeQueueSignature);
+  useEffect(() => { if (priorNativeQueue.current !== nativeQueueSignature) { priorNativeQueue.current = nativeQueueSignature; if (nativeConsumed.current) nativeConsumed.current = false; else playback.syncQueue?.(); } }, [nativeQueueSignature]);
   // Keep the hooks above on canonical ids, but map the queue back to the
   // collection's original id type for the existing UI components. They still
   // compare ids with ===; this keeps numeric shelves visible there too.

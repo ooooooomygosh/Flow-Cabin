@@ -10,7 +10,15 @@ export function usesBrowserCollection() {
 const browser = (path, options) => globalThis.navigator?.locks?.request ? navigator.locks.request(WEB_COLLECTION_KEY, () => browserCollectionRequest(path, options)) : browserCollectionRequest(path, options);
 export async function collectionRequest(path = '/api/items', { method = 'GET', body, signal } = {}) {
   if (signal?.aborted) throw signal.reason || new Error('操作已取消。');
-  if (usesBrowserCollection()) return browser(path, { method, body });
+  if (usesBrowserCollection()) {
+    const before = globalThis.albumMobile ? globalThis.localStorage?.getItem(WEB_COLLECTION_KEY) : undefined;
+    const result = await browser(path, { method, body });
+    if (method !== 'GET' && globalThis.albumMobile) {
+      try { await globalThis.albumMobile.flushStorage(); }
+      catch (error) { if (before === null) localStorage.removeItem(WEB_COLLECTION_KEY); else localStorage.setItem(WEB_COLLECTION_KEY, before); throw error; }
+    }
+    return result;
+  }
   const response = await fetch(path, { method, signal, headers: body === undefined ? {} : { 'Content-Type': 'application/json' }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
   if (!native() && method === 'GET' && path === '/api/items' && [404, 405, 501].includes(response.status)) { fallback = true; return browser(path, { method, body }); }
   const result = await response.json().catch(() => ({}));

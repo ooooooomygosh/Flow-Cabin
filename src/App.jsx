@@ -1,3 +1,4 @@
+import { startLanBridge } from './sync/storage.mjs';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Plus } from './icons';
 import { isNewCabin } from './onboarding/onboarding-model.mjs';
@@ -27,11 +28,13 @@ function useToast() {
 }
 
 export default function App() {
+  useEffect(() => { if (window.albumMobile?.syncRequest || window.albumDesktopCapabilities?.lanSync) return startLanBridge(); }, []);
   const [firstVisit] = useState(() => isNewCabin(localStorage));
   const [hubRequest, setHubRequest] = useState(null);
   const [items, setItems] = useState([]), [loading, setLoading] = useState(true), [error, setError] = useState('');
   const [adding, setAdding] = useState(null), [recordId, setRecordId] = useState(''), [backup, setBackup] = useState(false), [wall, setWall] = useState(false);
   const [toast, notify] = useToast();
+  useEffect(() => { const notice = event => notify(event.detail, { tone: event.detail.includes('未完成') ? 'error' : '' }); window.addEventListener('cabin:mobile-notice', notice); return () => window.removeEventListener('cabin:mobile-notice', notice); }, [notify]);
   const reload = useCallback(async () => {
     setLoading(true);
     try { setItems(await listItems()); setError(''); } catch (cause) { setError(cause.message); } finally { setLoading(false); }

@@ -81,8 +81,9 @@ function LocalMusicSettings() {
     <p role="status" className="music-local-status">{message || (summary ? `${summary.albumCount} 张专辑 · ${summary.trackCount} 首歌曲` : '')}</p>
   </section>;
 }
+const SESSION_LABELS={saved:'已保存登录信息 · 等待验证',valid:'登录有效 · 可复用本机凭据',expired:'平台已确认登录过期 · 请重新登录',offline:'暂时无法连接平台 · 登录信息已保留', 'storage-error':'凭据存储暂不可用 · 数据已保留，请解锁系统后重试',empty:'未登录，可尝试平台允许的游客音频'};
 export default function MusicAccounts() {
-  const desktop = useDesktopAppearance().client;
+  const desktop = useDesktopAppearance().client || Boolean(globalThis.albumMobile);
   const pending = useRef(false);
   const [config, setConfig] = useState({}), [url, setURL] = useState(''), [token, setToken] = useState(''), [players, setPlayers] = useState([]), [playerId, setPlayerId] = useState(''), [busy, setBusy] = useState(false), [error, setError] = useState(''), [notice, setNotice] = useState('');
   const sameServer = url.trim().replace(/\/+$/, '') === (config.maURL || '').replace(/\/+$/, '');
@@ -101,8 +102,8 @@ export default function MusicAccounts() {
   const account = (provider, logout = false) => { if (pending.current) return; if (!desktop) { setError('平台登录需要在心流小屋桌面版中进行：登录窗口由桌面版打开，凭据只加密保存在本机。'); return; } pending.current = true; setBusy(true); setError(''); setNotice(''); desktopCommand(logout ? 'music-logout' : 'music-login', { provider }); };
   return <div className="music-accounts">
     <p className="music-accounts-intro">平台登录在官方页面完成，登录信息加密保存在本机，不会上传。</p>
-    {[['qq', 'QQ 音乐', config.qqLoggedIn], ['netease', '网易云音乐', config.neteaseLoggedIn]].map(([provider, name, loggedIn]) => <div className="music-account" key={provider}><span><strong>{name}</strong><small>{loggedIn ? '已保存登录信息 · 尚未验证本次播放权限' : '未登录，可尝试平台允许的游客音频'}</small></span><button type="button" disabled={busy || !desktop} title={desktop ? '' : '需要在心流小屋桌面版中登录'} onClick={() => account(provider)}>{loggedIn ? '重新登录' : '登录'}</button>{loggedIn && <button type="button" disabled={busy} onClick={() => account(provider, true)}>退出平台</button>}</div>)}
-    <LocalMusicSettings/>
+    {[['qq', 'QQ 音乐', config.qqLoggedIn], ['netease', '网易云音乐', config.neteaseLoggedIn]].map(([provider, name, loggedIn]) => <div className="music-account" key={provider}><span><strong>{name}</strong><small>{SESSION_LABELS[config.accounts?.[provider]?.status] || (loggedIn ? SESSION_LABELS.saved : SESSION_LABELS.empty)}</small></span><button type="button" disabled={busy || !desktop} title={desktop ? '' : '需要在心流小屋桌面版中登录'} onClick={() => account(provider)}>{loggedIn ? '重新登录' : '登录'}</button>{loggedIn && <><button type="button" disabled={busy} onClick={async()=>{if(pending.current)return;pending.current=true;setBusy(true);setError('');try{setConfig(await musicRequest('/accounts/validate',{provider}));}catch(e){setError(e.message);}finally{pending.current=false;setBusy(false);}}}>复查登录</button><button type="button" disabled={busy} onClick={() => account(provider, true)}>退出平台</button></>}</div>)}
+    {!globalThis.albumMobile && <LocalMusicSettings/>}
     <details className="music-advanced"><summary>Music Assistant · 连接家里的播放器</summary>{config.maURL && config.playerId && <p className="music-accounts-saved">已保存服务器与播放器</p>}<form onSubmit={connect}><p>声音从服务器上配置好的播放器发出，不从本机播放。连接只检查服务器和播放器列表。</p>
       <label>服务器地址<input type="url" aria-label="Music Assistant 服务器地址" placeholder="http://192.168.1.8:8095" value={url} onChange={(event) => { setURL(event.target.value); setPlayers([]); setPlayerId(''); setToken(''); setNotice(''); }} disabled={busy} required/></label>
       <label>访问令牌<input type="password" aria-label="Music Assistant 访问令牌" value={token} onChange={(event) => setToken(event.target.value)} disabled={busy} placeholder={config.maTokenSet && sameServer ? '令牌已加密保存，留空可沿用' : '从服务器的用户资料中创建访问令牌'} autoComplete="off"/></label>

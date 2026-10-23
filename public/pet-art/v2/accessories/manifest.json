@@ -1,0 +1,228 @@
+{
+  "version": 1,
+  "id": "accessories",
+  "name": "旅行与日常配饰",
+  "atlas": "atlas.png",
+  "width": 1254,
+  "height": 1254,
+  "sourceImage": "exec-c1b60e36-ac2d-4f47-9574-86372f1a1dcb.png",
+  "frames": {
+    "music-pin": {
+      "frame": {
+        "x": 98,
+        "y": 184,
+        "w": 186,
+        "h": 156
+      },
+      "kind": "accessory",
+      "anchor": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "tomato-pin": {
+      "frame": {
+        "x": 383,
+        "y": 163,
+        "w": 194,
+        "h": 185
+      },
+      "kind": "accessory",
+      "anchor": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "star-scarf": {
+      "frame": {
+        "x": 642,
+        "y": 131,
+        "w": 263,
+        "h": 246
+      },
+      "kind": "accessory",
+      "anchor": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "raincoat": {
+      "frame": {
+        "x": 958,
+        "y": 130,
+        "w": 250,
+        "h": 239
+      },
+      "kind": "accessory",
+      "anchor": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "sunhat": {
+      "frame": {
+        "x": 39,
+        "y": 443,
+        "w": 285,
+        "h": 196
+      },
+      "kind": "accessory",
+      "anchor": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "moon-hat": {
+      "frame": {
+        "x": 353,
+        "y": 437,
+        "w": 274,
+        "h": 210
+      },
+      "kind": "accessory",
+      "anchor": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "bookbag": {
+      "frame": {
+        "x": 659,
+        "y": 431,
+        "w": 251,
+        "h": 233
+      },
+      "kind": "accessory",
+      "anchor": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "flower-crown": {
+      "frame": {
+        "x": 952,
+        "y": 462,
+        "w": 270,
+        "h": 188
+      },
+      "kind": "accessory",
+      "anchor": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "leaf-fan": {
+      "frame": {
+        "x": 62,
+        "y": 699,
+        "w": 238,
+        "h": 239
+      },
+      "kind": "accessory",
+      "anchor": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "blanket": {
+      "frame": {
+        "x": 353,
+        "y": 724,
+        "w": 270,
+        "h": 207
+      },
+      "kind": "accessory",
+      "anchor": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "ball": {
+      "frame": {
+        "x": 699,
+        "y": 740,
+        "w": 162,
+        "h": 167
+      },
+      "kind": "accessory",
+      "anchor": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "brush": {
+      "frame": {
+        "x": 969,
+        "y": 712,
+        "w": 226,
+        "h": 213
+      },
+      "kind": "accessory",
+      "anchor": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "snack-bowl": {
+      "frame": {
+        "x": 58,
+        "y": 1025,
+        "w": 242,
+        "h": 165
+      },
+      "kind": "accessory",
+      "anchor": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "umbrella": {
+      "frame": {
+        "x": 393,
+        "y": 958,
+        "w": 217,
+        "h": 248
+      },
+      "kind": "accessory",
+      "anchor": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "heart-pin": {
+      "frame": {
+        "x": 699,
+        "y": 1028,
+        "w": 182,
+        "h": 145
+      },
+      "kind": "accessory",
+      "anchor": {
+        "x": 0.5,
+        "y": 1
+      }
+    },
+    "travel-case": {
+      "frame": {
+        "x": 952,
+        "y": 975,
+        "w": 256,
+        "h": 217
+      },
+      "kind": "accessory",
+      "anchor": {
+        "x": 0.5,
+        "y": 1
+      }
+    }
+  },
+  "status": "static-accessory-library",
+  "limitations": [
+    "Calibrate attachment anchors for each species and pose before overlaying."
+  ],
+  "qa": {
+    "transparentBackground": true,
+    "visuallyReviewed": true,
+    "edgeWarnings": []
+  }
+}

@@ -8,7 +8,7 @@ import { onboardingSeed } from './app-version.mjs';
 export async function verifyAppleHandoff({ browser, origin, output, check }) {
   for (const initial of ['paused', 'playing', 'legacy']) {
     const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'zh-CN', reducedMotion: 'reduce' });
-    const errors = [], controls = [], resolves = [];
+    const errors = [], controls = [], resolves = [], hotUpdates = [];
     const selected = { id: 'ABCDEF0123456789', title: '所选歌曲', artist: '演示歌手', album: '原始专辑', duration: 200, elapsed: 12 };
     let current = { ...selected, title: '另一首歌曲', state: initial }, polls = 0, failPoll = false;
     await context.addInitScript((seed) => { window.__onboardingSeed = seed; }, onboardingSeed());
@@ -44,10 +44,24 @@ export async function verifyAppleHandoff({ browser, origin, output, check }) {
       if (u.pathname.startsWith('/api/') || u.pathname.startsWith('/desktop-music/')) { errors.push(u.pathname); return json({}); }
       return route.continue();
     });
-    const page = await context.newPage(); page.setDefaultTimeout(8000); page.on('pageerror', error => errors.push(error.message));
+    const page = await context.newPage();
+    // A native build can rewrite watched files while this fixture is polling.
+    // React refresh re-runs effects; diagnose that invalid test environment
+    // without hiding repeated resolves or weakening the handoff assertions.
+    page.on('websocket', socket => {
+      if (new URL(socket.url()).host !== new URL(origin).host) return;
+      socket.on('framereceived', ({ payload }) => {
+        try {
+          const message = JSON.parse(String(payload));
+          if (message.type === 'update' || message.type === 'full-reload') hotUpdates.push({ type: message.type, paths: (message.updates || []).slice(0, 8).map(update => update.path), path: message.path || '' });
+        } catch { /* Non-JSON Vite frames contain no reload instruction. */ }
+      });
+    });
+    const stableBuild = () => assert.equal(hotUpdates.length, 0, `Apple handoff fixture invalidated by Vite hot reload: ${JSON.stringify(hotUpdates)}`);
+    page.setDefaultTimeout(8000); page.on('pageerror', error => errors.push(error.message));
     const waiting = () => page.getByText('请在「音乐」App 播放所选歌曲', { exact: true }).first().waitFor();
     const progress = page.getByRole('slider', { name: '音乐播放进度', exact: true });
-    const pollAgain = async () => { const previous = polls; for (let i = 0; i < 40 && polls <= previous; i++) await page.waitForTimeout(100); assert.ok(polls > previous); await page.waitForTimeout(100); };
+    const pollAgain = async () => { const previous = polls; for (let i = 0; i < 40 && polls <= previous; i++) await page.waitForTimeout(100); assert.ok(polls > previous); await page.waitForTimeout(100); stableBuild(); };
     try {
       await page.goto(origin); await page.locator('.room-record').first().waitFor();
       assert.equal(await page.evaluate(() => /mac/i.test(navigator.userAgentData?.platform || navigator.platform)), true, 'settings and player both receive the Mac fixture platform');
@@ -89,7 +103,8 @@ export async function verifyAppleHandoff({ browser, origin, output, check }) {
       assert.deepEqual(await page.evaluate(() => window.__unexpectedNavigation), []);
       check(`apple-catalog-binds-selected-track-revokes-on-change-and-ejects-safely-${initial}`);
     } catch (error) {
-      console.error('Apple handoff fixture failure', { initial, errors, body: (await page.locator('body').innerText().catch(() => '')).slice(0, 2000) });
+      console.error('Apple handoff fixture failure', { initial, errors, hotUpdates, resolveRequests: resolves, body: (await page.locator('body').innerText().catch(() => '')).slice(0, 2000) });
+      if (hotUpdates.length) throw new Error(`Apple handoff fixture invalidated by Vite source changes (${hotUpdates.map(update => update.type + ': ' + (update.paths?.join(', ') || update.path)).join('; ')}). Freeze generated assets before rerunning this test.`, { cause: error });
       throw error;
     } finally { await context.close(); }
   }

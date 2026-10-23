@@ -15,7 +15,7 @@ function validPlace(lat, lng) {
   const a = num(lat), b = num(lng);
   return Number.isFinite(a) && Number.isFinite(b) && Math.abs(a) <= 90 && Math.abs(b) <= 180 ? { lat: round(a), lng: round(b) } : null;
 }
-const weatherUrl = ({ lat, lng }) => `${ENDPOINT}?latitude=${lat}&longitude=${lng}&current=weather_code,wind_speed_10m,precipitation,cloud_cover,temperature_2m,is_day&timezone=auto`;
+const weatherUrl = ({ lat, lng }) => `${ENDPOINT}?latitude=${lat}&longitude=${lng}&current=weather_code,wind_speed_10m,precipitation,cloud_cover,temperature_2m,apparent_temperature,relative_humidity_2m,is_day&timezone=auto`;
 
 // WMO weather interpretation codes → the cabin's weather kinds.
 function weatherFromReport(report) {
@@ -23,7 +23,11 @@ function weatherFromReport(report) {
   const code = Number(current.weather_code), cover = Number(current.cloud_cover), windKmh = Number(current.wind_speed_10m);
   if (!Number.isFinite(code)) return null;
   const wind = Math.round(clamp01((Number.isFinite(windKmh) ? windKmh : 10) / 50) * 100) / 100;
-  const of = (kind, intensity) => ({ kind, intensity: Math.round(clamp01(intensity) * 100) / 100, wind });
+  const readings = {};
+  for (const [name, source] of Object.entries({ temperature: 'temperature_2m', feelsLike: 'apparent_temperature', humidity: 'relative_humidity_2m', precipitation: 'precipitation' })) {
+    if (typeof current[source] === 'number' && Number.isFinite(current[source])) readings[name] = current[source];
+  }
+  const of = (kind, intensity) => ({ kind, intensity: Math.round(clamp01(intensity) * 100) / 100, wind, ...readings });
   if (code === 0) return of('clear', 0);
   if (code === 1 || code === 2) return Number.isFinite(cover) && cover >= 45 ? of('cloudy', .3 + cover / 250) : of('clear', 0);
   if (code === 3) return of('cloudy', .9);
@@ -40,7 +44,7 @@ function weatherFromReport(report) {
 }
 
 function createWeather({ fetch, publish, now = Date.now, setTimer = setTimeout, clearTimer = clearTimeout, writeLog = () => {} }) {
-  let enabled = false, place = null, value = null, timer = null, inflight = null;
+  let enabled = false, place = null, value = null, timer = null, inflight = null, inflightKey = null;
   const cache = new Map(); // "lat,lng" → { weather, fetchedAt }
   const key = (p) => `${p.lat},${p.lng}`;
   const state = () => enabled && value ? value : null;
@@ -49,22 +53,23 @@ function createWeather({ fetch, publish, now = Date.now, setTimer = setTimeout, 
   async function refresh() {
     if (!enabled || !place) return state();
     const wanted = place, hit = cache.get(key(wanted));
-    if (hit && now() - hit.fetchedAt < TTL) { value = { ...hit.weather, fetchedAt: hit.fetchedAt, source: 'open-meteo' }; emit(); schedule(hit.fetchedAt + TTL - now()); return state(); }
-    if (inflight) return inflight;
+    if (hit && now() - hit.fetchedAt < TTL) { value = { ...hit.weather, fetchedAt: hit.fetchedAt, source: 'open-meteo', lat: wanted.lat, lng: wanted.lng }; emit(); schedule(hit.fetchedAt + TTL - now()); return state(); }
+    if (inflight) return inflightKey === key(wanted) ? inflight : inflight.then(() => enabled && place && key(place) === key(wanted) ? refresh() : state());
+    inflightKey = key(wanted);
     inflight = (async () => {
       const controller = new AbortController(), abort = setTimer(() => controller.abort(), TIMEOUT);
       try {
-        const response = await fetch(weatherUrl(wanted), { signal: controller.signal, headers: { accept: 'application/json' } });
+        const response = await fetch(weatherUrl(wanted), { signal: controller.signal, redirect: 'error', headers: { accept: 'application/json' } });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const weather = weatherFromReport(await response.json());
         if (!weather) throw new Error('unrecognised report');
         const fetchedAt = now(); cache.set(key(wanted), { weather, fetchedAt });
-        if (enabled && place && key(place) === key(wanted)) { value = { ...weather, fetchedAt, source: 'open-meteo' }; emit(); }
+        if (enabled && place && key(place) === key(wanted)) { value = { ...weather, fetchedAt, source: 'open-meteo', lat: wanted.lat, lng: wanted.lng }; emit(); }
         schedule(TTL);
       } catch (error) {
         writeLog('weather-error', error.message || String(error));
         schedule(RETRY); // keep the last report (the page lets it go stale after 3 h)
-      } finally { clearTimer(abort); inflight = null; }
+      } finally { clearTimer(abort); inflight = null; inflightKey = null; }
       return state();
     })();
     return inflight;
@@ -85,6 +90,7 @@ function createWeather({ fetch, publish, now = Date.now, setTimer = setTimeout, 
 }
 const weatherScript = (value) => {
   const safe = value && typeof value === 'object' ? { kind: String(value.kind), intensity: Number(value.intensity) || 0, wind: Number(value.wind) || 0, fetchedAt: Number(value.fetchedAt) || 0, source: 'open-meteo' } : null;
+  if (safe) for (const name of ['temperature', 'feelsLike', 'humidity', 'precipitation', 'lat', 'lng']) { if (typeof value[name] === 'number' && Number.isFinite(value[name])) safe[name] = value[name]; }
   return `window.cabinWeather = ${JSON.stringify(safe)}; window.dispatchEvent(new CustomEvent('cabin:weather', { detail: window.cabinWeather }));`;
 };
 module.exports = { createWeather, weatherFromReport, weatherScript, weatherUrl, validPlace, WEATHER_TTL: TTL };

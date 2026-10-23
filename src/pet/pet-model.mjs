@@ -1,11 +1,10 @@
+import { ACTION_FRAMES, PET_ACTIONS } from './pet-actions.mjs';
 // What the cat is doing, derived from the room's state. Pure and testable.
 import { POSES, LISTEN_POSE, LISTEN_FRAMES, TYPING_POSE, TYPING_FRAMES, CLICK_POSE, CLICK_FRAMES, EAT_POSE, EAT_FRAMES, HOP_POSE, HOP_FRAMES } from './cat-sprites.mjs';
 import { getPet } from './pet-catalog.mjs';
 
-// `listen` (eyes closed, music on but no beat to follow): beauty's cat-only pose, outside POSES.
-// Cat-only action poses from beauty's sprites (#59): typing (key taps), eat (desk-pet feeding) and
-// hop (double-click). Other pets draw them as idle / celebrate (pet-sprites.mjs).
-export const FPS = Object.freeze({ idle: 2, groove: 4, [LISTEN_POSE]: .5, celebrate: 6, walk: 4, sleep: 1, focus: 1.5, [TYPING_POSE]: 8, [CLICK_POSE]: 10, [EAT_POSE]: 6, [HOP_POSE]: 10 });
+// Preserve the original cat timing while every species renders the same semantic actions.
+export const FPS = Object.freeze({ ...Object.fromEntries(PET_ACTIONS.map(action => [action, 4])), idle: 2, groove: 4, [LISTEN_POSE]: .5, celebrate: 6, walk: 4, sleep: 1, focus: 1.5, [TYPING_POSE]: 8, [CLICK_POSE]: 10, [EAT_POSE]: 6, [HOP_POSE]: 10 });
 export { LISTEN_POSE, TYPING_POSE, CLICK_POSE, EAT_POSE, HOP_POSE };
 // 打字跟随: the cat keeps typing this long after the last key activity (global hook or in-cabin).
 export const TYPING_HOLD_MS = 900;
@@ -23,19 +22,21 @@ export function activeInputPose({ typingAt = 0, clickAt = 0, now = Date.now() } 
   return { pose: '', until: 0 };
 }
 const EXTRA_COUNTS = { [LISTEN_POSE]: LISTEN_FRAMES, [TYPING_POSE]: TYPING_FRAMES, [CLICK_POSE]: CLICK_FRAMES, [EAT_POSE]: EAT_FRAMES, [HOP_POSE]: HOP_FRAMES };
-const frameCount = (pose) => EXTRA_COUNTS[pose] || POSES[pose] || 1;
+const frameCount = (pose) => EXTRA_COUNTS[pose] || POSES[pose] || ACTION_FRAMES[pose] || 1;
 // One-shot actions on the desktop pet: eat plays its 6 frames twice, hop once.
 export const ACTION_MS = Object.freeze({ [EAT_POSE]: Math.round(EAT_FRAMES * 2 * 1000 / 6), [HOP_POSE]: Math.round(HOP_FRAMES * 1000 / 10) });
 const IDLE_SLEEP_MS = 5 * 60 * 1000, CELEBRATE_MS = 4000;
 export const isNight = (hour) => hour >= 23 || hour < 6;
 
 // `synced`: a real detected beat (src/cat/beat-sync.mjs beatSynced). Without one the cat listens
-// (eyes closed) instead of dancing to a made-up tempo. Other pets draw `listen` as idle.
+// briefly instead of dancing to a made-up tempo.
 export function petPose({ synced = false, playing = false, phase = 'idle', paused = false, idleMs = 0, hour = 12, celebrateUntil = 0, now = 0, poked = 0 } = {}) {
   if (now < celebrateUntil) return 'celebrate';
   if (poked && now - poked < 1500) return 'celebrate';
   if (phase === 'focus' && !paused) return 'focus';
-  if (playing) return synced ? 'groove' : LISTEN_POSE;
+  // A brief listening expression, followed by open-eyed breathing. This is
+  // natural idle motion, never a fabricated beat.
+  if (playing) return synced ? 'groove' : (Math.max(0, now) % 12000 < 1500 ? LISTEN_POSE : 'idle');
   if (phase === 'shortBreak' || phase === 'longBreak') return 'walk';
   if (isNight(hour) || idleMs > IDLE_SLEEP_MS) return 'sleep';
   return 'idle';

@@ -5,12 +5,14 @@ const pending = new WeakMap();
 // Native shell events and the browser Fullscreen API are the only confirmed state.
 export function readCabinFullscreen(env = window) {
   const doc = env.document;
+  if (env.albumMobile) return doc.documentElement.dataset.mobileFullscreen === 'true';
   return doc.documentElement.dataset.desktopClient === 'true'
     ? doc.documentElement.dataset.desktopFullscreen === 'true'
     : Boolean(doc.fullscreenElement);
 }
 export async function requestCabinFullscreen({ exit = false, env = window } = {}) {
   const doc = env.document;
+  if (env.albumMobile) return env.albumMobile.setFullscreen(exit ? false : !readCabinFullscreen(env));
   if (doc.documentElement.dataset.desktopClient === 'true') {
     // Keep toggle intent in the native controller while macOS animates a transition.
     desktopCommand(exit ? 'fullscreen-exit' : 'fullscreen', {}, (href) => env.open(href, '_blank'));
