@@ -158,7 +158,7 @@
 .corner-actions .corner-primary{background:#e3d2ad;color:#293321}.corner-actions .corner-primary:hover{background:#f0deb8}
 .home-corner-loading{position:absolute;inset:0;display:grid;place-items:center;color:var(--home-muted);font-size:14px}
 @keyframes corner-enter{from{opacity:0}to{opacity:1}}
-@media(max-width:699px){.is-corner .home-room-caption{top:118px;left:20px}.home-room-caption .home-back-overview{min-height:48px;font-size:12px}.corner-actions{bottom:160px;max-width:calc(100% - 32px);gap:0;padding:4px}.corner-actions button{min-height:48px;font-size:12px;padding:6px 15px}.is-corner:before{background:linear-gradient(#111a16e6,transparent 30%,transparent 58%,#101a15e6)}.is-corner .home-intro{bottom:225px}}
+@media(max-width:699px){.is-corner .home-room-caption{top:calc(110px + max(8px,calc(var(--safe-area-inset-top,env(safe-area-inset-top,0px)) + 6px)));left:20px}.home-room-caption .home-back-overview{min-height:48px;font-size:12px}.corner-actions{bottom:160px;max-width:calc(100% - 32px);gap:0;padding:4px}.corner-actions button{min-height:48px;font-size:12px;padding:6px 15px}.is-corner:before{background:linear-gradient(#111a16e6,transparent 30%,transparent 58%,#101a15e6)}.is-corner .home-intro{bottom:225px}}
 @media(max-height:500px) and (min-width:700px){.is-corner .home-room-caption{top:55px;left:20px}.corner-actions{bottom:65px}.corner-actions button{min-height:36px;padding:4px 16px}}
 .is-reduced .home-corner,.is-reduced .corner-record-disc{animation:none}
 .is-reduced .corner-art,.is-reduced .corner-pet-occluder,.is-reduced .corner-pet,.is-reduced .corner-ambient{transition:none}
