@@ -13,8 +13,12 @@ export const LEGACY_WELCOME_KEY = 'flow-cabin-welcome-v1';
 // guide then explains the whole 1.18–1.21 arc, including the earlier hidden
 // typing-follow entry that existing users never saw in a guided flow.
 export const LEGACY_SEEN_VERSION = '1.17.0';
-export const STEPS = Object.freeze(['welcome', 'updates', 'source', 'permissions', 'room', 'test', 'done']);
-export const STEP_LABELS = Object.freeze({ welcome: '欢迎', updates: '更新', source: '音源', permissions: '权限', room: '房间', test: '试听', done: '完成' });
+// 2.2: three short steps. Permissions (键鼠陪伴, 通知, 开机启动) are optional and
+// live in 设置; a version update is a dismissible 新功能 sheet, not a walkthrough.
+export const STEPS = Object.freeze(['source', 'room', 'test']);
+export const STEP_LABELS = Object.freeze({ source: '音源', room: '房间与伙伴', test: '试听' });
+// Steps saved by 2.1 and earlier resume at the closest 2.2 step.
+const LEGACY_STEPS = Object.freeze({ welcome: 'source', updates: 'source', permissions: 'room', done: 'test' });
 const STATUSES = ['new', 'active', 'skipped', 'done'];
 const PERMISSION_VALUES = ['', 'granted', 'pending', 'denied', 'skipped', 'unsupported'];
 const versionString = (value) => parseVersion(value) ? String(value).trim().replace(/^v/i, '') : '';
@@ -56,7 +60,7 @@ export function permissionItems(env = {}, source = '') {
 }
 
 export function initialState() {
-  return { version: 2, status: 'new', step: 'welcome', source: '', quality: '', permissions: {}, tested: '', seenVersion: '', fromVersion: '', updatedAt: 0 };
+  return { version: 2, status: 'new', step: STEPS[0], source: '', quality: '', permissions: {}, tested: '', seenVersion: '', fromVersion: '', updatedAt: 0 };
 }
 
 export function normalizeState(value) {
@@ -70,7 +74,7 @@ export function normalizeState(value) {
   return {
     ...base,
     status,
-    step: STEPS.includes(value.step) ? value.step : base.step,
+    step: STEPS.includes(value.step) ? value.step : LEGACY_STEPS[value.step] || base.step,
     source: SOURCE_TABLE.some((source) => source.id === value.source) ? value.source : '',
     quality: typeof value.quality === 'string' ? value.quality.slice(0, 24) : '',
     permissions,
@@ -90,7 +94,7 @@ export function readOnboarding(storage) {
   const { legacy, raw, failed } = legacyOrEmpty(storage);
   if (failed) return { ...initialState(), status: 'skipped' };
   if (raw) { try { return normalizeState(JSON.parse(raw)); } catch { /* corrupt: fall through */ } }
-  return legacy ? { ...initialState(), status: 'done', step: 'done', seenVersion: LEGACY_SEEN_VERSION } : initialState();
+  return legacy ? { ...initialState(), status: 'done', step: 'test', seenVersion: LEGACY_SEEN_VERSION } : initialState();
 }
 
 export function writeOnboarding(storage, state, now = Date.now()) {
@@ -106,8 +110,10 @@ export function isNewCabin(storage) {
   } catch { return false; }
 }
 
-// Decide what the launch guide should do. A version comparison opens the guide
-// even when onboarding was completed on an earlier release.
+// Decide what the launch guide should do. A first run (or one closed half-way)
+// opens the three-step guide; a version gap on a cabin that already finished or
+// skipped it opens the 新功能 sheet once. A 2.1 update walkthrough that was
+// closed half-way (status 'active' with a fromVersion) becomes that sheet too.
 export function launchPlan(state, { isNew = false, currentVersion = '' } = {}) {
   if (state.status === 'active') return { open: true, mode: state.fromVersion ? 'update' : 'resume' };
   if (state.status === 'new' && isNew) return { open: true, mode: 'first-run' };
@@ -118,32 +124,38 @@ export function launchPlan(state, { isNew = false, currentVersion = '' } = {}) {
 export function shouldAutoOpen(state, options = {}) { return launchPlan(state, options).open; }
 
 // Apply a launch plan without restarting a guide that was closed half-way.
-// `plan.mode === 'update'` covers both a fresh version gap and a resumed
-// update; only the former may reset the step to the release list.
 export function applyLaunchPlan(state, plan, currentVersion = '') {
   if (!plan?.open) return state;
   if (plan.mode === 'first-run') return start(state);
-  if (plan.mode === 'update' && state.status !== 'active') return startUpdate(state, currentVersion);
+  if (plan.mode === 'update') return startUpdate(state, currentVersion);
   return state;
 }
 
 export const stepIndex = (step) => Math.max(0, STEPS.indexOf(step));
-export function goTo(state, step) { return STEPS.includes(step) ? { ...state, status: step === 'done' ? state.status : 'active', step } : state; }
+export function goTo(state, step) { return STEPS.includes(step) ? { ...state, status: 'active', step } : state; }
 export function next(state) { return goTo(state, STEPS[Math.min(STEPS.length - 1, stepIndex(state.step) + 1)]); }
 export function back(state) { return goTo(state, STEPS[Math.max(0, stepIndex(state.step) - 1)]); }
-export function start(state) { return { ...state, status: 'active', step: 'welcome', fromVersion: '' }; }
+export const isLastStep = (step) => step === STEPS.at(-1);
+export function start(state) { return { ...state, status: 'active', step: STEPS[0], fromVersion: '' }; }
+// The 新功能 sheet remembers which version it compares against, so an app quit
+// before 知道了 shows the same list next time. The guide itself is not reopened:
+// an interrupted 2.1 walkthrough counts as finished.
 export function startUpdate(state, currentVersion, fallbackFrom = LEGACY_SEEN_VERSION) {
-  const fromVersion = versionString(state.seenVersion) || versionString(fallbackFrom) || LEGACY_SEEN_VERSION;
-  return { ...state, status: 'active', step: 'updates', fromVersion, seenVersion: fromVersion };
+  const fromVersion = versionString(state.fromVersion) || versionString(state.seenVersion) || versionString(fallbackFrom) || LEGACY_SEEN_VERSION;
+  return { ...state, status: state.status === 'skipped' ? 'skipped' : 'done', fromVersion, seenVersion: fromVersion };
+}
+// 知道了 (or closing the sheet any other way): this version has been seen.
+export function dismissUpdate(state, currentVersion = '') {
+  return { ...state, status: state.status === 'skipped' ? 'skipped' : 'done', fromVersion: '', seenVersion: versionString(currentVersion) || versionString(state.seenVersion) || LEGACY_SEEN_VERSION };
 }
 export function skip(state, currentVersion = '') {
-  return { ...state, status: 'skipped', seenVersion: versionString(currentVersion) || versionString(state.seenVersion) || LEGACY_SEEN_VERSION };
+  return { ...state, status: 'skipped', fromVersion: '', seenVersion: versionString(currentVersion) || versionString(state.seenVersion) || LEGACY_SEEN_VERSION };
 }
 export function complete(state, currentVersion = '') {
-  return { ...state, status: 'done', step: 'done', seenVersion: versionString(currentVersion) || versionString(state.seenVersion) || LEGACY_SEEN_VERSION };
+  return { ...state, status: 'done', step: STEPS.at(-1), fromVersion: '', seenVersion: versionString(currentVersion) || versionString(state.seenVersion) || LEGACY_SEEN_VERSION };
 }
 // 重新引导 always starts from the top but keeps what was chosen last time.
-export function reopen(state) { return { ...state, status: 'active', step: 'welcome', fromVersion: '' }; }
+export function reopen(state) { return { ...state, status: 'active', step: STEPS[0], fromVersion: '' }; }
 export function chooseSource(state, id) { return SOURCE_TABLE.some((source) => source.id === id) ? { ...state, source: id } : state; }
 export function setPermission(state, id, result) { return PERMISSION_VALUES.includes(result) ? { ...state, permissions: { ...state.permissions, [id]: result } } : state; }
 export function setTested(state, result) { return { ...state, tested: result }; }
@@ -153,7 +165,7 @@ export function updateContext(state, currentVersion) {
   return { fromVersion, toVersion, releases: releasesBetween(fromVersion, toVersion) };
 }
 
-// Short summary for the 完成 step and the settings hub.
+// Short summary for the last step and the settings hub.
 export function summary(state, env = {}) {
   const source = sourceOptions({ ...env, mac: true, desktop: true }).find((item) => item.id === state.source);
   return {
