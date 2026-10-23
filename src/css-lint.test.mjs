@@ -48,7 +48,7 @@ test('every animation names a keyframe that exists', () => {
 });
 
 // The 2.1 home and the 2.2 lyric surfaces use their own soft, layered design.
-const SOFT_DESIGN = new Set(['home/home.css', 'lyrics/lyrics.css']);
+const SOFT_DESIGN = new Set(['home/home.css', 'lyrics/lyrics.css', 'lyrics/desk/desk-lyrics.css']);
 test('legacy pixel controls keep square corners and avoid blur; the cabin home and lyric surfaces use their own soft design', () => {
   for (const { file, css } of owned) {
     if (SOFT_DESIGN.has(file)) continue;

@@ -17,6 +17,7 @@ function createSiteCommands(ctx) {
   const table = {
     '/interface-restart': () => ctx.restartInterface?.(),
     '/lyrics-open': () => ctx.openLyrics?.(),
+    '/lyrics-toggle': () => ctx.toggleLyrics?.(),
     '/settings': () => ctx.toggleSettings(true),
     '/update-check': update, '/update-download': update, '/update-install': update, '/update-relaunch': update, '/update-open': update, '/update-auto': update, '/update-state': update,
     '/fullscreen': () => ctx.toggleFullscreen(),

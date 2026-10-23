@@ -35,7 +35,8 @@ function appMenuTemplate(ctx) {
 }
 
 // ctx: { restore, companion(command), checkUpdates, status (status-bar.cjs statusFrom), player(action), openJournal,
-//        petActive, petStart, petStop, sinkActive, sinkEnter, sinkExit, quit }
+//        petActive, petStart, petStop, sinkActive, sinkEnter, sinkExit, quit,
+//        lyricsOpen, lyricsLocked, lyricsToggle, lyricsLock }
 function trayMenuTemplate(ctx) {
   const status = ctx.status || {}, focusActive = status.phase && status.phase !== 'idle';
   return [
@@ -43,6 +44,8 @@ function trayMenuTemplate(ctx) {
     { type: 'separator' },
     { label: status.playing ? '暂停音乐' : '播放音乐', click: () => ctx.player?.('toggle') },
     { label: '下一首', click: () => ctx.player?.('next') },
+    { label: '桌面歌词', type: 'checkbox', checked: Boolean(ctx.lyricsOpen), click: () => ctx.lyricsToggle?.() },
+    ...(ctx.lyricsOpen ? [{ label: '锁定桌面歌词（鼠标穿透）', type: 'checkbox', checked: Boolean(ctx.lyricsLocked), click: () => ctx.lyricsLock?.() }] : []),
     { label: !focusActive ? '开始番茄钟' : status.paused ? '继续专注' : '暂停专注', click: () => ctx.companion(focusActive ? 'focus-toggle' : 'focus-start') },
     { label: '喂小猫一条小鱼干', click: () => ctx.companion('cat-feed') },
     { label: '打开小屋日记', click: () => ctx.openJournal?.() },

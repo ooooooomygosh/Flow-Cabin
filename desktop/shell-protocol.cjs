@@ -6,7 +6,6 @@ const fs = require('node:fs'), path = require('node:path');
 const readAsset = (file) => { try { return fs.readFileSync(file); } catch { return undefined; } };
 function registerShellProtocol(targetProtocol = protocol) {
   const assets = {
-    '/lyrics.html':['renderer/lyrics.html','text/html; charset=utf-8'], '/lyrics.css':['renderer/lyrics.css','text/css; charset=utf-8'], '/lyrics.js':['renderer/lyrics.js','text/javascript; charset=utf-8'],
     '/index.html': ['renderer/index.html', 'text/html; charset=utf-8'],
     '/pet-menu.html':['renderer/pet-menu.html','text/html; charset=utf-8'], '/pet-menu.css':['renderer/pet-menu.css','text/css; charset=utf-8'], '/pet-menu.js':['renderer/pet-menu.js','text/javascript; charset=utf-8'],
     '/app.css': ['renderer/app.css', 'text/css; charset=utf-8'],
@@ -24,8 +23,8 @@ function registerShellProtocol(targetProtocol = protocol) {
   list(path.join(__dirname, 'web'));
   targetProtocol.handle('album-desktop', (request) => {
     const url = new URL(request.url);
-    // The wallpaper and pet windows each load only their own page and shared assets.
-    if (['wallpaper', 'pet', 'mini'].includes(url.hostname) && !url.username && !url.password && !url.port && ['GET', 'HEAD'].includes(request.method)) {
+    // The wallpaper, pet, mini player and lyric bar windows each load only their own page and shared assets.
+    if (['wallpaper', 'pet', 'mini', 'lyrics'].includes(url.hostname) && !url.username && !url.password && !url.port && ['GET', 'HEAD'].includes(request.method)) {
       const page = url.pathname.endsWith('.html') ? `/${url.hostname}.html` : null;
       const file = page && url.pathname !== page ? null : wallpaperAssets.get(url.pathname);
       if (!file || !fs.existsSync(file)) return new Response('Not found', { status: 404 });

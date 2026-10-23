@@ -1,5 +1,7 @@
-import { loadLyrics, playbackPosition, readLyricSettings, LYRIC_CHANGED } from '../lyrics/lyric-session.mjs';
-import { activeLyric, lyricTrackKey } from '../lyrics/lyrics-model.mjs';
+import { loadLyrics, playbackPosition, readLyricSettings, lyricCacheKey, LYRIC_CHANGED } from '../lyrics/lyric-session.mjs';
+import { createLyricFeed } from '../lyrics/lyric-feed.mjs';
+import { readPrefs, writePrefs, PREFS_EVENT, DESK_PREF_KEYS } from '../lyrics/lyric-prefs.mjs';
+import { currentCabinPlayback } from '../scene/playback-listener.mjs';
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useFocusState } from '../focus/useFocus';
 import { useSoundscape } from '../audio/useSoundscape';
@@ -73,13 +75,31 @@ export function CabinRuntimeProvider({ deck, items, look, onNavigate, onRoomChan
     duration: deck.provider === 'system' ? deck.system?.timeline?.getSnapshot().duration || 0 : deck.playback.duration || 0,
   }), [deck.provider, deck.actualTrack, deck.nowTrack, deck.deckItem, deck.shownTrackIndex, deck.playback.resolvedId, deck.playback.resolvedProvider, deck.playback.resolvedArtist, deck.playback.resolvedAlbum, deck.playback.duration, deck.system]);
   current.current = { ...current.current, commands, identity, lyricsTrack };
+  // One lyric feed for the desktop lyric bar and other readers (src/lyrics/lyric-feed.mjs).
+  const lyricFeed = useMemo(() => createLyricFeed(), []);
+  current.current.lyricFeed = lyricFeed;
   useEffect(() => {
-    if(!window.albumDesktopAppearance?.client && document.documentElement.dataset.desktopClient!=='true')return;
-    let doc=null,closed=false,version=0;
-    const load=()=>{const token=++version;loadLyrics(lyricsTrack).then(value=>{if(!closed&&token===version)doc=value;}).catch(()=>{});};
-    const update=()=>{const r=current.current,position=playbackPosition(r.deck.playback,r.deck.provider==='system'?r.deck.system:null),index=doc?activeLyric(doc.lines,position,(doc.offset||0)+(readLyricSettings(lyricsTrack).offset||0)):-1;const text=i=>doc?.lines?.[i]?.words.map(w=>w.word).join('')||'';window.cabinLyricLine={title:lyricsTrack.title,current:text(index),next:text(index+1)};};
-    load();update();const timer=setInterval(update,250);window.addEventListener(LYRIC_CHANGED,load);return()=>{closed=true;clearInterval(timer);window.removeEventListener(LYRIC_CHANGED,load);};
-  },[lyricTrackKey(lyricsTrack)]);
+    lyricFeed.setSource(() => { const r = current.current, d = r.deck, system = d.provider === 'system' ? d.system : null, signal = currentCabinPlayback();
+      return { position: playbackPosition(d.playback, system), playing: Boolean(system ? system.playing : d.audible), rate: d.playback.rate || 1, duration: (Number(r.lyricsTrack.duration) || 0) * 1000, energy: signal.energy, bpm: signal.bpm, beatAt: signal.beatAt }; });
+    const readPrefsNow = () => lyricFeed.setPrefs(readPrefs());
+    // The desktop lyric bar changes display preferences through the shell; the page owns them.
+    const patch = event => { try { const value = event.detail && typeof event.detail === 'object' ? event.detail : {}; writePrefs(Object.fromEntries(Object.entries(value).filter(([key]) => DESK_PREF_KEYS.includes(key)))); } catch { /* storage full: keep the old look */ } };
+    readPrefsNow(); window.addEventListener(PREFS_EVENT, readPrefsNow); window.addEventListener('storage', readPrefsNow); window.addEventListener('cabin:lyric-prefs-patch', patch);
+    window.cabinLyricFeed = lyricFeed;
+    return () => { if (window.cabinLyricFeed === lyricFeed) delete window.cabinLyricFeed; window.removeEventListener(PREFS_EVENT, readPrefsNow); window.removeEventListener('storage', readPrefsNow); window.removeEventListener('cabin:lyric-prefs-patch', patch); };
+  }, [lyricFeed]);
+  useEffect(() => { lyricFeed.setSkin(look); }, [lyricFeed, look]);
+  useEffect(() => { lyricFeed.setPet({ id: identity.builtinId, accessory: identity.accessory }); }, [lyricFeed, identity.revision]);
+  const lyricKey = lyricCacheKey(lyricsTrack);
+  useEffect(() => {
+    let alive = true;
+    const load = () => {
+      if (deck.provider === 'visual' || !lyricsTrack.title) { lyricFeed.setDoc(lyricKey, null, lyricsTrack); return; }
+      loadLyrics(lyricsTrack).then(doc => { if (!alive) return; lyricFeed.setDoc(lyricKey, doc, lyricsTrack); lyricFeed.setOffset((doc.offset || 0) + (Number(readLyricSettings(lyricsTrack).offset) || 0)); }, () => { if (alive) lyricFeed.setDoc(lyricKey, null, lyricsTrack); });
+    };
+    load(); window.addEventListener(LYRIC_CHANGED, load);
+    return () => { alive = false; window.removeEventListener(LYRIC_CHANGED, load); };
+  }, [lyricFeed, lyricKey, deck.provider]);
   const devices = useMemo(() => createDeviceSession(() => current.current), []);
   useEffect(() => { if (window.albumMobile?.syncRequest || window.albumDesktopCapabilities?.lanSync) devices.start(); return () => devices.stop(); }, [devices]);
   useEffect(() => { if(!window.albumMobile?.consumeWidgetCommand)return;const run=async()=>{try{const {action}=await window.albumMobile.consumeWidgetCommand();if(action==='focus-toggle')current.current.focus.toggle();}catch{}};run();window.addEventListener('cabin:widget-command',run);window.addEventListener('focus',run);return()=>{window.removeEventListener('cabin:widget-command',run);window.removeEventListener('focus',run);};},[]);

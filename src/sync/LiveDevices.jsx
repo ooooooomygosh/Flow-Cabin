@@ -1,5 +1,6 @@
 import Dialog from '../Dialog';
-import React, { useEffect, useState, useSyncExternalStore } from 'react';
+import React, { lazy, Suspense, useEffect, useState, useSyncExternalStore } from 'react';
+const RemoteLyrics = lazy(() => import('../lyrics/RemoteLyrics'));
 import { useCabinRuntime } from '../runtime/CabinRuntime';
 import { readHandoff } from './focus-handoff.mjs';
 import { syncRequest } from './storage.mjs';
@@ -34,6 +35,6 @@ export default function LiveDevices({ peers, enabled, onRefresh }) {
     })}
     {handoff?.role === 'source' && <div role="status"><p>专注交接正在确认，本机保持暂停。重新连接后会核对接收状态。</p><button onClick={() => service.discardTransfer()}>结束本机这一轮，不重复计时</button></div>}
     {(message || live.error) && <p role="status">{message || live.error}</p>}
-    {lyrics && <Dialog title="歌词副屏" close={()=>setLyrics('')} size="xl" className="live-lyric-dialog"><div className="live-lyrics" role="region" aria-label="歌词副屏"><small>{selected?.music.title || '等待连接'}</small><strong>{selected?.lyrics.current || '等待歌词…'}</strong><p>{selected?.lyrics.next || ''}</p></div></Dialog>}
+    {lyrics && <Dialog title="歌词副屏" close={()=>setLyrics('')} size="xl" className="live-lyric-dialog"><Suspense fallback={<p role="status">正在打开歌词副屏…</p>}><RemoteLyrics snapshot={selected}/></Suspense></Dialog>}
   </section>;
 }

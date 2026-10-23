@@ -5,6 +5,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { launchChromium } from './launch-browser.mjs';
+import { parseLyrics } from '../src/lyrics/lyrics-model.mjs';
+import { packLyrics, alignSecondary } from '../src/lyrics/lyric-timing.mjs';
 const origin = 'http://127.0.0.1:4297', output = path.resolve('desktop/test-results/lyrics');
 await fs.mkdir(output, { recursive: true });
 const report = { checks: [], errors: [], requests: [], fixtureAudio: true };
@@ -63,8 +65,8 @@ try {
   await book.locator('.karaoke-line').waitFor();
   const fills = await book.locator('[data-karaoke-word]').evaluateAll(words => words.map(w => Number(w.style.getPropertyValue('--p'))));
   assert.ok(fills.length === 2 && fills.every(v => v >= 0 && v <= 1), `karaoke progress ${fills}`);
-  const sung = await book.locator('.karaoke-base').first().innerText(), expected = `第${Math.floor(await audioTime() / 3) + 1}句 `;
-  assert.equal(sung.trim(), expected.trim());
+  const sung = (await book.locator('.karaoke-base').first().innerText()).trim(), now = await audioTime();
+  assert.ok([now, Math.max(0, now - .4)].map(t => `第${Math.floor(t / 3) + 1}句`).includes(sung), `${sung} at ${now}`);
   assert.match(await book.getAttribute('style'), /--lyric-fill/);
   await page.screenshot({ path: path.join(output, 'corner-lyric-book.png') });
   pass('lyric-book-sings-the-current-line-with-word-fill-in-the-room-skin');
@@ -76,7 +78,9 @@ try {
   await page.waitForTimeout(600);
   const live = async () => (await stage.locator('.lyrics-sr-only').innerText()).trim();
   const lineAt = t => `第${Math.floor(t / 3) + 1}句 小屋歌词`;
-  assert.equal(await live(), lineAt(await audioTime()));
+  // The song keeps playing between reading the clock and the page: accept the line of the last 0.4 s.
+  const assertCurrent = async () => { const text = await live(), t = await audioTime(); assert.ok([lineAt(t), lineAt(Math.max(0, t - .4))].includes(text), `${text} at ${t}`); };
+  await assertCurrent();
   assert.equal(await stage.locator('.lyrics-stage-meta strong').innerText(), '会唱歌的小屋');
   assert.ok(await stage.locator('.lyrics-stage-particles').count(), 'room particles are drawn');
   assert.match(await stage.locator('.cabin-amll').innerText(), /Line \d+/, 'translations are aligned within half a second');
@@ -112,7 +116,7 @@ try {
   await page.keyboard.press('Space'); await page.waitForFunction(() => [...document.querySelectorAll('[data-cabin-audio-host] audio')].some(a => !a.paused));
   const before = await audioTime(); await page.keyboard.press('ArrowRight'); await page.waitForTimeout(300);
   assert.ok(await audioTime() >= before + 4, 'right arrow seeks five seconds');
-  await page.waitForTimeout(500); assert.equal(await live(), lineAt(await audioTime()));
+  await page.waitForTimeout(500); await assertCurrent();
   // Idle chrome fades after three seconds without input.
   await page.waitForTimeout(3300); assert.equal(await stage.locator('.lyrics-stage.is-idle').count(), 1);
   await page.keyboard.press('Escape'); await stage.waitFor({ state: 'hidden' });
@@ -135,6 +139,42 @@ try {
   for (const name of ['收起歌词', '歌词设置', '上一首', '下一首']) { const box = await stage.getByRole('button', { name }).boundingBox(); assert.ok(box && box.x >= 0 && box.x + box.width <= 391, name); }
   await page.screenshot({ path: path.join(output, 'stage-phone.png') });
   pass('each-room-has-its-own-lyric-skin-and-the-stage-fits-a-phone');
+  // 7. The desktop lyric bar page, fed like desktop/lyric-window.cjs feeds it, over a wallpaper.
+  const doc = parseLyrics(yrc, 'yrc'); doc.lines = alignSecondary(doc.lines, parseLyrics(translation).lines, 'translatedLyric');
+  const bar = await context.newPage(); bar.on('pageerror', e => report.errors.push('bar: ' + e.message));
+  await bar.setViewportSize({ width: 900, height: 168 });
+  await bar.addInitScript(({ packed }) => {
+    window.barCalls = [];
+    const listeners = { update: [], state: [] };
+    window.pushFeed = value => listeners.update.forEach(fn => fn(value)); window.pushState = value => listeners.state.forEach(fn => fn(value));
+    window.cabinLyrics = { ready: () => setTimeout(() => window.pushFeed({ docRev: 1, doc: packed, title: '会唱歌的小屋', artist: '回归测试', skin: 'starlight', pet: { id: 'fox', accessory: '' }, prefs: { deskSize: 34, translation: true, deskLayout: 'double', deskSkin: 'cabin', deskPet: true }, anchor: { position: 7400, at: Date.now(), playing: true, rate: 1, duration: 240000 }, energy: .6, bpm: 96, beatAt: Date.now() }), 50),
+      onUpdate: fn => { listeners.update.push(fn); return () => {}; }, onState: fn => { listeners.state.push(fn); return () => {}; },
+      command: action => window.barCalls.push(['command', action]), hoverLock: on => window.barCalls.push(['hover', on]), setPrefs: patch => window.barCalls.push(['prefs', patch]) };
+  }, { packed: packLyrics(doc) });
+  await bar.goto(origin + '/lyrics.html');
+  await bar.addStyleTag({ content: "body{background:url('/room-scenes/v21/forest/shell.png') center/cover !important}" });
+  const active = bar.locator('.desk-lyrics-row.is-active');
+  await active.waitFor();
+  assert.match(await active.innerText(), /第3句/); assert.match(await active.innerText(), /Line 3/);
+  assert.match(await bar.locator('.desk-lyrics-row.is-waiting').innerText(), /第4句/, 'the next line waits on the other row');
+  assert.equal(await bar.locator('.desk-lyrics').getAttribute('data-skin'), 'starlight');
+  await bar.waitForTimeout(300); await bar.screenshot({ path: path.join(output, 'desk-bar-starlight.png') });
+  await bar.mouse.move(450, 80); await bar.locator('.desk-lyrics-toolbar').hover();
+  await bar.getByRole('button', { name: '字号增大' }).click();
+  await bar.getByRole('button', { name: /跟随小屋/ }).click();
+  await bar.getByRole('button', { name: '锁定歌词（鼠标可穿透）' }).click();
+  await bar.screenshot({ path: path.join(output, 'desk-bar-hover.png') });
+  assert.deepEqual(await bar.evaluate(() => window.barCalls), [['prefs', { deskSize: 36 }], ['prefs', { deskSkin: 'paper' }], ['command', 'lock']]);
+  await bar.evaluate(() => window.pushState({ locked: true }));
+  assert.equal(await bar.locator('.desk-lyrics-toolbar').count(), 0, 'a locked bar shows no toolbar');
+  await bar.getByRole('button', { name: '解锁桌面歌词' }).hover(); await bar.getByRole('button', { name: '解锁桌面歌词' }).click();
+  assert.deepEqual((await bar.evaluate(() => window.barCalls)).slice(3), [['hover', true], ['hover', false], ['command', 'unlock']]);
+  await bar.evaluate(() => window.pushFeed({ docRev: 1, title: '会唱歌的小屋', skin: 'starlight', prefs: { deskLayout: 'single', deskSkin: 'neon', deskSize: 40, translation: false, deskPet: false }, anchor: { position: 31000, at: Date.now(), playing: true, rate: 1 }, energy: .9 }));
+  await bar.evaluate(() => window.pushState({ locked: false }));
+  await bar.locator('.desk-lyrics.layout-single[data-skin="neon"] .desk-lyrics-row.is-active', { hasText: '第11句' }).waitFor();
+  assert.doesNotMatch(await bar.locator('.desk-lyrics-row.is-active').innerText(), /Line/);
+  await bar.waitForTimeout(300); await bar.screenshot({ path: path.join(output, 'desk-bar-neon-single.png') });
+  pass('desktop-lyric-bar-follows-the-feed-with-ktv-rows-toolbar-lock-and-skins');
   assert.deepEqual(report.errors, []); report.passed = true;
 } catch (error) { report.failure = error.stack; console.error(error); process.exitCode = 1; await page?.screenshot({ path: path.join(output, 'failure.png') }).catch(() => {}); }
 finally { await browser?.close(); server?.kill(); await fs.writeFile(path.join(output, 'report.json'), JSON.stringify(report, null, 2)); }

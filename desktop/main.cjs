@@ -98,6 +98,8 @@ const statusBar = createStatusApplier({ getTray: () => companionTray, getWindow:
 let trayStatus = statusFrom(null);
 function trayWanted() { return companionsActive() || process.platform === 'darwin' || trayStatus.phase !== 'idle'; }
 function openJournal() { restoreMainWindow(); siteView?.webContents.executeJavaScript("window.dispatchEvent(new CustomEvent('cabin:open-journal'))").catch(() => {}); }
+// 桌面歌词 from the tray, the app menu, the page (lyrics-toggle) and the global shortcut.
+function toggleLyrics() { Promise.resolve(lyricWindow?.toggle()).catch(error => writeLog('lyric-window', error.message)); }
 function refreshTray() {
   if (trayWanted()) {
     if (!companionTray) {
@@ -113,7 +115,8 @@ function refreshTray() {
       restore: restoreMainWindow, companion, checkUpdates: () => updates.checkFromMenu(),
       status: trayStatus, player: (action) => relayPlayerCommand(siteView?.webContents, action), openJournal,
       petActive: petState.active, petStart: () => pet.start().catch((error) => writeLog('pet-error', error.message)), petStop: () => pet.stop(),
-      sinkActive: Boolean(desktopSink?.active || desktopSink?.busy), sinkEnter: () => desktopSink?.enter(), sinkExit: () => desktopSink.exit(), quit: () => app.quit()
+      sinkActive: Boolean(desktopSink?.active || desktopSink?.busy), sinkEnter: () => desktopSink?.enter(), sinkExit: () => desktopSink.exit(), quit: () => app.quit(),
+      lyricsOpen: Boolean(lyricWindow?.open), lyricsLocked: Boolean(lyricWindow?.locked), lyricsToggle: toggleLyrics, lyricsLock: () => lyricWindow?.setLocked(!lyricWindow.locked)
     }));
     if (process.platform !== 'darwin') companionTray.setContextMenu(currentTrayMenu);
     trayPet.refresh();
@@ -420,7 +423,8 @@ async function wireRemoteView() {
 
 const siteCommands = createSiteCommands({
   restartInterface: async () => { await siteView?.webContents.session.flushStorageData(); app.relaunch(); app.quit(); },
-  openLyrics: () => lyricWindow?.open().catch(error=>writeLog('lyric-window', error.message)),
+  openLyrics: () => lyricWindow?.show().catch(error=>writeLog('lyric-window', error.message)),
+  toggleLyrics,
   isSitePage: () => isSiteUrl(siteView?.webContents.getURL()), mainWindow: () => mainWindow, desktopSink: () => desktopSink, pet: () => pet, music: () => music, appearance: () => appearance, trayPet,
   toggleSettings, toggleFullscreen, setFullscreen, isFullscreen, chooseMusicFolder, notifyMusic, saveAppearance, writeLog,
   typing: {
@@ -601,7 +605,9 @@ else {
     dshBridge = createDshBridge({ directory: app.getPath('userData'), getSnapshot: () => dshSnapshot });
     petPackRoute = createPetPackRoute({ store: createPetPackStore({ directory: path.join(app.getPath('userData'), 'pet-packs') }), bridge: dshBridge });
     registerShellProtocol(); registerIpc();
-    lyricWindow = createLyricWindow({getSite:()=>siteView?.webContents,registerProtocol:registerShellProtocol});
+    lyricWindow = createLyricWindow({ getSite: () => siteView?.webContents, registerProtocol: registerShellProtocol, screen, ipcMain, BrowserWindow, directory: app.getPath('userData'), relayPlayer: relayPlayerCommand, log: writeLog,
+      onChange: (change) => { if (change.home) restoreMainWindow(); refreshTray(); } });
+    Promise.resolve(lyricWindow.restore()).catch(error => writeLog('lyric-window', error.message));
     petMenu = createPetMenu({ getTray: () => companionTray, registerProtocol: registerShellProtocol, getState: () => ({ status: trayStatus, track: lastCompanion?.track || '', avatar: trayPet.avatar }), command: action => { if (action === 'home') restoreMainWindow(); else if (action === 'focus') sendCompanionCommand(siteView?.webContents, trayStatus.phase === 'idle' ? 'focus-start' : 'focus-toggle'); else relayPlayerCommand(siteView?.webContents, action); } });
     wallpaper = createWallpaper({ app, getMain: () => mainWindow, getSite: () => siteView?.webContents, status: wallpaperStatus, appearanceScript, getAppearance: () => appearance, log: writeLog, registerProtocol: registerShellProtocol });
     desktopMode = createDesktopMode({ getWindow: () => mainWindow, screen, leaveFullscreen: () => setFullscreen(false), helperPath: desktopHelperPath(), log: writeLog,

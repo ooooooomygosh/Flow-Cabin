@@ -3,14 +3,13 @@ import { readHandoff, writeHandoff } from './focus-handoff.mjs';
 import { remainingMs } from '../focus/focus-model.mjs';
 import { readRecipes } from '../home/recipes.mjs';
 import { applySceneRecipe } from '../home/apply-scene.mjs';
-import { loadLyrics, playbackPosition, readLyricSettings } from '../lyrics/lyric-session.mjs';
-import { activeLyric, lyricTrackKey } from '../lyrics/lyrics-model.mjs';
+import { playbackPosition } from '../lyrics/lyric-session.mjs';
 import { saveJournalEntry } from '../focus/journal-entries.mjs';
 
 const RECEIPTS = 'flow-cabin-live-receipts-v1';
 const digest = async text => [...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text)))].map(n=>n.toString(16).padStart(2,'0')).join('');
 export function createDeviceSession(getRuntime, { request=syncRequest, storage=globalThis.localStorage, now=Date.now, setTimer=setTimeout, clearTimer=clearTimeout } = {}) {
-  let state={connections:[],peers:[],error:''},timer,stopped=false,identity='',doc=null,lyricKey='',updating=false;
+  let state={connections:[],peers:[],error:''},timer,stopped=false,identity='',updating=false;
   const listeners=new Set(),emit=()=>{for(const cb of listeners)cb(state);};
   const send=(peerId,action,payload={})=>request('/live/send',{peerId,action,payload});
   function recoverCommittedFocus() {
@@ -82,11 +81,9 @@ export function createDeviceSession(getRuntime, { request=syncRequest, storage=g
       const status=await request('/status');identity=status.id;
       if(status.enabled) {
         recoverCommittedFocus();
-        const r=getRuntime(),t=r.focus.state.timer,h=readHandoff(storage),key=lyricTrackKey(r.lyricsTrack);
-        if(key!==lyricKey){lyricKey=key;doc=null;if(r.lyricsTrack.title)loadLyrics(r.lyricsTrack).then(d=>{if(lyricKey===key)doc=d;}).catch(()=>{});}
-        const position=playbackPosition(r.deck.playback,r.deck.provider==='system'?r.deck.system:null),line=doc?activeLyric(doc.lines,position,(doc.offset||0)+(readLyricSettings(r.lyricsTrack).offset||0)):-1;
-        const text=i=>doc?.lines?.[i]?.words.map(w=>w.word).join('')||'';
-        const published=await request('/live/publish',{music:{title:r.deck.nowTrack,artist:r.lyricsTrack.artist,playing:r.deck.audible,position:(position||0)/1000,duration:r.lyricsTrack.duration,rate:r.deck.playback.rate||1,anchoredAt:now()},lyrics:{current:text(line),next:text(line+1),at:now()},focus:{phase:t.phase,remaining:remainingMs(t,now()),paused:t.paused,sessionId:t.sessionId||'',owner:h?.role==='owner'?identity:'',version:t.ownerVersion||0},pet:{id:r.identity.builtinId,accessory:r.identity.accessory},scenes:readRecipes(storage).recipes.map(({id,name})=>({id,name}))});
+        const r=getRuntime(),t=r.focus.state.timer,h=readHandoff(storage);
+        const position=playbackPosition(r.deck.playback,r.deck.provider==='system'?r.deck.system:null),sung=r.lyricFeed?r.lyricFeed.around(1,8):{lines:[],current:'',next:''};
+        const published=await request('/live/publish',{music:{title:r.deck.nowTrack,artist:r.lyricsTrack.artist,playing:r.deck.audible,position:(position||0)/1000,duration:r.lyricsTrack.duration,rate:r.deck.playback.rate||1,anchoredAt:now()},lyrics:{current:sung.current,next:sung.next,lines:sung.lines,skin:r.look||'',title:r.lyricsTrack.title||'',at:now()},focus:{phase:t.phase,remaining:remainingMs(t,now()),paused:t.paused,sessionId:t.sessionId||'',owner:h?.role==='owner'?identity:'',version:t.ownerVersion||0},pet:{id:r.identity.builtinId,accessory:r.identity.accessory},scenes:readRecipes(storage).recipes.map(({id,name})=>({id,name}))});
         state={...published,error:'',deviceId:identity};emit();
         for(const c of published.commands || [])if(!stopped)await handle(c);
         if(h?.role==='source' && published.peers.some(p=>p.peerId===h.peerId&&p.snapshot.focus.sessionId===h.sessionId&&p.snapshot.focus.owner===h.peerId&&p.snapshot.focus.version===h.version)) { if(r.focus.releaseTransfer(h.sessionId))writeHandoff({...h,role:'sent'},storage); }

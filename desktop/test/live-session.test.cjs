@@ -53,3 +53,15 @@ test('command expiration and allowlists reject stale work and strip paths, crede
   assert.deepEqual(clean.payload,{text:'笔记',base:'abc'});
   assert.ok(!JSON.stringify(cleanLiveSnapshot({music:{url:'SECRET'},location:{lat:12,lng:123}})).includes('SECRET'));
 });
+
+test('live snapshots carry a bounded window of word-timed lyric lines and the sender clock', () => {
+  const { cleanLiveSnapshot } = require('../live-session.cjs');
+  const lines = Array.from({ length: 20 }, (_, i) => ({ s: i * 1000, e: i * 1000 + 900, w: [['词'.repeat(300), i * 1000, i * 1000 + 900], 'bad'], t: 'x'.repeat(400), extra: 1 }));
+  const clean = cleanLiveSnapshot({ at: 123, lyrics: { current: 'a', skin: 'forest', title: '歌', lines: [...lines, null, { w: 'nope' }] } });
+  assert.equal(clean.lyrics.lines.length, 10); assert.equal(clean.lyrics.lines[0].w.length, 1);
+  assert.equal(clean.lyrics.lines[0].w[0][0].length, 40); assert.equal(clean.lyrics.lines[0].t.length, 200); assert.equal('extra' in clean.lyrics.lines[0], false);
+  assert.equal(clean.lyrics.skin, 'forest'); assert.equal(clean.sentAt, 123);
+  assert.deepEqual(cleanLiveSnapshot({}).lyrics.lines, []);
+  const worst = cleanLiveSnapshot({ lyrics: { lines: Array.from({ length: 20 }, () => ({ t: '译'.repeat(500), r: 'r'.repeat(500), w: Array.from({ length: 99 }, () => ['字'.repeat(200), 86400000, 86400000]) })) }, scenes: Array.from({ length: 30 }, (_, i) => ({ id: `scene-${i}`, name: '名'.repeat(80) })) });
+  assert.ok(Buffer.byteLength(JSON.stringify({ type: 'snapshot', value: worst })) < 128 * 1024, 'the largest snapshot still fits one live message');
+});

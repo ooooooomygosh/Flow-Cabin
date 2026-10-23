@@ -73,3 +73,23 @@ test('found lyrics survive a restart from the disk cache; misses are not persist
   fs.writeFileSync(cacheFile, '{broken'); assert.doesNotThrow(() => createLyricsService({ upstream, cookie: () => '', cacheFile }));
   fs.rmSync(dir, { recursive: true, force: true });
 });
+
+const { defaultBounds, restoreBounds, cleanFeed, cleanPrefsPatch } = require('../lyric-window.cjs');
+test('the lyric bar opens low and centred, and a saved spot is pulled back onto its display', () => {
+  const area = { x: 0, y: 25, width: 1440, height: 875 };
+  const fresh = defaultBounds(area);
+  assert.ok(Math.abs(fresh.x + fresh.width / 2 - 720) <= 1); assert.ok(fresh.y + fresh.height <= 900 - 40);
+  assert.deepEqual(restoreBounds({ x: 2000, y: -500, width: 5000, height: 50 }, area), { x: 0, y: 25, width: 1440, height: 96 });
+  assert.deepEqual(restoreBounds({ x: 100, y: 600, width: 800, height: 160 }, area), { x: 100, y: 600, width: 800, height: 160 });
+  assert.deepEqual(restoreBounds({ x: 'a' }, area), fresh);
+});
+test('only bounded, plain feed data and whitelisted preferences cross into the bar', () => {
+  const feed = cleanFeed({ docRev: 3, title: 'x'.repeat(500), skin: 'forest', prefs: { deskSize: 40, evil: 1, scale: 1.2 }, pet: { id: 'fox' }, anchor: { position: 1200, at: 5, playing: true, rate: 'x' }, energy: 7, doc: { lines: [] }, extra: 'drop' });
+  assert.equal(feed.title.length, 300); assert.deepEqual(feed.prefs, { deskSize: 40, scale: 1.2 }); assert.equal(feed.energy, 1);
+  assert.equal(feed.anchor.rate, 1); assert.equal(feed.pet.id, 'fox'); assert.equal('extra' in feed, false); assert.deepEqual(feed.doc, { lines: [] });
+  assert.equal('doc' in cleanFeed({ docRev: 3 }), false, 'no doc key means the bar keeps its copy');
+  assert.equal(cleanFeed({ doc: { lines: ['x'.repeat(3 * 1024 * 1024)] } }), null, 'oversized feeds are dropped');
+  assert.equal(cleanFeed(null), null);
+  assert.deepEqual(cleanPrefsPatch({ deskSize: 30, deskSkin: 'neon'.repeat(10), prototype: 1, deskPet: { x: 1 } }), { deskSize: 30, deskSkin: 'neonneonneonneonneon' });
+  assert.equal(cleanPrefsPatch({ evil: 1 }), null);
+});

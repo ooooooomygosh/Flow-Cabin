@@ -18,7 +18,7 @@ export default defineConfig({
   // Offline test copies can share dependencies, but must not share Vite's mutable cache.
   cacheDir: process.env.FLOW_CABIN_VITE_CACHE_DIR || undefined,
   build: { rollupOptions: {
-    input: { main: entry('./index.html'), promo: entry('./promo.html'), wallpaper: entry('./wallpaper.html'), pet: entry('./pet.html'), mini: entry('./mini.html') },
+    input: { main: entry('./index.html'), promo: entry('./promo.html'), wallpaper: entry('./wallpaper.html'), pet: entry('./pet.html'), mini: entry('./mini.html'), lyrics: entry('./lyrics.html') },
     output: { advancedChunks: { groups: chunkGroups } }
   } }
 });

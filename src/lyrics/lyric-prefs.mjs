@@ -4,11 +4,13 @@ export const PREFS_KEY = 'flow-cabin-lyric-prefs-v1', PREFS_EVENT = 'cabin:lyric
 export const SKIN_CHOICES = Object.freeze(['cabin', 'paper', 'neon', 'mono']);
 export const DEFAULT_PREFS = Object.freeze({
   scale: 1, translation: true, romanization: false,
-  // Desktop lyric bar.
-  deskLayout: 'double', deskSkin: 'cabin', deskSize: 34, deskLocked: false, deskPet: true, deskHideWhenPaused: false,
+  // Desktop lyric bar (its lock and position belong to the window, desktop/lyric-window.cjs).
+  deskLayout: 'double', deskSkin: 'cabin', deskSize: 34, deskPet: true, deskHideWhenPaused: false,
   // Fullscreen stage.
   stageParticles: true
 });
+// What the desktop lyric bar may change from its own toolbar.
+export const DESK_PREF_KEYS = Object.freeze(['translation', 'romanization', 'deskLayout', 'deskSkin', 'deskSize', 'deskPet', 'deskHideWhenPaused']);
 const pick = (value, choices, fallback) => choices.includes(value) ? value : fallback;
 const num = (value, low, high, fallback) => Number.isFinite(Number(value)) ? Math.max(low, Math.min(high, Number(value))) : fallback;
 export function normalizePrefs(value = {}) {
@@ -20,7 +22,7 @@ export function normalizePrefs(value = {}) {
     deskLayout: pick(v.deskLayout, ['single', 'double'], DEFAULT_PREFS.deskLayout),
     deskSkin: pick(v.deskSkin, SKIN_CHOICES, DEFAULT_PREFS.deskSkin),
     deskSize: Math.round(num(v.deskSize, 20, 64, DEFAULT_PREFS.deskSize)),
-    deskLocked: flag('deskLocked'), deskPet: flag('deskPet'), deskHideWhenPaused: flag('deskHideWhenPaused'),
+    deskPet: flag('deskPet'), deskHideWhenPaused: flag('deskHideWhenPaused'),
     stageParticles: flag('stageParticles')
   };
 }

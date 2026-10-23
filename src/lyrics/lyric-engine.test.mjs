@@ -54,8 +54,8 @@ test('display preferences are bounded, persisted and broadcast', () => {
   const odd = normalizePrefs({ deskSize: 2, deskSkin: 'evil', deskLayout: 'triple', translation: 'yes' });
   assert.equal(odd.deskSize, 20); assert.equal(odd.deskSkin, 'cabin'); assert.equal(odd.deskLayout, 'double'); assert.equal(odd.translation, true);
   const data = new Map(), storage = { getItem: k => data.get(k) ?? null, setItem: (k, v) => data.set(k, v) };
-  writePrefs({ romanization: true, deskLocked: true }, storage);
-  assert.equal(readPrefs(storage).romanization, true); assert.equal(readPrefs(storage).deskLocked, true);
+  writePrefs({ romanization: true, deskPet: false }, storage);
+  assert.equal(readPrefs(storage).romanization, true); assert.equal(readPrefs(storage).deskPet, false);
   assert.equal(readPrefs({ getItem: () => '{broken' }).scale, 1);
 });
 
@@ -102,4 +102,44 @@ test('paper lyrics darken the room colour enough to read on a light page', async
     const fill = paperStyle(skinFor(theme.id))['--lyric-fill'], paper = lum('#f3e6c8');
     assert.ok((paper + .05) / (lum(fill) + .05) >= 3, `${theme.id}: ${fill} on paper`);
   }
+});
+
+test('the lyric feed sends the whole song once per change, then only a clock anchor', async () => {
+  const { createLyricFeed } = await import('./lyric-feed.mjs');
+  let t = 1000; const feed = createLyricFeed({ now: () => t });
+  const doc = parseLyrics('[00:01.00]你好\n[00:04.00]世界');
+  feed.setSource(() => ({ position: 5000, playing: true, rate: 1, duration: 200000, energy: .4, bpm: 120, beatAt: 900 }));
+  feed.setDoc('song-a', doc, { title: '歌', artist: '人' }); feed.setOffset(500);
+  const first = feed.take(-1);
+  assert.equal(first.docRev, 1); assert.equal(first.doc.lines.length, 2); assert.equal(first.title, '歌');
+  assert.deepEqual(first.anchor, { position: 4500, at: 1000, playing: true, rate: 1, duration: 200000 });
+  t = 2000; const next = feed.take(1);
+  assert.equal('doc' in next, false, 'a reader that has the lyrics only gets the clock'); assert.equal(next.anchor.at, 2000);
+  feed.setDoc('song-a', doc, {}); assert.equal(feed.take(1).docRev, 1, 'the same lyrics do not bump the revision');
+  feed.setDoc('song-b', null, { title: '无歌词' }); const empty = feed.take(1);
+  assert.equal(empty.docRev, 2); assert.equal(empty.doc, null);
+  feed.setSource(() => ({ position: null })); assert.equal(feed.take(2).anchor.position, null);
+});
+
+test('a remote song position uses differences on one clock each, never across devices', async () => {
+  const { remotePosition } = await import('./remote-position.mjs');
+  // Sender clock is 1 hour ahead of ours: anchoredAt/sentAt are on its clock, receivedAt on ours.
+  const snapshot = { music: { position: 10, playing: true, rate: 1, duration: 200, anchoredAt: 3_600_000 + 1000 }, sentAt: 3_600_000 + 1200, receivedAt: 5000 };
+  assert.equal(remotePosition(snapshot, 5300), 10000 + 200 + 300);
+  assert.equal(remotePosition({ ...snapshot, music: { ...snapshot.music, playing: false } }, 9e9), 10000);
+  assert.equal(remotePosition({ ...snapshot, music: { ...snapshot.music, rate: 2 } }, 5300), 10000 + 1000);
+  assert.equal(remotePosition({ music: { position: 10, playing: true } }, 1), 10000, 'an older peer without timestamps is shown as last reported');
+  assert.equal(remotePosition({ ...snapshot, music: { ...snapshot.music, duration: 10.1 } }, 9e9), 10100);
+  assert.equal(remotePosition(null), null);
+});
+
+test('the lyric feed hands a phone the current line and a few around it', async () => {
+  const { createLyricFeed } = await import('./lyric-feed.mjs');
+  const feed = createLyricFeed(), doc = parseLyrics(Array.from({ length: 20 }, (_, i) => `[00:${String(i * 2).padStart(2, '0')}.00]第${i + 1}句`).join('\n'));
+  feed.setDoc('k', doc); feed.setSource(() => ({ position: 10500 }));
+  const sung = feed.around(1, 3);
+  assert.equal(sung.current, '第6句'); assert.equal(sung.next, '第7句');
+  assert.deepEqual(sung.lines.map(l => l.w[0][0]), ['第5句', '第6句', '第7句', '第8句', '第9句']);
+  assert.equal(sung.lines.at(-1).e, 18000, 'the last sent line still ends where the next begins');
+  assert.deepEqual(createLyricFeed().around(), { lines: [], current: '', next: '' });
 });
