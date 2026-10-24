@@ -17,6 +17,7 @@ function createSiteCommands(ctx) {
   const table = {
     '/interface-restart': () => ctx.restartInterface?.(),
     '/lyrics-open': () => ctx.openLyrics?.(),
+    '/lyrics-toggle': () => ctx.toggleLyrics?.(),
     '/settings': () => ctx.toggleSettings(true),
     '/update-check': update, '/update-download': update, '/update-install': update, '/update-relaunch': update, '/update-open': update, '/update-auto': update, '/update-state': update,
     '/fullscreen': () => ctx.toggleFullscreen(),
@@ -29,8 +30,13 @@ function createSiteCommands(ctx) {
     '/minimize': () => window().minimize(),
     '/maximize': () => { if (sink().active) sink().exit(); else if (ctx.isFullscreen()) ctx.setFullscreen(false); else if (window().isMaximized()) window().unmaximize(); else window().maximize(); },
     '/close': () => window().close(),
+    // A system notification from the page (end of a round, 喝水): title, body, silent, actions.
+    '/notify': ({ searchParams }) => ctx.notify?.(searchParams),
     '/pet-start': () => ctx.pet().start().catch((error) => ctx.writeLog('pet-error', error.message)),
     '/pet-stop': () => ctx.pet().stop(),
+    // 设置 › 房间与桌宠: bubbles, walk, gravity, onTop, locked, clickThrough, autoHide (true/false), opacity (0.3–1).
+    '/pet-prefs': ({ searchParams }) => ctx.pet()?.setPrefs?.(ctx.petPrefs ? ctx.petPrefs(searchParams) : {}),
+    '/pet-hide': ({ searchParams }) => { const hours = Number(searchParams.get('hours')); if (hours > 0 && hours <= 12) ctx.pet()?.hideFor?.(hours * 3600000); else if (searchParams.get('hours') === '0') ctx.pet()?.showNow?.(); },
     // A 小鱼干 drag in the cabin: the desktop pet accepts the drop while it lasts.
     '/pet-drag': ({ searchParams }) => { const active = flag(searchParams, 'active'); if (active !== null) ctx.pet()?.acceptDrops?.(active); },
     // 键鼠陪伴: setting changes use the same persisted appearance file as the
@@ -59,6 +65,23 @@ function createSiteCommands(ctx) {
     '/ai-chat': ({ searchParams }) => { ctx.ai.chat(searchParams.get('id') || '', searchParams.get('url'), searchParams.get('body'), { keyless: searchParams.get('keyless') === 'true' }).catch(() => {}); },
     '/ai-chat-cli': ({ searchParams }) => { ctx.ai.chatCli(searchParams.get('id') || '', searchParams.get('body')).catch(() => {}); },
     '/ai-cancel': ({ searchParams }) => { ctx.ai.cancel(searchParams.get('id') || ''); },
+    // ── M3 player ──
+    // 全局媒体快捷键 (desktop/media-keys.cjs): enabled=, action=<id>&accelerator=<Electron accelerator or ''>, reset=true; no params republishes.
+    '/media-keys': ({ searchParams }) => {
+      const keys = ctx.mediaKeys; if (!keys) return;
+      const enabled = flag(searchParams, 'enabled'), action = searchParams.get('action');
+      if (searchParams.get('reset') === 'true') keys.set({ reset: true });
+      else if (enabled !== null || (action && searchParams.has('accelerator'))) keys.set({ ...(enabled !== null ? { enabled } : {}), ...(action && searchParams.has('accelerator') ? { bindings: { [action]: String(searchParams.get('accelerator')).slice(0, 60) } } : {}) });
+      else keys.publish();
+    },
+    // 迷你唱机 outside 沉入桌面: shown=true|false, top=true|false (always on top).
+    '/mini-player': ({ searchParams }) => {
+      const mini = ctx.miniPlayer; if (!mini) return;
+      const shown = flag(searchParams, 'shown'), top = flag(searchParams, 'top');
+      if (top !== null) mini.setAlwaysOnTop(top);
+      if (shown === true) mini.show('user').catch((error) => ctx.writeLog('mini-player', error.message)); else if (shown === false) mini.hide('user');
+    },
+    // ── end M3 player ──
     '/weather': ({ searchParams }) => { const enabled = flag(searchParams, 'enabled'); if (enabled === null) ctx.weather.publish(); else ctx.weather.set({ enabled, lat: searchParams.get('lat'), lng: searchParams.get('lng') }).catch(() => {}); }
   };
   return {

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  JOURNAL_KEY, JOURNAL_CHANGE, JOURNAL_BODY_LIMIT, findJournalEntries,
+  JOURNAL_KEY, JOURNAL_CHANGE, JOURNAL_BODY_LIMIT, findJournalEntries, journalSnippet,
   saveJournalEntry, moveJournalEntry, restoreJournalRevision, purgeJournalEntry, readJournalState
 } from '../journal-entries.mjs';
 import './journal-entries.css';
@@ -140,7 +140,7 @@ export default function JournalEntries() {
   return <div className="fs-spread journal-entries-spread" role="tabpanel" aria-label="手记">
     <section className="fs-page journal-entry-index" aria-label="手记列表">
       <header><div><h3>我的手记</h3><p>把日子一页一页收好。</p></div><button type="button" className="journal-entry-new" disabled={Boolean(data.error)} onClick={create}>写一页</button></header>
-      <label className="journal-entry-search"><span className="sr-only">搜索手记</span><input aria-label="搜索手记" type="search" placeholder="找一句话，或一个标签" value={query} onChange={(event) => setQuery(event.target.value)}/></label>
+      <label className="journal-entry-search"><span className="sr-only">搜索手记</span><input aria-label="搜索手记" type="search" placeholder="找一句话；#标签 只搜标签" value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === 'Escape' && query) { event.preventDefault(); event.stopPropagation(); setQuery(''); } }}/></label>
       <div className="journal-entry-filter">
         <button type="button" aria-pressed={!trash} onClick={() => { setTrash(false); setSelectedId(''); setPurging(null); }}>手记</button>
         <button type="button" aria-pressed={trash} onClick={() => { setTrash(true); setSelectedId(''); setPurging(null); }}>回收站</button>
@@ -150,11 +150,11 @@ export default function JournalEntries() {
       {notice && <p role={noticeError ? 'alert' : 'status'}>{notice}</p>}
       <ol className="journal-entry-list">
         {rows.map((entry) => <li key={entry.id}><button type="button" aria-current={selectedId === entry.id ? 'true' : undefined} onClick={() => select(entry)}>
-          <time>{stamp(entry.createdAt)}</time><strong>{title(entry.body)}</strong><span>{workingDrafts.has(entry.id) ? '有尚未保存的修改' : entry.tags.map((value) => `#${value}`).join(' ') || '没有标签'}</span>
+          <time>{stamp(entry.createdAt)}</time><strong>{title(entry.body)}</strong>{(() => { const hit = query.trim() && journalSnippet(entry.body, query); return hit ? <span className="journal-entry-snippet">{hit.before}<mark>{hit.match}</mark>{hit.after}</span> : null; })()}<span>{workingDrafts.has(entry.id) ? '有尚未保存的修改' : entry.tags.map((value) => `#${value}`).join(' ') || '没有标签'}</span>
         </button></li>)}
       </ol>
       {!rows.length && <p className="journal-entry-empty">{query || tag ? '没有找到这一页。试试别的词。' : trash ? '回收站是空的。' : '不需要写得完整，一两句也很好。'}</p>}
-      <small>{rows.length} 页 · 永久删除会一并移除编辑历史</small>
+      <small>{query.trim() ? `找到 ${rows.length} 页` : `${rows.length} 页`} · 永久删除会一并移除编辑历史</small>
     </section>
     <div className="fs-spine has-art" aria-hidden="true"/>
     <section className="fs-page journal-entry-main" aria-label="手记内容">

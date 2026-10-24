@@ -6,10 +6,10 @@ import { ROOM_DRAG_TYPE } from './RoomScene';
 import useTurntablePosition from './useTurntablePosition';
 import { trackNames } from './room-model.mjs';
 import { trackArtist } from './track-meta.mjs';
-import { providerLabel } from './player/providers.mjs';
-import PlayerControls, { PocketProgress } from './player/PlayerControls';
+import { providerLabel, deckCapabilities } from './player/providers.mjs';
+import PlayerControls, { PocketProgress, SystemProgress } from './player/PlayerControls';
 import { displayTitle } from './display-title.mjs';
-const LyricsPanel = lazy(() => import('./lyrics/LyricsPanel'));
+const LyricsStage = lazy(() => import('./lyrics/LyricsStage'));
 const EMPTY_DECK_HINT = '双击封面或拖到这里'; // Enter is spelled out on the selection strip (双击或回车放盘).
 // Wrap the quality token (无损 / FLAC / Hi-Res / 320k MP3…) of a status line in a small badge; the text stays whole.
 const QUALITY = /(\d{2,4}\s?k(?:bps)?(?:\s?(?:MP3|AAC|OGG))?|Hi-?Res|FLAC|无损)/i;
@@ -48,7 +48,8 @@ export default function RoomTurntable({ item, spinning, trackIndex = 0, style, i
     </button>
     <div className="turntable-copy"><strong title={item?.title}>{displayTitle(item?.title) || '等一张唱片'}</strong><span className="turntable-artist">{item?.type === 'playlist' ? <>{trackArtist(item, trackIndex) || '歌单'} · <em>歌单</em></> : item?.artist || ''}</span><p className={trackName === EMPTY_DECK_HINT ? 'turntable-track is-hint' : 'turntable-track'} title={trackName}>{item && names.length ? `${String(trackIndex + 1).padStart(2, '0')} · ` : ''}{displayTitle(trackName)}</p><small className="turntable-status" role="status">{statusNode(statusText || (provider === 'system' ? system?.statusText : provider === 'visual' ? (item ? spinning ? '展示中 · 无音频' : '旋转已暂停 · 无音频' : '等待放盘 · 无音频') : playback?.statusText))}</small></div>
     </div>
-    {!readOnly && item && playback && !['visual', 'system', 'ma'].includes(provider) && <PocketProgress playback={playback}/>}
+    {!readOnly && item && playback && deckCapabilities(provider, { remote: playback.remote }).progress && provider !== 'system' && <PocketProgress playback={playback} readOnly={!deckCapabilities(provider, { remote: playback.remote }).seek}/>}
+    {!readOnly && provider === 'system' && system?.active && <SystemProgress timeline={system.timeline}/>}
     </div>
     {!readOnly && provider === 'system' && system && <div className="turntable-controls turntable-system-controls">
       <button type="button" aria-label="系统播放器上一首" disabled={!system.active} onClick={() => system.control('previous')}><ChevronLeft size={18}/></button>
@@ -60,7 +61,7 @@ export default function RoomTurntable({ item, spinning, trackIndex = 0, style, i
     {!readOnly && !['visual', 'system'].includes(provider) && playback?.candidates.length > 0 && <div className="turntable-matches" aria-label="选择曲目版本">{playback.candidates.map((candidate) => <button type="button" key={`${candidate.provider}:${candidate.id}`} onClick={() => playback.choose(candidate)}><strong>{candidate.title}</strong><span>{candidate.artist} · {candidate.album || '专辑未知'}</span></button>)}</div>}
     {!readOnly && playback?.localApp && <p className="turntable-local-app"><button type="button" onClick={() => playback.openInLocalApp()} title="小屋内播放失败时的备用办法：在平台 App（未安装时为官方网页）中打开这首歌。声音由该 App 播放，小屋不会显示进度。">{playback.localApp.label}</button><small>交给平台 App 播放 · 小屋不显示进度</small></p>}
     {!readOnly && item && provider !== 'visual' && <button type="button" className="turntable-lyrics-entry" onClick={() => setLyricsOpen(true)}>歌词</button>}
-    {lyricsOpen && <Suspense fallback={<span role="status">正在打开歌词…</span>}><LyricsPanel close={() => setLyricsOpen(false)} playback={playback} system={provider === 'system' ? system : null} track={{ provider: playback?.resolvedProvider || provider, id: provider === 'system' ? '' : playback?.resolvedId || '', title: trackName, artist: system?.artist || playback?.resolvedArtist || trackArtist(item, trackIndex), album: system?.album || playback?.resolvedAlbum || item?.albumTitle || (item?.type === 'album' ? item.title : ''), duration: provider === 'system' ? system?.timeline?.getSnapshot().duration || 0 : playback?.duration || 0 }}/></Suspense>}
+    {lyricsOpen && <Suspense fallback={<span role="status">正在打开歌词…</span>}><LyricsStage close={() => setLyricsOpen(false)} track={{ provider: playback?.resolvedProvider || provider, id: provider === 'system' ? '' : playback?.resolvedId || '', title: trackName, artist: system?.artist || playback?.resolvedArtist || trackArtist(item, trackIndex), album: system?.album || playback?.resolvedAlbum || item?.albumTitle || (item?.type === 'album' ? item.title : ''), duration: provider === 'system' ? system?.timeline?.getSnapshot().duration || 0 : playback?.duration || 0 }}/></Suspense>}
     {!readOnly && playback?.notice && <p className="turntable-local-app-notice" role="status">{playback.notice}</p>}
       </div>
     </div>

@@ -135,3 +135,21 @@ test('permanent deletion is trash-only, strips history, blocks stale editors and
   assert.deepEqual(mergeJournalRecord(edited, { id: first.id, purgedAt: 13 }), { id: first.id, purgedAt: 13 });
   assert.deepEqual(mergeJournalRecord({ id: first.id, purgedAt: 13 }, { ...edited, updatedAt: 999 }), { id: first.id, purgedAt: 13 });
 });
+
+test('journal search: every word must match, # searches tags, full-width folds, and the hit is shown in context', async () => {
+  const { findJournalEntries: find, journalSnippet } = await import('./journal-entries.mjs');
+  const entries = [
+    { id: 'a', body: '今天下了一整天的雨，听着 Lofi 写完了周报。', tags: ['工作'], deletedAt: null },
+    { id: 'b', body: '和朋友去看海，雨停了。', tags: ['周末', '雨天'], deletedAt: null }
+  ];
+  assert.deepEqual(find(entries, { query: '雨' }).map((entry) => entry.id), ['a', 'b']);
+  assert.deepEqual(find(entries, { query: '雨 周报' }).map((entry) => entry.id), ['a'], 'all words must match');
+  assert.deepEqual(find(entries, { query: 'ＬＯＦＩ' }).map((entry) => entry.id), ['a'], 'full-width and case fold');
+  assert.deepEqual(find(entries, { query: '#雨' }).map((entry) => entry.id), ['b'], 'a # term looks only at tags');
+  assert.deepEqual(find(entries, { query: '   ' }).map((entry) => entry.id), ['a', 'b']);
+  const hit = journalSnippet(entries[0].body, '周报', 4);
+  assert.equal(hit.match, '周报');
+  assert.ok(hit.before.startsWith('…') && hit.before.endsWith('写完了'));
+  assert.equal(journalSnippet(entries[1].body, '#雨'), null, 'a tag-only hit has no body snippet');
+  assert.equal(journalSnippet('abc', 'zzz'), null);
+});

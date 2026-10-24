@@ -31,25 +31,32 @@ async function choosePet(id, name) {
   await page.waitForTimeout(1100);
   assert.equal(await application.evaluate(() => globalThis.__qaTray?.__petId), id);
   const icon = await application.evaluate(() => ({ tray: globalThis.__icons.at(-1), dock: globalThis.__dockIcons.at(-1) }));
-  assert.equal(icon.tray.template, false); assert.ok(icon.tray.size.width >= 16); assert.equal(icon.dock.size.width, 512); if(process.platform==='darwin'){assert.equal(icon.tray.size.width,18);assert.ok(icon.tray.scales.includes(2));assert.ok(icon.dock.scales.includes(2));}
+  assert.equal(icon.tray.template, false); assert.ok(icon.tray.size.width >= 16);
+  // Linux has no Dock and the window icon is only hooked on Windows; the tray is checked everywhere.
+  if (process.platform !== 'linux') assert.equal(icon.dock.size.width, 512); if(process.platform==='darwin'){assert.equal(icon.tray.size.width,18);assert.ok(icon.tray.scales.includes(2));assert.ok(icon.dock.scales.includes(2));}
   report.nativeIcons.push({ id, ...icon });
 }
 (async () => {
   await launch();
-  assert.equal(await page.locator('.cabin-home').count(),0,'The released shelf remains the default');
-  // The fresh profile's lazy guide may mount after the shelf. Wait for it
-  // explicitly, then dismiss through its visible action before using the header.
-  const guide=page.getByRole('dialog',{name:'新手引导',exact:true});
-  await guide.waitFor({timeout:30000});await guide.getByRole('button',{name:'跳过引导',exact:true}).click();await guide.waitFor({state:'hidden'});
+  await page.locator('.cabin-home').waitFor(); assert.equal(await page.locator('.cabin-room').count(),0,'The life cabin is the default home since 2.2');
+  // The fresh profile's lazy guide may mount after the home. Dismiss it through its visible action if it comes.
+  // A getter: each relaunch replaces `page`.
+  const skipGuide=async(timeout=8000)=>{const guide=page.getByRole('dialog',{name:'新手引导',exact:true});if(await guide.waitFor({timeout}).then(()=>true,()=>false)){await guide.getByRole('button',{name:'跳过引导',exact:true}).click();await guide.waitFor({state:'hidden'});}};
+  await skipGuide();
+  const restartWith=async(open,confirm,mode,selector)=>{
+    await application.evaluate(({app})=>{globalThis.__restartRequested=false;globalThis.__originalQuit=app.quit.bind(app);globalThis.__originalRelaunch=app.relaunch.bind(app);app.relaunch=()=>{globalThis.__restartRequested=true;};app.quit=()=>{};});
+    await open();await page.getByRole('dialog',{name:'选择首页'}).getByRole('button',{name:confirm,exact:true}).click();
+    await page.waitForFunction(mode=>localStorage.getItem('flow-cabin-interface-v1')===mode,mode);
+    for(let i=0;i<30&&!await application.evaluate(()=>globalThis.__restartRequested);i++)await page.waitForTimeout(100);
+    assert.equal(await application.evaluate(()=>globalThis.__restartRequested),true,'native relaunch requested after saving');
+    await application.evaluate(({app})=>{app.quit=globalThis.__originalQuit;app.relaunch=globalThis.__originalRelaunch;});
+    await application.close();application=null;await launch();await page.locator(selector).first().waitFor();
+  };
+  await restartWith(()=>page.locator('.home-notice').getByRole('button',{name:'改用原版',exact:true}).click(),'改用原版唱片架','classic','.cabin-room');
+  await skipGuide(30000);
   await page.getByRole('button',{name:'专辑墙',exact:true}).first().click();await page.getByRole('dialog',{name:'专辑墙编辑器',exact:true}).waitFor();await page.keyboard.press('Escape');
-  await application.evaluate(({app})=>{globalThis.__originalQuit=app.quit.bind(app);globalThis.__originalRelaunch=app.relaunch.bind(app);app.relaunch=()=>{globalThis.__restartRequested=true;};app.quit=()=>{};});
-  await page.getByRole('button',{name:'体验 Beta 小屋',exact:true}).click();await page.getByRole('button',{name:'切换为 Beta 并重启',exact:true}).click();
-  await page.waitForFunction(()=>localStorage.getItem('flow-cabin-interface-v1')==='beta');
-  for(let i=0;i<30&&!await application.evaluate(()=>globalThis.__restartRequested);i++)await page.waitForTimeout(100);
-  assert.equal(await application.evaluate(()=>globalThis.__restartRequested),true,'native relaunch requested after saving');
-  await application.evaluate(({app})=>{app.quit=globalThis.__originalQuit;app.relaunch=globalThis.__originalRelaunch;});
-  await application.close();application=null;await launch();await page.locator('.cabin-home').waitFor();
-  report.checks.push('Default classic shelf keeps album wall; explicit Beta opt-in saves, requests native restart and opens Beta on a new process');
+  await restartWith(()=>page.getByRole('button',{name:'回到生活小屋',exact:true}).first().click(),'回到生活小屋','beta','.cabin-home');
+  report.checks.push('The life cabin opens by default; choosing the classic shelf (album wall intact) and back saves, requests a native restart and opens that home on a new process');
   assert.equal(await page.locator('[data-cabin-audio-host] audio').count(), 2);
   await page.getByRole('navigation', { name: '房间区域' }).getByRole('button', { name: '工作角', exact: true }).click();
   await page.getByRole('button', { name: '随手记', exact: true }).first().click();
@@ -67,10 +74,29 @@ async function choosePet(id, name) {
   await popup.getByRole('button', { name: /暂停专注|专注/ }).click(); await page.waitForTimeout(1200);
   await page.getByRole('button', { name: '专注', exact: true }).click(); await page.getByRole('button', { name: '继续', exact: true }).waitFor(); await close(); report.checks.push('Menu popup controls the existing home focus session');
   } else { await page.getByRole('button',{name:'专注',exact:true}).click();await page.getByRole('button',{name:'暂停',exact:true}).click();await close(); }
-  await page.evaluate(() => window.open('album-desktop://action/lyrics-open'));
-  let lyrics; for(let i=0;i<30;i++){lyrics=application.windows().find(p=>p.url().includes('/lyrics.html'));if(lyrics)break;await page.waitForTimeout(100);}
-  assert.ok(lyrics); await page.evaluate(()=>{Object.defineProperty(window,'cabinLyricLine',{configurable:true,get:()=>({title:'本机时间轴',current:'同一首歌，同一句歌词',next:'下一句仍在这里'}),set:()=>{}});});
-  await lyrics.getByText('同一首歌，同一句歌词',{exact:true}).waitFor(); await lyrics.screenshot({path:path.join(output,'lyrics.png')}); await lyrics.close(); report.checks.push('Companion lyrics read the home timeline through constrained native IPC');
+  // 桌面歌词: the shell reads the page's lyric feed; a fixture feed stands in for a playing song.
+  await application.evaluate(({ BrowserWindow }) => { globalThis.__ignore = []; const original = BrowserWindow.prototype.setIgnoreMouseEvents; BrowserWindow.prototype.setIgnoreMouseEvents = function (value, options) { globalThis.__ignore.push([value, Boolean(options?.forward)]); return original.call(this, value, options); }; });
+  await page.evaluate(() => { window.cabinLyricFeed = { take: rev => ({ docRev: 7, ...(rev === 7 ? {} : { doc: { precision: 'line', lines: [{ s: 0, e: 600000, w: [['同一首歌，同一句歌词', 0, 600000]] }, { s: 600000, e: 700000, w: [['下一句仍在这里', 600000, 700000]] }] } }), title: '本机时间轴', artist: '', skin: 'forest', pet: { id: 'cat' }, prefs: { deskLayout: 'double', deskSkin: 'cabin', deskSize: 34, translation: true, deskPet: true }, anchor: { position: 1000, at: Date.now(), playing: true, rate: 1, duration: 700000 }, energy: .5, bpm: 0, beatAt: 0 }) }; });
+  await page.evaluate(() => window.open('album-desktop://action/lyrics-toggle'));
+  let lyrics; for(let i=0;i<50;i++){lyrics=application.windows().find(p=>p.url().includes('/lyrics.html'));if(lyrics)break;await page.waitForTimeout(100);}
+  assert.ok(lyrics); lyrics.on('pageerror', e => report.errors.push('lyrics: ' + e.message)); await lyrics.locator('.desk-lyrics-row.is-active', { hasText: '同一首歌，同一句歌词' }).waitFor();
+  await lyrics.locator('.desk-lyrics-row.is-waiting', { hasText: '下一句仍在这里' }).waitFor();
+  // The page can render before the shell shows the window (it waits for the page load); the
+  // topmost flag only means something once the bar is on screen, so read it after it is shown.
+  let bar; for (let i = 0; i < 50; i++) { bar = await application.evaluate(({ BrowserWindow }) => { const win = BrowserWindow.getAllWindows().find(w => w.webContents.getURL().includes('/lyrics.html')); return { visible: win.isVisible(), color: win.getBackgroundColor(), top: win.isAlwaysOnTop(), resizable: win.isResizable() }; }); if (bar.visible) break; await page.waitForTimeout(100); }
+  assert.equal(bar.visible, true, 'the lyric bar is shown');
+  assert.match(bar.color, /^#0{6}(00)?$/i, 'the lyric bar window is transparent'); assert.equal(bar.top, true);
+  await lyrics.locator('.desk-lyrics').hover(); await lyrics.getByRole('button', { name: '锁定歌词（鼠标可穿透）' }).click();
+  await lyrics.getByRole('button', { name: '解锁桌面歌词' }).waitFor({ state: 'attached' });
+  assert.deepEqual(await application.evaluate(() => globalThis.__ignore.at(-1)), [true, true], 'locked: clicks pass through, moves still reach the bar');
+  await lyrics.screenshot({ path: path.join(output, 'lyrics.png') });
+  await lyrics.getByRole('button', { name: '解锁桌面歌词' }).hover(); await lyrics.getByRole('button', { name: '解锁桌面歌词' }).click();
+  await lyrics.getByRole('toolbar', { name: '桌面歌词' }).waitFor({ state: 'attached' });
+  assert.deepEqual(await application.evaluate(() => globalThis.__ignore.at(-1)), [false, false]);
+  await page.evaluate(() => window.open('album-desktop://action/lyrics-toggle'));
+  for (let i = 0; i < 30 && application.windows().some(p => p.url().includes('/lyrics.html')); i++) await page.waitForTimeout(100);
+  assert.equal(application.windows().some(p => p.url().includes('/lyrics.html')), false, 'the same command closes the bar');
+  report.checks.push('Desktop lyric bar reads the home lyric feed, is transparent and on top, locks click-through and toggles from the page');
   const imported={version:2,id:'native-video-fixture',name:'透明视频伙伴',author:'Flow Cabin tests',license:'CC0',media:{type:'webm',data:fs.readFileSync(path.join(__dirname,'../assets/pets-v21/cat/avatar-256.png')).toString('base64'),frameWidth:256,frameHeight:256,clips:{idle:{data:fs.readFileSync(path.join(__dirname,'fixtures/v21/transparent.webm')).toString('base64')}}},animations:{idle:{frames:[0],fps:1}}};
   await page.evaluate(async value=>{const response=await fetch('/desktop-pets/packs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(value)});const result=await response.json();if(!response.ok)throw Error(result.error);localStorage.setItem('cabin.petPack.v1',JSON.stringify(result.pack));window.dispatchEvent(new Event('cabin:pet-pack'));},imported);
   await page.waitForTimeout(1800);

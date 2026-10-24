@@ -42,7 +42,10 @@ a{color:var(--px-accent-hi)}
 /* Below ~1200 wide the toolbar reaches the centre: the alert drops under it instead of covering 专注. */
 @media(max-width:1200px){.app-error{top:calc(var(--px-titlebar) + 60px);max-width:calc(100vw - 32px)}}
 .app-error button{padding:4px 10px;background:var(--px-surface-2);border:1px solid var(--px-border)}
-.app-toast{position:fixed;z-index:300;left:50%;bottom:132px;translate:-50% 0;margin:0;padding:9px 16px;font-size:13px;color:var(--px-paper-ink);background:var(--px-paper);border:2px solid var(--px-paper-ink);box-shadow:4px 4px 0 #3b2a2088;animation:toast-in .2s ease-out}
+.app-toasts{position:fixed;inset:auto 0 132px;margin:0 auto;width:max-content;max-width:calc(100vw - 32px);padding:0;border:0;background:none;overflow:visible;display:none;flex-direction:column;align-items:center;gap:8px;pointer-events:none;color:inherit}
+.app-toasts:popover-open{display:flex}
+.app-toast{position:static;pointer-events:auto;display:flex;align-items:center;gap:12px;margin:0;padding:9px 16px;font-size:13px;color:var(--px-paper-ink);background:var(--px-paper);border:2px solid var(--px-paper-ink);box-shadow:4px 4px 0 #3b2a2088;animation:toast-in .2s ease-out}
+.app-toast button{min-height:32px;padding:2px 10px;font:inherit;font-weight:600;color:inherit;background:none;border:1px solid currentColor;border-radius:0;cursor:pointer}
 @keyframes toast-in{from{opacity:0;translate:-50% 8px}}
 
 /* Cabin toolbar and shelf panels, floating over the room */

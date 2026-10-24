@@ -422,11 +422,39 @@ try {
     await page.evaluate(()=>{window.dispatchEvent(new Event('focus'));document.dispatchEvent(new Event('visibilitychange'));});assert.equal((await focusState(page)).sessions.length,1);await screenshot(page,'timer-expired-reset');
   });
   await run('long-sleep-credits-once-and-waits',async page=>{
-    await openFocus(page);await page.getByRole('button',{name:'开始专注',exact:true}).click();const before=await focusState(page);
+    // 2.2: 锁屏或休眠时 · 照常计时 keeps the old behaviour checked here (the default asks first, see below).
+    await openFocus(page);await page.getByRole('button',{name:'计时设置'}).click();await page.getByLabel('锁屏或休眠时').selectOption('count');await page.getByRole('button',{name:'计时设置'}).click();
+    await page.getByRole('button',{name:'开始专注',exact:true}).click();const before=await focusState(page);
     await page.evaluate(end=>{Date.now=()=>end+5*60000;window.dispatchEvent(new Event('focus'));},before.timer.endsAt);
     await page.waitForFunction(key=>JSON.parse(localStorage.getItem(key)).timer.phase==='idle',KEY);
     for(let i=0;i<4;i++)await page.evaluate(()=>{window.dispatchEvent(new Event('focus'));document.dispatchEvent(new Event('visibilitychange'));});
     const after=await focusState(page);assert.equal(after.sessions.length,1);assert.equal(after.rewards.fish,1);await screenshot(page,'timer-after-long-sleep');
+  });
+  await run('long-sleep-pauses-and-asks-before-crediting',async page=>{
+    // Default (回来时询问): the computer slept through the round; nothing is credited until the user says so.
+    await openFocus(page);await page.getByRole('button',{name:'开始专注',exact:true}).click();const before=await focusState(page);
+    await page.evaluate(end=>{Date.now=()=>end+5*60000;window.dispatchEvent(new Event('focus'));},before.timer.endsAt);
+    const credit=page.getByRole('button',{name:'算进专注'});await credit.waitFor();
+    let state=await focusState(page);assert.equal(state.timer.phase,'focus');assert.equal(state.timer.paused,true);assert.equal(state.sessions.length,0,'asleep is not focus until confirmed');
+    await screenshot(page,'timer-asks-after-sleep');await credit.click();
+    await page.waitForFunction(key=>JSON.parse(localStorage.getItem(key)).rewards?.fish===1,KEY);
+    state=await focusState(page);assert.equal(state.sessions.length,1);assert.equal(state.sessions[0].end,before.timer.endsAt,'the round ends where it was planned to');
+  });
+  await run('overtime-extend-and-distraction',async page=>{
+    // 到点后继续计时, +5 分钟 and 分心了 from the timer tab.
+    await openFocus(page);await page.getByRole('button',{name:'计时设置'}).click();await page.getByLabel('到点后继续计时（手动结束这一轮）').check();await page.getByLabel('锁屏或休眠时').selectOption('count');await page.getByRole('button',{name:'计时设置'}).click();
+    await page.getByRole('button',{name:'开始专注',exact:true}).click();
+    await page.getByRole('button',{name:'延长 5 分钟'}).click();
+    let state=await focusState(page);assert.equal(state.timer.duration,6*60000,'1 minute + 5');
+    await page.getByRole('button',{name:/^分心了/}).click();await page.getByRole('button',{name:'撤销'}).waitFor();
+    assert.equal((await focusState(page)).distractions.length,1);
+    await page.evaluate(end=>{const real=Date.now.bind(Date),offset=end+60000-real();Date.now=()=>real()+offset;window.dispatchEvent(new Event('focus'));},state.timer.endsAt);
+    await page.waitForFunction(key=>JSON.parse(localStorage.getItem(key)).timer.due===true,KEY);
+    state=await focusState(page);assert.equal(state.timer.phase,'focus','overtime keeps the round going');assert.equal(state.rewards.fish,0);
+    await page.locator('.focus-badge-time',{hasText:'+'}).waitFor();
+    await page.getByRole('button',{name:'结束这一轮，去休息'}).click();
+    await page.waitForFunction(key=>JSON.parse(localStorage.getItem(key)).rewards?.fish===1,KEY);
+    state=await focusState(page);assert.equal(state.sessions.at(-1).completed,true);assert.ok(state.sessions.at(-1).end-state.sessions.at(-1).start>=7*60000,'the extra minute counts');
   });
   await run('pomodoro-start-and-zen-enter-focus-display-tools-hide-separately',async page=>{
     const shown=()=>page.locator('.focus-display').count();

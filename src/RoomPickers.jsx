@@ -7,7 +7,7 @@ import './room-pickers.css';
 import { interfaceMode } from './interface-mode.mjs';
 
 // Small picker art (scripts/art/scene-thumbs.py), not the full room illustration.
-export const sceneThumb = (scene) => interfaceMode() === 'beta' ? `/room-scenes/v21/${scene.id}/shell.png` : scene.id === 'pixel' ? '/room-scenes/amber-retreat.png' : CLASSIC_ROOM_SCENES.some(s => s.id === scene.id) ? `/room-scenes/thumbs/${scene.id}.png` : scene.view;
+export const sceneThumb = (scene) => interfaceMode() === 'beta' ? `/room-scenes/v21/${scene.id}/shell.webp` : scene.id === 'pixel' ? '/room-scenes/amber-retreat.png' : CLASSIC_ROOM_SCENES.some(s => s.id === scene.id) ? `/room-scenes/thumbs/${scene.id}.png` : scene.view;
 
 // Scene + companion pickers: Settings › 房间与桌宠 and the first-run guide's 房间 step.
 // `compact` drops the headings' hints and the descriptions for the guide's narrower column.

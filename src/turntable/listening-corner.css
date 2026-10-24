@@ -76,6 +76,15 @@
 .corner-speed { box-shadow: 2px 2px 0 var(--corner-paper-3); border-color: var(--corner-ink); }
 .corner-speed button { min-width: 32px; min-height: var(--px-hit); padding: 2px 6px; }
 .corner-status { margin: 0; font-size: 12px; color: var(--corner-ink-2); }
+.corner-mixer { display: flex; align-items: center; gap: 6px; min-width: 0; padding: 6px 0; border-bottom: 2px solid var(--corner-paper-3); }
+.corner-mixer > button, .corner-volume > button { display: grid; place-items: center; flex: none; width: 28px; height: 28px; padding: 0; color: var(--corner-ink-2); background: var(--corner-paper-2); border: 0; box-shadow: inset 1px 1px 0 var(--corner-paper-3), 2px 2px 0 var(--corner-paper-3); cursor: pointer; }
+.corner-mixer > button[aria-pressed=true] { color: var(--corner-paper); background: var(--corner-ink); }
+.corner-mixer > .corner-like[aria-pressed=true] { color: var(--corner-paper); background: var(--px-accent-lo); }
+.corner-mixer > .corner-retry { color: var(--corner-paper); background: var(--px-accent-lo); }
+.corner-mixer > button:active, .corner-volume > button:active { translate: 1px 1px; box-shadow: inset 1px 1px 0 var(--corner-paper-3); }
+.corner-volume { display: flex; flex: 1; align-items: center; gap: 6px; min-width: 0; margin-left: auto; }
+.corner-volume input[type=range] { flex: 1; min-width: 40px; accent-color: var(--corner-ink); }
+.corner-volume output { flex: none; width: 34px; font: 400 8px/8px var(--px-font-en); color: var(--corner-ink-2); text-align: right; font-variant-numeric: tabular-nums; }
 .corner-tracks { flex: 1 1 auto; min-height: 0; margin: 0; padding: 0; overflow-y: auto; list-style: none; scrollbar-width: thin; scrollbar-color: var(--corner-paper-3) transparent; }
 .corner-tracks button { position: relative; display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; align-items: center; gap: 8px; width: 100%; padding: 6px 6px 8px; color: var(--corner-ink-2); text-align: left; scroll-margin: 6px; background: none; border: 0; font: inherit; font-size: 13px; cursor: pointer; }
 .corner-tracks button:hover { color: var(--corner-ink); background: var(--corner-paper-2); }

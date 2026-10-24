@@ -67,6 +67,8 @@ async function mountFixture(application, site, options = {}) {
       return router(request);
     });
   }, { items, results: options.searchResults || [items[0]], slowCover: options.slowCover === true, music: options.music === true, coverResponse: options.coverResponse, autoMusic: options.autoMusic === true });
+  // These interaction fixtures exercise the classic shelf; since 2.2 the life cabin is the default home.
+  if (options.home !== 'cabin') await site.evaluate(() => { if (localStorage.getItem('flow-cabin-interface-v1') === null) localStorage.setItem('flow-cabin-interface-v1', 'classic'); });
   await site.reload(); await site.locator('.app-titlebar').waitFor(); await site.locator('.cabin-room').waitFor();
   // Interaction fixtures run against the cabin, not the first-run tutorial.
   const onboarding = site.getByRole('dialog', { name: '新手引导', exact: true });

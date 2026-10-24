@@ -96,7 +96,7 @@ ${directExport ? 'export ' : ''}function createBeatTracker(...args) {
     return route.fulfill({ status: 404, json: { error: 'none' } }); });
   await context.route('**/desktop-music/**', (r) => r.fulfill({ json: { available: false } }));
   await context.addInitScript((seed) => { window.__onboardingSeed = seed; }, onboardingSeed());
-  await context.addInitScript(() => { if (sessionStorage.getItem('s')) return; sessionStorage.setItem('s', '1'); localStorage.clear();
+  await context.addInitScript(() => { if (sessionStorage.getItem('s')) return; sessionStorage.setItem('s', '1'); localStorage.clear(); localStorage.setItem('flow-cabin-interface-v1', 'classic'); // the classic room is this test's stage
     localStorage.setItem('flow-cabin-onboarding-v1', window.__onboardingSeed);
     localStorage.setItem('flow-cabin-cat-mood-v1', JSON.stringify({ v: 1, mood: 90, tier: 'happy', updatedAt: Date.now(), feeds: [], totalFeeds: 0, unlockedActions: [] })); });
   const page = await context.newPage(); page.on('pageerror', (e) => report.pageErrors.push(`${name}: ${e.message}`));

@@ -2,6 +2,7 @@
 // examination list, pronunciation audio, or third-party quotations are bundled.
 import { addCards, cardKey, dayKey, LIMITS, sourceFields } from './study-model.mjs';
 import { PRACTICAL_WORD_BOOKS } from './books/practical-english.mjs';
+import { importRows } from './import-parser.mjs';
 export { PRACTICAL_SERIES, PRACTICAL_WORD_BOOKS } from './books/practical-english.mjs';
 const book = (id, name, description, rows) => Object.freeze({ id: `book-${id}`, name, description, source: '小屋原创入门词书 · 不是考试完整词库', words: rows.map(([front, back]) => ({ front, back })) });
 export const WORD_BOOKS = Object.freeze([
@@ -37,6 +38,13 @@ export function previewWordImport(text, { format = 'tsv', frontColumn = 0, backC
   let rows;
   try {
     if (format === 'json') { rows = JSON.parse(text); if (!Array.isArray(rows)) throw new Error(); }
+    else if (format === 'csv' || format === 'anki') {
+      // CSV (quoted fields, ; or ,) and Anki "Notes in Plain Text" (#separator, #html, #columns).
+      const parsed = importRows(text, format, { header: format === 'csv' && header });
+      const named = parsed.headers.findIndex(label => label.trim().toLowerCase() === 'source');
+      const sourceColumn = parsed.headers.length ? named : format === 'csv' ? 2 : -1;
+      rows = parsed.rows.map(parts => ({ front: parts[frontColumn], back: parts[backColumn], source: sourceColumn >= 0 && ![frontColumn, backColumn].includes(sourceColumn) && parts[sourceColumn]?.trim() ? parts[sourceColumn] : undefined }));
+    }
     else {
       const lines = String(text).replace(/^\uFEFF/, '').split(/\r?\n/).filter(line => line.trim());
       const sourceColumn = header ? (lines[0] || '').split('\t').findIndex(label => label.trim().toLowerCase() === 'source') : 2;
@@ -45,7 +53,7 @@ export function previewWordImport(text, { format = 'tsv', frontColumn = 0, backC
         return { front: parts[frontColumn], back: parts[backColumn], source: sourceColumn >= 0 && ![frontColumn, backColumn].includes(sourceColumn) ? parts[sourceColumn] : undefined };
       });
     }
-  } catch { return { cards: [], duplicates: 0, errors: 1, message: 'JSON 需要是 [{"front":"单词","back":"释义"}] 数组。' }; }
+  } catch { return { cards: [], duplicates: 0, errors: 1, message: format === 'json' ? 'JSON 需要是 [{"front":"单词","back":"释义"}] 数组。' : '没能读懂这个文件，请确认是 UTF-8 文本。' }; }
   let duplicates = 0, errors = 0, sourceErrors = 0; const cards = [];
   for (const row of rows) {
     if (!row || typeof row.front !== 'string' || typeof row.back !== 'string' || !row.front.trim() || !row.back.trim() || row.front.length > LIMITS.side || row.back.length > LIMITS.side) { errors++; continue; }

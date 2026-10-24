@@ -1597,12 +1597,20 @@ async function trackCover(provider, id, cookie = "") {
 async function lyrics(provider, id, cookie) {
   if (provider === "qq") {
     const result2 = await handleQQLyric(cookie, id, "");
-    return { text: String(result2.lyric || ""), format: "lrc", translation: String(result2.tlyric || "") };
+    const qrc = plainQrc(result2.qrc), roma = plainQrc(result2.roma);
+    return { text: qrc || String(result2.lyric || ""), format: qrc ? "qrc" : "lrc", translation: String(result2.tlyric || ""), romanization: roma };
   }
-  const result = await call("lyric", { id, cookie });
-  if (result.status >= 400) throw new Error("\u5E73\u53F0\u6B4C\u8BCD\u6682\u65F6\u4E0D\u53EF\u7528\u3002");
-  const body = asObj(result.body), yrc = asObj(body.yrc), lrc = asObj(body.lrc);
-  return { text: String(yrc.lyric || lrc.lyric || ""), format: yrc.lyric ? "yrc" : "lrc", translation: String(asObj(body.tlyric).lyric || "") };
+  const result = await Promise.resolve().then(() => call("lyric_new", { id, cookie })).catch(() => ({ status: 500, body: {} }));
+  const fallback = result.status >= 400 ? await call("lyric", { id, cookie }) : result;
+  if (fallback.status >= 400) throw new Error("\u5E73\u53F0\u6B4C\u8BCD\u6682\u65F6\u4E0D\u53EF\u7528\u3002");
+  const body = asObj(fallback.body), text = (key) => String(asObj(body[key]).lyric || "");
+  const word = Boolean(text("yrc"));
+  return { text: text("yrc") || text("lrc"), format: word ? "yrc" : "lrc", translation: word && text("ytlrc") || text("tlyric"), romanization: word && text("yromalrc") || text("romalrc") };
+}
+function plainQrc(value) {
+  const raw = String(value || "");
+  const content = raw.match(/LyricContent="([\s\S]*?)"\s*\/>/)?.[1] ?? raw;
+  return /\[\d+,\d+\][^\n]*\(\d+,\d+\)/.test(content) ? content : "";
 }
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {

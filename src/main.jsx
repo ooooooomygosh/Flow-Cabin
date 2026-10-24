@@ -13,6 +13,7 @@ import { frameClock } from './frame-clock.mjs';
 import { installZenConsoleReveal } from './scene/zen-console.mjs';
 import { syncPerformance, applyPerformance, startPerformanceProbe } from './perf-profile.mjs';
 import { initializeMobile } from './mobile/platform.mjs';
+import { installEscapeBack } from './ui/back-stack.mjs';
 import './mobile/mobile.css';
 
 async function start() {
@@ -22,6 +23,7 @@ async function start() {
   startPerformanceProbe();
   frameClock();
   installZenConsoleReveal();
+  installEscapeBack();
   const { default: App } = await import('./App');
   createRoot(document.getElementById('root')).render(<App/>);
 }

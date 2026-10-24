@@ -25,59 +25,75 @@ test('brand-new cabin opens the full guide; same-version cabins stay closed', ()
 
 test('progress persists and resumes; skip and done never auto-open', () => {
   const store = memory();
-  let s = m.next(m.next(m.start(m.initialState())));
+  let s = m.next(m.start(m.initialState()));
   s = m.chooseSource(s, 'qq');
   m.writeOnboarding(store, s, 5);
   const back = m.readOnboarding(store);
-  assert.deepEqual([back.status, back.step, back.source, back.updatedAt], ['active', 'source', 'qq', 5]);
+  assert.deepEqual([back.status, back.step, back.source, back.updatedAt], ['active', 'room', 'qq', 5]);
   assert.equal(m.shouldAutoOpen(back), true);
+  assert.equal(m.launchPlan(back, { currentVersion: '1.21.0' }).mode, 'resume');
   assert.equal(m.shouldAutoOpen(m.skip(back, '1.21.0'), { currentVersion: '1.21.0' }), false);
   assert.equal(m.shouldAutoOpen(m.complete(back, '1.21.0'), { currentVersion: '1.21.0' }), false);
   const again = m.reopen(m.complete(back, '1.21.0'));
-  assert.deepEqual([again.status, again.step, again.source], ['active', 'welcome', 'qq']);
+  assert.deepEqual([again.status, again.step, again.source], ['active', 'source', 'qq']);
 });
 
-test('a version gap opens an update guide and lists every skipped release', () => {
-  const old = { ...m.initialState(), status: 'done', step: 'done', seenVersion: '1.18.0' };
+test('the first-run guide is three steps and its last step is the finish line', () => {
+  assert.deepEqual(m.STEPS, ['source', 'room', 'test']);
+  assert.deepEqual(m.STEPS.map((id) => m.STEP_LABELS[id]), ['音源', '房间与伙伴', '试听']);
+  assert.equal(m.initialState().step, 'source');
+  assert.equal(m.isLastStep('test'), true);
+  assert.equal(m.isLastStep('room'), false);
+  assert.equal(m.complete(m.start(m.initialState()), '2.2.0').step, 'test');
+});
+
+test('steps saved by the six-step guide resume at the closest three-step step', () => {
+  const read = (step, extra = {}) => m.readOnboarding(memory({ [m.ONBOARDING_KEY]: JSON.stringify({ version: 2, status: 'active', step, ...extra }) }));
+  assert.equal(read('welcome').step, 'source');
+  assert.equal(read('updates').step, 'source');
+  assert.equal(read('permissions').step, 'room');
+  assert.equal(read('done').step, 'test');
+  assert.equal(read('room').step, 'room');
+});
+
+test('a version gap opens the 新功能 sheet once and lists every skipped release', () => {
+  const old = { ...m.initialState(), status: 'done', step: 'test', seenVersion: '1.18.0' };
   const plan = m.launchPlan(old, { currentVersion: '1.21.0' });
   assert.deepEqual(plan, { open: true, mode: 'update' });
-  let state = m.startUpdate(old, '1.21.0');
-  assert.deepEqual([state.status, state.step, state.fromVersion, state.seenVersion], ['active', 'updates', '1.18.0', '1.18.0']);
+  let state = m.applyLaunchPlan(old, plan, '1.21.0');
+  assert.deepEqual([state.status, state.fromVersion, state.seenVersion], ['done', '1.18.0', '1.18.0'], 'an update is not a walkthrough: the guide stays finished');
   assert.deepEqual(m.updateContext(state, '1.21.0').releases.map((release) => release.version), ['1.21.0', '1.20.0', '1.19.0']);
-  assert.deepEqual(m.launchPlan(state, { currentVersion: '1.21.0' }), { open: true, mode: 'update' }, 'closing a version guide resumes it on the next launch');
-  state = m.complete(state, '1.21.0');
-  assert.equal(state.seenVersion, '1.21.0');
+  assert.deepEqual(m.launchPlan(state, { currentVersion: '1.21.0' }), { open: true, mode: 'update' }, 'quitting before 知道了 shows the same sheet next time');
+  assert.equal(m.applyLaunchPlan(state, plan, '1.21.0').fromVersion, '1.18.0', 'the second showing compares against the same version');
+  state = m.dismissUpdate(state, '1.21.0');
+  assert.deepEqual([state.status, state.fromVersion, state.seenVersion], ['done', '', '1.21.0']);
   assert.equal(m.launchPlan(state, { currentVersion: '1.21.0' }).open, false);
 
-  const skipped = m.skip(m.startUpdate(old, '1.21.0'), '1.22.0');
-  assert.equal(skipped.seenVersion, '1.22.0');
+  const skipped = m.dismissUpdate(m.startUpdate({ ...old, status: 'skipped' }, '1.22.0'), '1.22.0');
+  assert.deepEqual([skipped.status, skipped.seenVersion], ['skipped', '1.22.0'], 'a skipped guide stays skipped');
   assert.deepEqual(m.updateContext({ ...old, seenVersion: '1.17.0' }, '1.21.0').releases.map((release) => release.version), ['1.21.0', '1.20.0', '1.19.0', '1.18.0']);
 });
 
-test('an interrupted update resumes at its saved step instead of the release list', () => {
-  const old = { ...m.initialState(), status: 'done', step: 'done', seenVersion: '1.18.0' };
-  const plan = m.launchPlan(old, { currentVersion: '1.21.0' });
-  let state = m.applyLaunchPlan(old, plan, '1.21.0');
-  assert.deepEqual([state.status, state.step, state.fromVersion], ['active', 'updates', '1.18.0']);
-  state = m.next(m.next(state)); // updates → source → permissions
-  const resumedPlan = m.launchPlan(state, { currentVersion: '1.21.0' });
-  assert.deepEqual(resumedPlan, { open: true, mode: 'update' });
-  const resumed = m.applyLaunchPlan(state, resumedPlan, '1.21.0');
-  assert.equal(resumed, state, 'a resumed update keeps the same state object');
-  assert.equal(resumed.step, 'permissions', 'the user returns to the step they closed');
-  assert.equal(m.applyLaunchPlan(old, plan, '1.21.0').step, 'updates', 'a fresh update still starts at the release list');
+test('a 2.1 update walkthrough closed half-way becomes the 新功能 sheet', () => {
+  const interrupted = m.readOnboarding(memory({ [m.ONBOARDING_KEY]: JSON.stringify({ version: 2, status: 'active', step: 'permissions', fromVersion: '1.18.0', seenVersion: '1.18.0' }) }));
+  const plan = m.launchPlan(interrupted, { currentVersion: '1.21.0' });
+  assert.deepEqual(plan, { open: true, mode: 'update' });
+  const state = m.applyLaunchPlan(interrupted, plan, '1.21.0');
+  assert.deepEqual([state.status, state.fromVersion], ['done', '1.18.0']);
+  assert.equal(m.launchPlan(m.dismissUpdate(state, '1.21.0'), { currentVersion: '1.21.0' }).open, false);
 });
 
 test('one completed version never auto-opens again; the next version opens once', () => {
   const latest = RELEASES[0].version;
-  let state = m.complete({ ...m.initialState(), status: 'active', step: 'done', seenVersion: '1.18.0' }, latest);
+  let state = m.complete({ ...m.initialState(), status: 'active', step: 'test', seenVersion: '1.18.0' }, latest);
   for (let launch = 0; launch < 3; launch++) assert.equal(m.launchPlan(state, { currentVersion: latest }).open, false);
   const plan = m.launchPlan(state, { currentVersion: '9.9.9' });
   assert.deepEqual(plan, { open: true, mode: 'update' });
   const opened = m.applyLaunchPlan(state, plan, '9.9.9');
-  assert.deepEqual([opened.status, opened.step, opened.fromVersion, opened.seenVersion], ['active', 'updates', latest, latest]);
+  assert.deepEqual([opened.status, opened.fromVersion, opened.seenVersion], ['done', latest, latest]);
   assert.equal(m.updateContext(opened, '9.9.9').releases.length, 0, 'no release card exists yet for an unreleased version');
-  assert.equal(m.complete(opened, 'v9.9.9').seenVersion, '9.9.9', 'stored versions drop the leading v');
+  assert.equal(m.dismissUpdate(opened, 'v9.9.9').seenVersion, '9.9.9', 'stored versions drop the leading v');
+  assert.equal(m.complete(opened, 'v9.9.9').seenVersion, '9.9.9');
 });
 
 test('a completed pre-versioning cabin sees the full companion arc from 1.18', () => {
@@ -102,13 +118,14 @@ test('step navigation is clamped and visits every step in order', () => {
   let s = m.start(m.initialState()); const seen = [s.step];
   for (let i = 0; i < 10; i++) { s = m.next(s); if (seen.at(-1) !== s.step) seen.push(s.step); }
   assert.deepEqual(seen, m.STEPS);
-  assert.equal(m.back(m.goTo(s, 'welcome')).step, 'welcome');
+  assert.equal(m.back(m.goTo(s, 'source')).step, 'source');
+  assert.equal(m.goTo(s, 'welcome'), s, 'retired steps are not navigable');
   assert.equal(m.goTo(s, 'nope'), s);
 });
 
 test('corrupt or hostile stored state is normalized', () => {
   const s = m.readOnboarding(memory({ [m.ONBOARDING_KEY]: '{"status":"x","step":"evil","source":"spotify","permissions":{"notifications":"granted","x":"yes"},"tested":"maybe"}' }));
-  assert.deepEqual([s.status, s.step, s.source, s.permissions, s.tested], ['new', 'welcome', '', { notifications: 'granted' }, '']);
+  assert.deepEqual([s.status, s.step, s.source, s.permissions, s.tested], ['new', 'source', '', { notifications: 'granted' }, '']);
   assert.equal(m.readOnboarding(memory({ [m.ONBOARDING_KEY]: '{bad' })).status, 'new');
   const broken = { getItem() { throw new Error('denied'); } };
   assert.equal(m.readOnboarding(broken).status, 'skipped');

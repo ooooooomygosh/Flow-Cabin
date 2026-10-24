@@ -46,7 +46,7 @@ async function startWallpaper() {
   await wallpaper.waitForFunction(() => Array.from(document.images).every(i => i.complete && i.naturalWidth > 0));
 }
 (async () => {
-  app = await _electron.launch({ executablePath: process.env.ALBUM_QA_EXE || path.join(desktop, 'node_modules/electron/dist/electron.exe'), args: process.env.ALBUM_QA_EXE ? [] : [desktop], env }); app.context().setDefaultTimeout(20000); await app.firstWindow();
+  app = await _electron.launch({ executablePath: process.env.ALBUM_QA_EXE || require(path.join(desktop, 'node_modules/electron')), args: process.env.ALBUM_QA_EXE ? [] : [desktop], env }); app.context().setDefaultTimeout(20000); await app.firstWindow();
   for (let i = 0; i < 100; i++) { site = app.context().pages().find(p => p.url().startsWith('https://album-circle.vercel.app')); host = app.context().pages().find(p => p.url() === 'album-desktop://shell/index.html'); if (site && host) break; await new Promise(r => setTimeout(r, 100)); }
   site.on('pageerror', e => report.pageErrors.push(e.message)); await mountFixture(app, site, { items, music: true, autoMusic: true });
   await site.locator('.cabin-night-study .study-writing-hand').waitFor(); assert.equal(await site.locator('.room-record-slot').count(), 9);
@@ -64,7 +64,7 @@ async function startWallpaper() {
   await site.locator('.room-record').first().dblclick(); await chooseSource(site, 'netease');
   await site.waitForFunction(() => document.querySelector('audio').currentTime > .2 && !document.querySelector('audio').paused);
   assert.deepEqual((await app.evaluate(() => globalThis.__qaMusicResolves)).slice(-2), ['99999', '12345']);
-  await site.getByLabel('唱机展示曲目', { exact: true }).selectOption('1');
+  await site.getByRole('button', { name: /^选择曲目/ }).click(); await site.getByRole('listbox', { name: '唱机展示曲目', exact: true }).getByRole('option').nth(1).click();
   await site.waitForFunction(() => document.querySelector('.turntable-track').textContent.includes('懦夫') && document.querySelector('audio').currentTime > .2 && !document.querySelector('audio').paused);
   assert.deepEqual((await app.evaluate(() => globalThis.__qaMusicResolves)).slice(-2), ['99999', '12345']); check('automatic-source-fallback-and-album-dropdown-play-real-html-audio');
   await site.getByRole('button', { name: '进入全屏模式', exact: true }).click();

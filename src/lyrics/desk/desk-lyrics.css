@@ -1,0 +1,53 @@
+@layer guards, reset, features, skin, overrides;
+@layer reset {
+  html:has(.desk-lyrics), html:has(.desk-lyrics) body { margin: 0; height: 100%; background: transparent; overflow: hidden; user-select: none; -webkit-user-select: none; }
+}
+@layer features {
+  /* The floating bar: transparent unless hovered, draggable anywhere but its buttons. */
+  .desk-lyrics { position: fixed; inset: 0; display: flex; flex-direction: column; padding: 8px 18px 10px; box-sizing: border-box; border-radius: 18px; font-family: var(--lyric-font); color: var(--lyric-base); -webkit-app-region: drag; app-region: drag; transition: background .25s, box-shadow .25s, opacity 1s; --energy: 0; --lyric-stroke-width: max(2px, calc(var(--desk-size) * .075)); }
+  .desk-lyrics:not(.is-locked):hover { background: color-mix(in srgb, var(--lyric-backdrop-a) 55%, transparent); box-shadow: inset 0 0 0 1px #ffffff1c; backdrop-filter: blur(14px); }
+  .desk-lyrics.is-quiet:not(:hover) { opacity: 0; }
+
+  .desk-lyrics-toolbar { position: absolute; top: 6px; left: 50%; z-index: 3; display: flex; align-items: center; gap: 4px; padding: 3px; border-radius: 999px; background: #0b0b0fb3; box-shadow: 0 4px 16px #0006; opacity: 0; transform: translate(-50%, -4px); transition: opacity .2s, transform .2s; -webkit-app-region: no-drag; app-region: no-drag; font-family: system-ui, sans-serif; }
+  .desk-lyrics:hover .desk-lyrics-toolbar, .desk-lyrics-toolbar:focus-within { opacity: 1; transform: translate(-50%, 0); }
+  .desk-lyrics-toolbar button { min-width: 32px; height: 28px; padding: 0 9px; border: 0; border-radius: 999px; background: transparent; color: #f2eee6; font: 13px/1 system-ui, sans-serif; cursor: pointer; white-space: nowrap; }
+  .desk-lyrics-toolbar button:hover { background: #ffffff1f; }
+  .desk-lyrics-toolbar button[aria-pressed="true"] { color: var(--lyric-fill); }
+  .desk-lyrics-toolbar button:disabled { opacity: .4; cursor: default; }
+  .desk-lyrics-toolbar button:focus-visible, .desk-lyrics-unlock:focus-visible { outline: 2px solid var(--lyric-fill); outline-offset: 1px; }
+  .desk-lyrics-sep { width: 1px; height: 16px; margin: 0 3px; background: #ffffff2e; }
+  .desk-lyrics-unlock { position: absolute; top: 6px; right: 10px; z-index: 3; width: 30px; height: 30px; border: 0; border-radius: 50%; background: #0b0b0fb3; color: #fff; font-size: 14px; cursor: pointer; opacity: 0; transition: opacity .2s; -webkit-app-region: no-drag; app-region: no-drag; }
+  .desk-lyrics:hover .desk-lyrics-unlock { opacity: .95; }
+
+  .desk-lyrics-stage { flex: 1; min-height: 0; display: flex; align-items: center; gap: 14px; }
+  .desk-lyrics-pet { flex: none; width: calc(var(--desk-size) * 1.9); aspect-ratio: 1; filter: drop-shadow(0 4px 6px #0008); }
+  .desk-lyrics-pet .pixel-cat { width: 100%; height: 100%; }
+  .desk-lyrics-pet.is-bobbing { animation: desk-pet-bob 1s ease-in-out infinite; }
+  @keyframes desk-pet-bob { 50% { transform: translateY(-6%) rotate(-3deg); } }
+
+  .desk-lyrics-lines { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: .18em; font-size: var(--desk-size); font-weight: 700; line-height: 1.22; letter-spacing: .02em; }
+  .desk-lyrics-row { min-height: 1.22em; display: flex; overflow: hidden; }
+  .layout-single .desk-lyrics-row { justify-content: center; text-align: center; }
+  .layout-single .desk-lyrics-row .karaoke-line { align-items: center; }
+  .layout-double .row-1 { justify-content: flex-end; text-align: end; }
+  .layout-double .row-1 .karaoke-line { align-items: flex-end; }
+  .desk-lyrics-row .karaoke-base { text-shadow: 0 2px 8px #000a; }
+  .desk-lyrics-row .karaoke-fill { text-shadow: 0 0 calc(.18em + var(--energy) * .45em) var(--lyric-glow), 0 0 calc(var(--energy) * 1.1em) color-mix(in srgb, var(--lyric-glow) 55%, transparent); }
+  .desk-lyrics-row .karaoke-roman, .desk-lyrics-row .karaoke-translation { font-weight: 500; text-shadow: 0 1px 6px #000c; paint-order: stroke fill; -webkit-text-stroke: calc(var(--lyric-stroke-width) * .6) var(--lyric-stroke); }
+  .desk-lyrics-waiting { display: flex; flex-direction: column; gap: .2em; color: var(--lyric-base); opacity: .62; transform: scale(.9); transform-origin: right center; paint-order: stroke fill; -webkit-text-stroke: var(--lyric-stroke-width) var(--lyric-stroke); text-shadow: 0 2px 8px #000a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .layout-double .row-0 .desk-lyrics-waiting { transform-origin: left center; }
+  .desk-lyrics-waiting small { font-size: .56em; font-weight: 500; }
+  .desk-lyrics-row.is-placeholder span { color: var(--lyric-base); opacity: .8; font-size: .7em; font-weight: 600; paint-order: stroke fill; -webkit-text-stroke: var(--lyric-stroke-width) var(--lyric-stroke); text-shadow: 0 2px 8px #000a; }
+
+  /* How a new line arrives, per room skin. */
+  .desk-lyrics-row.is-active { animation: .42s cubic-bezier(.2, .8, .2, 1) both desk-enter-rise; }
+  .enter-blur .desk-lyrics-row.is-active { animation-name: desk-enter-blur; }
+  .enter-slide .desk-lyrics-row.is-active { animation-name: desk-enter-slide; }
+  .enter-wave .desk-lyrics-row.is-active { animation-name: desk-enter-wave; animation-duration: .6s; }
+  .enter-step .desk-lyrics-row.is-active { animation-name: desk-enter-rise; animation-timing-function: steps(4, end); }
+  @keyframes desk-enter-rise { from { opacity: 0; transform: translateY(.45em); } to { opacity: 1; transform: none; } }
+  @keyframes desk-enter-blur { from { opacity: 0; filter: blur(8px); transform: scale(1.04); } to { opacity: 1; filter: none; transform: none; } }
+  @keyframes desk-enter-slide { from { opacity: 0; transform: translateX(-.8em); } to { opacity: 1; transform: none; } }
+  @keyframes desk-enter-wave { 0% { opacity: 0; transform: translateY(.5em) skewX(-6deg); } 60% { opacity: 1; transform: translateY(-.06em) skewX(2deg); } 100% { transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .desk-lyrics-row.is-active, .desk-lyrics-pet.is-bobbing { animation: none; } }
+}

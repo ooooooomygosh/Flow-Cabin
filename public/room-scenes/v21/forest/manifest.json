@@ -3,7 +3,7 @@
   "theme": "forest",
   "label": "林间小屋",
   "kind": "empty-room-shell",
-  "image": "shell.png",
+  "image": "shell.webp",
   "imageSize": {
     "width": 1536,
     "height": 1024
@@ -391,7 +391,7 @@
   "source": {
     "generator": "image_gen.imagegen",
     "generatedAt": "2026-10-23",
-    "reference": "/room-scenes/v21/pixel/shell.png",
+    "reference": "/room-scenes/v21/pixel/shell.webp",
     "referenceSha256": "05bb654bb6ea2c5328e372ea2ec0c9bf9247491e823a2eba3d2fa8b492d14372",
     "promptFile": "prompt.txt",
     "originalFile": "exec-7525c32e-8c23-4b07-9c28-59c1f7148130.png",

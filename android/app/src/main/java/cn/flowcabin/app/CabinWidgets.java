@@ -24,7 +24,9 @@ public class CabinWidgets extends AppWidgetProvider {
         if(!c.getSharedPreferences("cabin-companion",0).edit().putString("pet",pet).putString("accessory",accessory).putBoolean("imported",!avatar.isEmpty()).commit())throw new java.io.IOException("Companion save failed");
     }
     static String token(Context c) { android.content.SharedPreferences p=c.getSharedPreferences("cabin-widget",0);String value=p.getString("token","");if(value.isEmpty()){value=java.util.UUID.randomUUID().toString();p.edit().putString("token",value).commit();}return value; }
-    static boolean acceptIntent(Context c,Intent intent) { if(intent==null || !token(c).equals(intent.getStringExtra("cabinWidgetToken")) || !"focus-toggle".equals(intent.getStringExtra("cabinWidgetAction")))return false;c.getSharedPreferences("cabin-widget",0).edit().putString("command","focus-toggle").commit();intent.removeExtra("cabinWidgetAction");return true; }
+    // The focus widget's button and the focus-end notification's buttons (CabinFocus.post).
+    static final java.util.List<String> ACTIONS=java.util.Arrays.asList("focus-toggle","focus-break","focus-next","focus-skip","focus-extend","focus-end");
+    static boolean acceptIntent(Context c,Intent intent) { String action=intent==null?null:intent.getStringExtra("cabinWidgetAction");if(action==null || !token(c).equals(intent.getStringExtra("cabinWidgetToken")) || !ACTIONS.contains(action))return false;c.getSharedPreferences("cabin-widget",0).edit().putString("command",action).commit();intent.removeExtra("cabinWidgetAction");if(!"focus-toggle".equals(action))androidx.core.app.NotificationManagerCompat.from(c).cancel(720);return true; }
     @Override public void onReceive(Context c,Intent intent) {
         String action=intent.getAction();
         if(!"cn.flowcabin.WIDGET_PLAY".equals(action) && !"cn.flowcabin.WIDGET_NEXT".equals(action)){super.onReceive(c,intent);return;}

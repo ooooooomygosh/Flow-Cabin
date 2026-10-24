@@ -15,7 +15,8 @@
   html[data-platform=android] .cabin-room .cabin-toolbar { top:calc(var(--px-titlebar) + 2px);left:calc(var(--mobile-left) + 6px);right:calc(var(--mobile-right) + 6px);justify-content:space-between;gap:2px;flex-wrap:nowrap; }
   html[data-platform=android] .cabin-room .cabin-toolbar button { min-height:38px;padding:4px 6px;font-size:12px; }
   html[data-platform=android] .cabin-toolbar-group { gap:0; }
-  html[data-platform=android] .app-toast { width:max-content;max-width:calc(100vw - 32px);bottom:calc(var(--mobile-bottom) + 16px);line-height:1.6;z-index:1000; }
+  html[data-platform=android] .app-toasts { bottom:calc(var(--mobile-bottom) + 84px); }
+  html[data-platform=android] .app-toast { max-width:calc(100vw - 32px);line-height:1.6; }
   html[data-platform=android] dialog { top:var(--safe-area-inset-top,0px);bottom:var(--mobile-bottom);left:calc(var(--mobile-left) + 6px);right:calc(var(--mobile-right) + 6px);width:auto;max-width:800px;max-height:calc(var(--mobile-height,100dvh) - var(--safe-area-inset-top,0px) - var(--mobile-bottom) - 12px);margin:auto;padding:0; }
   html[data-platform=android] :is(.cabin-dialog-header,.record-dialog>header) { padding:8px 12px;min-height:52px; }
   html[data-platform=android] .cabin-dialog-body { padding:8px;min-height:0;overscroll-behavior:contain; }
@@ -54,7 +55,7 @@
   html[data-platform=android] .hub-row { padding-block:8px;gap:8px; }
   html[data-platform=android] .hub-sources button { padding:8px;gap:6px; }
   html[data-platform=android] .music-advanced { display:none; }
-  html[data-platform=android] .app-toast { left:calc(var(--mobile-left) + 8px);right:calc(var(--mobile-right) + 8px);margin-inline:auto;max-width:calc(100vw - var(--mobile-left) - var(--mobile-right) - 16px); }
+  html[data-platform=android] .app-toasts { left:calc(var(--mobile-left) + 8px);right:calc(var(--mobile-right) + 8px);max-width:calc(100vw - var(--mobile-left) - var(--mobile-right) - 16px); }
   html[data-platform=android][data-mobile-keyboard=true] :is(.room-turntable,.room-now-playing) { display:none; }
   html[data-platform=android][data-mobile-keyboard=true] textarea { box-sizing:border-box;min-height:40px;height:clamp(40px,calc(var(--mobile-height,100dvh) - var(--safe-area-inset-top,0px) - 100px),104px);max-height:clamp(40px,calc(var(--mobile-height,100dvh) - var(--safe-area-inset-top,0px) - 100px),104px); }
   @media(orientation:portrait) {

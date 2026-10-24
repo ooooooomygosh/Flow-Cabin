@@ -3,7 +3,7 @@
   "theme": "pixel",
   "label": "像素小屋",
   "kind": "empty-room-shell",
-  "image": "shell.png",
+  "image": "shell.webp",
   "imageSize": {
     "width": 1536,
     "height": 1024

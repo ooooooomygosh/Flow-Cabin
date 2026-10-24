@@ -1,6 +1,6 @@
 'use strict';
 const { contextBridge, ipcRenderer } = require('electron');
-const COMMANDS = new Set(['focus-start', 'focus-pause', 'focus-toggle', 'focus-skip', 'sound-toggle', 'cat-feed', 'open-settings', 'open-onboarding', 'open-about']);
+const COMMANDS = new Set(['focus-start', 'focus-pause', 'focus-toggle', 'focus-skip', 'focus-extend', 'focus-break', 'focus-next', 'focus-end', 'focus-distraction', 'sound-toggle', 'cat-feed', 'cat-pet', 'open-settings', 'open-onboarding', 'open-about']);
 const SIZES = new Set(['S', 'M', 'L']);
 const ACCESSORIES = new Set(['', 'headphones', 'scarf', 'beanie', 'bow', 'sprout']);
 contextBridge.exposeInMainWorld('albumPet', Object.freeze({

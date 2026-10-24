@@ -101,7 +101,7 @@
 .playlist-filter input { flex: 1; min-width: 0; color: var(--px-ink); background: none; border: 0; font: inherit; font-size: 13px; }
 .playlist-filter small { font-size: 12px; white-space: nowrap; }
 .playlist-tracks { margin: 8px 0 0; padding: 0; list-style: none; }
-.playlist-track { display: grid; grid-template-columns: 34px 34px minmax(0, 1.4fr) minmax(0, 1fr) 46px; align-items: center; gap: 10px; padding: 6px 8px; font-size: 13px; color: var(--px-ink-dim); border: 2px solid transparent; animation: playlist-row-in var(--px-dur-med) var(--px-ease) both; }
+.playlist-track { display: grid; grid-template-columns: 34px 34px minmax(0, 1.4fr) minmax(0, 1fr) 46px 64px; align-items: center; gap: 10px; padding: 6px 8px; font-size: 13px; color: var(--px-ink-dim); border: 2px solid transparent; animation: playlist-row-in var(--px-dur-med) var(--px-ease) both; }
 .playlist-track:nth-child(n+24) { animation: none; }
 .playlist-track:hover { color: var(--px-ink); background: #ffffff0d; }
 .playlist-track:focus-within { border-color: #ffd99c55; }
@@ -116,6 +116,13 @@
 .playlist-track-copy small { font-size: 12px; color: var(--px-ink-faint); }
 .playlist-track-album { font-size: 12.5px; color: var(--px-ink-faint); }
 .playlist-track-time { font-family: var(--px-font-en); font-size: 8px; text-align: right; color: var(--px-ink-faint); }
+/* 下一首播放 / 加入队列: quiet until the row is hovered or a button has focus. */
+.playlist-track-actions { display: flex; justify-content: flex-end; gap: 4px; opacity: 0; transition: opacity var(--px-dur-fast) steps(2, end); }
+.playlist-track:hover .playlist-track-actions, .playlist-track-actions:focus-within { opacity: 1; }
+.playlist-track-actions button { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; color: var(--px-ink-dim); background: var(--px-surface-2); border: 2px solid var(--px-shadow); cursor: pointer; }
+.playlist-track-actions button:hover:not(:disabled) { color: var(--px-ink); border-color: var(--px-accent); }
+.playlist-track-actions small { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (hover: none) { .playlist-track-actions { opacity: 1; } }
 .playlist-empty, .playlist-footnote { font-size: 12.5px; line-height: 1.6; color: var(--px-ink-faint); }
 .playlist-footnote { margin: 18px 0 0; padding-top: 12px; border-top: 2px dashed #8a5a3255; }
 
@@ -147,7 +154,7 @@
   /* Narrow rail: the caption (已登录 / hint) leaves the eye, not the accessible name; the green dot carries 已登录. */
   .playlist-rail-tab small { position: absolute; width: 1px; height: 1px; margin: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .playlist-hero { flex-direction: column; align-items: flex-start; }
-  .playlist-track { grid-template-columns: 30px 30px minmax(0, 1fr) 40px; }
+  .playlist-track { grid-template-columns: 30px 30px minmax(0, 1fr) 40px 64px; }
   .playlist-track-album { display: none; }
   .playlist-grid.is-featured .playlist-card { flex-wrap: wrap; }
   .playlist-grid.is-featured .playlist-card-cta { flex-direction: row; align-items: center; margin-left: 0; width: 100%; }
@@ -160,8 +167,8 @@
 .playlist-file-choices small { color: var(--px-ink-dim); }
 .playlist-rail-tab:disabled { opacity: .65; cursor: progress; }
 
-.playlist-facts{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin:10px 0}.playlist-facts>span{padding:4px 8px;background:#ffffff09;border:1px solid #ffffff18;color:var(--px-ink-dim);font-size:12px}.playlist-facts b{font-size:16px;font-weight:400;color:var(--px-ink)}.playlist-hero{background:radial-gradient(ellipse at 20% 30%,#c8934920,transparent 65%)}.playlist-track-heading{display:grid;grid-template-columns:34px 34px minmax(0,1.4fr) minmax(0,1fr) 46px;gap:10px;padding:10px 10px 6px;color:var(--px-ink-faint);font-size:12px;border-bottom:1px solid #ffffff16}.playlist-track-heading>span:last-child{text-align:right}.playlist-tracks .playlist-track:nth-child(even){background:#ffffff03}
-@media(max-width:760px){.playlist-track-heading{grid-template-columns:30px 30px minmax(0,1fr) 40px}.playlist-track-heading>span:nth-child(4){display:none}}
+.playlist-facts{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin:10px 0}.playlist-facts>span{padding:4px 8px;background:#ffffff09;border:1px solid #ffffff18;color:var(--px-ink-dim);font-size:12px}.playlist-facts b{font-size:16px;font-weight:400;color:var(--px-ink)}.playlist-hero{background:radial-gradient(ellipse at 20% 30%,#c8934920,transparent 65%)}.playlist-track-heading{display:grid;grid-template-columns:34px 34px minmax(0,1.4fr) minmax(0,1fr) 46px 64px;gap:10px;padding:10px 10px 6px;color:var(--px-ink-faint);font-size:12px;border-bottom:1px solid #ffffff16}.playlist-track-heading>span:nth-child(5){text-align:right}.playlist-tracks .playlist-track:nth-child(even){background:#ffffff03}
+@media(max-width:760px){.playlist-track-heading{grid-template-columns:30px 30px minmax(0,1fr) 40px 64px}.playlist-track-heading>span:nth-child(4){display:none}}
 
 .playlist-read-progress,.playlist-page-nav{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:12px 0;padding:10px;background:#ffffff08;border:1px solid var(--px-border);font-size:12px;color:var(--px-ink-dim)}.playlist-read-progress .pixel-button,.playlist-page-nav .pixel-button{font-size:12px}.playlist-page-nav{justify-content:center}
 

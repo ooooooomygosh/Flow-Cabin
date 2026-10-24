@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useStudy } from './useStudy';
 import { RATINGS, LIMITS, studyQueue, deckStatus, previews, daysUntil, cardStage, parseCards, dayKey } from './study-model.mjs';
-import { Plus, Trash2, ArrowLeft, Check, BookOpen, Clock } from '../icons';
+import { Plus, Trash2, ArrowLeft, Check, BookOpen, Clock, SpeakerWave } from '../icons';
+import { canSpeak, speak, readAutoSpeak, writeAutoSpeak } from './speech.mjs';
+import { defaultColumns, detectImportFormat } from './import-parser.mjs';
 import './study.css';
 import { WORD_BOOKS, previewWordImport } from './word-books.mjs';
 import { downloadBlob } from '../lib/download.mjs';
@@ -27,13 +29,14 @@ function Review({ deck, close, edit }) {
   useEffect(() => { if (!queue.cards.length) study.nextBookCard(deck.id); }, [study.state, deck.id, queue.cards.length]);
   const card = queue.cards[0], labels = useMemo(() => card ? previews(card, Date.now()) : {}, [card?.id, card?.memory?.reps]);
   const rate = (rating) => { if (!card || !flipped) return; if (!study.review(card.id, rating)) return; setFlipped(false); setDone((value) => value + 1); setNow(Date.now()); };
-  const root = useRef(null);
-  useEffect(() => { root.current?.focus({ preventScroll: true }); }, [card?.id]);
+  const root = useRef(null), voice = useMemo(() => canSpeak(), []), [autoSpeak, setAutoSpeak] = useState(readAutoSpeak);
+  useEffect(() => { root.current?.focus({ preventScroll: true }); if (card && voice && autoSpeak) speak(card.front); }, [card?.id]);
   useEffect(() => { if (!card && queue.upcoming && queue.upcoming - Date.now() < 30 * 60000) { const timer = setTimeout(() => setNow(Date.now()), Math.max(1000, queue.upcoming - Date.now())); return () => clearTimeout(timer); } }, [card?.id, queue.upcoming]);
   const key = (event) => {
     if (event.target.closest('input,textarea') || (event.target !== event.currentTarget && event.target.closest('button') && (event.key === ' ' || event.key === 'Enter'))) return; // a focused button does its own thing
     if (event.key === ' ' || event.key === 'Enter') { event.preventDefault(); if (!flipped) setFlipped(true); else rate(RATINGS[2].rating); }
     const choice = RATINGS.find((entry) => entry.key === event.key); if (choice && flipped) { event.preventDefault(); rate(choice.rating); }
+    if ((event.key === 'p' || event.key === 'P') && card && voice && !event.ctrlKey && !event.metaKey && !event.altKey) { event.preventDefault(); speak(card.front); }
     if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(); }
   };
   const book = WORD_BOOKS.find(entry => entry.id === deck.id);
@@ -50,13 +53,14 @@ function Review({ deck, close, edit }) {
         ? { title: '今天的新词已经学完', copy: `还剩 ${status.unlearned} 张新词，明天继续；也可以回到词书架调高每天新词。` }
         : { title: done ? `今天这组复习完了，共 ${done} 张` : '这组今天的复习已完成', copy: queue.upcoming ? `下一张在 ${whenLabel(queue.upcoming)} 到期` : '全部学完，继续保持。' };
   return <div ref={root} className="study-review" tabIndex={-1} onKeyDown={key} aria-label={`复习 ${deck.name}`}>
-    <header className="study-review-head"><button type="button" className="study-back" onClick={close}><ArrowLeft size={14}/>{deck.name}</button><span>{done ? `已复习 ${done} · ` : ''}剩 {queue.cards.length}</span></header>
+    <header className="study-review-head"><button type="button" className="study-back" onClick={close}><ArrowLeft size={14}/>{deck.name}</button>{voice && <label className="study-autospeak"><input type="checkbox" checked={autoSpeak} onChange={(event) => setAutoSpeak(writeAutoSpeak(event.target.checked))}/>自动朗读</label>}<span>{done ? `已复习 ${done} · ` : ''}剩 {queue.cards.length}</span></header>
     {card ? <>
       <button type="button" className={`study-card ${flipped ? 'is-flipped' : ''}`} aria-label={flipped ? '卡片背面' : '翻到背面（空格）'} onClick={() => setFlipped(true)}>
         <small className={`study-stage is-${cardStage(card)}`}>{{ new: '新卡', learning: '学习中', review: '复习' }[cardStage(card)]}</small>
         <span className="study-card-front">{card.front}</span>
         {flipped ? <span className="study-card-back">{card.back || '（没有背面，想一想就好）'}</span> : <span className="study-card-hint">想一想，再按空格翻面</span>}
       </button>
+      <div className="study-card-tools">{voice && <button type="button" className="pixel-button is-quiet study-speak" aria-label={`朗读 ${card.front}`} aria-keyshortcuts="P" onClick={() => speak(card.front)}><SpeakerWave size={14}/>发音<kbd>P</kbd></button>}<small className="study-keys">空格 翻面 · 1–4 评分{voice ? ' · P 发音' : ''} · Esc 返回</small></div>
       <Source value={card.source || deckSource(deck)}/>
       {flipped ? <div className="study-ratings" role="group" aria-label="记得怎么样">{RATINGS.map((entry) => <button type="button" key={entry.rating} className={`is-${entry.tone}`} onClick={() => rate(entry.rating)}><b>{entry.label}</b><small>{labels[entry.rating]}</small><kbd>{entry.key}</kbd></button>)}</div>
         : <button type="button" className="pixel-button is-primary study-flip" onClick={() => setFlipped(true)}>翻面 · 空格</button>}
@@ -102,15 +106,20 @@ function WordImport({ deck, cards }) {
     const file = event.target.files?.[0]; if (!file) return;
     event.target.value = '';
     if (file.size > 500000) { setMessage('文件不能超过 500 KB，请拆分后导入。'); return; }
-    try { setText(await file.text()); setFormat(file.name.endsWith('.json') ? 'json' : 'tsv'); setMessage(''); } catch { setMessage('无法读取文件，请重试。'); }
+    try {
+      const value = await file.text(), detected = detectImportFormat(value, file.name), columns = defaultColumns(value, detected);
+      setText(value); setFormat(detected); setFrontColumn(columns.frontColumn); setBackColumn(columns.backColumn);
+      setHeader(detected === 'csv' && /^(\uFEFF)?\s*"?(word|front|单词|正面|term|question)"?\s*[,;]/i.test(value));
+      setMessage(detected === 'anki' ? '识别为 Anki 纯文本导出，已跳过 Anki 的编号、笔记类型和牌组列。' : detected === 'csv' ? '识别为 CSV 表格。' : '');
+    } catch { setMessage('无法读取文件，请重试。'); }
   };
   return <details className="study-import"><summary>导入本地词书</summary>
-    <p>支持 UTF-8 的 TSV / Anki 两列纯文本，或 front、back 字段的 JSON 数组。追加词条，不覆盖已有复习进度。</p>
-    <p>可选来源：无标题 TSV 用第三列；有标题 TSV 用 source 列；JSON 用 source 字段。来源最多 {LIMITS.source} 字符，按纯文本显示。</p>
-    <label>选择词书文件<input aria-label="选择词书文件" type="file" accept=".tsv,.txt,.json" onChange={read}/></label>
+    <p>支持 UTF-8 的 TSV、CSV（Excel / Numbers 导出）、Anki「导出笔记 › 纯文本」，或 front、back 字段的 JSON 数组。追加词条，不覆盖已有复习进度。</p>
+    <p>可选来源：无标题 TSV / CSV 用第三列；有标题时用 source 列；JSON 用 source 字段。来源最多 {LIMITS.source} 字符，按纯文本显示。</p>
+    <label>选择词书文件<input aria-label="选择词书文件" type="file" accept=".tsv,.csv,.txt,.json" onChange={read}/></label>
     <button type="button" className="pixel-button is-quiet" onClick={() => downloadBlob(new Blob(['word\tmeaning\nwindow\t窗户\n'], { type: 'text/tab-separated-values' }), '小屋词书模板.tsv')}>下载两列模板</button>
-    {text && <><label>格式<select aria-label="词书导入格式" value={format} onChange={event => setFormat(event.target.value)}><option value="tsv">Tab 分隔文本</option><option value="json">JSON 数组</option></select></label>
-      {format === 'tsv' && <div className="study-import-columns">{[['正面列', frontColumn, setFrontColumn], ['背面列', backColumn, setBackColumn]].map(([label, value, update]) => <label key={label}>{label}<select aria-label={label} value={value} onChange={event => update(Number(event.target.value))}>{[0,1,2,3].map(index => <option key={index} value={index}>第 {index+1} 列</option>)}</select></label>)}<label><input type="checkbox" checked={header} onChange={event => setHeader(event.target.checked)}/>首行为标题</label></div>}
+    {text && <><label>格式<select aria-label="词书导入格式" value={format} onChange={event => setFormat(event.target.value)}><option value="tsv">Tab 分隔文本</option><option value="csv">CSV 表格</option><option value="anki">Anki 纯文本导出</option><option value="json">JSON 数组</option></select></label>
+      {format !== 'json' && <div className="study-import-columns">{[['正面列', frontColumn, setFrontColumn], ['背面列', backColumn, setBackColumn]].map(([label, value, update]) => <label key={label}>{label}<select aria-label={label} value={value} onChange={event => update(Number(event.target.value))}>{[0,1,2,3,4,5].map(index => <option key={index} value={index}>第 {index+1} 列</option>)}</select></label>)}{format !== 'anki' && <label><input type="checkbox" checked={header} onChange={event => setHeader(event.target.checked)}/>首行为标题</label>}</div>}
       <p role="status">有效 {preview.cards.length} · 重复 {preview.duplicates} · 错误 {preview.errors}{preview.message && ` · ${preview.message}`}</p>
       <ul className="study-import-preview">{preview.cards.slice(0,5).map(card => <li key={card.front}><b>{card.front}</b><span>{card.back}</span><Source value={card.source}/></li>)}</ul>
       <button type="button" className="pixel-button" disabled={!preview.cards.length} onClick={() => { const added = study.addCards(deck.id, preview.cards); setMessage(added === null ? '' : `已追加 ${added} 张卡片；旧进度保持不变。`); if (added) setText(''); }}>确认追加 {preview.cards.length} 张</button></>}
@@ -152,7 +161,7 @@ export default function StudyPanel() {
       <details><summary>预览 {selectedBook.words.length} 个词</summary><ul>{selectedBook.words.map(word => <li key={word.front}><b>{word.front}</b><span>{word.back}</span></li>)}</ul></details>
       <div className="study-book-start"><NewPerDay study={study}/><button type="button" className="pixel-button is-primary" onClick={() => { if (study.openBook(bookId)) setView({ mode: 'review', deckId: bookId }); }}>开始学习 / 复习</button></div>
     </section>
-    <details className="study-guide"><summary>怎么使用词书与复习？</summary><ol><li>选书并预览，设置每天新词数，再开始学习。已有卡组也可以直接打开。</li><li>先回忆，再按空格揭示答案。到期的旧词优先，新词遵守每日总额度。</li><li>忘记选「忘了」；费力想起选「模糊」；正常想起选「记得」；非常熟悉选「简单」。按钮下方显示下一次复习时间。</li><li>按 1–4 评分，Esc 返回词书架。切换词书保留已学进度。每天回来复习到期词。</li><li>新建卡组后可导入自己有权使用的 TSV、JSON 或 Anki 两列纯文本；不支持 .apkg 或导入第三方调度历史。</li></ol><p>内置 3 本入门书和 12 个日常实用主题，共 258 词，均为小屋原创学习材料，不是完整考试词库或官方分级。更多内容可自行导入。</p></details>
+    <details className="study-guide"><summary>怎么使用词书与复习？</summary><ol><li>选书并预览，设置每天新词数，再开始学习。已有卡组也可以直接打开。</li><li>先回忆，再按空格揭示答案。到期的旧词优先，新词遵守每日总额度。</li><li>忘记选「忘了」；费力想起选「模糊」；正常想起选「记得」；非常熟悉选「简单」。按钮下方显示下一次复习时间。</li><li>按 1–4 评分，Esc 返回词书架。切换词书保留已学进度。每天回来复习到期词。</li><li>新建卡组后可导入自己有权使用的 TSV、CSV、JSON 或 Anki「纯文本」导出；不支持 .apkg 或导入第三方调度历史。</li><li>复习时按 P 或点「发音」朗读单词（使用系统语音，不联网下载）。</li></ol><p>内置 3 本入门书和 12 个日常实用主题，共 258 词，均为小屋原创学习材料，不是完整考试词库或官方分级。更多内容可自行导入。</p></details>
     {!study.state.decks.length && <p className="study-empty" role="status"><BookOpen size={15}/><span>还没有开始任何词书。选上面一本内置词书开始，或新建卡组后导入自己的词表。</span></p>}
     {study.state.decks.length > 0 && <ul className="study-decks">{study.state.decks.map((entry) => {
       const status = deckStatus(study.state, entry.id, Date.now());

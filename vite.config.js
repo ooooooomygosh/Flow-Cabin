@@ -14,11 +14,11 @@ const chunkGroups = [
 export default defineConfig({
   plugins: [react(), artProduction()],
   optimizeDeps: { include: ['qrcode', 'jsqr', 'pixi.js', 'pixi.js/unsafe-eval', 'motion/react', '@applemusic-like-lyrics/react', '@applemusic-like-lyrics/lyric'] },
-  server: { watch: { ignored: ['**/android/**/build/**', '**/android/.gradle/**', '**/android/app/src/main/assets/**', '**/dist-android/**'] } },
+  server: { watch: { ignored: ['**/android/**/build/**', '**/android/.gradle/**', '**/android/app/src/main/assets/**', '**/dist-android/**', '**/.claude/**'] } },
   // Offline test copies can share dependencies, but must not share Vite's mutable cache.
   cacheDir: process.env.FLOW_CABIN_VITE_CACHE_DIR || undefined,
   build: { rollupOptions: {
-    input: { main: entry('./index.html'), promo: entry('./promo.html'), wallpaper: entry('./wallpaper.html'), pet: entry('./pet.html'), mini: entry('./mini.html') },
+    input: { main: entry('./index.html'), promo: entry('./promo.html'), wallpaper: entry('./wallpaper.html'), pet: entry('./pet.html'), mini: entry('./mini.html'), lyrics: entry('./lyrics.html') },
     output: { advancedChunks: { groups: chunkGroups } }
   } }
 });

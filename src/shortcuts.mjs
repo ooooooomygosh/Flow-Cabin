@@ -24,9 +24,13 @@ export const SHORTCUTS = Object.freeze([
   { id: 'fullscreen', keys: 'F11', label: 'F11', action: '全屏', scope: 'app' },
   { id: 'desktop', keys: 'Control+Alt+D Alt+Meta+D', label: 'Ctrl/⌘+Alt+D', action: '沉入 / 浮出桌面（桌面版）', scope: 'app', desktop: true },
   { id: 'settings', keys: 'Control+, Meta+,', label: 'Ctrl/⌘+,', action: '打开设置（桌面版）', scope: 'app', desktop: true },
+  // 2.2 focus: global, so they work while another app is in front (desktop/focus-shell.cjs FOCUS_HOTKEYS).
+  { id: 'focusToggle', keys: 'Control+Alt+F Alt+Meta+F', label: 'Ctrl/⌘+Alt+F', action: '开始 / 暂停专注（桌面版，全局）', scope: 'app', desktop: true, global: true },
+  { id: 'focusSkip', keys: 'Control+Alt+G Alt+Meta+G', label: 'Ctrl/⌘+Alt+G', action: '跳过：提前结束本轮或跳过休息（桌面版，全局）', scope: 'app', desktop: true, global: true },
   { id: 'journal', keys: 'L', label: 'L', action: '打开小屋日记', scope: 'room' },
   { id: 'focusDisplay', keys: 'F', label: 'F', action: '沉浸（同 Z）', scope: 'room' },
-  { id: 'focusFaces', keys: 'ArrowLeft ArrowRight', label: '← →', action: '沉浸里上一首 / 下一首', scope: 'display' }
+  { id: 'focusFaces', keys: 'ArrowLeft ArrowRight', label: '← →', action: '沉浸里上一首 / 下一首', scope: 'display' },
+  { id: 'help', keys: '? Control+/ Meta+/', label: '? / Ctrl+/', action: '快捷键速查', scope: 'app' }
 ]);
 export const shortcut = (id) => SHORTCUTS.find((entry) => entry.id === id);
 export const ariaKeys = (id) => shortcut(id)?.keys || undefined;

@@ -67,4 +67,17 @@ test('a freshly shown pet takes the first click (macOS) and can hit-test a point
   f.pet.stop();
 });
 
+test('2.2: a locked pet ignores drags; with gravity a pet let go mid-air falls; hide for an hour', async () => {
+  const f = fixture(); await f.pet.start();
+  const before = f.pet.window.getBounds();
+  assert.equal(f.pet.setPrefs({ locked: true }).locked, true);
+  f.event('pet:move', 50, -50); f.event('pet:drag-end');
+  assert.deepEqual(f.pet.window.getBounds(), before, 'locked: the pet stays put');
+  f.pet.setPrefs({ locked: false });
+  f.event('pet:move', 0, -300); f.event('pet:drag-end');
+  assert([...f.jobs.values()].some(job => job.delay === 16), 'a careful placement mid-air still falls');
+  f.pet.hideFor(3600000); assert(f.pet.hiddenUntil > Date.now()); f.pet.showNow(); assert.equal(f.pet.hiddenUntil, 0);
+  f.pet.stop();
+});
+
 test('isolated pet installs a fixed atlas-only HTTPS handler before loading its page',async()=>{const f=fixture();await f.pet.start();assert.deepEqual(f.protocolCalls,[['unhandle','https'],['handle','https']]);assert.equal((await f.protocols.get('https')(new Request('https://untrusted.invalid/atlas.png'))).status,403);f.pet.stop();});

@@ -22,7 +22,8 @@ test('the focus snapshot carries the round length, and the wallpaper keeps it', 
   const model = faceModel({ now: 61000, focus: clean });
   assert.ok(Math.abs(model.progress - 1 / 30) < 1e-9, 'the wallpaper face draws progress');
   assert.equal(cleanFocus({ duration: -5 }).duration, 0);
-  assert.equal(cleanFocus({ duration: 1e12 }).duration, 3 * 3600000);
+  // 2.2: +5 分钟 can stretch a round up to the 4-hour session limit.
+  assert.equal(cleanFocus({ duration: 1e12 }).duration, 4 * 3600000);
   assert.equal(cleanFocus({ longEvery: 'x' }).longEvery, 4);
   assert.equal(cleanFocus({ longEvery: 99 }).longEvery, 8);
 });

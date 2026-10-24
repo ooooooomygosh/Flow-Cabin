@@ -3,7 +3,7 @@ const { _electron } = require('playwright'), fs = require('node:fs'), path = req
 const { mountFixture, chooseRoomScene } = require('./ui-fixture.cjs');
 const desktop = path.resolve(__dirname, '..'), output = path.join(desktop, 'test-results/atmosphere'); fs.mkdirSync(output, { recursive: true });
 const env = { ...process.env, ALBUM_DESKTOP_TEST_PROFILE: path.join(output, `profile-${Date.now()}`) }; delete env.ELECTRON_RUN_AS_NODE;
-const executablePath = process.env.ALBUM_QA_EXE || path.join(desktop, 'node_modules/electron/dist/electron.exe');
+const executablePath = process.env.ALBUM_QA_EXE || require(path.join(desktop, 'node_modules/electron'));
 const report = { platform: process.platform, nativeWallpaperVerified: false, checks: [], pageErrors: [] }, hash = (value) => crypto.createHash('sha256').update(value).digest('hex');
 const check = (name, data = {}) => { report.checks.push({ name, ...data }); console.log('PASS ' + name); };
 let app, site;

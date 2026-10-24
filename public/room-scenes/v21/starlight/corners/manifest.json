@@ -225,7 +225,7 @@
         "originalFile": "exec-a48b0cbf-ebee-4f0e-bdae-b05f967c45a5.png",
         "references": [
           "/room-scenes/v21/pixel/corners/music.webp",
-          "/room-scenes/v21/starlight/shell.png",
+          "/room-scenes/v21/starlight/shell.webp",
           "/room-scenes/v21/furniture/starlight/atlas.webp"
         ],
         "promptsFile": "prompts.json",
@@ -239,7 +239,7 @@
         "runtimeEncoding": "lossless-webp",
         "generationReferences": [
           "/room-scenes/v21/pixel/corners/music.png",
-          "/room-scenes/v21/starlight/shell.png",
+          "/room-scenes/v21/starlight/shell.webp",
           "/room-scenes/v21/furniture/starlight/atlas.png"
         ],
         "referenceNote": "Generation used the PNG references recorded in generationReferences. Current corner and furniture reference URLs point to their lossless WebP runtime equivalents; original PNG provenance is retained in the corresponding outputs archives."
@@ -531,7 +531,7 @@
         "originalFile": "exec-92db169c-01db-4b8b-aac4-919d85b120c7.png",
         "references": [
           "/room-scenes/v21/pixel/corners/work.webp",
-          "/room-scenes/v21/starlight/shell.png",
+          "/room-scenes/v21/starlight/shell.webp",
           "/room-scenes/v21/furniture/starlight/atlas.webp"
         ],
         "promptsFile": "prompts.json",
@@ -545,7 +545,7 @@
         "runtimeEncoding": "lossless-webp",
         "generationReferences": [
           "/room-scenes/v21/pixel/corners/work.png",
-          "/room-scenes/v21/starlight/shell.png",
+          "/room-scenes/v21/starlight/shell.webp",
           "/room-scenes/v21/furniture/starlight/atlas.png"
         ],
         "referenceNote": "Generation used the PNG references recorded in generationReferences. Current corner and furniture reference URLs point to their lossless WebP runtime equivalents; original PNG provenance is retained in the corresponding outputs archives."
@@ -764,7 +764,7 @@
         "originalFile": "exec-be09ecec-d44e-46cf-a9f9-fb28cbaba81e.png",
         "references": [
           "/room-scenes/v21/pixel/corners/life.webp",
-          "/room-scenes/v21/starlight/shell.png",
+          "/room-scenes/v21/starlight/shell.webp",
           "/room-scenes/v21/furniture/starlight/atlas.webp"
         ],
         "promptsFile": "prompts.json",
@@ -778,7 +778,7 @@
         "runtimeEncoding": "lossless-webp",
         "generationReferences": [
           "/room-scenes/v21/pixel/corners/life.png",
-          "/room-scenes/v21/starlight/shell.png",
+          "/room-scenes/v21/starlight/shell.webp",
           "/room-scenes/v21/furniture/starlight/atlas.png"
         ],
         "referenceNote": "Generation used the PNG references recorded in generationReferences. Current corner and furniture reference URLs point to their lossless WebP runtime equivalents; original PNG provenance is retained in the corresponding outputs archives."

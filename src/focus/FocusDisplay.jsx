@@ -3,10 +3,11 @@ import React, { useEffect, useRef, useState } from 'react';
 import FocusFace, { faceFocus } from './FocusFace';
 import { useFocusDisplay, useSceneLook } from './useFocusDisplay';
 import { FACE_IDS, FACE_LABELS, FACE_HINTS, SHOW_MODES, cycleFace, faceFor } from './focus-display.mjs';
-import { PHASE_LABELS } from './focus-model.mjs';
+import { PHASE_LABELS, currentRound } from './focus-model.mjs';
 import { useFocusState } from './useFocus';
 import { Segmented } from '../ui/Roving';
-import { ChevronLeft, ChevronRight, Expand, Contract, Play, Pause, X } from '../icons';
+import { ChevronLeft, ChevronRight, Expand, Contract, Play, Pause, X, Check } from '../icons';
+const OFFER_TITLES = { pause: '专注已暂停', done: '这一轮专注结束了', due: '时间到了，还在继续计时' };
 import { readCabinFullscreen, requestCabinFullscreen } from '../desktop/fullscreen-client.mjs';
 import { useDesktopFullscreen } from '../desktop-client';
 import { roomCovered } from '../room/useRoomChrome';
@@ -62,14 +63,15 @@ export default function FocusDisplayStage() {
   // Starting a pomodoro (button, shortcut, tray or the next round) enters 沉浸.
   useEffect(() => { const on = () => { if (autoEnter.current && !roomCovered() && !document.documentElement.classList.contains('room-desktop')) { setOffer(''); setOpen(true); } }; window.addEventListener('album-focus-start', on); return () => window.removeEventListener('album-focus-start', on); }, []);
   // Pausing or finishing a focus round offers the way back instead of throwing the user out.
-  const phase = focus?.state?.timer?.phase, paused = Boolean(focus?.state?.timer?.paused), seen = useRef({ phase, paused });
+  const phase = focus?.state?.timer?.phase, paused = Boolean(focus?.state?.timer?.paused), due = Boolean(focus?.state?.timer?.due), seen = useRef({ phase, paused, due });
   useEffect(() => {
-    const before = seen.current; seen.current = { phase, paused };
+    const before = seen.current; seen.current = { phase, paused, due };
     if (!open) return;
     if (paused && !before.paused && phase !== 'idle') setOffer('pause');
     else if (before.phase === 'focus' && phase !== 'focus') setOffer('done');
-    else if (!paused && phase === 'focus') setOffer('');
-  }, [open, phase, paused]);
+    else if (due && !before.due) setOffer('due');
+    else if (!paused && phase === 'focus' && !due) setOffer('');
+  }, [open, phase, paused, due]);
   useEffect(() => { const on = (event) => setOpen(event.detail?.open !== false); window.addEventListener(OPEN_EVENT, on); return () => window.removeEventListener(OPEN_EVENT, on); }, []);
   // Anything that opens 小屋日记 (cabin:open-journal, from any entry) closes 沉浸 first.
   useEffect(() => { const on = () => { setOpen(false); setOffer(''); }; window.addEventListener('cabin:open-journal', on, true); return () => window.removeEventListener('cabin:open-journal', on, true); }, []);
@@ -110,8 +112,8 @@ export default function FocusDisplayStage() {
   if (!open) return null;
   const state = focus?.state, timer = state?.timer, running = timer && timer.phase !== 'idle';
   const clockShown = display.show === 'clock' || (display.show === 'auto' && !running);
-  const task = state?.tasks.find((item) => item.id === timer.taskId)?.text;
-  const note = clockShown ? (running ? `${PHASE_LABELS[timer.phase]}中` : '') : [task, timer && running ? `第 ${timer.round % state.settings.longEvery + (timer.phase === 'focus' ? 1 : 0)} / ${state.settings.longEvery} 轮` : ''].filter(Boolean).join(' · ');
+  const currentTask = state?.tasks.find((item) => item.id === timer.taskId), task = currentTask?.text;
+  const note = clockShown ? (running ? `${PHASE_LABELS[timer.phase]}中` : '') : [task, timer && running ? `第 ${currentRound(timer, Date.now()) % state.settings.longEvery + (timer.phase === 'focus' ? 1 : 0)} / ${state.settings.longEvery} 轮` : ''].filter(Boolean).join(' · ');
   const toggleFullscreen = () => { const exit = readCabinFullscreen(); ownFullscreen.current = !exit; requestCabinFullscreen({ exit }).catch(() => {}); };
   return <Dialog variant="full" title="专注画面" close={close} initialFocus={stage} returnFocus=".focus-badge" className="focus-display-shell" deckKeys><div ref={stage} className={`focus-display${idle ? ' is-idle' : ''}`} data-face={id} tabIndex={-1} onClick={(event) => { if (!event.target.closest('.focus-display-bar, .focus-display-offer')) close(); }}>
     <div className="focus-display-stage">
@@ -119,15 +121,27 @@ export default function FocusDisplayStage() {
       {note && <p className="focus-display-note">{note}</p>}
     </div>
     {flash && <p className="focus-display-flash" role="status">{flash}</p>}
-    {offer && <div className="focus-display-offer" role="group" aria-label={offer === 'pause' ? '专注已暂停' : '这一轮专注结束了'} onClick={(event) => event.stopPropagation()}>
-      <strong>{offer === 'pause' ? '专注已暂停' : '这一轮专注结束了'}</strong>
+    {offer && <div className="focus-display-offer" role="group" aria-label={OFFER_TITLES[offer]} onClick={(event) => event.stopPropagation()}>
+      <strong>{OFFER_TITLES[offer]}</strong>
+      {/* The next step right here: 开始休息 / 再来一轮 / 完成任务 (or, in overtime, 结束 / +5). */}
+      {offer === 'done' && focus && <>
+        {timer.phase === 'idle' && <button type="button" onClick={() => { focus.startBreak(); setOffer(''); }}>开始休息</button>}
+        <button type="button" onClick={() => { focus.nextRound(); setOffer(''); }}>{timer.phase === 'idle' ? '再来一轮' : '跳过休息，再来一轮'}</button>
+        {currentTask && !currentTask.done && <button type="button" onClick={() => focus.completeCurrent()}><Check size={16}/>完成「{currentTask.text.slice(0, 12)}」</button>}
+      </>}
+      {offer === 'due' && focus && <>
+        <button type="button" onClick={() => { focus.skip(); }}>结束这一轮，去休息</button>
+        <button type="button" onClick={() => { focus.extend(); setOffer(''); }}>再专注 5 分钟</button>
+      </>}
       <button type="button" onClick={close}><X size={16}/>返回小屋</button>
-      <button type="button" onClick={() => setOffer('')}>留在这里</button>
+      <button type="button" onClick={() => setOffer('')}>{offer === 'due' ? '继续计时' : '留在这里'}</button>
     </div>}
     <nav className="focus-display-bar" aria-label="专注画面工具">
       <Segmented className="face-tabs" label="画面样式" value={id} onChange={(mode) => { setDisplay({ mode }); setFlash(FACE_LABELS[mode]); }} items={FACE_IDS.map((value) => ({ id: value, label: FACE_LABELS[value], title: FACE_HINTS[value] }))}/>
       <Segmented className="face-show" label="画面显示" value={display.show} onChange={(show) => setDisplay({ show })} items={SHOW_MODES.map(([value, label]) => ({ id: value, label }))}/>
-      {focus && <button type="button" onClick={focus.toggle}>{!running ? <><Play size={16}/>开始专注</> : timer.paused ? <><Play size={16}/>继续专注</> : <><Pause size={16}/>暂停专注</>}</button>}
+      {focus && <button type="button" onClick={focus.toggle}>{!running ? <><Play size={16}/>开始专注</> : timer.paused ? <><Play size={16}/>{timer.phase === 'focus' ? '继续专注' : '继续休息'}</> : <><Pause size={16}/>{timer.phase === 'focus' ? '暂停专注' : '暂停休息'}</>}</button>}
+      {focus && running && <button type="button" title="这一轮再加 5 分钟" onClick={() => focus.extend()}>+5 分钟</button>}
+      {focus && timer.phase === 'focus' && <button type="button" title="走神了？记下来，统计里能看到" onClick={() => focus.distraction()}>分心了</button>}
       <button type="button" onClick={toggleFullscreen}>{fullscreen ? <><Contract size={16}/>退出全屏</> : <><Expand size={16}/>全屏</>}</button>
       <button type="button" aria-keyshortcuts="Escape" onClick={close}><X size={16}/>返回小屋</button>
     </nav>

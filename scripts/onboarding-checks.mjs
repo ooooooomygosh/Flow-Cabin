@@ -34,39 +34,41 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
   try {
     await page.goto(origin); const wizard = wizardOf(page); await wizard.waitFor();
     await page.evaluate(() => document.fonts.ready);
-    await heading(page).filter({ hasText: '欢迎来到心流小屋' }).waitFor();
+    await heading(page).filter({ hasText: '想从哪里听歌？' }).waitFor();
+    await wizard.locator('.onboarding-eyebrow').filter({ hasText: '欢迎来到心流小屋' }).waitFor();
+    assert.deepEqual(await wizard.locator('.onboarding-progress li').allInnerTexts(), ['1\n音源', '2\n房间与伙伴', '3\n试听'], 'the first run is three steps');
     for (const viewport of [{ width: 1440, height: 900 }, { width: 960, height: 600 }, { width: 640, height: 600 }]) {
       await page.setViewportSize(viewport);
-      for (const name of ['开始设置', '跳过引导']) await inViewport(page, button(page, name));
+      for (const name of ['下一步', '跳过引导']) await inViewport(page, button(page, name));
       assert(await wizard.evaluate((dialog) => dialog.scrollWidth <= dialog.clientWidth));
       await page.screenshot({ path: path.join(evidence, `onboarding-${viewport.width}.png`), animations: 'disabled' });
     }
     await page.setViewportSize({ width: 1440, height: 900 });
-    await button(page, '开始设置').click();
-    await heading(page).filter({ hasText: '想从哪里听歌？' }).waitFor();
-    assert.equal(await page.evaluate(() => document.activeElement.id), 'onboarding-heading');
     assert.equal(await page.getByRole('radio', { name: '音源 QQ 音乐' }).isDisabled(), true, 'platform login is desktop-only');
     await page.getByRole('radio', { name: '音源 本地音乐' }).click();
     assert.equal(await page.getByRole('radio', { name: '音源 本地音乐' }).getAttribute('aria-checked'), 'true');
     await button(page, '选择音乐文件').waitFor();
     await wizard.locator('.onboarding-scene img').evaluate((image) => image.decode());
     await page.screenshot({ path: path.join(output, 'onboarding.png'), animations: 'disabled' });
+    await button(page, '下一步').click();
+    await heading(page).filter({ hasText: '选一个房间，再挑个伙伴' }).waitFor();
+    assert.equal(await page.evaluate(() => document.activeElement.id), 'onboarding-heading');
     check('wizard-auto-opens-three-sizes-web-sources-and-heading-focus');
-    await button(page, '下一步').click();
-    await heading(page).filter({ hasText: '只开需要的权限' }).waitFor();
-    await button(page, '跳过 系统通知').click(); await wizard.getByText('已跳过').waitFor();
-    await button(page, '下一步').click();
     // The compact 房间 picker uses the current Pixel Cabin artwork from the catalog.
     assert.equal(await wizard.locator('.room-pickers.is-compact').getByRole('button', { name: '选择场景 像素小屋', exact: true }).locator('img').getAttribute('src'), getRoomScene('pixel').view);
     await button(page, '选择场景 林间书屋').click(); await button(page, '选择桌宠 枫糖').click();
     assert.equal(await button(page, '选择场景 林间书屋').getAttribute('aria-pressed'), 'true');
     assert.equal(await page.locator('.cabin-scene').getAttribute('data-room-look'), 'forest');
     await button(page, '下一步').click();
+    await heading(page).filter({ hasText: '放一段声音试试' }).waitFor();
     assert.equal(await page.locator('audio[src]').count(), 0, 'no sound before 播放测试');
     await button(page, '播放测试').click(); await button(page, '听到了').click();
     await wizard.getByText('声音正常，可以开始听歌了。').waitFor();
-    await button(page, '下一步').click();
     await wizard.locator('.onboarding-summary').getByText('本地音乐').waitFor();
+    // Optional permissions fold under the last step; on the web only notifications apply.
+    await wizard.locator('.onboarding-optional summary').click();
+    await button(page, '允许 系统通知').waitFor();
+    assert.equal(await button(page, '下一步').count(), 0, 'the last step ends the guide');
     await button(page, '进入小屋').click(); await wizard.waitFor({ state: 'hidden' });
     assert.equal(await page.locator('.focus-badge.is-running').count(), 0);
     await page.reload(); await page.getByRole('button', { name: '添加第一张专辑' }).waitFor();
@@ -78,9 +80,21 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
 
     // 2. 重新引导 from the hub, motion preferences.
     await button(page, '设置').click(); await hubOf(page).waitFor();
-    assert.deepEqual(await hubOf(page).getByRole('tab').allInnerTexts(), ['音源', '房间与桌宠', '键鼠陪伴', '专注工具', '同步与设备', '显示与桌面', '数据与备份', 'AI（Beta）', '小屋 Beta', '关于']);
+    assert.deepEqual(await hubOf(page).getByRole('tab').allInnerTexts(), ['音源', '房间与桌宠', '键鼠陪伴', '专注工具', '同步与设备', '显示与桌面', '数据与备份', 'AI（Beta）', '关于']);
+    // 搜索设置: results replace the panel, Enter jumps to the first one.
+    await hubOf(page).getByRole('searchbox', { name: '搜索设置' }).fill('备份');
+    await hubOf(page).locator('.settings-hub-results').getByRole('button', { name: /收藏与备份/ }).waitFor();
+    assert.equal(await page.getByRole('tab', { name: '关于' }).isDisabled(), true, 'sections without a match are dimmed');
+    await hubOf(page).getByRole('searchbox', { name: '搜索设置' }).press('Enter');
+    assert.equal(await page.getByRole('tab', { name: '数据与备份' }).getAttribute('aria-selected'), 'true');
+    assert.equal(await hubOf(page).getByRole('searchbox', { name: '搜索设置' }).inputValue(), '');
+    await hubOf(page).getByRole('searchbox', { name: '搜索设置' }).fill('没有这种设置');
+    await hubOf(page).getByText('没有找到「没有这种设置」').waitFor();
+    await hubOf(page).getByRole('searchbox', { name: '搜索设置' }).press('Escape');
+    assert.equal(await hubOf(page).count(), 1, 'Escape in a filled search box clears it instead of closing 设置');
+    check('settings-search-filters-sections-and-jumps');
     await page.getByRole('tab', { name: '关于' }).click(); await button(page, '重新引导').click();
-    await wizardOf(page).waitFor(); await heading(page).filter({ hasText: '欢迎来到心流小屋' }).waitFor();
+    await wizardOf(page).waitFor(); await heading(page).filter({ hasText: '想从哪里听歌？' }).waitFor();
     assert.equal(await hubOf(page).count(), 0);
     assert.equal(await page.locator('.onboarding-step').evaluate((el) => getComputedStyle(el).animationName), 'none');
     await page.emulateMedia({ reducedMotion: 'no-preference' });
@@ -91,11 +105,11 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
     check('reopen-from-settings-and-motion-obeys-os-and-app-preferences');
 
     // 3. Closing half-way resumes on the next launch; Escape restores focus.
-    await button(page, '开始设置').click(); await heading(page).filter({ hasText: '想从哪里听歌？' }).waitFor();
+    assert.equal(await page.getByRole('radio', { name: '音源 本地音乐' }).getAttribute('aria-checked'), 'true', 'earlier choices survive');
+    await button(page, '下一步').click(); await heading(page).filter({ hasText: '选一个房间，再挑个伙伴' }).waitFor();
     await page.keyboard.press('Escape'); await wizardOf(page).waitFor({ state: 'hidden' });
     await page.reload(); await wizardOf(page).waitFor();
-    await heading(page).filter({ hasText: '想从哪里听歌？' }).waitFor();
-    assert.equal(await page.getByRole('radio', { name: '音源 本地音乐' }).getAttribute('aria-checked'), 'true', 'earlier choices survive');
+    await heading(page).filter({ hasText: '选一个房间，再挑个伙伴' }).waitFor();
     // 4. 跳过引导 is final until 重新引导.
     await button(page, '跳过引导').click(); await page.reload(); await page.getByRole('button', { name: '添加第一张专辑' }).waitFor();
     assert.equal(await wizardOf(page).count(), 0);
@@ -151,28 +165,20 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
   }));
   try {
     await page.goto(origin);
-    const updateWizard = wizardOf(page, '版本更新'); await updateWizard.waitFor();
+    const sheet = wizardOf(page, '新功能'); await sheet.waitFor();
     const updates = releasesBetween(LEGACY_SEEN_VERSION, APP_VERSION);
-    await heading(page).filter({ hasText: `你离开的这段时间，小屋更新了 ${updates.length} 个版本` }).waitFor();
-    assert.deepEqual(await updateWizard.locator('.onboarding-progress li').allInnerTexts(), ['1\n更新', '2\n音源', '3\n权限', '4\n房间', '5\n试听', '6\n完成']);
-    assert.deepEqual(await updateWizard.locator('.onboarding-release header span').allInnerTexts(), updates.map(release => `v${release.version}`));
-    await updateWizard.getByText('「键鼠陪伴」进入「设置」一级入口', { exact: false }).waitFor();
-    await button(page, '稍后继续').waitFor();
-    assert.equal(await button(page, '开始设置').count(), 0);
-    await button(page, '开始检查设置').click();
-    await heading(page).filter({ hasText: '想从哪里听歌？' }).waitFor();
-    assert.equal(await page.evaluate(() => document.activeElement.id), 'onboarding-heading');
-    await page.getByRole('radio', { name: '音源 本地音乐' }).click();
-    await button(page, '下一步').click(); await heading(page).filter({ hasText: '只开需要的权限' }).waitFor();
-    await button(page, '跳过 系统通知').click();
-    await button(page, '下一步').click(); await heading(page).filter({ hasText: '选一个房间，再挑个伙伴' }).waitFor();
-    await button(page, '下一步').click(); await heading(page).filter({ hasText: '放一段声音试试' }).waitFor();
-    await button(page, '播放测试').click(); await button(page, '听到了').click();
-    await button(page, '下一步').click(); await heading(page).filter({ hasText: '这次更新已经逐项确认' }).waitFor();
-    await button(page, '进入小屋').click(); await updateWizard.waitFor({ state: 'hidden' });
+    await sheet.locator('.whats-new-title').filter({ hasText: updates[0].title }).waitFor();
+    await sheet.getByText(`你离开的这段时间，小屋更新了 ${updates.length} 个版本。`).waitFor();
+    assert.equal(await sheet.locator('.whats-new-list li').count(), updates[0].items.length, 'the newest release is listed in full');
+    await sheet.locator('.whats-new-older summary').click();
+    assert.deepEqual(await sheet.locator('.onboarding-release header span').allInnerTexts(), updates.slice(1).map(release => `v${release.version}`), 'older releases fold away');
+    assert.equal(await wizardOf(page, '新手引导').count(), 0, 'an update is not a walkthrough');
+    assert.equal(await sheet.locator('.onboarding-progress').count(), 0);
+    await page.screenshot({ path: path.join(evidence, 'whats-new.png'), animations: 'disabled' });
+    await button(page, '知道了').click(); await sheet.waitFor({ state: 'hidden' });
     await page.reload(); await page.getByRole('button', { name: '添加第一张专辑' }).waitFor();
-    assert.equal(await wizardOf(page, '版本更新').count(), 0);
-    check('legacy-welcome-cabin-sees-and-completes-v1.21-update-guide');
+    assert.equal(await wizardOf(page, '新功能').count(), 0, 'one 知道了 is enough');
+    check('legacy-welcome-cabin-sees-the-whats-new-sheet-once');
     assert.deepEqual(failures, []);
   } finally { await context.close(); }
 
@@ -180,7 +186,7 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
   ({ context, page, failures } = await fresh());
   try {
     await page.goto(origin); await wizardOf(page).waitFor();
-    await button(page, '开始设置').click(); await button(page, '下一步').click(); await button(page, '下一步').click();
+    await button(page, '下一步').click();
     await page.evaluate(() => { const set = Storage.prototype.setItem; Storage.prototype.setItem = function (key, value) { if (key.startsWith('album-circle-library')) throw new DOMException('Storage full', 'QuotaExceededError'); return set.call(this, key, value); }; });
     await button(page, '选择场景 海边慢屋').click();
     await wizardOf(page).getByRole('alert').waitFor();

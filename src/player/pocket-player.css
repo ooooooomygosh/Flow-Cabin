@@ -79,7 +79,7 @@
 .room-turntable .pocket-progress small { display: flex; justify-content: space-between; font: 400 8px/11px var(--px-font-en); color: var(--pk-lcd-dim); font-variant-numeric: tabular-nums; }
 
 /* Control deck: a walnut wheel with a brass rim and an amber centre, then one 32px rail: two keys and the track selector. */
-.room-turntable .pocket-deck { display: grid; grid-template-columns: 32px 32px minmax(0, 1fr); align-items: center; gap: 10px 6px; margin: 0; container-type: inline-size; }
+.room-turntable .pocket-deck { display: grid; grid-template-columns: 32px 32px 32px minmax(0, 1fr); align-items: center; gap: 10px 6px; margin: 0; container-type: inline-size; }
 .room-turntable .pocket-deck > .pocket-wheel { grid-column: 1 / -1; grid-row: 1; justify-self: center; }
 .room-turntable .pocket-deck > .pocket-keys { display: contents; }
 .room-turntable .pocket-wheel { --wh: 120px; position: relative; width: var(--wh); height: var(--wh); filter: drop-shadow(-2px 0 0 var(--pk-outline)) drop-shadow(2px 0 0 var(--pk-outline)) drop-shadow(0 -2px 0 var(--pk-outline)) drop-shadow(0 2px 0 var(--pk-outline)) drop-shadow(0 2px 0 var(--pk-outline)); }
@@ -117,6 +117,9 @@
 }
 .room-turntable .pocket-keys .pocket-key:nth-child(1) { grid-column: 1; }
 .room-turntable .pocket-keys .pocket-key:nth-child(2) { grid-column: 2; }
+.room-turntable .pocket-keys .pocket-key:nth-child(3) { grid-column: 3; }
+.room-turntable .turntable-controls .pocket-like[aria-pressed=true] { color: var(--px-warn); border-color: var(--px-warn); }
+.room-turntable .turntable-controls .pocket-like[aria-pressed=true] .pocket-led { background: var(--px-warn); }
 .room-turntable .turntable-controls .pocket-key svg { width: 14px; height: 14px; }
 .room-turntable .turntable-controls .pocket-key small { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
 .room-turntable .turntable-controls .pocket-key .pocket-led { position: absolute; top: 2px; right: 2px; width: 4px; height: 4px; background: var(--px-surface-3); }
@@ -127,13 +130,33 @@
 .room-turntable .turntable-controls .pocket-key:active:not(:disabled) { translate: 0 1px; }
 
 /* Track selector: an input group on the same rail. */
-.room-turntable .pocket-track { grid-column: 3; grid-row: 2; display: flex; align-items: stretch; gap: 0; min-width: 0; margin: 0; font-size: 12px; color: var(--px-ink-dim); }
+.room-turntable .pocket-track { position: relative; grid-column: 4; grid-row: 2; display: flex; align-items: stretch; gap: 0; min-width: 0; margin: 0; font-size: 12px; color: var(--px-ink-dim); }
 .room-turntable .pocket-track span { display: grid; place-items: center; flex: none; width: 40px; height: 32px; padding: 0; font-size: 12px; line-height: 1; color: var(--px-ink); background: var(--px-surface-3); border: 2px solid var(--px-border); border-right: 0; }
-.room-turntable .pocket-track select { flex: 1; min-width: 0; height: 32px; margin: 0; color: var(--pk-ink); border: 2px solid var(--px-border); font: inherit; font-size: 12px; font-variant-numeric: tabular-nums; }
-@container (max-width: 220px) { .room-turntable .pocket-track { grid-column: 1 / -1; grid-row: 3; } }
+.room-turntable .pocket-track-button { display: flex; flex: 1; align-items: center; gap: 5px; min-width: 0; height: 32px; margin: 0; padding: 0 6px; color: var(--pk-ink); text-align: left; background: var(--px-surface-2); border: 2px solid var(--px-border); font: inherit; font-size: 12px; cursor: pointer; }
+.room-turntable .pocket-track-button b { flex: none; font: 400 8px/12px var(--px-font-en); color: var(--px-ink-dim); }
+.room-turntable .pocket-track-button em { flex: 1; min-width: 0; overflow: hidden; font-style: normal; white-space: nowrap; text-overflow: ellipsis; }
+.room-turntable .pocket-track-button svg { flex: none; }
+.room-turntable .pocket-track-button:hover, .room-turntable .pocket-track.is-open .pocket-track-button { border-color: var(--px-border-hi); }
+/* The track list: a scrollable pixel panel that opens over the rail. */
+.room-turntable .pocket-tracklist { position: absolute; z-index: 5; right: 0; bottom: calc(100% + 4px); left: 0; display: grid; max-height: 240px; overflow: auto; padding: 2px; background: var(--px-surface); box-shadow: 0 0 0 2px var(--pk-outline), inset 2px 2px 0 var(--px-border), 4px 4px 0 #0d0805a6; overscroll-behavior: contain; }
+.room-turntable .pocket-tracklist [role=option] { display: flex; align-items: center; gap: 6px; min-height: 30px; padding: 3px 6px; color: var(--px-ink); text-align: left; background: none; border: 0; font: inherit; font-size: 12px; cursor: pointer; }
+.room-turntable .pocket-tracklist [role=option] b { flex: none; width: 18px; font: 400 8px/12px var(--px-font-en); color: var(--px-ink-dim); }
+.room-turntable .pocket-tracklist [role=option] span { display: grid; flex: 1; min-width: 0; }
+.room-turntable .pocket-tracklist [role=option] strong, .room-turntable .pocket-tracklist [role=option] small { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.room-turntable .pocket-tracklist [role=option] strong { font-weight: 400; }
+.room-turntable .pocket-tracklist [role=option] small { font-size: 12px; color: var(--px-ink-dim); }
+.room-turntable .pocket-tracklist [role=option]:hover, .room-turntable .pocket-tracklist [role=option]:focus-visible { background: var(--px-surface-3); outline: 0; box-shadow: inset 2px 0 0 var(--px-accent); }
+.room-turntable .pocket-tracklist [aria-selected=true] { color: var(--px-accent-hi); background: var(--px-surface-2); }
+.room-turntable .pocket-tracklist [aria-selected=true] b { color: var(--px-accent); }
+.room-turntable .pocket-tracklist .is-unplayable strong { color: var(--px-ink-faint); text-decoration: line-through; text-decoration-color: var(--px-ink-faint); }
+.room-turntable .pocket-tracklist .is-unplayable small { color: var(--px-warn); }
+@container (max-width: 250px) { .room-turntable .pocket-track { grid-column: 1 / -1; grid-row: 3; } }
 .room-turntable .turntable-audio-sliders.pocket-volume { display: block; margin: 10px -12px -12px; padding: 8px 12px 10px; background: linear-gradient(#342114, #24160f); box-shadow: 0 -2px 0 #00000059; }
 .room-turntable .pocket-volume .player-volume { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--px-ink-dim); }
 .room-turntable .pocket-volume input[type=range] { flex: 1; min-width: 0; }
+.room-turntable .pocket-volume .player-volume-readout { flex: none; width: 34px; font: 400 8px/12px var(--px-font-en); color: var(--px-ink-dim); text-align: right; font-variant-numeric: tabular-nums; }
+.room-turntable .pocket-progress.is-read-only input[type=range] { cursor: default; }
+.room-turntable .pocket-progress.is-read-only input[type=range]::-webkit-slider-thumb { opacity: 0; }
 
 /* Narrow consoles (night study, 720p): the sleeve alone, so the song and status keep their lines. */
 .room-turntable .pocket-screen { container-type: inline-size; }

@@ -22,20 +22,23 @@ function statusFrom(companion, now = Date.now()) {
   const focus = companion?.focus || null, phase = focus?.phase || 'idle', active = phase !== 'idle';
   const remaining = !active ? 0 : focus.paused ? focus.remaining || 0 : focus.endsAt ? Math.max(0, focus.endsAt - now) : focus.remaining || 0;
   const duration = focus?.duration || 0, playing = Boolean(companion?.musicPlaying || companion?.playing), track = companion?.track || '';
+  // 到点后继续计时: past the planned end the title counts up (+mm:ss).
+  const overtime = phase === 'focus' && focus?.due === true, over = overtime ? (focus.paused ? focus.over || 0 : focus.endsAt ? Math.max(0, now - focus.endsAt) : focus.over || 0) : 0;
   const icon = active && !focus.paused ? 'focus' : active ? 'pause' : playing ? 'play' : 'cat';
-  const timer = active ? clockText(remaining) : '';
+  const timer = !active ? '' : overtime ? `+${clockText(over)}` : clockText(remaining);
   const lines = [];
-  if (active) lines.push(`${PHASE_NAMES[phase] || '专注'}${focus.paused ? '（已暂停）' : ''} · 还剩 ${timer}`);
+  if (active) lines.push(overtime ? `专注${focus.paused ? '（已暂停）' : ''} · 已超出 ${clockText(over)}` : `${PHASE_NAMES[phase] || '专注'}${focus.paused ? '（已暂停）' : ''} · 还剩 ${timer}`);
+  if (active && focus.task) lines.push(`当前任务：${focus.task}`);
   if (playing) lines.push(track ? `正在播放：${track}` : '正在播放');
   return {
-    icon, playing, phase, paused: Boolean(focus?.paused), focusRunning: phase === 'focus' && !focus.paused,
-    // macOS: text next to the menu-bar icon. Only while a round runs (or is paused), so the bar stays quiet otherwise.
-    title: active ? ` ${timer}` : '',
+    icon, playing, phase, paused: Boolean(focus?.paused), overtime, focusRunning: phase === 'focus' && !focus.paused,
+    // macOS: text next to the menu-bar icon while a round runs: a pause mark when paused, 休 during a break.
+    title: !active ? '' : ` ${focus.paused ? '‖ ' : phase === 'focus' ? '' : '休 '}${timer}`,
     tooltip: ['心流小屋', ...lines].join('\n'),
     statusLine: lines[0] || (playing ? '正在播放' : '小屋很安静'),
-    // Dock / taskbar: progress through the current focus round (-1 hides it), badge = minutes left.
-    progress: phase === 'focus' && duration > 0 ? Math.max(0, Math.min(1, 1 - remaining / duration)) : -1,
-    badge: phase === 'focus' ? String(Math.max(1, Math.ceil(remaining / 60000))) : ''
+    // Dock / taskbar: progress through the current round, breaks included (-1 hides it); badge = focus minutes left.
+    progress: active && duration > 0 ? (overtime ? 1 : Math.max(0, Math.min(1, 1 - remaining / duration))) : -1,
+    badge: phase === 'focus' && !overtime ? String(Math.max(1, Math.ceil(remaining / 60000))) : ''
   };
 }
 // A focus round just ended (focus → break / idle): bounce the Dock, flash the taskbar.
@@ -64,7 +67,8 @@ function createStatusApplier({ getTray, getWindow, app, nativeImage, getPetId = 
         tray.setToolTip(status.tooltip);
       }
       if (win && !win.isDestroyed()) {
-        win.setProgressBar(status.progress >= 0 ? status.progress : -1);
+        if (status.paused && status.progress >= 0) win.setProgressBar(status.progress, { mode: 'paused' });
+        else win.setProgressBar(status.progress >= 0 ? status.progress : -1);
         if (platform === 'win32') win.setOverlayIcon(status.focusRunning ? nativeImage.createFromPath(path.join(__dirname, 'assets', 'tray', 'tray-focus-16.png')) : null, status.focusRunning ? '专注中' : '');
         if (ended && platform === 'win32' && !win.isFocused()) win.flashFrame(true);
       }

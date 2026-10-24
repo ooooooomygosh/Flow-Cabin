@@ -1,15 +1,23 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { INTERFACE_KEY, interfaceMode, switchInterface } from '../interface-mode.mjs';
+import { INTERFACE_KEY, interfaceMode, switchInterface, shouldShowHomeNotice, dismissHomeNotice } from '../interface-mode.mjs';
 
 function storage(value) {
   const data = new Map(value == null ? [] : [[INTERFACE_KEY, value]]);
   return { getItem: key => data.get(key) ?? null, setItem: (key, value) => data.set(key, value), removeItem: key => data.delete(key) };
 }
-test('Existing and new installations stay classic without explicit local opt-in', () => {
-  for (const value of [null, '', 'classic', 'true', '2.1', 'unknown']) assert.equal(interfaceMode(storage(value)), 'classic');
-  assert.equal(interfaceMode(storage('beta')), 'beta');
-  assert.equal(interfaceMode({ getItem() { throw Error('unavailable'); } }), 'classic');
+test('The life cabin is the default home; only an explicit classic choice keeps the shelf', () => {
+  for (const value of [null, '', 'beta', 'true', '2.1', 'unknown']) assert.equal(interfaceMode(storage(value)), 'beta');
+  assert.equal(interfaceMode(storage('classic')), 'classic');
+  assert.equal(interfaceMode({ getItem() { throw Error('unavailable'); } }), 'beta');
+});
+test('The new-home notice shows once, only to people who never chose a home', () => {
+  const fresh = storage();
+  assert.equal(shouldShowHomeNotice(fresh), true);
+  dismissHomeNotice(fresh); assert.equal(shouldShowHomeNotice(fresh), false);
+  assert.equal(shouldShowHomeNotice(storage('classic')), false);
+  assert.equal(shouldShowHomeNotice(storage('beta')), false);
+  assert.equal(shouldShowHomeNotice({ getItem() { throw Error('unavailable'); } }), false);
 });
 test('Switching persists and flushes the chosen mode before requesting restart, in both directions', async () => {
   const saved = storage();

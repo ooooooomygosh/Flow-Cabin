@@ -9,7 +9,12 @@ const number = (v, max) => Number.isFinite(v) ? Math.max(0, Math.min(max, v)) : 
 function cleanLiveSnapshot(v = {}) {
   return { version:1, at:Date.now(), capabilities:['music','lyrics','focus','notes','pet','scene'],
     music:{ title:string(v.music?.title), artist:string(v.music?.artist), playing:v.music?.playing===true, position:number(v.music?.position,86400), duration:number(v.music?.duration,86400), rate:number(v.music?.rate,4) || 1, anchoredAt:number(v.music?.anchoredAt,9e15) },
-    lyrics:{ current:string(v.lyrics?.current,1000), next:string(v.lyrics?.next,1000), at:number(v.lyrics?.at,9e15) },
+    // A few word-timed lines around the current one, so the phone can sing them in time
+    // (bounded well under the 128 KiB message limit even for long CJK lines);
+    // sentAt is the sender's clock when it published (music.anchoredAt is on that clock too).
+    lyrics:{ current:string(v.lyrics?.current,1000), next:string(v.lyrics?.next,1000), at:number(v.lyrics?.at,9e15), skin:string(v.lyrics?.skin,40), title:string(v.lyrics?.title,300),
+      lines:(Array.isArray(v.lyrics?.lines)?v.lyrics.lines:[]).slice(0,10).filter(l=>l&&Array.isArray(l.w)).map(l=>({ s:number(l.s,864e5), e:number(l.e,864e5), w:l.w.slice(0,40).filter(Array.isArray).map(([t,s,e])=>[string(t,40),number(s,864e5),number(e,864e5)]), t:string(l.t,200), r:string(l.r,200) })) },
+    sentAt:number(v.at,9e15),
     focus:{ phase:['focus','shortBreak','longBreak'].includes(v.focus?.phase)?v.focus.phase:'idle', remaining:number(v.focus?.remaining,10800000), paused:v.focus?.paused===true, sessionId:string(v.focus?.sessionId,100), owner:string(v.focus?.owner,100), version:number(v.focus?.version,1e9) },
     pet:{ id:['cat','chick','bunny','bear','fox'].includes(v.pet?.id)?v.pet.id:'cat', accessory:['headphones','scarf','beanie','bow','sprout'].includes(v.pet?.accessory)?v.pet.accessory:'' },
     scenes:(Array.isArray(v.scenes)?v.scenes:[]).slice(0,30).filter(s=>id(s?.id)).map(s=>({id:s.id,name:string(s.name,60)})) };

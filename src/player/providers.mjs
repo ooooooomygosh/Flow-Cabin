@@ -18,3 +18,11 @@ export const isDeckProvider = (id) => DECK_PROVIDERS.includes(id);
 export const providerLabel = (id, form = 'label') => (PROVIDERS.find((provider) => provider.id === id) || PROVIDERS[1])[form === 'short' ? 'short' : 'label'];
 // Sources that produce sound (everything but the visual-only deck and auto-matching).
 export const SOURCES = Object.freeze(PROVIDERS.filter((provider) => !['visual', 'auto'].includes(provider.id)).map(({ short, desktopOnly, ...source }) => Object.freeze(source)));
+// What the deck's controls can really do with a source. Remote players (the macOS
+// 「音乐」App, Music Assistant) report a position but cannot be scrubbed or have
+// their volume set from the cabin; the system mirror only shows progress.
+export function deckCapabilities(provider, { remote = false } = {}) {
+  const audible = isDeckProvider(provider) && provider !== 'visual' && provider !== 'system';
+  const remotePlayer = provider === 'appleMusic' || provider === 'ma' || (audible && remote === true);
+  return Object.freeze({ progress: provider !== 'visual' && isDeckProvider(provider), seek: audible && !remotePlayer, volume: audible && !remotePlayer, readOnlyProgress: provider === 'system' || remotePlayer });
+}

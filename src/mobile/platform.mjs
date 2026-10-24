@@ -1,6 +1,8 @@
-import { Capacitor, registerPlugin } from '@capacitor/core';
+import { Capacitor, registerPlugin, SystemBars } from '@capacitor/core';
 import { App } from '@capacitor/app';
 import { createMobileStorage, persistentKey } from './storage.mjs';
+import { backStack } from '../ui/back-stack.mjs';
+import { watchStatusBar } from './system-bar-tone.mjs';
 
 export const isAndroid = () => Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
 const Device = registerPlugin('CabinDevice');
@@ -10,6 +12,7 @@ const report = text => window.dispatchEvent(new CustomEvent('cabin:mobile-notice
 export async function initializeMobile() {
   if (!isAndroid()) return;
   document.documentElement.dataset.platform = 'android';
+  watchStatusBar(style => SystemBars.setStyle({ style })); // status bar icons follow the room under them
   let viewportWidth = innerWidth, fullHeight = window.visualViewport?.height || innerHeight;
   const resize = () => { const height = window.visualViewport?.height || innerHeight; if (Math.abs(innerWidth - viewportWidth) > 80) { viewportWidth = innerWidth; fullHeight = height; } else fullHeight = Math.max(fullHeight, height); document.documentElement.style.setProperty('--mobile-height', `${height}px`); const nativeKeyboard = document.documentElement.dataset.nativeKeyboard; document.documentElement.dataset.mobileKeyboard = String(nativeKeyboard === undefined ? Boolean(document.activeElement?.matches('input,textarea,select') && fullHeight - height > 140) : nativeKeyboard === 'true'); if (document.activeElement?.matches('input,textarea,select')) document.activeElement.scrollIntoView({ block: 'nearest' }); };
   window.visualViewport?.addEventListener('resize', resize); window.addEventListener('resize', resize); resize();
@@ -35,6 +38,8 @@ export async function initializeMobile() {
   await App.addListener('backButton', async () => {
     const dialogs = [...document.querySelectorAll('dialog[open]')], dialog = dialogs.at(-1);
     if (dialog) { const event = new Event('cancel', { cancelable: true }); if (dialog.dispatchEvent(event)) dialog.close(); return; }
+    // Corners, furniture editing, the lyrics stage, armed confirms: one layer per press.
+    if (backStack.back()) return;
     const close = document.querySelector('.focus-dock-close');
     if (close) { close.click(); return; }
     if (document.documentElement.dataset.mobileFullscreen === 'true') { await window.albumMobile.setFullscreen(false); return; }

@@ -16,7 +16,9 @@ import { bindEnergyVar } from '../scene/playback-listener.mjs';
 import { timeOfDay, normalizeWeather } from '../room-ambience.mjs';
 import { bitmapPath } from '../pixel-icon-bitmaps.mjs';
 import { usePlaybackDuration, usePlaybackPosition } from '../deck/usePlaybackClock';
-import { ChevronLeft, ChevronRight, Pause, Play, Plus, X, SpeakerWave, SpeakerOff, Disc3 } from '../icons';
+import { ChevronLeft, ChevronRight, Pause, Play, Plus, X, SpeakerWave, SpeakerOff, Disc3, Heart, Refresh, RepeatPixel, RepeatOnePixel, ShufflePixel } from '../icons';
+import { deckCapabilities } from '../player/providers.mjs';
+import { volumePercent, wheelVolume } from '../player/volume-curve.mjs';
 import './listening-corner.css';
 
 // 唱机特写 · Listening Corner: the deck up close on a lamp-lit desk in a small
@@ -29,6 +31,24 @@ const MoonIcon = glyph(['.....XXXX...', '...XXXX.....', '..XXXX......', '.XXXX..
 const LIGHTS = [{ id: 'lamp', label: '台灯', icon: <LampIcon/> }, { id: 'dusk', label: '黄昏', icon: <SunsetIcon/> }, { id: 'night', label: '深夜', icon: <MoonIcon/> }];
 const SPEEDS = [{ id: 33, label: '33' }, { id: 45, label: '45' }];
 const LIGHT_KEY = 'album-circle-corner-light-v1';
+const REPEAT_LABEL = { off: '顺序播放', all: '整张循环', one: '单曲循环' };
+
+// The close-up's own small mixer: repeat, shuffle, 喜欢, retry after a failure
+// and a perceptual volume slider (the wheel adjusts it too).
+function CornerMixer({ playback, player, provider }) {
+  const row = useRef(null), latest = useRef(playback); latest.current = playback;
+  const caps = deckCapabilities(provider, { remote: playback?.remote }), volume = Boolean(playback && caps.volume);
+  useEffect(() => { const node = row.current; if (!node || !volume) return; const wheel = (event) => { event.preventDefault(); const pb = latest.current; pb.setVolume(wheelVolume(pb.muted ? 0 : pb.volume, event.deltaY)); }; node.addEventListener('wheel', wheel, { passive: false }); return () => node.removeEventListener('wheel', wheel); }, [volume]);
+  const failed = playback && playback.status === 'error';
+  const value = playback?.muted ? 0 : playback?.volume || 0, percent = volumePercent(value);
+  return <div className="corner-mixer">
+    {player && <button type="button" aria-label={`播放模式：${REPEAT_LABEL[player.queue.repeat]}`} title={`${REPEAT_LABEL[player.queue.repeat]} · R`} aria-pressed={player.queue.repeat !== 'off'} onClick={player.cycleRepeat}>{player.queue.repeat === 'one' ? <RepeatOnePixel size={12}/> : <RepeatPixel size={12}/>}</button>}
+    {player && <button type="button" aria-label="随机播放本张" title="本张随机 · S" aria-pressed={Boolean(player.queue.shuffle)} onClick={player.toggleShuffle}><ShufflePixel size={12}/></button>}
+    {player?.toggleLiked && <button type="button" className="corner-like" aria-label={player.liked ? '取消喜欢这首' : '喜欢这首'} title="喜欢 · 只保存在这台设备" aria-pressed={Boolean(player.liked)} onClick={player.toggleLiked}><Heart size={12}/></button>}
+    {failed && <button type="button" className="corner-retry" aria-label="重试这首" title={playback.error || '重试'} onClick={playback.retry}><Refresh size={12}/></button>}
+    {volume && <label ref={row} className="corner-volume" title="滚轮也可以调节音量"><button type="button" aria-label={playback.muted ? '取消静音' : '静音'} aria-pressed={Boolean(playback.muted)} onClick={() => playback.setMuted(!playback.muted)}>{playback.muted || !playback.volume ? <SpeakerOff size={12}/> : <SpeakerWave size={12}/>}</button><input type="range" aria-label="唱机特写音量" aria-valuetext={`${percent}%`} min="0" max="1" step=".01" value={value} onChange={(event) => playback.setVolume(Number(event.target.value))}/><output aria-hidden="true">{percent}%</output></label>}
+  </div>;
+}
 
 // The visual-only deck has no audio clock; time passes while it spins.
 function useVisualClock(running, key) {
@@ -233,6 +253,7 @@ export default function ListeningCorner({ item, items = [], vinyl, provider, spi
           <span className="corner-time">{audible && duration ? `${formatSeconds(position)} / ${formatSeconds(duration)}` : provider === 'visual' ? '仅动画 · 无音频' : ''}</span>
           <Segmented className="segmented corner-speed" label="转速" items={SPEEDS} value={speed} onChange={changeSpeed}/>
         </div>
+        {(audible || player) && <CornerMixer playback={audible ? playback : null} player={player} provider={provider}/>}
         {audible && playback.statusText && !playback.playing && <p className="corner-status" role="status">{playback.statusText}</p>}
         <ol ref={list} className="corner-tracks" aria-label="本面曲目">{names.map((name, index) => <li key={index}><button type="button" aria-current={index === trackIndex ? 'true' : undefined} onClick={() => setTrackIndex(index)}>
           <b>{String(index + 1).padStart(2, '0')}</b><span>{displayTitle(name)}</span><small>{lengths[index] ? formatDuration(lengths[index]) : ''}</small>

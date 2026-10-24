@@ -3,7 +3,7 @@ name: Checks
 # What this workflow proves, in order:
 #   1. 依赖装得上            npm ci（根项目 + desktop/）
 #   2. 单元测试全绿          npm test（桌面端 node:test + 根项目 node:test，含 CSS 设计系统守卫）
-#   3. 生产构建能出包        npm run build（index / promo / wallpaper / pet / mini 五个入口）
+#   3. 生产构建能出包        npm run build（index / promo / wallpaper / pet / mini / lyrics 六个入口）
 #   4. 隔离浏览器回归不回归   npm run test:*（固定演示数据 + 生成 WAV，不联网、不碰真实账号）
 # 这一串就是 CONTRIBUTING 里写的 `npm run check` + 浏览器回归；
 # 没有覆盖到的部分写在 docs/limitations.md，不要把绿灯当成真机验收。
@@ -52,7 +52,7 @@ jobs:
       - name: Run static web collection without a backend
         run: npm run test:web-static
       - name: Run full-screen home, persistent playback and furniture regressions
-        run: npm run test:home && npm run test:home-interactions
+        run: npm run test:home && npm run test:home-interactions && npm run test:lyrics
       - name: Run Android playback React bridge regression
         run: npm run test:native-playback
       - name: Run promotional page interaction tests

@@ -3,7 +3,7 @@ const { _electron } = require('playwright'), fs = require('node:fs'), path = req
 const { mountFixture, albums, useWarmCabin, chooseRoomScene } = require('./ui-fixture.cjs');
 const desktop = path.resolve(__dirname, '..'), output = path.join(desktop, 'test-results'); fs.mkdirSync(output, { recursive: true });
 const env = { ...process.env, ALBUM_DESKTOP_TEST_PROFILE: path.join(output, `room-ui-profile-${Date.now()}`) }; delete env.ELECTRON_RUN_AS_NODE;
-const executablePath = process.env.ALBUM_QA_EXE || path.join(desktop, 'node_modules/electron/dist/electron.exe');
+const executablePath = process.env.ALBUM_QA_EXE || require(path.join(desktop, 'node_modules/electron'));
 const report = { executablePath, startedAt: new Date().toISOString(), fixtureData: true, paidAIRequests: 0, productionWrites: 0, checks: [], pageErrors: [] };
 const check = (name, detail = {}) => { report.checks.push({ name, passed: true, ...detail }); console.log('PASS ' + name); };
 let app, site, host;
@@ -46,7 +46,7 @@ const row = () => site.locator('.room-rack-grid').getAttribute('data-start-row')
   });
   assert.notEqual(furniture.perspective, 'none'); assert.match(furniture.surface, /^matrix3d/); assert.match(furniture.front, /^matrix3d/); assert.match(furniture.side, /^matrix3d/); assert.match(furniture.raisedPlatter, /^matrix3d/); assert.equal(furniture.cabinetSupportsDeck, true); assert.equal(furniture.cabinetWithinViewport, true); check('three-dimensional-turntable-on-wooden-side-cabinet', furniture);
   assert.equal(await site.locator('.room-turntable').getAttribute('data-spinning'), 'true'); assert.ok((await site.locator('.turntable-status').innerText()).includes('无音频'));
-  await site.getByLabel('唱机展示曲目', { exact: true }).selectOption('1'); assert.ok((await site.locator('.turntable-track').innerText()).includes(items[1].tracks[1]));
+  await site.getByRole('button', { name: /^选择曲目/ }).click(); await site.getByRole('listbox', { name: '唱机展示曲目', exact: true }).getByRole('option').nth(1).click(); assert.ok((await site.locator('.turntable-track').innerText()).includes(items[1].tracks[1]));
   await site.getByRole('button', { name: '暂停唱片旋转', exact: true }).click(); assert.equal(await site.locator('.room-turntable').getAttribute('data-spinning'), 'false');
   await site.getByRole('button', { name: '继续唱片旋转', exact: true }).click(); check('double-click-record-placement-original-track-selection-pause-resume');
   await site.locator('.room-record').nth(2).dragTo(site.getByRole('complementary', { name: '黑胶唱机' }));

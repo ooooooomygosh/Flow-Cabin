@@ -6,10 +6,11 @@ import { toImageData } from './raster.mjs';
 import { changedCards, FLIP_FRAMES, FLIP_FPS } from './flip-math.mjs';
 import { frameClock, onBackgroundChange, onOcclusionChange } from '../frame-clock.mjs';
 import { reducedMotion } from '../motion-preference.mjs';
+import { currentRound } from './focus-model.mjs';
 import './focus-display.css';
 
 // The focus record as a face reads it (the wallpaper passes its snapshot instead).
-export const faceFocus = (state) => state && ({ phase: state.timer.phase, paused: state.timer.paused, endsAt: state.timer.endsAt, remaining: state.timer.remaining, duration: state.timer.duration, hideSeconds: state.settings.hideSeconds, round: state.timer.round, longEvery: state.settings.longEvery, focusMin: state.settings.focusMin, task: state.tasks.find((task) => task.id === state.timer.taskId)?.text || '' });
+export const faceFocus = (state) => state && ({ phase: state.timer.phase, paused: state.timer.paused, endsAt: state.timer.endsAt, remaining: state.timer.remaining, duration: state.timer.duration, hideSeconds: state.settings.hideSeconds, round: currentRound(state.timer, Date.now()), due: Boolean(state.timer.due), over: state.timer.over || 0, longEvery: state.settings.longEvery, focusMin: state.settings.focusMin, task: state.tasks.find((task) => task.id === state.timer.taskId)?.text || '' });
 
 // Integer scale (in device pixels) that fits w×h into the box.
 export function fitScale(box, w, h, dpr = 1, max = 64) {

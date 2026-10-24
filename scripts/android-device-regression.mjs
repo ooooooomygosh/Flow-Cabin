@@ -4,6 +4,7 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { onboardingSeed } from './app-version.mjs';
 import assert from 'node:assert/strict';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -97,7 +98,7 @@ try {
   const target = (await fetch('http://127.0.0.1:9223/json').then(r => r.json())).find(t => t.url === 'https://localhost/');
   await openSocket(target);
   await until('Boolean(window.albumMobile)');
-  await evaluate(`(async()=>{const items=Array.from({length:29},(_,i)=>({id:'android-qa-'+i,type:'album',title:'全面屏测试 '+(i+1),artist:'模拟器测试',tracks:['测试曲目'],addedAt:new Date(2026,0,1,i).toISOString()}));localStorage.setItem('flow-cabin-web-collection-v1',JSON.stringify({version:1,items}));localStorage.setItem('flow-cabin-onboarding-v1',JSON.stringify({version:2,status:'done',step:'done',seenVersion:'1.21.6'}));await window.albumMobile.flushStorage();return true;})()`);
+  await evaluate(`(async()=>{const items=Array.from({length:29},(_,i)=>({id:'android-qa-'+i,type:'album',title:'全面屏测试 '+(i+1),artist:'模拟器测试',tracks:['测试曲目'],addedAt:new Date(2026,0,1,i).toISOString()}));localStorage.setItem('flow-cabin-web-collection-v1',JSON.stringify({version:1,items}));localStorage.setItem('flow-cabin-onboarding-v1',${JSON.stringify(onboardingSeed())});await window.albumMobile.flushStorage();return true;})()`);
   await send('Page.reload'); await until('document.querySelectorAll(".room-record").length > 0');
   await layout('portrait');
   const service = await evaluate(`window.albumMobile.musicRequest('/config').then(v=>({ready:true,qqLoggedIn:v.qqLoggedIn,neteaseLoggedIn:v.neteaseLoggedIn}))`);
