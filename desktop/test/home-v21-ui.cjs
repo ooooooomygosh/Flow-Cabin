@@ -81,7 +81,10 @@ async function choosePet(id, name) {
   let lyrics; for(let i=0;i<50;i++){lyrics=application.windows().find(p=>p.url().includes('/lyrics.html'));if(lyrics)break;await page.waitForTimeout(100);}
   assert.ok(lyrics); lyrics.on('pageerror', e => report.errors.push('lyrics: ' + e.message)); await lyrics.locator('.desk-lyrics-row.is-active', { hasText: '同一首歌，同一句歌词' }).waitFor();
   await lyrics.locator('.desk-lyrics-row.is-waiting', { hasText: '下一句仍在这里' }).waitFor();
-  const bar = await application.evaluate(({ BrowserWindow }) => { const win = BrowserWindow.getAllWindows().find(w => w.webContents.getURL().includes('/lyrics.html')); return { color: win.getBackgroundColor(), top: win.isAlwaysOnTop(), resizable: win.isResizable() }; });
+  // The page can render before the shell shows the window (it waits for the page load); the
+  // topmost flag only means something once the bar is on screen, so read it after it is shown.
+  let bar; for (let i = 0; i < 50; i++) { bar = await application.evaluate(({ BrowserWindow }) => { const win = BrowserWindow.getAllWindows().find(w => w.webContents.getURL().includes('/lyrics.html')); return { visible: win.isVisible(), color: win.getBackgroundColor(), top: win.isAlwaysOnTop(), resizable: win.isResizable() }; }); if (bar.visible) break; await page.waitForTimeout(100); }
+  assert.equal(bar.visible, true, 'the lyric bar is shown');
   assert.match(bar.color, /^#0{6}(00)?$/i, 'the lyric bar window is transparent'); assert.equal(bar.top, true);
   await lyrics.locator('.desk-lyrics').hover(); await lyrics.getByRole('button', { name: '锁定歌词（鼠标可穿透）' }).click();
   await lyrics.getByRole('button', { name: '解锁桌面歌词' }).waitFor({ state: 'attached' });
