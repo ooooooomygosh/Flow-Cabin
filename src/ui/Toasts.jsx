@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { addToast, removeToast } from './toast-model.mjs';
 
 // notify(text) confirms quietly for 3.2 s; notify(text, { tone: 'error' }) is an alert
@@ -21,13 +22,25 @@ function Toast({ toast, dismiss }) {
 }
 
 // A manual popover lives in the browser's top layer, so toasts stay visible above
-// open modal dialogs. Re-showing it on every new toast lifts it above a dialog that
-// opened after it.
+// open modal dialogs. A modal makes everything outside it inert, though, so while one
+// is open the stack is rendered inside the topmost dialog: its 撤销 button stays
+// clickable. Re-showing the popover on every change keeps it above that dialog.
+const topDialog = () => [...document.querySelectorAll('dialog[open]')].at(-1) || null;
+function useTopDialog() {
+  const [dialog, setDialog] = useState(topDialog);
+  useEffect(() => {
+    const observer = new MutationObserver(() => setDialog(previous => { const next = topDialog(); return next === previous ? previous : next; }));
+    observer.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['open'] });
+    return () => observer.disconnect();
+  }, []);
+  return dialog;
+}
 export function ToastStack({ toasts, dismiss }) {
-  const host = useRef(null), newest = toasts.at(-1)?.id;
+  const host = useRef(null), newest = toasts.at(-1)?.id, dialog = useTopDialog();
   useLayoutEffect(() => {
     const node = host.current; if (!node?.showPopover) return;
     try { if (node.matches(':popover-open')) node.hidePopover(); if (toasts.length) node.showPopover(); } catch {}
-  }, [newest, toasts.length]);
-  return <div ref={host} className="app-toasts" popover="manual" aria-live="polite">{toasts.map(toast => <Toast key={toast.id} toast={toast} dismiss={dismiss}/>)}</div>;
+  }, [newest, toasts.length, dialog]);
+  const stack = <div ref={host} key={dialog ? 'in-dialog' : 'page'} className="app-toasts" popover="manual" aria-live="polite">{toasts.map(toast => <Toast key={toast.id} toast={toast} dismiss={dismiss}/>)}</div>;
+  return dialog ? createPortal(stack, dialog) : stack;
 }

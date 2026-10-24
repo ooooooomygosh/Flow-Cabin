@@ -523,8 +523,9 @@ try {
     return out;
   }, state); };
   await page.locator('.focus-badge').click(); await page.getByRole('tab', { name: '番茄钟' }).click();
-  const startFocus = page.getByRole('button', { name: '开始专注', exact: true }); if (await startFocus.count()) { await startFocus.click(); await page.locator('.focus-display').waitFor(); await page.keyboard.press('Escape'); }
-  await page.getByRole('button', { name: '收起专注工具', exact: true }).click(); await page.locator('.room-cat-bubble').waitFor();
+  // Since 2.2 the cat speaks at moments, not all round: the start bubble shows for a few seconds.
+  const startFocus = page.getByRole('button', { name: '开始专注', exact: true }); if (await startFocus.count()) { await startFocus.click(); await page.locator('.room-cat-bubble', { hasText: '开始专注啦' }).waitFor({ state: 'attached' }); await page.locator('.focus-display').waitFor(); await page.keyboard.press('Escape'); }
+  await page.getByRole('button', { name: '收起专注工具', exact: true }).click();
   await page.evaluate(() => {
     window.__layoutTrace = [];
     const record = (kind, detail) => { window.__layoutTrace.push({ kind, detail, at: performance.now() }); if (window.__layoutTrace.length > 50) window.__layoutTrace.shift(); };
