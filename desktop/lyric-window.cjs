@@ -12,6 +12,9 @@ const POLL_MS = 250, MAX_FEED_BYTES = 2 * 1024 * 1024;
 const PLAYER = new Set(['toggle', 'next', 'previous']);
 const PREF_KEYS = new Set(['translation', 'romanization', 'deskLayout', 'deskSkin', 'deskSize', 'deskPet', 'deskHideWhenPaused']);
 const MIN = { width: 360, height: 96 };
+// On Windows, Electron treats 'floating' (and the other macOS panel levels) as "behind the
+// taskbar" and re-stacks the window there, which loses its topmost flag; 'pop-up-menu' stays on top.
+const TOP_LEVEL = process.platform === 'win32' ? 'pop-up-menu' : 'floating';
 
 // Where the bar opens on a display it has not been placed on: low and centred.
 function defaultBounds(workArea) {
@@ -60,7 +63,7 @@ function createLyricWindow({ getSite, registerProtocol, screen, ipcMain, Browser
     window.setIgnoreMouseEvents(ignore, ignore ? { forward: true } : undefined);
     // Changing focusability on Windows drops the topmost flag, so put the bar back on top after it.
     if (window.isFocusable() !== !saved.locked) window.setFocusable(!saved.locked);
-    window.setAlwaysOnTop(true, 'floating');
+    window.setAlwaysOnTop(true, TOP_LEVEL);
     send('cabin-lyrics:state', { locked: saved.locked });
   };
   async function poll() {
@@ -105,7 +108,7 @@ function createLyricWindow({ getSite, registerProtocol, screen, ipcMain, Browser
       window = created;
       if (!(await created.webContents.session.protocol.isProtocolHandled('album-desktop'))) registerProtocol(created.webContents.session.protocol);
       if (window !== created || created.isDestroyed()) return;
-      created.setAlwaysOnTop(true, 'floating');
+      created.setAlwaysOnTop(true, TOP_LEVEL);
       created.setVisibleOnAllWorkspaces?.(true, { visibleOnFullScreen: true });
       created.webContents.session.setPermissionRequestHandler((_w, _p, callback) => callback(false));
       created.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
