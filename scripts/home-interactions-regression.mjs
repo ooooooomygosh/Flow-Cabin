@@ -43,6 +43,7 @@ try{
  const live=await browser.newContext({viewport:{width:1440,height:900}});
  await live.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());
  await live.addInitScript(()=>{localStorage.setItem('flow-cabin-interface-v1','beta');localStorage.setItem('flow-cabin-home-intro-v1','done');});
+ await live.addInitScript(seed=>localStorage.setItem('flow-cabin-onboarding-v1',seed),onboardingSeed()); // the guide and 新功能 sheet are covered by onboarding checks
  const cam=await live.newPage();cam.setDefaultTimeout(15000);cam.on('pageerror',e=>report.errors.push(e.message));await cam.goto(origin);
  await cam.locator('.home-canvas[data-art-ready=true]').waitFor();await cam.locator('.cabin-home[data-corners-ready=pixel]').waitFor();
  await cam.evaluate(()=>{window.cornerLoading=0;new MutationObserver(list=>{for(const m of list)for(const n of m.addedNodes)if(n.nodeType===1&&(n.matches('.home-corner-loading')||n.querySelector('.home-corner-loading')))window.cornerLoading++;}).observe(document.body,{childList:true,subtree:true});});

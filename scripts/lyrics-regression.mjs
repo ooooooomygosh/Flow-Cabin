@@ -5,6 +5,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { launchChromium } from './launch-browser.mjs';
+import { onboardingSeed } from './app-version.mjs';
 import { parseLyrics } from '../src/lyrics/lyrics-model.mjs';
 import { packLyrics, alignSecondary } from '../src/lyrics/lyric-timing.mjs';
 const origin = 'http://127.0.0.1:4297', output = path.resolve('desktop/test-results/lyrics');
@@ -33,9 +34,10 @@ try {
     }
     return route.continue();
   });
-  await context.addInitScript(({ fixture, yrc, translation, alternate }) => {
+  await context.addInitScript(({ fixture, yrc, translation, alternate, seed }) => {
     localStorage.setItem('flow-cabin-interface-v1', 'beta');
     localStorage.setItem('flow-cabin-home-intro-v1', 'done');
+    localStorage.setItem('flow-cabin-onboarding-v1', seed); // the guide and 新功能 sheet are covered by onboarding checks
     localStorage.setItem('flow-cabin-web-collection-v1', JSON.stringify({ version: 1, items: [fixture] }));
     localStorage.setItem('album-circle-room-player-v1', 'local');
     localStorage.setItem('flow-cabin-welcome-v1', 'true');
@@ -49,7 +51,7 @@ try {
       }
       return {};
     } };
-  }, { fixture, yrc, translation, alternate });
+  }, { fixture, yrc, translation, alternate, seed: onboardingSeed() });
   page = await context.newPage(); page.setDefaultTimeout(20000); page.on('pageerror', e => report.errors.push(e.message));
   await page.goto(origin); await page.locator('.home-world canvas').waitFor();
   const notice = page.locator('.home-notice').getByRole('button', { name: '好的' }); if (await notice.isVisible()) await notice.click();
