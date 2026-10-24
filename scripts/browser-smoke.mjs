@@ -179,6 +179,8 @@ try {
   await page.evaluate(() => document.activeElement?.blur()); await page.keyboard.press('Space'); await page.waitForFunction(() => document.querySelector('audio[data-deck="active"]').paused && window.__cabinPlayback.at(-1).playing === false);
   await page.keyboard.press('m'); assert.equal(await page.locator('audio[data-deck="active"]').evaluate(a => a.muted), true); await page.keyboard.press('m'); assert.equal(await page.locator('audio[data-deck="active"]').evaluate(a => a.muted), false);
   await page.keyboard.press('Space'); await page.waitForFunction(() => !document.querySelector('audio[data-deck="active"]').paused);
+  // 上一首 restarts a song that has played for over 3 s; the slider checks above may have run past that, so start near the beginning.
+  await page.locator('audio[data-deck="active"]').evaluate(a => { a.currentTime = .5; });
   await page.keyboard.press('Shift+ArrowLeft'); await page.waitForFunction(() => document.querySelector('.turntable-track').textContent.startsWith('01'));
   check('keyboard-space-mute-and-previous');
   // 重启后恢复: the song and its spot come back after a reload, paused, and play resumes there. No stream URL is stored.
