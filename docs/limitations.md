@@ -1,6 +1,6 @@
 # 使用边界与验证状态
 
-当前版本基线：`v2.1.0`（2026-10-23）。具体验证证据见 [2.1 实施记录](v2.1-implementation.md)，已发布 tag、资产与签名以 [GitHub Releases](https://github.com/ooooooomygosh/Flow-Cabin/releases) 为准。
+当前版本基线：`v2.2.0`。2.2 的改动、验证与未实测边界见 [2.2 打磨记录](v2.2-polish.md)；2.1 的证据见 [2.1 实施记录](v2.1-implementation.md)，已发布 tag、资产与签名以 [GitHub Releases](https://github.com/ooooooomygosh/Flow-Cabin/releases) 为准。
 
 ## 2.1 的验收边界
 
