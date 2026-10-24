@@ -1,6 +1,6 @@
 import { InterfacePreference } from '../InterfaceMode';
 import { interfaceMode } from '../interface-mode.mjs';
-import React, { lazy, Suspense, useEffect, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { PERFORMANCE_MODES, performanceMode, performanceLevel, setPerformanceMode, onPerformanceChange } from '../perf-profile.mjs';
 import Dialog from '../Dialog';
 import { Tabs, Segmented, tabPanelProps } from '../ui/Roving';
@@ -11,7 +11,7 @@ import FocusSettingsForm from '../focus/FocusSettingsForm';
 import DailyGoalField from '../focus/stats/DailyGoalField.jsx';
 import { desktopCommand } from '../desktop-client';
 import { getAutostart, setAutostart, onAutostartChange } from '../desktop/autostart-client.mjs';
-import { ChevronLeft, ChevronRight, Check } from '../icons';
+import { ChevronLeft, ChevronRight, Check, Search, X } from '../icons';
 import { providerFor } from './onboarding-model.mjs';
 import useSourceStatus from './useSourceStatus';
 import { PROVIDERS, providerLabel } from '../player/providers.mjs';
@@ -25,6 +25,9 @@ import InputCompanionSettings from './InputCompanionSettings';
 import StorageStatus from '../mobile/StorageStatus';
 import PetBehaviourSettings from '../pet/PetBehaviourSettings';
 import { MiniPlayerRow, MediaKeysRows } from '../desktop/PlayerDesktopSettings';
+import WhatsNew from './WhatsNew';
+import { RELEASES } from './releases.mjs';
+import { searchSettings, matchingSections } from './settings-search.mjs';
 
 const SyncSettings = lazy(() => import('../sync/SyncSettings'));
 const PetPackSettings = lazy(() => import('../pet/PetPackSettings'));
@@ -48,10 +51,29 @@ export default function SettingsHub({ section = 'music', setSection, close, env,
     change(); query.addEventListener('change', change);
     return () => query.removeEventListener('change', change);
   }, []);
-  return <Dialog title="设置" label="设置" close={close} className="settings-hub" size="lg">
+  const [query, setQuery] = useState(''), [found, setFound] = useState(null), [news, setNews] = useState(false);
+  const searchBox = useRef(null), panel = useRef(null);
+  const labels = useMemo(() => Object.fromEntries(HUB_SECTIONS.map((item) => [item.id, item.label])), []);
+  const results = useMemo(() => searchSettings(query, { env, labels }), [query, env, labels]);
+  const searching = Boolean(query.trim());
+  const hits = useMemo(() => new Map(matchingSections(results, HUB_SECTIONS).map((item) => [item.id, results.filter((entry) => hubTab(entry.section) === item.id).length])), [results]);
+  const tabs = searching ? HUB_SECTIONS.map((item) => ({ ...item, disabled: !hits.has(item.id), content: <>{item.label}{hits.has(item.id) && <small className="settings-hub-count">{hits.get(item.id)}</small>}</> })) : HUB_SECTIONS;
+  const jump = (entry) => { setQuery(''); setSection(entry.section); setFound({ ...entry, at: Date.now() }); };
+  useSettingHighlight(panel, found, reduceMotion);
+  return <Dialog title="设置" label="设置" close={close} className="settings-hub" size="lg" onKeyDown={(event) => {
+    if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === 'f') { event.preventDefault(); searchBox.current?.focus(); searchBox.current?.select(); }
+  }}>
     <div className="settings-hub-layout">
-      <Tabs className="settings-hub-nav" label="设置分区" idPrefix="hub-tab" orientation={compact ? 'horizontal' : 'vertical'} arrows="both" items={HUB_SECTIONS} value={tab} onChange={setSection}/>
-      <section {...tabPanelProps('hub-tab', tab)} className="settings-hub-panel">
+      <div className="settings-hub-side">
+        <label className="settings-hub-search"><Search size={14}/><input ref={searchBox} type="search" placeholder="搜索设置" aria-label="搜索设置" aria-controls="hub-tab-panel" value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => {
+          if (event.key === 'Enter' && results[0]) { event.preventDefault(); jump(results[0]); }
+          else if (event.key === 'Escape' && query) { event.preventDefault(); event.stopPropagation(); setQuery(''); }
+          else if (event.key === 'ArrowDown' && results[0]) { event.preventDefault(); panel.current?.querySelector('.settings-hub-results button')?.focus(); }
+        }}/>{query && <button type="button" className="settings-hub-clear" aria-label="清除搜索" onClick={() => { setQuery(''); searchBox.current?.focus(); }}><X size={12}/></button>}</label>
+        <Tabs className="settings-hub-nav" label="设置分区" idPrefix="hub-tab" orientation={compact ? 'horizontal' : 'vertical'} arrows="both" items={tabs} value={searching ? '' : tab} onChange={(id) => { setQuery(''); setSection(id); }}/>
+      </div>
+      <section ref={panel} {...tabPanelProps('hub-tab', tab)} className="settings-hub-panel">
+        {searching ? <SearchResults query={query} results={results} labels={labels} jump={jump}/> : <>
         {section === 'music' && <MusicSection env={env} player={player} provider={provider} useSource={useSource} openAccounts={() => setSection('music/accounts')}/>}
         {section === 'music/accounts' && <div className="hub-subpage" role="region" aria-label="账户与文件夹">
           <button type="button" className="hub-back" onClick={() => setSection('music')}><ChevronLeft size={14}/>音源</button>
@@ -70,11 +92,51 @@ export default function SettingsHub({ section = 'music', setSection, close, env,
         {tab === 'ai' && <AiSettings/>}
         {tab === 'about' && <div className="hub-rows">
           <UpdatePanel version={version} desktop={Boolean(env.desktop)}/>
-          <Row title="重新引导" hint="再走一遍新手引导，之前的选择会保留。"><button type="button" className="pixel-button" onClick={restartOnboarding}>重新引导</button></Row>
+          <Row title="新功能" hint={`看看 v${version} 带来了什么，也可以翻到更早的版本。`}><button type="button" className="pixel-button" onClick={() => setNews(true)}>查看新功能</button></Row>
+          <Row title="重新引导" hint="再走一遍三步引导（音源、房间与伙伴、试听），之前的选择会保留。"><button type="button" className="pixel-button" onClick={restartOnboarding}>重新引导</button></Row>
         </div>}
+        </>}
       </section>
     </div>
+    {news && <WhatsNew history copy={{ fromVersion: '', toVersion: version, releases: RELEASES.slice(0, 8) }} close={() => setNews(false)}/>}
   </Dialog>;
+}
+
+// The results of 搜索设置: one row per setting, with the section it lives in.
+function SearchResults({ query, results, labels, jump }) {
+  const move = (event) => {
+    const keys = { ArrowDown: 1, ArrowUp: -1 }; if (!keys[event.key]) return;
+    const list = [...event.currentTarget.querySelectorAll('button')], index = list.indexOf(document.activeElement);
+    const next = list[index + keys[event.key]];
+    event.preventDefault();
+    if (next) next.focus(); else if (keys[event.key] < 0) document.querySelector('.settings-hub-search input')?.focus();
+  };
+  if (!results.length) return <div className="settings-hub-empty" role="status"><strong>没有找到「{query.trim()}」</strong><small>换个说法试试，比如“备份”“通知”“歌词”或“音源”。</small></div>;
+  return <ul className="settings-hub-results" aria-label={`找到 ${results.length} 项设置`} onKeyDown={move}>{results.map((entry) => { const [tab, sub] = entry.section.split('/'); return <li key={entry.id}>
+    <button type="button" onClick={() => jump(entry)}><span><strong>{entry.title}</strong><small>{labels[tab]}{sub === 'accounts' ? ' › 账户与文件夹' : ''}</small></span><ChevronRight size={14}/></button>
+  </li>; })}</ul>;
+}
+
+// After a jump, scroll the matching row into view and light it up briefly.
+// Lazy sections (同步与设备, 桌宠衣柜) render a moment later, so look a few times.
+function useSettingHighlight(panel, found, reduceMotion) {
+  useEffect(() => {
+    if (!found) return undefined;
+    const anchor = found.anchor || found.title;
+    let tries = 0, lit = null, timer = 0;
+    const look = () => {
+      const root = panel.current; if (!root) return;
+      const text = [...root.querySelectorAll('strong,h3,h4,legend,label,span,button,p')].find((node) => node.textContent.trim().startsWith(anchor));
+      if (!text) { if (++tries < 20) timer = setTimeout(look, 100); return; }
+      lit = text.closest('.hub-row,.hub-sources,.typing-companion,fieldset,section,label') || text;
+      if (lit === root) lit = text;
+      lit.scrollIntoView({ block: 'center', behavior: reduceMotion ? 'auto' : 'smooth' });
+      lit.classList.add('is-found');
+      timer = setTimeout(() => lit?.classList.remove('is-found'), 1800);
+    };
+    timer = setTimeout(look, 0);
+    return () => { clearTimeout(timer); lit?.classList.remove('is-found'); };
+  }, [found]);
 }
 
 const Row = ({ title, hint, led, children }) => <div className="hub-row"><span><strong>{led !== undefined && <i className={`hub-led ${led ? 'is-on' : ''}`} aria-hidden="true"/>}{title}</strong>{hint && <small>{hint}</small>}</span>{children && <span className="hub-row-actions">{children}</span>}</div>;
@@ -157,6 +219,6 @@ function DisplaySection({ env, desktop }) {
     {env.desktop && <Row title="显示与字体" hint="界面缩放、字体、减少动态效果。"><button type="button" className="pixel-button" onClick={() => desktopCommand('settings')}>打开显示与字体</button></Row>}
     {env.desktop && <MiniPlayerRow/>}
     {env.desktop && <MediaKeysRows/>}
-    <div className="hub-row hub-shortcuts-row"><span><strong>快捷键</strong><dl className="hub-shortcuts">{SHORTCUTS.map((entry) => <div key={entry.id}><dt>{entry.label}</dt><dd>{entry.action}</dd></div>)}</dl></span></div>
+    <div className="hub-row hub-shortcuts-row"><span><strong>快捷键</strong><button type="button" className="onboarding-text" onClick={() => window.dispatchEvent(new Event('cabin:shortcuts'))}>按 ? 或 Ctrl/⌘+/ 随时打开速查表</button><dl className="hub-shortcuts">{SHORTCUTS.map((entry) => <div key={entry.id}><dt>{entry.label}</dt><dd>{entry.action}</dd></div>)}</dl></span></div>
   </div>;
 }

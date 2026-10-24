@@ -15,6 +15,11 @@
 .live-devices{display:grid;gap:16px;padding:16px 0;border-block:1px solid var(--px-border)}
 .live-device{display:grid;gap:12px;padding:16px;background:var(--px-surface-2)}
 .live-device-heading{display:flex;justify-content:space-between;gap:12px}.live-device-heading span{font-size:12px;color:var(--px-ink-dim)}
+.live-device-state{display:inline-flex;align-items:center;gap:6px}.live-device-state i{width:6px;height:6px;background:var(--px-ink-muted);box-shadow:0 0 0 1px var(--px-shadow)}
+.live-device-state.is-ok{color:var(--px-good)}.live-device-state.is-ok i{background:var(--px-good)}.live-device-state.is-wait i{background:var(--px-warn)}
+.live-device-hint{margin-top:-6px;font-size:12px;line-height:1.6;color:var(--px-ink-dim)}
+.live-scenes{display:grid;gap:6px;font-size:13px}
+.live-device-message.is-error{color:var(--px-warn)}
 .live-device .live-reconnect{display:flex;align-items:center;gap:10px}.live-reconnect input{width:20px;height:20px;min-height:20px}
 @media(max-width:699px){.live-devices button{min-height:48px}}
 }

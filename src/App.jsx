@@ -17,6 +17,7 @@ import { StudyProvider } from './study/useStudy';
 import { SoundscapeProvider } from './audio/useSoundscape';
 import { addItem, importItems, listItems, removeItem } from './collection-api.mjs';
 import { useToasts, ToastStack } from './ui/Toasts';
+import ShortcutSheet from './ui/ShortcutSheet';
 
 // Stable identifiers keep vinyl styles, crates and focus records saved by
 // earlier releases attached to this computer's collection.
@@ -71,6 +72,7 @@ export default function App() {
         <Suspense fallback={<p role="status">正在打开小屋…</p>}><Room items={items} loading={loading} loadError={error} reload={reload} firstVisit={firstVisit} hubRequest={hubRequest} openBackup={() => setBackup(true)} openWall={() => setWall(true)} notify={notify} openRecord={setRecordId} openAdd={(query = '') => setAdding({ query })} saveToShelf={saveToShelf}/></Suspense>
       </main>
       <ToastStack toasts={toasts} dismiss={dismissToast}/>
+      <ShortcutSheet/>
     </div>
     {interfaceOpen && <InterfaceDialog mode={mode} items={items} close={() => setInterfaceOpen(false)}/>}
     {adding && <AddAlbum items={items} initialQuery={adding.query} initialTab={adding.tab} close={() => setAdding(null)} onAdded={addToShelf}/>}

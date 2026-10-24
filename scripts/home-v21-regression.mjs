@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { launchChromium } from './launch-browser.mjs';
+import { onboardingSeed } from './app-version.mjs';
 const origin = process.env.HOME_TEST_ORIGIN || 'http://127.0.0.1:4292';
 const minutes = Number(process.env.SOAK_MINUTES || 0), duration = Math.max(180, Math.ceil(minutes * 60 + 60));
 const output = path.resolve('desktop/test-results/home-v21' + (minutes ? '-soak' : ''));
@@ -29,16 +30,17 @@ try {
     }
     return route.continue();
   });
-  await context.addInitScript(({ fixture }) => {
+  await context.addInitScript(({ fixture, seed }) => {
     localStorage.setItem('flow-cabin-web-collection-v1', JSON.stringify({ version: 1, items: [fixture] }));
     localStorage.setItem('album-circle-room-player-v1', 'local');
     localStorage.setItem('flow-cabin-welcome-v1', 'true');
+    localStorage.setItem('flow-cabin-onboarding-v1', seed); // this version's 新功能 sheet was already seen
     window.albumMobile = { musicRequest: async (route, body) => {
       if (route === '/resolve') return { audioPath: '/fixture-audio/long.wav', title: '长时间播放' };
       if (route === '/lyrics') return { text: '[00:00]小屋里的测试音乐\n[00:30]持续播放，不因页面切换而中断', format: 'lrc', source: 'fixture' };
       return {};
     } };
-  }, { fixture });
+  }, { fixture, seed: onboardingSeed() });
   const page = await context.newPage(); page.on('pageerror', e => report.errors.push(e.message));
   await page.goto(origin); await page.locator('.home-world canvas').waitFor();
   const intro = page.getByRole('button', { name: '知道了', exact: true }); if (await intro.isVisible()) await intro.click();

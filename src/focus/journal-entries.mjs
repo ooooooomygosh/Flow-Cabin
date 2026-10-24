@@ -116,10 +116,26 @@ export function restoreJournalRevision({ storage, id, expectedVersion, revision,
   } catch (error) { return failure(error); }
 }
 
+// 搜索手记: every space-separated word must appear (body or tags), ignoring
+// case and full-width forms; a leading # searches tags only.
+const fold = (value) => String(value ?? '').normalize('NFKC').toLocaleLowerCase();
+export const journalTerms = (query = '') => fold(query).split(/\s+/).filter(Boolean);
 export function findJournalEntries(entries, { query = '', tag = '', trash = false } = {}) {
-  const term = query.trim().toLocaleLowerCase();
+  const terms = journalTerms(query);
   return entries.filter((entry) => (entry.deletedAt != null) === trash && (!tag || entry.tags.includes(tag))
-    && (!term || `${entry.body}\n${entry.tags.join(' ')}`.toLocaleLowerCase().includes(term)));
+    && terms.every((term) => term.startsWith('#') && term.length > 1 ? entry.tags.some((value) => fold(value).includes(term.slice(1))) : fold(`${entry.body}\n${entry.tags.join(' ')}`).includes(term)));
+}
+// The line around the first hit, split for highlighting: { before, match, after }.
+// null when nothing in the body matches (the hit was in a tag).
+export function journalSnippet(body, query, radius = 18) {
+  const terms = journalTerms(query).filter((term) => !term.startsWith('#'));
+  const text = String(body ?? '').replace(/\s+/g, ' ').trim(), folded = fold(text);
+  let at = -1, length = 0;
+  for (const term of terms) { const index = folded.indexOf(term); if (index >= 0 && (at < 0 || index < at)) { at = index; length = term.length; } }
+  if (at < 0) return null;
+  if (folded.length !== text.length) return { before: text.slice(0, 48), match: '', after: text.length > 48 ? '…' : '' };
+  const start = Math.max(0, at - radius), end = Math.min(text.length, at + length + radius * 2);
+  return { before: (start ? '…' : '') + text.slice(start, at), match: text.slice(at, at + length), after: text.slice(at + length, end) + (end < text.length ? '…' : '') };
 }
 
 export function purgeJournalEntry({ storage, id, expectedVersion, now = Date.now(), target = globalThis.window } = {}) {

@@ -28,6 +28,8 @@
   .journal-entry-list button[aria-current=true] { box-shadow: inset 3px 0 0 #987341; background: #ead9af; }
   .journal-entry-list time, .journal-entry-list span { color: var(--journal-paper-faint); font-size: 12px; line-height: 16px; }
   .journal-entry-list strong { font: 14px/22px var(--px-font-body); white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
+  .journal-entry-list .journal-entry-snippet { color: var(--journal-paper-ink); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+  .journal-entry-snippet mark { color: inherit; background: #e8c46a99; padding: 0 1px; }
   .journal-entry-empty { padding: 20px 4px; }
   .journal-entry-history { border-top: 1px dashed var(--journal-rule); padding-top: 12px; }
   .journal-entry-history p, .journal-entry-history summary { color: var(--journal-paper-ink); font: 14px/24px var(--px-font-body); }

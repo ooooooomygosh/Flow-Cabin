@@ -63,7 +63,7 @@ export default function RoomCanvas({ layout, selected, reduced, dim, active = tr
     (async () => {
       const base = `/room-scenes/v21/furniture/${layout.theme}/`;
       const manifest = await json(base + 'manifest.json');
-      const shell = await load(`/room-scenes/v21/${layout.theme}/shell.png`);
+      const shell = await load(`/room-scenes/v21/${layout.theme}/shell.webp`);
       const files = [...new Set(Object.values(manifest.frames).map(f => f.file))];
       const atlases = Object.fromEntries(await Promise.all(files.map(async file => [file, await load(base + file)])));
       if (disposed) return;

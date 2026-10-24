@@ -109,8 +109,7 @@ try {
     await demo.getByRole('button', { name: '设置', exact: true }).click(); await demo.waitForTimeout(1300);
     await demo.getByRole('tab', { name: '关于', exact: true }).click(); await demo.waitForTimeout(900);
     await demo.getByRole('button', { name: '重新引导', exact: true }).click(); await demo.waitForTimeout(1800);
-    await demo.getByRole('button', { name: '开始设置', exact: true }).click(); await demo.waitForTimeout(2200);
-    await demo.getByRole('button', { name: '下一步', exact: true }).click(); await demo.waitForTimeout(1800);
+    await demo.getByRole('button', { name: '下一步', exact: true }).click(); await demo.waitForTimeout(2200);
     await demo.getByRole('button', { name: '下一步', exact: true }).click(); await demo.waitForTimeout(2200);
     await demo.getByRole('button', { name: '跳过引导', exact: true }).click(); await demo.waitForTimeout(900);
     await demo.locator('.focus-badge').click(); await demo.waitForTimeout(1500);

@@ -224,7 +224,7 @@
         "generator": "image_gen.imagegen",
         "originalFile": "exec-bb68a71b-356b-407e-a0d3-7a38fe6a6469.png",
         "references": [
-          "/room-scenes/v21/pixel/shell.png",
+          "/room-scenes/v21/pixel/shell.webp",
           "/room-scenes/v21/furniture/pixel/atlas.webp"
         ],
         "promptsFile": "prompts.json",
@@ -237,7 +237,7 @@
         "pixelsModified": false,
         "runtimeEncoding": "lossless-webp",
         "generationReferences": [
-          "/room-scenes/v21/pixel/shell.png",
+          "/room-scenes/v21/pixel/shell.webp",
           "/room-scenes/v21/furniture/pixel/atlas.png"
         ],
         "referenceNote": "Generation used the PNG references recorded in generationReferences. Current corner and furniture reference URLs point to their lossless WebP runtime equivalents; original PNG provenance is retained in the corresponding outputs archives."
@@ -528,7 +528,7 @@
         "generator": "image_gen.imagegen",
         "originalFile": "exec-c0167439-4141-417c-b0ba-0a9751ff3ad9.png",
         "references": [
-          "/room-scenes/v21/pixel/shell.png",
+          "/room-scenes/v21/pixel/shell.webp",
           "/room-scenes/v21/furniture/pixel/atlas.webp"
         ],
         "promptsFile": "prompts.json",
@@ -541,7 +541,7 @@
         "pixelsModified": false,
         "runtimeEncoding": "lossless-webp",
         "generationReferences": [
-          "/room-scenes/v21/pixel/shell.png",
+          "/room-scenes/v21/pixel/shell.webp",
           "/room-scenes/v21/furniture/pixel/atlas.png"
         ],
         "referenceNote": "Generation used the PNG references recorded in generationReferences. Current corner and furniture reference URLs point to their lossless WebP runtime equivalents; original PNG provenance is retained in the corresponding outputs archives."
@@ -759,7 +759,7 @@
         "generator": "image_gen.imagegen",
         "originalFile": "exec-4b2ef1cc-79e9-4702-87e6-2a918feec537.png",
         "references": [
-          "/room-scenes/v21/pixel/shell.png",
+          "/room-scenes/v21/pixel/shell.webp",
           "/room-scenes/v21/furniture/pixel/atlas.webp"
         ],
         "promptsFile": "prompts.json",
@@ -772,7 +772,7 @@
         "pixelsModified": false,
         "runtimeEncoding": "lossless-webp",
         "generationReferences": [
-          "/room-scenes/v21/pixel/shell.png",
+          "/room-scenes/v21/pixel/shell.webp",
           "/room-scenes/v21/furniture/pixel/atlas.png"
         ],
         "referenceNote": "Generation used the PNG references recorded in generationReferences. Current corner and furniture reference URLs point to their lossless WebP runtime equivalents; original PNG provenance is retained in the corresponding outputs archives."

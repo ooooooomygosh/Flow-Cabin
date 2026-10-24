@@ -3,7 +3,7 @@
   "theme": "seaside",
   "label": "海边小屋",
   "kind": "empty-room-shell",
-  "image": "shell.png",
+  "image": "shell.webp",
   "imageSize": {
     "width": 1536,
     "height": 1024
@@ -423,7 +423,7 @@
   "source": {
     "generator": "image_gen.imagegen",
     "generatedAt": "2026-10-23",
-    "reference": "/room-scenes/v21/pixel/shell.png",
+    "reference": "/room-scenes/v21/pixel/shell.webp",
     "referenceSha256": "05bb654bb6ea2c5328e372ea2ec0c9bf9247491e823a2eba3d2fa8b492d14372",
     "promptFile": "prompt.txt",
     "originalFile": "exec-7fba9571-d05b-4dd3-9f49-786c23cd82dd.png",

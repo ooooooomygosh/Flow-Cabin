@@ -225,7 +225,7 @@
         "originalFile": "exec-892db909-913c-4537-b59a-6dc5ea73434d.png",
         "references": [
           "/room-scenes/v21/pixel/corners/music.webp",
-          "/room-scenes/v21/night-study/shell.png",
+          "/room-scenes/v21/night-study/shell.webp",
           "/room-scenes/v21/furniture/night-study/atlas.webp"
         ],
         "promptsFile": "prompts.json",
@@ -239,7 +239,7 @@
         "runtimeEncoding": "lossless-webp",
         "generationReferences": [
           "/room-scenes/v21/pixel/corners/music.png",
-          "/room-scenes/v21/night-study/shell.png",
+          "/room-scenes/v21/night-study/shell.webp",
           "/room-scenes/v21/furniture/night-study/atlas.png"
         ],
         "referenceNote": "Generation used the PNG references recorded in generationReferences. Current corner and furniture reference URLs point to their lossless WebP runtime equivalents; original PNG provenance is retained in the corresponding outputs archives."
@@ -531,7 +531,7 @@
         "originalFile": "exec-d2f61a3d-1907-4f8f-87a7-3e7031f7fc22.png",
         "references": [
           "/room-scenes/v21/pixel/corners/work.webp",
-          "/room-scenes/v21/night-study/shell.png",
+          "/room-scenes/v21/night-study/shell.webp",
           "/room-scenes/v21/furniture/night-study/atlas.webp"
         ],
         "promptsFile": "prompts.json",
@@ -545,7 +545,7 @@
         "runtimeEncoding": "lossless-webp",
         "generationReferences": [
           "/room-scenes/v21/pixel/corners/work.png",
-          "/room-scenes/v21/night-study/shell.png",
+          "/room-scenes/v21/night-study/shell.webp",
           "/room-scenes/v21/furniture/night-study/atlas.png"
         ],
         "referenceNote": "Generation used the PNG references recorded in generationReferences. Current corner and furniture reference URLs point to their lossless WebP runtime equivalents; original PNG provenance is retained in the corresponding outputs archives."
@@ -764,7 +764,7 @@
         "originalFile": "exec-4ecfaa64-d27f-4464-abb8-e3d93a22f291.png",
         "references": [
           "/room-scenes/v21/pixel/corners/life.webp",
-          "/room-scenes/v21/night-study/shell.png",
+          "/room-scenes/v21/night-study/shell.webp",
           "/room-scenes/v21/furniture/night-study/atlas.webp"
         ],
         "promptsFile": "prompts.json",
@@ -778,7 +778,7 @@
         "runtimeEncoding": "lossless-webp",
         "generationReferences": [
           "/room-scenes/v21/pixel/corners/life.png",
-          "/room-scenes/v21/night-study/shell.png",
+          "/room-scenes/v21/night-study/shell.webp",
           "/room-scenes/v21/furniture/night-study/atlas.png"
         ],
         "referenceNote": "Generation used the PNG references recorded in generationReferences. Current corner and furniture reference URLs point to their lossless WebP runtime equivalents; original PNG provenance is retained in the corresponding outputs archives."

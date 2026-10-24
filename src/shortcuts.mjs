@@ -29,7 +29,8 @@ export const SHORTCUTS = Object.freeze([
   { id: 'focusSkip', keys: 'Control+Alt+G Alt+Meta+G', label: 'Ctrl/⌘+Alt+G', action: '跳过：提前结束本轮或跳过休息（桌面版，全局）', scope: 'app', desktop: true, global: true },
   { id: 'journal', keys: 'L', label: 'L', action: '打开小屋日记', scope: 'room' },
   { id: 'focusDisplay', keys: 'F', label: 'F', action: '沉浸（同 Z）', scope: 'room' },
-  { id: 'focusFaces', keys: 'ArrowLeft ArrowRight', label: '← →', action: '沉浸里上一首 / 下一首', scope: 'display' }
+  { id: 'focusFaces', keys: 'ArrowLeft ArrowRight', label: '← →', action: '沉浸里上一首 / 下一首', scope: 'display' },
+  { id: 'help', keys: '? Control+/ Meta+/', label: '? / Ctrl+/', action: '快捷键速查', scope: 'app' }
 ]);
 export const shortcut = (id) => SHORTCUTS.find((entry) => entry.id === id);
 export const ariaKeys = (id) => shortcut(id)?.keys || undefined;

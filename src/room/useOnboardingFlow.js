@@ -7,7 +7,9 @@ import { version as currentVersion } from '../../package.json';
 
 // First-run guide and the settings hub (section '' = closed; 'music/accounts'
 // is 音源 › 账户与文件夹), plus the window events and companion commands that open them.
-export default function useOnboardingFlow({ client, loading, loadError, firstVisit, itemCount, hubRequest, notify, homeFirst = false }) {
+// Both homes show the same short guide on a first run and the 新功能 sheet once
+// after an update.
+export default function useOnboardingFlow({ client, loading, loadError, firstVisit, itemCount, hubRequest, notify }) {
   const [hub, setHub] = useState('');
   const env = useMemo(() => onboardingModel.detectEnv(window), [client]);
   const playerAdapter = useMemo(() => createPlayerAdapter({ env, command: desktopCommand, request: musicRequest }), [env]);
@@ -20,12 +22,12 @@ export default function useOnboardingFlow({ client, loading, loadError, firstVis
     welcomeChecked.current = true;
     const plan = onboardingModel.launchPlan(current.current, { isNew: firstVisit && !itemCount, currentVersion });
     if (!plan.open) return;
-    // A resumed update keeps its saved step; only a new version gap starts at
-    // the release list. Restarting it on every launch would lose the user's place.
+    // A resumed guide keeps its saved step; an update only remembers which
+    // version the 新功能 sheet compares against.
     const next = onboardingModel.applyLaunchPlan(current.current, plan, currentVersion);
     if (next !== current.current) saveOnboarding(next);
     setWizardMode(plan.mode);
-    if (!homeFirst) setWizard(true);
+    setWizard(true);
   }, [loading, loadError, firstVisit, itemCount]);
   // An external request is an event, not persistent desired dialog state.
   // Effect replay (including Fast Refresh) must not reopen a dismissed request.
@@ -38,13 +40,12 @@ export default function useOnboardingFlow({ client, loading, loadError, firstVis
   const restartOnboarding = useCallback(() => { setHub(''); saveOnboarding(onboardingModel.reopen(current.current)); setWizardMode('manual'); setWizard(true); }, [saveOnboarding]);
   const closeWizard = useCallback((reason = 'later') => {
     setWizard(false);
-    // Version updates are a guided check, not a one-tap dismissal: closing one
-    // keeps it active so the next launch resumes at the same step.
-    const action = reason === 'skip' && wizardMode === 'update' ? 'later' : reason;
-    if (action === 'skip') saveOnboarding(onboardingModel.skip(current.current, currentVersion));
-    else if (action === 'done') saveOnboarding(onboardingModel.complete(current.current, currentVersion));
+    // The 新功能 sheet is seen as soon as it is closed, however that happens.
+    if (wizardMode === 'update' || current.current.fromVersion) { saveOnboarding(onboardingModel.dismissUpdate(current.current, currentVersion)); setWizardMode(''); return; }
+    if (reason === 'skip') saveOnboarding(onboardingModel.skip(current.current, currentVersion));
+    else if (reason === 'done') saveOnboarding(onboardingModel.complete(current.current, currentVersion));
     // 'later' keeps status 'active' so the next launch resumes this step.
-    setWizardMode(action === 'later' ? wizardMode : '');
+    setWizardMode(reason === 'later' ? wizardMode : '');
   }, [saveOnboarding, wizardMode]);
   // The guide's 更多音源 and the deck's 音源设置 open Settings on 音源 (or one page deeper).
   const openMusicSettings = useCallback((section = 'music') => setHub(section), []);

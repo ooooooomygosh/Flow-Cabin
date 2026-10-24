@@ -22,9 +22,6 @@
 .onboarding-eyebrow{font-size:12px;letter-spacing:.12em;color:var(--ob-accent)}
 .onboarding-step h3{font-size:24px;line-height:1.4;margin:6px 0 10px;outline-offset:4px}
 .onboarding-step p{font-size:13px;line-height:1.8;color:var(--ob-dim);margin:0 0 14px}
-.onboarding-list{list-style:none;padding:0;margin:0 0 14px;display:grid;gap:10px;font-size:13px}
-/* One numbered chip for step tabs and list items. */
-.onboarding-list b{display:inline-grid;place-items:center;width:20px;height:20px;margin-right:10px;border:2px solid var(--ob-edge);color:var(--ob-accent);font:400 12px/1 var(--px-font-cn);-webkit-font-smoothing:none}
 .onboarding-releases{display:grid;gap:8px;max-height:300px;overflow:auto;padding:1px 8px 1px 1px;scrollbar-gutter:stable}
 .onboarding-release{padding:10px 12px 9px;background:var(--ob-well);border:2px solid var(--ob-edge);border-left:5px solid var(--ob-accent)}
 .onboarding-release header{display:flex;align-items:baseline;gap:9px;margin-bottom:7px}
@@ -32,8 +29,6 @@
 .onboarding-release header strong{font-family:var(--px-font-cn);font-weight:400;font-size:12px;line-height:1.5}
 .onboarding-release ul{display:grid;gap:5px;margin:0;padding:0 0 0 16px;color:var(--ob-dim);font-size:12px;line-height:1.65}
 .onboarding-release li::marker{color:var(--ob-accent)}
-.onboarding-update-next{display:grid;gap:3px;margin-top:12px;padding:9px 11px;background:#0003;border:2px dashed var(--ob-edge);font-size:12px}
-.onboarding-update-next strong{color:var(--ob-ink)}.onboarding-update-next span{color:var(--ob-dim);line-height:1.6}
 .onboarding-sources{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:12px}
 .onboarding-sources button{position:relative;display:grid;gap:4px;text-align:left;padding:10px;min-width:0;background:var(--ob-well);color:var(--ob-ink);border:2px solid var(--ob-edge);border-radius:0;cursor:pointer;transition:border-color var(--px-dur-fast) steps(2,end)}
 .onboarding-sources button:disabled{opacity:.5;cursor:not-allowed}
@@ -54,6 +49,12 @@
 .onboarding-permissions li>span:first-child{display:grid;gap:3px;flex:1;min-width:0}.onboarding-permissions small{font-size:12px;color:var(--ob-dim)}
 .onboarding-permissions em{font-style:normal;font-size:12px;margin-left:8px;padding:1px 5px;border:1px solid var(--ob-edge);color:var(--ob-dim)}
 .onboarding-test{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px}.onboarding-test>span{display:flex;gap:8px}
+/* 可选权限: folded under the last step; each row still asks or points into 设置. */
+.onboarding-optional{margin:0 0 4px;border:2px solid var(--ob-edge);background:#0002}
+.onboarding-optional>summary{padding:8px 12px;color:var(--ob-dim);font-size:12px;cursor:pointer}
+.onboarding-optional>summary:hover,.onboarding-optional[open]>summary{color:var(--ob-ink)}
+.onboarding-optional>.onboarding-permissions{padding:0 8px 8px}
+.onboarding-optional>small{display:block;padding:0 12px 10px;color:var(--ob-dim);font-size:12px;line-height:1.6}
 .onboarding-summary{display:grid;grid-template-columns:auto 1fr;gap:8px 16px;margin:0 0 14px;padding:12px;background:var(--ob-well);border:2px solid var(--ob-edge);font-size:13px}.onboarding-summary dt{color:var(--ob-dim)}.onboarding-summary dd{margin:0}
 /* 键鼠陪伴: shared by the update guide and 设置 › 键鼠陪伴. */
 .typing-companion{margin:0 0 12px;padding:12px;background:var(--ob-well);border:2px solid var(--ob-edge)}
@@ -81,11 +82,43 @@
 @media(max-height:700px){.onboarding-layout{min-height:0}.onboarding-step h3{font-size:20px}.onboarding-progress{padding:10px 0}.onboarding-footer{margin-top:12px;padding-top:10px}}
 @media(max-width:760px){.onboarding-layout{grid-template-columns:1fr}.onboarding-scene{display:none}.onboarding-footer{flex-wrap:wrap}.onboarding-footer>small{display:none}.typing-companion-stats{grid-template-columns:1fr 1fr}.typing-companion-head{flex-wrap:wrap}}
 
+/* 新功能: one calm sheet after an update; older releases fold away. */
+.onboarding.whats-new{width:min(560px,calc(100vw - 24px))}
+.whats-new .cabin-dialog-body{padding:0 calc(var(--ob-u)*6) calc(var(--ob-u)*5)}
+.whats-new-title{margin:6px 0 10px;font:400 24px/1.4 var(--px-font-cn)}
+.whats-new-gap{margin:0 0 12px;color:var(--ob-dim);font-size:13px;line-height:1.7}
+.whats-new-list{display:grid;gap:8px;margin:0 0 14px;padding:0;list-style:none}
+.whats-new-list li{position:relative;padding:8px 10px 8px 26px;background:var(--ob-well);border:2px solid var(--ob-edge);font-size:13px;line-height:1.7}
+.whats-new-list li::before{content:'';position:absolute;left:10px;top:15px;width:6px;height:6px;background:var(--ob-accent)}
+.whats-new-older>summary{padding:6px 0;color:var(--ob-dim);font-size:12px;cursor:pointer}
+.whats-new-older>summary:hover{color:var(--ob-ink)}
+.whats-new-older .onboarding-releases{max-height:260px;margin-top:6px}
+
 /* settings hub: one fixed size, so switching tabs never resizes the dialog; the panel scrolls. */
 .settings-hub.cabin-dialog.is-lg{width:min(920px,calc(100vw - 32px));height:min(640px,calc(100dvh - 32px));max-height:none}
 .settings-hub .cabin-dialog-body{display:flex;flex:1;min-height:0;overflow:hidden;padding:0}
 .settings-hub-layout{flex:1;display:grid;grid-template-columns:150px minmax(0,1fr);min-height:0}
-.settings-hub-nav{display:grid;align-content:start;gap:4px;padding:16px 0 16px 16px;overflow:auto}
+.settings-hub-side{display:flex;flex-direction:column;min-height:0}
+.settings-hub-nav{display:grid;align-content:start;gap:4px;padding:8px 0 16px 16px;overflow:auto}
+/* 搜索设置: one field above the sections; results replace the panel while it has text. */
+.settings-hub-search{position:relative;display:flex;align-items:center;gap:6px;margin:16px 0 0 16px;padding:0 6px 0 8px;min-height:32px;color:var(--ob-dim);background:var(--ob-well);border:2px solid var(--ob-edge)}
+.settings-hub-search:focus-within{border-color:var(--ob-accent);color:var(--ob-ink)}
+.settings-hub-search input{flex:1;min-width:0;width:100%;height:28px;padding:0;color:var(--ob-ink);background:none;border:0;outline:0;font-size:12px}
+.settings-hub-search input::-webkit-search-cancel-button{display:none}
+.settings-hub .settings-hub-search input,.settings-hub .settings-hub-search input:focus,.settings-hub .settings-hub-search input:focus-visible{border:0;outline:0;box-shadow:none;background:none;min-height:0}
+.settings-hub-clear{display:grid;place-items:center;width:20px;height:20px;padding:0;color:var(--ob-dim);background:none;border:0;cursor:pointer}.settings-hub-clear:hover{color:var(--ob-ink)}
+.settings-hub-count{margin-left:6px;padding:0 4px;color:var(--px-bg);background:var(--ob-accent);font-size:12px;line-height:16px}
+.settings-hub-nav button:disabled{opacity:.4;cursor:default}
+.settings-hub-results{display:grid;gap:4px;margin:0;padding:0;list-style:none}
+.settings-hub-results button{display:flex;align-items:center;gap:8px;width:100%;min-height:44px;padding:4px 12px;text-align:left;color:var(--ob-ink);background:var(--ob-well);border:2px solid var(--ob-edge);border-radius:0;font:inherit;cursor:pointer}
+.settings-hub-results button:hover,.settings-hub-results button:focus-visible{border-color:var(--ob-accent)}
+.settings-hub-results button>span{display:grid;gap:1px;flex:1;min-width:0}
+.settings-hub-results strong{font:400 12px/16px var(--px-font-cn);-webkit-font-smoothing:none}
+.settings-hub-results small{color:var(--ob-dim);font-size:12px;line-height:1.35}
+.settings-hub-empty{display:grid;gap:6px;padding:28px 12px;text-align:center;color:var(--ob-dim);font-size:12px}
+.settings-hub-empty strong{color:var(--ob-ink);font:400 12px/1.5 var(--px-font-cn)}
+.settings-hub-panel .is-found{outline:2px solid var(--ob-accent);outline-offset:2px;animation:hub-found 1.8s steps(6,end)}
+@keyframes hub-found{0%,30%{outline-color:var(--ob-accent)}100%{outline-color:transparent}}
 .settings-hub-nav button{text-align:left;padding:8px 10px;background:none;color:var(--ob-dim);border:2px solid transparent;border-radius:0;font-size:12px;cursor:pointer}
 .settings-hub-nav button:hover{color:var(--ob-ink)}
 .settings-hub-nav button[aria-selected=true]{color:var(--ob-ink);background:var(--ob-well);border-color:var(--ob-accent)}
@@ -95,7 +128,7 @@
 .hub-row-actions .pixel-button svg{order:1}
 .hub-toggle{display:inline-flex;align-items:center;gap:8px;font-size:12px}.hub-toggle input{width:18px;height:18px;accent-color:var(--ob-accent)}
 /* 快捷键: key caps in a grid instead of one long sentence. */
-.hub-shortcuts-row{align-items:flex-start;padding:8px 12px}.hub-shortcuts-row>span:first-child{flex:1}
+.hub-shortcuts-row{align-items:flex-start;padding:8px 12px}.hub-shortcuts-row>span:first-child{flex:1}.hub-shortcuts-row .onboarding-text{justify-self:start;padding:0}
 .hub-shortcuts{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:4px 16px;margin:4px 0 0}
 .hub-shortcuts div{display:flex;align-items:baseline;gap:8px;min-width:0;font-size:12px;line-height:20px}
 .hub-shortcuts dt{flex:none;padding:0 5px;line-height:18px;color:var(--px-ink);background:var(--px-surface-3);border:1px solid var(--ob-edge);box-shadow:1px 1px 0 var(--px-shadow);white-space:nowrap}
@@ -115,7 +148,7 @@
 .hub-back{justify-self:start;display:inline-flex;align-items:center;gap:4px;padding:4px 8px 4px 4px;color:var(--ob-dim);background:none;border:2px solid transparent;font-size:12px;cursor:pointer}.hub-back:hover{color:var(--ob-ink);border-color:var(--ob-edge)}
 .hub-focus-settings{padding:12px;background:var(--ob-well);border:2px solid var(--ob-edge)}
 .hub-focus-settings .focus-settings-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
-@media(max-width:700px){.settings-hub-layout{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}.settings-hub-nav{grid-auto-flow:column;grid-auto-columns:max-content;padding:8px 12px 0}.settings-hub-panel{padding:12px}.hub-row{flex-wrap:wrap}.hub-focus-settings .focus-settings-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:700px){.settings-hub-layout{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}.settings-hub-search{margin:8px 12px 0}.settings-hub-nav{grid-auto-flow:column;grid-auto-columns:max-content;padding:8px 12px 0}.settings-hub-panel{padding:12px}.hub-row{flex-wrap:wrap}.hub-focus-settings .focus-settings-grid{grid-template-columns:1fr 1fr}}
 /* moved from the retired cabin-welcome.css */
 @media(prefers-reduced-motion:no-preference){html:not([data-desktop-reduce-motion=true]) .focus-dock,html:not([data-desktop-reduce-motion=true]) .shelf-filters{animation:welcome-step-in .18s ease-out}}
 @keyframes welcome-step-in{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
