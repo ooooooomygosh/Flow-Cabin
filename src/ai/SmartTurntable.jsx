@@ -9,6 +9,7 @@ import {
   parseAiPlaylist, parseIntent, smartPlaylistItem
 } from './smart-turntable.mjs';
 import { fallbackFollowUp, fallbackNotice, progressSteps } from './smart-progress.mjs';
+import useBackLayer from '../ui/useBackLayer';
 import './smart-turntable.css';
 
 const FOCUSABLE = 'button:not(:disabled), textarea:not(:disabled), input:not(:disabled), [tabindex]:not([tabindex="-1"])';
@@ -36,6 +37,8 @@ export default function SmartTurntable({ open, close, items = [], onStart, onSav
   const configured = aiConnectionReady(settings, key, { desktop: isDesktopShell() });
   const abortRequest = () => { request.current?.abort(); request.current = null; };
   const dismiss = () => { abortRequest(); close?.(); };
+  // Not a native <dialog>: register with the back stack so Android's back button closes it.
+  useBackLayer(Boolean(open), dismiss, 'smart-turntable');
 
   useEffect(() => {
     if (!open) {

@@ -6,6 +6,7 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import assert from 'node:assert/strict';
 import { launchChromium } from './launch-browser.mjs';
+import { onboardingSeed } from './app-version.mjs';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'), output = path.join(root, 'mobile-test-results');
 await fs.mkdir(output, { recursive: true });
 const report = { bridge: 'deterministic mock', nativeDeviceTested: false, checks: [], errors: [] };
@@ -14,7 +15,7 @@ const wav = Buffer.alloc(44 + 8000 * 2 * 60);
 wav.write('RIFF'); wav.writeUInt32LE(wav.length - 8, 4); wav.write('WAVEfmt ', 8); wav.writeUInt32LE(16, 16); wav.writeUInt16LE(1, 20); wav.writeUInt16LE(1, 22); wav.writeUInt32LE(8000, 24); wav.writeUInt32LE(16000, 28); wav.writeUInt16LE(2, 32); wav.writeUInt16LE(16, 34); wav.write('data', 36); wav.writeUInt32LE(wav.length - 44, 40);
 let server, browser, page;
 const db = new Map([
-  ['flow-cabin-onboarding-v1', JSON.stringify({ version: 2, status: 'done', step: 'done', seenVersion: '1.21.6' })],
+  ['flow-cabin-onboarding-v1', onboardingSeed()],
   ['album-circle-focus-v1:local-owner', JSON.stringify({ settings: { notify: false, chime: false } })],
   ['album-circle-performance-v1', 'low']
 ]), files = [], account = { qqLoggedIn: false, neteaseLoggedIn: false, quality: 'exhigh', qualities: [{ id: 'standard', label: '标准' }, { id: 'exhigh', label: '高品质' }] };
