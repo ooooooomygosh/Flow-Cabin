@@ -58,7 +58,9 @@ function createLyricWindow({ getSite, registerProtocol, screen, ipcMain, Browser
     if (!window || window.isDestroyed()) return;
     const ignore = saved.locked && !hoverLock;
     window.setIgnoreMouseEvents(ignore, ignore ? { forward: true } : undefined);
-    window.setFocusable(!saved.locked);
+    // Changing focusability on Windows drops the topmost flag, so put the bar back on top after it.
+    if (window.isFocusable() !== !saved.locked) window.setFocusable(!saved.locked);
+    window.setAlwaysOnTop(true, 'floating');
     send('cabin-lyrics:state', { locked: saved.locked });
   };
   async function poll() {
