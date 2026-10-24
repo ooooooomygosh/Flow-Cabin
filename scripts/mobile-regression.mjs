@@ -16,6 +16,7 @@ wav.write('RIFF'); wav.writeUInt32LE(wav.length - 8, 4); wav.write('WAVEfmt ', 8
 let server, browser, page;
 const db = new Map([
   ['flow-cabin-onboarding-v1', onboardingSeed()],
+  ['flow-cabin-interface-v1', 'classic'], // these flows drive the classic shelf; the native store replaces the launcher's localStorage pin
   ['album-circle-focus-v1:local-owner', JSON.stringify({ settings: { notify: false, chime: false } })],
   ['album-circle-performance-v1', 'low']
 ]), files = [], account = { qqLoggedIn: false, neteaseLoggedIn: false, quality: 'exhigh', qualities: [{ id: 'standard', label: '标准' }, { id: 'exhigh', label: '高品质' }] };
