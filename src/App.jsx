@@ -69,7 +69,7 @@ export default function App() {
       {mode === 'classic' && <ClassicTitlebar items={items} loading={loading} onAdd={() => setAdding({query:''})} onWall={() => setWall(true)} onBeta={() => setInterfaceOpen(true)} onSettings={() => setHubRequest({section:'music',at:Date.now()})} notify={notify}/>}
       <main className="app-cabin">
         {error && <p className="app-error" role="alert">{error}<button type="button" disabled={loading} onClick={reload}>{loading ? '正在重试…' : '重试'}</button></p>}
-        <Suspense fallback={<p role="status">正在打开小屋…</p>}><Room items={items} loading={loading} loadError={error} reload={reload} firstVisit={firstVisit} hubRequest={hubRequest} openBackup={() => setBackup(true)} openWall={() => setWall(true)} notify={notify} openRecord={setRecordId} openAdd={(query = '') => setAdding({ query })} saveToShelf={saveToShelf}/></Suspense>
+        <Suspense fallback={<p role="status">正在打开小屋…</p>}><Room items={items} loading={loading} loadError={error} reload={reload} firstVisit={firstVisit} hubRequest={hubRequest} openBackup={() => setBackup(true)} openWall={() => setWall(true)} notify={notify} openRecord={setRecordId} openAdd={(query = '', tab) => setAdding({ query, tab })} saveToShelf={saveToShelf}/></Suspense>
       </main>
       <ToastStack toasts={toasts} dismiss={dismissToast}/>
       <ShortcutSheet/>
