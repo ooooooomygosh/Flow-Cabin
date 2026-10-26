@@ -44,7 +44,7 @@ try {
   const page = await context.newPage(); page.on('pageerror', e => report.errors.push(e.message));
   await page.goto(origin); await page.locator('.home-world canvas').waitFor();
   const intro = page.getByRole('button', { name: '知道了', exact: true }); if (await intro.isVisible()) await intro.click();
-  await page.getByRole('region', { name: '正在播放', exact: true }).getByRole('button', { name: '放一张唱片', exact: true }).click(); // the bar's empty state opens 唱片架
+  await page.locator('.home-shortcuts').getByRole('button', { name: '唱片架', exact: true }).click();
   await page.getByRole('button', { name: '播放 雨天练习', exact: true }).click();
   await page.waitForFunction(() => [...document.querySelectorAll('[data-cabin-audio-host] audio')].some(a => !a.paused && a.currentTime > .1));
   await page.locator('.cabin-dialog-close').last().click();
@@ -89,7 +89,9 @@ try {
   }
   report.checks.push('50 corner switches preserve the same playing audio element and exactly two decks');
   await page.screenshot({ path: path.join(output, 'desktop-corner.png') });
-  await page.getByRole('button', { name: '随手记', exact: true }).first().click();
+  // 3.0: 随手记 left the top bar; the desk's 笔记本 still opens it from the home.
+  await page.locator('.home-accessible-furniture summary').click();
+  await page.locator('.home-accessible-furniture').getByRole('button', { name: '笔记本', exact: true }).click();
   const note = page.getByRole('textbox').filter({ visible: true });
   // Read the actual note surface, and report its opening separately from storage tests.
   assert.ok(await page.getByRole('dialog').count()); report.checks.push('notes open directly from the home');

@@ -43,7 +43,7 @@ try {
   });
   const page = await context.newPage(); page.setDefaultTimeout(15000);
   page.on('pageerror', e => report.pageErrors.push(e.message));
-  const enterRoom = async () => { await page.getByRole('button', { name: '设置', exact: true }).click(); await page.getByRole('tab', { name: '房间与桌宠', exact: true }).click(); await page.getByRole('button', { name: '走进生活小屋', exact: true }).click(); };
+  const enterRoom = async () => { await page.getByRole('button', { name: '设置', exact: true }).click(); await page.getByRole('tab', { name: '小屋与奶糖', exact: true }).click(); await page.getByRole('button', { name: '走进生活小屋', exact: true }).click(); };
   const open = async () => { await page.goto(origin); await enterRoom(); };
   const ready = async theme => {
     await page.locator(`.room2-canvas[data-art-theme="${theme}"][data-art-ready=true]`).waitFor();

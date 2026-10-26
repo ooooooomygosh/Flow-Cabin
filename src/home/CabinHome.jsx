@@ -3,7 +3,9 @@ import { useCabinRuntime } from '../runtime/CabinRuntime';
 import { DesktopControls } from '../desktop-client';
 import PixelCat from '../pet/PixelCat';
 import Dialog from '../Dialog';
-import { Down as ChevronDown, ChevronLeft, ChevronRight, Play, Pause, BookOpen, Clock, Library, Grid3X3, Settings, Heart } from '../icons';
+import { Down as ChevronDown, ChevronLeft, ChevronRight, Play, Pause, BookOpen, Clock, Library, Heart } from '../icons';
+import useLabs from '../product/useLabs';
+import { NAV_ENTRIES, hotspotItems, gearMenu, gatedAction } from './shell-model.mjs';
 import { FURNITURE, THEMES, bounds, unproject, defaultLayout, readLayout, saveLayout, createHistory, placeFurniture, addFurniture, removeFurniture, migrateLayout, LAYOUT_CHANGED, LAYOUT_PREFIX } from './spatial-layout.mjs';
 import { downloadBlob } from '../lib/download.mjs';
 import RoomCanvas, { prefetchRoomArt } from './RoomCanvas';
@@ -18,6 +20,7 @@ import { ZONE_ORDER, ZONE_NAMES, zoneSpots, TIMING, ZOOM, PUSH, PHONE_WIDTH, TAP
 import { cornerReady, preloadCorners, whenIdle } from './corner-assets.mjs';
 import './home.css';
 import NowPlayingBar from '../listen/NowPlayingBar';
+import './shell.css';
 
 const shortDate = date => date.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' });
 const typingTarget = target => target?.closest?.('input,textarea,select,[contenteditable="true"],[contenteditable=""],[role=slider],[role=tablist],[role=radiogroup],[role=listbox],[role=menu],.room-turntable');
@@ -75,6 +78,7 @@ export default function CabinHome({ reduced = false, editRequest = 0, focusOpen 
   const [furnitureManifest, setFurnitureManifest] = useState(null), [artTheme, setArtTheme] = useState(''), [artAttempt, setArtAttempt] = useState(0);
   useEffect(() => { let alive = true; setFurnitureManifest(null); fetch(`/room-scenes/v21/furniture/${look}/manifest.json`).then(r => r.json()).then(v => alive && setFurnitureManifest(v)).catch(() => {}); return () => { alive = false; }; }, [look, artAttempt]);
   const [editing, setEditing] = useState(false), [drawer, setDrawer] = useState(''), [selected, setSelected] = useState('');
+  const [roomMenu, setRoomMenu] = useState(false), labs = useLabs();
   const firstZone = useRef(null); if (firstZone.current === null) firstZone.current = readZone(globalThis.localStorage, innerWidth);
   // zone: where the person is (buttons, Esc, memory). corner: the close view on the strip (kept while leaving).
   // phase: overview → zoom (dolly in while the art decodes) → reveal (cross-fade) → corner → unreveal (fade out) → zoomout → overview.
@@ -140,16 +144,33 @@ export default function CabinHome({ reduced = false, editRequest = 0, focusOpen 
   const overview = zone === 'all', stripShown = phase !== 'overview', cornerShown = phase === 'reveal' || phase === 'corner', settled = phase === 'corner';
   const artReady = artTheme === shown.theme;
   const finishEditing = () => { setEditing(false); setDrawer(''); setSelected(''); };
+  const startEditing = () => { setRoomMenu(false); setZone('all'); setEditing(true); setDrawer('decorate'); };
   editingRef.current = editing;
   useBackLayer(!overview && !editing, () => setZone('all'), 'corner');
   useBackLayer(editing, finishEditing, 'decorate');
+  // 房间名下拉：选择小屋 / 布置小屋. Esc (back stack) or a press outside closes it.
+  const roomMenuRef = useRef(null);
+  useBackLayer(roomMenu, () => setRoomMenu(false), 'room-menu');
+  useEffect(() => {
+    if (!roomMenu) return undefined;
+    roomMenuRef.current?.querySelector('[role=menuitem]')?.focus();
+    const away = event => { if (!roomMenuRef.current?.contains(event.target)) setRoomMenu(false); };
+    document.addEventListener('pointerdown', away, true); return () => document.removeEventListener('pointerdown', away, true);
+  }, [roomMenu]);
+  const roomMenuKeys = event => {
+    const list = [...event.currentTarget.querySelectorAll('[role=menuitem]')], index = list.indexOf(document.activeElement), step = { ArrowDown: 1, ArrowUp: -1 }[event.key];
+    if (step) { event.preventDefault(); list[(index + step + list.length) % list.length]?.focus(); }
+    else if (event.key === 'Tab') setRoomMenu(false);
+  };
+  const spotsById = useMemo(() => hotspotItems(shown.items), [shown]);
+  const gear = gearMenu(labs);
   const scale = Math.min(viewport.width / 1200, viewport.height / 800);
   // The overview camera: fitted to the frame, or dollied toward the corner being entered or left.
   const zoomed = !reduced && ['zoom', 'reveal', 'corner', 'unreveal'].includes(phase);
   const spots = useMemo(() => zoneSpots(shown.items.map(item => ({ type: item.type, ...bounds(item) }))), [shown]);
   const camera = worldCamera(viewport.width, viewport.height, zoomed ? spots[corner] : null, phase === 'zoom' ? ZOOM : ZOOM * PUSH);
   const worldMotion = reduced ? undefined : { zoom: `transform ${TIMING.zoom}ms cubic-bezier(.55,0,.3,1)`, reveal: `transform ${TIMING.reveal + 60}ms cubic-bezier(.2,.7,.2,1)`, corner: 'none', unreveal: 'none', zoomout: `transform ${TIMING.zoomOut}ms cubic-bezier(.25,.75,.25,1)` }[phase];
-  const worldStyle = { transform: cameraTransform(camera), transition: worldMotion, visibility: settled ? 'hidden' : undefined };
+  const worldStyle = { transform: cameraTransform(camera), transition: worldMotion, visibility: settled ? 'hidden' : undefined, '--world-scale': camera.scale };
   // The strip is moved by hand (no re-render per pointer move); the page dots follow its fractional page.
   const paintDots = progress => dotLevels(progress).forEach((level, i) => dots.current[i]?.style.setProperty('--lit', level.toFixed(3)));
   const place = (offset = 0, duration = 0) => {
@@ -228,7 +249,9 @@ export default function CabinHome({ reduced = false, editRequest = 0, focusOpen 
     if (suppressClick.current) { suppressClick.current = false; return; }
     if (editing) { setSelected(item.id); setDrawer('decorate'); return; }
     if (item.type === 'lamp' || item.type === 'curtain') { setDim(value => !value); return; }
-    commands.open(FURNITURE[item.type].action);
+    // The three hotspots open the three pillars; other furniture never opens a feature whose lab is off.
+    const action = spotsById.get(item.id)?.action || gatedAction(FURNITURE[item.type].action, labs);
+    if (action) commands.open(action);
   };
   const begin = (event, item) => {
     if (event.button !== 0) return;
@@ -256,8 +279,17 @@ export default function CabinHome({ reduced = false, editRequest = 0, focusOpen 
   return <section className={`cabin-home theme-${look} ${editing ? 'is-editing' : ''} ${!overview ? 'is-corner' : ''} ${cornerShown ? 'has-corner-view' : ''} ${reduced ? 'is-reduced' : ''}`} aria-label="生活小屋首页" data-zone={zone} data-phase={phase} data-corners-ready={preloaded || undefined}>
     <header className="home-header">
       <button type="button" className="home-pet-portrait" aria-expanded={petOpen} aria-label={`伙伴与装扮 · ${identity.name}`} onClick={() => commands.open('pet')}><PixelCat petId={identity.builtinId} accessory={identity.accessory} reduceMotion={reduced} label={identity.name}/></button>
-      <button type="button" className="home-room-name" aria-label="选择房间主题" onClick={() => setDrawer('themes')}><small>FLOW CABIN</small><span>{theme.name}<ChevronDown size={14}/></span></button>
-      <nav className="home-shortcuts" aria-label="小屋常用工具"><button type="button" onClick={() => commands.open('wall')}><Grid3X3 size={17}/><span>专辑墙</span></button><button type="button" onClick={() => commands.open('library')}><Library size={17}/><span>唱片库</span></button><button type="button" className="focus-badge" aria-expanded={focusOpen} onClick={() => commands.open('timer')}><Clock size={17}/><span>专注</span></button><button type="button" onClick={() => commands.open('notes')}><BookOpen size={17}/><span>随手记</span></button><button type="button" aria-pressed={editing} onClick={() => { if (editing) { setEditing(false); setDrawer(''); setSelected(''); } else { setZone('all'); setEditing(true); setDrawer('decorate'); } }}><Settings size={16}/><span>{editing ? '完成布置' : '布置'}</span></button></nav>
+      <div className="home-room-menu" ref={roomMenuRef}>
+        <button type="button" className="home-room-name" aria-label={`${theme.name} · 选择或布置小屋`} aria-haspopup="menu" aria-expanded={roomMenu} aria-controls="home-room-menu" onClick={() => setRoomMenu(open => !open)}><small>FLOW CABIN</small><span>{theme.name}<ChevronDown size={14}/></span></button>
+        {roomMenu && <div className="home-room-menu-list" id="home-room-menu" role="menu" aria-label="小屋" onKeyDown={roomMenuKeys}>
+          <button type="button" role="menuitem" onClick={() => { setRoomMenu(false); setDrawer('themes'); }}><span>选择小屋</span><small>换一间房间</small></button>
+          <button type="button" role="menuitem" onClick={() => { if (editing) { setRoomMenu(false); finishEditing(); } else startEditing(); }}><span>{editing ? '完成布置' : '布置小屋'}</span><small>{editing ? '保存现在的摆放' : '拖动家具、套用预设'}</small></button>
+        </div>}
+      </div>
+      {/* 3.0: three entries (唱片架 · 专注 · 日记); 专辑墙 lives inside 唱片架, 随手记 inside 专注 and 日记, 布置 under the room name. */}
+      <nav className="home-shortcuts" aria-label="小屋常用工具">{NAV_ENTRIES.map(entry => entry.id === 'focus'
+        ? <button type="button" key={entry.id} className="focus-badge" aria-expanded={focusOpen} onClick={() => commands.open(entry.action)}><Clock size={17}/><span>{entry.label}</span></button>
+        : <button type="button" key={entry.id} onClick={() => commands.open(entry.action)}>{entry.id === 'library' ? <Library size={17}/> : <BookOpen size={17}/>}<span>{entry.label}</span></button>)}{editing && <button type="button" className="home-finish-editing" aria-pressed="true" onClick={finishEditing}><span>完成布置</span></button>}</nav>
       <DesktopControls onSettings={() => setDrawer('menu')} onError={text => notify(text, { tone: 'error' })}/>
     </header>
     <div className="home-room-caption">{!overview && <button type="button" className="home-back-overview" onClick={() => setZone('all')}>‹ 返回全屋</button>}<span>{shortDate(new Date())}</span><p>{focus.state.timer.phase === 'focus' ? '留一点安静，做眼前的小事。' : playingTitle ? '唱片在转，时间慢一点。' : '灯亮着，慢慢来。'}</p></div>
@@ -267,11 +299,11 @@ export default function CabinHome({ reduced = false, editRequest = 0, focusOpen 
           <RoomCanvas layout={shown} selected={editing ? selected : ''} reduced={reduced} dim={dim || sky.state.bucket === 'night'} active={['overview', 'unreveal', 'zoomout'].includes(phase) && !covered} onPetPosition={placePetHit} onArtReady={setArtTheme} onRetry={() => setArtAttempt(n => n + 1)}/>
           <div className="home-art-veil" aria-hidden="true">正在布置小屋…</div>
           {!editing && <div className="home-zone-areas">{ZONE_ORDER.map(id => <button type="button" key={id} tabIndex={-1} className={`home-zone-area zone-${id}`} style={{ left: spots[id].floor.x, top: spots[id].floor.y }} aria-label={`走进${ZONE_NAMES[id]}`} onClick={() => setZone(id)}><span>{ZONE_NAMES[id]}</span></button>)}</div>}
-          <div className="home-furniture-layer">{shown.items.map(item => { const b = bounds(item), spec = FURNITURE[item.type]; return <button key={item.id} type="button" data-furniture={item.type} data-live={['clock', 'timer', 'tasks', 'calendar', 'weather', 'lyrics', 'deck', 'notes'].includes(item.type)} className={`home-furniture facing-${item.facing} ${intro && ['deck', 'clock'].includes(item.type) ? 'is-guided' : ''}`} aria-label={`${spec.name}${editing ? ' · 移动或调整' : ''}`} style={{ left: b.x, top: b.y, width: Math.max(b.w, 48 / scale), height: Math.max(b.h, 48 / scale), zIndex: Math.round(item.u + item.v + (item.z ? 20 : 0)) }} onClick={() => activate(item)} onPointerDown={e => begin(e, item)} onPointerMove={move} onPointerUp={end} onPointerCancel={end} onKeyDown={event => {
+          <div className="home-furniture-layer">{shown.items.map(item => { const b = bounds(item), spec = FURNITURE[item.type], spot = spotsById.get(item.id); return <button key={item.id} type="button" data-furniture={item.type} data-hotspot={spot?.id} data-live={['clock', 'timer', 'tasks', 'calendar', 'weather', 'lyrics', 'deck', 'notes'].includes(item.type)} className={`home-furniture facing-${item.facing} ${spot ? 'is-hotspot' : ''} ${intro && ['listen', 'focus'].includes(spot?.id) ? 'is-guided' : ''}`} aria-label={`${spec.name}${editing ? ' · 移动或调整' : spot ? ` · ${spot.verb}` : ''}`} style={{ left: b.x, top: b.y, width: Math.max(b.w, 48 / scale), height: Math.max(b.h, 48 / scale), zIndex: Math.round(item.u + item.v + (item.z ? 20 : 0)) }} onClick={() => activate(item)} onPointerDown={e => begin(e, item)} onPointerMove={move} onPointerUp={end} onPointerCancel={end} onKeyDown={event => {
             if (!editing || !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return;
             event.preventDefault(); const step = event.shiftKey ? 40 : 10, patch = item.mount.startsWith('wall-') ? { [item.mount === 'wall-left' ? 'v' : 'u']: (item.mount === 'wall-left' ? item.v : item.u) + (event.key === 'ArrowLeft' ? -step : event.key === 'ArrowRight' ? step : 0), z: item.z + (event.key === 'ArrowUp' ? step : event.key === 'ArrowDown' ? -step : 0) } : { u: item.u + (event.key === 'ArrowLeft' ? -step : event.key === 'ArrowRight' ? step : 0), v: item.v + (event.key === 'ArrowUp' ? -step : event.key === 'ArrowDown' ? step : 0) };
             mutate(() => placeFurniture(layout, item.id, patch));
-          }}><FurnitureLive item={item} manifest={furnitureManifest}/><span className="home-furniture-label">{spec.name}</span></button>; })}</div>
+          }}><FurnitureLive item={item} manifest={furnitureManifest}/><span className="home-furniture-label" aria-hidden="true">{editing || !spot ? spec.name : spot.label}</span></button>; })}</div>
           <button type="button" className="home-pet-hit" ref={petHit} style={{ left: 612, top: 558 }} aria-label={`${identity.name} · 照顾伙伴`} onClick={() => commands.open('pet')}/>
         </div>
       </div>
@@ -286,12 +318,16 @@ export default function CabinHome({ reduced = false, editRequest = 0, focusOpen 
     </div>}
     <SleepIndicator/>
     {homeNotice ? <aside className="home-intro home-notice" aria-label="新的首页"><span><b>首页换成了生活小屋。</b>唱片、手记和专注记录都在，原版唱片架也随时可以换回。</span><button type="button" onClick={closeHomeNotice}>好的</button><button type="button" onClick={() => { closeHomeNotice(); window.dispatchEvent(new Event('cabin:interface-choice')); }}>改用原版</button></aside>
-    : intro && <aside className="home-intro" aria-label="小屋初次指引"><span>点唱机听歌，点钟开始专注。布置可以慢慢来。</span><button type="button" onClick={completeIntro}>知道了</button></aside>}
+    : intro && <aside className="home-intro" aria-label="小屋初次指引"><span>点唱机听歌，点书桌开始一段专注。</span><button type="button" onClick={completeIntro}>知道了</button></aside>}
     {store.error && <p className="home-layout-error" role="alert">{store.error}</p>}
     <footer className="home-footer"><NowPlayingBar/><nav className="home-zones" aria-label="房间区域" aria-keyshortcuts="0 1 2 3 ArrowLeft ArrowRight"><button type="button" aria-pressed={zone === 'all'} onClick={() => setZone('all')}>{overview ? '全屋' : '返回全屋'}</button>{ZONE_ORDER.map((id, i) => <button type="button" key={id} aria-pressed={zone === id} onClick={() => setZone(id)}><i className="home-zone-dot" aria-hidden="true" ref={el => { dots.current[i] = el; }}/>{ZONE_NAMES[id]}</button>)}</nav><button type="button" className="home-pet-return" aria-label="回到宠物" onClick={() => setZone('life')}><Heart size={16}/>{identity.name}</button></footer>
     <details className="home-accessible-furniture"><summary>家具与无障碍入口</summary><div>{layout.items.map(item => <button type="button" key={item.id} onClick={() => activate(item)}>{FURNITURE[item.type].name}</button>)}</div></details>
     {drawer && <Dialog title={drawer === 'themes' ? '选择小屋' : drawer === 'menu' ? '小屋日常' : '布置小屋'} close={() => setDrawer('')} className="home-tool home-editor" size="lg">
-      {drawer === 'menu' ? <nav className="home-menu-grid" aria-label="小屋功能">{[['recipes','场景配方'],['sleep','睡前模式'],['postcard','小屋明信片'],['weather','位置与天气'],['diagnostics','功能诊断'],['backup','备份与恢复'],['settings','全部设置'],['interface','改用原版唱片架']].map(([id,name]) => <button type="button" key={id} onClick={() => { setDrawer(''); commands.open(id); }}>{name}</button>)}</nav> : drawer === 'themes' ? <div className="home-theme-grid">{THEMES.map(t => <button type="button" key={t.id} aria-pressed={look === t.id} onPointerEnter={() => prefetchRoomArt(t.id)} onFocus={() => prefetchRoomArt(t.id)} onClick={() => { commands.theme(t.id); setDrawer(''); }}><img src={`/room-scenes/v21/${t.id}/shell.webp`} alt=""/><span>{t.name}</span></button>)}</div> : <>
+      {drawer === 'menu' ? <>
+        {/* 3.0: four everyday items; 位置与天气, 功能诊断 and the classic home live in 全部设置, lab items appear only while their lab is on. */}
+        <nav className="home-menu-grid" aria-label="小屋功能">{gear.core.map(([id, name]) => <button type="button" key={id} onClick={() => { if (id === 'themes') setDrawer('themes'); else if (id === 'decorate') startEditing(); else { setDrawer(''); commands.open(id); } }}>{name}</button>)}</nav>
+        {gear.lab.length > 0 && <nav className="home-menu-grid home-menu-labs" aria-label="实验室功能"><h3>实验室</h3>{gear.lab.map(([id, name]) => <button type="button" key={id} onClick={() => { setDrawer(''); commands.open(id); }}>{name}</button>)}</nav>}
+      </> : drawer === 'themes' ? <div className="home-theme-grid">{THEMES.map(t => <button type="button" key={t.id} aria-pressed={look === t.id} onPointerEnter={() => prefetchRoomArt(t.id)} onFocus={() => prefetchRoomArt(t.id)} onClick={() => { commands.theme(t.id); setDrawer(''); }}><img src={`/room-scenes/v21/${t.id}/shell.webp`} alt=""/><span>{t.name}</span></button>)}</div> : <>
         <p>拖动家具，或聚焦后用方向键微调。桌面小物会跟着桌子移动。</p>
         <div className="home-editor-actions"><button type="button" disabled={!store.canUndo} onClick={store.undo}>撤销</button><button type="button" disabled={!store.canRedo} onClick={store.redo}>重做</button><button type="button" className="home-primary" onClick={() => { setDrawer(''); setEditing(false); setSelected(''); }}>完成布置</button><button type="button" onClick={() => setDrawer('')}>到屋内拖动</button></div>
         <fieldset><legend>完整布置预设</legend>{[['listen', '听歌'], ['work', '工作'], ['rest', '休息']].map(([id, label]) => <button type="button" key={id} onClick={() => commit(defaultLayout(look, id))}>{label}</button>)}</fieldset>

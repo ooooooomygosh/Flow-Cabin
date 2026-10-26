@@ -72,7 +72,7 @@ try {
   await page.getByLabel('我的笔记').fill('重启后也留下的手机笔记'); await page.getByLabel('我的笔记').blur(); await page.getByText('已保存在这台手机', { exact: true }).waitFor();
   await page.screenshot({ path: path.join(output, 'android-record-card.png'), animations: 'disabled' }); await page.keyboard.press('Escape');
   await page.reload(); await page.locator('.room-record').waitFor(); assert.match(db.get('flow-cabin-web-collection-v1'), /重启后也留下的手机笔记/); check('reload-restores-native-collection-and-notes');
-  await page.getByRole('button', { name: '设置', exact: true }).first().tap(); await page.getByRole('tab', { name: '数据与备份', exact: true }).tap();
+  await page.getByRole('button', { name: '设置', exact: true }).first().tap(); await page.getByRole('tab', { name: '数据', exact: true }).tap();
   await page.getByText('这台手机的小屋', { exact: true }).waitFor(); await page.getByRole('button', { name: '收藏与备份', exact: true }).tap();
   await page.getByRole('button', { name: '导出备份', exact: true }).tap(); await page.getByText('备份已保存到你选择的位置。', { exact: true }).waitFor();
   const backup = JSON.parse(Buffer.from(files.at(-1).data, 'base64').toString('utf8')); assert.equal(backup.items[0].notes, '重启后也留下的手机笔记'); assert.equal(files.at(-1).mime, 'application/json'); check('backup-goes-through-native-save-picker-with-real-backup-data');
@@ -86,7 +86,7 @@ try {
   await page.getByText('《手机离线专辑》已放上唱片架。', { exact: true }).waitFor(); await page.keyboard.press('Escape'); await page.reload();
   await page.getByRole('button', { name: '选择 测试歌手 的 手机离线专辑', exact: true }).tap();
   assert.match(db.get('flow-cabin-android-music-v1'), /content:\/\/qa\/music\/2.wav/); check('system-picked-music-mapping-survives-renderer-reload');
-  await page.getByRole('button', { name: '设置', exact: true }).first().tap(); await page.getByRole('tab', { name: '音源', exact: true }).tap();
+  await page.getByRole('button', { name: '设置', exact: true }).first().tap(); await page.getByRole('tab', { name: '音乐', exact: true }).tap();
   await page.getByRole('radio', { name: '本地音乐', exact: true }).tap(); await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '选择 测试歌手 的 手机离线专辑', exact: true }).dblclick();
   await page.waitForFunction(() => [...document.querySelectorAll('audio')].some(a => a.src.includes('/music/1.wav') && !a.paused && a.currentTime > .1));
@@ -106,7 +106,7 @@ try {
     await page.screenshot({ path: path.join(output, `android-cutout-${width}x${height}-${left}-${right}.png`), animations:'disabled' }); check(`loaded-player-cutout-${width}x${height}-${left}-${right}`);
   }
   await page.setViewportSize({width:393,height:852}); await page.evaluate(() => { document.documentElement.style.setProperty('--safe-area-inset-left','0px');document.documentElement.style.setProperty('--safe-area-inset-right','0px'); });
-  await page.getByRole('button', { name:'设置',exact:true }).first().tap(); await page.getByRole('tab', {name:'音源',exact:true}).tap();
+  await page.getByRole('button', { name:'设置',exact:true }).first().tap(); await page.getByRole('tab', {name:'音乐',exact:true}).tap();
   assert.equal(await page.getByRole('radio', {name:'QQ 音乐',exact:true}).isEnabled(),true);
   assert.equal(await page.getByRole('radio', {name:'网易云音乐',exact:true}).isEnabled(),true);
   await page.getByRole('button', {name:'账户与文件夹',exact:true}).tap(); await page.getByRole('button', {name:'登录',exact:true}).first().tap();

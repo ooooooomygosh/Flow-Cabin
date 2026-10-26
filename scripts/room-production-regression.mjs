@@ -47,7 +47,7 @@ try {
   const {THEMES}=await import('../src/home/spatial-layout.mjs');
   for(let i=0;i<50;i++){
     const theme=THEMES[i%THEMES.length];
-    await page.getByRole('button',{name:'选择房间主题',exact:true}).click();
+    await page.locator('.home-room-name').click();await page.getByRole('menuitem',{name:/^选择小屋/}).click(); // 3.0: the room name opens a small menu
     await page.getByRole('dialog',{name:'选择小屋',exact:true}).getByRole('button',{name:theme.name,exact:true}).click();
     await page.locator(`.home-canvas[data-art-theme="${theme.id}"][data-art-ready=true]`).waitFor();
   }
@@ -56,7 +56,7 @@ try {
   await page.setViewportSize({width:412,height:915});
   await page.evaluate(()=>{document.documentElement.dataset.platform='android';document.documentElement.style.setProperty('--safe-area-inset-top','48px');document.documentElement.style.setProperty('--mobile-bottom','24px');document.documentElement.style.setProperty('--safe-area-inset-bottom','24px');});
   const header=await page.locator('.home-header').boundingBox();assert.ok(header.y>=48);
-  await page.getByRole('button',{name:'布置',exact:true}).click();
+  await page.locator('.home-room-name').click();await page.getByRole('menuitem',{name:/^布置小屋/}).click();
   const drawer=await page.getByRole('dialog',{name:'布置小屋',exact:true}).boundingBox();assert.ok(drawer.y>=48&&drawer.y+drawer.height<=892,JSON.stringify(drawer));
   await page.getByRole('dialog').getByRole('button',{name:'完成布置',exact:true}).click();
   await page.getByRole('navigation',{name:'房间区域'}).getByRole('button',{name:'工作角',exact:true}).click();await page.locator('.corner-clock').waitFor();

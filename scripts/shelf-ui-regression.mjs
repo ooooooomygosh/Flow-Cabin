@@ -42,7 +42,7 @@ try {
     finally{await context.close();}
   };
   for(const scene of ROOM_SCENES)await run(`shelf-${scene.id}-geometry-and-interaction`,async page=>{
-    await page.getByRole('button',{name:'设置',exact:true}).click();await page.getByRole('tab',{name:'房间与桌宠',exact:true}).click();await page.getByRole('button',{name:`选择场景 ${scene.label}`,exact:true}).click();await page.keyboard.press('Escape');
+    await page.getByRole('button',{name:'设置',exact:true}).click();await page.getByRole('tab',{name:'小屋与奶糖',exact:true}).click();await page.getByRole('button',{name:`选择场景 ${scene.label}`,exact:true}).click();await page.keyboard.press('Escape');
     for(const [width,height] of [[1440,900],[960,600],[640,600]]){
       await page.setViewportSize({width,height});await page.waitForFunction(()=>[...document.querySelectorAll('.room-record .pixel-artwork canvas')].every(c=>c.classList.contains('is-painted')));
       await page.mouse.move(0,height-1);await shot(page,`${scene.id}-${width}x${height}`);
@@ -58,7 +58,7 @@ try {
   });
   const photos=await showcaseAlbums();
   await run('shelf-photographic-covers-and-fine-type',async page=>{
-    await page.getByRole('button',{name:'设置',exact:true}).click();await page.getByRole('tab',{name:'房间与桌宠',exact:true}).click();await page.getByRole('button',{name:'选择场景 琥珀小屋',exact:true}).click();await page.keyboard.press('Escape');
+    await page.getByRole('button',{name:'设置',exact:true}).click();await page.getByRole('tab',{name:'小屋与奶糖',exact:true}).click();await page.getByRole('button',{name:'选择场景 琥珀小屋',exact:true}).click();await page.keyboard.press('Escape');
     await page.setViewportSize({width:2560,height:1600});await page.mouse.move(0,1599);await page.waitForFunction(()=>[...document.querySelectorAll('.room-record .pixel-artwork canvas')].every(c=>c.classList.contains('is-painted')));await shot(page,'photos-warm-2560x1600');
     for(const index of [0,1,2,6])await page.locator('.room-record-slot').nth(index).screenshot({path:path.join(output,`photo-cell-${index}.png`),animations:'disabled'});
     report.measurements.push({photos:await page.locator('.room-record .pixel-artwork canvas').evaluateAll(cs=>cs.map(c=>({width:c.getBoundingClientRect().width,resolution:c.width})))});
@@ -79,7 +79,7 @@ try {
     await shot(page,'header-before-interaction');
     assert.equal(await page.locator('.app-titlebar').getByRole('button',{name:/^(设置|软件设置|显示与字体)$/}).count(),1,'one settings gear');
     assert.equal(await page.getByRole('button',{name:'最大化或还原窗口',exact:true}).count(),0,'no second square');
-    const settings=page.getByRole('button',{name:'设置',exact:true});assert.equal((await settings.innerText()).trim(),'','settings is icon-only');await settings.focus();await page.keyboard.press('Enter');await page.getByRole('tab',{name:'显示与桌面',exact:true}).click();await page.getByRole('button',{name:'打开显示与字体',exact:true}).click();assert.match(await page.evaluate(()=>window.__nativeCommands.at(-1)),/\/settings$/);await page.keyboard.press('Escape');await settings.waitFor();assert.equal(await settings.evaluate(e=>e===document.activeElement),true);
+    const settings=page.getByRole('button',{name:'设置',exact:true});assert.equal((await settings.innerText()).trim(),'','settings is icon-only');await settings.focus();await page.keyboard.press('Enter');await page.getByRole('tab',{name:'桌面',exact:true}).click();await page.getByRole('button',{name:'打开显示与字体',exact:true}).click();assert.match(await page.evaluate(()=>window.__nativeCommands.at(-1)),/\/settings$/);await page.keyboard.press('Escape');await settings.waitFor();assert.equal(await settings.evaluate(e=>e===document.activeElement),true);
     const enter=page.getByRole('button',{name:'进入全屏模式',exact:true});await enter.click();assert.match(await page.evaluate(()=>window.__nativeCommands.at(-1)),/\/fullscreen$/);assert.equal(await enter.getAttribute('aria-pressed'),'false','wait for native confirmation');
     await page.evaluate(()=>{document.documentElement.dataset.desktopFullscreen='true';window.dispatchEvent(new CustomEvent('album-desktop-fullscreen',{detail:true}));});
     assert.equal(await page.getByRole('button',{name:'退出全屏模式',exact:true}).getAttribute('aria-pressed'),'true');assert.equal(await page.getByRole('button',{name:/^退出全屏(模式)?$/}).count(),1);await page.getByRole('button',{name:'收起工具',exact:true}).click();assert.equal(await page.getByRole('button',{name:/^退出全屏(模式)?$/}).count(),1);await page.getByRole('button',{name:'显示工具',exact:true}).click();assert.equal(await page.getByRole('button',{name:/^退出全屏(模式)?$/}).count(),1);await page.getByRole('button',{name:'隐藏工具',exact:true}).click();await page.getByRole('button',{name:'退出全屏',exact:true}).click();assert.match(await page.evaluate(()=>window.__nativeCommands.at(-1)),/\/fullscreen-exit$/);await shot(page,'immersive-fullscreen-recovery');

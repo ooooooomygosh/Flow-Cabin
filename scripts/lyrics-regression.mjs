@@ -131,7 +131,7 @@ try {
 
   // 6. Every room's skin, desktop and phone.
   for (const [id, name] of [['rain-train', '雨夜列车书房'], ['starlight', '星光小屋'], ['forest', '林间书屋'], ['warm', '琥珀小屋']]) {
-    await page.getByRole('button', { name: '选择房间主题' }).click();
+    await page.locator('.home-room-name').click(); await page.getByRole('menuitem', { name: /^选择小屋/ }).click();
     await page.locator('.home-theme-grid').getByRole('button', { name }).click();
     await page.locator('.corner-actions').getByRole('button', { name: '歌词册', exact: true }).click();
     await stage.locator('.cabin-amll').waitFor();

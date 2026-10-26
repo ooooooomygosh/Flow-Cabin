@@ -4,6 +4,7 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { launchChromium } from './launch-browser.mjs';
 import { onboardingSeed } from './app-version.mjs';
+import { openAlbumWall, libraryDialog, openSettingsSection, settingsDialog } from './settings-actions.mjs';
 const origin = 'http://127.0.0.1:4296', output = path.resolve('desktop/test-results/interface-mode');
 const report = { checks: [], errors: [], fixture: true };
 const pass = name => { report.checks.push(name); console.log('PASS ' + name); };
@@ -31,21 +32,26 @@ try {
   await page.locator('.home-notice').waitFor();
   assert.equal(await page.evaluate(() => localStorage.getItem('flow-cabin-interface-v1')), null, 'the default is not written as a choice');
   pass('new-and-existing-installations-open-the-life-cabin-with-one-audio-engine-and-a-notice');
-  await page.locator('.home-shortcuts').getByRole('button', { name: '专辑墙', exact: true }).click();
+  // 3.0: 专辑墙 left the top bar; it opens from inside 唱片架.
+  assert.equal(await page.locator('.home-shortcuts').getByRole('button', { name: '专辑墙', exact: true }).count(), 0);
+  await openAlbumWall(page);
   await page.getByRole('button', { name: '添加 原版唱片 的 仍在这里', exact: true }).click();
   await page.locator('.wall-group').filter({ has: page.getByText('文字', { exact: true }) }).locator('summary').click();
   await page.getByLabel('专辑墙标题', { exact: true }).fill('我的专辑墙');
   const wall = await page.evaluate(() => localStorage.getItem('album-circle-wall-v1'));
   await page.keyboard.press('Escape');
+  if (await libraryDialog(page).count()) { await page.keyboard.press('Escape'); await libraryDialog(page).waitFor({ state: 'hidden' }); }
   await page.locator('.home-notice').getByRole('button', { name: '改用原版', exact: true }).click();
   await page.getByRole('button', { name: '关闭选择首页', exact: true }).click();
   assert.equal(await page.evaluate(() => localStorage.getItem('flow-cabin-interface-v1')), null);
   assert.equal(await page.locator('.home-notice').count(), 0, 'the notice is dismissed once acted on');
-  pass('album-wall-is-one-click-away-and-cancelling-the-switch-leaves-the-cabin');
-  await page.getByRole('button', { name: '设置', exact: true }).first().click();
-  await page.getByRole('button', { name: '改用原版唱片架', exact: true }).click();
+  pass('album-wall-opens-from-the-record-shelf-and-cancelling-the-switch-leaves-the-cabin');
+  // 3.0: the classic home is a transition option in 设置 › 小屋与奶糖, not an everyday menu item.
+  await openSettingsSection(page, '小屋与奶糖');
+  await settingsDialog(page).getByRole('heading', { name: '经典首页（过渡）', exact: true }).waitFor();
+  await settingsDialog(page).getByRole('button', { name: '改用原版唱片架', exact: true }).click();
   requests.length = 0;
-  await page.getByRole('dialog').getByRole('button', { name: '改用原版唱片架', exact: true }).click();
+  await page.getByRole('dialog', { name: '选择首页', exact: true }).getByRole('button', { name: '改用原版唱片架', exact: true }).click();
   await page.locator('.cabin-room').waitFor();
   assert.equal(await page.locator('.cabin-home').count(), 0);
   assert.equal(await page.locator('audio').count(), 2);
@@ -72,13 +78,17 @@ try {
   await page.getByRole('dialog').getByRole('button', { name: '回到生活小屋', exact: true }).click();
   await page.locator('.cabin-home').waitFor();
   assert.equal(await page.evaluate(() => localStorage.getItem('flow-cabin-interface-v1')), 'beta');
-  await page.getByRole('button', { name: '随手记', exact: true }).first().click();
+  // The desk's 笔记本 (and the accessible furniture list) still opens 随手记 from the home.
+  await page.locator('.home-accessible-furniture summary').click();
+  await page.locator('.home-accessible-furniture').getByRole('button', { name: '笔记本', exact: true }).click();
   assert.equal(await page.getByRole('textbox', { name: '随手记内容' }).inputValue(), '切换后也要保留的草稿'); await page.keyboard.press('Escape');
+  await page.locator('.home-accessible-furniture summary').click();
   await page.screenshot({ path: path.join(output, 'cabin-phone.png') });
-  for (const name of ['专辑墙', '唱片库', '专注', '随手记', '布置']) {
+  for (const name of ['唱片架', '专注', '日记']) {
     const button = page.locator('.home-shortcuts').getByRole('button', { name, exact: true });
     const box = await button.boundingBox(); assert.ok(box && box.x >= 0 && box.x + box.width <= 391 && box.height >= 48, name);
   }
+  const room = await page.locator('.home-room-name').boundingBox(); assert.ok(room && room.x >= 0 && room.x + room.width <= 391 && room.height >= 48, '房间名下拉');
   pass('switching-back-restores-the-cabin-with-notes-intact-and-reachable-phone-entries');
   assert.deepEqual(report.errors, []); report.passed = true;
 } catch (error) { report.failure = error.stack; console.error(error); process.exitCode = 1; await page?.screenshot({ path: path.join(output, 'failure.png') }).catch(() => {}); }
