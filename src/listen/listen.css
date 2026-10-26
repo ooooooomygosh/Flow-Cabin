@@ -1,0 +1,202 @@
+@layer guards, reset, features, skin, overrides;
+/* 听 · the now-playing bar and the 唱片架 page (docs/design/3.0-design.md §6.2, §7).
+   Colours read the 3.0 semantic tokens (--ui-*, W4) and fall back to the --px-* palette.
+   Motion: 220–320ms, cubic-bezier(.2,.8,.2,1), transform / opacity only; reduced motion swaps. */
+@layer overrides {
+.listen-bar-host,.listen-shelf{--listen-surface:var(--ui-surface,rgba(36,22,13,.8));--listen-raised:var(--ui-surface-raised,rgba(58,36,22,.92));--listen-line:var(--ui-line,rgba(212,164,107,.26));--listen-ink:var(--ui-text-1,var(--px-ink));--listen-dim:var(--ui-text-2,var(--px-ink-dim));--listen-faint:var(--ui-text-3,var(--px-ink-faint));--listen-accent:var(--ui-accent,var(--px-accent));--listen-accent-hi:var(--ui-accent-strong,var(--px-accent-hi));--listen-ease:cubic-bezier(.2,.8,.2,1);--listen-hover:rgba(255,233,203,.07)}
+
+/* ── The bar ─────────────────────────────────────────────── */
+.listen-bar-host{flex:1 1 auto;min-width:0;container-type:inline-size;container-name:listen}
+.listen-bar{position:relative;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(220px,1.3fr) auto;align-items:center;gap:18px;min-height:64px;padding:8px 10px 8px 8px;background:var(--listen-surface);border:1px solid var(--listen-line);border-radius:12px;box-shadow:0 10px 30px rgba(13,8,5,.32),inset 0 1px 0 rgba(255,233,203,.05);backdrop-filter:blur(14px) saturate(1.1);-webkit-backdrop-filter:blur(14px) saturate(1.1);color:var(--listen-ink);font-family:var(--ui-font-body,var(--px-font-body));text-align:left}
+.listen-bar button{font:inherit;color:inherit;min-height:40px;border-radius:8px;border:1px solid transparent;background:transparent;box-shadow:none;text-shadow:none;cursor:pointer;transition:background-color .22s var(--listen-ease),color .22s var(--listen-ease),opacity .22s var(--listen-ease)}
+.listen-bar button:hover:not(:disabled){background:var(--listen-hover);border-color:transparent}
+.listen-bar button:focus-visible{outline:2px solid var(--listen-accent-hi);outline-offset:2px}
+.listen-bar button:disabled{opacity:.38;cursor:default}
+.listen-now{display:flex;align-items:center;gap:10px;min-width:0}
+.listen-cover{position:relative;display:block;width:100%;height:100%;overflow:hidden;border-radius:6px;background:var(--px-surface-2)}
+.listen-cover img,.listen-cover .record-sleeve,.listen-cover canvas{display:block;width:100%;height:100%;object-fit:cover}
+.listen-bar .listen-cover-button{flex:none;width:48px;height:48px;min-height:48px;padding:0;border-radius:8px;box-shadow:0 4px 10px rgba(13,8,5,.35);transition:transform .26s var(--listen-ease)}
+.listen-bar .listen-cover-button:hover:not(:disabled){transform:translateY(-1px);background:transparent}
+.listen-bar.is-playing .listen-cover-button .listen-cover:after{content:"";position:absolute;inset:auto 4px 4px auto;width:6px;height:6px;border-radius:50%;background:var(--listen-accent);box-shadow:0 0 0 2px rgba(13,8,5,.45)}
+.listen-bar .listen-meta{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:1px;min-width:0;flex:1;padding:2px 8px;text-align:left}
+.listen-meta strong{display:block;max-width:100%;font-size:14px;font-weight:500;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.listen-artist{font-weight:400;color:var(--listen-dim)}
+.listen-fade{position:relative;display:block;width:100%;height:18px;overflow:hidden;font-size:12px;line-height:18px;color:var(--listen-faint)}
+.listen-fade>span{position:absolute;inset:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.listen-fade.is-lyric{color:var(--listen-dim)}.listen-fade.is-error{color:var(--px-warn)}
+.listen-fade-in{animation:listen-line-in .32s var(--listen-ease) both}
+.listen-fade-out{animation:listen-line-out .32s var(--listen-ease) both}
+@keyframes listen-line-in{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+@keyframes listen-line-out{from{opacity:1;transform:none}to{opacity:0;transform:translateY(-5px)}}
+.listen-transport{display:flex;flex-direction:column;align-items:stretch;gap:2px;min-width:0}
+.listen-keys{display:flex;align-items:center;justify-content:center;gap:6px}
+.listen-bar .listen-icon{position:relative;display:inline-flex;align-items:center;justify-content:center;width:40px;padding:0;color:var(--listen-dim)}
+.listen-bar .listen-icon:hover:not(:disabled){color:var(--listen-ink)}
+.listen-bar .listen-play{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;padding:0;border-radius:50%;background:var(--listen-ink);color:var(--px-ink-on-accent);box-shadow:0 2px 8px rgba(13,8,5,.35)}
+.listen-bar .listen-play:hover:not(:disabled){background:var(--listen-accent-hi);color:var(--px-ink-on-accent)}
+.listen-bar .listen-play svg{width:16px;height:16px}.listen-bar .listen-skip svg{width:14px;height:14px}
+.listen-spin{animation:listen-spin 1s linear infinite}
+@keyframes listen-spin{to{transform:rotate(360deg)}}
+.listen-progress{display:grid;grid-template-columns:38px 1fr 38px;align-items:center;gap:8px;height:18px;font-variant-numeric:tabular-nums}
+.listen-progress small{font-size:12px;line-height:1;color:var(--listen-faint)}.listen-progress small:last-child{text-align:right}
+.listen-progress.is-empty{height:18px}
+.listen-progress input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:16px;margin:0;padding:0;background:transparent;cursor:pointer}
+.listen-progress input[type=range]::-webkit-slider-runnable-track{height:3px;border-radius:2px;background:linear-gradient(90deg,var(--listen-accent) var(--listen-progress,0%),rgba(255,233,203,.16) var(--listen-progress,0%))}
+.listen-progress input[type=range]::-moz-range-track{height:3px;border-radius:2px;background:rgba(255,233,203,.16)}
+.listen-progress input[type=range]::-moz-range-progress{height:3px;border-radius:2px;background:var(--listen-accent)}
+.listen-progress input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:11px;margin-top:-4px;border-radius:50%;border:0;background:var(--listen-ink);opacity:0;transition:opacity .22s var(--listen-ease)}
+.listen-progress input[type=range]::-moz-range-thumb{width:11px;height:11px;border-radius:50%;border:0;background:var(--listen-ink);opacity:0}
+.listen-progress:hover input[type=range]::-webkit-slider-thumb,.listen-progress input[type=range]:focus-visible::-webkit-slider-thumb{opacity:1}
+.listen-progress:hover input[type=range]::-moz-range-thumb,.listen-progress input[type=range]:focus-visible::-moz-range-thumb{opacity:1}
+.listen-progress input[type=range]:focus-visible{outline:2px solid var(--listen-accent-hi);outline-offset:2px;border-radius:4px}
+.listen-progress-track{position:relative;display:block;height:3px;border-radius:2px;background:rgba(255,233,203,.16);overflow:hidden}
+.listen-progress-track i{position:absolute;left:0;top:0;bottom:0;width:var(--listen-progress,0%);background:var(--listen-faint);border-radius:2px}
+.listen-actions{display:flex;align-items:center;justify-content:flex-end;gap:2px}
+.listen-bar .listen-like[aria-pressed=true],.listen-shelf .listen-like[aria-pressed=true]{color:var(--listen-accent)}
+.listen-bar .listen-like[aria-pressed=true] svg{animation:listen-heart .32s var(--listen-ease)}
+@keyframes listen-heart{from{transform:scale(.7)}60%{transform:scale(1.18)}to{transform:scale(1)}}
+.listen-badge{position:absolute;top:3px;right:2px;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:var(--listen-accent);color:var(--px-ink-on-accent);font-size:12px;font-weight:600;line-height:16px;text-align:center;font-style:normal}
+.listen-bar .listen-focus{display:inline-flex;align-items:center;gap:6px;margin-left:6px;padding:0 14px;border-radius:999px;border-color:var(--listen-line);color:var(--listen-ink);white-space:nowrap;font-size:13px}
+.listen-bar .listen-focus:hover:not(:disabled){border-color:var(--listen-accent);background:rgba(224,173,105,.12)}
+.listen-bar .listen-focus.is-running{border-color:rgba(224,173,105,.55);color:var(--listen-accent-hi)}
+.listen-focus time{font-variant-numeric:tabular-nums;color:var(--listen-dim)}
+.listen-pop-anchor{position:relative;display:inline-flex}
+.listen-pop{position:absolute;right:0;bottom:calc(100% + 12px);z-index:30;background:var(--listen-raised);border:1px solid var(--listen-line);border-radius:12px;box-shadow:0 16px 40px rgba(13,8,5,.5);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);color:var(--listen-ink);animation:listen-pop-in .24s var(--listen-ease) both;outline:none}
+@keyframes listen-pop-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.listen-volume{display:flex;align-items:center;gap:8px;padding:8px 12px 8px 6px;width:220px}
+.listen-volume input[type=range]{flex:1;accent-color:var(--listen-accent)}
+.listen-volume output{min-width:36px;text-align:right;font-size:12px;color:var(--listen-dim);font-variant-numeric:tabular-nums}
+.listen-queue{width:min(380px,calc(100vw - 32px));max-height:min(62vh,520px);overflow:auto;padding:4px}
+.listen-queue .player-queue{margin:0;border:0;box-shadow:none;background:transparent}
+/* Empty: 「放一张唱片」 and the last records as one-click resume. */
+.listen-bar.is-empty{grid-template-columns:1fr auto}
+.listen-empty{display:flex;align-items:center;gap:14px;min-width:0;padding-left:8px}
+.listen-empty-text{display:flex;flex-direction:column;min-width:0;flex:1}
+.listen-empty-text strong{font-size:14px;font-weight:500}.listen-empty-text small{font-size:12px;color:var(--listen-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.listen-recent{display:flex;gap:8px;margin:0;padding:0;list-style:none}
+.listen-bar .listen-recent-cover{position:relative;width:44px;height:44px;min-height:44px;padding:0;border-radius:6px;overflow:hidden}
+.listen-recent-cover>svg{position:absolute;inset:auto 3px 3px auto;width:14px;height:14px;padding:3px;box-sizing:content-box;border-radius:50%;background:rgba(13,8,5,.6);color:var(--listen-ink);opacity:0;transform:scale(.8);transition:opacity .22s var(--listen-ease),transform .22s var(--listen-ease)}
+.listen-recent-cover:hover>svg,.listen-recent-cover:focus-visible>svg{opacity:1;transform:none}
+.listen-bar .listen-primary,.listen-shelf .listen-primary{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:40px;padding:0 16px;border-radius:8px;border:1px solid transparent;background:var(--listen-accent);color:var(--px-ink-on-accent);font-weight:500;white-space:nowrap}
+.listen-bar .listen-primary:hover:not(:disabled),.listen-shelf .listen-primary:hover:not(:disabled){background:var(--listen-accent-hi);color:var(--px-ink-on-accent)}
+
+/* Narrower bars (a corner's footer, a tablet): fewer things, never a cramped row. */
+@container listen (max-width:760px){
+  .listen-bar{grid-template-columns:minmax(0,1fr) auto auto;gap:10px}
+  .listen-transport{flex-direction:row;align-items:center}
+  .listen-progress{position:absolute;left:14px;right:14px;bottom:2px;height:3px;display:block}
+  .listen-progress small{display:none}
+  .listen-progress input[type=range]{position:absolute;inset:-6px 0;height:15px}
+  .listen-progress-track{height:2px}
+  .listen-artist{display:none}
+  .listen-bar .listen-focus span{display:none}.listen-bar .listen-focus{padding:0 12px}
+  .listen-empty-text small{display:none}
+}
+@container listen (max-width:520px){
+  .listen-bar .listen-lyrics,.listen-bar .listen-actions .listen-pop-anchor,.listen-bar .listen-focus.is-running time{display:none}
+  .listen-recent li:nth-child(n+3){display:none}
+}
+/* A phone: cover · title · play · ♥ (docs/design/3.0-design.md §6.2). */
+@container listen (max-width:430px){
+  .listen-bar{min-height:56px;padding:6px 8px 6px 6px;gap:6px}
+  .listen-bar .listen-cover-button{width:44px;height:44px;min-height:44px}
+  .listen-bar .listen-skip,.listen-bar .listen-focus{display:none}
+  .listen-bar .listen-meta{padding:2px 4px}
+  .listen-empty{gap:8px;padding-left:4px}
+  .listen-empty-text strong{font-size:13px}
+  .listen-bar.is-empty .listen-focus{display:none}
+  .listen-recent li:nth-child(n+2){display:none}
+}
+
+/* The home footer: the bar takes the room the zone pills leave. */
+.home-footer>.listen-bar-host{max-width:1120px}
+
+/* ── 唱片架 ──────────────────────────────────────────────── */
+.listen-shelf{display:flex;flex-direction:column;gap:16px;color:var(--listen-ink);min-height:min(60vh,520px)}
+.listen-shelf button{font:inherit}
+.listen-shelf-top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px}
+.listen-row-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.listen-shelf .listen-secondary{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:40px;padding:0 14px;border-radius:8px;border:1px solid var(--listen-line);background:transparent;color:var(--listen-ink);white-space:nowrap}
+.listen-shelf .listen-secondary:hover:not(:disabled){border-color:var(--listen-accent);background:rgba(224,173,105,.1)}
+.listen-shelf .listen-secondary.is-active{border-color:var(--listen-accent);color:var(--listen-accent-hi)}
+.listen-shelf .listen-secondary,.listen-shelf .listen-primary{position:relative}
+.listen-shelf .listen-badge{position:static;margin-left:2px}
+.listen-segmented{display:inline-flex;padding:3px;gap:2px;border-radius:999px;background:rgba(13,8,5,.35);border:1px solid var(--listen-line)}
+.listen-segmented button{min-height:36px;padding:0 16px;border-radius:999px;border:0;background:transparent;color:var(--listen-dim);font-size:13px;transition:background-color .22s var(--listen-ease),color .22s var(--listen-ease)}
+.listen-segmented button:hover{color:var(--listen-ink);background:var(--listen-hover)}
+.listen-segmented button[aria-checked=true]{background:var(--listen-ink);color:var(--px-ink-on-accent)}
+.listen-segmented.is-small button{min-height:32px;padding:0 12px;font-size:12px}
+.listen-toolbar{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.listen-toolbar .listen-pop-anchor{position:static}
+.listen-toolbar .listen-row-actions{margin-left:auto}
+.listen-search{flex:1 1 220px;min-width:0;min-height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--listen-line);background:rgba(13,8,5,.3);color:var(--listen-ink);font:inherit;font-size:13px}
+.listen-search:focus-visible{outline:2px solid var(--listen-accent-hi);outline-offset:1px}
+.listen-count{font-size:13px;color:var(--listen-dim)}
+.listen-note{margin:0;font-size:13px;color:var(--listen-dim);display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.listen-shelf .listen-link{display:inline-flex;align-items:center;gap:5px;min-height:32px;padding:0 6px;border:0;background:transparent;color:var(--listen-accent-hi);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.listen-filters{top:calc(100% + 8px);bottom:auto;right:0;width:min(560px,100%);max-height:min(64vh,560px);overflow:auto;padding:16px;display:flex;flex-direction:column;gap:12px;font-size:13px}
+.listen-filter-row,.listen-filters .record-library-controls{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px;margin:0;padding:0;color:var(--listen-dim)}
+.listen-filters label,.listen-filters .record-library-controls>label{flex:1 1 150px;display:flex;flex-direction:column;align-items:stretch;gap:4px;font-size:13px;color:var(--listen-dim)}
+.listen-filters select,.listen-filters .record-library-controls select{width:100%;min-width:0;max-width:none;min-height:36px}
+.listen-filters .record-library-controls>button{min-height:36px}
+.listen-filters .record-filter-count{margin-left:auto;font-size:12px;color:var(--listen-faint)}
+.listen-filters .record-library-controls>small{flex:1 1 100%;color:var(--listen-faint)}
+.listen-grid{margin:0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:24px 18px}
+.listen-grid li{position:relative;min-width:0;display:flex;flex-direction:column}
+.listen-shelf .listen-grid-cover{position:relative;display:block;width:100%;aspect-ratio:1;padding:0;border:0;border-radius:8px;background:transparent;overflow:visible;cursor:pointer}
+.listen-grid-cover .listen-cover{border-radius:8px;box-shadow:0 8px 18px rgba(13,8,5,.38);transition:transform .28s var(--listen-ease),box-shadow .28s var(--listen-ease)}
+.listen-grid-cover:hover .listen-cover,.listen-grid-cover:focus-visible .listen-cover{transform:translateY(-3px);box-shadow:0 14px 26px rgba(13,8,5,.45)}
+.listen-grid-cover:focus-visible{outline:2px solid var(--listen-accent-hi);outline-offset:3px}
+.listen-grid-play{position:absolute;right:8px;bottom:8px;display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--listen-ink);color:var(--px-ink-on-accent);opacity:0;transform:translateY(4px);transition:opacity .22s var(--listen-ease),transform .22s var(--listen-ease);box-shadow:0 4px 10px rgba(13,8,5,.4)}
+.listen-grid-cover:hover .listen-grid-play,.listen-grid-cover:focus-visible .listen-grid-play,.listen-grid li[data-playing] .listen-grid-play{opacity:1;transform:none}
+.listen-grid li[data-playing] .listen-cover{outline:2px solid var(--listen-accent);outline-offset:2px}
+.listen-shelf .listen-grid-title:hover{background:transparent;border-color:transparent}.listen-shelf .listen-grid-title:hover strong{color:var(--listen-accent-hi)}
+.listen-shelf .listen-grid-title{display:block;width:100%;min-height:0;padding:9px 0 2px;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer}
+.listen-grid-title strong,.listen-grid-title small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.listen-grid-title strong{font-size:13px;font-weight:500}.listen-grid-title small{font-size:12px;color:var(--listen-faint)}
+.listen-shelf .listen-grid-queue{align-self:flex-start;min-height:28px;padding:0 6px;margin-left:-6px;border:0;border-radius:6px;background:transparent;color:var(--listen-faint);font-size:12px;cursor:pointer}
+.listen-shelf .listen-grid-queue:hover{color:var(--listen-ink);background:var(--listen-hover)}
+.listen-wall{margin:0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:4px}
+.listen-wall button{display:block;width:100%;aspect-ratio:1;padding:0;border:0;border-radius:2px;background:transparent;overflow:hidden;cursor:pointer}
+.listen-wall .listen-cover{border-radius:2px;transition:transform .28s var(--listen-ease),filter .28s var(--listen-ease)}
+.listen-wall button:hover .listen-cover,.listen-wall button:focus-visible .listen-cover{transform:scale(1.04)}
+.listen-wall button:focus-visible{outline:2px solid var(--listen-accent-hi);outline-offset:-2px}
+.listen-wall li[data-playing] .listen-cover{outline:2px solid var(--listen-accent);outline-offset:-2px}
+.listen-songs{margin:0;padding:0;list-style:none;display:flex;flex-direction:column}
+.listen-songs li{display:flex;align-items:center;gap:4px;border-bottom:1px solid rgba(212,164,107,.12)}
+.listen-shelf .listen-song{flex:1;min-width:0;display:grid;grid-template-columns:44px minmax(0,1fr) auto;align-items:center;gap:12px;min-height:56px;padding:6px 8px;border:0;border-radius:8px;background:transparent;color:inherit;text-align:left;cursor:pointer}
+.listen-shelf .listen-song:hover:not(:disabled){background:var(--listen-hover)}
+.listen-shelf .listen-song:focus-visible{outline:2px solid var(--listen-accent-hi);outline-offset:-2px}
+.listen-song .listen-cover{width:44px;height:44px}
+.listen-song-text{min-width:0;display:flex;flex-direction:column}
+.listen-song-text strong{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.listen-song-text small{font-size:12px;color:var(--listen-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.listen-song time{font-size:12px;color:var(--listen-faint);white-space:nowrap;font-variant-numeric:tabular-nums}
+.listen-songs li.is-current .listen-song-text strong{color:var(--listen-accent)}
+.listen-songs li.is-current .listen-song-text strong:after{content:" · 正在播放";font-size:12px;font-weight:400}
+.listen-songs li.is-unavailable .listen-song{opacity:.5;cursor:default}
+.listen-shelf .listen-icon{display:inline-flex;align-items:center;justify-content:center;width:40px;min-height:40px;padding:0;border:0;border-radius:8px;background:transparent;color:var(--listen-dim);cursor:pointer}
+.listen-shelf .listen-icon:hover{background:var(--listen-hover);color:var(--listen-ink)}
+.listen-empty-shelf{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;flex:1;padding:48px 16px;text-align:center}
+.listen-empty-shelf.is-small{padding:40px 16px}
+.listen-empty-shelf p{margin:0;max-width:30em;font-size:15px;line-height:1.6;color:var(--listen-dim)}
+.listen-empty-art{position:relative;width:132px;height:96px}
+.listen-empty-art i{position:absolute;bottom:0;width:72px;height:72px;border-radius:6px;border:1px solid var(--listen-line);background:linear-gradient(145deg,rgba(255,233,203,.08),rgba(255,233,203,.02))}
+.listen-empty-art i:nth-child(1){left:0;transform:rotate(-8deg)}.listen-empty-art i:nth-child(2){left:30px;bottom:10px;transform:rotate(3deg)}.listen-empty-art i:nth-child(3){left:60px;transform:rotate(10deg);border-style:dashed}
+.listen-empty-heart{display:grid;place-items:center;width:56px;height:56px;border-radius:50%;background:rgba(224,173,105,.1);color:var(--listen-accent)}
+@media(max-width:699px){
+  .listen-grid{grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:18px 12px}
+  .listen-wall{grid-template-columns:repeat(auto-fill,minmax(80px,1fr))}
+  .listen-shelf-top{flex-direction:column;align-items:stretch}
+  .listen-shelf-top .listen-segmented{align-self:stretch}.listen-shelf-top .listen-segmented button{flex:1}
+  .listen-shelf-top .listen-row-actions{justify-content:flex-end}
+  .listen-song time{display:none}
+}
+@media(prefers-reduced-motion:reduce){
+  .listen-fade-in,.listen-fade-out,.listen-pop,.listen-bar .listen-like[aria-pressed=true] svg{animation:none}
+  .listen-fade-out{display:none}
+  .listen-grid-cover .listen-cover,.listen-wall .listen-cover,.listen-bar .listen-cover-button,.listen-grid-play,.listen-recent-cover>svg{transition:none}
+  .listen-grid-cover:hover .listen-cover,.listen-wall button:hover .listen-cover{transform:none}
+}
+.is-reduced .listen-fade-in,.is-reduced .listen-fade-out,.is-reduced .listen-pop{animation:none}.is-reduced .listen-fade-out{display:none}
+}
