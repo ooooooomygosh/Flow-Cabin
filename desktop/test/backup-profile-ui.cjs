@@ -76,7 +76,7 @@ async function snapshot(name, profile) {
 }
 async function openBackup() {
   await site.getByRole('button', { name: '设置', exact: true }).click();
-  await site.getByRole('tab', { name: '数据与备份', exact: true }).click();
+  await site.getByRole('tab', { name: '数据', exact: true }).click();
   await site.getByRole('button', { name: '收藏与备份', exact: true }).click();
   const dialog = site.getByRole('dialog', { name: '收藏与备份', exact: true });
   await dialog.waitFor(); return dialog;

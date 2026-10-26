@@ -30,14 +30,14 @@ let app, site, host;
   await site.getByRole('button', { name: /写周报/ }).first().click(); assert.equal(await site.locator('.focus-task-list li.is-current').count(), 1);
   check('tasks-add-complete-and-select');
 
-  await site.getByRole('tab', { name: '番茄钟' }).click();
-  await site.getByLabel('当前专注任务').selectOption('');
-  assert.equal(await site.getByLabel('当前专注任务').inputValue(), '');
+  // 3.0: 这一段 holds the timer, the 「这一段做什么？」 line with its 待办 picker, and the 便签 (old 随手记).
+  await site.getByRole('tab', { name: '这一段' }).click();
+  await site.getByLabel('从待办里选').selectOption('');
+  assert.equal(await site.getByLabel('从待办里选').inputValue(), '');
   check('free-focus-clears-task-selection');
-  await site.getByRole('tab', { name: '随手记' }).click();
   await site.getByLabel('随手记内容').fill('稍后整理笔记\n<script>window.__noteExecuted = true</script>');
-  await site.getByRole('tab', { name: '番茄钟' }).click();
-  await site.getByRole('tab', { name: '随手记' }).click();
+  await site.getByRole('tab', { name: '待办' }).click();
+  await site.getByRole('tab', { name: '这一段' }).click();
   assert.match(await site.getByLabel('随手记内容').inputValue(), /稍后整理笔记/);
   assert.equal(await site.evaluate(() => window.__noteExecuted), undefined);
   const persistedNote = await site.evaluate(() => Object.keys(localStorage).filter((key) => key.startsWith('album-circle-focus-v1:')).some((key) => JSON.parse(localStorage.getItem(key)).notes?.includes('稍后整理笔记')));
@@ -49,21 +49,25 @@ let app, site, host;
   await site.getByRole('button', { name: '确认清空', exact: true }).click();
   assert.equal(await site.getByLabel('随手记内容').inputValue(), '');
   check('quick-notes-persist-as-plain-text-and-clear-needs-confirmation');
-  await site.getByRole('tab', { name: '番茄钟' }).click();
   await site.getByRole('button', { name: '计时设置' }).click(); await site.getByLabel('专注（分）').fill('2');
-  await site.getByRole('button', { name: '开始专注' }).click(); await site.locator('.focus-display').waitFor(); await site.keyboard.press('Escape'); await site.locator('.focus-display').waitFor({ state: 'detached' }); // 开始专注 enters 沉浸
+  await site.getByRole('button', { name: '开始专注' }).click(); assert.equal(await site.locator('.focus-display').count(), 0); // 自动进入沉浸 is off by default (2.2), so 开始专注 stays in the room
   await site.waitForFunction(() => document.querySelector('.focus-badge')?.textContent.includes('02:00') || document.querySelector('.focus-badge')?.textContent.includes('01:5'));
-  await site.locator('.room-cat .pixel-cat[data-pose="focus"]').waitFor(); check('focus-starts-and-cat-keeps-company');
+  // During focus the cat does one of its quiet-work poses (PetLife), not only 'focus'.
+  await site.locator(['focus', 'read', 'write', 'type', 'think'].map((pose) => `.room-cat .pixel-cat[data-pose="${pose}"]`).join(',')).first().waitFor(); check('focus-starts-and-cat-keeps-company');
   await site.screenshot({ path: path.join(output, 'focus-running.png') });
   await site.evaluate(() => { window.__phase = null; window.addEventListener('album-focus-phase', (event) => { window.__phase = event.detail; }); });
   await site.clock.fastForward('02:01');
   await site.waitForFunction(() => window.__phase?.phase === 'focus');
   assert.equal(await site.evaluate(() => window.__phase.completed), true);
   await site.locator('.focus-phase', { hasText: '短休息' }).waitFor(); check('pomodoro-completes-and-break-starts');
-  await site.getByRole('tab', { name: '统计' }).click();
-  assert.match(await site.locator('.focus-cat-link').innerText(), /1 小鱼干/); assert.match(await site.locator('.focus-stat-tiles').innerText(), /2 分钟/);
-  assert.equal(await site.locator('.focus-task-list').count(), 0); check('stats-and-reward-update');
+  // 3.0: 统计 moved from the focus panel into 唱片日记 › 统计.
+  await site.evaluate(() => window.dispatchEvent(new CustomEvent('cabin:open-journal', { detail: { tab: 'stats' } })));
+  const journal = site.getByRole('dialog', { name: '唱片日记' }); await journal.waitFor();
+  assert.match(await journal.locator('.rd-cat-link').innerText(), /1 小鱼干/); assert.match(await journal.locator('.fs-today-num').first().innerText(), /2 分钟/);
+  assert.equal(await journal.locator('.focus-task-list').count(), 0); check('stats-and-reward-update');
   await site.screenshot({ path: path.join(output, 'focus-stats.png') });
+  await site.keyboard.press('Escape'); await journal.waitFor({ state: 'hidden' });
+  if (!await site.getByRole('tab', { name: '声音' }).isVisible()) await site.locator('.focus-badge').click();
 
   await site.getByRole('tab', { name: '声音' }).click();
   await site.getByLabel('雨声音量').fill('0.7'); await site.getByLabel('壁炉音量').fill('0.3');

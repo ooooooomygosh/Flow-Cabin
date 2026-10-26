@@ -41,7 +41,7 @@ const check = (value) => report.checks.push(value);
   await card.getByPlaceholder(/第一次听的场景/).fill('安装后的第一张'); await card.locator('.record-card-saved', { hasText: '已保存' }).waitFor();
   await card.getByRole('button', { name: '关闭唱片卡片' }).click(); check('record-card-notes');
   await site.getByRole('button', { name: '设置', exact: true }).click();
-  await site.getByRole('tab', { name: '显示与桌面', exact: true }).click();
+  await site.getByRole('tab', { name: '桌面', exact: true }).click();
   await application.evaluate(({ app }) => {
     if (process.platform === 'darwin') { app.setActivationPolicy('regular'); app.focus({ steal: true }); }
   });
