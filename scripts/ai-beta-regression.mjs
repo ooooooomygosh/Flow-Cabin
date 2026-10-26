@@ -31,6 +31,8 @@ try {
       if (location.origin === 'null' || sessionStorage.getItem('seeded')) return;
       sessionStorage.setItem('seeded', '1');
       localStorage.setItem('flow-cabin-onboarding-v1', window.__onboardingSeed);
+      // 3.0: 小屋来信 / 信箱 is a 实验室 feature (off for new users); this suite checks it, so it starts switched on.
+      localStorage.setItem('flow-cabin-labs-v1', JSON.stringify({ letters: true }));
       localStorage.setItem('album-circle-focus-display-v1', JSON.stringify({ autoEnter: false }));
       // Seed the browser's actual reporting period. Daily letters need yesterday,
       // not last week's weekend (those coincide only on Monday).
@@ -206,7 +208,7 @@ try {
   await run('letter-draft-survives-immediate-close-and-sends-local-reply', async (page) => {
     await page.waitForFunction(() => JSON.parse(localStorage.getItem('flow-cabin-letters-v1') || '[]').length === 1, null, { timeout: 15000 });
     await openLetters(page);
-    const journal = page.getByRole('dialog', { name: '小屋日记' });
+    const journal = page.getByRole('dialog', { name: '唱片日记' });
     const mailbox = journal.getByRole('tabpanel', { name: '信箱' });
     await mailbox.getByRole('button', { name: '写一封信' }).click();
     const editor = mailbox.getByLabel('写给小屋的信');
@@ -349,13 +351,13 @@ try {
     await mailbox.getByRole('button', { name: '来信', exact: true }).click();
     await mailbox.locator('.fs-mail-list li').first().waitFor();
     await mailbox.getByRole('button', { name: '移到回收站', exact: true }).click();
-    await page.getByRole('tab', { name: '周报', exact: true }).click();
+    await page.getByRole('tab', { name: '本周合集', exact: true }).click(); // 3.0: the weekly letter spot moved from 周报 to 本周合集
     assert.equal(await page.locator('.fs-letter.is-ai').count(), 0, 'removed incoming letters also disappear from the weekly letter spot');
   }, { ai: { enabled: false, baseUrl: API, model: 'm' } });
 
   await run('interrupted-ai-local-letter-reply-can-be-recovered', async (page) => {
     await openLetters(page);
-    const journal = page.getByRole('dialog', { name: '小屋日记' });
+    const journal = page.getByRole('dialog', { name: '唱片日记' });
     const mailbox = journal.getByRole('tabpanel', { name: '信箱' });
     await mailbox.getByRole('button', { name: '写一封信' }).click();
     const body = '网络断开时也要留住这封信。';
@@ -370,7 +372,7 @@ try {
     assert.equal(requestCount(), 1);
     await page.reload(); await page.locator('.focus-badge').waitFor({ timeout: 30000 });
     await openLetters(page);
-    const restored = page.getByRole('dialog', { name: '小屋日记' }).getByRole('tabpanel', { name: '信箱' });
+    const restored = page.getByRole('dialog', { name: '唱片日记' }).getByRole('tabpanel', { name: '信箱' });
     await restored.getByLabel('写给小屋的信').waitFor();
     await restored.getByRole('button', { name: '收进抽屉' }).click();
     await restored.getByRole('button', { name: '用本地回信接上' }).waitFor();

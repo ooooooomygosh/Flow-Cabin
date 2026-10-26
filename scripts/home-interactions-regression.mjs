@@ -24,7 +24,7 @@ try{
  assert.equal(await page.locator('.home-furniture:not(.is-hotspot) .home-furniture-label').evaluateAll(n=>n.filter(l=>getComputedStyle(l).opacity!=='0').length),0,'other furniture is labelled only on hover or focus');
  await page.getByRole('button',{name:'设置',exact:true}).click();assert.deepEqual(await page.getByRole('navigation',{name:'小屋功能',exact:true}).getByRole('button').allInnerTexts(),['选择小屋','布置小屋','备份与恢复','全部设置']);
  assert.equal(await page.getByRole('dialog',{name:'小屋日常',exact:true}).getByRole('button',{name:/场景配方|睡前模式|小屋明信片|位置与天气|功能诊断|改用原版/}).count(),0,'lab and moved items stay out of the everyday menu');await close();
- await page.getByRole('button',{name:'日记',exact:true}).click();await page.getByRole('dialog',{name:'小屋日记'}).waitFor();await page.keyboard.press('Escape');await page.getByRole('dialog',{name:'小屋日记'}).waitFor({state:'hidden'});
+ await page.getByRole('button',{name:'日记',exact:true}).click();await page.getByRole('dialog',{name:'唱片日记'}).waitFor();await page.keyboard.press('Escape');await page.getByRole('dialog',{name:'唱片日记'}).waitFor({state:'hidden'});
  await page.locator('.home-room-name').click();assert.deepEqual(await page.getByRole('menu',{name:'小屋'}).getByRole('menuitem').evaluateAll(n=>n.map(i=>i.querySelector('span').textContent)),['选择小屋','布置小屋']);await page.keyboard.press('Escape');assert.equal(await page.getByRole('menu',{name:'小屋'}).count(),0);
  pass('shell-has-three-entries-four-everyday-items-three-hotspot-labels-and-a-room-menu');
  await zone('工作角');await page.getByRole('button',{name:'完成任务：先读一页书',exact:true}).click();
