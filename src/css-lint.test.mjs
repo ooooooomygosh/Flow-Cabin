@@ -47,14 +47,35 @@ test('every animation names a keyframe that exists', () => {
   }
 });
 
-// The 2.1 home and the 2.2 lyric surfaces use their own soft, layered design.
-const SOFT_DESIGN = new Set(['home/home.css', 'lyrics/lyrics.css', 'lyrics/desk/desk-lyrics.css']);
-test('legacy pixel controls keep square corners and avoid blur; the cabin home and lyric surfaces use their own soft design', () => {
+// 3.0 chrome (高级温馨): corners and glass come from the --ui-* tokens only, so one edit
+// in tokens.css re-shapes every panel. A radius is 0, 50%, or a --ui-radius token (a
+// fallback inside var() is fine); glass is `blur(var(--ui-blur))`, which 流畅模式 and
+// reduced transparency switch off in one place (perf-low.css). The 2.2 lyric surfaces
+// and the shell sheets other streams own keep their own soft design for now.
+const RADIUS = /^(?:0|0px|50%|var\(--ui-radius[\w-]*(?:,\s*[^()]*(?:\([^()]*\))?[^()]*)?\))$/;
+const UI_CHROME = new Set(['app.css', 'styles/pixel-ui.css', 'styles/perf-low.css', 'home/home.css', 'home/home-tools.css', 'ui/record-sleeve.css', 'ui/shortcut-sheet.css']);
+const SOFT_DESIGN = new Set(['lyrics/lyrics.css', 'lyrics/desk/desk-lyrics.css']);
+const radii = (css) => [...css.matchAll(/border(?:-[a-z]+)*-radius\s*:\s*([^;}]+)/g)].map((m) => m[1].replace(/!important/, '').trim());
+test('chrome corners and glass come from the --ui-* tokens', () => {
   for (const { file, css } of owned) {
-    if (SOFT_DESIGN.has(file) || file.startsWith('home/')) continue; // home.css, the 2.2 home tools and the lyric surfaces
-    for (const m of css.matchAll(/border(?:-[a-z]+)*-radius\s*:\s*([^;}]+)/g)) assert.match(m[1].trim(), /^(0|0px|50%)$/, `${file}: border-radius ${m[1].trim()}`);
-    assert(!/backdrop-filter\s*:\s*(?!none)/.test(css), `${file}: backdrop-filter`);
-    assert(!/blur\(/.test(css), `${file}: blur()`);
+    if (SOFT_DESIGN.has(file) || (file.startsWith('home/') && !UI_CHROME.has(file))) continue;
+    for (const value of radii(css)) for (const part of value.split(/\s+(?![^(]*\))/)) assert.match(part, RADIUS, `${file}: border-radius ${value} (use 0, 50% or var(--ui-radius*))`);
+    for (const m of css.matchAll(/backdrop-filter\s*:\s*([^;}]+)/g)) assert.match(m[1].replace(/!important/, '').trim(),/^(none|blur\(var\(--ui-blur[^)]*\)\)(\s+saturate\([\d.]+\))?)$/, `${file}: backdrop-filter ${m[1].trim()} (use blur(var(--ui-blur)))`);
+    if (!UI_CHROME.has(file)) assert(!/(?<!backdrop-filter\s*:\s*)blur\((?!var\(--ui-blur)/.test(css), `${file}: blur()`);
+  }
+});
+
+test('glass turns off on 流畅模式 and under reduced transparency', () => {
+  const css = sheets.find((s) => s.file === 'styles/perf-low.css').css;
+  assert.match(css, /html\[data-perf='low'\][^{]*\*[^{]*\{[^}]*backdrop-filter:\s*none\s*!important/, 'perf-low.css must drop every backdrop-filter on 流畅模式');
+  assert.match(css, /prefers-reduced-transparency:\s*reduce/, 'perf-low.css must make surfaces opaque under reduced transparency');
+});
+
+test('3.0 chrome sheets use the pixel face only for digits and small decorative labels', () => {
+  const CHROME = /\.(pixel-button|dialog-tabs|segmented|app-toast|cabin-dialog-header|cabin-dialog-title|home-shortcuts|home-tool|home-room-name)\b/;
+  for (const { file, css } of owned.filter((s) => UI_CHROME.has(s.file))) for (const { selector, body } of rules(css)) {
+    if (!/--px-font-(cn|en)|--ui-font-digits/.test(body)) continue;
+    for (const part of selector.split(',')) assert(!CHROME.test(part), `${file} ${part.trim()}: pixel face on 3.0 chrome`);
   }
 });
 
@@ -111,6 +132,48 @@ test('small text tokens meet AA contrast on their intended surfaces', () => {
   for (const file of ['record-card.css', 'turntable/listening-corner.css']) {
     assert(!/\bcolor:\s*var\(--px-accent-lo\)/.test(fs.readFileSync(path.join(SRC, file), 'utf8')), `${file}: bevel colour used as small text`);
   }
+});
+
+// The 3.0 surfaces are translucent: check text on --ui-surface composited over the
+// darkest and the lightest room that can sit behind it (blur not counted), and on a
+// raised card / hover wash on top of that.
+test('3.0 text tokens meet AA on the glass surfaces over any room', () => {
+  const source = fs.readFileSync(path.join(SRC, 'styles/tokens.css'), 'utf8');
+  const raw = new Map([...source.matchAll(/(--(?:px|ui)-[\w-]+):\s*([^;]+);/g)].map((m) => [m[1], m[2].trim()]));
+  const colour = (name) => {
+    let value = raw.get(name); assert(value, `Missing token ${name}`);
+    for (let i = 0; i < 4 && value.startsWith('var('); i++) value = raw.get(value.match(/var\((--[\w-]+)/)[1]);
+    const hex = value.match(/^#([\da-f]{6})$/i), rgba = value.match(/^rgba\(\s*(\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\s*\)$/);
+    if (hex) return { rgb: hex[1].match(/../g).map((h) => parseInt(h, 16)), a: 1 };
+    assert(rgba, `${name}: ${value} is not a hex or rgba() colour`);
+    return { rgb: rgba.slice(1, 4).map(Number), a: Number(rgba[4]) };
+  };
+  const over = (top, bottom) => top.rgb.map((v, i) => v * top.a + bottom[i] * (1 - top.a));
+  const lum = (rgb) => rgb.map((v) => { v /= 255; return v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }).reduce((sum, v, i) => sum + v * [.2126, .7152, .0722][i], 0);
+  const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); };
+  for (const room of [[0, 0, 0], [255, 255, 255]]) {
+    const surface = over(colour('--ui-surface'), room);
+    const grounds = { '--ui-surface': surface, '--ui-surface-raised': over(colour('--ui-surface-raised'), surface), '--ui-surface-hover': over(colour('--ui-surface-hover'), surface) };
+    for (const [ground, rgb] of Object.entries(grounds)) for (const text of ['--ui-text', '--ui-text-2', '--ui-text-3', '--ui-accent', '--ui-danger', '--ui-good']) {
+      const value = ratio(colour(text).rgb, rgb);
+      assert(value >= 4.5, `${text} on ${ground} over rgb(${room}): ${value.toFixed(2)}:1 < 4.5:1`);
+    }
+  }
+  const onAccent = ratio(colour('--ui-accent-text').rgb, colour('--ui-accent').rgb);
+  assert(onAccent >= 4.5, `--ui-accent-text on --ui-accent: ${onAccent.toFixed(2)}:1`);
+});
+
+test('the 3.0 token contract other streams build on is complete', () => {
+  const source = fs.readFileSync(path.join(SRC, 'styles/tokens.css'), 'utf8');
+  const names = ['bg', 'surface', 'surface-raised', 'surface-hover', 'line', 'line-strong', 'text', 'text-2', 'text-3', 'accent', 'accent-text', 'accent-soft', 'good', 'danger', 'focus-ring', 'blur', 'radius-lg', 'radius', 'radius-pill', 'shadow', 'shadow-lg',
+    'space-1', 'space-2', 'space-3', 'space-4', 'space-5', 'space-6', 'fs-xs', 'fs-sm', 'fs-md', 'fs-lg', 'fs-xl', 'fs-2xl', 'fs-3xl', 'font', 'font-display', 'font-digits', 'ease', 'dur', 'dur-slow'];
+  for (const name of names) assert.match(source, new RegExp(`--ui-${name}:`), `tokens.css must define --ui-${name}`);
+  const px = (name) => Number(source.match(new RegExp(`--ui-${name}:\\s*(\\d+)px`))?.[1]);
+  assert.deepEqual(['xs', 'sm', 'md', 'lg', 'xl', '2xl', '3xl'].map((s) => px(`fs-${s}`)), [12, 13, 15, 18, 24, 32, 48]);
+  assert.deepEqual([px('radius-lg'), px('radius'), px('radius-pill')], [12, 8, 999]);
+  // Every --ui-* a stylesheet reads exists (a typo would silently drop to the fallback).
+  const defined = new Set(sheets.flatMap(({ css }) => [...css.matchAll(/(--ui-[\w-]+)\s*:/g)].map((m) => m[1])));
+  for (const { file, css } of sheets) for (const [, name] of css.matchAll(/var\((--ui-[\w-]+)/g)) assert(defined.has(name), `${file}: ${name} is not a token`);
 });
 
 test('desktop companion panel labels use readable text sizes', () => {

@@ -1,54 +1,52 @@
-/* 心流小屋 · design tokens and app shell. Pixel-cosy: warm wood, brass
-   borders, square corners and hard drop shadows over the cabin artwork. */
+/* 心流小屋 · app shell and shared chrome. 3.0 (高级温馨): warm walnut glass from the
+   --ui-* tokens; the button / dialog / field / toast faces live in styles/pixel-ui.css
+   (skin layer), layout lives here. The classic room's toolbar, shelf filters and
+   selection card keep their pixel frames: they sit on the pixel scene. */
 @layer guards, reset, features, skin, overrides;
 @layer features {
 :root{color-scheme:dark}
-html,body,#root{margin:0;height:100%;overflow:hidden;background:var(--px-bg);color:var(--px-ink)}
+html,body,#root{margin:0;height:100%;overflow:hidden;background:var(--ui-bg);color:var(--ui-text)}
 button,input,select,textarea{font:inherit;color:inherit}button{cursor:pointer}button:disabled{cursor:default}
 
 ::selection{background:#e0ad6966}
-*{scrollbar-width:thin;scrollbar-color:var(--px-border) transparent}
+*{scrollbar-width:thin;scrollbar-color:var(--ui-line-strong) transparent}
 a{color:var(--px-accent-hi)}
 
-/* Buttons */
-.pixel-button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:34px;padding:7px 13px;font-size:13px;line-height:1.2;white-space:nowrap;color:var(--px-ink);background:var(--px-surface-2);border:2px solid var(--px-border);text-decoration:none}
-/* Bevel, hover lift, press and the primary (accent) face: styles/pixel-ui.css. One primary look: .pixel-button.is-primary. */
-.pixel-button:hover:not(:disabled){background:var(--px-surface-3)}
-.pixel-button.is-primary{font-weight:700}
-.pixel-button.is-danger{color:#fff3ea;background:#a8392b;border-color:var(--px-warn)}
-.pixel-button.is-quiet{background:transparent;box-shadow:none;border-color:#8a5a3266;color:var(--px-ink-dim)}
-.pixel-button:disabled,.pixel-button.is-disabled{opacity:.45;box-shadow:none}
+/* Buttons: geometry only — the face (ghost / primary / quiet / danger) is in pixel-ui.css. */
+.pixel-button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:7px 14px;font-size:var(--ui-fs-sm);line-height:1.2;white-space:nowrap;text-decoration:none}
 
-/* Title bar */
+/* Title bar (classic home) */
 .app{position:fixed;inset:0;overflow:hidden}
-.app-startup{display:grid;place-items:center;padding:24px;font-family:var(--px-font-body);box-sizing:border-box}
-.app-startup section{width:min(100%,440px);padding:28px;box-sizing:border-box;background:var(--px-surface-2);border:1px solid var(--px-border);border-radius:0}
-.app-startup small{font-size:12px;letter-spacing:.08em;color:var(--px-ink-dim)}
-.app-startup h1{margin:18px 0 12px;font-size:22px;line-height:1.4}
-.app-startup p{line-height:1.7;overflow-wrap:anywhere;color:var(--px-ink-dim)}
+.app-startup{display:grid;place-items:center;padding:24px;font-family:var(--ui-font);box-sizing:border-box}
+.app-startup section{width:min(100%,440px);padding:28px;box-sizing:border-box;background:var(--ui-surface-raised);border:1px solid var(--ui-line);border-radius:var(--ui-radius-lg);box-shadow:var(--ui-shadow)}
+.app-startup small{font-size:var(--ui-fs-xs);letter-spacing:.08em;color:var(--ui-text-3)}
+.app-startup h1{margin:18px 0 12px;font-size:var(--ui-fs-xl);font-weight:500;line-height:1.4}
+.app-startup p{line-height:1.7;overflow-wrap:anywhere;color:var(--ui-text-2)}
 .app-startup-error button{min-height:48px;margin-top:8px}
-.app-titlebar{position:absolute;inset:0 0 auto;z-index:30;height:var(--px-titlebar);display:flex;align-items:center;gap:14px;padding:0 10px 0 14px;background:linear-gradient(#1c120bf5,#1c120bd9);border-bottom:2px solid #8a5a3299;box-shadow:0 4px 0 #0d080555;-webkit-app-region:drag;user-select:none}
+.app-titlebar{position:absolute;inset:0 0 auto;z-index:30;height:var(--px-titlebar);display:flex;align-items:center;gap:14px;padding:0 10px 0 14px;background:linear-gradient(rgba(23,17,12,.94),rgba(23,17,12,.82));border-bottom:1px solid var(--ui-line);box-shadow:0 8px 24px rgba(10,6,3,.22);-webkit-app-region:drag;user-select:none}
 .app-titlebar button,.app-titlebar a,.app-titlebar input{-webkit-app-region:no-drag}
 .app-brand{display:flex;align-items:center;gap:10px;min-width:0}
 .app-brand-cat{width:36px;height:36px;image-rendering:pixelated;filter:drop-shadow(2px 2px 0 var(--px-shadow))}
-.app-brand span{display:grid;line-height:1.15}.app-brand h1{margin:0;font-size:16px;letter-spacing:.06em}.app-brand small{font-size:12px;color:var(--px-ink-dim)}
+.app-brand span{display:grid;line-height:1.15}.app-brand h1{margin:0;font-size:16px;letter-spacing:.06em}.app-brand small{font-size:12px;color:var(--ui-text-2)}
 .app-actions{display:flex;gap:8px;margin-left:auto;min-width:0}
+/* Window controls: quiet icon buttons (also the 3.0 home header's settings / fullscreen). */
 .desktop-controls{display:flex;align-items:center;gap:2px;-webkit-app-region:no-drag}
-.desktop-controls button{display:grid;place-items:center;width:34px;height:30px;padding:0;color:var(--px-ink-dim);background:none;border:0}
-.desktop-controls button:hover{color:var(--px-ink);background:#ffffff14}.desktop-controls .window-close:hover{color:#fff;background:#c8413b}
-.window-control-divider{width:1px;height:18px;margin:0 4px;background:#8a5a3266}
+.desktop-controls button{display:grid;place-items:center;width:34px;height:30px;padding:0;color:var(--ui-text-2);background:none;border:0;border-radius:var(--ui-radius);transition:background-color var(--ui-dur) var(--ui-ease),color var(--ui-dur) var(--ui-ease)}
+.desktop-controls button:hover{color:var(--ui-text);background:var(--ui-surface-hover)}.desktop-controls .window-close:hover{color:#fff;background:#c8413b}
+.window-control-divider{width:1px;height:18px;margin:0 4px;background:var(--ui-line)}
 .app-cabin{position:absolute;inset:0}
-.app-error{position:absolute;z-index:40;top:calc(var(--px-titlebar) + 12px);left:50%;translate:-50% 0;display:flex;gap:12px;align-items:center;margin:0;padding:10px 14px;background:#471f14f2;border:2px solid var(--px-warn);box-shadow:4px 4px 0 var(--px-shadow)}
+.app-error{position:absolute;z-index:40;top:calc(var(--px-titlebar) + 12px);left:50%;translate:-50% 0;display:flex;gap:12px;align-items:center;margin:0;padding:10px 12px 10px 16px;color:var(--ui-text);background:var(--ui-surface-raised);border:1px solid color-mix(in srgb,var(--ui-danger) 55%,transparent);border-radius:var(--ui-radius-lg);box-shadow:inset 3px 0 0 var(--ui-danger),var(--ui-shadow);backdrop-filter:blur(var(--ui-blur))}
 /* Below ~1200 wide the toolbar reaches the centre: the alert drops under it instead of covering 专注. */
 @media(max-width:1200px){.app-error{top:calc(var(--px-titlebar) + 60px);max-width:calc(100vw - 32px)}}
-.app-error button{padding:4px 10px;background:var(--px-surface-2);border:1px solid var(--px-border)}
+.app-error button{min-height:32px;padding:4px 12px;background:none;border:1px solid var(--ui-line-strong);border-radius:var(--ui-radius)}
 .app-toasts{position:fixed;inset:auto 0 132px;margin:0 auto;width:max-content;max-width:calc(100vw - 32px);padding:0;border:0;background:none;overflow:visible;display:none;flex-direction:column;align-items:center;gap:8px;pointer-events:none;color:inherit}
 .app-toasts:popover-open{display:flex}
-.app-toast{position:static;pointer-events:auto;display:flex;align-items:center;gap:12px;margin:0;padding:9px 16px;font-size:13px;color:var(--px-paper-ink);background:var(--px-paper);border:2px solid var(--px-paper-ink);box-shadow:4px 4px 0 #3b2a2088;animation:toast-in .2s ease-out}
-.app-toast button{min-height:32px;padding:2px 10px;font:inherit;font-weight:600;color:inherit;background:none;border:1px solid currentColor;border-radius:0;cursor:pointer}
-@keyframes toast-in{from{opacity:0;translate:-50% 8px}}
+/* The face (glass, hairline, entrance) is in pixel-ui.css. */
+.app-toast{position:static;pointer-events:auto;display:flex;align-items:center;gap:14px;margin:0;padding:10px 12px 10px 16px;max-width:min(560px,calc(100vw - 32px))}
+.app-toast>span{min-width:0;overflow-wrap:anywhere}
+.app-toast button{flex:none;min-height:32px;padding:2px 12px;font:inherit;font-weight:500;color:inherit;background:none;border:1px solid currentColor;cursor:pointer}
 
-/* Cabin toolbar and shelf panels, floating over the room */
+/* Cabin toolbar and shelf panels, floating over the classic room (pixel scene chrome) */
 .cabin-room .cabin-toolbar{position:absolute;top:calc(var(--px-titlebar) + 10px);left:14px;right:14px;z-index:12;display:flex;flex-wrap:wrap;gap:8px;padding:0;background:none;box-shadow:none;border:0;border-radius:0}
 .cabin-toolbar-group{display:flex;gap:2px}
 .cabin-room .cabin-toolbar button{display:flex;align-items:center;gap:6px;padding:6px 10px;font-size:12px;white-space:nowrap;color:#ffdfaa;background:transparent;border:0;border-radius:0}
@@ -58,7 +56,7 @@ a{color:var(--px-accent-hi)}
 .room-zen:not(.room-zen-tools) .cabin-room .cabin-toolbar{top:12px;left:auto}
 .shelf-filters{position:absolute;z-index:25;top:calc(var(--px-titlebar) + 58px);left:14px;width:min(700px,calc(100% - 28px));max-height:calc(100% - var(--px-titlebar) - 200px);overflow:auto;padding:14px 16px 4px;color:var(--px-ink);background:#27180ef5;border:2px solid var(--px-brass);box-shadow:6px 6px 0 #0d0805cc}
 .shelf-filter-row{display:flex;gap:14px;flex-wrap:wrap}.shelf-filter-row label{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--px-ink-dim)}
-.shelf-filters select{padding:6px 8px;font-size:13px;color:var(--px-ink);background-color:var(--px-surface-2);border:1px solid var(--px-border);border-radius:0}
+.shelf-filters select{padding:6px 8px;font-size:13px}
 .shelf-filters .record-library-controls{padding:12px 0;color:var(--px-ink-dim)}
 .room-selection-actions button,.room-selection-actions a,.cabin-room .room-selection-actions button,.cabin-room .room-selection-actions a{border-radius:0;border:2px solid var(--px-border);box-shadow:3px 3px 0 #0d0805aa}
 .room-selection-actions a,.record-card-tools a{text-decoration:none}
@@ -69,89 +67,91 @@ a{color:var(--px-accent-hi)}
 @media (max-width: 640px){.cabin-scene .room-empty{z-index:11}}
 .cabin-scene .room-empty button{display:inline-flex;align-items:center;gap:6px;border-radius:0;font-weight:700;border:2px solid var(--px-accent-hi);background:var(--px-accent);color:#24170d;box-shadow:3px 3px 0 var(--px-shadow)}
 
-/* Dialogs */
-.cabin-dialog{width:min(var(--dialog-md),calc(100vw - 40px));max-height:calc(100vh - 64px);padding:0;color:var(--px-ink);background:var(--px-surface);border:2px solid var(--px-brass);box-shadow:8px 8px 0 #0d0805dd;overflow:hidden}
+/* Dialogs: the frame (glass, hairline, 12px, shadow, entrance) is in pixel-ui.css. */
+.cabin-dialog{width:min(var(--dialog-md),calc(100vw - 40px));max-height:calc(100vh - 64px);padding:0;overflow:hidden}
 .cabin-dialog.is-sm{width:min(var(--dialog-sm),calc(100vw - 40px))}
 .cabin-dialog.is-lg{width:min(var(--dialog-lg),calc(100vw - 40px))}
 .cabin-dialog.is-xl{width:min(var(--dialog-xl),calc(100vw - 32px))}
-.cabin-dialog::backdrop{background:#0d0805a8}
 .cabin-dialog[open]{display:flex;flex-direction:column}
 .cabin-modal:focus{outline:0}
 .cabin-dialog-title:focus{outline:0}
 /* The full variant is the whole window (唱机特写, 专辑墙): no frame, no backdrop gap. */
 .cabin-modal.is-full{width:100%;height:100%;max-width:none;max-height:none;margin:0;padding:0;border:0;overflow:hidden}
 .cabin-modal.is-full::backdrop{background:var(--px-bg)}
-.cabin-dialog-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px 12px 18px;background:var(--px-surface-2);border-bottom:2px solid var(--px-border)}
-.cabin-dialog-header h2{display:flex;align-items:center;gap:9px;margin:0;font-size:17px;letter-spacing:.04em}
-.cabin-dialog-close{display:grid;place-items:center;width:32px;height:32px;padding:0;background:none;border:0;color:var(--px-ink-dim)}.cabin-dialog-close:hover{color:var(--px-ink);background:#ffffff14}
-.cabin-dialog-body{padding:16px 20px 20px;overflow:auto;min-height:0}
-.cabin-dialog-footer{display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:12px 20px;border-top:2px solid var(--px-border);background:var(--px-surface-2)}
-.dialog-tabs{display:flex;gap:0;margin:-4px 0 14px;border-bottom:2px solid var(--px-border)}
-.dialog-tabs button{padding:8px 16px;font-size:13px;color:var(--px-ink-dim);background:none;border:0;border-bottom:3px solid transparent;margin-bottom:-2px}
-.dialog-tabs button[aria-selected=true]{color:var(--px-ink);border-bottom-color:var(--px-accent);font-weight:700}
-/* Errors read as errors (role=alert): a warn bar, never the neutral status look. */
-.status.is-error{margin:8px 0;padding:6px 10px 6px 12px;list-style:none;font-size:12px;line-height:18px;color:var(--px-ink);background:color-mix(in srgb,var(--px-warn) 18%,var(--px-surface));border-left:4px solid var(--px-warn)}
+.cabin-dialog-header{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:60px;padding:12px 14px 12px var(--ui-space-6);background:none;border-bottom:1px solid var(--ui-line);box-shadow:none}
+.cabin-dialog-header h2{display:flex;align-items:center;gap:10px;margin:0;font:500 var(--ui-fs-lg)/var(--ui-lh-tight) var(--ui-font-display);letter-spacing:.02em;color:var(--ui-text)}
+.cabin-dialog-header h2>svg{color:var(--ui-text-2)}
+.cabin-dialog-close{display:grid;place-items:center;flex:none;width:36px;height:36px;padding:0;background:none;border:0;border-radius:var(--ui-radius);color:var(--ui-text-2);transition:background-color var(--ui-dur) var(--ui-ease),color var(--ui-dur) var(--ui-ease)}.cabin-dialog-close:hover{color:var(--ui-text);background:var(--ui-surface-hover)}
+.cabin-dialog-body{padding:var(--ui-space-5) var(--ui-space-6) var(--ui-space-6);overflow:auto;min-height:0;line-height:var(--ui-lh)}
+.cabin-dialog-footer{display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:14px var(--ui-space-6);border-top:1px solid var(--ui-line);background:none}
+/* Tabs: quiet labels over a hairline, the open one carries a short amber rule. */
+.dialog-tabs{display:flex;gap:4px;margin:-4px 0 18px;border-bottom:1px solid var(--ui-line)}
+.dialog-tabs button{position:relative;min-height:40px;padding:8px 12px;font-size:var(--ui-fs-sm);color:var(--ui-text-2);background:none;border:0;border-bottom:2px solid transparent;border-radius:var(--ui-radius) var(--ui-radius) 0 0;margin-bottom:-1px;transition:color var(--ui-dur) var(--ui-ease),border-color var(--ui-dur) var(--ui-ease),background-color var(--ui-dur) var(--ui-ease)}
+.dialog-tabs button:hover{color:var(--ui-text);background:var(--ui-surface-hover)}
+.dialog-tabs button[aria-selected=true]{color:var(--ui-text);border-bottom-color:var(--ui-accent);font-weight:500}
+/* Errors read as errors (role=alert): a danger rule, never the neutral status look. */
+.status.is-error{margin:8px 0;padding:8px 12px 8px 14px;list-style:none;font-size:12px;line-height:18px;color:var(--ui-text);background:color-mix(in srgb,var(--ui-danger) 14%,transparent);border-left:3px solid var(--ui-danger);border-radius:var(--ui-radius-sm)}
 .status.is-error li+li{margin-top:4px}
 /* In-place confirm (ui/Confirm) and the 撤销 line after a single delete. */
-.confirm-inline{display:inline-flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:6px;margin-left:auto;font-size:12px;line-height:16px;color:var(--px-ink)}
-.confirm-inline .pixel-button,.undo-line .pixel-button{min-height:var(--px-hit);padding:4px 10px;font-size:12px}
-.undo-line{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:6px 0;font-size:12px;color:var(--px-ink-dim)}
-.segmented{display:inline-flex;border:2px solid var(--px-border);box-shadow:3px 3px 0 var(--px-shadow)}
-.segmented button{padding:5px 12px;font-size:12px;color:var(--px-ink-dim);background:var(--px-surface-2);border:0}
-.segmented button+button{border-left:1px solid var(--px-border)}
-.segmented button[aria-checked=true]{color:#24170d;background:var(--px-accent);font-weight:700}
+.confirm-inline{display:inline-flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:6px;margin-left:auto;font-size:12px;line-height:16px;color:var(--ui-text)}
+.confirm-inline .pixel-button,.undo-line .pixel-button{min-height:28px;padding:4px 10px;font-size:12px}
+.undo-line{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:6px 0;font-size:12px;color:var(--ui-text-2)}
+/* Segmented control: one pill, the chosen option glows amber. */
+.segmented{display:inline-flex;gap:2px;padding:2px;background:var(--ui-field);border:1px solid var(--ui-line);border-radius:var(--ui-radius-pill);box-shadow:none}
+.segmented button{min-height:30px;padding:4px 14px;font-size:var(--ui-fs-sm);color:var(--ui-text-2);background:transparent;border:0;border-radius:var(--ui-radius-pill);transition:background-color var(--ui-dur) var(--ui-ease),color var(--ui-dur) var(--ui-ease)}
+.segmented button:hover:not(:disabled){color:var(--ui-text)}
+.segmented button[aria-checked=true]{color:var(--ui-text);background:var(--ui-accent-soft);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ui-accent) 45%,transparent);font-weight:500}
 
 /* Add album */
 .add-panel{display:grid;gap:12px}
-.add-search{display:flex;align-items:center;gap:8px;padding:4px 4px 4px 12px;background:var(--px-bg);border:2px solid var(--px-border)}
-.add-search>svg{color:var(--px-ink-dim);flex:none}
+.add-search{display:flex;align-items:center;gap:8px;padding:4px 4px 4px 12px;background:var(--ui-field);border:1px solid var(--ui-line-strong);border-radius:var(--ui-radius)}
+.add-search:focus-within{border-color:var(--ui-accent)}
+.add-search>svg{color:var(--ui-text-3);flex:none}
 .add-search input{flex:1;min-width:0;padding:8px 0;font-size:15px;background:none;border:0}
 .add-options{display:flex;gap:12px;flex-wrap:wrap}
-.add-status{margin:0;font-size:13px;color:var(--px-ink-dim)}
-.add-hint{display:flex;align-items:center;gap:8px;margin:12px 0 0;padding:14px 16px;font-size:13px;color:var(--px-ink-faint);border:2px dashed var(--px-border-subtle)}
-.add-intro{margin:0;font-size:13px;line-height:1.7;color:var(--px-ink-dim)}
-.add-notice{display:flex;align-items:center;gap:8px;margin:0 0 12px;padding:8px 12px;font-size:13px;color:#14200f;background:var(--px-good);border:2px solid #d5f2c8}
+.add-status{margin:0;font-size:13px;color:var(--ui-text-2)}
+.add-hint{display:flex;align-items:center;gap:8px;margin:12px 0 0;padding:14px 16px;font-size:13px;color:var(--ui-text-3);border:1px dashed var(--ui-line-strong);border-radius:var(--ui-radius-lg)}
+.add-intro{margin:0;font-size:13px;line-height:1.7;color:var(--ui-text-2)}
+.add-notice{display:flex;align-items:center;gap:8px;margin:0 0 12px;padding:8px 12px;font-size:13px;color:var(--ui-text);background:color-mix(in srgb,var(--ui-good) 16%,transparent);border:1px solid color-mix(in srgb,var(--ui-good) 45%,transparent);border-radius:var(--ui-radius)}
 .add-results{list-style:none;margin:0;padding:0;display:grid;gap:8px;max-height:min(52vh,520px);overflow:auto}
-.add-results li{display:flex;align-items:center;gap:12px;padding:8px;background:var(--px-surface-2);border:1px solid #8a5a3288}
-.add-results li:hover{border-color:var(--px-brass)}
-.add-cover{flex:none;width:72px;height:72px;object-fit:cover;background:var(--px-bg);box-shadow:3px 3px 0 var(--px-shadow)}
-.add-cover-empty{display:grid;place-items:center;color:var(--px-ink-faint)}
+.add-results li{display:flex;align-items:center;gap:12px;padding:8px;background:var(--ui-surface-hover);border:1px solid var(--ui-line);border-radius:var(--ui-radius-lg);transition:border-color var(--ui-dur) var(--ui-ease)}
+.add-results li:hover{border-color:var(--ui-line-strong)}
+.add-cover{flex:none;width:72px;height:72px;object-fit:cover;background:var(--ui-bg);border-radius:var(--ui-radius-sm);box-shadow:var(--ui-shadow)}
+.add-cover-empty{display:grid;place-items:center;color:var(--ui-text-3)}
 .add-result-copy{flex:1;min-width:0;display:grid;gap:3px}
 .add-result-copy strong,.add-result-copy small{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-.add-result-copy strong{font-size:15px}.add-result-copy small{font-size:12px;color:var(--px-ink-dim)}.add-result-copy .add-source{color:var(--px-ink-faint);font-size:12px}
-.add-local-actions{display:flex;align-items:center;gap:14px;font-size:13px;color:var(--px-ink-dim)}
+.add-result-copy strong{font-size:15px;font-weight:500}.add-result-copy small{font-size:12px;color:var(--ui-text-2)}.add-result-copy .add-source{color:var(--ui-text-3);font-size:12px}
+.add-local-actions{display:flex;align-items:center;gap:14px;font-size:13px;color:var(--ui-text-2)}
 .add-manual-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px}
-.add-manual label,.backup-dialog label{display:grid;gap:5px;font-size:12px;color:var(--px-ink-dim)}
-.add-manual input,.add-manual textarea,.record-card-notes textarea{padding:8px 10px;font-size:14px;color:var(--px-ink);background:var(--px-bg);border:2px solid var(--px-border);border-radius:0;resize:vertical}
+.add-manual label,.backup-dialog label{display:grid;gap:6px;font-size:12px;color:var(--ui-text-2)}
+.add-manual input,.add-manual textarea,.record-card-notes textarea{padding:8px 10px;font-size:14px;resize:vertical}
 .add-manual>.pixel-button{justify-self:start}
 
 /* Backup */
-.backup-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:0 0 14px}
-.backup-stats div{padding:10px;text-align:center;background:var(--px-surface-2);border:1px solid #8a5a3288}.backup-stats dt{font-size:12px;color:var(--px-ink-faint)}.backup-stats dd{margin:2px 0 0;font-size:18px;font-weight:700;color:var(--px-accent-hi)}
+.backup-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:0 0 16px}
+.backup-stats div{padding:12px 10px;text-align:center;background:var(--ui-surface-hover);border:1px solid var(--ui-line);border-radius:var(--ui-radius-lg)}.backup-stats dt{font-size:12px;color:var(--ui-text-3)}.backup-stats dd{margin:4px 0 0;font-size:var(--ui-fs-lg);font-weight:500;color:var(--ui-accent)}
 .backup-actions{display:flex;gap:10px;margin:14px 0 8px}
 
 /* The vinyl editor dialog shares the cabin frame; 账户与文件夹 sections */
-.record-dialog{color:var(--px-ink);background:var(--px-surface)}
-.music-local p{font-size:12px;line-height:1.7;color:var(--px-ink-dim)}
-.music-local h3{font-size:12px}
-.music-advanced{margin-top:16px;padding:12px 0;border-top:2px solid var(--px-border-subtle);border-bottom:2px solid var(--px-border-subtle)}
-.music-advanced summary{cursor:pointer;font-size:13px;color:var(--px-ink);line-height:1.8}
+.music-local p{font-size:12px;line-height:1.7;color:var(--ui-text-2)}
+.music-local h3{font-size:var(--ui-fs-sm);font-weight:500}
+.music-advanced{margin-top:16px;padding:12px 0;border-top:1px solid var(--ui-line);border-bottom:1px solid var(--ui-line)}
+.music-advanced summary{cursor:pointer;font-size:13px;color:var(--ui-text);line-height:1.8}
 .music-advanced summary:focus-visible{outline-offset:4px}
-.music-advanced form{padding:8px 0 0}.music-advanced form>p{font-size:12px;line-height:1.7;color:var(--px-ink-dim)}
-.record-dialog{border-radius:0;border:2px solid var(--px-brass);box-shadow:8px 8px 0 #0d0805dd}
-.record-dialog::backdrop{background:#0d0805a8}
-.record-dialog button{border-radius:0}
+.music-advanced form{padding:8px 0 0}.music-advanced form>p{font-size:12px;line-height:1.7;color:var(--ui-text-2)}
 
 @media (max-width:1100px){.app-actions .pixel-button span{display:none}.app-actions .pixel-button.is-primary span{display:inline}}
 @media (max-width:800px){.cabin-toolbar-group:not(.zen-keep) button span{display:none}}
 @media (max-width:760px){.record-card{grid-template-columns:1fr}.record-card-sleeve{max-width:260px}.add-manual-grid{grid-template-columns:1fr}.backup-stats{grid-template-columns:repeat(2,1fr)}}
+/* Phones: dialogs use the whole width, the header and body breathe a little less. */
+@media (max-width:520px){.cabin-dialog,.cabin-dialog.is-sm,.cabin-dialog.is-lg,.cabin-dialog.is-xl{width:calc(100vw - 24px);max-height:calc(100dvh - 32px)}.cabin-dialog-header{padding-left:var(--ui-space-5)}.cabin-dialog-body{padding:var(--ui-space-4) var(--ui-space-5) var(--ui-space-5)}.cabin-dialog-footer{padding:12px var(--ui-space-5)}}
 
 /* Toolbar groups may wrap as a whole, but never clip reachable controls. */
 .cabin-room .cabin-toolbar > .cabin-toolbar-group{max-width:none;overflow:visible;flex:0 0 auto}
 .cabin-room .cabin-toolbar button:focus-visible{outline-offset:3px}
 
 
-.room-preferences-error{position:absolute;z-index:25;left:18px;right:18px;top:130px;padding:10px 14px;border:2px solid #dfbd87;background:#4a3029f2;color:#fff0d2;font-size:12px}
+.room-preferences-error{position:absolute;z-index:25;left:18px;right:18px;top:130px;padding:10px 14px;color:var(--ui-text);background:var(--ui-surface-raised);border:1px solid color-mix(in srgb,var(--ui-danger) 55%,transparent);border-radius:var(--ui-radius-lg);box-shadow:inset 3px 0 0 var(--ui-danger),var(--ui-shadow);font-size:12px}
 
 /* First visit: two useful paths, with no setup required before focusing. */
 .cabin-scene .room-empty{inset:42% 24% auto 31%;padding:24px 20px;gap:12px;max-height:calc(100% - 42% - 24px);overflow:auto}

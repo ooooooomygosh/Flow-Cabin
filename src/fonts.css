@@ -1,7 +1,10 @@
-/* Main window type defaults: the HarmonyOS faces are declared once in tokens.css. */
+/* Main window type defaults: the HarmonyOS faces are declared once in tokens.css.
+   3.0 (--ui-font): HarmonyOS Sans when it is installed (nothing is downloaded), else
+   the system CJK face. 设置 › 显示与字体 replaces --desktop-font; 「内置」 loads the
+   bundled files (8 MB a weight, so never by default). */
 @layer guards, reset, features, skin, overrides;
 @layer reset {
-:root { --desktop-font: system-ui, 'PingFang SC', 'Microsoft YaHei', sans-serif; --desktop-weight: 400; --desktop-heading-weight: 700; }
+:root { --desktop-font: 'HarmonyOS Sans SC', system-ui, 'PingFang SC', 'Microsoft YaHei', sans-serif; --desktop-weight: 400; --desktop-heading-weight: 700; }
 html, body, button, input, textarea, select { font-family: var(--desktop-font); font-synthesis: none; }
 body, input, textarea, select { font-weight: var(--desktop-weight); }
 h1, h2, h3, h4, strong, b { font-weight: var(--desktop-heading-weight); }
