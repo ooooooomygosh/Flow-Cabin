@@ -282,7 +282,8 @@ function toggleSettings(open = !settingsOpen) {
 }
 async function saveAppearance(value) {
   const next = normalizeSettings(value);
-  if (next.font !== 'bundled' && !(await listSystemFonts()).includes(next.font)) throw new Error('该字体未安装，请刷新本机字体列表后选择。');
+  // 'system' (the default) and 'bundled' are stacks, not installed families.
+  if (!['system', 'bundled'].includes(next.font) && !(await listSystemFonts()).includes(next.font)) throw new Error('该字体未安装，请刷新本机字体列表后选择。');
   fs.mkdirSync(app.getPath('userData'), { recursive: true });
   fs.writeFileSync(settingsPath() + '.tmp', JSON.stringify(next));
   fs.renameSync(settingsPath() + '.tmp', settingsPath());
