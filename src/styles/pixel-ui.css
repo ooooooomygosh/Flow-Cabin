@@ -1,72 +1,155 @@
 /*
- * Flow Cabin · pixel UI skin (owner: beauty / art direction).
+ * Flow Cabin · UI skin (owner: art direction).
  * Lives in the `skin` cascade layer, after `features`, so it wins over feature
- * files in dev and in the shipped build alike — without !important. It only
- * re-skins shared chrome (buttons, panels, dialogs, inputs, sliders, bubbles)
- * with the tokens in tokens.css: pixel fonts on a 12px grid, 9-slice notched
- * frames, hard stepped shadows and steps() motion. Layout stays in feature files.
+ * files in dev and in the shipped build alike — without !important.
+ *
+ * 3.0 (高级温馨, docs/design/3.0-design.md §7): the shared chrome — buttons,
+ * dialogs, fields, sliders, toasts, choice cards — is warm walnut glass built
+ * from the --ui-* tokens: one amber accent, 8/12px corners, 1px warm hairlines,
+ * soft layered shadows, eased 240ms motion. No 9-slice frames, bevels or hard
+ * shadows on chrome, and no pixel face on buttons or prose.
+ *
+ * The classic room keeps its pixel look where it belongs to the scene: the
+ * toolbar HUD, the shelf's selection card, the empty-shelf card, the turntable
+ * copy and the cat's paper bubble (bottom half of this file).
+ *
+ * Tuning a shared control from a feature file: the button face reads custom
+ * properties, so `--btn-bg`, `--btn-bg-hover`, `--btn-ink` and `--btn-line` set in
+ * any layer restyle it without fighting this layer. Layout (size, padding, gap)
+ * is never set here.
  */
 @layer guards, reset, features, skin, overrides;
 @layer skin {
-/* ── type: pixel display face for UI chrome, readable body face for prose.
-   Smoothing is switched off only where a pixel face is drawn; prose keeps it. ── */
-.app-brand h1, .cabin-dialog-header h2, .record-card-copy h3, .room-selection-copy h2,
+/* ── 3.0 buttons: secondary is a ghost with a hairline; primary is amber ── */
+.pixel-button {
+  font-family: var(--ui-font); font-weight: 500; letter-spacing: .01em; -webkit-font-smoothing: antialiased;
+  color: var(--btn-ink, var(--ui-text)); background: var(--btn-bg, transparent);
+  border: 1px solid var(--btn-line, var(--ui-line-strong)); border-radius: var(--ui-radius); box-shadow: none;
+  transition: background-color var(--ui-dur) var(--ui-ease), border-color var(--ui-dur) var(--ui-ease), color var(--ui-dur) var(--ui-ease), transform var(--ui-dur) var(--ui-ease);
+}
+.pixel-button:hover:not(:disabled) { background: var(--btn-bg-hover, var(--ui-surface-hover)); border-color: var(--btn-line-hover, var(--btn-line, var(--ui-line-strong))); }
+.pixel-button:active:not(:disabled) { transform: scale(.98); transition-duration: 80ms; }
+.pixel-button.is-primary { --btn-bg: var(--ui-accent); --btn-bg-hover: color-mix(in srgb, var(--ui-accent) 86%, #fff); --btn-ink: var(--ui-accent-text); --btn-line: transparent; font-weight: 600; }
+.pixel-button.is-quiet { --btn-bg: transparent; --btn-line: transparent; --btn-ink: var(--ui-text-2); }
+.pixel-button.is-quiet:hover:not(:disabled) { color: var(--ui-text); }
+.pixel-button.is-danger { --btn-ink: var(--ui-danger); --btn-line: color-mix(in srgb, var(--ui-danger) 45%, transparent); --btn-bg-hover: color-mix(in srgb, var(--ui-danger) 14%, transparent); }
+.pixel-button svg { flex: none; }
+/* One disabled look for every button: dimmed, no press. */
+.pixel-button:disabled, .pixel-button.is-disabled { opacity: var(--px-disabled-opacity); cursor: default; transform: none; }
+
+/* ── dialogs: walnut glass, 12px, hairline, soft layered shadow ─────────── */
+.cabin-dialog, .record-dialog {
+  color: var(--ui-text); background: var(--ui-surface);
+  border: 1px solid var(--ui-line); border-radius: var(--ui-radius-lg); box-shadow: var(--ui-shadow-lg);
+  backdrop-filter: blur(var(--ui-blur)) saturate(1.1);
+}
+:is(.cabin-dialog, .record-dialog)::backdrop { background: var(--ui-backdrop); }
+.cabin-dialog[open], .record-dialog[open] { animation: ui-dialog-in var(--ui-dur-slow) var(--ui-ease) both; }
+@keyframes ui-dialog-in { 0% { opacity: 0; transform: translateY(8px) scale(.985); } 100% { opacity: 1; transform: none; } }
+/* The lite entrance (流畅模式): opacity only — scaling a full-window dialog
+   re-rasterizes the whole panel every step. */
+@keyframes px-dialog-in-lite { 0% { opacity: 0; } 100% { opacity: 1; } }
+
+/* ── fields: a quiet dark well, hairline edge, amber on focus ──────────── */
+/* Canonical form controls. Not: .pixel-button, range, checkbox, .segmented. */
+:is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) :is(select, textarea), :is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) input:is([type=text], [type=search], [type=number], [type=date], [type=url]), :is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) input:not([type]) {
+  appearance: none; -webkit-appearance: none; min-height: 36px;
+  background-color: var(--ui-field); color: var(--ui-text); border: 1px solid var(--ui-line-strong); border-radius: var(--ui-radius); box-shadow: none;
+  transition: border-color var(--ui-dur) var(--ui-ease), background-color var(--ui-dur) var(--ui-ease);
+}
+:is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) :is(select, textarea, input:is([type=text], [type=search], [type=number], [type=date], [type=url], :not([type]))):hover { border-color: color-mix(in srgb, var(--ui-accent) 50%, transparent); }
+:is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) :is(select, textarea, input:is([type=text], [type=search], [type=number], [type=date], [type=url], :not([type]))):focus-visible { border-color: var(--ui-accent); outline-offset: 1px; }
+:is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) :is(select, textarea, input:is([type=text], [type=search], [type=number], [type=date], [type=url], :not([type]))):disabled { opacity: var(--px-disabled-opacity); cursor: default; }
+:is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) :is(textarea, input:is([type=text], [type=search], [type=number], [type=date], [type=url], :not([type])))::placeholder { color: var(--ui-text-3); opacity: 1; }
+:is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) select {
+  cursor: pointer; padding-right: 30px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23d3c0a4' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center; background-size: 10px 6px;
+}
+:is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) option { background: var(--px-surface); color: var(--ui-text); }
+:is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) input[type=date] { color-scheme: dark; }
+:is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) input[type=date]::-webkit-calendar-picker-indicator { filter: invert(72%) sepia(40%) saturate(600%) hue-rotate(345deg); opacity: .9; cursor: pointer; }
+/* compact contexts keep their own height (pocket player owns .pocket-track) */
+.cabin-room .pocket-track select { min-height: 0; }
+/* 专辑墙 search and 添加 search: the label / row is the well, the input inside it stays bare. */
+.album-wall-overlay .wall-search > label > input, .add-search input { border: 0; background: transparent; box-shadow: none; min-height: 0; }
+.add-search input:focus-visible { outline: 0; }
+/* Sliders: a slim rounded track and a lamp-amber knob. */
+input[type=range] { -webkit-appearance: none; appearance: none; height: 18px; background: transparent; cursor: pointer; }
+input[type=range]::-webkit-slider-runnable-track { height: 4px; background: rgba(255, 232, 196, .16); border: 0; border-radius: var(--ui-radius-pill); box-shadow: none; }
+input[type=range]::-moz-range-track { height: 4px; background: rgba(255, 232, 196, .16); border: 0; border-radius: var(--ui-radius-pill); }
+input[type=range]::-moz-range-progress { height: 4px; background: var(--ui-accent); border-radius: var(--ui-radius-pill); }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; margin-top: -5px; border: 0; border-radius: 50%; background: var(--ui-accent); box-shadow: 0 0 0 3px var(--ui-accent-soft), 0 1px 3px rgba(10, 6, 3, .4); transition: transform var(--ui-dur) var(--ui-ease); }
+input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border: 0; border-radius: 50%; background: var(--ui-accent); box-shadow: 0 0 0 3px var(--ui-accent-soft); }
+input[type=range]:hover::-webkit-slider-thumb { transform: scale(1.12); }
+input[type=range]:disabled { opacity: var(--px-disabled-opacity); cursor: default; }
+input[type=checkbox], input[type=radio] { accent-color: var(--ui-accent); }
+
+/* ── toasts: a raised glass note, centred above the footer ─────────────── */
+.app-toast {
+  font: 400 var(--ui-fs-sm)/1.45 var(--ui-font); color: var(--ui-text);
+  background: var(--ui-surface-raised); border: 1px solid var(--ui-line); border-radius: var(--ui-radius-lg); box-shadow: var(--ui-shadow);
+  backdrop-filter: blur(var(--ui-blur));
+  animation: ui-toast-in var(--ui-dur-slow) var(--ui-ease) both;
+}
+.app-toast button { color: var(--ui-accent); border-color: var(--ui-line-strong); border-radius: var(--ui-radius-pill); transition: background-color var(--ui-dur) var(--ui-ease); }
+.app-toast button:hover { background: var(--ui-surface-hover); }
+/* An error toast reads as an error (role=alert): a danger rule on the left, the text stays legible. */
+.app-toast.is-error { box-shadow: inset 3px 0 0 var(--ui-danger), var(--ui-shadow); }
+@keyframes ui-toast-in { 0% { opacity: 0; transform: translateY(8px); } 100% { opacity: 1; transform: none; } }
+
+/* ── choice cards (scenes / companions): soft tiles that light up ──────── */
+.scene-choice, .pet-choice { border: 1px solid var(--ui-line); border-radius: var(--ui-radius-lg); box-shadow: none; transition: border-color var(--ui-dur) var(--ui-ease), background-color var(--ui-dur) var(--ui-ease), transform var(--ui-dur) var(--ui-ease); }
+.scene-choice:hover, .pet-choice:hover { border-color: var(--ui-line-strong); }
+.scene-choice:active, .pet-choice:active { transform: scale(.99); transition-duration: 80ms; }
+.scene-choice[aria-pressed=true], .pet-choice[aria-pressed=true] { border-color: var(--ui-accent); background: var(--ui-accent-soft); box-shadow: 0 0 0 1px var(--ui-accent); }
+.scene-choice > img { image-rendering: pixelated; }
+
+/* ══ Classic room (data-interface=classic): scene-specific pixel pieces ══════
+   These sit on the pixel scene, so they keep the pixel display face on its 12px
+   grid, the 9-slice frames and the hard bevels (docs/art-direction.md). */
+.app-brand h1, .record-card-copy h3, .room-selection-copy h2,
 .turntable-copy > strong, .turntable-heading, .room-empty > p,
-.pixel-button, .cabin-room .cabin-toolbar button, .room-selection-actions button, .room-selection-actions a,
-.dialog-tabs button, .segmented button, .room-cat-bubble, .app-toast, .room-shelf-navigation, .focus-badge,
-.cabin-scene .room-empty button, .turntable-controls button, .backup-stats dt,
-.record-card-kicker, .room-selection-copy small, .app-brand small, .scene-choice strong, .pet-choice strong {
+.cabin-room .cabin-toolbar button, .room-selection-actions button, .room-selection-actions a,
+.room-cat-bubble, .room-shelf-navigation, .cabin-room .focus-badge,
+.cabin-scene .room-empty button, .turntable-controls button,
+.record-card-kicker, .room-selection-copy small, .app-brand small {
   font-family: var(--px-font-cn); font-weight: 400; letter-spacing: 0; -webkit-font-smoothing: none;
 }
-/* Pixel glyphs are drawn on a 12px grid: chrome text is 12 / 24px only. */
-.pixel-button, .cabin-room .cabin-toolbar button, .room-selection-actions button, .room-selection-actions a,
-.dialog-tabs button, .segmented button, .app-toast, .room-cat-bubble, .room-shelf-navigation,
-.turntable-controls button, .turntable-heading, .turntable-copy > strong, .app-brand small, .room-selection-copy small,
-.record-card-kicker, .backup-stats dt, .scene-choice strong, .pet-choice strong { font-size: var(--px-text-chrome); line-height: var(--px-leading-chrome); }
-.app-brand h1, .cabin-dialog-header h2, .room-selection-copy h2, .room-empty > p { font-size: var(--px-text-title); line-height: var(--px-leading-title); }
+.cabin-room .cabin-toolbar button, .room-selection-actions button, .room-selection-actions a,
+.room-cat-bubble, .room-shelf-navigation, .turntable-controls button, .turntable-heading, .turntable-copy > strong,
+.app-brand small, .room-selection-copy small, .record-card-kicker { font-size: var(--px-text-chrome); line-height: var(--px-leading-chrome); }
+.app-brand h1, .room-selection-copy h2, .room-empty > p { font-size: var(--px-text-title); line-height: var(--px-leading-title); }
 .record-card-copy h3 { font-size: var(--px-text-title); line-height: var(--px-leading-title-lg); }
 .room-selection-copy p, .turntable-artist, .turntable-track { font-family: var(--px-font-body); }
 /* The provider tag is CJK (仅展示 / 本地音乐): the pixel CJK face at 12px, never 8px Latin. */
 .turntable-heading > small { font-family: var(--px-font-cn); font-weight: 400; font-size: var(--px-text-chrome); line-height: var(--px-leading-chrome); letter-spacing: 0; }
 
-/* ── buttons: bevel + hover lift + click squish, all in frames ─────────── */
-.pixel-button, .room-selection-actions button, .room-selection-actions a, .cabin-scene .room-empty button,
-.add-manual > .pixel-button, .record-card-tools .record-tools-button, .record-card-tools .discogs-link {
+/* Scene buttons: bevel + hover lift + click squish, all in frames. */
+.room-selection-actions button, .room-selection-actions a, .cabin-scene .room-empty button {
   box-shadow: inset 2px 2px 0 var(--px-bevel-white), inset -2px -2px 0 var(--px-bevel-black), var(--px-shadow-2);
   transition: translate var(--px-dur-fast) steps(2, end), box-shadow var(--px-dur-fast) steps(2, end), background-color var(--px-dur-fast) steps(2, end), filter var(--px-dur-fast) steps(2, end);
 }
-.pixel-button:hover:not(:disabled), .room-selection-actions button:hover:not(:disabled), .room-selection-actions a:hover:not(:disabled),
-.cabin-scene .room-empty button:hover:not(:disabled), .record-card-tools .record-tools-button:hover:not(:disabled), .record-card-tools .discogs-link:hover:not(:disabled) {
+.room-selection-actions button:hover:not(:disabled), .room-selection-actions a:hover:not(:disabled), .cabin-scene .room-empty button:hover:not(:disabled) {
   translate: 0 -2px; box-shadow: inset 2px 2px 0 var(--px-bevel-white-hi), inset -2px -2px 0 var(--px-bevel-black), 4px 6px 0 var(--px-shadow); filter: brightness(1.06);
 }
-.pixel-button:active:not(:disabled), .room-selection-actions button:active:not(:disabled), .room-selection-actions a:active:not(:disabled),
-.cabin-scene .room-empty button:active:not(:disabled), .record-card-tools .record-tools-button:active:not(:disabled), .record-card-tools .discogs-link:active:not(:disabled) {
+.room-selection-actions button:active:not(:disabled), .room-selection-actions a:active:not(:disabled), .cabin-scene .room-empty button:active:not(:disabled) {
   translate: 2px 2px; box-shadow: inset 2px 2px 0 var(--px-bevel-black), inset -2px -2px 0 var(--px-bevel-white-soft), 1px 1px 0 var(--px-shadow); transition-duration: 0s;
 }
-.pixel-button.is-primary, .cabin-scene .room-empty button:not(.room-welcome-focus) {
+.cabin-scene .room-empty button:not(.room-welcome-focus) {
   color: var(--px-ink-on-accent); background: var(--px-accent); border-color: var(--px-accent-hi);
   box-shadow: inset 2px 2px 0 var(--px-accent-hi), inset -2px -2px 0 var(--px-accent-lo), var(--px-shadow-2);
 }
-.pixel-button.is-primary:hover:not(:disabled) { box-shadow: inset 2px 2px 0 var(--px-bevel-warm), inset -2px -2px 0 var(--px-accent-lo), 4px 6px 0 var(--px-shadow); }
 /* The selection card's primary action takes the scene's own accent (CabinRoom sets --scene-accent). */
 .cabin-room .room-selection-actions .room-open-album {
   color: var(--px-ink-on-accent); background: var(--scene-accent); border-color: color-mix(in srgb, var(--scene-accent) 55%, #fff);
   box-shadow: inset 2px 2px 0 color-mix(in srgb, var(--scene-accent) 55%, #fff), inset -2px -2px 0 color-mix(in srgb, var(--scene-accent) 65%, #000), var(--px-shadow-2);
 }
 .cabin-room .room-selection-actions .room-open-album:hover { box-shadow: inset 2px 2px 0 color-mix(in srgb, var(--scene-accent) 40%, #fff), inset -2px -2px 0 color-mix(in srgb, var(--scene-accent) 65%, #000), 4px 6px 0 var(--px-shadow); }
-.pixel-button.is-quiet { box-shadow: none; }
-.pixel-button.is-quiet:hover:not(:disabled) { box-shadow: var(--px-shadow-1); }
-/* One disabled look for every button: no bevel, no hard shadow, no lift. The skin
-   layer owns the box-shadow, so the state has to be restated here (app.css only
-   dims the button — its `box-shadow:none` lost to this layer). It sits after the
-   primary/quiet faces on purpose: same specificity, so source order wins. */
-.pixel-button:disabled, .pixel-button.is-disabled, .room-selection-actions button:disabled,
-.cabin-scene .room-empty button:disabled, .record-card-tools .record-tools-button:disabled {
-  box-shadow: none; opacity: var(--px-disabled-opacity); cursor: default; translate: none;
-}
+.room-selection-actions button:disabled, .cabin-scene .room-empty button:disabled { box-shadow: none; opacity: var(--px-disabled-opacity); cursor: default; translate: none; }
 
-/* HUD chips (the toolbar's groups: the focus badge, then the room actions): one framed
-   strip each, 40px tall, keys light up like lamp buttons. A running timer lights its frame. */
+/* HUD chips (the classic toolbar's groups: the focus badge, then the room actions): one
+   framed strip each, keys light up like lamp buttons. A running timer lights its frame. */
 .cabin-toolbar-group {
   border: 4px solid transparent; border-image: var(--px-frame-img-quiet) 2 / 4px stretch; background-clip: padding-box;
   background-color: var(--px-surface-hud); box-shadow: var(--px-shadow-2);
@@ -77,80 +160,25 @@
 .cabin-room .cabin-toolbar button { transition: background-color var(--px-dur-fast) steps(2, end), color var(--px-dur-fast) steps(2, end), translate var(--px-dur-fast) steps(2, end); }
 .cabin-room .cabin-toolbar button:hover:not(:disabled) { background: var(--px-accent-hi-ghost); color: var(--px-ink); translate: 0 -1px; }
 .cabin-room .cabin-toolbar button:active:not(:disabled) { translate: 0 1px; transition-duration: 0s; }
-.cabin-room .cabin-toolbar button svg, .pixel-button svg { shape-rendering: crispEdges; }
+.cabin-room .cabin-toolbar button svg { shape-rendering: crispEdges; }
 
-/* ── panels: 9-slice notched pixel frames ─────────────────────────────── */
-.cabin-room .room-now-playing, .shelf-filters, .cabin-scene .room-empty, .cabin-dialog, .record-dialog {
+/* Scene panels: 9-slice notched pixel frames. */
+.cabin-room .room-now-playing, .shelf-filters, .cabin-scene .room-empty {
   border: 6px solid transparent; border-image: var(--px-frame-img) 2 / 6px stretch; background-clip: padding-box;
 }
-.cabin-dialog, .record-dialog { box-shadow: var(--px-shadow-3); }
-.cabin-dialog-header { background: linear-gradient(var(--px-surface-3), var(--px-surface-2)); border-bottom: 2px solid var(--px-shadow); box-shadow: inset 0 -2px 0 var(--px-border); }
-.cabin-dialog-close, .desktop-controls button { transition: background-color var(--px-dur-fast) steps(2, end), color var(--px-dur-fast) steps(2, end); }
-:is(.cabin-dialog, .record-dialog)::backdrop { background: var(--px-backdrop); }
-.cabin-dialog[open], .record-dialog[open] { animation: px-dialog-in var(--px-dur-med) var(--px-ease) both; }
-@keyframes px-dialog-in { 0% { opacity: 0; translate: 0 12px; scale: .96; } 100% { opacity: 1; translate: 0; scale: 1; } }
-/* The lite entrance (流畅模式): opacity only — scaling a full-window dialog
-   re-rasterizes the whole panel every step. */
-@keyframes px-dialog-in-lite { 0% { opacity: 0; } 100% { opacity: 1; } }
-
-/* Tabs and segmented controls: sliding lamp-lit key. */
-.dialog-tabs button { transition: color var(--px-dur-fast) steps(2, end), border-color var(--px-dur-fast) steps(2, end); }
-.dialog-tabs button:hover { color: var(--px-ink); }
-.segmented button { transition: background-color var(--px-dur-fast) steps(2, end), color var(--px-dur-fast) steps(2, end); }
-.segmented button[aria-checked=true] { box-shadow: inset 2px 2px 0 var(--px-accent-hi), inset -2px -2px 0 var(--px-accent-lo); }
-
-/* ── inputs, selects, sliders ─────────────────────────────────────────── */
-/* Canonical form controls: dark inset well, amber edge on hover/focus, one chevron SVG.
-   Not: .pixel-button, range, checkbox, .segmented. */
-:is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) :is(select, textarea), :is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) input:is([type=text], [type=search], [type=number], [type=date], [type=url]), :is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) input:not([type]) {
-  appearance: none; -webkit-appearance: none; min-height: 32px;
-  background-color: var(--px-surface-inset); color: var(--px-ink); border: 2px solid var(--px-border); box-shadow: var(--px-shadow-inset);
-  transition: border-color var(--px-dur-fast) steps(2, end);
-}
-:is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) :is(select, textarea, input:is([type=text], [type=search], [type=number], [type=date], [type=url], :not([type]))):hover { border-color: var(--px-border-hi); }
-:is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) :is(select, textarea, input:is([type=text], [type=search], [type=number], [type=date], [type=url], :not([type]))):focus-visible { border-color: var(--px-accent-hi); }
-:is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) :is(select, textarea, input:is([type=text], [type=search], [type=number], [type=date], [type=url], :not([type]))):disabled { opacity: var(--px-disabled-opacity); cursor: default; }
-:is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) :is(textarea, input:is([type=text], [type=search], [type=number], [type=date], [type=url], :not([type])))::placeholder { color: var(--px-ink-faint); opacity: 1; }
-:is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) select {
-  cursor: pointer; padding-right: 28px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' shape-rendering='crispEdges'%3E%3Cpath fill='%23e0ad69' d='M0 0h10v2H8v2H6v2H4V4H2V2H0z'/%3E%3C/svg%3E");
-  background-repeat: no-repeat; background-position: right 10px center; background-size: 10px 6px;
-}
-:is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) option { background: var(--px-surface); color: var(--px-ink); }
-:is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) input[type=date] { color-scheme: dark; }
-:is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) input[type=date]::-webkit-calendar-picker-indicator { filter: invert(72%) sepia(40%) saturate(600%) hue-rotate(345deg); opacity: .9; cursor: pointer; }
-/* compact contexts keep their own height (pocket player owns .pocket-track) */
-.cabin-room .pocket-track select { min-height: 0; }
-/* 专辑墙 search: the label is the well, the input inside it stays bare. */
-.album-wall-overlay .wall-search > label > input { border: 0; background: transparent; box-shadow: none; }
-input[type=range] { -webkit-appearance: none; appearance: none; height: 16px; background: transparent; cursor: pointer; }
-input[type=range]::-webkit-slider-runnable-track { height: 6px; background: var(--px-shadow); border: 2px solid var(--px-border); box-shadow: inset 0 2px 0 #00000080; }
-input[type=range]::-moz-range-track { height: 6px; background: var(--px-shadow); border: 2px solid var(--px-border); }
-input[type=range]::-moz-range-progress { height: 6px; background: var(--px-accent); }
-input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 10px; height: 14px; margin-top: -6px; border: 0; background: var(--px-accent); box-shadow: inset 2px 2px 0 var(--px-accent-hi), inset -2px -2px 0 var(--px-accent-lo), 0 0 0 2px var(--px-shadow); transition: translate var(--px-dur-fast) steps(2, end); }
-input[type=range]::-moz-range-thumb { width: 10px; height: 14px; border: 2px solid var(--px-shadow); background: var(--px-accent); }
-input[type=range]:hover::-webkit-slider-thumb { translate: 0 -1px; }
-input[type=range]:disabled { opacity: var(--px-disabled-opacity); cursor: default; }
-input[type=checkbox], input[type=radio] { accent-color: var(--px-accent); }
-
 
 /* Shrunk below 1:1 the art's 4-px cells land on 2/3-px steps (a plaid on the wood);
    an even box-filter downscale reads cleaner there. At 1:1 and above it stays crisp. */
 .cabin-scene[data-scene-scale='down'] .cabin-scene-art { image-rendering: auto; }
 
-/* ── speech bubble + toast: paper tags with a pixel tail ─────────────── */
-.room-cat-bubble, .app-toast {
+/* The cat's speech bubble: a paper tag with a pixel tail (it lives in the scene). */
+.room-cat-bubble {
   border: 4px solid transparent; border-image: var(--px-frame-img-paper) 2 / 4px stretch;
   background: var(--px-paper); background-clip: padding-box; color: var(--px-paper-ink);
   box-shadow: var(--px-shadow-1);
 }
 .room-cat-bubble::after { content: ''; position: absolute; left: 50%; top: 100%; width: 8px; height: 6px; translate: -50% 2px; rotate: 0deg; border: 0;
   background: linear-gradient(var(--px-paper-ink) 0 0) 2px 0 / 4px 2px no-repeat, linear-gradient(var(--px-paper-ink) 0 0) 2px 2px / 4px 2px no-repeat, linear-gradient(var(--px-paper) 0 0) 2px -2px / 4px 2px no-repeat; }
-/* An error toast keeps the paper tag but inks it in the warn colour, with a warn rule on the left.
-   The text uses --px-warn-ink: the bright ember only reaches 3.11:1 on paper, the ink 5.41:1. */
-.app-toast.is-error { color: var(--px-warn-ink); box-shadow: inset 4px 0 0 var(--px-warn), var(--px-shadow-1); }
-.app-toast { animation: px-toast-in var(--px-dur-med) var(--px-ease) both; }
-@keyframes px-toast-in { 0% { opacity: 0; translate: -50% 12px; } 100% { opacity: 1; translate: -50% 0; } }
 /* Cat bubble placement (CatBubble.jsx): offset vars, tail follows the side. */
 .room-cat-bubble { translate: calc(-50% + var(--bubble-dx, 0px)) calc(-4px + var(--bubble-dy, 0px)); transition: translate var(--px-dur-fast) steps(2, end); }
 .room-cat-bubble[data-side='left']::after, .room-cat-bubble[data-side='right']::after { top: 50%; translate: 0 -50%; width: 6px; height: 8px;
@@ -159,31 +187,19 @@ input[type=checkbox], input[type=radio] { accent-color: var(--px-accent); }
 .room-cat-bubble[data-side='left']::after { left: calc(100% + 4px); }
 .room-cat-bubble:not([data-side='left']):not([data-side='right'])::after { left: calc(50% - var(--bubble-dx, 0px)); }
 
-/* Choice cards (scenes / companions): framed tiles that lift and lock in. */
-.scene-choice, .pet-choice { border: 2px solid var(--px-border-soft); box-shadow: var(--px-shadow-2); transition: translate var(--px-dur-fast) steps(2, end), border-color var(--px-dur-fast) steps(2, end), box-shadow var(--px-dur-fast) steps(2, end); }
-.scene-choice:hover, .pet-choice:hover { translate: 0 -2px; border-color: var(--px-accent); box-shadow: 4px 6px 0 var(--px-shadow); }
-.scene-choice:active, .pet-choice:active { translate: 1px 1px; box-shadow: var(--px-shadow-1); transition-duration: 0s; }
-.scene-choice[aria-pressed=true], .pet-choice[aria-pressed=true] { border-color: var(--px-accent-hi); background: var(--px-accent-ghost); box-shadow: 0 0 0 2px var(--px-shadow), var(--px-shadow-2); }
-.scene-choice > img { image-rendering: pixelated; }
-
-/* Square corners for chrome another file still rounds (companion-room.css; handed off). */
-.music-local-folders li { border-radius: 0; }
-
 /* ── reduced motion: keep states, drop movement ───────────────────────── */
 /* Every hover lift in this file has to be listed here: the OS switch (and the
    in-app one) kills transitions, so a lift would otherwise jump instantly.
    The :active squish stays — it is the press feedback, not decoration. */
 @media (prefers-reduced-motion: reduce) {
-  .pixel-button:hover:not(:disabled), .cabin-room .cabin-toolbar button:hover:not(:disabled),
+  .cabin-room .cabin-toolbar button:hover:not(:disabled),
   .room-selection-actions button:hover:not(:disabled), .room-selection-actions a:hover:not(:disabled),
-  .cabin-scene .room-empty button:hover:not(:disabled),
-  .record-card-tools .record-tools-button:hover:not(:disabled), .record-card-tools .discogs-link:hover:not(:disabled),
-  .scene-choice:hover, .pet-choice:hover { translate: none; }
+  .cabin-scene .room-empty button:hover:not(:disabled) { translate: none; }
+  input[type=range]:hover::-webkit-slider-thumb { transform: none; }
 }
-html[data-desktop-reduce-motion='true'] :is(.pixel-button:hover:not(:disabled), .cabin-room .cabin-toolbar button:hover:not(:disabled),
+html[data-desktop-reduce-motion='true'] :is(.cabin-room .cabin-toolbar button:hover:not(:disabled),
   .room-selection-actions button:hover:not(:disabled), .room-selection-actions a:hover:not(:disabled),
-  .cabin-scene .room-empty button:hover:not(:disabled),
-  .record-card-tools .record-tools-button:hover:not(:disabled), .record-card-tools .discogs-link:hover:not(:disabled),
-  .scene-choice:hover, .pet-choice:hover) { translate: none; }
+  .cabin-scene .room-empty button:hover:not(:disabled)) { translate: none; }
+html[data-desktop-reduce-motion='true'] input[type=range]:hover::-webkit-slider-thumb { transform: none; }
 
 }

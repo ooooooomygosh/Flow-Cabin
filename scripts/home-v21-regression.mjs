@@ -44,11 +44,41 @@ try {
   const page = await context.newPage(); page.on('pageerror', e => report.errors.push(e.message));
   await page.goto(origin); await page.locator('.home-world canvas').waitFor();
   const intro = page.getByRole('button', { name: '知道了', exact: true }); if (await intro.isVisible()) await intro.click();
-  await page.getByRole('button', { name: '唱片库', exact: true }).first().click();
+  await page.getByRole('region', { name: '正在播放', exact: true }).getByRole('button', { name: '放一张唱片', exact: true }).click(); // the bar's empty state opens 唱片架
   await page.getByRole('button', { name: '播放 雨天练习', exact: true }).click();
   await page.waitForFunction(() => [...document.querySelectorAll('[data-cabin-audio-host] audio')].some(a => !a.paused && a.currentTime > .1));
   await page.locator('.cabin-dialog-close').last().click();
   await page.evaluate(() => { window.soakAudio = [...document.querySelectorAll('[data-cabin-audio-host] audio')].find(a => !a.paused); });
+  // 3.0 正在播放条 (src/listen/NowPlayingBar.jsx): the song, one line of lyric, ♥ in one click, Space still plays / pauses.
+  const bar = page.getByRole('region', { name: '正在播放', exact: true });
+  await bar.getByRole('button', { name: '暂停播放', exact: true }).waitFor();
+  assert.match(await bar.locator('.listen-meta strong').innerText(), /长时间播放/);
+  await bar.locator('.listen-line.is-lyric').waitFor();
+  const heart = bar.getByRole('button', { name: '喜欢这首歌', exact: true });
+  await heart.click(); assert.equal(await heart.getAttribute('aria-pressed'), 'true');
+  assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('flow-cabin-liked-songs-v1'))[0].title), '长时间播放');
+  await heart.click(); assert.equal(await heart.getAttribute('aria-pressed'), 'false');
+  await page.evaluate(() => document.activeElement?.blur()); await page.keyboard.press('Space');
+  await page.waitForFunction(() => window.soakAudio.paused); await bar.getByRole('button', { name: '继续播放', exact: true }).waitFor();
+  await page.keyboard.press('Space'); await page.waitForFunction(() => !window.soakAudio.paused);
+  assert.equal(await bar.getByRole('progressbar').count() + await bar.getByRole('slider', { name: '播放进度' }).count(), 1, 'one progress bar');
+  report.checks.push('the now-playing bar shows the song and a lyric line, hearts in one click and keeps Space as play / pause');
+  // 唱片架 three views: 我喜欢 lists the heart and plays it, 最近播放 lists what really played.
+  await heart.click();
+  await bar.locator('.listen-meta').click(); await page.getByRole('dialog', { name: '唱机旁', exact: true }).getByRole('button', { name: '打开唱片架', exact: true }).click();
+  const shelf = page.getByRole('dialog', { name: '唱片架', exact: true });
+  await shelf.getByRole('radio', { name: '唱片', exact: true }).waitFor();
+  assert.equal(await shelf.getByRole('button', { name: '筛选', exact: true }).count(), 0, 'a one-record shelf has no filter button');
+  await shelf.getByRole('radio', { name: '我喜欢', exact: true }).click();
+  await shelf.getByRole('button', { name: '播放《长时间播放》', exact: true }).click();
+  assert.equal(await page.evaluate(() => !window.soakAudio.paused), true);
+  await shelf.getByRole('radio', { name: '最近播放', exact: true }).click();
+  await shelf.getByRole('list', { name: '最近播放的歌', exact: true }).getByRole('button', { name: '播放《长时间播放》', exact: true }).waitFor();
+  await shelf.getByRole('radio', { name: '我喜欢', exact: true }).click();
+  await shelf.getByRole('button', { name: '取消喜欢《长时间播放》', exact: true }).click();
+  await shelf.getByText('还没有喜欢的歌', { exact: false }).waitFor();
+  await page.locator('.cabin-dialog-close').last().click();
+  report.checks.push('唱片架: 我喜欢 plays and un-hearts a song, 最近播放 lists it, no 筛选 under 12 records');
   const zones = page.getByRole('navigation', { name: '房间区域' });
   for (let i = 0; i < 50; i++) {
     const name = ['听歌角', '工作角', '生活角', '返回全屋'][i % 4];
@@ -73,6 +103,11 @@ try {
     console.log(`Playing ${Math.round((Date.now() - started) / 60000)} min, ${sample.position.toFixed(1)} s, heap ${sample.heap}`);
   }
   if (minutes) report.checks.push(`${minutes} minutes continuous playback in actual home`);
+  // 「开始这一段」 starts the focus timer through the existing focus command, without touching the music.
+  await bar.getByRole('button', { name: '开始这一段', exact: true }).click();
+  await bar.locator('.listen-focus.is-running').waitFor();
+  assert.equal(await page.evaluate(() => !window.soakAudio.paused), true);
+  report.checks.push('开始这一段 starts focus from the bar while the record keeps playing');
   assert.deepEqual(report.errors, []); report.passed = true;
 } catch (error) { report.failure = error.stack; process.exitCode = 1; console.error(error); }
 finally { report.finishedAt = new Date().toISOString(); await fs.writeFile(path.join(output, 'report.json'), JSON.stringify(report, null, 2)); await browser.close(); server?.kill(); }
