@@ -7,9 +7,9 @@
 /* 房间名下拉：选择小屋 / 布置小屋 */
 .home-room-menu{position:relative;display:flex;-webkit-app-region:no-drag}
 .home-room-menu-list{position:absolute;top:calc(100% + 6px);left:0;z-index:40;display:grid;gap:2px;min-width:220px;padding:6px;border-radius:12px;background:var(--ui-surface,var(--px-surface-hud));border:1px solid var(--ui-line,var(--px-border-subtle));box-shadow:0 12px 32px #0006;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);-webkit-app-region:no-drag;animation:shell-menu-in var(--px-dur-fast,160ms) cubic-bezier(.2,.8,.2,1)}
-.cabin-home .home-room-menu-list button{display:grid;justify-items:start;gap:2px;width:100%;min-height:48px;padding:8px 12px;border:0;border-radius:8px;background:transparent;color:var(--ui-text-1,var(--px-ink));text-align:left;box-shadow:none;font-size:13px}
+.cabin-home .home-room-menu-list button{display:grid;justify-items:start;gap:2px;width:100%;min-height:48px;padding:8px 12px;border:0;border-radius:8px;background:transparent;color:var(--ui-text,var(--px-ink));text-align:left;box-shadow:none;font-size:13px}
 .cabin-home .home-room-menu-list button small{font-size:12px;color:var(--ui-text-2,var(--px-ink-dim))}
-.cabin-home .home-room-menu-list button:hover,.cabin-home .home-room-menu-list button:focus-visible{background:var(--ui-accent-ghost,var(--px-accent-hi-ghost))}
+.cabin-home .home-room-menu-list button:hover,.cabin-home .home-room-menu-list button:focus-visible{background:var(--ui-accent-soft,var(--px-accent-hi-ghost))}
 .cabin-home .home-room-menu-list button:focus-visible{outline:2px solid var(--ui-accent,var(--px-accent));outline-offset:-2px}
 @keyframes shell-menu-in{from{opacity:0;transform:translateY(-4px)}}
 @media(prefers-reduced-motion:reduce){.home-room-menu-list{animation:none}}
@@ -20,9 +20,11 @@
 
 /* 全屋视图：只有唱机、书桌、窝/日记本常驻标签；其他家具悬停或聚焦时才出现 */
 /* The world is scaled to fit; the three labels counter-scale so they stay readable on a phone. */
-.home-world:not([inert]) .home-furniture.is-hotspot .home-furniture-label{opacity:1;font-size:clamp(12px,calc(12px / var(--world-scale,1)),34px);padding:.4em .85em;border-radius:.6em;bottom:-.5em;background:var(--ui-surface,#24221ed9);border-color:var(--ui-line,#ead7b540);color:var(--ui-text-1,var(--px-ink))}
-.home-world:not([inert]) .home-furniture.is-hotspot .home-furniture-label:before{content:'';display:inline-block;width:.5em;height:.5em;margin-right:.5em;border-radius:50%;background:var(--ui-accent,var(--px-accent));vertical-align:.1em}
-.is-art-loading .home-furniture.is-hotspot .home-furniture-label{opacity:0}
+/* Visibility and size must win over the hover-only rule; colours stay at zero specificity so W4's resting/hover contrast applies. */
+.home-world:not([inert]) .home-furniture[data-hotspot] .home-furniture-label{opacity:1;font-size:clamp(12px,calc(12px / var(--world-scale,1)),34px);padding:.4em .85em;border-radius:.6em;bottom:-.5em}
+:where(.home-world:not([inert]) .home-furniture[data-hotspot]) .home-furniture-label{background:var(--ui-surface,#24221ed9);border-color:var(--ui-line,#ead7b540);color:var(--ui-text,var(--px-ink))}
+:where(.home-world:not([inert]) .home-furniture[data-hotspot]) .home-furniture-label:before{content:'';display:inline-block;width:.5em;height:.5em;margin-right:.5em;border-radius:50%;background:var(--ui-accent,var(--px-accent));vertical-align:.1em}
+.home-world.is-art-loading:not([inert]) .home-furniture[data-hotspot] .home-furniture-label{opacity:0}
 
 /* 小屋日常：实验室开着时的那一组 */
 .home-menu-labs{margin-top:16px}
@@ -36,13 +38,37 @@
 
 /* 设置：新分区里的小节、实验室开关、关于入口 */
 .settings-hub-side .settings-hub-about{margin:auto 16px 16px;padding:6px 10px;min-height:32px;border:0;background:none;color:var(--ui-text-2,var(--px-ink-faint));font-size:12px;text-align:left;cursor:pointer;box-shadow:none}
-.settings-hub-side .settings-hub-about:hover,.settings-hub-side .settings-hub-about:focus-visible{color:var(--ui-text-1,var(--px-ink))}
+.settings-hub-side .settings-hub-about:hover,.settings-hub-side .settings-hub-about:focus-visible{color:var(--ui-text,var(--px-ink))}
 .settings-hub-panel .hub-block{display:grid;gap:8px;margin-top:24px;scroll-margin-top:12px}
-.settings-hub-panel .hub-block>h3{margin:0 0 4px;font-size:15px;font-weight:500;color:var(--ui-text-1,var(--px-ink))}
+.settings-hub-panel .hub-block>h3{margin:0 0 4px;font-size:15px;font-weight:500;color:var(--ui-text,var(--px-ink))}
 .settings-hub-panel .hub-classic-home p{margin:0;font-size:12px;line-height:1.6;color:var(--ui-text-2,var(--px-ink-dim))}
 .settings-hub-panel .hub-classic-home .pixel-button{justify-self:start}
 .hub-labs-list{display:grid}
 .hub-diagnostics{padding:4px 12px 12px}
 /* Phone: the tab row scrolls on its own instead of widening the whole dialog. */
 @media(max-width:700px){.settings-hub-side .settings-hub-about{display:none}.settings-hub .settings-hub-layout{grid-template-columns:minmax(0,1fr);min-width:0}.settings-hub .settings-hub-side,.settings-hub .settings-hub-panel{min-width:0}}
+/* 3.0 设置 (W1): the hub's contents on the --ui-* tokens (W4) with --px-* fallbacks — no pixel font,
+   1px lines, rounded rows. Scoped to .settings-hub, so the first-run wizard keeps its own look. */
+.settings-hub{--ob-bg:var(--ui-surface,var(--px-surface));--ob-well:var(--ui-surface-raised,var(--px-surface-2));--ob-ink:var(--ui-text,var(--px-ink));--ob-dim:var(--ui-text-2,var(--px-ink-dim));--ob-accent:var(--ui-accent,var(--px-accent));--ob-good:var(--ui-good,var(--px-good));--ob-edge:var(--ui-line,var(--px-border-subtle));font-family:var(--ui-font,var(--px-font-body))}
+.settings-hub .settings-hub-nav button,.settings-hub .hub-row strong,.settings-hub .hub-sources strong,.settings-hub .settings-hub-results strong,.settings-hub .settings-hub-empty strong,.settings-hub .hub-block>h3{font-family:var(--ui-font,var(--px-font-body));font-weight:500;-webkit-font-smoothing:auto}
+.settings-hub .hub-row strong,.settings-hub .hub-sources strong,.settings-hub .settings-hub-results strong{font-size:var(--ui-fs-sm,13px);line-height:var(--ui-lh-tight,1.3)}
+.settings-hub .hub-row,.settings-hub .hub-sources button,.settings-hub .settings-hub-results button,.settings-hub .hub-focus-settings,.settings-hub .hub-keys{background:var(--ob-well);border:1px solid var(--ob-edge);border-radius:var(--ui-radius,12px);box-shadow:none}
+.settings-hub .hub-row{padding:var(--ui-space-2,8px) var(--ui-space-3,14px);min-height:52px}
+.settings-hub .hub-sources button{padding:var(--ui-space-2,8px) var(--ui-space-3,14px);min-height:48px}
+.settings-hub .hub-sources button:hover:not(:disabled),.settings-hub .settings-hub-results button:hover{border-color:var(--ui-line-strong,var(--px-border-hi))}
+.settings-hub .hub-sources button[aria-checked=true]{border-color:var(--ob-accent);box-shadow:inset 0 0 0 1px var(--ob-accent)}
+.settings-hub .settings-hub-results button:focus-visible,.settings-hub .hub-sources button:focus-visible,.settings-hub .settings-hub-nav button:focus-visible{outline:var(--ui-focus-ring,2px solid var(--px-focus));outline-offset:2px}
+.settings-hub .settings-hub-search{min-height:36px;background:var(--ui-field,var(--ob-well));border:1px solid var(--ob-edge);border-radius:var(--ui-radius-sm,8px)}
+.settings-hub .settings-hub-search:focus-within{border-color:var(--ob-accent)}
+.settings-hub .settings-hub-search input{font-size:var(--ui-fs-sm,13px)}
+.settings-hub .settings-hub-nav{gap:2px}
+.settings-hub .settings-hub-nav button{padding:8px 12px;border:1px solid transparent;border-radius:var(--ui-radius-sm,8px);font-size:var(--ui-fs-sm,13px);transition:background var(--ui-dur,200ms) var(--ui-ease,ease),color var(--ui-dur,200ms) var(--ui-ease,ease)}
+.settings-hub .settings-hub-nav button:hover:not(:disabled){background:var(--ui-surface-hover,var(--px-accent-ghost))}
+.settings-hub .settings-hub-nav button[aria-selected=true]{color:var(--ui-accent-text,var(--px-accent-hi));background:var(--ui-accent-soft,var(--px-accent-hi-ghost));border-color:transparent}
+.settings-hub .settings-hub-count{padding:0 6px;border-radius:var(--ui-radius-pill,999px)}
+.settings-hub .hub-led{border-radius:50%;box-shadow:none}
+.settings-hub .hub-shortcuts dt{background:var(--ui-surface,var(--px-surface-3));border:1px solid var(--ob-edge);border-radius:var(--ui-radius-sm,6px);box-shadow:none}
+.settings-hub .hub-back{border:1px solid transparent;border-radius:var(--ui-radius-sm,8px)}
+.settings-hub .settings-hub-panel .is-found{outline:var(--ui-focus-ring,2px solid var(--px-accent));outline-offset:2px;border-radius:var(--ui-radius,12px);animation:none}
+@media(prefers-reduced-motion:reduce){.settings-hub .settings-hub-nav button{transition:none}}
 }
