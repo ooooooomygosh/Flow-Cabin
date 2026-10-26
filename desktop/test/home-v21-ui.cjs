@@ -52,7 +52,8 @@ async function choosePet(id, name) {
     await application.evaluate(({app})=>{app.quit=globalThis.__originalQuit;app.relaunch=globalThis.__originalRelaunch;});
     await application.close();application=null;await launch();await page.locator(selector).first().waitFor();
   };
-  await restartWith(()=>page.locator('.home-notice').getByRole('button',{name:'改用原版',exact:true}).click(),'改用原版唱片架','classic','.cabin-room');
+  // 3.0: a new install gets no home-change notice; the classic home is a transition option in 设置 › 小屋与奶糖.
+  await restartWith(async()=>{await menu('全部设置');const hub=page.getByRole('dialog',{name:'设置',exact:true});await hub.getByRole('tab',{name:'小屋与奶糖',exact:true}).click();await hub.getByRole('button',{name:'改用原版唱片架',exact:true}).click();},'改用原版唱片架','classic','.cabin-room');
   await skipGuide(30000);
   await page.getByRole('button',{name:'专辑墙',exact:true}).first().click();await page.getByRole('dialog',{name:'专辑墙编辑器',exact:true}).waitFor();await page.keyboard.press('Escape');
   await restartWith(()=>page.getByRole('button',{name:'回到生活小屋',exact:true}).first().click(),'回到生活小屋','beta','.cabin-home');
