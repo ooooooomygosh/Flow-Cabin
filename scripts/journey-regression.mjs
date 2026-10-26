@@ -77,9 +77,11 @@ try {
   assert.equal(saved.state.rewards.fish, 0); assert.equal(saved.sessions.length, 1);
   assert.equal(saved.sessions[0].album.title, '留给自己的晚风');
   check('end-once-returns-to-idle-and-records-the-album-without-rewards');
-  await page.getByRole('tab', { name: '统计', exact: true }).click();
-  await page.getByRole('button', { name: '打开小屋日记 →', exact: true }).click();
-  await page.getByRole('tab', { name: '概览', exact: true }).click();
+  // 3.0: 统计 lives in 唱片日记. An early-ended round is never pressed into a record (no card, no
+  // failure), but its minutes and its album still show under 统计 › 最近的专注.
+  await page.evaluate(() => window.dispatchEvent(new CustomEvent('cabin:open-journal', { detail: { tab: 'stats' } })));
+  await page.getByRole('dialog', { name: '唱片日记' }).waitFor();
+  assert.equal(await page.locator('.press-card').count(), 0, 'no 压制唱片 card for an early end');
   await page.locator('.fs-sessions').getByText(/留给自己的晚风/).waitFor();
   await page.screenshot({ path: path.join(output, 'journal.png'), animations: 'disabled' });
   check('journal-shows-the-round-and-its-record');
@@ -106,7 +108,7 @@ try {
   await page.keyboard.press('Escape'); await corner.waitFor({ state: 'detached' });
   assert.equal(await page.locator('.focus-badge').evaluate(node => node === document.activeElement), true);
   check('keyboard-opened-listening-corner-has-a-stable-focus-return');
-  await page.locator('.focus-badge').click(); await page.getByRole('tab', { name: '统计', exact: true }).click();
+  await page.locator('.focus-badge').click(); await page.getByRole('tab', { name: '这一段', exact: true }).click();
   // Narrow controls still fit, without clipping interactive targets.
   for (const viewport of [{ width: 1280, height: 720 }, { width: 960, height: 600 }]) {
     await page.setViewportSize(viewport); await page.screenshot({ path: path.join(output, `compact-${viewport.width}.png`), animations: 'disabled' });
