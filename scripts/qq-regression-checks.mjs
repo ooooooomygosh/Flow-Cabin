@@ -48,7 +48,9 @@ export async function verifyQQRegression({ browser, origin, check }) {
     // 学习 has one entry: the toolbar's 专注 badge opens the dock, 学习 is its tab (设置 holds only preferences).
     await page.keyboard.press('Escape'); await page.getByRole('button', { name: '设置', exact: true }).click(); await page.getByRole('tab', { name: '专注', exact: true }).click();
     assert.equal(await page.getByRole('dialog', { name: '设置', exact: true }).getByRole('button', { name: /打开学习|打开番茄钟|查看统计/ }).count(), 0, 'no action rows in 设置');
-    await page.getByLabel('专注（分）').waitFor(); await page.keyboard.press('Escape');
+    await page.getByLabel('专注（分）').waitFor();
+    // 3.0: 学习 is the 词书学习 lab; switch it on in 设置 › 实验室 first.
+    await page.getByRole('tab', { name: '实验室', exact: true }).click(); await page.getByRole('checkbox', { name: '词书学习', exact: true }).check(); await page.keyboard.press('Escape');
     await page.locator('.cabin-toolbar .focus-badge').click(); await page.getByRole('tab', { name: '学习', exact: true }).click();
     assert.equal(await page.getByRole('tab', { name: '学习', exact: true }).getAttribute('aria-selected'), 'true'); await page.locator('.focus-dock').waitFor();
     check('toolbar-focus-badge-opens-study-dock-and-settings-holds-preferences');
