@@ -135,3 +135,35 @@ test('一年唱片墙: each day knows its top record; colour comes from its cove
   assert.equal(wallColour(null, colours), null);
   assert.deepEqual(wallSummary(cols), { days: 3, withRecord: 2, minutes: 155 });
 });
+
+test('压制唱片 store: only finished rounds of 5+ minutes get a card; one host shows it; the note is saved once', async () => {
+  const { createPressStore } = await import('../press-store.mjs');
+  const target = new EventTarget(), saved = [];
+  let fail = false;
+  const store = createPressStore({ target, save: (id, note) => { if (fail) return { ok: false, error: '没能保存' }; saved.push([id, note]); return { ok: true }; } });
+  const off = store.subscribe(() => {});
+  const send = (record) => target.dispatchEvent(new CustomEvent('cabin:focus-session', { detail: record }));
+  send({ id: 'short', completed: true, durationMs: 4 * MIN }); send({ id: 'stopped', completed: false, durationMs: 30 * MIN });
+  assert.equal(store.get().record, null, 'no card, no failure for short or interrupted rounds');
+  send({ id: 's1', completed: true, durationMs: 25 * MIN, taskText: '写第三章' });
+  assert.equal(store.get().record.id, 's1'); assert.equal(store.get().host, '');
+  const releaseDock = store.claim('dock'), releaseDisplay = store.claim('display');
+  assert.equal(store.get().host, 'display', '沉浸 wins over the panel'); releaseDisplay(); assert.equal(store.get().host, 'dock'); releaseDock(); assert.equal(store.get().host, '');
+  store.setDraft('  写完了 '); fail = true;
+  assert.equal(store.keep(), false); assert.equal(store.get().record.id, 's1', 'a failed note keeps the card open'); assert.match(store.get().error, /没能保存/);
+  fail = false; assert.equal(store.keep(), true); assert.deepEqual(saved, [['s1', '写完了']]); assert.equal(store.get().record, null);
+  send({ id: 's2', completed: true, durationMs: 50 * MIN }); store.setDraft('');
+  target.dispatchEvent(new Event('album-focus-start'));
+  assert.equal(store.get().record, null, 'a new round puts the card away'); assert.equal(saved.length, 1, 'an empty note writes nothing');
+  off();
+});
+
+test('本周合集 PNG draws totals, the top records and the notes', async () => {
+  const { drawCollectionCard, CARD_W, CARD_H } = await import('./week-card.mjs');
+  const calls = [], ctx = new Proxy({}, { get: (t, k) => k in t ? t[k] : (k === 'measureText' ? (text) => ({ width: String(text).length * 7 }) : (...args) => calls.push([k, ...args])), set: (t, k, v) => { t[k] = v; return true; } });
+  const c = weeklyCollection([session(at(0, 9), 25, { album: night, note: '第一句' }), session(at(1, 9), 50, { album: rain })], [], NOW);
+  assert.deepEqual(drawCollectionCard(ctx, c, undefined, { covers: [null, null] }), { width: CARD_W, height: CARD_H });
+  const texts = calls.filter((call) => call[0] === 'fillText').map((call) => call[1]).join('\n');
+  assert.match(texts, /本周合集/); assert.match(texts, /本周来了 2 天/); assert.match(texts, /《雨天唱片》/); assert.match(texts, /「第一句」/);
+  assert.doesNotMatch(texts, /连续/);
+});

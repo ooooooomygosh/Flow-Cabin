@@ -2,13 +2,14 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useFocus } from '../useFocus';
 import useReducedMotion from '../../useReducedMotion';
 import useFocusSessions from './useFocusSessions.js';
-import { recentSummary, dailySeries, yearHeatmap, byTask, timeOfDay, weeklyReport, reportMarkdown, formatMinutes, dayKey } from './stats-model.mjs';
-import { STREAK_HINT } from '../focus-model.mjs';
-import { drawWeekCard, canDrawCover, CARD_W, CARD_H } from './week-card.mjs';
+import { recentSummary, dailySeries, byTask, timeOfDay, weeklyReport, reportMarkdown, formatMinutes, dayKey, distractionSummary } from './stats-model.mjs';
+import { WEEK_DAYS_HINT, levelInfo } from '../focus-model.mjs';
+import { drawCollectionCard, canDrawCover, CARD_W, CARD_H } from './week-card.mjs';
 import { JOURNAL_EVENT, JOURNAL_TABS, journalTab, isJournalKey } from './journal-events.mjs';
 import './focus-stats.css';
 import { downloadBlob } from '../../lib/download.mjs';
 import './journal-art.css';
+import './record-diary.css';
 import { journalArtStyle, hasArt, JOURNAL_ART, CARD_EXPORT_SLOTS, cardArt, sprite, LETTER_PLACEHOLDER } from './journal-art.mjs';
 import { defaultWeekOffset, weekName, catPose, CAT_POSE_CAPTION, barUnits, cabinLetter } from './journal-layout.mjs';
 import { readCatMood, subscribeCatMood } from './cat-mood-source.mjs';
@@ -17,6 +18,14 @@ import { TONES } from '../../ai/ai-model.mjs';
 import Mailbox from './Mailbox.jsx';
 import JournalEntries, { useJournalDraftWarning } from './JournalEntries.jsx';
 import useInputStats from '../../desktop/useInputStats';
+import '../../study/study.css';
+import useLabs from '../../product/useLabs.js';
+import { JOURNAL_CHANGE, JOURNAL_KEY, readJournalRecords } from '../journal-entries.mjs';
+import { weekDiary, weeklyCollection, collectionMarkdown, yearWall, wallColour, wallSummary, topRecords, FREE_INTENT } from './record-diary.mjs';
+import { Sleeve } from '../PressCard';
+import { readCoverPixels } from '../../album-wall-canvas.mjs';
+import { dominantColour } from '../../cover-colour.mjs';
+import { DEFAULT_RECORD_STYLE } from '../../record-library.mjs';
 
 const clock = (t) => { const d = new Date(t); return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
 const typing = (el) => el?.closest?.('input,textarea,select,[contenteditable="true"]');
@@ -91,13 +100,13 @@ export function Bars({ days, label, mini = false, set = 'records', best = null }
   </figure>;
 }
 
-// 小屋日记: a full-scene in-app overlay (native <dialog> in the top layer, so the
-// room's own keys pause while it is open). Opens from the stats card, L, or
-// `cabin:open-journal` ({ detail: { tab } }).
+// 唱片日记 (3.0, formerly 小屋日记): a full-scene in-app overlay (native <dialog> in the top
+// layer, so the room's own keys pause while it is open). Opens from L, the top nav 「日记」,
+// or `cabin:open-journal` ({ detail: { tab } }); the default page is 这一周.
 export default function CabinJournal() {
   const focus = useFocus();
   useJournalDraftWarning();
-  const [open, setOpen] = useState(false), [view, setView] = useState('overview'), ref = useRef(null), openRef = useRef(false), closingRef = useRef(false);
+  const [open, setOpen] = useState(false), [view, setView] = useState('week'), ref = useRef(null), openRef = useRef(false), closingRef = useRef(false);
   openRef.current = open;
   useLetterDelivery(useFocusSessions(focus?.state?.sessions), focus?.state?.notes || '');
   // Close synchronously so an L pressed in the same frame as Esc (before React re-renders) reopens.
@@ -106,7 +115,7 @@ export default function CabinJournal() {
   useEffect(() => {
     const on = (event) => show(journalTab(event.detail?.tab));
     // Our own dialog may still be mid-close (exit animation / pending effect): it never blocks L.
-    const key = (event) => { if (!openRef.current && isJournalKey(event) && !typing(event.target) && !document.querySelector('dialog[open]:not(.cabin-journal)') && !document.documentElement.classList.contains('room-corner-open')) { event.preventDefault(); show('overview'); } };
+    const key = (event) => { if (!openRef.current && isJournalKey(event) && !typing(event.target) && !document.querySelector('dialog[open]:not(.cabin-journal)') && !document.documentElement.classList.contains('room-corner-open')) { event.preventDefault(); show('week'); } };
     window.addEventListener(JOURNAL_EVENT, on); document.addEventListener('keydown', key);
     return () => { window.removeEventListener(JOURNAL_EVENT, on); document.removeEventListener('keydown', key); };
   }, []);
@@ -116,7 +125,7 @@ export default function CabinJournal() {
     else if (el.open) { closingRef.current = true; el.close?.(); }
   }, [open]);
   if (!focus) return null;
-  return <dialog ref={ref} className="cabin-journal" aria-label="小屋日记" style={journalArtStyle()} onCancel={(event) => { event.preventDefault(); shut(); }} onClose={() => { // Our own close() queues this event; if L / cabin:open-journal reopened meanwhile it must not shut again.
+  return <dialog ref={ref} className="cabin-journal" aria-label="唱片日记" style={journalArtStyle()} onCancel={(event) => { event.preventDefault(); shut(); }} onClose={() => { // Our own close() queues this event; if L / cabin:open-journal reopened meanwhile it must not shut again.
     if (closingRef.current) { closingRef.current = false; return; } if (openRef.current && !ref.current?.open) shut(); }}>
     {open && <JournalBook state={focus.state} now={focus.now} view={view} setView={setView} close={shut}/>}
   </dialog>;
@@ -145,9 +154,8 @@ export function Strip({ name, w, h, frames = 1, frame = 0, scale = 1, className 
       onError={(e) => { const to = LETTER_PLACEHOLDER[name]; if (to && !e.currentTarget.src.endsWith(to)) e.currentTarget.src = to; }}/></span>;
 }
 
-// 小屋来信 spot: the newest AI letter when there is one (sealed until opened; the cat walks
-// it in once), else the template letter built from this week's data. The 信箱 flag is up
-// while any letter is unread.
+// 小屋来信 spot (lab): the newest AI letter when there is one (sealed until opened; the cat
+// walks it in once), else the template letter built from this week's data.
 function LetterSpot({ template, reduced, input }) {
   const { list, unread, markRead } = useLetters();
   const incoming = useMemo(() => list.filter((letter) => letter.direction === 'in' && !letter.replyTo && letter.status !== 'draft' && !letter.trashed), [list]);
@@ -177,143 +185,259 @@ function useCatMood(from, to) {
   useEffect(() => { setMood(read()); return subscribeCatMood(globalThis.window, () => setMood(read())); }, [from, to]);
   return mood;
 }
+// 手记 / 随手记 entries, live: they appear in 这一周 as 「文字」 items.
+function useJournalTexts() {
+  const read = () => { try { return readJournalRecords(globalThis.localStorage); } catch { return []; } };
+  const [entries, setEntries] = useState(read);
+  useEffect(() => {
+    const reload = () => setEntries(read()), sync = (event) => { if (event.key === JOURNAL_KEY) reload(); };
+    window.addEventListener(JOURNAL_CHANGE, reload); window.addEventListener('storage', sync);
+    return () => { window.removeEventListener(JOURNAL_CHANGE, reload); window.removeEventListener('storage', sync); };
+  }, []);
+  return entries;
+}
+// Dominant colour of each cover thumbnail (cached per window); the reader's default colour means "unknown".
+const colourCache = new Map();
+function useCoverColours(covers) {
+  const key = covers.join('\n'), [colours, setColours] = useState(() => new Map(covers.filter((c) => colourCache.has(c)).map((c) => [c, colourCache.get(c)])));
+  useEffect(() => {
+    let alive = true;
+    const missing = covers.filter((cover) => cover && !colourCache.has(cover));
+    if (!missing.length) { setColours(new Map(covers.map((c) => [c, colourCache.get(c)]))); return undefined; }
+    Promise.all(missing.map(async (cover) => { try { const pixels = await readCoverPixels(cover); colourCache.set(cover, pixels ? dominantColour(pixels) : DEFAULT_RECORD_STYLE.base); } catch { colourCache.set(cover, DEFAULT_RECORD_STYLE.base); } }))
+      .then(() => { if (alive) setColours(new Map(covers.map((c) => [c, colourCache.get(c)]))); });
+    return () => { alive = false; };
+  }, [key]);
+  return colours;
+}
 
-function JournalBook({ state, now, view, setView, close }) {
-  const sessions = useFocusSessions(state.sessions), tasks = state.tasks, reduced = useReducedMotion();
-  const { unread } = useLetters();
-  const input = useInputStats();
-  const [range, setRange] = useState(7), [weekOffset, setWeekOffset] = useState(() => defaultWeekOffset(sessions, tasks, now)), [note, setNote] = useState('');
+const MINUTE = 60000;
+function RecordRow({ item, selected, onSelect }) {
+  if (item.kind === 'text') return <li className={`rd-item is-text ${selected ? 'is-selected' : ''}`}><button type="button" aria-pressed={selected} onClick={onSelect}>
+    <span className="rd-text-mark" aria-hidden="true">文</span>
+    <span className="rd-item-copy"><strong><em className="rd-badge">文字 · {item.label}</em>{item.snippet}</strong><small>{item.time}</small></span></button></li>;
+  return <li className={`rd-item is-record ${selected ? 'is-selected' : ''}`}><button type="button" aria-pressed={selected} onClick={onSelect}>
+    <Sleeve cover={item.cover} title={item.album?.title || ''} artist={item.album?.artist || ''} size="sm"/>
+    <span className="rd-item-copy"><strong>{item.intent || FREE_INTENT}</strong>{item.note && <span className="rd-note">「{item.note}」</span>}
+      <small>{formatMinutes(item.minutes)} · {item.time}{item.album?.title ? ` · 《${item.album.title}》` : ''}</small></span></button></li>;
+}
+function ItemDetail({ item }) {
+  if (!item) return <Empty pose="cat-wait" title="这一周的唱片会放在这里">开始一段专注，结束时它会压成一张唱片，收进这一页。</Empty>;
+  if (item.kind === 'text') return <article className="rd-detail is-text" aria-label="文字详情">
+    <p className="rd-detail-kicker">文字 · {item.label} · {clock(item.at)}</p>
+    <div className="rd-detail-body fs-hand">{item.body.split('\n').map((line, i) => <p key={i}>{line || ' '}</p>)}</div>
+    {item.tags.length > 0 && <p className="rd-detail-tags">{item.tags.map((tag) => `#${tag}`).join(' ')}</p>}
+  </article>;
+  return <article className="rd-detail is-record" aria-label="唱片详情">
+    <Sleeve cover={item.cover} title={item.album?.title || ''} artist={item.album?.artist || ''} size="lg" spinning/>
+    <p className="rd-detail-kicker">{clock(item.start)} · {item.slot}</p>
+    <h3 className="rd-detail-title">{item.intent || FREE_INTENT}</h3>
+    <dl className="rd-detail-facts">
+      <div><dt>时长</dt><dd>{formatMinutes(item.minutes)}</dd></div>
+      <div><dt>时段</dt><dd>{item.slot} {item.time}</dd></div>
+      <div><dt>唱片</dt><dd>{item.album?.title ? `《${item.album.title}》${item.album.artist ? ` · ${item.album.artist}` : ''}` : '没有放唱片'}</dd></div>
+      {item.track?.title && <div><dt>那时在放</dt><dd>{item.track.title}</dd></div>}
+    </dl>
+    {item.note ? <blockquote className="rd-detail-note fs-hand">「{item.note}」</blockquote> : <p className="rd-detail-quiet">这一段没有留话。</p>}
+  </article>;
+}
+
+function WeekView({ sessions, entries, tasks, now, spine }) {
+  const [offset, setOffset] = useState(0), today = dayKey(now);
+  const week = useMemo(() => weekDiary(sessions, entries, now, { weekOffset: offset, tasks }), [sessions, entries, tasks, today, offset]);
+  const all = week.days.flatMap((day) => day.items), [selected, setSelected] = useState('');
+  const current = all.find((item) => item.id === selected) || [...all].reverse().find((item) => item.kind === 'record') || all.at(-1) || null;
+  const shown = week.days.filter((day) => !day.future || day.items.length);
+  return <div className="fs-spread rd-week" key="week" role="tabpanel" aria-label="这一周">
+    <div className="fs-page is-turning rd-week-left">
+      <div className="fs-weekpick rd-weekpick" role="group" aria-label="选择周">
+        <button type="button" aria-label="上一周" onClick={() => setOffset((w) => w - 1)}>‹</button>
+        <strong>{weekName(offset)} · {week.label}</strong>
+        <button type="button" aria-label="下一周" disabled={offset >= 0} onClick={() => setOffset((w) => Math.min(0, w + 1))}>›</button>
+      </div>
+      <p className="rd-week-sum" title={WEEK_DAYS_HINT}>{offset === 0 ? '本周来了' : '那周来了'} <b>{week.weekDays}</b> 天 · 压制 <b>{week.records}</b> 张唱片 · 专注 <b>{formatMinutes(week.totalMinutes)}</b></p>
+      <ol className="rd-days">{shown.map((day) => <li key={day.key} className={`rd-day ${day.isToday ? 'is-today' : ''} ${day.items.length ? '' : 'is-quiet'}`}>
+        <h4 className="rd-day-head"><span>{day.label}</span><small>{day.date}{day.isToday ? ' · 今天' : ''}</small>{day.minutes > 0 && <small className="rd-day-min">{formatMinutes(day.minutes)}</small>}</h4>
+        {day.items.length ? <ul className="rd-items">{day.items.map((item) => <RecordRow key={`${item.kind}-${item.id}`} item={item} selected={current?.id === item.id} onSelect={() => { setSelected(item.id); if (window.matchMedia?.('(max-width: 760px)').matches) requestAnimationFrame(() => document.querySelector('.rd-week-right')?.scrollIntoView({ block: 'start', behavior: 'smooth' })); }}/>)}</ul>
+          : <p className="rd-day-quiet">{day.isToday ? '今天还没压唱片，放一张开始吧。' : '安静的一天。'}</p>}
+      </li>)}</ol>
+    </div>
+    {spine}
+    <div className="fs-page is-turning rd-week-right"><ItemDetail item={current}/></div>
+  </div>;
+}
+
+function CollectionView({ sessions, entries, tasks, now, labs, input, reduced, spine, flash, note }) {
   const today = dayKey(now), canvas = useRef(null);
-  const recent = useMemo(() => recentSummary(sessions, now, 4), [sessions, today]);
-  const daily = useMemo(() => dailySeries(sessions, now, range), [sessions, today, range]);
-  const year = useMemo(() => yearHeatmap(sessions, now), [sessions, today]);
-  const taskRows = useMemo(() => byTask(sessions, tasks), [sessions, tasks]);
-  const tod = useMemo(() => timeOfDay(sessions), [sessions]);
+  const [weekOffset, setWeekOffset] = useState(() => defaultWeekOffset(sessions, tasks, now));
+  const collection = useMemo(() => weeklyCollection(sessions, entries, now, { weekOffset, tasks }), [sessions, entries, tasks, today, weekOffset]);
   const report = useMemo(() => weeklyReport(sessions, tasks, now, weekOffset), [sessions, tasks, today, weekOffset]);
-  const mood = useCatMood(report.from, report.to);
+  const mood = useCatMood(report.from, report.to), pose = catPose(report.totalMinutes, mood), letter = cabinLetter(report, mood);
   const pastWeeks = useMemo(() => Array.from({ length: 8 }, (_, i) => { const offset = -i; const w = weeklyReport(sessions, tasks, now, offset); return { offset, label: w.label, totalMinutes: w.totalMinutes, daily: w.daily }; }).reverse(), [sessions, tasks, today]);
   const weekPeak = Math.max(30, ...pastWeeks.flatMap((w) => w.daily.map((d) => d.minutes)));
-  const doneTasks = tasks.filter((t) => t.done).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0)).slice(0, 8);
-  const openTasks = tasks.filter((t) => !t.done).length;
   const weekDone = tasks.filter((t) => t.done && t.doneAt >= report.from && t.doneAt < report.to).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
-  const taskName = (id) => tasks.find((t) => t.id === id)?.text;
-  const activeDays = year.flat().filter((d) => d.minutes > 0).length, slotPeak = Math.max(1, ...tod.slots.map((s) => s.minutes)), taskPeak = Math.max(1, ...taskRows.map((r) => r.minutes));
-  const pose = catPose(report.totalMinutes, mood), letter = cabinLetter(report, mood);
-  const flash = (text) => { setNote(text); setTimeout(() => setNote(''), 2400); };
   const copy = async () => {
-    const text = reportMarkdown(report);
+    const text = `${reportMarkdown(report)}\n\n${collectionMarkdown(collection)}`;
     try { await navigator.clipboard.writeText(text); } catch { const area = document.createElement('textarea'); area.value = text; document.body.append(area); area.select(); document.execCommand?.('copy'); area.remove(); }
-    flash('已复制周报文字');
+    flash('已复制本周合集的文字');
   };
-  const loadCover = (url) => new Promise((resolve) => {
+  const loadImage = (url) => new Promise((resolve) => {
     if (!canDrawCover(url, location.origin)) return resolve(null);
     const img = new Image(); img.onload = () => resolve(img); img.onerror = () => resolve(null); img.src = url;
   });
   const exportPng = async () => {
     const el = canvas.current || document.createElement('canvas'); el.width = CARD_W; el.height = CARD_H;
-    const spriteNames = [pose, 'sticker-best-day', 'bar-books', 'bar-books-cap', mood?.feeds ? 'sticker-fed' : null];
-    const [cover, ...imgs] = await Promise.all([loadCover(report.album?.cover), ...CARD_EXPORT_SLOTS.map((slot) => loadCover(JOURNAL_ART[slot])), ...spriteNames.map((n) => n ? loadCover(sprite(n)) : null)]);
-    const slotImgs = imgs.slice(0, CARD_EXPORT_SLOTS.length), [cat, best, unit, cap, fed] = imgs.slice(CARD_EXPORT_SLOTS.length);
-    const art = { ...cardArt(Object.fromEntries(CARD_EXPORT_SLOTS.map((slot, i) => [slot, slotImgs[i]]))), cat, bestSticker: best, barUnit: unit, barCap: cap, fedSticker: fed };
-    drawWeekCard(el.getContext('2d'), report, undefined, { cover, art, letter, mood });
+    const [covers, slots] = await Promise.all([Promise.all(collection.top.map((r) => loadImage(r.cover))), Promise.all(CARD_EXPORT_SLOTS.map((slot) => loadImage(JOURNAL_ART[slot])))]);
+    const art = cardArt(Object.fromEntries(CARD_EXPORT_SLOTS.map((slot, i) => [slot, slots[i]])));
+    drawCollectionCard(el.getContext('2d'), collection, undefined, { covers, art });
     const blob = await new Promise(resolve => el.toBlob(resolve, 'image/png'));
-    if (!blob) { flash('无法生成周报图片，请重试'); return; }
-    const saved = await downloadBlob(blob, `心流小屋周报-${dayKey(report.from)}.png`);
-    if (!saved?.cancelled && !saved?.failed) flash('周报图片已导出');
+    if (!blob) { flash('无法生成本周合集图片，请重试'); return; }
+    const saved = await downloadBlob(blob, `心流小屋本周合集-${dayKey(collection.from)}.png`);
+    if (!saved?.cancelled && !saved?.failed) flash('本周合集图片已导出');
   };
-  const [coverFailed, setCoverFailed] = useState('');
-  const showCover = report.album?.cover && coverFailed !== report.album.cover;
+  return <div className="fs-spread rd-collection" key="collection" role="tabpanel" aria-label="本周合集"><div className="fs-page is-turning fs-week-left rd-collection-left">
+    <article className={`fs-card rd-card ${hasArt('card') ? 'has-stamp' : ''} ${hasArt('cardTape') ? 'has-tape' : ''}`} aria-label="本周合集卡片">
+      <Tape className="is-card"/>
+      {hasArt('card') && <span className="fs-stamp" aria-hidden="true"/>}
+      <header><span>心流小屋 · 本周合集</span><small>{collection.label}</small></header>
+      <div className="fs-card-hero">
+        <figure className={`fs-cat is-${pose}`}><Sprite name={pose} scale={2} alt={`小猫${CAT_POSE_CAPTION[pose]}`}/><figcaption>{CAT_POSE_CAPTION[pose]}</figcaption></figure>
+        <div className="fs-card-total"><small>{weekName(weekOffset)}专注</small><strong>{formatMinutes(collection.totalMinutes)}</strong>
+          <small>{weekOffset === 0 ? '本周来了' : '那周来了'} {collection.daysVisited} 天 · 压制 {collection.records} 张唱片</small>
+          <ol className="rd-dots" aria-label={`${collection.daysVisited} 天来过小屋`}>{collection.days.map((d) => <li key={d.key} className={`${d.visited ? 'is-visited' : ''} ${d.isToday ? 'is-today' : ''}`} title={`周${d.label}${d.visited ? ' · 来过' : ''}`}><span aria-hidden="true"/><small>{d.label}</small></li>)}</ol></div>
+      </div>
+      <h3 className="fs-title">陪你最久的唱片</h3>
+      {collection.top.length ? <ol className="rd-top">{collection.top.map((r, i) => <li key={r.key}><Sleeve cover={r.cover} title={r.title} artist={r.artist}/><span className="rd-top-copy"><strong>{i + 1}. 《{r.title}》</strong><small>{[r.artist, `陪你 ${formatMinutes(r.minutes)}`].filter(Boolean).join(' · ')}</small></span></li>)}</ol>
+        : <p className="fs-hint fs-hand">这周还没有唱片陪着专注。放一张喜欢的，再开始一段吧。</p>}
+      <h3 className="fs-title">你写下的话</h3>
+      {collection.notes.length ? <ul className="rd-notes">{collection.notes.slice(0, 4).map((n) => <li key={n.id} className="fs-hand">「{n.text}」{n.intent ? <small> · {n.intent}</small> : null}</li>)}{collection.notes.length > 4 && <li className="rd-notes-more">还有 {collection.notes.length - 4} 句</li>}</ul>
+        : <p className="fs-hint fs-hand">这周没有留话，也没关系。</p>}
+      <p className="fs-card-summary fs-hand rd-card-line">{collection.line}</p>
+    </article>
+  </div>{spine}<div className="fs-page is-turning fs-week-right rd-collection-right">
+    <div className="fs-weekpick" role="group" aria-label="选择周">
+      <button type="button" aria-label="上一周" onClick={() => setWeekOffset((w) => w - 1)}>‹</button>
+      <strong>{weekName(weekOffset)} · {collection.label}</strong>
+      <button type="button" aria-label="下一周" disabled={weekOffset >= 0} onClick={() => setWeekOffset((w) => Math.min(0, w + 1))}>›</button>
+    </div>
+    <ol className="fs-weeks" aria-label="最近几周">{pastWeeks.map((w) => <li key={w.offset}><button type="button" aria-pressed={w.offset === weekOffset} aria-label={`${w.label} · ${formatMinutes(w.totalMinutes)}`} title={`${w.label} · ${formatMinutes(w.totalMinutes)}`} onClick={() => setWeekOffset(w.offset)}>
+      <span className="fs-weeks-bars" aria-hidden="true">{w.daily.map((d) => <i key={d.key} style={{ height: `${d.minutes ? Math.max(2, Math.round(d.minutes / weekPeak * 24 / 2) * 2) : 1}px` }}/>)}</span>
+      <small>{w.offset === 0 ? '本周' : w.label.split(' – ')[0]}</small></button></li>)}</ol>
+    <p className="fs-hint fs-hand">{report.summary}</p>
+    <Bars days={report.daily} best={report.bestDay} set="books" mini label="这一周 · 每天的分钟"/>
+    <ul className="fs-notes is-mini" aria-label="这周做完的事">{weekDone.length ? weekDone.slice(0, 3).map((t, i) => <li key={t.id} className="fs-note" style={{ '--tilt': `${[2, -1.5, 1][i]}deg` }}><span className="fs-note-check" aria-hidden="true">✓</span><span className="fs-note-text">{t.text}</span></li>)
+      : <li className="fs-note is-blank" style={{ '--tilt': '1.5deg' }}><span className="fs-note-text">做完的一件小事，会成为这里的一张便签。</span></li>}
+      {weekDone.length > 3 && <li className="fs-note-more">还有 {weekDone.length - 3} 件</li>}</ul>
+    {labs.letters && <LetterSpot template={letter} reduced={reduced} input={weekOffset === 0 ? input : null}/>}
+    <div className="fs-actions"><button type="button" onClick={copy}>复制文字</button><button type="button" onClick={exportPng}>导出图片</button><span role="status" aria-live="polite">{note}</span></div>
+    <canvas ref={canvas} hidden/>
+  </div></div>;
+}
+
+function WallView({ sessions, now }) {
+  const today = dayKey(now), cols = useMemo(() => yearWall(sessions, now), [sessions, today]), cells = cols.flat();
+  const covers = useMemo(() => [...new Set(cells.map((cell) => cell.top?.cover).filter(Boolean))], [cols]);
+  const colours = useCoverColours(covers), summary = wallSummary(cols), [picked, setPicked] = useState('');
+  const yearTop = useMemo(() => { const from = new Date(`${cells[0].key}T00:00:00`).getTime(); return topRecords(sessions.filter((s) => s.end >= from), 3); }, [sessions, today]);
+  const cell = cells.find((c) => c.key === picked) || [...cells].reverse().find((c) => c.minutes > 0 && !c.future) || null;
+  return <div className="fs-spread rd-wall" key="wall" role="tabpanel" aria-label="一年唱片墙"><div className="fs-page is-turning rd-wall-page">
+    <h3 className="fs-title">一年唱片墙 <small>· 每天一格，用那天陪你最久的唱片上色</small></h3>
+    {summary.days > 0 ? <figure className="fs-year rd-wall-figure stats-chart-well" aria-label={`过去一年 ${summary.days} 天有专注，其中 ${summary.withRecord} 天有唱片陪着`}>
+      <div className="fs-year-grid rd-wall-grid">{cells.map((c) => { const colour = wallColour(c, colours, DEFAULT_RECORD_STYLE.base); return <button type="button" key={c.key} data-level={c.level} className={`${c.future ? 'is-future' : ''} ${colour ? 'has-cover' : ''} ${cell?.key === c.key ? 'is-picked' : ''}`} style={colour ? { '--cell': colour } : undefined} tabIndex={c.minutes ? 0 : -1} disabled={c.future} aria-label={`${c.key} · ${c.minutes} 分钟${c.top ? ` · 《${c.top.title}》` : ''}`} title={`${c.key} · ${c.minutes} 分钟${c.top ? ` · 《${c.top.title}》` : ''}`} onClick={() => setPicked(c.key)}/>; })}</div>
+      <figcaption className="focus-heatmap-legend">过去一年 · {summary.days} 天有专注 · 唱片的颜色来自封面；没有封面时：少{[1, 2, 3, 4].map((l) => <span key={l} data-level={l}/>)}多</figcaption>
+    </figure> : <Empty title="每一段，都会在这面墙上留一格颜色">开始一段专注，墙上就会亮起今天这一格。</Empty>}
+    {cell && <p className="rd-wall-day fs-hand">{cell.key} · 专注 {formatMinutes(cell.minutes)}{cell.top ? ` · 陪着你的是《${cell.top.title}》` : ''}</p>}
+    <div className="rd-wall-lower"><section className="rd-wall-side" aria-label="这一年">
+    <dl className="rd-wall-facts"><div><dt>有专注的日子</dt><dd>{summary.days} 天</dd></div><div><dt>有唱片陪着</dt><dd>{summary.withRecord} 天</dd></div><div><dt>一共</dt><dd>{formatMinutes(summary.minutes)}</dd></div></dl>
+    </section><section className="rd-wall-side" aria-label="这一年陪你最久的唱片">
+    <h3 className="fs-title">这一年陪你最久的唱片</h3>
+    {yearTop.length ? <ol className="rd-top is-year">{yearTop.map((r, i) => <li key={r.key}><Sleeve cover={r.cover} title={r.title} artist={r.artist}/><span className="rd-top-copy"><strong>{i + 1}. 《{r.title}》</strong><small>{[r.artist, `陪你 ${formatMinutes(r.minutes)}`].filter(Boolean).join(' · ')}</small></span></li>)}</ol>
+      : <p className="fs-hint fs-hand">放着唱片专注过，这里就会排出一年里的老朋友。</p>}
+    </section></div>
+  </div></div>;
+}
+
+// 统计 (secondary): the former 概览 and 待办 pages — today, goal, 7/30-day bars, time of day, recent rounds, where time went.
+function StatsView({ state, sessions, now, input, spine, close }) {
+  const tasks = state.tasks, [part, setPart] = useState('overview'), [range, setRange] = useState(7), today = dayKey(now);
+  const recent = useMemo(() => recentSummary(sessions, now, 4), [sessions, today]);
+  const daily = useMemo(() => dailySeries(sessions, now, range), [sessions, today, range]);
+  const taskRows = useMemo(() => byTask(sessions, tasks), [sessions, tasks]);
+  const tod = useMemo(() => timeOfDay(sessions), [sessions]);
+  const weekMinutes = daily.slice(-7).reduce((sum, d) => sum + d.minutes, 0);
+  const distracted = useMemo(() => distractionSummary(state.distractions, now, { tasks, focusMinutes: weekMinutes }), [state.distractions, today, weekMinutes]);
+  const doneTasks = tasks.filter((t) => t.done).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0)).slice(0, 8), openTasks = tasks.filter((t) => !t.done).length;
+  const taskName = (id) => tasks.find((t) => t.id === id)?.text;
+  const slotPeak = Math.max(1, ...tod.slots.map((s) => s.minutes)), taskPeak = Math.max(1, ...taskRows.map((r) => r.minutes));
+  const goal = state.settings?.dailyGoal || 0, level = levelInfo(state.rewards.xp);
+  const toggle = <div className="fs-seg rd-stats-seg" role="group" aria-label="统计内容">{[['overview', '概览'], ['tasks', '待办']].map(([id, name]) => <button key={id} type="button" aria-pressed={part === id} onClick={() => setPart(id)}>{name}</button>)}</div>;
+  if (part === 'tasks') return <div className="fs-spread" key="stats-tasks" role="tabpanel" aria-label="统计 · 待办"><div className="fs-page is-turning fs-tasks-left">
+    {toggle}
+    <h3 className="fs-title">时间花在哪里</h3>
+    {taskRows.length ? <ol className="fs-rank fs-task-rank">{taskRows.map((r, i) => <li key={r.id || 'free'} className={`${r.free ? 'is-free' : ''} ${i === 0 ? 'is-best' : ''}`}>
+      <span className="fs-rank-name"><b className="fs-rank-no">{i + 1}</b>{r.name}{r.done ? <small> · 已完成</small> : null}</span><span className="fs-rank-num">{formatMinutes(r.minutes)} · {r.pomodoros} 个番茄</span>
+      <span className="fs-meter" aria-hidden="true"><i style={{ width: `${r.minutes / taskPeak * 100}%` }}/></span></li>)}</ol>
+      : <Empty pose="cat-wait" title="把时间，留给一件小事" action={<button type="button" className="fs-cta" onClick={close}>回小屋写一条待办</button>}>在「这一段做什么？」里写一句或选一件待办，这一页就会告诉你时间都花在了哪里。</Empty>}
+    {taskRows.some((r) => !r.free) && <figure className="fs-task-note"><Sprite name="cat-desk" scale={2}/><figcaption className="fs-hand">{(() => { const top = taskRows.find((r) => !r.free); const all = taskRows.reduce((n, r) => n + r.minutes, 0); return <>你最常陪伴的是「{top.name}」，<br/>占了全部专注的 {Math.round(top.minutes / Math.max(1, all) * 100)}%。<br/>{openTasks ? `还有 ${openTasks} 件在路上，慢慢来。` : '手头的事都做完了，休息一下吧。'}</>; })()}</figcaption></figure>}
+  </div>{spine}<div className="fs-page is-turning fs-tasks-right">
+    <h3 className="fs-title">做完的事 {doneTasks.length ? <small>· {tasks.filter((t) => t.done).length} 件{openTasks ? ` · 还有 ${openTasks} 件在路上` : ''}</small> : null}</h3>
+    {doneTasks.length > 0 && <ul className="fs-notes">{doneTasks.map((t, i) => <li key={t.id} className="fs-note" style={{ '--tilt': `${[-2, 1.5, -1, 2, 0, -1.5][i % 6]}deg` }}>
+      <Tape className="is-note"/><span className="fs-note-check" aria-hidden="true">✓</span><span className="fs-note-text">{t.text}</span>
+      <small>{t.doneAt ? clock(t.doneAt).split(' ')[0] : ''} · {formatMinutes(taskRows.find((r) => r.id === t.id)?.minutes || 0)}</small></li>)}</ul>}
+    {doneTasks.length < 3 && <figure className={`fs-todo-empty ${doneTasks.length ? 'is-under' : ''}`}><Sprite name="todo-empty" fallback="cat-wait" scale={2}/>
+      <figcaption><p className="fs-empty-title fs-hand">慢慢来，写下第一件事吧</p>
+        <p className="fs-empty">{doneTasks.length ? `已经贴上 ${doneTasks.length} 张便签了。每勾掉一条待办，这一页就多一张。` : '每勾掉一条待办，就会在这一页贴一张便签。'}{openTasks ? ` 现在还有 ${openTasks} 件在路上。` : ''}</p>
+        {!openTasks && <button type="button" className="fs-cta" onClick={close}>回小屋写一条待办</button>}</figcaption></figure>}
+  </div></div>;
+  return <div className="fs-spread" key="stats" role="tabpanel" aria-label="统计"><div className="fs-page is-turning fs-ov-left">
+    {toggle}
+    <section className="fs-today" aria-label="今天">
+      <div className="fs-today-num"><small>今天</small><strong>{formatMinutes(recent.todayMinutes)}</strong>{goal ? <small>目标 {goal} 分钟{recent.todayMinutes >= goal ? ' · 达成 ✓' : ''}</small> : null}</div>
+      <div className="fs-today-num"><small>番茄</small><strong>{recent.todayPomodoros} 个</strong></div>
+      <div className="fs-today-num fs-today-week" title={WEEK_DAYS_HINT}><small>本周来了</small><strong>{recent.weekDays} 天</strong><small>每周一重新开始</small></div>
+    </section>
+    {goal > 0 && <div className={`focus-goal ${recent.todayMinutes >= goal ? 'is-met' : ''}`}><span>每日目标 {recent.todayMinutes} / {goal} 分钟{recent.todayMinutes >= goal ? ' · 今天达成了' : ''}</span>
+      <span className="focus-goal-bar" role="progressbar" aria-label="每日目标进度" aria-valuemin={0} aria-valuemax={goal} aria-valuenow={Math.min(goal, recent.todayMinutes)}><i style={{ width: `${Math.min(100, recent.todayMinutes / goal * 100)}%` }}/></span></div>}
+    <InputCompanion input={input} title="今天的陪伴"/>
+    <div className="fs-section-head"><h3 className="fs-title">每天</h3><div className="fs-seg" role="group" aria-label="时间范围">{[7, 30].map((n) => <button key={n} type="button" aria-pressed={range === n} onClick={() => setRange(n)}>近 {n} 天</button>)}</div></div>
+    <Bars days={daily} label={`最近 ${range} 天 · 分钟`} set="records"/>
+    {distracted.week > 0 && <p className="fs-hint fs-distractions" aria-label="分心记录">分心 · 今天 {distracted.today} 次 · 最近 7 天 {distracted.week} 次{distracted.perHour !== null ? `（约每小时 ${distracted.perHour} 次）` : ''}{distracted.busiest ? ` · 多在${distracted.busiest.label}` : ''}{distracted.task ? ` · 「${distracted.task.name}」时最多` : ''}</p>}
+  </div>
+  {spine}
+  <div className="fs-page is-turning fs-ov-right">
+    <h3 className="fs-title">时段</h3>
+    <p className="fs-hint fs-hand">{tod.best ? `你通常在${tod.best.label}（${tod.best.from}–${tod.best.to} 点）最专注。` : '专注几次之后，这里会告诉你最顺手的时段。'}</p>
+    <ol className="fs-rank fs-slots">{tod.slots.map((s) => <li key={s.id} className={tod.best?.id === s.id ? 'is-best' : ''}>
+      <span className="fs-rank-name">{s.label} <small>{s.from}–{s.to} 点</small></span><span className="fs-rank-num">{formatMinutes(s.minutes)}</span>
+      <span className="fs-meter" aria-hidden="true"><i style={{ width: `${s.minutes / slotPeak * 100}%` }}/></span></li>)}</ol>
+    <h3 className="fs-title">最近的专注</h3>
+    {recent.recent.length ? <ol className="fs-sessions">{recent.recent.map((s) => <li key={s.id}>
+      <span className="fs-time">{clock(s.start)}</span><span className="fs-task">{taskName(s.taskId) || s.taskText || FREE_INTENT}{s.album ? <small> · 《{s.album.title}》</small> : null}</span>
+      <span className="fs-min">{Math.round(s.durationMs / MINUTE)} 分</span></li>)}</ol>
+      : <Empty title="第一段，从这里开始">开始一段专注，小屋会帮你记下来。</Empty>}
+    <button type="button" className="fs-link rd-cat-link" onClick={() => { close(); window.dispatchEvent(new Event('cabin-open-cat')); }}>Lv.{level.level} · {state.rewards.fish} 小鱼干 · 去看看小猫 ›</button>
+  </div></div>;
+}
+
+function JournalBook({ state, now, view, setView, close }) {
+  const sessions = useFocusSessions(state.sessions), entries = useJournalTexts(), tasks = state.tasks, reduced = useReducedMotion(), labs = useLabs();
+  const { unread } = useLetters();
+  const input = useInputStats();
+  const [note, setNote] = useState('');
+  const flash = (text) => { setNote(text); setTimeout(() => setNote(''), 2400); };
+  const tabs = JOURNAL_TABS.filter(([id]) => id !== 'letters' || labs.letters), active = tabs.some(([id]) => id === view) ? view : 'week';
   const spine = <div className={`fs-spine ${hasArt('spine') ? 'has-art' : ''}`} aria-hidden="true"/>;
-  const goal = state.settings?.dailyGoal || 0;
   return <div className={`fs-book ${reduced ? 'is-reduced' : ''}`}>
     <header className="fs-book-head">
-      <h2>小屋日记</h2>
-      <div className="fs-ribbons" role="tablist" aria-label="日记分区">{JOURNAL_TABS.map(([id, name]) => <button key={id} type="button" role="tab" aria-selected={view === id} onClick={() => setView(id)}>{name}{id === 'letters' && unread > 0 ? <b className="fs-tab-unread" aria-label={`${unread} 封未读`}>{unread}</b> : null}</button>)}</div>
+      <h2>唱片日记</h2>
+      <div className="fs-ribbons" role="tablist" aria-label="日记分区">{tabs.map(([id, name]) => <button key={id} type="button" role="tab" aria-selected={active === id} onClick={() => setView(id)}>{name}{id === 'letters' && unread > 0 ? <b className="fs-tab-unread" aria-label={`${unread} 封未读`}>{unread}</b> : null}</button>)}</div>
       <button type="button" className="fs-back" aria-keyshortcuts="Escape" onClick={close}>返回小屋</button>
     </header>
-    {view === 'overview' && <div className="fs-spread" key="overview" role="tabpanel" aria-label="概览">
-      <div className="fs-page is-turning fs-ov-left">
-        <section className="fs-today" aria-label="今天">
-          <div className="fs-today-num"><small>今天</small><strong>{formatMinutes(recent.todayMinutes)}</strong>{goal ? <small>目标 {goal} 分钟{recent.todayMinutes >= goal ? ' · 达成 ✓' : ''}</small> : null}</div>
-          <div className="fs-today-num"><small>番茄</small><strong>{recent.todayPomodoros} 个</strong></div>
-          <div className="fs-today-num fs-today-streak" title={STREAK_HINT}>{recent.streak >= 2 && <img className="fs-sticker" src={sprite('sticker-streak')} alt="" width={32} height={32}/>}<small>当前连续</small><strong>{recent.streak} 天</strong>{recent.forgiven ? <small title="每个周一开始的自然周可宽限一天；宽限日不计入坚持天数。">坚持 {recent.graceStreak} 天（含宽限；休息 {recent.forgiven} 天）</small> : null}</div>
-        </section>
-        <InputCompanion input={input} title="今天的陪伴"/>
-        <div className="fs-section-head"><h3 className="fs-title">每天</h3><div className="fs-seg" role="group" aria-label="时间范围">{[7, 30].map((n) => <button key={n} type="button" aria-pressed={range === n} onClick={() => setRange(n)}>近 {n} 天</button>)}</div></div>
-        <Bars days={daily} label={`最近 ${range} 天 · 分钟`} set="records"/>
-        {activeDays > 0 ? <figure className="fs-year stats-chart-well" aria-label={`过去一年专注热力图，有 ${activeDays} 天专注`}>
-          <div className="fs-year-grid">{year.flat().map((d) => <span key={d.key} data-level={d.level} className={d.future ? 'is-future' : ''} title={`${d.key} · ${d.minutes} 分钟`}/>)}</div>
-          <figcaption className="focus-heatmap-legend">过去一年 · {activeDays} 天有专注 · 少{[1, 2, 3, 4].map((l) => <span key={l} data-level={l}/>)}多</figcaption>
-        </figure> : <p className="fs-hint fs-hand">每一轮都会在这一页留下一点颜色。</p>}
-      </div>
-      {spine}
-      <div className="fs-page is-turning fs-ov-right">
-        <h3 className="fs-title">时段</h3>
-        <p className="fs-hint fs-hand">{tod.best ? `你通常在${tod.best.label}（${tod.best.from}–${tod.best.to} 点）最专注。` : '专注几次之后，这里会告诉你最顺手的时段。'}</p>
-        <ol className="fs-rank fs-slots">{tod.slots.map((s) => <li key={s.id} className={tod.best?.id === s.id ? 'is-best' : ''}>
-          <span className="fs-rank-name">{s.label} <small>{s.from}–{s.to} 点</small></span><span className="fs-rank-num">{formatMinutes(s.minutes)}</span>
-          <span className="fs-meter" aria-hidden="true"><i style={{ width: `${s.minutes / slotPeak * 100}%` }}/></span></li>)}</ol>
-        <h3 className="fs-title">最近的专注</h3>
-        {recent.recent.length ? <ol className="fs-sessions">{recent.recent.map((s) => <li key={s.id}>
-          <span className="fs-time">{clock(s.start)}</span><span className="fs-task">{taskName(s.taskId) || s.taskText || '自由专注'}{s.album ? <small> · 《{s.album.title}》</small> : null}</span>
-          <span className="fs-min">{Math.round(s.durationMs / 60000)} 分{s.completed ? '' : ' · 提前结束'}</span></li>)}</ol>
-          : <Empty title="第一轮，从这里开始">开一个番茄，小屋会帮你记下来。</Empty>}
-      </div>
-    </div>}
-    {view === 'tasks' && <div className="fs-spread" key="tasks" role="tabpanel" aria-label="待办"><div className="fs-page is-turning fs-tasks-left">
-      <h3 className="fs-title">时间花在哪里</h3>
-      {taskRows.length ? <ol className="fs-rank fs-task-rank">{taskRows.map((r, i) => <li key={r.id || 'free'} className={`${r.free ? 'is-free' : ''} ${i === 0 ? 'is-best' : ''}`}>
-        <span className="fs-rank-name"><b className="fs-rank-no">{i + 1}</b>{r.name}{r.done ? <small> · 已完成</small> : null}</span><span className="fs-rank-num">{formatMinutes(r.minutes)} · {r.pomodoros} 个番茄</span>
-        <span className="fs-meter" aria-hidden="true"><i style={{ width: `${r.minutes / taskPeak * 100}%` }}/></span></li>)}</ol>
-        : <Empty pose="cat-wait" title="把时间，留给一件小事" action={<button type="button" className="fs-cta" onClick={close}>回小屋写一条待办</button>}>在「待办」里选一件事再开番茄，这一页就会告诉你时间都花在了哪里。</Empty>}
-      {taskRows.some((r) => !r.free) && <figure className="fs-task-note"><Sprite name="cat-desk" scale={2}/><figcaption className="fs-hand">{(() => { const top = taskRows.find((r) => !r.free); const all = taskRows.reduce((n, r) => n + r.minutes, 0); return <>你最常陪伴的是「{top.name}」，<br/>占了全部专注的 {Math.round(top.minutes / Math.max(1, all) * 100)}%。<br/>{openTasks ? `还有 ${openTasks} 件在路上，慢慢来。` : '手头的事都做完了，休息一下吧。'}</>; })()}</figcaption></figure>}
-    </div>{spine}<div className="fs-page is-turning fs-tasks-right">
-      <h3 className="fs-title">做完的事 {doneTasks.length ? <small>· {tasks.filter((t) => t.done).length} 件{openTasks ? ` · 还有 ${openTasks} 件在路上` : ''}</small> : null}</h3>
-      {doneTasks.length > 0 && <ul className="fs-notes">{doneTasks.map((t, i) => <li key={t.id} className="fs-note" style={{ '--tilt': `${[-2, 1.5, -1, 2, 0, -1.5][i % 6]}deg` }}>
-        <Tape className="is-note"/><span className="fs-note-check" aria-hidden="true">✓</span><span className="fs-note-text">{t.text}</span>
-        <small>{t.doneAt ? clock(t.doneAt).split(' ')[0] : ''} · {formatMinutes(taskRows.find((r) => r.id === t.id)?.minutes || 0)}</small></li>)}</ul>}
-      {doneTasks.length < 3 && <figure className={`fs-todo-empty ${doneTasks.length ? 'is-under' : ''}`}><Sprite name="todo-empty" fallback="cat-wait" scale={2}/>
-        <figcaption><p className="fs-empty-title fs-hand">慢慢来，写下第一件事吧</p>
-          <p className="fs-empty">{doneTasks.length ? `已经贴上 ${doneTasks.length} 张便签了。每勾掉一条待办，这一页就多一张。` : '每勾掉一条待办，就会在这一页贴一张便签。'}{openTasks ? ` 现在还有 ${openTasks} 件在路上。` : ''}</p>
-          {!openTasks && <button type="button" className="fs-cta" onClick={close}>回小屋写一条待办</button>}</figcaption></figure>}
-    </div></div>}
-    {view === 'weekly' && <div className="fs-spread" key="weekly" role="tabpanel" aria-label="周报"><div className="fs-page is-turning fs-week-left">
-      <article className={`fs-card ${hasArt('card') ? 'has-stamp' : ''} ${hasArt('cardTape') ? 'has-tape' : ''}`} aria-label="周报卡片">
-        <Tape className="is-card"/>
-        {hasArt('card') && <span className="fs-stamp" aria-hidden="true"/>}
-        <header><span>心流小屋 · 周报</span><small>{report.label}</small></header>
-        <div className="fs-card-hero">
-          <figure className={`fs-cat is-${pose}`}><Sprite name={pose} scale={2} alt={`小猫${CAT_POSE_CAPTION[pose]}`}/><figcaption>{CAT_POSE_CAPTION[pose]}</figcaption></figure>
-          <div className="fs-card-total"><small>{weekName(weekOffset)}专注</small><strong>{formatMinutes(report.totalMinutes)}</strong>
-            <small className={report.deltaMinutes >= 0 ? 'is-up' : ''}>{report.deltaMinutes === 0 ? '与上周持平' : `${report.deltaMinutes > 0 ? '比上周多' : '比上周少'} ${formatMinutes(Math.abs(report.deltaMinutes))}`} · {report.pomodoros} 个番茄</small>
-            <p className="fs-card-summary fs-hand">{report.summary}</p></div>
-        </div>
-        <Bars days={report.daily} best={report.bestDay} set="books" label="这一周 · 分钟"/>
-      </article>
-    </div>{spine}<div className="fs-page is-turning fs-week-right">
-      <div className="fs-weekpick" role="group" aria-label="选择周">
-        <button type="button" aria-label="上一周" onClick={() => setWeekOffset((w) => w - 1)}>‹</button>
-        <strong>{weekName(weekOffset)} · {report.label}</strong>
-        <button type="button" aria-label="下一周" disabled={weekOffset >= 0} onClick={() => setWeekOffset((w) => Math.min(0, w + 1))}>›</button>
-      </div>
-      <LetterSpot template={letter} reduced={reduced} input={weekOffset === 0 ? input : null}/>
-      <div className="fs-board">
-        <figure className="fs-polaroid" style={{ '--tilt': '-3deg' }}><Tape className="is-polaroid"/>
-          {report.album ? (showCover ? <img className="fs-card-cover" src={report.album.cover} alt="" width={96} height={96} onError={() => setCoverFailed(report.album.cover)}/> : <span className="fs-cover-ph" aria-hidden="true"/>) : <span className="fs-cover-ph is-empty" aria-hidden="true"/>}
-          <figcaption className="fs-hand"><small>专注时放在唱机上的唱片</small>{report.album ? `《${report.album.title}》` : '下一张唱片，会陪你开始'}{report.album?.artist ? <small>{report.album.artist}</small> : null}</figcaption></figure>
-        <ul className="fs-notes is-mini" aria-label="这周做完的事">{weekDone.length ? weekDone.slice(0, 3).map((t, i) => <li key={t.id} className="fs-note" style={{ '--tilt': `${[2, -1.5, 1][i]}deg` }}><span className="fs-note-check" aria-hidden="true">✓</span><span className="fs-note-text">{t.text}</span></li>)
-          : <li className="fs-note is-blank" style={{ '--tilt': '1.5deg' }}><span className="fs-note-text">做完的一件小事，会成为这里的一张便签。</span></li>}
-          {weekDone.length > 3 && <li className="fs-note-more">还有 {weekDone.length - 3} 件</li>}</ul>
-        {mood && <figure className="fs-mood" aria-label="小猫心情"><Sprite name={mood.tier === 'droopy' ? 'cat-droopy' : mood.tier === 'happy' ? 'cat-rub' : 'cat-wait'} scale={1}/>{mood.feeds > 0 && <img className="fs-sticker" src={sprite('sticker-fed')} alt="" width={32} height={32}/>}
-          <figcaption className="fs-hand">{mood.feeds > 0 ? `喂了 ${mood.feeds} 次` : '来陪小猫坐一会儿'}{mood.label ? <small>{mood.label}</small> : null}</figcaption></figure>}
-      </div>
-      <ol className="fs-weeks" aria-label="最近几周">{pastWeeks.map((w) => <li key={w.offset}><button type="button" aria-pressed={w.offset === weekOffset} aria-label={`${w.label} · ${formatMinutes(w.totalMinutes)}`} title={`${w.label} · ${formatMinutes(w.totalMinutes)}`} onClick={() => setWeekOffset(w.offset)}>
-        <span className="fs-weeks-bars" aria-hidden="true">{w.daily.map((d) => <i key={d.key} style={{ height: `${d.minutes ? Math.max(2, Math.round(d.minutes / weekPeak * 24 / 2) * 2) : 1}px` }}/>)}</span>
-        <small>{w.offset === 0 ? '本周' : w.label.split(' – ')[0]}</small></button></li>)}</ol>
-      <div className="fs-actions"><button type="button" onClick={copy}>复制文字</button><button type="button" onClick={exportPng}>导出图片</button><span role="status" aria-live="polite">{note}</span></div>
-      <canvas ref={canvas} hidden/>
-    </div></div>}
-    {view === 'letters' && <Mailbox sessions={sessions} state={state} now={now} reduced={reduced}/>}
-    {view === 'entries' && <JournalEntries/>}
+    {active === 'week' && <WeekView sessions={sessions} entries={entries} tasks={tasks} now={now} spine={spine}/>}
+    {active === 'collection' && <CollectionView sessions={sessions} entries={entries} tasks={tasks} now={now} labs={labs} input={input} reduced={reduced} spine={spine} flash={flash} note={note}/>}
+    {active === 'wall' && <WallView sessions={sessions} now={now}/>}
+    {active === 'stats' && <StatsView state={state} sessions={sessions} now={now} input={input} spine={spine} close={close}/>}
+    {active === 'letters' && <Mailbox sessions={sessions} state={state} now={now} reduced={reduced}/>}
+    {active === 'entries' && <JournalEntries/>}
   </div>;
 }

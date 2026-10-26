@@ -120,3 +120,45 @@ export function drawWeekCard(ctx, r, palette, { cover = null, art = {}, letter =
   if (mood?.feeds > 0) sprite(ctx, art.fedSticker, CARD_W - 68, rowY + 60, 32, 32);
   return { width: CARD_W, height: CARD_H };
 }
+
+// 本周合集 (3.0, replaces the postcard): total, 本周来了 N 天, the three records that kept you
+// company (cover + minutes) and the notes you wrote. covers: loaded images by index of c.top.
+export function drawCollectionCard(ctx, c, palette, { covers = [], art = {} } = {}) {
+  const paper = art.cardPaper && intScale(art.cardPaper, 1, 1) ? art.cardPaper : null;
+  const p = palette || (paper ? CARD_PAPER_PALETTE : CARD_PALETTE);
+  ctx.imageSmoothingEnabled = false; ctx.textBaseline = 'top';
+  ctx.fillStyle = p.bg; ctx.fillRect(0, 0, CARD_W, CARD_H); frame(ctx, 8, 8, CARD_W - 16, CARD_H - 16, p);
+  if (paper) tile(ctx, paper, 12, 12, CARD_W - 24, CARD_H - 24);
+  if (!sprite(ctx, art.cardTape, CARD_W / 2, 0, 128, 32, 'tc')) tapeRect(ctx, CARD_W / 2 - 48, 0, 96, 24, p);
+  const stamp = sprite(ctx, art.cardStamp, CARD_W - 24, 24, 96, 96, 'tr'), textRight = stamp ? stamp[0] - 12 : CARD_W - 32;
+  ctx.fillStyle = p.accent; ctx.font = `bold 24px ${FONT}`; ctx.fillText(clip(ctx, '心流小屋 · 本周合集', textRight - 36), 36, 36);
+  ctx.fillStyle = p.dim; ctx.font = `14px ${FONT}`; ctx.fillText(c.label, 36, 70);
+  // Hero: total + 本周来了 N 天 with seven day dots (never a streak).
+  ctx.fillStyle = p.faint; ctx.fillText('这周专注', 36, 112);
+  ctx.fillStyle = p.hi; ctx.font = `bold 34px ${FONT}`; ctx.fillText(formatMinutes(c.totalMinutes), 36, 134);
+  ctx.fillStyle = p.ink; ctx.font = `14px ${FONT}`; ctx.fillText(`本周来了 ${c.daysVisited} 天 · 压制 ${c.records} 张唱片`, 36, 180);
+  c.days.forEach((d, i) => { const x = 330 + i * 34; ctx.fillStyle = d.visited ? p.accent : p.inset; ctx.fillRect(x, 140, 22, 22); if (!d.visited) { ctx.fillStyle = p.lo; ctx.fillRect(x, 160, 22, 2); } ctx.fillStyle = p.faint; ctx.font = `12px ${FONT}`; ctx.fillText(d.label, x + 5, 168); });
+  ctx.fillStyle = p.lo; for (let x = 36; x < CARD_W - 36; x += 8) ctx.fillRect(x, 214, 4, 2);
+  // 陪你最久的唱片
+  ctx.fillStyle = p.accent; ctx.font = `bold 16px ${FONT}`; ctx.fillText('陪你最久的唱片', 36, 232);
+  if (!c.top.length) { ctx.fillStyle = p.dim; ctx.font = `14px ${FONT}`; ctx.fillText('这周还没有唱片陪着专注。', 36, 262); }
+  c.top.forEach((r, i) => {
+    const y = 262 + i * 84, img = covers[i];
+    ctx.fillStyle = '#141010'; ctx.beginPath?.(); if (ctx.arc) { ctx.arc(36 + 64 + 18, y + 32, 30, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = p.accent; ctx.beginPath(); ctx.arc(36 + 64 + 18, y + 32, 9, 0, Math.PI * 2); ctx.fill(); }
+    ctx.fillStyle = p.border; ctx.fillRect(34, y - 2, 68, 68);
+    if (img) { ctx.imageSmoothingEnabled = (img.naturalWidth || img.width || 0) > 64; ctx.drawImage(img, 36, y, 64, 64); ctx.imageSmoothingEnabled = false; }
+    else { ctx.fillStyle = p.inset; ctx.fillRect(36, y, 64, 64); ctx.fillStyle = p.lo; ctx.fillRect(48, y + 12, 40, 40); ctx.fillStyle = p.accent; ctx.fillRect(64, y + 28, 8, 8); }
+    ctx.fillStyle = p.ink; ctx.font = `bold 16px ${FONT}`; ctx.fillText(clip(ctx, `${i + 1}. 《${r.title}》`, CARD_W - 300), 170, y + 8);
+    ctx.fillStyle = p.dim; ctx.font = `14px ${FONT}`; ctx.fillText(clip(ctx, [r.artist, `陪你 ${formatMinutes(r.minutes)}`].filter(Boolean).join(' · '), CARD_W - 220), 170, y + 34);
+  });
+  const notesY = 262 + Math.max(1, c.top.length) * 84 + 8;
+  ctx.fillStyle = p.lo; for (let x = 36; x < CARD_W - 36; x += 8) ctx.fillRect(x, notesY, 4, 2);
+  ctx.fillStyle = p.accent; ctx.font = `bold 16px ${FONT}`; ctx.fillText('你写下的话', 36, notesY + 18);
+  ctx.fillStyle = p.ink; ctx.font = `14px ${FONT}`;
+  const lines = (c.notes.length ? c.notes.map((n) => `「${n.text}」`) : ['这周没有留话，也没关系。']).flatMap((l) => wrap(ctx, l, CARD_W - 72)).slice(0, Math.max(2, Math.floor((CARD_H - 96 - notesY - 48) / 22)));
+  lines.forEach((line, i) => { ctx.fillText(line, 36, notesY + 46 + i * 22); ctx.fillStyle = p.inset; ctx.fillRect(36, notesY + 64 + i * 22, CARD_W - 72, 1); ctx.fillStyle = p.ink; });
+  ctx.fillStyle = p.dim; ctx.font = `14px ${FONT}`;
+  wrap(ctx, c.line, CARD_W - 72).slice(0, 2).forEach((line, i) => ctx.fillText(line, 36, CARD_H - 84 + i * 20));
+  ctx.fillText('—— 小屋里的猫', CARD_W - 150, CARD_H - 40);
+  return { width: CARD_W, height: CARD_H };
+}

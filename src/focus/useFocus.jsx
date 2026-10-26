@@ -197,6 +197,7 @@ export function FocusProvider({ userId, notify = () => {}, children }) {
     clearDone: () => apply(model.clearDone),
     saveNotes: (notes) => apply((s) => ({ ...s, notes: model.normalizeNotes(notes) }), { volatile: true }),
     selectTask: (id, toggle = false) => apply((s) => model.selectTask(s, id, toggle)),
+    setIntent: (text) => apply((s) => model.setIntent(s, text), { volatile: true }),
     equip: (kind, value) => apply((s) => model.equip(s, kind, value)),
     spendFish: (count = 1) => apply((s) => model.spendFish(s, count)),
     buyUnlock: (id) => apply((s) => model.buyUnlock(s, id)),

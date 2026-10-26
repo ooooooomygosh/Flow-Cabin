@@ -1,0 +1,28 @@
+@layer guards, reset, features, skin, overrides;
+/* 3.0 「这一段」: one intention line, one dominant 开始专注, rhythm behind a small selector, the 便签 below.
+   Semantic --ui-* tokens (W4) win when present; --px-* keep the current look. */
+@layer features {
+.focus-dock{--session-ink:var(--ui-text-1,var(--px-ink));--session-dim:var(--ui-text-2,var(--px-ink-dim));--session-faint:var(--ui-text-3,var(--px-ink-faint));--session-line:var(--ui-line,var(--px-border));--session-well:var(--ui-input,var(--px-surface-inset));--session-accent:var(--ui-accent,var(--px-accent))}
+.focus-intent{display:flex;gap:6px;align-items:flex-end;width:100%;text-align:left}
+.focus-intent-field{display:grid;gap:4px;flex:1;min-width:0;font-size:12px;color:var(--session-dim)}
+.focus-intent-field input{width:100%;min-height:38px;box-sizing:border-box;font-size:14px;color:var(--session-ink);background:var(--session-well);border:2px solid var(--session-line)}
+.focus-intent-field input:focus-visible{border-color:var(--session-accent);outline:none}
+.focus-intent-field input::placeholder{color:var(--session-faint)}
+.focus-intent-pick{flex:none;max-width:96px;min-height:38px;font-size:12px}
+.focus-intent.is-running{opacity:.9}.focus-intent.is-running .focus-intent-field span{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.focus-intent.is-running .focus-intent-field input{min-height:32px;font-size:13px}.focus-intent.is-running .focus-intent-pick{min-height:32px}
+.focus-controls.is-idle{width:100%}
+.focus-controls.is-idle .focus-start{flex:1;justify-content:center;min-height:46px;font-size:15px;letter-spacing:.08em}
+.focus-rhythm{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:6px;margin-top:-2px}
+.focus-rhythm button{display:inline-flex;align-items:center;gap:4px;min-height:30px;padding:3px 9px;font-size:12px;color:var(--session-dim);background:none;border:1px solid var(--session-line)}
+.focus-rhythm button:hover,.focus-rhythm button[aria-expanded=true]{color:var(--session-ink);border-color:var(--session-accent)}
+.focus-rhythm-toggle{font-variant-numeric:tabular-nums}
+.focus-rhythm-toggle::after{content:'';width:0;height:0;margin-left:2px;border:4px solid transparent;border-top-color:currentColor;translate:0 2px}
+.focus-rhythm-toggle[aria-expanded=true]::after{border-top-color:transparent;border-bottom-color:currentColor;translate:0 -2px}
+.focus-timer.is-pressing{display:block}
+.focus-notes.is-compact{width:100%;gap:6px;margin-top:6px;padding-top:10px;text-align:left;border-top:1px dashed var(--session-line)}
+.focus-notes.is-compact label{gap:4px}
+.focus-notes-title{display:flex;align-items:baseline;gap:8px;font-size:12px;color:var(--session-ink)}.focus-notes-title small{color:var(--session-faint);font-size:12px}
+.focus-notes.is-compact textarea{min-height:72px}
+.focus-notes.is-compact .focus-task-footer{margin-top:2px}
+}

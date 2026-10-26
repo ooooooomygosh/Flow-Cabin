@@ -41,7 +41,6 @@
   .fs-card-total { margin: 0; font-size: var(--px-text-body-lg); font-weight: 700; color: var(--px-accent-hi); }
   .fs-card-total small { display: block; font-size: 12px; font-weight: 400; color: var(--px-ink-dim); }
   .fs-card-total small.is-up { color: var(--px-good); }
-  .fs-card-cover { width: 32px; height: 32px; flex: none; image-rendering: pixelated; box-shadow: 0 0 0 2px var(--px-border); }
   .fs-card-summary { margin: 0; padding: 8px; background: var(--px-surface-inset); color: var(--px-accent-hi); font-size: var(--px-text-body-sm); }
   .fs-card.has-stamp header { padding-right: calc(var(--journal-card-stamp-w, 64px) + 12px); min-height: calc(var(--journal-card-stamp-h, 64px) - 8px); align-items: flex-start; flex-direction: column; gap: 2px; }
   .fs-week-left { align-content: center; } .fs-week-left .fs-card { padding: 20px 16px 16px; gap: 12px; }
@@ -54,7 +53,6 @@
   .fs-weeks-bars i { width: 4px; background: var(--journal-ink, var(--px-accent)); }
   .fs-weeks small { font-size: 12px; white-space: nowrap; }
   .fs-actions [role='status'] { font-size: 12px; color: var(--px-good); }
-  .fs-compact { display: grid; gap: 8px; }
   .fs-bars.is-mini .fs-bars-row { height: 64px; }
   /* 键鼠陪伴: aggregate counts only. The mini chart compresses large keyboard
      counts with a square-root scale so clicks stay visible in the same panel. */
@@ -83,8 +81,7 @@
   .fs-input-privacy { margin: 0; font-size: 12px; line-height: 16px; color: var(--journal-paper-faint, var(--px-ink-faint)); }
   .fs-input-letter-line { display: flex; align-items: baseline; gap: 6px; margin: 0 0 2px; padding: 3px 7px; font-size: 12px; line-height: 18px; color: var(--journal-paper-ink, var(--px-ink)); background: color-mix(in srgb, var(--px-good) 10%, transparent); border-left: 3px solid var(--px-good); }
   .fs-input-letter-line span { flex: none; color: var(--px-good); font-weight: 700; }
-  .fs-open-journal { min-height: 32px; font: inherit; font-weight: 700; color: var(--px-ink-on-accent); background: var(--px-accent); border: var(--px-border-w) solid var(--px-accent-hi); box-shadow: var(--px-shadow-1); cursor: pointer; }
-  .fs-open-journal:focus-visible, .fs-link:focus-visible, .fs-back:focus-visible { outline: 2px solid var(--px-focus); outline-offset: 2px; }
+  .fs-link:focus-visible, .fs-back:focus-visible { outline: 2px solid var(--px-focus); outline-offset: 2px; }
   .fs-link { justify-self: start; min-height: var(--px-hit); padding: 0; font: inherit; font-size: 12px; color: var(--px-ink-faint); background: none; border: 0; text-decoration: underline; cursor: pointer; }
   /* 小屋日记 layout (colours and art: journal-art.css). */
   .cabin-journal { position: fixed; inset: 0; width: 100vw; height: 100vh; max-width: none; max-height: none; margin: 0; padding: 24px 32px; border: 0; color: var(--px-ink); display: none; }
@@ -144,7 +141,6 @@
   .fs-today-num { position: relative; display: grid; align-content: start; gap: 0; padding: 8px 10px; border: 2px dashed var(--journal-rule, var(--px-border)); background: color-mix(in srgb, var(--journal-paper, transparent) 80%, #fff); line-height: 20px; }
   .fs-today-num strong { font-size: var(--px-text-body-lg); }
   .fs-today-num small { font-size: 12px; }
-  .fs-today-streak .fs-sticker { position: absolute; top: -10px; right: -6px; transform: rotate(10deg); }
   /* 待办 */
   .fs-rank-no { display: inline-grid; place-items: center; width: 20px; height: 20px; margin-right: 6px; font-size: 12px; background: var(--journal-rule, var(--px-heat-0)); }
   .fs-task-rank li.is-best .fs-rank-no { background: var(--journal-ink-hi, var(--px-accent)); color: var(--px-ink-on-accent, #fff); }
@@ -183,28 +179,14 @@
   .fs-weekpick { justify-content: space-between; }
   .fs-letter { display: grid; gap: 4px; }
   .fs-letter .fs-hand { padding: 0 4px; }
-  .fs-board { display: grid; grid-template-columns: 116px 1fr auto; gap: 14px; align-items: start; padding-top: 8px; }
-  .fs-polaroid { position: relative; margin: 0; padding: 8px 8px 6px; background: #fffdf6; box-shadow: 3px 3px 0 rgba(13, 8, 5, .25), 0 0 0 1px rgba(13, 8, 5, .15); transform: rotate(var(--tilt, 0deg)); display: grid; gap: 4px; }
-  .fs-polaroid .fs-card-cover, .fs-cover-ph { width: 100px; height: 100px; display: block; image-rendering: pixelated; box-shadow: none; }
-  .fs-cover-ph { background: radial-gradient(circle, var(--px-accent) 0 8px, var(--px-bg) 8px 14px, var(--px-surface) 14px 15px, var(--px-bg) 15px 38px, transparent 38px), var(--px-paper-ink); }
-  .fs-cover-ph.is-empty { opacity: .35; }
-  .fs-polaroid figcaption { font-size: 12px; line-height: 16px; text-align: center; overflow: hidden; }
-  .fs-polaroid figcaption small { display: block; color: #8a735e; }
   .fs-book .fs-tape.is-polaroid { top: -8px; left: 26px; width: 56px; height: 14px; transform: rotate(4deg); }
   .fs-notes.is-mini { grid-template-columns: 1fr; gap: 10px; padding: 0; }
   .fs-notes.is-mini .fs-note { min-height: 0; padding: 6px 8px 6px 30px; }
   .fs-notes.is-mini .fs-note-check { top: 8px; }
-  .fs-mood { margin: 0; display: grid; justify-items: center; gap: 2px; width: 84px; position: relative; padding: 6px 4px; border: 2px dashed var(--journal-rule, var(--px-border)); }
-  .fs-mood .fs-sticker { position: absolute; top: -12px; right: -10px; transform: rotate(12deg); }
-  .fs-mood figcaption { font-size: 12px; line-height: 16px; text-align: center; }
-  .fs-mood figcaption small { display: block; color: var(--journal-paper-faint); }
   .fs-week-right .fs-weeks { margin-top: auto; }
   @media (max-width: 1100px) {
     .fs-book .fs-page { padding: 12px 18px 16px; }
     .fs-card-hero { grid-template-columns: 96px 1fr; gap: 10px; } .fs-cat img { width: 96px; height: 96px; }
-    .fs-board { grid-template-columns: 100px 1fr auto; gap: 10px; }
-    .fs-polaroid .fs-card-cover, .fs-cover-ph { width: 84px; height: 84px; }
-    .fs-mood { width: 72px; }
   }
   @media (max-height: 760px) {
     .fs-bars:not(.is-mini) .fs-bars-row { min-height: calc(8 * 12px + 8px + 32px); }
@@ -257,7 +239,6 @@
 .fs-letter-paper { background-repeat: repeat; image-rendering: pixelated; padding: 8px 10px; position: relative; }
 .fs-envelope-open { float: right; margin: 0 0 4px 6px; }
 .fs-sign-seal { margin-left: 4px; }
-.fs-mail-entry img { image-rendering: pixelated; }
 .fs-letter-nav button { min-width: 24px; }
 .fs-envelope { position: relative; display: grid; justify-items: center; gap: 8px; padding: 8px 0; }
 .fs-envelope-art { position: relative; display: block; width: 96px; height: 72px; }
@@ -267,7 +248,6 @@
 @keyframes fs-deliver-walk { to { background-position: -192px 0; } }
 @keyframes fs-deliver-in { from { transform: translateX(-40px); opacity: 0; } to { transform: none; opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .fs-deliver.is-walking { animation: none; } }
-.fs-mail-entry { display: inline-flex; align-items: center; gap: 6px; }
 .ai-settings .ai-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .ai-settings .ai-row > span { min-width: 6em; }
 .ai-settings .ai-row input[type="url"], .ai-settings .ai-row input[type="text"], .ai-settings .ai-row input[type="password"] { flex: 1; min-width: 14em; }
