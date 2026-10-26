@@ -3,7 +3,6 @@ import { useCabinRuntime } from '../runtime/CabinRuntime';
 import PixelCat from '../pet/PixelCat';
 import { useCatBehaviour } from '../pet/RoomCat';
 import { useLife } from './useLife';
-import { Play, Pause } from '../icons';
 import { ClockReadout, LyricsReadout } from './HomeReadouts';
 import { cornerCamera, planeStyle } from './corner-camera.mjs';
 import { cornerManifest, peekCornerManifest, cornerUrl, decodeCorner, isCornerDecoded } from './corner-assets.mjs';
@@ -79,9 +78,10 @@ export default function HomeCorner({ zone, active = true, viewport, reduced, dim
 
 // The action bar belongs to the place, not the picture: one bar that follows the current corner.
 export function CornerActions({ zone }) {
-  const { deck, focus, identity, commands } = useCabinRuntime();
+  const { focus, identity, commands } = useCabinRuntime();
   const label = { music:'听歌角', work:'工作角', life:'生活角' }[zone];
+  // 3.0: play / next live on the now-playing bar below, so the listening corner keeps only its lyric book.
   return <div className={`corner-actions is-${zone}`} aria-label={`${label}操作`}>
-    {zone === 'music' ? <><button type="button" className="corner-primary" onClick={commands.play}>{deck.audible ? <Pause size={16}/> : <Play size={16}/>}<span>{deck.audible ? '暂停' : '播放'}</span></button><button type="button" onClick={commands.next} disabled={!deck.deckItem}>下一首</button><button type="button" onClick={() => commands.open('lyrics')}>歌词册</button></> : zone === 'work' ? <><button type="button" className="corner-primary" onClick={() => commands.open('timer')}>{focus.state.timer.phase === 'idle' ? '开始专注' : '查看专注'}</button><button type="button" onClick={() => commands.open('tasks')}>今日任务</button><button type="button" onClick={() => commands.open('notes')}>随手记</button></> : <><button type="button" className="corner-primary" onClick={() => commands.open('pet')}>陪陪{identity.name}</button><button type="button" onClick={() => commands.open('weather')}>天气</button><button type="button" onClick={() => commands.open('rest')}>休息一下</button></>}
+    {zone === 'music' ? <button type="button" onClick={() => commands.open('lyrics')}>歌词册</button> : zone === 'work' ? <><button type="button" className="corner-primary" onClick={() => commands.open('timer')}>{focus.state.timer.phase === 'idle' ? '开始专注' : '查看专注'}</button><button type="button" onClick={() => commands.open('tasks')}>今日任务</button><button type="button" onClick={() => commands.open('notes')}>随手记</button></> : <><button type="button" className="corner-primary" onClick={() => commands.open('pet')}>陪陪{identity.name}</button><button type="button" onClick={() => commands.open('weather')}>天气</button><button type="button" onClick={() => commands.open('rest')}>休息一下</button></>}
   </div>;
 }

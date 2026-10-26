@@ -1,6 +1,7 @@
 import { selectPack } from './pet/imported-pack.mjs';
 import React, { Suspense, lazy, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { reportTrayPet } from './desktop/desktop-sink-client.mjs';
+import { dismissHomeNotice } from './interface-mode.mjs';
 import { getRoomScene } from './scene-catalog.mjs';
 import { normalizePetId, getPet } from './pet/pet-catalog.mjs';
 import { setBeat } from './player/beat-clock.mjs';
@@ -67,6 +68,8 @@ const buildSnapshot = ({ items, record, look, ...rest }) => ({ ...rest, look, ro
 export default function CabinRoom({ items, loading, loadError = '', reload, openRecord, openAdd, firstVisit = false, hubRequest = null, openBackup, openWall, notify, saveToShelf }) {
   const appearance = useDesktopAppearance(), reduced = useReducedMotion();
   const stage = useRef(null);
+  // 「首页换成了生活小屋」 is news only for people who used an earlier home; a new install starts here.
+  useState(() => { if (firstVisit) dismissHomeNotice(); });
   const flow = useOnboardingFlow({ client: appearance.client, loading, loadError, firstVisit, itemCount: items.length, hubRequest, notify });
   const chrome = useRoomChrome({ client: appearance.client, notify, restoreDock: false });
   const library = useRecordLibrary(), look = library?.data.rooms[library.roomId]?.look || 'pixel';
@@ -222,7 +225,7 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
     <HomePanels tool={tool} close={() => setTool('')} filters={filters} setFilters={setFilters} visible={visible} recordStyle={recordStyle} openAdd={openAdd} openRecord={openRecord} openWall={openWall} openSmart={smartEntry && (() => { setTool(''); openSmart(); })} onRoomChange={personalizeRoom}/>{/* the panel is modal: close it, or the smart turntable opens inert behind it */}
     {focus && <CabinJournal/>}
     {focus && <FocusDock open={false}/>}
-    {focus && dock.open && <Dialog title={dock.tab === 'notes' ? '专注' : '专注与日常'} close={() => saveDock({ open: false })} className="home-tool home-focus-dialog" size="lg"><FocusDock embedded open tab={dock.tab} setTab={tab => saveDock({ tab })} close={() => saveDock({ open: false })} onOpenSmart={smartEntry}/></Dialog>}
+    {focus && dock.open && <Dialog title="专注" close={() => saveDock({ open: false })} className="home-tool home-focus-dialog" size="lg"><FocusDock embedded open tab={dock.tab} setTab={tab => saveDock({ tab })} close={() => saveDock({ open: false })} onOpenSmart={smartEntry}/></Dialog>}
     {lyricsOpen && <HomeLyrics close={() => setLyricsOpen(false)}/>}
     {desktopMode ? <DesktopWidgets mode="desktop" exit={chrome.toggleDesktopMode} item={deckItem} provider={provider} playback={playback} player={player} spinning={effectiveSpin} toggleVisual={deck.toggleVisual} trackIndex={deck.shownTrackIndex}/> : zen && !chrome.zenTools && <DesktopWidgets mode="zen"/>}
     {!desktopMode && <ImmersiveChrome zen={zen} fullscreen={fullscreen} exitFullscreen={chrome.exitFullscreen} toggleZen={chrome.toggleZen} tools={chrome.zenTools} setTools={chrome.setZenTools}/>}
