@@ -1,8 +1,9 @@
 /*
- * Flow Cabin · pixel design tokens (shared contract).
- * Art direction: cozy lo-fi pixel cabin — warm wood, amber lamplight, soft
- * moss/teal accents, night-blue windows. Every size is a multiple of --px-unit
- * so frames, shadows and offsets land on whole "pixels".
+ * Flow Cabin · design tokens (shared contract).
+ * --px-*: the cabin palette and the pixel geometry of the painted scenes, sprites
+ * and the classic room (every size a multiple of --px-unit). Kept for compatibility.
+ * --ui-*: the 3.0 chrome (高级温馨) — panels, dialogs, buttons, fields, toasts. New
+ * chrome reads --ui-* only; see docs/art-direction.md.
  * Owner: beauty (art direction). Teammates: consume, don't redefine — add new
  * tokens here instead so the palette stays in one place. Canvas code reads the
  * live values (getComputedStyle) with a local fallback (player/pixel-cover.mjs).
@@ -134,12 +135,68 @@ html[data-desktop-reduce-motion='true'] *::after { animation: none !important; t
   --z-scene: 0; --z-props: 10; --z-room-console: 10; --z-room-pet: 22; --z-hud: 20; --z-titlebar: 30; --z-chrome: 90; --z-overlay: 80; --z-toast: 300;
   /* modal widths (Dialog size=sm|md|lg|xl); modals live in the top layer, above every --z-* */
   --dialog-sm: 440px; --dialog-md: 580px; --dialog-lg: 920px; --dialog-xl: 1040px;
+
+  /* ── 3.0 semantic UI tokens (高级温馨, docs/design/3.0-design.md §7) ──────
+     The painted room is the hero; chrome steps back: warm walnut glass panels,
+     a 1px warm-gold hairline, soft layered shadows, one amber accent.
+     Feature files read these with a pixel fallback, e.g.
+     `background: var(--ui-surface, var(--px-surface))`. Names are a contract.
+     Contrast (WCAG, checked in css-lint.test.mjs): --ui-surface is composited
+     over the darkest (#000) and the lightest (#fff) room that can sit behind it,
+     blur not counted; then a raised card / hover wash on top of that surface.
+                       on surface      on raised       on hover wash
+                       black · white   black · white   black · white
+       --ui-text       15.47 · 10.68   11.88 · 11.49   13.19 · 8.79
+       --ui-text-2     10.37 ·  7.16    7.96 ·  7.70    8.84 · 5.89
+       --ui-text-3      8.25 ·  5.70    6.34 ·  6.13    7.04 · 4.69
+       --ui-accent      9.06 ·  6.26    6.96 ·  6.73    7.72 · 5.14
+       --ui-danger      8.18 ·  5.65    6.28 ·  6.07    6.97 · 4.65
+       --ui-good       10.32 ·  7.13    7.93 ·  7.66    8.80 · 5.86
+       --ui-accent-text on --ui-accent: 8.27:1                                  */
+  --ui-bg: #17110c;                          /* window floor behind the room */
+  --ui-surface: rgba(31, 21, 14, .88);       /* walnut glass: drawers, dialogs, bars */
+  --ui-surface-raised: rgba(58, 42, 30, .92);/* cards, menus, toasts on top of a surface */
+  --ui-surface-hover: rgba(255, 232, 196, .07); /* hover / pressed wash over any surface */
+  --ui-field: rgba(10, 7, 4, .30);           /* input / select well */
+  --ui-backdrop: rgba(12, 8, 5, .46);        /* modal backdrop: dims, never blacks out the room */
+  --ui-line: rgba(240, 200, 140, .16);       /* 1px warm-gold hairline */
+  --ui-line-strong: rgba(240, 200, 140, .30);/* field edges, hovered hairlines */
+  --ui-text: #f6ead8;                        /* body text, warm paper */
+  --ui-text-2: #d3c0a4;                      /* secondary text, labels */
+  --ui-text-3: #bfab8e;                      /* tertiary: captions, placeholders */
+  --ui-accent: var(--px-accent);             /* amber lamplight: the only accent */
+  --ui-accent-text: #2a1a0c;                 /* text on --ui-accent */
+  --ui-accent-soft: rgba(224, 173, 105, .16);/* selected wash, soft badges */
+  --ui-good: #9fcf8f;
+  --ui-danger: #f7927a;
+  --ui-focus-ring: 2px solid rgba(255, 217, 156, .9); /* outline shorthand: `outline: var(--ui-focus-ring)` */
+  --ui-focus-offset: 2px;
+  --ui-blur: 18px;                           /* `backdrop-filter: blur(var(--ui-blur))`; off on 流畅模式 */
+  --ui-radius-lg: 12px;                      /* panels, dialogs, cards */
+  --ui-radius: 8px;                          /* buttons, fields */
+  --ui-radius-pill: 999px;                   /* chips, segmented, switchers */
+  --ui-radius-sm: 4px;                       /* key caps, tiny badges, thumbnails */
+  --ui-shadow: 0 1px 2px rgba(10, 6, 3, .22), 0 8px 24px rgba(10, 6, 3, .26);
+  --ui-shadow-lg: 0 2px 6px rgba(10, 6, 3, .22), 0 18px 48px rgba(10, 6, 3, .36), 0 40px 96px rgba(10, 6, 3, .22);
+  --ui-space-1: 4px; --ui-space-2: 8px; --ui-space-3: 12px; --ui-space-4: 16px; --ui-space-5: 20px; --ui-space-6: 24px;
+  --ui-fs-xs: 12px; --ui-fs-sm: 13px; --ui-fs-md: 15px; --ui-fs-lg: 18px; --ui-fs-xl: 24px; --ui-fs-2xl: 32px; --ui-fs-3xl: 48px;
+  --ui-lh: 1.5; --ui-lh-tight: 1.2;          /* body / titles */
+  /* Body and titles: the user's font (设置 › 显示与字体), HarmonyOS Sans when it is
+     installed, else the system CJK face. The bundled HarmonyOS files are 8 MB a
+     weight, so they load only when picked as 「内置」 there. */
+  --ui-font: var(--desktop-font, 'HarmonyOS Sans SC', system-ui, 'PingFang SC', 'Microsoft YaHei', sans-serif);
+  --ui-font-display: var(--ui-font);         /* same family; titles use 300–500, never bold */
+  --ui-font-digits: var(--px-font-en);       /* pixel face: timer digits and small decorative labels only (8px grid) */
+  --ui-ease: cubic-bezier(.2, .8, .2, 1);
+  --ui-dur: 240ms;
+  --ui-dur-slow: 320ms;
 }
 * { box-sizing: border-box; }
 /* Form controls take the surrounding type; a feature may still size its own control. */
 :is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) :is(select, textarea, input) { font: inherit; }
-/* Keyboard focus: a stepped dashed lamp ring, never a soft glow. Features may move it (outline-offset). */
-:focus-visible { outline: var(--px-focus-ring); outline-offset: var(--px-focus-offset); }
+/* Keyboard focus (3.0): one solid lamp-amber ring, offset from the control. Features may move it (outline-offset).
+   --px-focus-ring (dashed) stays for the classic room's pixel props that ask for it. */
+:focus-visible { outline: var(--ui-focus-ring); outline-offset: var(--ui-focus-offset); }
 /* The one spin: records, discs and LEDs turn in 8 frames (pixel motion, no permanent layer). */
 @keyframes px-spin { to { rotate: 360deg; } }
 }
