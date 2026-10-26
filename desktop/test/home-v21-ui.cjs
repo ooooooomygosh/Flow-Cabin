@@ -109,6 +109,8 @@ async function choosePet(id, name) {
   const backup=JSON.parse(fs.readFileSync(backupPath,'utf8'));assert.equal(backup.version,5);assert.equal(backup.petAssets.media.clips.idle.data,imported.media.clips.idle.data);assert.match(backup.focus.notes,/这份草稿还在/);await close();
   report.checks.push('Actual native Backup v5 export includes current notes, layouts and imported transparent video bytes');
   await page.evaluate(()=>{localStorage.removeItem('cabin.petPack.v1');window.dispatchEvent(new Event('cabin:pet-pack'));});
+  // 3.0: 小屋明信片 and 场景配方 / 睡前模式 are 实验室 features (off for a new profile); switch them on for these checks.
+  await page.evaluate(()=>{const labs=JSON.parse(localStorage.getItem('flow-cabin-labs-v1')||'{}');localStorage.setItem('flow-cabin-labs-v1',JSON.stringify({...labs,postcard:true,scenes:true}));window.dispatchEvent(new CustomEvent('cabin:labs-changed'));});
   await menu('小屋明信片'); await page.getByRole('button',{name:'生成预览',exact:true}).click();
   try { await page.locator('.home-postcard-preview').waitFor(); }
   catch(error){report.scene=await page.locator('.home-canvas').evaluate(el=>({state:{...el.dataset},error:el.querySelector('.home-scene-error')?.textContent}));throw error;}

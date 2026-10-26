@@ -32,7 +32,6 @@
 .focus-phase{margin:0;color:#e6bf89;font-size:12px;letter-spacing:.12em}
 .focus-rounds{display:flex;gap:6px}.focus-rounds span{width:10px;height:10px;background:#3e281a;border:2px solid #8a5f3a}.focus-rounds .is-done{background:var(--px-warn);border-color:#ffb08f}.focus-rounds .is-active{background:var(--px-accent);animation:focus-pulse 1.2s steps(2) infinite}
 @keyframes focus-pulse{50%{opacity:.4}}
-.focus-current-task{display:grid;gap:4px;width:100%;text-align:left;color:#d3b58f;font-size:12px}
 .focus-task-now{margin:0;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:var(--px-ink)}
 .focus-controls{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
 .focus-controls button{display:inline-flex;align-items:center;gap:6px;padding:8px 11px;color:#ffe2b4;background:#5b3a22;border:2px solid #a8784a;box-shadow:3px 3px 0 #120b06aa}
@@ -57,8 +56,6 @@
 .focus-task-remove{display:grid;place-items:center;min-width:var(--px-hit);min-height:var(--px-hit);padding:3px;color:#c89c71;background:none;border:0;opacity:.6}.focus-task-list li:hover .focus-task-remove{opacity:1}
 .focus-task-footer{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:6px;margin-top:10px;font-size:12px;color:var(--px-ink-dim)}.focus-task-footer>button{color:#e8c08c;background:none;border:0;text-decoration:underline}
 
-.focus-stat-tiles{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:0}
-.focus-stat-tiles div{padding:8px 10px;background:#34210f;border:1px solid #5d3d24}.focus-stat-tiles dt{font-size:12px;color:var(--px-ink-dim)}.focus-stat-tiles dd{margin:2px 0 0;font-size:15px;font-weight:700;color:#ffe2a8;font-variant-numeric:tabular-nums}
 .stats-chart-well{margin:14px 0 0;padding:12px;background:var(--px-surface-inset);border:2px solid var(--px-border-subtle);box-shadow:var(--px-shadow-inset)}
 .focus-rewards{display:grid;gap:7px;margin-top:14px;padding-top:12px;border-top:2px dashed #5d3d24}
 .focus-task-rounds{display:inline-flex;align-items:center;gap:2px;color:var(--px-warn)}
@@ -105,7 +102,6 @@
    Local --focus-* variables are the single source for these pieces; they map
    onto the shared cabin design tokens when that file defines them. */
 .focus-dock{--focus-accent:var(--px-accent);--focus-accent-deep:var(--px-accent-lo);--focus-ink:var(--px-bg);--focus-cream:var(--px-ink);--focus-muted:var(--px-ink-dim);--focus-well:var(--px-surface-2);--focus-edge:var(--px-border);--focus-rest:var(--px-good);--focus-tomato:var(--px-warn);--focus-shadow:var(--px-shadow);--focus-fast:var(--px-dur-fast);--focus-med:var(--px-dur-med)}
-.focus-face-note{color:var(--focus-muted);font-size:12px;letter-spacing:.06em;margin-top:-6px}
 .focus-presets{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;width:100%}
 .focus-presets button{display:grid;gap:1px;padding:6px 2px 5px;color:var(--focus-cream);background:var(--focus-well);border:2px solid var(--focus-edge);box-shadow:2px 2px 0 var(--focus-shadow);transition:translate var(--focus-fast) steps(2),background var(--focus-fast)}
 .focus-presets button:hover{translate:0 -2px;box-shadow:2px 4px 0 var(--focus-shadow)}
@@ -170,7 +166,6 @@
 }
 
 .cat-panel .focus-rewards{margin-top:0;padding-top:0;border-top:0}
-.focus-cat-link{margin-top:14px;justify-self:start;display:inline-flex;align-items:center;gap:6px}
 .cabin-dialog.cat-panel{position:fixed;margin:0;inset:auto;left:var(--cat-panel-x,50%);top:var(--cat-panel-y,50%);width:min(360px,calc(100vw - 24px));max-height:var(--cat-panel-max-h,calc(100vh - 24px));overflow:auto;translate:var(--cat-panel-shift,0 0)}
 :root:not([style*='--cat-panel-x']) .cabin-dialog.cat-panel{translate:-50% -50%}
 /* The cat stays in view next to its panel: no dimming backdrop over the room. */

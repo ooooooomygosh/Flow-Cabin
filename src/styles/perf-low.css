@@ -1,6 +1,7 @@
 /* 流畅模式 (data-perf="low"): keep the room's look, drop what costs the most
    on slow machines — filters re-rasterized on every update, half the dust,
-   decorative loops. The atmosphere canvas also slows itself (perf-profile).
+   decorative loops, and the 3.0 glass (backdrop blur re-samples the room under
+   every panel on every frame). The atmosphere canvas also slows itself (perf-profile).
    Kill switches sit in `guards` (an !important there beats every layer);
    plain replacements sit in `overrides`, the last layer. */
 @layer guards, reset, features, skin, overrides;
@@ -12,6 +13,13 @@ html[data-perf='low'] :is(.playlist-track, .desktop-widget), html[data-perf='low
 /* The button hover runs a brightness() filter: every hover re-rasterizes the
    button. The lift + hard shadow stay, so the hover still reads. */
 html[data-perf='low'] :is(.pixel-button, .room-selection-actions button, .room-selection-actions a, .cabin-scene .room-empty button, .record-card-tools .record-tools-button, .record-card-tools .discogs-link) { filter: none !important; }
+/* No glass on 流畅模式: every panel, chip and backdrop goes flat (the surfaces
+   turn more opaque below, so text keeps its contrast without the blur). */
+html[data-perf='low'] *, html[data-perf='low'] *::before, html[data-perf='low'] *::after, html[data-perf='low'] ::backdrop { backdrop-filter: none !important; }
+/* The OS asks for less transparency: same flat glass, opaque surfaces below. */
+@media (prefers-reduced-transparency: reduce) {
+  *, *::before, *::after, ::backdrop { backdrop-filter: none !important; }
+}
 }
 @layer overrides {
 html[data-perf='low'] .ambient-mote:nth-child(odd) { display: none; }
@@ -22,5 +30,11 @@ html[data-perf='low'] .desktop-widget { background: color-mix(in srgb, var(--px-
 html[data-perf='low'] .corner-pool::after { transition: none; }
 /* Dialog entrance without the scale: scaling a full-window dialog re-rasterizes
    the whole panel on every step; opacity alone still fades it in. */
-html[data-perf='low'] :is(.cabin-dialog, .record-dialog)[open] { animation: px-dialog-in-lite var(--px-dur-med) var(--px-ease) both; }
+html[data-perf='low'] :is(.cabin-dialog, .record-dialog)[open] { animation: px-dialog-in-lite var(--ui-dur) var(--ui-ease) both; }
+html[data-perf='low'] .cabin-modal.home-tool { animation: px-dialog-in-lite var(--ui-dur) var(--ui-ease) both; }
+/* Without the blur the glass needs more body to keep text on it readable. */
+html[data-perf='low'] { --ui-surface: rgba(31, 21, 14, .96); --ui-surface-raised: rgba(58, 42, 30, .98); }
+@media (prefers-reduced-transparency: reduce) {
+  :root { --ui-surface: #1f150e; --ui-surface-raised: #3a2a1e; --ui-backdrop: rgba(12, 8, 5, .72); }
+}
 }

@@ -712,3 +712,27 @@ test('a restore never brings a running timer back', () => {
   assert.equal(restored.timer.phase, 'idle');
   assert.equal(restored.timer.endsAt, 0);
 });
+
+// 3.0: the optional 「留一句话给这一段」 note travels with backups, capped and merged without loss.
+test('session notes survive backup export, import sanitising and merge', async () => {
+  const { setSessionNote, NOTE_LIMIT } = await import('./focus/session-log.mjs');
+  const source = memoryStorage(), destination = memoryStorage();
+  const noted = sessionRecord({ start: at - 25 * 60000, end: at, completed: true, todo: { id: '', text: '读论文' } });
+  const plain = sessionRecord({ start: at - 90 * 60000, end: at - 60 * 60000, completed: true });
+  appendSession(plain, source); appendSession(noted, source);
+  assert.equal(setSessionNote(noted.id, '读完了引言', { storage: source, target: null }).ok, true);
+  const parsed = parseBackup(JSON.stringify(buildBackup({ storage: source })));
+  assert.deepEqual(parsed.memory.focusSessions.map((s) => s.note), [undefined, '读完了引言'], 'records with and without a note');
+  assert.equal('note' in parsed.memory.focusSessions[0], false);
+  // An over-long or hostile note in a file is capped to plain text, never rejected as a whole.
+  const tampered = JSON.parse(JSON.stringify(buildBackup({ storage: source })));
+  tampered.memory.focusSessions[1].note = `<b>${'长'.repeat(400)}</b>\n`;
+  assert.equal(Array.from(parseBackup(JSON.stringify(tampered)).memory.focusSessions[1].note).length, NOTE_LIMIT);
+  // A local copy without the note takes the incoming note; an older file never wipes a local note.
+  appendSession(noted, destination);
+  restoreBackupMemory(parsed, { storage: destination, target: null });
+  assert.equal(JSON.parse(destination.getItem(SESSION_LOG_KEY)).find((s) => s.id === noted.id).note, '读完了引言');
+  const older = parseBackup(JSON.stringify({ ...buildBackup({ storage: source }), memory: { version: 1, focusSessions: [{ ...noted }] } }));
+  restoreBackupMemory(older, { storage: destination, target: null });
+  assert.equal(JSON.parse(destination.getItem(SESSION_LOG_KEY)).find((s) => s.id === noted.id).note, '读完了引言');
+});

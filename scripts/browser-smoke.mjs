@@ -180,7 +180,10 @@ try {
   await page.keyboard.press('m'); assert.equal(await page.locator('audio[data-deck="active"]').evaluate(a => a.muted), true); await page.keyboard.press('m'); assert.equal(await page.locator('audio[data-deck="active"]').evaluate(a => a.muted), false);
   await page.keyboard.press('Space'); await page.waitForFunction(() => !document.querySelector('audio[data-deck="active"]').paused);
   // 上一首 restarts a song that has played for over 3 s; the slider checks above may have run past that, so start near the beginning.
+  // The deck's position store throttles writes (250 ms), so wait until the progress bar has the new spot
+  // before pressing: 上一首 reads that store, and a stale > 3 s position restarts the song instead.
   await page.locator('audio[data-deck="active"]').evaluate(a => { a.currentTime = .5; });
+  await page.waitForFunction(() => Number(document.querySelector('input[aria-label="音乐播放进度"]')?.value) < 3);
   await page.keyboard.press('Shift+ArrowLeft'); await page.waitForFunction(() => document.querySelector('.turntable-track').textContent.startsWith('01'));
   check('keyboard-space-mute-and-previous');
   // 重启后恢复: the song and its spot come back after a reload, paused, and play resumes there. No stream URL is stored.
@@ -256,7 +259,7 @@ try {
   await openMusicSettings(page); await page.locator('.music-local-status', { hasText: '1 张专辑 · 2 首歌曲' }).waitFor(); await screenshot('music-settings'); const sourceBefore = await page.locator('.room-turntable').getAttribute('data-provider');
   // 账户与文件夹 manages logins and folders only; the deck's source has one picker, one page up.
   assert.equal(await accountsRegion(page).getByRole('button', { name: /在唱机上用|唱机改用/ }).count(), 0, 'no second source picker in 账户与文件夹'); assert.equal(await settingsDialog(page).getByRole('combobox', { name: '唱机音源' }).count(), 0, 'no 唱机音源 select');
-  await accountsRegion(page).getByRole('button', { name: '音源', exact: true }).click(); const qqSource = settingsDialog(page).getByRole('radiogroup', { name: '唱机音源', exact: true }).getByRole('radio', { name: 'QQ 音乐', exact: true });
+  await accountsRegion(page).getByRole('button', { name: '音乐', exact: true }).click(); const qqSource = settingsDialog(page).getByRole('radiogroup', { name: '唱机音源', exact: true }).getByRole('radio', { name: 'QQ 音乐', exact: true });
   await qqSource.click(); assert.equal(await qqSource.getAttribute('aria-checked'), 'true'); await qqSource.getByText('唱机在用').waitFor(); assert.equal(await settingsDialog(page).getByRole('radio', { checked: true }).count(), 1, 'exactly one source is in use');
   await closeDialog(); assert.equal(await page.locator('.room-turntable').getAttribute('data-provider'), 'qq'); await chooseSource(page, sourceBefore); check('music-settings-offline-account-and-local-status'); check('music-settings-use-source-on-deck');
   // Seamless playback: stored source fails → automatic rematch plays the best candidate (no picker), with the chosen quality shown honestly.
@@ -268,9 +271,14 @@ try {
   rematch = 'all-fail'; await page.getByRole('button', { name: '下一首展示曲目' }).click(); await page.getByRole('button', { name: '在 QQ 音乐中打开' }).click(); await page.locator('.turntable-local-app-notice', { hasText: '小屋不显示进度' }).waitFor(); assert.equal(localOpens[0].provider, 'qq'); assert.equal(await page.evaluate(() => document.querySelector('audio[data-deck="active"]').paused), true, 'the hand-off never pretends the cabin is playing'); check('local-app-fallback-labelled-after-failure');
   rematch = ''; await chooseSource(page, sourceBefore);
   await page.locator('.focus-badge').click(); await page.getByRole('tab', { name: '待办', exact: true }).click(); await page.getByLabel('新的待办').fill('浏览器测试待办'); await page.getByRole('button', { name: '添加待办' }).click(); await page.getByRole('checkbox', { name: '完成：浏览器测试待办' }).check(); assert.equal(await page.locator('.focus-task-list li.is-done').count(), 1); check('focus-tasks-create-and-complete');
-  await page.getByRole('tab', { name: '随手记', exact: true }).click(); await page.getByLabel('随手记内容').fill('QA 随手记备份内容'); check('quick-notes-save-local-text');
-  await page.getByRole('tab', { name: '番茄钟' }).click(); await page.getByRole('button', { name: '计时设置' }).click(); await page.getByLabel('专注（分）').fill('2'); await page.getByLabel('专注（分）').blur(); await page.getByRole('button', { name: '开始专注' }).click(); await page.locator('.focus-display').waitFor(); await page.keyboard.press('Escape'); await page.locator('.focus-display').waitFor({ state: 'detached' }); await page.clock.fastForward(121000); await page.locator('.focus-phase', { hasText: '短休息' }).waitFor(); await page.getByRole('tab', { name: '统计' }).click(); assert.match(await page.locator('.focus-stat-tiles').innerText(), /2 分钟/); await screenshot('focus-statistics'); check('focus-timer-completes-and-records-session'); await page.locator('.focus-dock-close').click();
+  // 3.0: 随手记 is the 便签 inside 这一段.
+  await page.getByRole('tab', { name: '这一段', exact: true }).click(); await page.getByLabel('随手记内容').fill('QA 随手记备份内容'); check('quick-notes-save-local-text');
+  await page.getByRole('button', { name: '计时设置' }).click(); await page.getByLabel('专注（分）').fill('2'); await page.getByLabel('专注（分）').blur(); await page.getByRole('button', { name: '开始专注' }).click(); await page.locator('.focus-display').waitFor(); await page.keyboard.press('Escape'); await page.locator('.focus-display').waitFor({ state: 'detached' }); await page.clock.fastForward(121000); await page.locator('.focus-phase', { hasText: '短休息' }).waitFor(); await page.locator('.focus-dock-close').click();
+  // 3.0: 统计 moved from the focus panel into 唱片日记 › 统计.
+  await page.evaluate(() => window.dispatchEvent(new CustomEvent('cabin:open-journal', { detail: {} }))); const statsJournal = page.getByRole('dialog', { name: '唱片日记' }); await statsJournal.waitFor(); await statsJournal.getByRole('tab', { name: '统计' }).click(); assert.match(await statsJournal.locator('.fs-today-num').first().innerText(), /2 分钟/); await screenshot('focus-statistics'); check('focus-timer-completes-and-records-session'); await page.keyboard.press('Escape'); await statsJournal.waitFor({ state: 'hidden' });
   // 学习: a deck, pasted cards, a keyboard review (Space flips, 1–4 rate), a countdown.
+  // 3.0: 学习 is the 词书学习 lab (设置 › 实验室); switch it on for this journey.
+  await page.evaluate(() => { const labs = JSON.parse(localStorage.getItem('flow-cabin-labs-v1') || '{}'); localStorage.setItem('flow-cabin-labs-v1', JSON.stringify({ ...labs, study: true })); window.dispatchEvent(new CustomEvent('cabin:labs-changed')); });
   await page.locator('.focus-badge').click(); await page.getByRole('tab', { name: '学习', exact: true }).click();
   await page.getByLabel('新卡组名称').fill('QA 单词'); await page.getByRole('button', { name: '新建', exact: true }).click();
   const studyDeck = page.locator('.study-decks li', { hasText: 'QA 单词' });
@@ -307,7 +315,7 @@ try {
   await page.keyboard.press(' '); await page.keyboard.press('3'); await page.locator('.study-done').waitFor(); await page.getByRole('button', { name: '回到词书架', exact: true }).click();
   await page.getByLabel('倒计时名称').fill('期末'); await page.getByLabel('倒计时日期').fill('2026-12-20'); await page.getByRole('button', { name: '添加倒计时' }).click(); await page.locator('.study-countdowns li', { hasText: '期末' }).getByText('73 天').waitFor();
   check('study-flashcards-fsrs-keyboard-review-and-countdown'); await page.locator('.focus-dock-close').click();
-  await page.getByRole('button', { name: '设置', exact: true }).click(); await page.getByRole('tab', { name: '数据与备份', exact: true }).click(); await page.getByRole('button', { name: '收藏与备份', exact: true }).click(); const downloadPromise = page.waitForEvent('download'); await page.getByRole('button', { name: '导出备份', exact: true }).click(); const download = await downloadPromise; await download.saveAs(path.join(output, 'fixture-backup.json')); const backup = JSON.parse(await fs.readFile(path.join(output, 'fixture-backup.json'))); assert.equal(backup.kind, 'FlowCabinBackup'); assert.equal(backup.items.length, 18); assert.equal(backup.focus.tasks.length, 1); assert.equal(backup.focus.notes, 'QA 随手记备份内容'); assert.equal(backup.study.cards.length, 2); assert.equal(backup.study.countdowns[0].title, '期末'); check('backup-exports-collection-and-focus');
+  await page.getByRole('button', { name: '设置', exact: true }).click(); await page.getByRole('tab', { name: '数据', exact: true }).click(); await page.getByRole('button', { name: '收藏与备份', exact: true }).click(); const downloadPromise = page.waitForEvent('download'); await page.getByRole('button', { name: '导出备份', exact: true }).click(); const download = await downloadPromise; await download.saveAs(path.join(output, 'fixture-backup.json')); const backup = JSON.parse(await fs.readFile(path.join(output, 'fixture-backup.json'))); assert.equal(backup.kind, 'FlowCabinBackup'); assert.equal(backup.items.length, 18); assert.equal(backup.focus.tasks.length, 1); assert.equal(backup.focus.notes, 'QA 随手记备份内容'); assert.equal(backup.study.cards.length, 2); assert.equal(backup.study.countdowns[0].title, '期末'); check('backup-exports-collection-and-focus');
   await page.getByLabel('导入备份文件').setInputFiles({ name: 'bad.json', mimeType: 'application/json', buffer: Buffer.from('{invalid') }); await page.getByText('文件内容无法读取。', { exact: true }).waitFor(); check('backup-rejects-malformed-input');
   const imported = { kind: 'FlowCabinBackup', items: [{ ...items[0], id: 'backup-imported', title: '备份导入唱片' }] };
   await page.getByLabel('导入备份文件').setInputFiles({ name: 'fixture.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(imported)) }); await page.getByText('导入完成：新增 1 张唱片，唱片架现在共有 19 张。', { exact: true }).waitFor(); assert(items.some(i => i.id === 'backup-imported')); check('backup-import-merges-new-album'); await closeDialog();
@@ -524,7 +532,7 @@ try {
     }
     return out;
   }, state); };
-  await page.locator('.focus-badge').click(); await page.getByRole('tab', { name: '番茄钟' }).click();
+  await page.locator('.focus-badge').click(); await page.getByRole('tab', { name: '这一段', exact: true }).click();
   // Since 2.2 the cat speaks at moments, not all round: the start bubble shows for a few seconds.
   const startFocus = page.getByRole('button', { name: '开始专注', exact: true }); if (await startFocus.count()) { await startFocus.click(); await page.locator('.room-cat-bubble', { hasText: '开始专注啦' }).waitFor({ state: 'attached' }); await page.locator('.focus-display').waitFor(); await page.keyboard.press('Escape'); }
   await page.getByRole('button', { name: '收起专注工具', exact: true }).click();
@@ -654,7 +662,7 @@ try {
   for (const [index, call] of report.apiCalls.entries()) if (call.method === 'DELETE' && call.path === '/api/items') assert(!report.apiCalls.slice(index + 1).some(later => later.method === 'PATCH' && later.path === call.path && later.id === call.id), 'Deleted album received a late notes autosave');
   check('deleted-albums-do-not-receive-late-autosaves');
   // 设置 › 关于: version + update row (browser preview has no updater, says so).
-  await page.getByRole('button', { name: '设置', exact: true }).click(); await page.getByRole('tab', { name: '关于' }).click();
+  await page.getByRole('button', { name: '设置', exact: true }).click(); await page.getByRole('tab', { name: '实验室' }).click();
   const about = page.locator('.update-panel'); await about.getByText(/心流小屋 v\d+\.\d+\.\d+/).waitFor(); const send = (detail) => page.evaluate((value) => { window.cabinUpdateState = value; window.dispatchEvent(new CustomEvent('cabin:update-state', { detail: value })); }, detail);
   if (await about.getByText('网页版总是最新的').count()) assert.equal(await about.getByRole('button', { name: '检查更新' }).count(), 0, 'no fake update button on the web');
   else {

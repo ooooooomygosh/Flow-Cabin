@@ -8,6 +8,8 @@ export async function verifyFullscreenStudy({ browser, origin, output, check }) 
   await context.addInitScript(() => {
     if (location.origin === 'null') return;
     localStorage.setItem('flow-cabin-onboarding-v1', window.__onboardingSeed);
+    // 3.0: 学习 is the 词书学习 lab (设置 › 实验室); this suite checks it, so it starts switched on.
+    if (!localStorage.getItem('flow-cabin-labs-v1')) localStorage.setItem('flow-cabin-labs-v1', JSON.stringify({ study: true }));
     window.__commands = []; window.open = url => { window.__commands.push(String(url)); return null; };
     window.albumDesktopAppearance = { client: true, reduceMotion: true };
     const init = () => { document.documentElement.dataset.desktopClient = 'true'; document.documentElement.dataset.desktopReduceMotion = 'true'; };

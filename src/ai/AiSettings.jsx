@@ -80,7 +80,7 @@ export default function AiSettings() {
       <div className="ai-row"><span>语气</span><Segmented label="来信语气" items={TONES} value={settings.tone} onChange={(tone) => update({ tone })}/></div>
       <label className="ai-row ai-toggle"><input type="checkbox" checked={settings.shareNotes} onChange={(event) => update({ shareNotes: event.target.checked })}/> 允许自动来信参考我的随手记</label>
       <p className="ai-note">默认关闭。打开后，最近一段随手记摘录会随统计发给你配置的 AI 服务；信箱只保存“参考了随手记”的事实标记，不保存原文。关闭 AI 或请求失败时，小屋会用本机数据写一封不联网的信。</p>
-      <p className="ai-note">来信都收在「小屋日记 › 信箱」。每{settings.cadence === 'daily' ? '天' : '周'}只写一封，新来信会立起小旗子；你也可以随时主动写信，失败时原稿和本地回信都会保留。</p>
+      <p className="ai-note">来信都收在「唱片日记 › 信箱」。每{settings.cadence === 'daily' ? '天' : '周'}只写一封，新来信会立起小旗子；你也可以随时主动写信，失败时原稿和本地回信都会保留。</p>
     </fieldset>
   </div>;
 }

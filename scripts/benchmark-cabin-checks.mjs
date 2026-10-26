@@ -139,7 +139,7 @@ export async function verifyBenchmarkCabin(browser, origin, { output, check = ()
         await reachable(windowButton); await windowButton.click();
         const settings = page.getByRole('dialog', { name: '设置', exact: true });
         await settings.waitFor();
-        assert.equal(await settings.getByRole('tab', { name: '房间与桌宠', exact: true }).getAttribute('aria-selected'), 'true');
+        assert.equal(await settings.getByRole('tab', { name: '小屋与奶糖', exact: true }).getAttribute('aria-selected'), 'true');
         await settings.getByRole('heading', { name: '窗外', exact: true }).waitFor();
         await noOverflow(page); await shot('settings');
         await page.keyboard.press('Escape'); await settings.waitFor({ state: 'hidden' });
@@ -162,7 +162,7 @@ export async function verifyBenchmarkCabin(browser, origin, { output, check = ()
           if (compact) {
             assert.equal(await page.locator('.cabin-welcome').isVisible(), false, 'the compact layout intentionally hides the welcome note');
             await page.locator('.cabin-toolbar .focus-badge').click();
-            await page.getByRole('tab', { name: '随手记', exact: true }).click();
+            await page.getByRole('tab', { name: '这一段', exact: true }).click();
           } else {
             const write = page.getByRole('button', { name: '写两句', exact: true });
             await reachable(write); await write.click();
@@ -171,7 +171,7 @@ export async function verifyBenchmarkCabin(browser, origin, { output, check = ()
         await openNotes();
         const notes = page.getByRole('textbox', { name: '随手记内容', exact: true });
         await notes.waitFor();
-        assert.equal(await page.getByRole('tab', { name: '随手记', exact: true }).getAttribute('aria-selected'), 'true');
+        assert.equal(await page.getByRole('tab', { name: '这一段', exact: true }).getAttribute('aria-selected'), 'true');
         await notes.pressSequentially('A quiet evening.', { delay: 25 }); await notes.press('Enter');
         await notes.pressSequentially('Two lines for today.', { delay: 25 });
         const text = 'A quiet evening.\nTwo lines for today.';
@@ -183,7 +183,7 @@ export async function verifyBenchmarkCabin(browser, origin, { output, check = ()
       });
       await run('cat-reacts-to-real-input', async (page, shot) => {
         await page.locator('.cabin-toolbar .focus-badge').click();
-        await page.getByRole('tab', { name: '随手记', exact: true }).click();
+        await page.getByRole('tab', { name: '这一段', exact: true }).click();
         const notes = page.getByRole('textbox', { name: '随手记内容', exact: true });
         await notes.click();
         await page.waitForFunction(() => {

@@ -54,15 +54,16 @@ let app, site, host;
   await site.locator('html:not([data-app-background])').waitFor();
   await site.clock.runFor(1200); assert.ok(await site.evaluate(() => window.__catPaints) > paints);
   check('background-pauses-drawing-and-visible-resumes');
-  await site.locator('.focus-badge').click(); await site.getByRole('tab', { name: '统计' }).click();
-  await site.locator('.focus-cat-link').click();
+  // 3.0: 统计 (with its cat link) lives in 唱片日记 › 统计; the link closes the journal and opens the cat.
+  await site.evaluate(() => window.dispatchEvent(new CustomEvent('cabin:open-journal', { detail: { tab: 'stats' } })));
+  await site.getByRole('dialog', { name: '唱片日记' }).locator('.rd-cat-link').click();
   await site.getByRole('button', { name: '黑猫', exact: true }).click(); assert.equal(await cat.getAttribute('data-skin'), 'black');
   await site.screenshot({ path: path.join(output, 'cat-black-room.png') });
   await site.getByRole('button', { name: '关闭小猫', exact: true }).click();
-  await site.getByRole('tab', { name: '番茄钟' }).click(); await site.getByRole('button', { name: '计时设置' }).click();
+  await site.locator('.focus-badge').click(); await site.getByRole('tab', { name: '这一段' }).click(); await site.getByRole('button', { name: '计时设置' }).click();
   await site.getByLabel('专注（分）').fill('2'); await site.getByLabel('专注（分）').blur(); await site.getByLabel('隐藏秒数（仅显示剩余分钟）').check();
   await site.getByLabel('提示音', { exact: true }).uncheck(); await site.getByLabel('系统通知', { exact: true }).uncheck();
-  await site.getByRole('button', { name: '开始专注', exact: true }).click(); await site.locator('.focus-display').waitFor(); await site.keyboard.press('Escape'); await site.locator('.focus-display').waitFor({ state: 'detached' }); // 开始专注 enters 沉浸
+  await site.getByRole('button', { name: '开始专注', exact: true }).click(); assert.equal(await site.locator('.focus-display').count(), 0); // 自动进入沉浸 is off by default (2.2), so 开始专注 stays in the room
   assert.match(await site.locator('.focus-badge').innerText(), /2 分钟/);
   // The face canvas carries the accessible clock; the old CSS progress bar was removed.
   const clock = await site.locator('.focus-timer .pixel-clock').getAttribute('aria-label'); assert.equal(clock, '2 分钟');
@@ -75,10 +76,11 @@ let app, site, host;
   await site.evaluate(() => { window.__phaseCount = 0; window.addEventListener('album-focus-phase', () => window.__phaseCount++); });
   await site.clock.fastForward(60000); assert.equal(await site.evaluate(() => window.__phaseCount), 1);
   await site.clock.fastForward(1000); assert.equal(await site.evaluate(() => window.__phaseCount), 1);
-  await site.getByRole('tab', { name: '统计' }).click(); assert.match(await site.locator('.focus-stat-tiles').innerText(), /2 分钟/); assert.match(await site.locator('.focus-cat-link').innerText(), /1 小鱼干/);
+  await site.evaluate(() => window.dispatchEvent(new CustomEvent('cabin:open-journal', { detail: { tab: 'stats' } }))); const journal = site.getByRole('dialog', { name: '唱片日记' });
+  assert.match(await journal.locator('.fs-today-num').first().innerText(), /2 分钟/); assert.match(await journal.locator('.rd-cat-link').innerText(), /1 小鱼干/); await site.keyboard.press('Escape'); await journal.waitFor({ state: 'hidden' });
   check('minutes-stay-still-between-boundaries-pause-resume-and-finish-once-with-active-duration-and-reward');
   await site.reload(); await cat.waitFor(); assert.equal(await cat.getAttribute('data-skin'), 'black');
-  if (!await site.getByRole('tab', { name: '番茄钟' }).isVisible()) await site.locator('.focus-badge').click(); await site.getByRole('tab', { name: '番茄钟' }).click(); await site.getByRole('button', { name: '计时设置' }).click(); assert.equal(await site.getByLabel('隐藏秒数（仅显示剩余分钟）').isChecked(), true);
+  if (!await site.getByRole('tab', { name: '这一段' }).isVisible()) await site.locator('.focus-badge').click(); await site.getByRole('tab', { name: '这一段' }).click(); await site.getByRole('button', { name: '计时设置' }).click(); assert.equal(await site.getByLabel('隐藏秒数（仅显示剩余分钟）').isChecked(), true);
   check('skin-and-display-preferences-persist-after-reload');
   await site.locator('.focus-dock-close').click();
   const opened = app.waitForEvent('window', page => page.url().includes('/pet/pet.html'));

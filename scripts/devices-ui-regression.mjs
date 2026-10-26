@@ -34,14 +34,17 @@ try {
  });
  page = await context.newPage(); page.setDefaultTimeout(12000); page.on('pageerror', e => errors.push(e.stack)); await page.goto(origin);
  const intro=page.getByRole('button',{name:'知道了',exact:true});if(await intro.isVisible())await intro.click();
- await page.getByRole('button', { name: '设置', exact: true }).click(); await page.getByRole('button',{name:'全部设置',exact:true}).click(); await page.getByRole('tab', { name: '同步与设备', exact: true }).click();
+ await page.getByRole('button', { name: '设置', exact: true }).click(); await page.getByRole('button',{name:'全部设置',exact:true}).click(); await page.getByRole('tab', { name: '实验室', exact: true }).click();
+ // 3.0: 同步与设备 sits in 实验室 behind the 设备联动 switch (off for people who never paired).
+ const sync = page.getByRole('region', { name: '同步与设备', exact: true }); assert.equal(await sync.getByRole('button', { name: '开启局域网接收', exact: true }).count(), 0, 'pairing is hidden while the lab is off');
+ await page.getByRole('checkbox', { name: '设备联动', exact: true }).check(); assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('flow-cabin-labs-v1')).devices), true);
  await page.getByRole('button', { name: '开启局域网接收', exact: true }).click(); await page.getByRole('button', { name: '生成 2 分钟配对码', exact: true }).click();
  await page.getByAltText('两分钟有效的心流小屋配对二维码').waitFor();
  assert.match(await page.getByAltText('两分钟有效的心流小屋配对二维码').getAttribute('src'), /^data:image\/png;base64,/);
  assert.equal(await page.getByRole('button', { name: '扫描另一台小屋的二维码', exact: true }).count(), 1);
  await page.screenshot({ path: path.join(output, 'local-pairing.png') }); pass('advertised native capability opens explicit LAN pairing and generates QR locally');
  await page.getByRole('button', { name: '关闭接收', exact: true }).click(); assert.equal(enabled, false); pass('receiving remains an explicit reversible setting');
- await page.getByRole('tab', { name: '房间与桌宠', exact: true }).click();
+ await page.getByRole('tab', { name: '小屋与奶糖', exact: true }).click();
  await page.getByRole('region', { name: '宠物动画包', exact: true }).waitFor();
  assert.equal(await page.locator('input[type=file][accept*=".zip"]').isEnabled(), true); pass('pet-pack JSON and ZIP import is wired into real settings');
  await page.getByRole('button', { name: '布置小屋', exact: true }).click(); await page.getByRole('dialog', { name: '布置小屋', exact: true }).waitFor();

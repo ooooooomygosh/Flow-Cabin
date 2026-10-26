@@ -1,7 +1,7 @@
 // Pure focus statistics + weekly report. Every function takes `now`.
 // Sessions use the shape from session-source.mjs.
 import { dayKey, startOfDay, addDays, startOfWeek } from '../../lib/local-calendar.mjs';
-import { currentStreak, minutesByDay } from '../focus-model.mjs';
+import { currentStreak, minutesByDay, daysThisWeek } from '../focus-model.mjs';
 export { minutesByDay } from '../focus-model.mjs';
 export { dayKey, startOfDay, startOfWeek, isMonday } from '../../lib/local-calendar.mjs';
 const MINUTE = 60000;
@@ -53,7 +53,7 @@ export function recentSummary(sessions, now, limit = 6) {
   return {
     todayMinutes: Math.round(days.get(today) || 0),
     todayPomodoros: todaySessions.filter((s) => s.completed).length,
-    streak: currentStreak(days, now), graceStreak: streak.days, forgiven: streak.forgiven,
+    streak: currentStreak(days, now), graceStreak: streak.days, forgiven: streak.forgiven, weekDays: daysThisWeek(days, now),
     totalMinutes: Math.round(sumMinutes(sessions)),
     recent: sessions.slice().sort((a, b) => b.end - a.end).slice(0, limit)
   };

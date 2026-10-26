@@ -24,7 +24,7 @@ const dialog = page => page.getByRole('dialog', { name: '设置', exact: true })
 async function choose(page, id, label) {
   await page.getByRole('button', { name: '设置', exact: true }).click();
   const settings = dialog(page);
-  await settings.getByRole('tab', { name: '房间与桌宠', exact: true }).click();
+  await settings.getByRole('tab', { name: '小屋与奶糖', exact: true }).click();
   await settings.getByRole('button', { name: `选择场景 ${label}`, exact: true }).click();
   await settings.getByRole('button', { name: '关闭设置', exact: true }).click();
   await settings.waitFor({ state: 'detached' });

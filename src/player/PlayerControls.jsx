@@ -77,7 +77,7 @@ function TrackPicker({ item, names, trackIndex, track, reasonFor }) {
 
 // 待播: what plays next (the decided next song, queued songs, queued records),
 // drag or Alt+↑/↓ to reorder, 立即播放, 置顶, 清空, and 最近播放.
-function QueuePanel({ item, names, trackIndex, track, player, panel, close, reasonFor }) {
+export function QueuePanel({ item, names, trackIndex, track, player, panel, close, reasonFor }) {
   const [view, setView] = useState('queue'), [notice, setNotice] = useState(''), [dragging, setDragging] = useState(null), [over, setOver] = useState(null);
   const upNext = player.upNext || [], entries = upNext.filter((entry) => entry.kind === 'track' || entry.kind === 'album');
   const songs = entries.filter((entry) => entry.kind === 'track'), albums = entries.filter((entry) => entry.kind === 'album');

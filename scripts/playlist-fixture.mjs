@@ -2,6 +2,7 @@
 // Covers are served from docs/assets/covers through a fake https origin so the
 // page looks real without any network access. No platform is contacted.
 import fs from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
 export const COVER_ORIGIN = 'https://covers.fixture.test';
@@ -30,6 +31,6 @@ export function playlistDetail(id, provider = 'netease') {
 }
 export async function serveCover(route) {
   const name = new URL(route.request().url()).pathname.slice(1);
-  const file = path.join(path.dirname(new URL(import.meta.url).pathname), '../docs/assets/covers', path.basename(name));
+  const file = path.join(path.dirname(fileURLToPath(import.meta.url)), '../docs/assets/covers', path.basename(name));
   try { return route.fulfill({ contentType: 'image/jpeg', body: await fs.readFile(file) }); } catch { return route.fulfill({ status: 404, body: '' }); }
 }

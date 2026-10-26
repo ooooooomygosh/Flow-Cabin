@@ -1,0 +1,97 @@
+@layer guards, reset, features, skin, overrides;
+/* 唱片日记 (3.0): 这一周, 本周合集, 一年唱片墙. Pages are paper: ink comes from the journal art
+   variables (journal-art.css); W4's --ui-* tokens are used first where they exist. */
+@layer features {
+  .fs-book { --rd-ink: var(--journal-paper-ink, var(--px-paper-ink)); --rd-faint: var(--journal-paper-faint, var(--px-ink-faint)); --rd-rule: var(--journal-rule, var(--px-border-subtle)); --rd-hi: var(--journal-ink-hi, var(--px-accent-lo)); --rd-accent: var(--ui-accent, var(--px-accent)); }
+  /* Long weeks scroll inside their page; the book itself never grows past the window. */
+  .fs-book { height: min(720px, calc(100dvh - 48px)); }
+  .fs-spread { grid-template-rows: minmax(0, 1fr); }
+  .rd-week-sum { margin: 0; font-size: 13px; color: var(--rd-faint); }
+  .rd-week-sum b { color: var(--rd-ink); font-variant-numeric: tabular-nums; }
+  .rd-days { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
+  .rd-day { display: grid; gap: 6px; }
+  .rd-day-head { display: flex; align-items: baseline; gap: 8px; margin: 0; padding-bottom: 4px; font-size: 13px; color: var(--rd-ink); border-bottom: 1px dashed var(--rd-rule); }
+  .rd-day-head small { font-size: 12px; font-weight: 400; color: var(--rd-faint); }
+  .rd-day-head .rd-day-min { margin-left: auto; font-variant-numeric: tabular-nums; }
+  .rd-day.is-today .rd-day-head span { color: var(--rd-hi); }
+  .rd-day-quiet { margin: 0; font-size: 12px; color: var(--rd-faint); }
+  .rd-items { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+  .rd-item button { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 48px; padding: 6px 8px; font: inherit; text-align: left; color: var(--rd-ink); background: transparent; border: 1px solid transparent; border-radius: var(--ui-radius, 8px); cursor: pointer; transition: background 220ms cubic-bezier(.2,.8,.2,1), border-color 220ms cubic-bezier(.2,.8,.2,1); }
+  .rd-item button:hover { background: color-mix(in srgb, var(--rd-rule) 40%, transparent); }
+  .rd-item.is-selected button { border-color: var(--rd-hi); background: color-mix(in srgb, var(--rd-rule) 55%, transparent); }
+  .rd-item button:focus-visible { outline: 2px solid var(--px-focus); outline-offset: 1px; }
+  .rd-item .press-sleeve { margin-right: 14px; }
+  .rd-item-copy { display: grid; gap: 2px; min-width: 0; }
+  .rd-item-copy strong { overflow: hidden; font-size: 13px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+  .rd-item-copy small { font-size: 12px; color: var(--rd-faint); font-variant-numeric: tabular-nums; }
+  .rd-note { overflow: hidden; font-size: 12px; color: var(--rd-ink); text-overflow: ellipsis; white-space: nowrap; opacity: .85; }
+  .rd-text-mark { display: grid; place-items: center; flex: none; width: 36px; height: 36px; margin-right: 14px; font-size: 13px; color: var(--rd-hi); border: 1px dashed var(--rd-hi); }
+  .rd-badge { margin-right: 6px; font-style: normal; font-size: 12px; font-weight: 400; color: var(--rd-hi); }
+  .rd-detail { display: grid; justify-items: start; gap: 10px; color: var(--rd-ink); }
+  .rd-detail.is-record { justify-items: center; text-align: center; padding-top: 12px; }
+  .rd-detail.is-record .press-sleeve { margin: 4px 36px 8px 0; }
+  .rd-detail-kicker { margin: 0; font-size: 12px; letter-spacing: .06em; color: var(--rd-faint); }
+  .rd-detail-title { margin: 0; font-size: 18px; line-height: 1.3; }
+  .rd-detail-facts { display: grid; gap: 6px; width: min(340px, 100%); margin: 4px 0 0; text-align: left; }
+  .rd-detail-facts div { display: grid; grid-template-columns: 72px 1fr; gap: 8px; font-size: 13px; }
+  .rd-detail-facts dt { color: var(--rd-faint); } .rd-detail-facts dd { margin: 0; overflow-wrap: anywhere; }
+  .rd-detail-note { margin: 6px 0 0; padding: 10px 14px; max-width: 360px; font-size: 15px; line-height: 1.6; border-left: 3px solid var(--rd-hi); text-align: left; }
+  .rd-detail-quiet { margin: 6px 0 0; font-size: 12px; color: var(--rd-faint); }
+  .rd-detail-body { display: grid; gap: 4px; width: 100%; font-size: 14px; line-height: 1.7; }
+  .rd-detail-body p { margin: 0; overflow-wrap: anywhere; }
+  .rd-detail-tags { margin: 0; font-size: 12px; color: var(--rd-hi); }
+  /* 本周合集 */
+  .rd-card { display: grid; gap: 10px; align-content: start; }
+  .rd-dots { display: flex; gap: 6px; margin: 6px 0 0; padding: 0; list-style: none; }
+  .rd-dots li { display: grid; justify-items: center; gap: 2px; }
+  .rd-dots span { width: 16px; height: 16px; border: 1px solid var(--rd-rule); }
+  .rd-dots li.is-visited span { background: var(--rd-hi); border-color: var(--rd-hi); }
+  .rd-dots li.is-today small { color: var(--rd-hi); font-weight: 700; }
+  .rd-dots small { font-size: 12px; color: var(--rd-faint); }
+  .rd-top { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+  .rd-top li { display: flex; align-items: center; gap: 14px; min-height: 56px; }
+  .rd-top .press-sleeve { margin-right: 16px; }
+  .rd-top-copy { display: grid; gap: 2px; min-width: 0; }
+  .rd-top-copy strong { overflow: hidden; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+  .rd-top-copy small { font-size: 12px; color: var(--rd-faint); }
+  .rd-top.is-year { gap: 8px; }
+  .rd-notes { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; font-size: 14px; line-height: 1.6; }
+  .rd-notes small { font-size: 12px; color: var(--rd-faint); }
+  .rd-notes-more { font-size: 12px; color: var(--rd-faint); }
+  .rd-card-line { margin: 4px 0 0; }
+  /* 一年唱片墙: a cell keeps the heat colour of its level unless its top record has a cover colour. */
+  .rd-wall-grid button { aspect-ratio: 1; min-width: 0; padding: 0; border: 0; background: var(--cell, color-mix(in srgb, var(--rd-rule) 75%, transparent)); cursor: pointer; }
+  .rd-wall-grid button[data-level='1']:not(.has-cover) { background: var(--px-heat-1); }
+  .rd-wall-grid button[data-level='2']:not(.has-cover) { background: var(--px-heat-2); }
+  .rd-wall-grid button[data-level='3']:not(.has-cover) { background: var(--px-heat-3); }
+  .rd-wall-grid button[data-level='4']:not(.has-cover) { background: var(--px-heat-4); }
+  .rd-wall-grid button.is-future { visibility: hidden; }
+  .rd-wall-grid button.is-picked { outline: 2px solid var(--rd-ink); outline-offset: 0; position: relative; z-index: 1; }
+  .rd-wall-grid button:focus-visible { outline: 2px solid var(--px-focus); position: relative; z-index: 1; }
+  .rd-wall { grid-template-columns: 1fr; }
+  .rd-wall-page { align-content: start; gap: 14px; }
+  .rd-wall .fs-year-grid.rd-wall-grid { max-width: none; gap: 2px; }
+  .rd-wall-figure { overflow-x: auto; }
+  .rd-wall-lower { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px 32px; align-items: start; }
+  .rd-wall-side { display: grid; gap: 10px; align-content: start; }
+  .rd-wall-day { margin: 0; font-size: 14px; }
+  .rd-wall-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 8px 0 0; }
+  .rd-wall-facts div { display: grid; gap: 2px; padding: 8px; border: 1px dashed var(--rd-rule); border-radius: var(--ui-radius, 8px); }
+  .rd-wall-facts dt { font-size: 12px; color: var(--rd-faint); } .rd-wall-facts dd { margin: 0; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .rd-stats-seg { justify-self: start; }
+  .rd-cat-link { margin-top: 8px; }
+  @media (max-width: 760px) {
+    .cabin-journal { padding: 8px; }
+    .fs-book { height: calc(100dvh - 16px); }
+    .fs-book-head { flex-wrap: wrap; gap: 6px; }
+    .fs-book-head h2 { flex: 1; }
+    .fs-ribbons { order: 3; flex-basis: 100%; overflow-x: auto; scrollbar-width: none; }
+    .fs-ribbons button { flex: none; padding: 4px 10px 8px; }
+    .fs-spread { grid-template-columns: 1fr; overflow: auto; align-content: start; }
+    .fs-spread > .fs-spine { display: none; }
+    .fs-spread > .fs-page { overflow: visible; padding: 14px 16px; }
+    .rd-detail.is-record .press-sleeve.is-lg { --size: 88px; }
+    .rd-wall .fs-year-grid.rd-wall-grid { min-width: 480px; gap: 1px; }
+    .rd-wall-lower { grid-template-columns: 1fr; }
+  }
+}

@@ -80,20 +80,20 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
 
     // 2. 重新引导 from the hub, motion preferences.
     await button(page, '设置').click(); await hubOf(page).waitFor();
-    assert.deepEqual(await hubOf(page).getByRole('tab').allInnerTexts(), ['音源', '房间与桌宠', '键鼠陪伴', '专注工具', '同步与设备', '显示与桌面', '数据与备份', 'AI（Beta）', '关于']);
+    assert.deepEqual(await hubOf(page).getByRole('tab').allInnerTexts(), ['音乐', '专注', '小屋与奶糖', '桌面', '数据', '实验室']);
     // 搜索设置: results replace the panel, Enter jumps to the first one.
     await hubOf(page).getByRole('searchbox', { name: '搜索设置' }).fill('备份');
     await hubOf(page).locator('.settings-hub-results').getByRole('button', { name: /收藏与备份/ }).waitFor();
-    assert.equal(await page.getByRole('tab', { name: '关于' }).isDisabled(), true, 'sections without a match are dimmed');
+    assert.equal(await page.getByRole('tab', { name: '实验室' }).isDisabled(), true, 'sections without a match are dimmed');
     await hubOf(page).getByRole('searchbox', { name: '搜索设置' }).press('Enter');
-    assert.equal(await page.getByRole('tab', { name: '数据与备份' }).getAttribute('aria-selected'), 'true');
+    assert.equal(await page.getByRole('tab', { name: '数据' }).getAttribute('aria-selected'), 'true');
     assert.equal(await hubOf(page).getByRole('searchbox', { name: '搜索设置' }).inputValue(), '');
     await hubOf(page).getByRole('searchbox', { name: '搜索设置' }).fill('没有这种设置');
     await hubOf(page).getByText('没有找到「没有这种设置」').waitFor();
     await hubOf(page).getByRole('searchbox', { name: '搜索设置' }).press('Escape');
     assert.equal(await hubOf(page).count(), 1, 'Escape in a filled search box clears it instead of closing 设置');
     check('settings-search-filters-sections-and-jumps');
-    await page.getByRole('tab', { name: '关于' }).click(); await button(page, '重新引导').click();
+    await page.getByRole('tab', { name: '实验室' }).click(); await button(page, '重新引导').click();
     await wizardOf(page).waitFor(); await heading(page).filter({ hasText: '想从哪里听歌？' }).waitFor();
     assert.equal(await hubOf(page).count(), 0);
     assert.equal(await page.locator('.onboarding-step').evaluate((el) => getComputedStyle(el).animationName), 'none');
@@ -117,14 +117,14 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
 
     // 5. Settings hub: shortcuts route to their section.
     await openRoomSettings(page); await hubOf(page).waitFor();
-    assert.equal(await page.getByRole('tab', { name: '房间与桌宠' }).getAttribute('aria-selected'), 'true');
+    assert.equal(await page.getByRole('tab', { name: '小屋与奶糖' }).getAttribute('aria-selected'), 'true');
     await button(page, '选择场景 海边慢屋').click();
     assert.equal(await page.locator('.cabin-scene').getAttribute('data-room-look'), 'seaside');
     await page.screenshot({ path: path.join(evidence, 'settings-hub-room.png'), animations: 'disabled' });
     await closeSettings(page);
     // The deck's 音源设置 event opens 设置 › 音源 (web: only 仅动画展示 and 本地音乐 can be chosen).
     await page.evaluate(() => window.dispatchEvent(new Event('cabin-open-music-settings'))); await hubOf(page).waitFor();
-    assert.equal(await page.getByRole('tab', { name: '音源' }).getAttribute('aria-selected'), 'true');
+    assert.equal(await page.getByRole('tab', { name: '音乐' }).getAttribute('aria-selected'), 'true');
     const sources = hubOf(page).getByRole('radiogroup', { name: '唱机音源', exact: true });
     assert.equal(await sources.getByRole('radio', { name: '本地音乐', exact: true }).getAttribute('aria-checked'), 'true', 'the guide\'s choice is the deck\'s source');
     assert.equal(await sources.getByRole('radio', { checked: true }).count(), 1);
@@ -132,12 +132,12 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
     assert.equal(await hubOf(page).getByRole('button', { name: '账户与文件夹' }).count(), 0, 'web has no accounts page');
     assert.equal(await hubOf(page).getByLabel('音质').count(), 0, 'web has no quality choice');
     await page.screenshot({ path: path.join(evidence, 'settings-hub-music.png'), animations: 'disabled' });
-    await hubOf(page).getByRole('tab', { name: '键鼠陪伴' }).click();
+    await hubOf(page).getByRole('tab', { name: '小屋与奶糖' }).click();
     await hubOf(page).getByText('跨应用键鼠陪伴需要心流小屋桌面版。网页版仍会在小屋窗口内回应键盘和鼠标。', { exact: true }).waitFor();
-    await page.getByRole('tab', { name: '显示与桌面' }).click();
+    await page.getByRole('tab', { name: '桌面' }).click();
     await hubOf(page).getByRole('checkbox', { name: '沉入桌面' }).waitFor();
     assert.equal(await hubOf(page).getByRole('checkbox', { name: '沉入桌面' }).isDisabled(), true, 'browser preview: #14 reports 沉入桌面 as desktop-client only');
-    await page.getByRole('tab', { name: '数据与备份' }).click(); await button(page, '收藏与备份').click();
+    await page.getByRole('tab', { name: '数据' }).click(); await button(page, '收藏与备份').click();
     await page.getByRole('dialog', { name: '收藏与备份' }).waitFor(); await page.keyboard.press('Escape');
     check('settings-hub-sections-and-old-shortcuts-route-to-it');
     assert.deepEqual(failures, []);
@@ -151,7 +151,7 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
     localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ ...JSON.parse(window.__onboardingSeed), source: 'local', permissions: {}, tested: 'skipped' }));
   }));
   try {
-    await page.goto(origin); await button(page, '设置').click(); await page.getByRole('tab', { name: '显示与桌面' }).click();
+    await page.goto(origin); await button(page, '设置').click(); await page.getByRole('tab', { name: '桌面' }).click();
     await hubOf(page).getByText(/当前系统不支持沉入桌面|沉入桌面需要在心流小屋桌面客户端里使用/).first().waitFor(); // #14's installDesktopApi owns window.cabinDesktop in the page
     assert.equal(await hubOf(page).getByRole('checkbox', { name: '沉入桌面' }).isDisabled(), true);
     check('desktop-mode-unsupported-reason-disables-toggle');

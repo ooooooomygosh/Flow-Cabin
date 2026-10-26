@@ -1,7 +1,9 @@
 import {spawn} from 'node:child_process';
 import assert from 'node:assert/strict';
+import {fileURLToPath} from 'node:url';
 import {launchChromium} from '../../scripts/launch-browser.mjs';
-const root=new URL('../../',import.meta.url).pathname;
+// fileURLToPath, not .pathname: a checkout path with spaces must not stay percent-encoded.
+const root=fileURLToPath(new URL('../../',import.meta.url));
 const server=spawn(process.execPath,[root+'node_modules/vite/bin/vite.js','--host','127.0.0.1','--port','4297','--strictPort'],{cwd:root,stdio:'ignore'});
 let browser;
 try {

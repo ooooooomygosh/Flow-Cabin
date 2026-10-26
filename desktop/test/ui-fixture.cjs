@@ -86,7 +86,7 @@ async function chooseRoomScene(site, sceneId) {
   const scene = getRoomScene(sceneId);
   if (scene.id !== sceneId) throw new Error(`Unknown scene in test: ${sceneId}`);
   await openRoomSettings(site);
-  const picker = site.getByRole('dialog', { name: '设置', exact: true }); // 布置小屋 opens 设置 › 房间与桌宠 (PR #16)
+  const picker = site.getByRole('dialog', { name: '设置', exact: true }); // 设置 › 小屋与奶糖 (3.0; was 房间与桌宠)
   await picker.getByRole('button', { name: `选择场景 ${scene.label}`, exact: true }).click();
   await picker.getByRole('button', { name: '关闭设置', exact: true }).click(); await picker.waitFor({ state: 'hidden' });
   await site.locator(`.cabin-scene[data-room-look="${sceneId}"]`).waitFor();
@@ -95,14 +95,14 @@ async function useWarmCabin(site) { await chooseRoomScene(site, 'warm'); }
 // The old 布置小屋 / 音源设置 buttons are gone; both live in the settings hub.
 async function openRoomSettings(site) {
   await site.getByRole('button', { name: '设置', exact: true }).click();
-  await site.getByRole('tab', { name: '房间与桌宠', exact: true }).click();
+  await site.getByRole('tab', { name: '小屋与奶糖', exact: true }).click();
 }
-// 设置 › 音源 › 账户与文件夹: logins, local folders and Music Assistant, a page inside 设置.
+// 设置 › 音乐 (3.0; was 音源) › 账户与文件夹: logins, local folders and Music Assistant, a page inside 设置.
 const settingsDialog = (site) => site.getByRole('dialog', { name: '设置', exact: true });
 const accountsRegion = (site) => settingsDialog(site).getByRole('region', { name: '账户与文件夹', exact: true });
 async function openSourceSettings(site) {
   if (!await settingsDialog(site).isVisible()) await site.getByRole('button', { name: '设置', exact: true }).click();
-  await settingsDialog(site).getByRole('tab', { name: '音源', exact: true }).click();
+  await settingsDialog(site).getByRole('tab', { name: '音乐', exact: true }).click();
 }
 async function openMusicSettings(site) {
   await openSourceSettings(site);

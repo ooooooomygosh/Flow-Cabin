@@ -32,7 +32,7 @@ async function waitForBody(page, body) {
   }, { key: JOURNAL_KEY, body });
 }
 
-async function openFocus(page, tab = '随手记') {
+async function openFocus(page, tab = '这一段') { // 3.0: 随手记 is the 便签 in 这一段
   const badge = page.locator('.focus-badge');
   await badge.waitFor({ timeout: 30000 });
   if (await badge.getAttribute('aria-expanded') === 'false') await badge.click();
@@ -47,7 +47,7 @@ async function openEntries(page) {
   // A new window can have readyState=complete while #root is still empty;
   // wait for the command recipient before sending its keyboard/event entry.
   await page.locator('.cabin-journal').waitFor({ state: 'attached' });
-  const dialog = page.getByRole('dialog', { name: '小屋日记' });
+  const dialog = page.getByRole('dialog', { name: '唱片日记' });
   if (!await dialog.isVisible().catch(() => false)) {
     await page.evaluate(() => document.activeElement?.blur());
     await page.keyboard.press('l');
@@ -62,7 +62,7 @@ async function openEntries(page) {
 }
 
 async function closeEntries(page) {
-  const dialog = page.getByRole('dialog', { name: '小屋日记' });
+  const dialog = page.getByRole('dialog', { name: '唱片日记' });
   await dialog.getByRole('button', { name: '返回小屋', exact: true }).click();
   await dialog.waitFor({ state: 'hidden' });
 }
@@ -116,6 +116,8 @@ try {
       if (location.origin === 'null') return;
       if (!localStorage.getItem('flow-cabin-onboarding-v1')) localStorage.setItem('flow-cabin-onboarding-v1', window.__onboardingSeed);
       if (!localStorage.getItem('album-circle-focus-display-v1')) localStorage.setItem('album-circle-focus-display-v1', JSON.stringify({ autoEnter: false }));
+      // 3.0: 信箱 (小屋来信) is a lab; the letter-deletion checks below switch it on, as a user who already had letters would have it.
+      if (!localStorage.getItem('flow-cabin-labs-v1')) localStorage.setItem('flow-cabin-labs-v1', JSON.stringify({ letters: true }));
       if (!localStorage.getItem(focusKey)) localStorage.setItem(focusKey, JSON.stringify({ notes, settings: { focusMin: 25, shortMin: 5, notify: false, chime: false } }));
       if (journalSeed && !localStorage.getItem(journalKey)) localStorage.setItem(journalKey, JSON.stringify(journalSeed));
       window.__nativeCommands = [];

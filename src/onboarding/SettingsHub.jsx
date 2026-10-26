@@ -28,17 +28,18 @@ import { MiniPlayerRow, MediaKeysRows } from '../desktop/PlayerDesktopSettings';
 import WhatsNew from './WhatsNew';
 import { RELEASES } from './releases.mjs';
 import { searchSettings, matchingSections } from './settings-search.mjs';
+import { HUB_SECTIONS, hubTab, hubAnchor } from './settings-sections.mjs';
+import { LAB_FEATURES, LAB_IDS, setLabEnabled } from '../product/features.mjs';
+import useLabs from '../product/useLabs';
+import { Diagnostics } from '../home/SceneTools';
+import '../home/shell.css';
 
 const SyncSettings = lazy(() => import('../sync/SyncSettings'));
 const PetPackSettings = lazy(() => import('../pet/PetPackSettings'));
 
-export const HUB_SECTIONS = Object.freeze([
-  { id: 'music', label: '音源' }, { id: 'room', label: '房间与桌宠' }, { id: 'companion', label: '键鼠陪伴' }, { id: 'focus', label: '专注工具' },
-  { id: 'sync', label: '同步与设备' }, { id: 'desktop', label: '显示与桌面' }, { id: 'data', label: '数据与备份' }, { id: 'ai', label: 'AI（Beta）' }, { id: 'about', label: '关于' }
-]);
-// A section may open on a sub-page: 'music/accounts' is 音源 › 账户与文件夹.
-// 'beta' (2.1 首页选择) now lives in 房间与桌宠.
-export const hubTab = (section = '') => { const tab = String(section).split('/')[0] || 'music'; return tab === 'beta' ? 'room' : tab; };
+// 3.0: six sections (settings-sections.mjs). Old ids ('companion', 'sync',
+// 'ai', 'about', 'beta'…) still open the hub, on the section that holds them now.
+export { HUB_SECTIONS, hubTab };
 
 // Preferences, in one place; actions (timer, album wall, the companion going
 // out, fullscreen) stay in the room. Tray / menu / deck shortcuts open this
@@ -60,6 +61,7 @@ export default function SettingsHub({ section = 'music', setSection, close, env,
   const tabs = searching ? HUB_SECTIONS.map((item) => ({ ...item, disabled: !hits.has(item.id), content: <>{item.label}{hits.has(item.id) && <small className="settings-hub-count">{hits.get(item.id)}</small>}</> })) : HUB_SECTIONS;
   const jump = (entry) => { setQuery(''); setSection(entry.section); setFound({ ...entry, at: Date.now() }); };
   useSettingHighlight(panel, found, reduceMotion);
+  useSectionAnchor(panel, section, reduceMotion);
   return <Dialog title="设置" label="设置" close={close} className="settings-hub" size="lg" onKeyDown={(event) => {
     if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === 'f') { event.preventDefault(); searchBox.current?.focus(); searchBox.current?.select(); }
   }}>
@@ -71,30 +73,30 @@ export default function SettingsHub({ section = 'music', setSection, close, env,
           else if (event.key === 'ArrowDown' && results[0]) { event.preventDefault(); panel.current?.querySelector('.settings-hub-results button')?.focus(); }
         }}/>{query && <button type="button" className="settings-hub-clear" aria-label="清除搜索" onClick={() => { setQuery(''); searchBox.current?.focus(); }}><X size={12}/></button>}</label>
         <Tabs className="settings-hub-nav" label="设置分区" idPrefix="hub-tab" orientation={compact ? 'horizontal' : 'vertical'} arrows="both" items={tabs} value={searching ? '' : tab} onChange={(id) => { setQuery(''); setSection(id); }}/>
+        <button type="button" className="settings-hub-about" onClick={() => { setQuery(''); setSection('about'); }}>关于 · v{version}</button>
       </div>
       <section ref={panel} {...tabPanelProps('hub-tab', tab)} className="settings-hub-panel">
         {searching ? <SearchResults query={query} results={results} labels={labels} jump={jump}/> : <>
-        {section === 'music' && <MusicSection env={env} player={player} provider={provider} useSource={useSource} openAccounts={() => setSection('music/accounts')}/>}
+        {tab === 'music' && section !== 'music/accounts' && <MusicSection env={env} player={player} provider={provider} useSource={useSource} openAccounts={() => setSection('music/accounts')}/>}
         {section === 'music/accounts' && <div className="hub-subpage" role="region" aria-label="账户与文件夹">
-          <button type="button" className="hub-back" onClick={() => setSection('music')}><ChevronLeft size={14}/>音源</button>
+          <button type="button" className="hub-back" onClick={() => setSection('music')}><ChevronLeft size={14}/>音乐</button>
           <MusicAccounts/>
         </div>}
-        {tab === 'room' && <><InterfacePreference/>{interfaceMode()==='beta'&&<Row title="生活小屋" hint="首页就是生活小屋。调整家具位置，或套用听歌、工作、休息预设。"><button type="button" className="pixel-button" onClick={openStudio}>布置小屋</button></Row>}<p className="personalization-intro">选一个今天想待着的地方，再找一位安静的伙伴。换装不会打断音乐和专注。</p><RoomPickers look={look} petId={petId} onChange={onRoomChange} reduceMotion={reduceMotion}/><PetBehaviourSettings desktop={Boolean(env.desktop)}/><SkySettings/><Suspense fallback={<p role="status">正在整理桌宠衣柜…</p>}>{(window.albumDesktopCapabilities?.petPacks || window.albumMobile?.petRequest) && <PetPackSettings/>}</Suspense>{window.albumMobile?.setLauncherIcon && <Row title="桌宠启动图标" hint="使用当前伙伴作为启动器图标；系统图标缓存可能稍后更新。"><button type="button" className="pixel-button" onClick={() => window.albumMobile.setLauncherIcon(petId)}>使用当前桌宠图标</button></Row>}{error && <p role="alert" className="record-error">{error}</p>}</>}
-        {tab === 'sync' && <Suspense fallback={<p role="status">正在打开同步设置…</p>}><SyncSettings/></Suspense>}
-        {tab === 'companion' && <CompanionSection env={env} player={player}/>}
-        {tab === 'focus' && <><p className="personalization-intro">番茄钟的时长和提醒。计时、待办、学习和声音在右上角「专注」里。</p><FocusSettingsForm className="hub-focus-settings"/><DailyGoalField/></>}
+        {tab === 'focus' && <><p className="personalization-intro">番茄钟的时长和提醒。计时本身在顶栏的「专注」里。</p><FocusSettingsForm className="hub-focus-settings"/><DailyGoalField/></>}
+        {tab === 'room' && <>
+          <p className="personalization-intro">选一个今天想待着的地方，再找一位安静的伙伴。换装不会打断音乐和专注。</p>
+          {interfaceMode() === 'beta' && <Row title="布置小屋" hint="调整家具位置，或套用听歌、工作、休息预设。也可以从首页的房间名打开。"><button type="button" className="pixel-button" onClick={openStudio}>布置小屋</button></Row>}
+          <RoomPickers look={look} petId={petId} onChange={onRoomChange} reduceMotion={reduceMotion}/><PetBehaviourSettings desktop={Boolean(env.desktop)}/>
+          <div id="hub-sky" className="hub-block"><SkySettings/></div>
+          <Suspense fallback={<p role="status">正在整理桌宠衣柜…</p>}>{(window.albumDesktopCapabilities?.petPacks || window.albumMobile?.petRequest) && <PetPackSettings/>}</Suspense>
+          {window.albumMobile?.setLauncherIcon && <Row title="桌宠启动图标" hint="使用当前伙伴作为启动器图标；系统图标缓存可能稍后更新。"><button type="button" className="pixel-button" onClick={() => window.albumMobile.setLauncherIcon(petId)}>使用当前桌宠图标</button></Row>}
+          <section id="hub-companion" className="hub-block" aria-label="键鼠陪伴"><h3>键鼠陪伴</h3><CompanionSection env={env} player={player}/></section>
+          <InterfacePreference/>
+          {error && <p role="alert" className="record-error">{error}</p>}
+        </>}
         {tab === 'desktop' && <DisplaySection env={env} desktop={desktop}/>}
-        {tab === 'data' && <div className="hub-rows">
-          {env.mobile && <StorageStatus/>}
-          <Row title="收藏与备份" hint="导出 / 导入唱片、歌单、专注记录。备份文件只保存在你选的位置。"><button type="button" className="pixel-button" onClick={openBackup}>收藏与备份</button></Row>
-          {env.desktop && <Row title="本地音乐文件夹" hint="添加或移除扫描的文件夹。"><button type="button" className="pixel-button" onClick={() => setSection('music/accounts')}>管理文件夹<ChevronRight size={14}/></button></Row>}
-        </div>}
-        {tab === 'ai' && <AiSettings/>}
-        {tab === 'about' && <div className="hub-rows">
-          <UpdatePanel version={version} desktop={Boolean(env.desktop)}/>
-          <Row title="新功能" hint={`看看 v${version} 带来了什么，也可以翻到更早的版本。`}><button type="button" className="pixel-button" onClick={() => setNews(true)}>查看新功能</button></Row>
-          <Row title="重新引导" hint="再走一遍三步引导（音源、房间与伙伴、试听），之前的选择会保留。"><button type="button" className="pixel-button" onClick={restartOnboarding}>重新引导</button></Row>
-        </div>}
+        {tab === 'data' && <DataSection env={env} openBackup={openBackup} openFolders={() => setSection('music/accounts')} open={section === 'diagnostics'}/>}
+        {tab === 'labs' && <LabsSection env={env} openNews={() => setNews(true)} restartOnboarding={restartOnboarding}/>}
         </>}
       </section>
     </div>
@@ -139,6 +141,22 @@ function useSettingHighlight(panel, found, reduceMotion) {
   }, [found]);
 }
 
+// An old section id ('ai', 'sync', 'about', 'companion'…) opens its new section scrolled to that block.
+function useSectionAnchor(panel, section, reduceMotion) {
+  useEffect(() => {
+    const anchor = hubAnchor(section);
+    if (!anchor) return undefined;
+    let tries = 0, timer = 0;
+    const look = () => {
+      const node = panel.current?.querySelector(`#${anchor}`);
+      if (!node) { if (++tries < 20) timer = setTimeout(look, 100); return; }
+      node.scrollIntoView({ block: 'start', behavior: reduceMotion ? 'auto' : 'smooth' });
+    };
+    timer = setTimeout(look, 0);
+    return () => clearTimeout(timer);
+  }, [section]);
+}
+
 const Row = ({ title, hint, led, children }) => <div className="hub-row"><span><strong>{led !== undefined && <i className={`hub-led ${led ? 'is-on' : ''}`} aria-hidden="true"/>}{title}</strong>{hint && <small>{hint}</small>}</span>{children && <span className="hub-row-actions">{children}</span>}</div>;
 
 function CompanionSection({ env, player }) {
@@ -147,8 +165,44 @@ function CompanionSection({ env, player }) {
     {env.desktop
       ? <InputCompanionSettings player={player} env={env}/>
       : <div className="onboarding-hint">{env.mobile ? '手机版的小猫在小屋内陪伴你；跨应用键鼠统计与独立桌宠需要电脑桌面版。' : '跨应用键鼠陪伴需要心流小屋桌面版。网页版仍会在小屋窗口内回应键盘和鼠标。'}</div>}
-    {env.desktop && <Row title="统计位置" hint="今天的键盘、点击、连续天数与最近 7 天，也在奶糖的小猫面板、右上角「专注 › 统计」和「小屋日记」里。"/>}
+    {env.desktop && <Row title="统计位置" hint="今天的键盘、点击与最近 7 天，也在奶糖的小猫面板和顶栏的「日记」里。"/>}
   </>;
+}
+
+// 数据: backups and folders, plus 功能诊断 (opened on demand: it asks the music service and devices).
+function DataSection({ env, openBackup, openFolders, open: initiallyOpen = false }) {
+  const [open, setOpen] = useState(initiallyOpen);
+  useEffect(() => { if (initiallyOpen) setOpen(true); }, [initiallyOpen]);
+  return <div className="hub-rows">
+    {env.mobile && <StorageStatus/>}
+    <Row title="收藏与备份" hint="导出 / 导入唱片、歌单、专注记录。备份文件只保存在你选的位置。"><button type="button" className="pixel-button" onClick={openBackup}>收藏与备份</button></Row>
+    {env.desktop && <Row title="本地音乐文件夹" hint="添加或移除扫描的文件夹。"><button type="button" className="pixel-button" onClick={openFolders}>管理文件夹<ChevronRight size={14}/></button></Row>}
+    <section id="hub-diagnostics" className="hub-block" aria-label="功能诊断">
+      <Row title="功能诊断" hint="播放、专注、天气、账号与连接是否正常。报告不含账号凭据、任务正文或位置坐标。"><button type="button" className="pixel-button" aria-expanded={open} onClick={() => setOpen((value) => !value)}>{open ? '收起诊断' : '查看功能诊断'}</button></Row>
+      {open && <div className="hub-diagnostics"><Diagnostics/></div>}
+    </section>
+  </div>;
+}
+
+// 实验室: features that sit outside the core loop (docs/design/3.0-design.md §5.3).
+// Turning one off only hides its entry points; data, backups and sync stay as they are.
+function LabsSection({ env, openNews, restartOnboarding }) {
+  const labs = useLabs();
+  return <div className="hub-rows hub-labs">
+    <p className="personalization-intro">还在打磨、或只有一部分人需要的功能。关掉只会收起它们的入口，数据、备份和同步都原样保留，随时可以再打开。</p>
+    <div className="hub-labs-list" role="group" aria-label="实验室功能">{LAB_IDS.map((id) => { const lab = LAB_FEATURES[id], on = Boolean(labs[id]); return <Row key={id} title={lab.label} hint={lab.hint} led={on}>
+      <label className="hub-toggle"><input type="checkbox" aria-label={lab.label} checked={on} onChange={(event) => setLabEnabled(id, event.target.checked)}/><span>{on ? '开' : '关'}</span></label>
+    </Row>; })}</div>
+    <section id="hub-ai" className="hub-block"><h3>AI（Beta）</h3><AiSettings/></section>
+    <section id="hub-sync" className="hub-block" aria-label="同步与设备"><h3>同步与设备</h3>{labs.devices
+      ? <Suspense fallback={<p role="status">正在打开同步设置…</p>}><SyncSettings/></Suspense>
+      : <Row title="设备联动已收起" hint="打开上面的「设备联动」，就能在这里配对手机或另一台电脑。已配对的设备和同步数据都还在。"><button type="button" className="pixel-button" onClick={() => setLabEnabled('devices', true)}>打开设备联动</button></Row>}</section>
+    <section id="hub-about" className="hub-block" aria-label="关于"><h3>关于</h3>
+      <UpdatePanel version={version} desktop={Boolean(env.desktop)}/>
+      <Row title="新功能" hint={`看看 v${version} 带来了什么，也可以翻到更早的版本。`}><button type="button" className="pixel-button" onClick={openNews}>查看新功能</button></Row>
+      <Row title="重新引导" hint="再走一遍三步引导（音源、房间与伙伴、试听），之前的选择会保留。"><button type="button" className="pixel-button" onClick={restartOnboarding}>重新引导</button></Row>
+    </section>
+  </div>;
 }
 
 // What the deck plays from: one radio list. Each source row shows whether it is

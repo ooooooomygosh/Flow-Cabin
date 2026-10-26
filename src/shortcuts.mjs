@@ -27,7 +27,7 @@ export const SHORTCUTS = Object.freeze([
   // 2.2 focus: global, so they work while another app is in front (desktop/focus-shell.cjs FOCUS_HOTKEYS).
   { id: 'focusToggle', keys: 'Control+Alt+F Alt+Meta+F', label: 'Ctrl/⌘+Alt+F', action: '开始 / 暂停专注（桌面版，全局）', scope: 'app', desktop: true, global: true },
   { id: 'focusSkip', keys: 'Control+Alt+G Alt+Meta+G', label: 'Ctrl/⌘+Alt+G', action: '跳过：提前结束本轮或跳过休息（桌面版，全局）', scope: 'app', desktop: true, global: true },
-  { id: 'journal', keys: 'L', label: 'L', action: '打开小屋日记', scope: 'room' },
+  { id: 'journal', keys: 'L', label: 'L', action: '打开唱片日记', scope: 'room' },
   { id: 'focusDisplay', keys: 'F', label: 'F', action: '沉浸（同 Z）', scope: 'room' },
   { id: 'focusFaces', keys: 'ArrowLeft ArrowRight', label: '← →', action: '沉浸里上一首 / 下一首', scope: 'display' },
   { id: 'help', keys: '? Control+/ Meta+/', label: '? / Ctrl+/', action: '快捷键速查', scope: 'app' }

@@ -55,7 +55,7 @@ try {
   page = await context.newPage(); page.setDefaultTimeout(20000); page.on('pageerror', e => report.errors.push(e.message));
   await page.goto(origin); await page.locator('.home-world canvas').waitFor();
   const notice = page.locator('.home-notice').getByRole('button', { name: '好的' }); if (await notice.isVisible()) await notice.click();
-  await page.getByRole('button', { name: '唱片库', exact: true }).first().click();
+  await page.getByRole('region', { name: '正在播放', exact: true }).getByRole('button', { name: '放一张唱片', exact: true }).click(); // the bar's empty state opens 唱片架
   await page.getByRole('button', { name: '播放 歌词练习', exact: true }).click();
   await page.waitForFunction(() => [...document.querySelectorAll('[data-cabin-audio-host] audio')].some(a => !a.paused && a.currentTime > .1));
   await page.locator('.cabin-dialog-close').last().click();
@@ -73,6 +73,11 @@ try {
   await page.screenshot({ path: path.join(output, 'corner-lyric-book.png') });
   pass('lyric-book-sings-the-current-line-with-word-fill-in-the-room-skin');
 
+  // 1b. The 3.0 now-playing bar shows the same line from the shared lyric feed (read twice a second).
+  await page.waitForFunction(() => /^第\d+句/.test(document.querySelector('.listen-bar .listen-line.is-lyric')?.title || ''));
+  { const shown = await page.locator('.listen-bar .listen-line').getAttribute('title'), t = await audioTime(); assert.ok([0, .6, 1.2].map(d => `第${Math.floor(Math.max(0, t - d) / 3) + 1}句`).some(line => shown.startsWith(line)), `${shown} at ${t}`); }
+  assert.equal(await page.getByRole('region', { name: '正在播放', exact: true }).getByRole('button', { name: '歌词', exact: true }).count(), 1);
+  pass('now-playing-bar-shows-the-current-lyric-line');
   // 2. The fullscreen stage: AMLL view, now-playing panel, live region follows the song.
   await page.locator('.corner-actions').getByRole('button', { name: '歌词册', exact: true }).click();
   const stage = page.getByRole('dialog', { name: '沉浸歌词' });
@@ -126,7 +131,7 @@ try {
 
   // 6. Every room's skin, desktop and phone.
   for (const [id, name] of [['rain-train', '雨夜列车书房'], ['starlight', '星光小屋'], ['forest', '林间书屋'], ['warm', '琥珀小屋']]) {
-    await page.getByRole('button', { name: '选择房间主题' }).click();
+    await page.locator('.home-room-name').click(); await page.getByRole('menuitem', { name: /^选择小屋/ }).click();
     await page.locator('.home-theme-grid').getByRole('button', { name }).click();
     await page.locator('.corner-actions').getByRole('button', { name: '歌词册', exact: true }).click();
     await stage.locator('.cabin-amll').waitFor();
