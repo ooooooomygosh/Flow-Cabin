@@ -69,7 +69,7 @@ function trayMenuTemplate(ctx) {
     ...(ctx.lyricsOpen ? [{ label: '锁定桌面歌词（鼠标穿透）', type: 'checkbox', checked: Boolean(ctx.lyricsLocked), click: () => ctx.lyricsLock?.() }] : []),
     ...focusItems(status, ctx),
     { label: '喂小猫一条小鱼干', click: () => ctx.companion('cat-feed') },
-    { label: '打开小屋日记', click: () => ctx.openJournal?.() },
+    { label: '打开唱片日记', click: () => ctx.openJournal?.() },
     { type: 'separator' },
     { label: '打开小屋', click: ctx.restore },
     { label: '小屋设置…', click: () => { ctx.restore(); ctx.companion('open-settings'); } },

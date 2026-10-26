@@ -73,7 +73,7 @@ test('tray menu: status line, pause/next, start pomodoro, feed cat, open journal
   const click = (items, label) => items.find((item) => item.label === label).click();
   const idle = menu(statusFrom(null));
   assert.deepEqual([idle[0].label, idle[0].enabled], ['小屋很安静', false]);
-  click(idle, '播放音乐'); click(idle, '下一首'); click(idle, '开始番茄钟'); click(idle, '喂小猫一条小鱼干'); click(idle, '打开小屋日记');
+  click(idle, '播放音乐'); click(idle, '下一首'); click(idle, '开始番茄钟'); click(idle, '喂小猫一条小鱼干'); click(idle, '打开唱片日记');
   assert.deepEqual(player, ['toggle', 'next']); assert.deepEqual(sent, ['focus-start', 'cat-feed']); assert.equal(journal, 1);
   const now = Date.now(), running = menu(statusFrom({ musicPlaying: true, focus: { phase: 'focus', endsAt: now + 60000, duration: 120000 } }, now));
   click(running, '暂停专注'); assert.equal(sent.at(-1), 'focus-toggle'); assert.ok(running.some((item) => item.label === '暂停音乐'));
