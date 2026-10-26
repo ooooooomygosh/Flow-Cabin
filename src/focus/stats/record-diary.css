@@ -3,6 +3,9 @@
    variables (journal-art.css); W4's --ui-* tokens are used first where they exist. */
 @layer features {
   .fs-book { --rd-ink: var(--journal-paper-ink, var(--px-paper-ink)); --rd-faint: var(--journal-paper-faint, var(--px-ink-faint)); --rd-rule: var(--journal-rule, var(--px-border-subtle)); --rd-hi: var(--journal-ink-hi, var(--px-accent-lo)); --rd-accent: var(--ui-accent, var(--px-accent)); }
+  /* Long weeks scroll inside their page; the book itself never grows past the window. */
+  .fs-book { height: min(720px, calc(100dvh - 48px)); }
+  .fs-spread { grid-template-rows: minmax(0, 1fr); }
   .rd-week-sum { margin: 0; font-size: 13px; color: var(--rd-faint); }
   .rd-week-sum b { color: var(--rd-ink); font-variant-numeric: tabular-nums; }
   .rd-days { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
@@ -79,7 +82,7 @@
   .rd-cat-link { margin-top: 8px; }
   @media (max-width: 760px) {
     .cabin-journal { padding: 8px; }
-    .fs-book { height: 100%; }
+    .fs-book { height: calc(100dvh - 16px); }
     .fs-book-head { flex-wrap: wrap; gap: 6px; }
     .fs-book-head h2 { flex: 1; }
     .fs-ribbons { order: 3; flex-basis: 100%; overflow-x: auto; scrollbar-width: none; }

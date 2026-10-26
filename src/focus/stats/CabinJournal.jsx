@@ -248,6 +248,13 @@ function WeekView({ sessions, entries, tasks, now, spine }) {
   const all = week.days.flatMap((day) => day.items), [selected, setSelected] = useState('');
   const current = all.find((item) => item.id === selected) || [...all].reverse().find((item) => item.kind === 'record') || all.at(-1) || null;
   const shown = week.days.filter((day) => !day.future || day.items.length);
+  // Later in the week, open on today rather than on Monday.
+  const list = useRef(null);
+  useEffect(() => {
+    // After the dialog is shown (its own effect runs after ours), so the page has a layout.
+    const frame = requestAnimationFrame(() => { const day = list.current?.querySelector('.rd-day.is-today'), page = list.current?.closest('.fs-page'); if (day && page && offset === 0 && day !== list.current.firstElementChild) page.scrollTop += day.getBoundingClientRect().top - page.getBoundingClientRect().top - 12; });
+    return () => cancelAnimationFrame(frame);
+  }, [offset]);
   return <div className="fs-spread rd-week" key="week" role="tabpanel" aria-label="这一周">
     <div className="fs-page is-turning rd-week-left">
       <div className="fs-weekpick rd-weekpick" role="group" aria-label="选择周">
@@ -256,7 +263,7 @@ function WeekView({ sessions, entries, tasks, now, spine }) {
         <button type="button" aria-label="下一周" disabled={offset >= 0} onClick={() => setOffset((w) => Math.min(0, w + 1))}>›</button>
       </div>
       <p className="rd-week-sum" title={WEEK_DAYS_HINT}>{offset === 0 ? '本周来了' : '那周来了'} <b>{week.weekDays}</b> 天 · 压制 <b>{week.records}</b> 张唱片 · 专注 <b>{formatMinutes(week.totalMinutes)}</b></p>
-      <ol className="rd-days">{shown.map((day) => <li key={day.key} className={`rd-day ${day.isToday ? 'is-today' : ''} ${day.items.length ? '' : 'is-quiet'}`}>
+      <ol className="rd-days" ref={list}>{shown.map((day) => <li key={day.key} className={`rd-day ${day.isToday ? 'is-today' : ''} ${day.items.length ? '' : 'is-quiet'}`}>
         <h4 className="rd-day-head"><span>{day.label}</span><small>{day.date}{day.isToday ? ' · 今天' : ''}</small>{day.minutes > 0 && <small className="rd-day-min">{formatMinutes(day.minutes)}</small>}</h4>
         {day.items.length ? <ul className="rd-items">{day.items.map((item) => <RecordRow key={`${item.kind}-${item.id}`} item={item} selected={current?.id === item.id} onSelect={() => { setSelected(item.id); if (window.matchMedia?.('(max-width: 760px)').matches) requestAnimationFrame(() => document.querySelector('.rd-week-right')?.scrollIntoView({ block: 'start', behavior: 'smooth' })); }}/>)}</ul>
           : <p className="rd-day-quiet">{day.isToday ? '今天还没压唱片，放一张开始吧。' : '安静的一天。'}</p>}
@@ -339,10 +346,13 @@ function WallView({ sessions, now }) {
   const covers = useMemo(() => [...new Set(cells.map((cell) => cell.top?.cover).filter(Boolean))], [cols]);
   const colours = useCoverColours(covers), summary = wallSummary(cols), [picked, setPicked] = useState('');
   const yearTop = useMemo(() => { const from = new Date(`${cells[0].key}T00:00:00`).getTime(); return topRecords(sessions.filter((s) => s.end >= from), 3); }, [sessions, today]);
+  // On a narrow window the wall scrolls sideways: start at the recent end.
+  const wall = useRef(null);
+  useEffect(() => { const frame = requestAnimationFrame(() => { if (wall.current) wall.current.scrollLeft = wall.current.scrollWidth; }); return () => cancelAnimationFrame(frame); }, []);
   const cell = cells.find((c) => c.key === picked) || [...cells].reverse().find((c) => c.minutes > 0 && !c.future) || null;
   return <div className="fs-spread rd-wall" key="wall" role="tabpanel" aria-label="一年唱片墙"><div className="fs-page is-turning rd-wall-page">
     <h3 className="fs-title">一年唱片墙 <small>· 每天一格，用那天陪你最久的唱片上色</small></h3>
-    {summary.days > 0 ? <figure className="fs-year rd-wall-figure stats-chart-well" aria-label={`过去一年 ${summary.days} 天有专注，其中 ${summary.withRecord} 天有唱片陪着`}>
+    {summary.days > 0 ? <figure ref={wall} className="fs-year rd-wall-figure stats-chart-well" aria-label={`过去一年 ${summary.days} 天有专注，其中 ${summary.withRecord} 天有唱片陪着`}>
       <div className="fs-year-grid rd-wall-grid">{cells.map((c) => { const colour = wallColour(c, colours, DEFAULT_RECORD_STYLE.base); return <button type="button" key={c.key} data-level={c.level} className={`${c.future ? 'is-future' : ''} ${colour ? 'has-cover' : ''} ${cell?.key === c.key ? 'is-picked' : ''}`} style={colour ? { '--cell': colour } : undefined} tabIndex={c.minutes ? 0 : -1} disabled={c.future} aria-label={`${c.key} · ${c.minutes} 分钟${c.top ? ` · 《${c.top.title}》` : ''}`} title={`${c.key} · ${c.minutes} 分钟${c.top ? ` · 《${c.top.title}》` : ''}`} onClick={() => setPicked(c.key)}/>; })}</div>
       <figcaption className="focus-heatmap-legend">过去一年 · {summary.days} 天有专注 · 唱片的颜色来自封面；没有封面时：少{[1, 2, 3, 4].map((l) => <span key={l} data-level={l}/>)}多</figcaption>
     </figure> : <Empty title="每一段，都会在这面墙上留一格颜色">开始一段专注，墙上就会亮起今天这一格。</Empty>}
