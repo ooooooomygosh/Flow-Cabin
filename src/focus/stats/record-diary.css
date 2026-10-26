@@ -13,7 +13,7 @@
   .rd-day.is-today .rd-day-head span { color: var(--rd-hi); }
   .rd-day-quiet { margin: 0; font-size: 12px; color: var(--rd-faint); }
   .rd-items { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
-  .rd-item button { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 48px; padding: 6px 8px; font: inherit; text-align: left; color: var(--rd-ink); background: transparent; border: 1px solid transparent; cursor: pointer; transition: background 220ms cubic-bezier(.2,.8,.2,1), border-color 220ms cubic-bezier(.2,.8,.2,1); }
+  .rd-item button { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 48px; padding: 6px 8px; font: inherit; text-align: left; color: var(--rd-ink); background: transparent; border: 1px solid transparent; border-radius: var(--ui-radius, 8px); cursor: pointer; transition: background 220ms cubic-bezier(.2,.8,.2,1), border-color 220ms cubic-bezier(.2,.8,.2,1); }
   .rd-item button:hover { background: color-mix(in srgb, var(--rd-rule) 40%, transparent); }
   .rd-item.is-selected button { border-color: var(--rd-hi); background: color-mix(in srgb, var(--rd-rule) 55%, transparent); }
   .rd-item button:focus-visible { outline: 2px solid var(--px-focus); outline-offset: 1px; }
@@ -73,7 +73,7 @@
   .rd-wall-side { display: grid; gap: 10px; align-content: start; }
   .rd-wall-day { margin: 0; font-size: 14px; }
   .rd-wall-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 8px 0 0; }
-  .rd-wall-facts div { display: grid; gap: 2px; padding: 8px; border: 1px dashed var(--rd-rule); }
+  .rd-wall-facts div { display: grid; gap: 2px; padding: 8px; border: 1px dashed var(--rd-rule); border-radius: var(--ui-radius, 8px); }
   .rd-wall-facts dt { font-size: 12px; color: var(--rd-faint); } .rd-wall-facts dd { margin: 0; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
   .rd-stats-seg { justify-self: start; }
   .rd-cat-link { margin-top: 8px; }
