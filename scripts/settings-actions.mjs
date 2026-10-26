@@ -37,7 +37,8 @@ export async function openCabinLibrary(page) {
 export const addDialog = (page) => page.getByRole('dialog', { name: '添加到唱片架', exact: true });
 export async function openAddToShelf(page, tab = '曲库搜索') {
   if (await page.locator('.cabin-home').count()) await openCabinLibrary(page);
-  await page.getByRole('button', { name: '添加到唱片架', exact: true }).click(); await addDialog(page).waitFor();
+  // 3.0: an empty 唱片架 shows its own 手动添加 / 搜索添加 instead of the toolbar button.
+  await page.getByRole('button', { name: '添加到唱片架', exact: true }).or(page.locator('.listen-shelf .listen-primary')).first().click(); await addDialog(page).waitFor();
   if (tab !== '曲库搜索') await addDialog(page).getByRole('tab', { name: tab, exact: true }).click();
 }
 export async function openShelfTools(page) {
@@ -47,6 +48,6 @@ export async function openShelfTools(page) {
 }
 // Classic: the titlebar's 专辑墙. Cabin (3.0): 专辑墙 lives inside 唱片架.
 export async function openAlbumWall(page) {
-  if (await page.locator('.cabin-home').count()) { await openCabinLibrary(page); await libraryDialog(page).getByRole('button', { name: '专辑墙', exact: true }).click(); return; }
+  if (await page.locator('.cabin-home').count()) { await openCabinLibrary(page); const dialog = libraryDialog(page); await dialog.getByRole('radio', { name: '墙', exact: true }).or(dialog.getByRole('button', { name: '墙', exact: true })).first().click(); await dialog.getByRole('button', { name: '制作专辑墙海报' }).click(); return; }
   await page.getByRole('button', { name: '专辑墙', exact: true }).first().click();
 }

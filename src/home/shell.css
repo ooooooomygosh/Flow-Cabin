@@ -32,7 +32,7 @@
 
 @media(max-width:699px){
   .home-header .home-room-menu{flex:1;min-width:0}
-  .home-room-menu .home-room-name{width:100%}
+  .home-room-menu .home-room-name{width:100%;min-height:48px}
   .home-room-menu-list{min-width:min(260px,calc(100vw - 28px))}
 }
 
