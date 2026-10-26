@@ -72,7 +72,7 @@ function useRoomLayout(look) {
   return { layout, commit, error, setError, undo: () => historyAction('undo'), redo: () => historyAction('redo'), canUndo: read(look).canUndo, canRedo: read(look).canRedo };
 }
 
-export default function CabinHome({ reduced = false, editRequest = 0, focusOpen = false, petOpen = false }) {
+export default function CabinHome({ reduced = false, editRequest = 0, focusOpen = false, petOpen = false, guiding = false }) {
   const { deck, focus, identity, look, sky, commands, notify } = useCabinRuntime();
   const store = useRoomLayout(look), { layout, commit } = store;
   const [furnitureManifest, setFurnitureManifest] = useState(null), [artTheme, setArtTheme] = useState(''), [artAttempt, setArtAttempt] = useState(0);
@@ -318,7 +318,7 @@ export default function CabinHome({ reduced = false, editRequest = 0, focusOpen 
     </div>}
     <SleepIndicator/>
     {homeNotice ? <aside className="home-intro home-notice" aria-label="新的首页"><span><b>首页换成了生活小屋。</b>唱片、手记和专注记录都在，原版唱片架也随时可以换回。</span><button type="button" onClick={closeHomeNotice}>好的</button><button type="button" onClick={() => { closeHomeNotice(); window.dispatchEvent(new Event('cabin:interface-choice')); }}>改用原版</button></aside>
-    : intro && <aside className="home-intro" aria-label="小屋初次指引"><span>点唱机听歌，点书桌开始一段专注。</span><button type="button" onClick={completeIntro}>知道了</button></aside>}
+    : intro && !guiding && <aside className="home-intro" aria-label="小屋初次指引"><span>点唱机听歌，点书桌开始一段专注。</span><button type="button" onClick={completeIntro}>知道了</button></aside>}
     {store.error && <p className="home-layout-error" role="alert">{store.error}</p>}
     <footer className="home-footer"><NowPlayingBar/><nav className="home-zones" aria-label="房间区域" aria-keyshortcuts="0 1 2 3 ArrowLeft ArrowRight"><button type="button" aria-pressed={zone === 'all'} onClick={() => setZone('all')}>{overview ? '全屋' : '返回全屋'}</button>{ZONE_ORDER.map((id, i) => <button type="button" key={id} aria-pressed={zone === id} onClick={() => setZone(id)}><i className="home-zone-dot" aria-hidden="true" ref={el => { dots.current[i] = el; }}/>{ZONE_NAMES[id]}</button>)}</nav><button type="button" className="home-pet-return" aria-label="回到宠物" onClick={() => setZone('life')}><Heart size={16}/>{identity.name}</button></footer>
     <details className="home-accessible-furniture"><summary>家具与无障碍入口</summary><div>{layout.items.map(item => <button type="button" key={item.id} onClick={event => { event.currentTarget.closest('details').open = false; activate(item); }}>{FURNITURE[item.type].name}</button>)}</div></details>

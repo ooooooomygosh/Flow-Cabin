@@ -71,6 +71,9 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
   // 「首页换成了生活小屋」 is news only for people who used an earlier home; a new install starts here.
   useState(() => { if (firstVisit) dismissHomeNotice(); });
   const flow = useOnboardingFlow({ client: appearance.client, loading, loadError, firstVisit, itemCount: items.length, hubRequest, notify });
+  // On a first visit the guide comes first; the home's one-line hint waits until it has been closed once.
+  const [guideDone, setGuideDone] = useState(!firstVisit), guideShown = useRef(false);
+  useEffect(() => { if (flow.wizard) guideShown.current = true; else if (guideShown.current) setGuideDone(true); }, [flow.wizard]);
   const chrome = useRoomChrome({ client: appearance.client, notify, restoreDock: false });
   const library = useRecordLibrary(), look = library?.data.rooms[library.roomId]?.look || 'pixel';
   const [mobileSlotCount, setMobileSlotCount] = useState(null);
@@ -218,7 +221,7 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
     if (action === 'journal' || action === 'mail') { window.dispatchEvent(new CustomEvent('cabin:open-journal', { detail: { tab: action === 'mail' && labs.letters ? 'letters' : 'entries' } })); return; }    setTool(action);
   };
   return <CabinRuntimeProvider deck={deck} items={items} look={look} onNavigate={openTool} onRoomChange={personalizeRoom} notify={notify}>
-    <CabinHome reduced={appearance.reduceMotion || reduced} editRequest={editRequest} focusOpen={dock.open} petOpen={catPanelOpen}/>
+    <CabinHome reduced={appearance.reduceMotion || reduced} editRequest={editRequest} focusOpen={dock.open} petOpen={catPanelOpen} guiding={flow.wizard || !guideDone}/>
     <LifeReminder/>
     {library?.error && <p className="home-layout-error" role="alert">设置未保存：{library.error}</p>}
     {wallpaperError && <p className="wallpaper-error" role="alert">{wallpaperError}<button type="button" aria-label="关闭动态背景提示" onClick={() => setWallpaperError('')}>×</button></p>}
