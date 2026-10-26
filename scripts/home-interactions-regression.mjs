@@ -17,12 +17,22 @@ try{
  await context.addInitScript(()=>localStorage.setItem('flow-cabin-interface-v1','beta'));
   await context.addInitScript(()=>{if(sessionStorage.getItem('home-fixture'))return;sessionStorage.setItem('home-fixture','1');localStorage.setItem('flow-cabin-home-intro-v1','done');localStorage.setItem('album-circle-focus-v1:local-owner',JSON.stringify({settings:{notify:false,chime:false},tasks:[{id:'first',text:'先读一页书',done:false,createdAt:Date.now()}]}));});
  page=await context.newPage();page.setDefaultTimeout(15000);page.on('pageerror',e=>report.errors.push(e.message));await page.goto(origin);await page.locator('.home-canvas[data-art-ready=true]').waitFor();
+ // 3.0 shell: three top entries, four everyday items behind ⚙, three always-labelled hotspots, 布置 under the room name.
+ await page.waitForTimeout(400); // labels fade in once the art is ready
+ assert.deepEqual(await page.locator('.home-shortcuts button').allInnerTexts().then(t=>t.map(s=>s.trim())),['唱片架','专注','日记']);
+ assert.deepEqual(await page.locator('.home-furniture.is-hotspot').evaluateAll(n=>n.map(b=>[b.dataset.furniture,b.querySelector('.home-furniture-label').textContent,getComputedStyle(b.querySelector('.home-furniture-label')).opacity])),[['deck','唱机','1'],['desk','书桌','1'],['bed','窝 · 日记本','1']]);
+ assert.equal(await page.locator('.home-furniture:not(.is-hotspot) .home-furniture-label').evaluateAll(n=>n.filter(l=>getComputedStyle(l).opacity!=='0').length),0,'other furniture is labelled only on hover or focus');
+ await page.getByRole('button',{name:'设置',exact:true}).click();assert.deepEqual(await page.getByRole('navigation',{name:'小屋功能',exact:true}).getByRole('button').allInnerTexts(),['选择小屋','布置小屋','备份与恢复','全部设置']);
+ assert.equal(await page.getByRole('dialog',{name:'小屋日常',exact:true}).getByRole('button',{name:/场景配方|睡前模式|小屋明信片|位置与天气|功能诊断|改用原版/}).count(),0,'lab and moved items stay out of the everyday menu');await close();
+ await page.getByRole('button',{name:'日记',exact:true}).click();await page.getByRole('dialog',{name:'小屋日记'}).waitFor();await page.keyboard.press('Escape');await page.getByRole('dialog',{name:'小屋日记'}).waitFor({state:'hidden'});
+ await page.locator('.home-room-name').click();assert.deepEqual(await page.getByRole('menu',{name:'小屋'}).getByRole('menuitem').evaluateAll(n=>n.map(i=>i.querySelector('span').textContent)),['选择小屋','布置小屋']);await page.keyboard.press('Escape');assert.equal(await page.getByRole('menu',{name:'小屋'}).count(),0);
+ pass('shell-has-three-entries-four-everyday-items-three-hotspot-labels-and-a-room-menu');
  await zone('工作角');await page.getByRole('button',{name:'完成任务：先读一页书',exact:true}).click();
  assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('album-circle-focus-v1:local-owner')).tasks[0].done),true);pass('task-paper-completes-real-task-without-opening-another-page');
  await zone('返回全屋');await page.locator('[data-furniture=calendar]').click();await page.getByRole('dialog',{name:'挂历与日程',exact:true}).waitFor();
  await page.getByLabel('查看日期',{exact:true}).fill('2026-11-01');await page.getByLabel('记一个重要日子',{exact:true}).fill('小屋纪念日');await page.getByRole('button',{name:'记在这一天',exact:true}).click();await page.getByText('小屋纪念日',{exact:true}).waitFor();await close();
  await page.reload();await page.locator('.home-canvas[data-art-ready=true]').waitFor();await page.locator('[data-furniture=calendar]').click();await page.getByLabel('查看日期',{exact:true}).fill('2026-11-01');await page.getByText('小屋纪念日',{exact:true}).waitFor();await close();pass('calendar-selects-dates-and-persists-important-days-through-reload');
- await page.getByRole('button',{name:'布置',exact:true}).click();const editor=page.getByRole('dialog',{name:'布置小屋',exact:true});
+ await page.locator('.home-room-name').click();await page.getByRole('menuitem',{name:/^布置小屋/}).click();const editor=page.getByRole('dialog',{name:'布置小屋',exact:true});
  await editor.getByRole('button',{name:'恢复默认',exact:true}).click();
  await editor.getByRole('button',{name:'工作桌 已摆放',exact:true}).click();
  const before=await page.evaluate(()=>JSON.parse(localStorage.getItem('flow-cabin-room-layout-v2:pixel')).items.length);
@@ -72,6 +82,7 @@ try{
  await fallback.addInitScript(seed=>localStorage.setItem('flow-cabin-onboarding-v1',seed),onboardingSeed()); // the first-run guide is covered by onboarding-checks
  await fallback.addInitScript(()=>{
    localStorage.setItem('flow-cabin-interface-v1','beta');localStorage.setItem('flow-cabin-home-intro-v1','done');
+   localStorage.setItem('flow-cabin-labs-v1',JSON.stringify({postcard:true})); // 小屋明信片 is a 实验室 feature since 3.0
    const getContext=HTMLCanvasElement.prototype.getContext;
    HTMLCanvasElement.prototype.getContext=function(kind,...args){return /webgl/i.test(kind)?null:getContext.call(this,kind,...args);};
    if (globalThis.OffscreenCanvas) { const offscreen=OffscreenCanvas.prototype.getContext; OffscreenCanvas.prototype.getContext=function(kind,...args){return /webgl/i.test(kind)?null:offscreen.call(this,kind,...args);}; }

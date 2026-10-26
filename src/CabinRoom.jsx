@@ -37,6 +37,8 @@ import Dialog from './Dialog';
 import { CabinRuntimeProvider } from './runtime/CabinRuntime';
 import CabinHome from './home/CabinHome';
 import HomePanels, { HomeLyrics, LifeReminder } from './home/HomePanels';
+import useLabs from './product/useLabs';
+import { openJournal } from './focus/stats/journal-events.mjs';
 
 // Opened on demand: Settings (with 音源 › 账户与文件夹), the first-run guide and
 // 唱机特写 load on first use (prefetched once the room is idle).
@@ -81,6 +83,8 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
   const [smartOpen, setSmartOpen] = useState(false);
   const closeSmart = useCallback(() => setSmartOpen(false), []);
   const openSmart = useCallback(() => setSmartOpen(true), []);
+  // 实验室 (src/product/features.mjs): an entry point is only offered while its lab is on.
+  const labs = useLabs(), smartEntry = labs.smartTurntable ? openSmart : undefined;
   // Capture the first interaction before the lazy panel's module is available.
   useLayoutEffect(() => {
     const open = () => setCatPanelOpen(true);
@@ -206,18 +210,19 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
     if (action === 'pet') { setTool(''); setCatPanelOpen(true); return; }
     if (action === 'settings' || action === 'music-settings') { setTool(''); flow.setHub('music'); return; }
     if (action === 'lyrics') { setLyricsOpen(true); return; }
-    if (action === 'journal' || action === 'mail') { window.dispatchEvent(new CustomEvent('cabin:open-journal', { detail: { tab: action === 'mail' ? 'letters' : 'entries' } })); return; }
-    setTool(action);
+    // 日记 (top bar, the 窝/日记本 hotspot): the journal's own first page, the same as L.
+    if (action === 'diary') { openJournal(); return; }
+    if (action === 'journal' || action === 'mail') { window.dispatchEvent(new CustomEvent('cabin:open-journal', { detail: { tab: action === 'mail' && labs.letters ? 'letters' : 'entries' } })); return; }    setTool(action);
   };
   return <CabinRuntimeProvider deck={deck} items={items} look={look} onNavigate={openTool} onRoomChange={personalizeRoom} notify={notify}>
     <CabinHome reduced={appearance.reduceMotion || reduced} editRequest={editRequest} focusOpen={dock.open} petOpen={catPanelOpen}/>
     <LifeReminder/>
     {library?.error && <p className="home-layout-error" role="alert">设置未保存：{library.error}</p>}
     {wallpaperError && <p className="wallpaper-error" role="alert">{wallpaperError}<button type="button" aria-label="关闭动态背景提示" onClick={() => setWallpaperError('')}>×</button></p>}
-    <HomePanels tool={tool} close={() => setTool('')} filters={filters} setFilters={setFilters} visible={visible} recordStyle={recordStyle} openAdd={openAdd} openRecord={openRecord} openWall={openWall} openSmart={() => { setTool(''); openSmart(); }} onRoomChange={personalizeRoom}/>{/* the panel is modal: close it, or the smart turntable opens inert behind it */}
+    <HomePanels tool={tool} close={() => setTool('')} filters={filters} setFilters={setFilters} visible={visible} recordStyle={recordStyle} openAdd={openAdd} openRecord={openRecord} openWall={openWall} openSmart={smartEntry && (() => { setTool(''); openSmart(); })} onRoomChange={personalizeRoom}/>{/* the panel is modal: close it, or the smart turntable opens inert behind it */}
     {focus && <CabinJournal/>}
     {focus && <FocusDock open={false}/>}
-    {focus && dock.open && <Dialog title={dock.tab === 'notes' ? '随手记' : '专注与日常'} close={() => saveDock({ open: false })} className="home-tool home-focus-dialog" size="lg"><FocusDock embedded open tab={dock.tab} setTab={tab => saveDock({ tab })} close={() => saveDock({ open: false })} onOpenSmart={openSmart}/></Dialog>}
+    {focus && dock.open && <Dialog title={dock.tab === 'notes' ? '随手记' : '专注与日常'} close={() => saveDock({ open: false })} className="home-tool home-focus-dialog" size="lg"><FocusDock embedded open tab={dock.tab} setTab={tab => saveDock({ tab })} close={() => saveDock({ open: false })} onOpenSmart={smartEntry}/></Dialog>}
     {lyricsOpen && <HomeLyrics close={() => setLyricsOpen(false)}/>}
     {desktopMode ? <DesktopWidgets mode="desktop" exit={chrome.toggleDesktopMode} item={deckItem} provider={provider} playback={playback} player={player} spinning={effectiveSpin} toggleVisual={deck.toggleVisual} trackIndex={deck.shownTrackIndex}/> : zen && !chrome.zenTools && <DesktopWidgets mode="zen"/>}
     {!desktopMode && <ImmersiveChrome zen={zen} fullscreen={fullscreen} exitFullscreen={chrome.exitFullscreen} toggleZen={chrome.toggleZen} tools={chrome.zenTools} setTools={chrome.setZenTools}/>}
