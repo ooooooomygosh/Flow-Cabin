@@ -1,6 +1,6 @@
 import { invalidateRecovery } from '../backup/recovery.mjs';
 import { JOURNAL_KEY, JOURNAL_CHANGE, normalizeJournalStoredRecord } from '../focus/journal-entries.mjs';
-import { SESSION_LOG_KEY, SESSION_EVENT } from '../focus/session-log.mjs';
+import { SESSION_LOG_KEY, SESSION_EVENT, normalizeSessionNote } from '../focus/session-log.mjs';
 import { validateLayout as validateLegacy } from '../room2/layout.mjs';
 import { validateLayout as validateSpatial, LAYOUT_PREFIX } from '../home/spatial-layout.mjs';
 import { normalizeRecipes, RECIPES_KEY } from '../home/recipes.mjs';
@@ -60,7 +60,7 @@ export function applySnapshot(snapshot, storage = localStorage, target = globalT
   const focus = snapshot.focus.filter(r => !r.deleted).map(r => {
     const v = r.value;
     if (!v || v.id !== r.id || !Number.isFinite(v.start) || !Number.isFinite(v.end) || v.end < v.start || !Number.isFinite(v.durationMs) || v.durationMs < 0 || typeof v.completed !== 'boolean') throw new Error('收到的专注记录无效');
-    return { id: v.id, start: v.start, end: v.end, durationMs: v.durationMs, completed: v.completed, taskId: String(v.taskId || '').slice(0, 100), taskText: String(v.taskText || '').slice(0, 8000), album: v.album, track: v.track, cover: typeof v.cover === 'string' && v.cover.startsWith('data:image/') && v.cover.length <= 400 * 1024 ? v.cover : '' };
+    return { id: v.id, start: v.start, end: v.end, durationMs: v.durationMs, completed: v.completed, taskId: String(v.taskId || '').slice(0, 100), taskText: String(v.taskText || '').slice(0, 8000), album: v.album, track: v.track, cover: typeof v.cover === 'string' && v.cover.startsWith('data:image/') && v.cover.length <= 400 * 1024 ? v.cover : '', ...(normalizeSessionNote(v.note) ? { note: normalizeSessionNote(v.note) } : {}) };
   });
   if(snapshot.version===2&&!['companion','recipes','favorites'].every(d=>Array.isArray(snapshot[d])&&snapshot[d].length<=5000))throw Error('同步扩展数据无效');
   const layouts = snapshot.layouts.map(r => ({ record: r, value: r.deleted ? null : validateLayout(r.value) }));

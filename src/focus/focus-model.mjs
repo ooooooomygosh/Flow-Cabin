@@ -1,6 +1,6 @@
 // Pomodoro, tasks, statistics and rewards. Pure functions only: every
 // transition receives `now`, so hidden or throttled windows stay accurate.
-import { dayKey, startOfDay, addDays } from '../lib/local-calendar.mjs';
+import { dayKey, startOfDay, addDays, startOfWeek } from '../lib/local-calendar.mjs';
 export { dayKey } from '../lib/local-calendar.mjs';
 export const FOCUS_PREFIX = 'album-circle-focus-v1:';
 export const MAX_FOCUS_BYTES = 512000;
@@ -92,14 +92,17 @@ export function normalizeSettings(value = {}) {
 const DAY_KEY = /^\d{4}-\d{2}-\d{2}$/;
 // roundDay: the local day of the last finished round, so the 第 n 轮 counter starts over on a new day.
 const roundDay = (v) => typeof v.roundDay === 'string' && DAY_KEY.test(v.roundDay) ? { roundDay: v.roundDay } : {};
+// intent: 「这一段做什么？」 typed freely (no todo picked). Only present when non-empty, so older records stay as they were.
+export const INTENT_LENGTH = 120;
+const intent = (v) => { const value = text(v.intent, INTENT_LENGTH); return value ? { intent: value } : {}; };
 function normalizeTimer(value = {}, settings = DEFAULT_SETTINGS) {
   const v = value && typeof value === 'object' ? value : {};
   const phase = PHASES.includes(v.phase) ? v.phase : 'idle';
-  if (phase === 'idle') return { phase, endsAt: 0, remaining: 0, paused: false, startedAt: 0, round: clamp(v.round, 0, 1e6, 0), taskId: text(v.taskId, 40), ...roundDay(v) };
+  if (phase === 'idle') return { phase, endsAt: 0, remaining: 0, paused: false, startedAt: 0, round: clamp(v.round, 0, 1e6, 0), taskId: text(v.taskId, 40), ...intent(v), ...roundDay(v) };
   // due: a focus round in overtime (到点后继续计时); over: overtime already counted while paused.
   // awayAt: paused because the screen locked or the computer slept at that moment.
   const due = phase === 'focus' && v.due === true, awayAt = clamp(v.awayAt, 0, 9e15, 0);
-  return { phase, duration: clamp(v.duration, 1, MAX_DURATION, phaseDuration(settings, phase)), endsAt: clamp(v.endsAt, 0, 9e15, 0), remaining: clamp(v.remaining, 0, MAX_DURATION, 0), paused: v.paused === true, startedAt: clamp(v.startedAt, 0, 9e15, 0), round: clamp(v.round, 0, 1e6, 0), taskId: text(v.taskId, 40), ...roundDay(v),
+  return { phase, duration: clamp(v.duration, 1, MAX_DURATION, phaseDuration(settings, phase)), endsAt: clamp(v.endsAt, 0, 9e15, 0), remaining: clamp(v.remaining, 0, MAX_DURATION, 0), paused: v.paused === true, startedAt: clamp(v.startedAt, 0, 9e15, 0), round: clamp(v.round, 0, 1e6, 0), taskId: text(v.taskId, 40), ...intent(v), ...roundDay(v),
     ...(due ? { due, over: clamp(v.over, 0, MAX_OVER, 0) } : {}), ...(awayAt && v.paused === true ? { awayAt } : {}),
     ...(typeof v.sessionId==='string' && /^[\w-]{1,100}$/.test(v.sessionId) ? {sessionId:v.sessionId,ownerVersion:clamp(v.ownerVersion,0,1e9,0)} : {}) };
 }
@@ -226,7 +229,7 @@ export function toggle(state, now) {
   if (state.timer.phase === 'idle') return startPhase(state, 'focus', now);
   return state.timer.paused ? resume(state, now) : pause(state, now);
 }
-export function reset(state) { return { ...state, timer: { ...normalizeTimer({ round: state.timer.round, taskId: state.timer.taskId, roundDay: state.timer.roundDay }) } }; }
+export function reset(state) { return { ...state, timer: { ...normalizeTimer({ round: state.timer.round, taskId: state.timer.taskId, intent: state.timer.intent, roundDay: state.timer.roundDay }) } }; }
 
 // Completes the active phase. `completed` is false when skipped by hand; an overtime round is
 // always complete (its planned time is behind it) and counts the extra minutes too.
@@ -250,13 +253,13 @@ function finish(state, now, completed, manual = false) {
     const breakPhase = (timer.round + 1) % state.settings.longEvery === 0 ? 'longBreak' : 'shortBreak';
     next.timer = { ...timer, round: completed ? timer.round + 1 : timer.round, ...(completed ? { roundDay: dayKey(now) } : {}) };
     event.next = breakPhase;
-    next = state.settings.autoBreak ? startPhase(next, breakPhase, now) : { ...next, timer: normalizeTimer({ round: next.timer.round, taskId: timer.taskId, roundDay: next.timer.roundDay }) };
+    next = state.settings.autoBreak ? startPhase(next, breakPhase, now) : { ...next, timer: normalizeTimer({ round: next.timer.round, taskId: timer.taskId, intent: timer.intent, roundDay: next.timer.roundDay }) };
   } else {
     event.next = 'focus';
     // After a long break the next set starts again from round 1.
     const round = timer.phase === 'longBreak' ? 0 : timer.round;
     next = { ...next, timer: { ...timer, round } };
-    next = state.settings.autoFocus ? startPhase(next, 'focus', now) : { ...next, timer: normalizeTimer({ round, taskId: timer.taskId, roundDay: timer.roundDay }) };
+    next = state.settings.autoFocus ? startPhase(next, 'focus', now) : { ...next, timer: normalizeTimer({ round, taskId: timer.taskId, intent: timer.intent, roundDay: timer.roundDay }) };
   }
   return { state: next, event };
 }
@@ -275,7 +278,7 @@ export function tick(state, now) {
   const result = finish(state, timer.endsAt, true);
   if (result.state.timer.phase !== 'idle' && now >= result.state.timer.endsAt) {
     // The machine slept through the following phase too; stop and wait.
-    result.state = { ...result.state, timer: normalizeTimer({ round: result.state.timer.round, taskId: result.state.timer.taskId, roundDay: result.state.timer.roundDay }) };
+    result.state = { ...result.state, timer: normalizeTimer({ round: result.state.timer.round, taskId: result.state.timer.taskId, intent: result.state.timer.intent, roundDay: result.state.timer.roundDay }) };
   }
   return result;
 }
@@ -388,8 +391,18 @@ export function moveTask(state, taskId, toIndex) {
 }
 export function selectTask(state, taskId, toggle = false) {
   const selected = state.tasks.some((task) => task.id === taskId) ? taskId : '';
-  return { ...state, timer: { ...state.timer, taskId: toggle && state.timer.taskId === selected ? '' : selected } };
+  const { intent: _typed, ...timer } = state.timer, next = toggle && state.timer.taskId === selected ? '' : selected;
+  // Picking a todo replaces the typed intention; clearing the pick keeps what was typed.
+  return { ...state, timer: next ? { ...timer, taskId: next } : { ...state.timer, taskId: '' } };
 }
+// 「这一段做什么？」 free text. Typing unpicks a todo (the session then stores the text with an empty taskId).
+export function setIntent(state, value) {
+  const { intent: _old, ...timer } = state.timer, typed = text(value, INTENT_LENGTH);
+  if (typed === (state.timer.intent || '') && (!typed || !state.timer.taskId)) return state;
+  return { ...state, timer: { ...timer, taskId: typed ? '' : timer.taskId, ...(typed ? { intent: typed } : {}) } };
+}
+// What this round is for: the picked todo's text, else the typed intention, else ''.
+export const intentText = (state) => state.tasks.find((task) => task.id === state.timer.taskId)?.text || state.timer.intent || '';
 export function clearDone(state) {
   const tasks = state.tasks.filter((task) => !task.done);
   return { ...state, tasks, timer: tasks.some((task) => task.id === state.timer.taskId) ? state.timer : { ...state.timer, taskId: '' } };
@@ -421,13 +434,23 @@ export function currentStreak(days, now) {
   while (map.get(dayKey(cursor)) >= 1) { count++; cursor = addDays(cursor, -1); }
   return count;
 }
+// 「本周来了 N 天」: local days of this Monday-week (up to today) with at least 1 minute of focus.
+// Starts again every Monday and can never "break" (presentation only; currentStreak stays).
+export const WEEK_DAYS_HINT = '按本地日期，本周（周一起）至少专注 1 分钟的天数。每周一重新开始，不会中断。';
+export function daysThisWeek(days, now) {
+  const map = days instanceof Map ? days : new Map();
+  if (!Number.isFinite(now)) return 0;
+  const today = startOfDay(now); let cursor = startOfWeek(now), count = 0;
+  for (; cursor <= today; cursor = addDays(cursor, 1)) if (map.get(dayKey(cursor)) >= 1) count++;
+  return count;
+}
 export function focusStats(sessions = [], now) {
   const list = Array.isArray(sessions) ? sessions : [];
   const days = minutesByDay(list);
   // 没有可用的时钟就不编日期：只给与时间无关的部分，星期栏留空，
   // 免得面板上出现 NaN-NaN-NaN 这样的假日期。
   if (!Number.isFinite(now)) {
-    return { today: 0, week: Array.from({ length: 7 }, () => ({ key: '', label: '', minutes: 0 })), streak: 0,
+    return { today: 0, week: Array.from({ length: 7 }, () => ({ key: '', label: '', minutes: 0 })), streak: 0, weekDays: 0,
       totalMinutes: Math.round([...days.values()].reduce((sum, value) => sum + value, 0)), sessions: list.filter((s) => s?.completed).length, todaySessions: 0 };
   }
   const today = startOfDay(now), week = [];
@@ -438,7 +461,7 @@ export function focusStats(sessions = [], now) {
   }
   const streak = currentStreak(days, now);
   const total = [...days.values()].reduce((sum, value) => sum + value, 0);
-  return { today: week[6].minutes, week, streak, totalMinutes: Math.round(total), sessions: list.filter((s) => s?.completed).length, todaySessions: list.filter((s) => s?.completed && dayKey(s.end) === dayKey(now)).length };
+  return { today: week[6].minutes, week, streak, weekDays: daysThisWeek(days, now), totalMinutes: Math.round(total), sessions: list.filter((s) => s?.completed).length, todaySessions: list.filter((s) => s?.completed && dayKey(s.end) === dayKey(now)).length };
 }
 
 export function levelInfo(xp) {
@@ -468,5 +491,5 @@ export function equip(state, kind, value) {
 export function focusSnapshot(state, now) {
   const task = state.tasks.find((item) => item.id === state.timer.taskId);
   const unlocked = unlockedIds(state.rewards.xp, state.rewards.bought);
-  return { hideSeconds: state.settings.hideSeconds, catSkin: state.settings.catSkin, quietMode: state.settings.quietMode, phase: state.timer.phase, paused: state.timer.paused, remaining: remainingMs(state.timer, now), endsAt: state.timer.paused ? 0 : state.timer.endsAt, round: currentRound(state.timer, now), due: Boolean(state.timer.due), over: overtimeMs(state.timer, now), startedAt: state.timer.phase === 'idle' ? 0 : state.timer.startedAt, duration: state.timer.phase === 'idle' ? 0 : state.timer.duration || phaseDuration(state.settings, state.timer.phase), longEvery: state.settings.longEvery, task: task?.text || '', fish: state.rewards.fish, level: levelInfo(state.rewards.xp).level, accessory: state.rewards.equipped.accessory, unlockedAccessories: UNLOCKS.filter((item) => item.kind === 'accessory' && unlocked.has(item.id)).map((item) => item.id), weather: state.rewards.equipped.weather };
+  return { hideSeconds: state.settings.hideSeconds, catSkin: state.settings.catSkin, quietMode: state.settings.quietMode, phase: state.timer.phase, paused: state.timer.paused, remaining: remainingMs(state.timer, now), endsAt: state.timer.paused ? 0 : state.timer.endsAt, round: currentRound(state.timer, now), due: Boolean(state.timer.due), over: overtimeMs(state.timer, now), startedAt: state.timer.phase === 'idle' ? 0 : state.timer.startedAt, duration: state.timer.phase === 'idle' ? 0 : state.timer.duration || phaseDuration(state.settings, state.timer.phase), longEvery: state.settings.longEvery, task: task?.text || state.timer.intent || '', fish: state.rewards.fish, level: levelInfo(state.rewards.xp).level, accessory: state.rewards.equipped.accessory, unlockedAccessories: UNLOCKS.filter((item) => item.kind === 'accessory' && unlocked.has(item.id)).map((item) => item.id), weather: state.rewards.equipped.weather };
 }

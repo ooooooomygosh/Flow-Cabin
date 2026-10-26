@@ -6,7 +6,8 @@
 // `cabin:focus-session` with the same record in `event.detail`:
 //   { id?, start, end, durationMs, completed, taskId, taskText?,
 //     album?: { id?, title, artist? } | string, track?: { title, artist?, album? },
-//     cover?: string /* album cover: data:image/… or http(s)/same-site URL */ }
+//     cover?: string /* album cover: data:image/… or http(s)/same-site URL */,
+//     note?: string /* 「留一句话给这一段」, ≤ 140 chars */ }
 // `start`/`end` are epoch ms. Aliases startedAt/endedAt/startAt/endAt are read
 // too. Records without a usable start/end are dropped.
 //
@@ -16,6 +17,7 @@
 // window) wins because it carries album/track.
 export const FOCUS_SESSION_EVENT = 'cabin:focus-session';
 export const SESSION_LOG_KEY = 'flow-cabin-focus-sessions-v1';
+import { normalizeSessionNote } from '../session-log.mjs';
 const MINUTE = 60000, MAX_SESSION = 4 * 60 * MINUTE, MAX_RECORDS = 5000;
 
 const num = (value) => { const n = Number(value); return Number.isFinite(n) ? n : 0; };
@@ -49,7 +51,8 @@ export function normalizeSessionRecord(raw) {
   if (!start || end <= start || end - start > MAX_SESSION) return null;
   const durationMs = duration > 0 && duration <= end - start ? Math.round(duration) : end - start;
   const track = raw.track && typeof raw.track === 'object' ? { title: str(raw.track.title), artist: str(raw.track.artist), album: str(raw.track.album) } : null;
-  return { id: str(raw.id, 60) || `s${start}`, start, end, durationMs, completed: raw.completed !== false, taskId: str(raw.taskId, 40), taskText: str(raw.taskText), album: normalizeAlbum(raw.album, track, raw.cover), track };
+  const note = normalizeSessionNote(raw.note);
+  return { id: str(raw.id, 60) || `s${start}`, start, end, durationMs, completed: raw.completed !== false, taskId: str(raw.taskId, 40), taskText: str(raw.taskText), album: normalizeAlbum(raw.album, track, raw.cover), track, ...(note ? { note } : {}) };
 }
 
 export function readSessionLog(storage) {
@@ -63,7 +66,7 @@ export function readSessionLog(storage) {
 // Legacy pomodoro sessions (main ≤ v1.16) → the same shape.
 export const fromLegacySessions = (sessions) => (Array.isArray(sessions) ? sessions : []).map((s) => normalizeSessionRecord(s && { ...s, id: `legacy-${s.start}` })).filter(Boolean);
 
-const richness = (s) => (s.album ? 2 : 0) + (s.taskText ? 1 : 0) + (s.id.startsWith('legacy-') ? 0 : 1);
+const richness = (s) => (s.album ? 2 : 0) + (s.taskText ? 1 : 0) + (s.note ? 1 : 0) + (s.id.startsWith('legacy-') ? 0 : 1);
 // Merge sources, dropping duplicates whose start and end are both within a minute.
 export function mergeSessions(...lists) {
   const all = lists.flat().filter(Boolean).sort((a, b) => a.start - b.start || richness(b) - richness(a)), out = [];
