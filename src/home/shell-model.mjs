@@ -10,18 +10,18 @@ export const NAV_ENTRIES = Object.freeze([
 
 // 全屋视图里常驻文字的三个热点。每个热点取房间里第一件在场的家具（按 types 顺序）。
 export const HOTSPOTS = Object.freeze([
-  { id: 'listen', action: 'music', types: ['deck', 'records', 'player'], labels: { deck: '唱机', records: '唱机', player: '唱机' } },
-  { id: 'focus', action: 'timer', types: ['desk', 'clock', 'timer'], labels: { desk: '书桌', clock: '专注钟', timer: '专注钟' } },
-  { id: 'journal', action: 'diary', types: ['journal', 'bed'], labels: { journal: '日记本', bed: '窝 · 日记本' } }
+  { id: 'listen', action: 'music', verb: '听歌', types: ['deck', 'records', 'player'], labels: { deck: '唱机', records: '唱机', player: '唱机' } },
+  { id: 'focus', action: 'timer', verb: '开始专注', types: ['desk', 'clock', 'timer'], labels: { desk: '书桌', clock: '专注钟', timer: '专注钟' } },
+  { id: 'journal', action: 'diary', verb: '打开日记', types: ['journal', 'bed'], labels: { journal: '日记本', bed: '窝 · 日记本' } }
 ]);
 
-// itemId → { id, action, label }
+// itemId → { id, action, label, verb }
 export function hotspotItems(items = []) {
   const out = new Map();
   for (const spot of HOTSPOTS) {
     for (const type of spot.types) {
       const item = items.find((entry) => entry?.type === type);
-      if (item) { out.set(item.id, { id: spot.id, action: spot.action, label: spot.labels[type] }); break; }
+      if (item) { out.set(item.id, { id: spot.id, action: spot.action, label: spot.labels[type], verb: spot.verb }); break; }
     }
   }
   return out;

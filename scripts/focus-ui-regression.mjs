@@ -259,7 +259,7 @@ try {
     await page.reload();await openFocus(page);assert.equal((await focusState(page)).timer.remaining,paused.timer.remaining);await page.getByRole('button',{name:'继续',exact:true}).click();const resumed=await focusState(page);assert.equal(resumed.timer.paused,false);assert.equal(resumed.timer.duration,paused.timer.duration);assert.equal(resumed.sessions.length,0);await screenshot(page,'timer-reloaded-resumed');
   });
   await run('backup-focus-failure-is-transactional-and-visible',async page=>{
-    await failStorage(page,true);await page.getByRole('button',{name:'设置',exact:true}).click();await page.getByRole('tab',{name:'数据与备份',exact:true}).click();await page.getByRole('button',{name:'收藏与备份',exact:true}).click();
+    await failStorage(page,true);await page.getByRole('button',{name:'设置',exact:true}).click();await page.getByRole('tab',{name:'数据',exact:true}).click();await page.getByRole('button',{name:'收藏与备份',exact:true}).click();
     await page.getByLabel('导入备份文件').setInputFiles({name:'synthetic-backup.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify({kind:'FlowCabinBackup',items:[],focus:{notes:'导入的新内容',tasks:[],settings:{notify:false,chime:false}}}))});
     await page.getByRole('status').filter({hasText:'导入完成'}).waitFor();assert.equal((await focusState(page)).notes,'原有随手记','nothing is replaced before the inline confirm');
     await page.getByRole('group',{name:'替换本机记录'}).getByRole('button',{name:'替换这些内容',exact:true}).click();await page.getByRole('alert').filter({hasText:'未能保存'}).waitFor();
@@ -291,7 +291,7 @@ try {
   const backupStorage = page => page.evaluate(keys => Object.fromEntries(Object.entries(keys).map(([domain, key]) => [domain, localStorage.getItem(key)])), backupKeys);
   const openBackup = async page => {
     await page.getByRole('button', { name: '设置', exact: true }).click();
-    await page.getByRole('tab', { name: '数据与备份', exact: true }).click();
+    await page.getByRole('tab', { name: '数据', exact: true }).click();
     await page.getByRole('button', { name: '收藏与备份', exact: true }).click();
     await page.locator('.backup-dialog').waitFor();
   };
@@ -568,17 +568,17 @@ try {
     await failStudyStorage(page,false);await page.locator('.study-review').focus();await page.keyboard.press('3');assert.equal((await studyState(page)).cards[0].memory.reps,1);await page.keyboard.press('Escape');assert.equal(await page.locator('.study-panel').count(),1);assert.equal(await page.locator('.focus-dock').count(),1);await screenshot(page,'study-review-returned');
   });
   await run('productivity-settings-keyboard-navigation',async page=>{
-    await page.getByRole('button',{name:'设置',exact:true}).click();const nav=page.getByRole('tablist',{name:'设置分区',exact:true});await nav.getByRole('tab',{name:'音源',exact:true}).focus();await page.keyboard.press('ArrowDown');
-    assert.equal(await nav.getByRole('tab',{name:'房间与桌宠',exact:true}).getAttribute('aria-selected'),'true');assert.equal(await page.evaluate(()=>document.activeElement?.id),'hub-tab-room');assert.equal(await nav.locator('[tabindex="0"]').count(),1);await screenshot(page,'settings-keyboard-room');
-    await page.keyboard.press('End');assert.equal(await page.evaluate(()=>document.activeElement?.id),'hub-tab-about');await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>document.activeElement?.id),'hub-tab-music');await page.keyboard.press('ArrowLeft');assert.equal(await page.evaluate(()=>document.activeElement?.id),'hub-tab-about');await page.keyboard.press('Home');assert.equal(await page.evaluate(()=>document.activeElement?.id),'hub-tab-music');
-    await page.setViewportSize({width:640,height:600});await page.waitForFunction(()=>document.querySelector('[aria-label="设置分区"]')?.getAttribute('aria-orientation')==='horizontal');await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>document.activeElement?.id),'hub-tab-room');await page.screenshot({path:path.join(output,'settings-keyboard-640x600.png'),animations:'disabled'});await page.keyboard.press('Home');
+    await page.getByRole('button',{name:'设置',exact:true}).click();const nav=page.getByRole('tablist',{name:'设置分区',exact:true});await nav.getByRole('tab',{name:'音乐',exact:true}).focus();await page.keyboard.press('ArrowDown');
+    assert.equal(await nav.getByRole('tab',{name:'专注',exact:true}).getAttribute('aria-selected'),'true');assert.equal(await page.evaluate(()=>document.activeElement?.id),'hub-tab-focus');assert.equal(await nav.locator('[tabindex="0"]').count(),1);await screenshot(page,'settings-keyboard-focus');
+    await page.keyboard.press('End');assert.equal(await page.evaluate(()=>document.activeElement?.id),'hub-tab-labs');await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>document.activeElement?.id),'hub-tab-music');await page.keyboard.press('ArrowLeft');assert.equal(await page.evaluate(()=>document.activeElement?.id),'hub-tab-labs');await page.keyboard.press('Home');assert.equal(await page.evaluate(()=>document.activeElement?.id),'hub-tab-music');
+    await page.setViewportSize({width:640,height:600});await page.waitForFunction(()=>document.querySelector('[aria-label="设置分区"]')?.getAttribute('aria-orientation')==='horizontal');await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>document.activeElement?.id),'hub-tab-focus');await page.screenshot({path:path.join(output,'settings-keyboard-640x600.png'),animations:'disabled'});await page.keyboard.press('Home');
     await page.keyboard.press('Tab');assert.equal(await page.locator('#hub-tab-panel').evaluate(e=>e.contains(document.activeElement)),true);await page.keyboard.press('Escape');assert.equal(await page.getByRole('dialog',{name:'设置',exact:true}).count(),0);assert.equal(await page.getByRole('button',{name:'设置',exact:true}).evaluate(e=>e===document.activeElement),true);
   });
   await run('productivity-settings-sections-and-shortcut-return',async page=>{
     await openFocus(page,'随手记');await page.getByLabel('随手记内容').fill('设置面板往返保留');await page.getByRole('button',{name:'设置',exact:true}).click();
-    for(const [index,name] of ['音源','房间与桌宠','专注工具','显示与桌面','数据与备份','AI（Beta）','关于'].entries()) { await page.getByRole('tablist',{name:'设置分区',exact:true}).getByRole('tab',{name,exact:true}).click();await screenshot(page,`settings-section-${index}`);if(name==='显示与桌面')assert.equal(await page.locator('.hub-row-actions .segmented button').evaluateAll(buttons=>buttons.every(button=>{const range=document.createRange();range.selectNodeContents(button);return range.getClientRects().length===1;})),true,'performance option labels stay on one line'); }
-    // 专注工具 holds the timer preferences (the dock's own form), not shortcuts into the dock.
-    const hub=page.getByRole('dialog',{name:'设置',exact:true});await page.getByRole('tablist',{name:'设置分区',exact:true}).getByRole('tab',{name:'专注工具',exact:true}).click();assert.equal(await hub.getByRole('button',{name:/打开学习|打开番茄钟|查看统计|随手记/}).count(),0,'no action rows');
+    for(const [index,name] of ['音乐','专注','小屋与奶糖','桌面','数据','实验室'].entries()) { await page.getByRole('tablist',{name:'设置分区',exact:true}).getByRole('tab',{name,exact:true}).click();await screenshot(page,`settings-section-${index}`);if(name==='桌面')assert.equal(await page.locator('.hub-row-actions .segmented button').evaluateAll(buttons=>buttons.every(button=>{const range=document.createRange();range.selectNodeContents(button);return range.getClientRects().length===1;})),true,'performance option labels stay on one line'); }
+    // 专注 holds the timer preferences (the dock's own form), not shortcuts into the dock.
+    const hub=page.getByRole('dialog',{name:'设置',exact:true});await page.getByRole('tablist',{name:'设置分区',exact:true}).getByRole('tab',{name:'专注',exact:true}).click();assert.equal(await hub.getByRole('button',{name:/打开学习|打开番茄钟|查看统计|随手记/}).count(),0,'no action rows');
     await hub.getByLabel('专注（分）').fill('31');await hub.getByLabel('专注（分）').press('Enter');await page.keyboard.press('Escape');assert.equal(await hub.count(),0);
     assert.equal(await page.locator('.focus-badge').innerText().then(text=>text.includes('31')),true,'a 设置 change reaches the timer');await openFocus(page,'随手记');assert.equal(await page.getByLabel('随手记内容').inputValue(),'设置面板往返保留');await screenshot(page,'settings-shortcut-restored');
   });

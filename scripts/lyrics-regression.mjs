@@ -55,7 +55,7 @@ try {
   page = await context.newPage(); page.setDefaultTimeout(20000); page.on('pageerror', e => report.errors.push(e.message));
   await page.goto(origin); await page.locator('.home-world canvas').waitFor();
   const notice = page.locator('.home-notice').getByRole('button', { name: '好的' }); if (await notice.isVisible()) await notice.click();
-  await page.getByRole('button', { name: '唱片库', exact: true }).first().click();
+  await page.locator('.home-shortcuts').getByRole('button', { name: '唱片架', exact: true }).click();
   await page.getByRole('button', { name: '播放 歌词练习', exact: true }).click();
   await page.waitForFunction(() => [...document.querySelectorAll('[data-cabin-audio-host] audio')].some(a => !a.paused && a.currentTime > .1));
   await page.locator('.cabin-dialog-close').last().click();
@@ -126,7 +126,7 @@ try {
 
   // 6. Every room's skin, desktop and phone.
   for (const [id, name] of [['rain-train', '雨夜列车书房'], ['starlight', '星光小屋'], ['forest', '林间书屋'], ['warm', '琥珀小屋']]) {
-    await page.getByRole('button', { name: '选择房间主题' }).click();
+    await page.locator('.home-room-name').click(); await page.getByRole('menuitem', { name: /^选择小屋/ }).click();
     await page.locator('.home-theme-grid').getByRole('button', { name }).click();
     await page.locator('.corner-actions').getByRole('button', { name: '歌词册', exact: true }).click();
     await stage.locator('.cabin-amll').waitFor();

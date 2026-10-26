@@ -61,9 +61,9 @@ export async function verifyCabinToolActions({ page, check = () => {} }) {
   await closeSettings(page);
   // The console's source chip opens 设置 › 音源; 账户与文件夹 is a page inside it, not another dialog.
   await page.locator('.room-turntable .turntable-source-chip').click(); await settingsDialog(page).getByRole('radiogroup', { name: '唱机音源', exact:true }).waitFor();
-  assert.equal(await settingsDialog(page).getByRole('tab', { name: '音源', exact:true }).getAttribute('aria-selected'), 'true'); await closeSettings(page);
+  assert.equal(await settingsDialog(page).getByRole('tab', { name: '音乐', exact:true }).getAttribute('aria-selected'), 'true'); await closeSettings(page);
   await openMusicSettings(page); assert.equal(await page.getByRole('dialog').count(), 1, '账户与文件夹 stays inside 设置');
-  await accountsRegion(page).getByRole('button', { name: '音源', exact:true }).click(); await accountsRegion(page).waitFor({ state: 'detached' }); await page.keyboard.press('Escape'); await settingsDialog(page).waitFor({ state: 'hidden' });
+  await accountsRegion(page).getByRole('button', { name: '音乐', exact:true }).click(); await accountsRegion(page).waitFor({ state: 'detached' }); await page.keyboard.press('Escape'); await settingsDialog(page).waitFor({ state: 'hidden' });
   await page.getByRole('button', { name:'移动唱机',exact:true }).press('Home');
   assert.equal(await page.locator('.room-turntable').getAttribute('data-moving'), 'false', 'tool actions do not start a drag');
   check('relocated-tools-filter-state-and-dialog-actions');
