@@ -13,6 +13,7 @@ import { useDesktopFullscreen } from '../desktop-client';
 import { roomCovered } from '../room/useRoomChrome';
 import { getRoomScene } from '../scene-catalog.mjs';
 import RecordNowPlaying, { useNowPlaying, playerCommand } from './RecordNowPlaying';
+import { PressCard, usePress } from './PressCard';
 
 // 专注画面: one face, chosen by the user (or the scene's own until they pick),
 // shown in the focus dock, the zen clock, the desktop clock widget and — with
@@ -55,7 +56,7 @@ export function FaceSwitch() {
 // Who opens and closes it, and what it excludes: docs/entry-map.md.
 export default function FocusDisplayStage() {
   const [open, setOpen] = useState(false), [flash, setFlash] = useState(''), [idle, setIdle] = useState(false), [offer, setOffer] = useState('');
-  const now = useNowPlaying();
+  const now = useNowPlaying(), press = usePress(open ? 'display' : '');
   const focus = useFocusState(), look = useSceneLook(), [display, setDisplay] = useFocusDisplay(), id = faceFor(display, look);
   const fullscreen = useDesktopFullscreen(), ownFullscreen = useRef(false), stage = useRef(null), live = useRef(id); live.current = id;
   const close = () => { setOpen(false); setOffer(''); };
@@ -115,13 +116,15 @@ export default function FocusDisplayStage() {
   const currentTask = state?.tasks.find((item) => item.id === timer.taskId), task = currentTask?.text;
   const note = clockShown ? (running ? `${PHASE_LABELS[timer.phase]}中` : '') : [task, timer && running ? `第 ${currentRound(timer, Date.now()) % state.settings.longEvery + (timer.phase === 'focus' ? 1 : 0)} / ${state.settings.longEvery} 轮` : ''].filter(Boolean).join(' · ');
   const toggleFullscreen = () => { const exit = readCabinFullscreen(); ownFullscreen.current = !exit; requestCabinFullscreen({ exit }).catch(() => {}); };
-  return <Dialog variant="full" title="专注画面" close={close} initialFocus={stage} returnFocus=".focus-badge" className="focus-display-shell" deckKeys><div ref={stage} className={`focus-display${idle ? ' is-idle' : ''}`} data-face={id} tabIndex={-1} onClick={(event) => { if (!event.target.closest('.focus-display-bar, .focus-display-offer')) close(); }}>
+  return <Dialog variant="full" title="专注画面" close={close} initialFocus={stage} returnFocus=".focus-badge" className="focus-display-shell" deckKeys><div ref={stage} className={`focus-display${idle ? ' is-idle' : ''}`} data-face={id} tabIndex={-1} onClick={(event) => { if (!event.target.closest('.focus-display-bar, .focus-display-offer, .focus-display-press')) close(); }}>
     <div className="focus-display-stage">
       <FocusFace face={id} look={look} focus={faceFocus(state)} show={display.show} seconds={display.seconds} variant="full" maxScale={8} caption={id !== 'record'} music={id === 'record' ? { playing: now.playing } : null}>{id === 'record' ? <RecordNowPlaying now={now}/> : null}</FocusFace>
       {note && <p className="focus-display-note">{note}</p>}
     </div>
     {flash && <p className="focus-display-flash" role="status">{flash}</p>}
-    {offer && <div className="focus-display-offer" role="group" aria-label={OFFER_TITLES[offer]} onClick={(event) => event.stopPropagation()}>
+    {/* A finished round is pressed here: the 压制唱片 card takes the place of 「这一轮专注结束了」. */}
+    {press.mine && <div className="focus-display-press"><PressCard record={press.record} inline onDone={() => setOffer('')}/></div>}
+    {offer && !(press.mine && offer === 'done') && <div className="focus-display-offer" role="group" aria-label={OFFER_TITLES[offer]} onClick={(event) => event.stopPropagation()}>
       <strong>{OFFER_TITLES[offer]}</strong>
       {/* The next step right here: 开始休息 / 再来一轮 / 完成任务 (or, in overtime, 结束 / +5). */}
       {offer === 'done' && focus && <>

@@ -19,7 +19,8 @@ let browser, server;
 const focusState = page => page.evaluate(key => JSON.parse(localStorage.getItem(key) || '{}'), KEY);
 // 专辑墙 opens from 整理唱片架 (the console's shelf panel).
 const openAlbumWall = async page => { const tools = page.getByRole('button',{name:'整理唱片架',exact:true}); if (await tools.getAttribute('aria-expanded') !== 'true') await tools.click(); await page.getByRole('region',{name:'整理唱片架',exact:true}).getByRole('button',{name:'专辑墙',exact:true}).click(); };
-const openFocus = async (page, tab = '番茄钟') => { const badge = page.locator('.focus-badge'); await badge.waitFor({timeout:30000}); if (await badge.getAttribute('aria-expanded') === 'false') await badge.click(); await page.locator('.focus-dock').waitFor(); await page.locator('.focus-dock').getByRole('tab', { name: tab, exact: true }).click(); };
+// 3.0: 这一段 / 待办 / 声音 (+ 学习 with the study lab). 随手记 is the 便签 inside 这一段.
+const openFocus = async (page, tab = '这一段') => { tab = { 番茄钟: '这一段', 随手记: '这一段' }[tab] || tab; const badge = page.locator('.focus-badge'); await badge.waitFor({timeout:30000}); if (await badge.getAttribute('aria-expanded') === 'false') await badge.click(); await page.locator('.focus-dock').waitFor(); await page.locator('.focus-dock').getByRole('tab', { name: tab, exact: true }).click(); };
 const screenshot = async (page, name) => { for (const [width, height] of [[1440,900],[960,600]]) { await page.setViewportSize({width,height}); await page.screenshot({ path: path.join(output, `${name}-${width}x${height}.png`), animations:'disabled', timeout:15000 }); } };
 // screenshot() resizes the window twice, and the cat panel follows the repositioned cat asynchronously.
 // Return drag handles only after the chip, cat and the chip's real hit-test target have stayed put
@@ -48,12 +49,14 @@ try {
   let log=''; server.stdout.on('data',b=>log+=b); server.stderr.on('data',b=>log+=b);
   for (let i=0;;i++) { if (server.exitCode!==null || i>150) throw new Error(log); if (hasViteLocalOrigin(log,origin) && await fetch(origin).then(r=>r.ok,()=>false)) break; await new Promise(r=>setTimeout(r,100)); }
   browser = await launchChromium();
-  const run = async (name,test,{firstVisit=false,collection,autoEnter=false,motion=false}={}) => {
+  // 词书学习 is a lab since 3.0: its suites switch it on first; everything else runs with the labs a new user has.
+  const run = async (name,test,{firstVisit=false,collection,autoEnter=false,motion=false,labs=name.startsWith('productivity-')?{study:true}:null}={}) => {
     if (process.env.FOCUS_FILTER && !process.env.FOCUS_FILTER.split(',').some(filter=>name.includes(filter))) return;
     const context = await browser.newContext({viewport:{width:1440,height:900},locale:'zh-CN',reducedMotion:motion?'no-preference':'reduce'});
     await context.addInitScript((seed) => { window.__onboardingSeed = seed; }, onboardingSeed());
-    await context.addInitScript(({key,firstVisit,autoEnter,motion}) => {
+    await context.addInitScript(({key,firstVisit,autoEnter,motion,labs}) => {
       if (location.origin==='null') return;
+      if (labs && !localStorage.getItem('flow-cabin-labs-v1')) localStorage.setItem('flow-cabin-labs-v1',JSON.stringify(labs));
       // Most suites work in the dock after starting a round; 沉浸 on start is covered by its own test.
       if (!localStorage.getItem('album-circle-focus-display-v1')) localStorage.setItem('album-circle-focus-display-v1',JSON.stringify({autoEnter}));
       if (!firstVisit) localStorage.setItem('flow-cabin-onboarding-v1', window.__onboardingSeed);
@@ -66,7 +69,7 @@ try {
         // 表达的是「这一轮要动效」。上下文级的设置是给房间页的，不该套到桌宠上。
         if(!window.albumPet)document.documentElement.dataset.desktopReduceMotion=String(!motion);};
       if(document.documentElement) init(); else new MutationObserver((_,o)=>{if(document.documentElement){init();o.disconnect();}}).observe(document,{childList:true});
-    },{key:KEY,firstVisit,autoEnter,motion});
+    },{key:KEY,firstVisit,autoEnter,motion,labs});
     await context.route('**/*',async route=>{
       const u=new URL(route.request().url()), p=u.pathname;
       if(u.origin!==origin){report.unexpectedRequests.push(u.href);return route.abort();}
@@ -143,6 +146,31 @@ try {
     assert.equal(await page.evaluate(()=>window.__phaseEvents.length),1);assert.equal((await focusState(page)).rewards.fish,0);assert.match(await page.locator('.focus-dock [role=alert]').innerText(),/无法保存/);await screenshot(page,'timer-unsaved-completion');
     await failStorage(page,false);await page.getByRole('button',{name:'重试保存',exact:true}).click();const after=await focusState(page);assert.equal(after.sessions.length,1);assert.equal(after.rewards.fish,1);assert.equal(after.timer.phase,'shortBreak');assert.equal(await page.evaluate(()=>window.__phaseEvents.length),1);
   });
+  await run('intention-and-pressed-record-card',async page=>{
+    // 3.0 loop: one line of intention, Enter starts; a finished round of 5+ minutes is pressed into a record.
+    await page.evaluate(key=>{const v=JSON.parse(localStorage.getItem(key)||'{}');v.settings={...v.settings,focusMin:5,shortMin:1,sleepPolicy:'count'};localStorage.setItem(key,JSON.stringify(v));},KEY);await page.reload();
+    await openFocus(page);assert.equal(await page.locator('.focus-dock').getByRole('tab').count(),3,'这一段 / 待办 / 声音');
+    assert.equal(await page.locator('.focus-dock .smart-turntable-entry').count(),0,'智能唱片机 stays in its lab');
+    assert.equal(await page.locator('.focus-dock .focus-presets').count(),0,'rhythms sit behind 节奏');await page.getByRole('button',{name:/^节奏/}).click();assert.equal(await page.locator('.focus-dock .focus-presets [role=radio]').count(),4);await page.getByRole('button',{name:/^节奏/}).click();
+    await page.getByLabel('这一段做什么？').fill('读论文第二节');await page.getByLabel('这一段做什么？').press('Enter');
+    let state=await focusState(page);assert.equal(state.timer.phase,'focus','Enter starts');assert.equal(state.timer.intent,'读论文第二节');assert.equal(state.timer.taskId,'');
+    assert.match(await page.locator('.focus-dock .focus-task-now').innerText(),/读论文第二节/);
+    await page.evaluate(end=>{Date.now=()=>end+1;window.dispatchEvent(new Event('focus'));},state.timer.endsAt);
+    const card=page.locator('.focus-dock .press-card');await card.waitFor();
+    assert.match(await card.innerText(),/读论文第二节/);assert.match(await card.innerText(),/5 分钟/);assert.equal(await page.locator('.press-dialog').count(),0,'shown once, in the panel');
+    await card.getByLabel('留一句话给这一段').fill('读完了引言');await screenshot(page,'press-card-in-panel');
+    await card.getByRole('button',{name:'收好了',exact:true}).click();await card.waitFor({state:'detached'});
+    const log=await page.evaluate(()=>JSON.parse(localStorage.getItem('flow-cabin-focus-sessions-v1')));
+    assert.equal(log.length,1);assert.equal(log[0].taskText,'读论文第二节');assert.equal(log[0].taskId,'');assert.equal(log[0].note,'读完了引言');assert.equal(log[0].completed,true);
+    state=await focusState(page);assert.equal(state.timer.phase,'shortBreak','收好了 leaves the break running');
+    // An early end is not pressed and shows no failure.
+    await page.getByRole('button',{name:'跳过休息'}).click();await page.getByRole('button',{name:'开始专注',exact:true}).click();state=await focusState(page);
+    await page.evaluate(start=>{Date.now=()=>start+3*60000;},state.timer.startedAt);await page.getByRole('button',{name:'提前结束本轮专注'}).click();
+    await page.waitForTimeout(300);assert.equal(await page.locator('.press-card').count(),0,'no card for an interrupted round');assert.doesNotMatch(await page.locator('.focus-dock').innerText(),/失败|没完成/);
+    // The pressed record is in 唱片日记 › 这一周 with its note.
+    await page.evaluate(()=>window.dispatchEvent(new CustomEvent('cabin:open-journal',{detail:{}})));const journal=page.getByRole('dialog',{name:'唱片日记'});await journal.waitFor();
+    assert.match(await journal.locator('.rd-day.is-today').innerText(),/读论文第二节[\s\S]*读完了引言/);
+  });
   await run('stats-card-and-cabin-journal',async page=>{
     // Focus album snapshots and verified playback are separate fixtures, with different albums.
     const fixture=await page.evaluate(async ({key})=>{
@@ -166,74 +194,84 @@ try {
     },{key:KEY});
     assert.equal(fixture.playback.length,1,'the independent PlaybackSession fixture passes the real model reader');
     assert.equal(fixture.playback[0].durationMs,90000,'verified listening is 90 seconds, not the five-minute wall span');
-    await page.reload();await openFocus(page,'统计');
-    const card=page.locator('.fs-compact');await card.waitFor();
-    assert.equal(await card.locator('.focus-stat-tiles > div').filter({hasText:'今日专注'}).locator('dd').innerText(),'25 分钟','playback does not add to focus minutes; the legacy/log pair is deduplicated');
-    assert.equal(await card.getByRole('progressbar',{name:'每日目标进度'}).count(),1);assert.equal(await card.locator('.fs-bar').count(),7);
+    await page.reload();await openFocus(page);
+    // 3.0: 统计 left the focus panel. 这一段 keeps today's line, with 本周来了 N 天 instead of a streak.
+    const today=page.locator('.focus-dock .focus-today');await today.waitFor();
+    assert.match(await today.innerText(),/今日\s*1\s*轮\s*·\s*25\s*分钟/,'playback does not add to focus minutes; the legacy/log pair is deduplicated');
+    assert.match(await today.innerText(),/本周来了\s*\d+\s*天/);assert.doesNotMatch(await page.locator('.focus-dock').innerText(),/连续/,'no streak in the focus panel');
+    assert.equal(await page.locator('.focus-dock').getByRole('tab').count(),3,'这一段 / 待办 / 声音');
     assert.equal(await page.locator('.focus-dock').getByLabel('每日专注目标分钟').count(),0,'goal is edited in Settings only');
-    const scrolls=await page.locator('.focus-dock').evaluate(dock=>[...dock.querySelectorAll('*')].filter(el=>['auto','scroll'].includes(getComputedStyle(el).overflowY)&&el.scrollHeight>el.clientHeight+1).map(el=>el.className));
-    for(const [w,h] of [[1280,800],[1440,900]]){await page.setViewportSize({width:w,height:h});await page.screenshot({path:path.join(output,`stats-card-${w}x${h}.png`),animations:'disabled'});}
-    assert.deepEqual(scrolls,[],'stats card does not scroll');
-    // Let the dock settle after the viewport changes above before clicking into it.
-    await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
-    await page.getByRole('button',{name:'打开小屋日记 →'}).click();
-    const journal=page.getByRole('dialog',{name:'小屋日记'});await journal.waitFor();
-    assert.equal(await journal.getByRole('tab',{name:'概览'}).getAttribute('aria-selected'),'true');assert.equal(await journal.locator('.fs-year-grid span').count(),53*7);
+    // Let the dock settle after the viewport changes above before using the keyboard.
+    await page.evaluate(()=>document.activeElement?.blur());await page.keyboard.press('l');
+    const journal=page.getByRole('dialog',{name:'唱片日记'});await journal.waitFor();
+    assert.equal(await journal.getByRole('tab',{name:'这一周'}).getAttribute('aria-selected'),'true','唱片日记 opens on 这一周');
+    assert.equal(await journal.getByRole('tab',{name:'信箱'}).count(),0,'信箱 only with the letters lab');
+    assert.match(await journal.locator('.rd-day.is-today').innerText(),/写第三章/,'today\'s pressed record is listed with its intention');
+    for(const [w,h] of [[1280,800],[1440,900]]){await page.setViewportSize({width:w,height:h});await page.screenshot({path:path.join(output,`journal-week-${w}x${h}.png`),animations:'disabled'});}
+    // 统计 (secondary): today, goal, 7/30-day bars, where the time went.
+    await journal.getByRole('tab',{name:'统计'}).click();
+    assert.equal(await journal.locator('.fs-today-num').first().locator('strong').innerText(),'25 分钟','playback does not add to focus minutes');
+    assert.match(await journal.locator('.fs-today-week').innerText(),/本周来了/);assert.equal(await journal.locator('.fs-today-streak').count(),0);
+    assert.equal(await journal.getByRole('progressbar',{name:'每日目标进度'}).count(),1);assert.equal(await journal.locator('.fs-bar').count(),7);
     assert.match(await journal.locator('.fs-sessions li').first().innerText(),/写第三章/);
     for(const [w,h] of [[1280,800],[1440,900]]){await page.setViewportSize({width:w,height:h});await page.screenshot({path:path.join(output,`journal-overview-${w}x${h}.png`),animations:'disabled'});}
     await journal.getByRole('button',{name:'近 30 天'}).click();assert.equal(await journal.locator('.fs-bar').count(),30);
-    await journal.getByRole('tab',{name:'待办'}).click();const rows=await journal.locator('.fs-rank li .fs-rank-name').allInnerTexts();assert(rows.some(t=>t.includes('自由专注')));assert(rows.some(t=>t.includes('写第三章')));
+    await journal.getByRole('button',{name:'待办',exact:true}).click();const rows=await journal.locator('.fs-rank li .fs-rank-name').allInnerTexts();assert(rows.some(t=>t.includes('自由专注')));assert(rows.some(t=>t.includes('写第三章')));
     for(const [w,h] of [[1280,800],[1440,900]]){await page.setViewportSize({width:w,height:h});await page.screenshot({path:path.join(output,`journal-tasks-${w}x${h}.png`),animations:'disabled'});}
     await page.keyboard.press('Escape');await journal.waitFor({state:'hidden'});
     await page.keyboard.press('l');await journal.waitFor();await page.getByRole('button',{name:'返回小屋'}).click();await journal.waitFor({state:'hidden'});
     await page.evaluate(()=>window.dispatchEvent(new CustomEvent('cabin:open-journal',{detail:{tab:'weekly'}})));await journal.waitFor();
     // Close and reopen in the same task: the queued close event of the old close() must not shut the new one.
     await page.evaluate(()=>new Promise(done=>{const d=document.querySelector('dialog.cabin-journal');const mo=new MutationObserver(()=>{if(!d.open){mo.disconnect();window.dispatchEvent(new CustomEvent('cabin:open-journal',{detail:{tab:'weekly'}}));done();}});mo.observe(d,{attributes:true,attributeFilter:['open']});d.dispatchEvent(new Event('cancel',{cancelable:true}));}));await journal.waitFor();await page.waitForTimeout(300);assert.equal(await journal.isVisible(),true,'reopened journal stays open');
-    assert.equal(await journal.getByRole('tab',{name:'周报'}).getAttribute('aria-selected'),'true');assert.match(await journal.locator('.fs-weekpick strong').innerText(),/本周/,'周报 opens on the current week when it has data');assert.equal(await journal.locator('.fs-stamp').count(),1,'stamp rendered once');
-    const polaroid=journal.locator('.fs-polaroid'),playbackAlbum=fixture.playback[0].album.title;
-    assert.match(await polaroid.innerText(),/专注时放在唱机上的唱片/,'the journal labels focus metadata as an album snapshot');
-    assert((await polaroid.innerText()).includes(`《${fixture.focusAlbum}》`),'the current-week snapshot comes from the focus log, including on Monday');
-    assert(!(await polaroid.innerText()).includes(playbackAlbum),'the separate playback album is not a focus snapshot');
+    // 本周合集 (the old 周报 tab name lands here).
+    assert.equal(await journal.getByRole('tab',{name:'本周合集'}).getAttribute('aria-selected'),'true');assert.match(await journal.locator('.fs-weekpick strong').innerText(),/本周/,'本周合集 opens on the current week when it has data');assert.equal(await journal.locator('.fs-stamp').count(),1,'stamp rendered once');
+    const top=journal.locator('.rd-top'),playbackAlbum=fixture.playback[0].album.title;
+    assert((await top.innerText()).includes(`《${fixture.focusAlbum}》`),'the records that kept you company come from the focus log, including on Monday');
+    assert(!(await journal.locator('.rd-card').innerText()).includes(playbackAlbum),'the separate playback album is not a focus record');
+    assert.match(await journal.locator('.rd-card .fs-card-total').innerText(),/本周来了 \d+ 天/);
     // Leave legacy focus and real playback intact: neither may invent missing focus album metadata.
     await page.evaluate(key=>{localStorage.removeItem(key);window.dispatchEvent(new StorageEvent('storage',{key,storageArea:localStorage}));},fixture.focusLogKey);
-    await polaroid.filter({hasText:'下一张唱片，会陪你开始'}).waitFor();
-    assert(!(await polaroid.innerText()).includes(playbackAlbum),'playback-only records never fill the focus-album slot');
+    await journal.locator('.rd-card').filter({hasText:'这周还没有唱片陪着专注'}).waitFor();
+    assert(!(await journal.locator('.rd-card').innerText()).includes(playbackAlbum),'playback-only records never fill the focus-record slot');
     await page.evaluate(({key,value})=>{localStorage.setItem(key,value);window.dispatchEvent(new StorageEvent('storage',{key,newValue:value,storageArea:localStorage}));},{key:fixture.focusLogKey,value:fixture.focusLog});
-    await polaroid.filter({hasText:`《${fixture.focusAlbum}》`}).waitFor();
-    const cover=journal.locator('.fs-card-cover');await cover.waitFor();await cover.evaluate(img=>img.decode());assert.equal(await cover.evaluate(img=>img.complete&&img.naturalWidth===8&&getComputedStyle(img).imageRendering),'pixelated','cover thumbnail renders pixelated');
+    await top.filter({hasText:`《${fixture.focusAlbum}》`}).waitFor();
+    const cover=journal.locator('.rd-top .press-jacket img').first();await cover.waitFor();await cover.evaluate(img=>img.decode());assert.equal(await cover.evaluate(img=>img.complete&&img.naturalWidth===8&&getComputedStyle(img).imageRendering),'pixelated','cover thumbnail renders pixelated');
     await page.context().grantPermissions(['clipboard-read','clipboard-write'],{origin});await journal.getByRole('button',{name:'复制文字'}).click();
     const markdown=await page.evaluate(()=>navigator.clipboard.readText());
-    assert.match(markdown,/^## 心流小屋周报 · /);assert.match(markdown,/专注时放在唱机上的唱片/);
+    assert.match(markdown,/^## 心流小屋周报 · /);assert.match(markdown,/专注时放在唱机上的唱片/);assert.match(markdown,/### 本周合集/);assert.match(markdown,/陪你最久的唱片/);
     assert(markdown.includes(`《${fixture.focusAlbum}》`));assert(!markdown.includes(playbackAlbum));
     assert.doesNotMatch(markdown,/最常听|听歌时长|唱针转了/,'focus minutes are never presented as listening duration');
     assert.deepEqual(await page.evaluate(async ()=>(await import('/src/player/playback-log.mjs')).readPlaybackSessions()),fixture.playback,'opening and exporting focus stats never adds listening history');
     report.statsJournal={focusAlbum:fixture.focusAlbum,todayFocusMinutes:25,playbackAlbum,verifiedPlaybackMs:90000,playbackWallSpanMs:300000,missingFocusAlbumDoesNotFallBackToPlayback:true};
-    const [download]=await Promise.all([page.waitForEvent('download'),journal.getByRole('button',{name:'导出图片'}).click()]);assert.match(download.suggestedFilename(),/^心流小屋周报-.*\.png$/);await download.saveAs(path.join(output,'weekly-card-export.png'));
+    const [download]=await Promise.all([page.waitForEvent('download'),journal.getByRole('button',{name:'导出图片'}).click()]);assert.match(download.suggestedFilename(),/^心流小屋本周合集-.*\.png$/);await download.saveAs(path.join(output,'weekly-collection-export.png'));
     for(const [w,h] of [[1280,800],[1440,900],[1920,1080]]){await page.setViewportSize({width:w,height:h});
-      // Right page is balanced: summary, facts, week strip and actions fill most of it, nothing overflows.
+      // Right page: week picker, weeks strip, bars, notes and actions; nothing overflows the spread.
       const fill=await journal.locator('.fs-week-right').evaluate(el=>{const kids=[...el.children].filter(c=>c.offsetHeight);const r=el.getBoundingClientRect(),last=kids.at(-1).getBoundingClientRect();return {used:(last.bottom-r.top)/r.height,overflow:el.scrollHeight>el.clientHeight+1};});
-      assert(fill.used>0.5,`weekly right page only ${Math.round(fill.used*100)}% used at ${w}x${h}`);assert(!fill.overflow,`weekly right page scrolls at ${w}x${h}`);
-      assert(!(await journal.locator('.fs-week-left').evaluate(el=>el.scrollHeight>el.clientHeight+1)),`weekly card scrolls at ${w}x${h}`);
-      await page.screenshot({path:path.join(output,`journal-weekly-${w}x${h}.png`),animations:'disabled'});}
+      assert(fill.used>0.4,`collection right page only ${Math.round(fill.used*100)}% used at ${w}x${h}`);assert(!fill.overflow,`collection right page scrolls at ${w}x${h}`);
+      assert(!(await journal.locator('.fs-week-left').evaluate(el=>el.scrollHeight>el.clientHeight+1)),`collection card scrolls at ${w}x${h}`);
+      await page.screenshot({path:path.join(output,`journal-collection-${w}x${h}.png`),animations:'disabled'});}
     assert.equal(await journal.locator('.fs-weeks button').count(),8);assert.equal(await journal.locator('.fs-weeks button[aria-pressed="true"]').count(),1);
     await journal.locator('.fs-weeks button').last().click();assert.match(await journal.locator('.fs-weekpick strong').innerText(),/本周/);
     await journal.locator('.fs-weeks button').nth(6).click();
     await journal.getByRole('button',{name:'上一周'}).click();assert.match(await journal.locator('.fs-weekpick strong').innerText(),/2 周前/);
+    // 一年唱片墙: one cell per day.
+    await journal.getByRole('tab',{name:'唱片墙'}).click();assert.equal(await journal.locator('.rd-wall-grid button').count(),53*7);
     await page.keyboard.press('Escape');await page.evaluate(()=>window.dispatchEvent(new CustomEvent('cabin-open-settings',{detail:{section:'focus'}})));
     const hub=page.getByRole('dialog',{name:'设置',exact:true});await hub.getByLabel('每日专注目标分钟').fill('60');await hub.getByLabel('每日专注目标分钟').press('Enter');assert.equal((await focusState(page)).settings.dailyGoal,60);
   });
   await run('cabin-journal-motion-on-reopens-and-fits-1024',async page=>{
     await page.evaluate(({key})=>{const day=86400000,base=new Date().setHours(0,0,0,0),sessions=[];for(let d=1;d<300;d+=2)sessions.push({start:base-d*day+9*3600e3,end:base-d*day+9*3600e3+40*60e3,completed:true});const old=JSON.parse(localStorage.getItem(key)||'{}');localStorage.setItem(key,JSON.stringify({...old,sessions}));},{key:KEY});
-    await page.setViewportSize({width:1024,height:768});await page.reload();await openFocus(page,'统计');await page.locator('.fs-compact').waitFor();await page.locator('body').click({position:{x:5,y:5}});
-    const journal=page.getByRole('dialog',{name:'小屋日记'});
-    
+    await page.setViewportSize({width:1024,height:768});await page.reload();await page.locator('.focus-badge').waitFor();await page.locator('body').click({position:{x:5,y:5}});
+    const journal=page.getByRole('dialog',{name:'唱片日记'});
+
     assert.equal(await page.evaluate(()=>matchMedia('(prefers-reduced-motion: reduce)').matches),false,'motion is on');
     for(let i=0;i<3;i++){await page.keyboard.press('l');await journal.waitFor();await page.keyboard.press('Escape');await page.keyboard.press('l');await journal.waitFor({timeout:2000});assert(await journal.isVisible(),`L right after Esc reopens (round ${i+1})`);await page.keyboard.press('Escape');await journal.waitFor({state:'hidden'});}
-    await page.keyboard.press('l');await journal.waitFor();await page.waitForTimeout(400);
+    await page.keyboard.press('l');await journal.waitFor();await journal.getByRole('tab',{name:'唱片墙'}).click();await page.waitForTimeout(400);
     const fit=await journal.locator('.fs-year').evaluate(fig=>{const page=fig.closest('.fs-page').getBoundingClientRect(),r=fig.getBoundingClientRect(),cap=fig.querySelector('figcaption');return {inside:r.right<=page.right+0.5&&fig.querySelector('.fs-year-grid').getBoundingClientRect().right<=page.right+0.5,capClip:cap.scrollWidth>cap.clientWidth+1};});
-    assert(fit.inside,'year heatmap stays inside the left page at 1024x768');assert(!fit.capClip,'heatmap caption is not clipped');
-    await page.screenshot({path:path.join(output,'journal-overview-1024x768.png'),animations:'disabled'});
-    await journal.getByRole('tab',{name:'周报'}).click();await page.waitForTimeout(400);await page.screenshot({path:path.join(output,'journal-weekly-1024x768.png'),animations:'disabled'});
+    assert(fit.inside,'year record wall stays inside the page at 1024x768');assert(!fit.capClip,'wall caption is not clipped');
+    await page.screenshot({path:path.join(output,'journal-wall-1024x768.png'),animations:'disabled'});
+    await journal.getByRole('tab',{name:'本周合集'}).click();await page.waitForTimeout(400);await page.screenshot({path:path.join(output,'journal-collection-1024x768.png'),animations:'disabled'});
+    await journal.getByRole('tab',{name:'这一周'}).click();await page.waitForTimeout(400);await page.screenshot({path:path.join(output,'journal-week-1024x768.png'),animations:'disabled'});
   },{motion:true});
   await run('typing-shortcuts-stay-in-the-input',async page=>{
     await openFocus(page,'随手记');
@@ -242,14 +280,14 @@ try {
     await notes.focus();
     await page.keyboard.type(' l z h t f m ');
     assert.equal(await notes.inputValue(),'输入框里的字符： l z h t f m ');
-    assert.equal(await page.getByRole('dialog',{name:'小屋日记'}).count(),0,'L while typing must not open the journal');
+    assert.equal(await page.getByRole('dialog',{name:'唱片日记'}).count(),0,'L while typing must not open the journal');
     assert.equal(await page.locator('.focus-display').count(),0,'Z / F while typing must not open 沉浸');
     assert.equal(await page.evaluate(()=>document.documentElement.classList.contains('room-zen')),false,'H while typing must not hide the tools');
     assert.equal(await page.evaluate(()=>document.documentElement.classList.contains('room-corner-open')),false,'T while typing must not open 唱机特写');
     assert.equal(await page.locator('.listening-corner').count(),0);
     await page.evaluate(()=>document.activeElement?.blur());
     await page.keyboard.press('l');
-    const journal=page.getByRole('dialog',{name:'小屋日记'});
+    const journal=page.getByRole('dialog',{name:'唱片日记'});
     await journal.waitFor();
     await page.keyboard.press('Escape');await journal.waitFor({state:'hidden'});
     await screenshot(page,'typing-shortcuts-stay-in-input');
@@ -474,7 +512,7 @@ try {
     await page.evaluate(()=>document.activeElement?.blur());await page.keyboard.press('h');assert.equal(await page.evaluate(()=>document.documentElement.classList.contains('room-zen')),true);assert.equal(await shown(),0,'收起工具 does not open the focus display');await screenshot(page,'tools-hidden');
     await page.keyboard.press('h');assert.equal(await page.evaluate(()=>document.documentElement.classList.contains('room-zen')),false);
     assert.equal(await page.getByRole('button',{name:'整窗'}).count(),0,'整窗 is folded into 沉浸');
-    // 小屋日记 is opened above the room: L or cabin:open-journal leaves 沉浸 first.
+    // 唱片日记 is opened above the room: L or cabin:open-journal leaves 沉浸 first.
     await page.evaluate(()=>{window.__journal=0;window.addEventListener('cabin:open-journal',()=>window.__journal++);});
     await page.keyboard.press('z');await page.locator('.focus-display').waitFor();await page.keyboard.press('l');
     await page.locator('.focus-display').waitFor({state:'detached'});await page.waitForFunction(()=>window.__journal>=1);

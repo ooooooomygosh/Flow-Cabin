@@ -32,7 +32,7 @@ async function waitForBody(page, body) {
   }, { key: JOURNAL_KEY, body });
 }
 
-async function openFocus(page, tab = '随手记') {
+async function openFocus(page, tab = '这一段') { // 3.0: 随手记 is the 便签 in 这一段
   const badge = page.locator('.focus-badge');
   await badge.waitFor({ timeout: 30000 });
   if (await badge.getAttribute('aria-expanded') === 'false') await badge.click();
@@ -43,7 +43,7 @@ async function openFocus(page, tab = '随手记') {
 }
 
 async function openEntries(page) {
-  const dialog = page.getByRole('dialog', { name: '小屋日记' });
+  const dialog = page.getByRole('dialog', { name: '唱片日记' });
   if (!await dialog.isVisible().catch(() => false)) {
     await page.evaluate(() => document.activeElement?.blur());
     await page.keyboard.press('l');
@@ -58,7 +58,7 @@ async function openEntries(page) {
 }
 
 async function closeEntries(page) {
-  const dialog = page.getByRole('dialog', { name: '小屋日记' });
+  const dialog = page.getByRole('dialog', { name: '唱片日记' });
   await dialog.getByRole('button', { name: '返回小屋', exact: true }).click();
   await dialog.waitFor({ state: 'hidden' });
 }
@@ -241,7 +241,7 @@ try {
 
   await run('quick-notes-archive-keeps-source-and-does-not-duplicate', async (page) => {
     const note = '会议结束后要先整理三条结论，再回来继续专注。';
-    const dock = await openFocus(page, '随手记');
+    const dock = await openFocus(page);
     const noteBox = page.getByLabel('随手记内容');
     await noteBox.fill(note);
     await page.waitForFunction(({ key, note }) => JSON.parse(localStorage.getItem(key) || '{}').notes === note, { key: FOCUS_KEY, note });
@@ -261,7 +261,7 @@ try {
     assert.equal((await focusState(page)).notes, note);
 
     await dock.getByRole('button', { name: '翻开手记', exact: true }).click();
-    const dialog = page.getByRole('dialog', { name: '小屋日记' });
+    const dialog = page.getByRole('dialog', { name: '唱片日记' });
     await dialog.waitFor();
     const { panel } = await openEntries(page);
     await selectEntry(panel, '会议结束后');

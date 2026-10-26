@@ -261,7 +261,7 @@ export function restoreBackupMemory(parsed, { storage = localStorageOrNull(), ta
   if (!storage) throw new Error('无法保存小屋记忆，请检查存储空间。');
   const current = readBackupMemory(storage), next = { ...incoming };
   if (incoming.focusSessions) next.focusSessions = mergeRecords(current.focusSessions || [], incoming.focusSessions, (record) => record.id,
-    (local, saved) => ({ ...saved, album: saved.album || local.album, track: saved.track || local.track, cover: saved.cover || local.cover, taskText: saved.taskText || local.taskText, taskId: saved.taskId || local.taskId })).sort((a, b) => a.start - b.start);
+    (local, saved) => ({ ...saved, album: saved.album || local.album, track: saved.track || local.track, cover: saved.cover || local.cover, taskText: saved.taskText || local.taskText, taskId: saved.taskId || local.taskId, ...(saved.note || local.note ? { note: saved.note || local.note } : {}) })).sort((a, b) => a.start - b.start);
   if (incoming.playbackSessions) next.playbackSessions = mergeRecords(current.playbackSessions || [], incoming.playbackSessions, (record) => record.id,
     (local, saved) => local.durationMs > saved.durationMs || (local.durationMs === saved.durationMs
       && (local.end > saved.end || (local.reason !== 'checkpoint' && saved.reason === 'checkpoint'))) ? local : saved).sort((a, b) => a.start - b.start);

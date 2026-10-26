@@ -145,6 +145,8 @@ try {
   await context.addInitScript(({ focusKey, displayKey }) => {
     if (location.origin === 'null') return;
     if (!localStorage.getItem('flow-cabin-onboarding-v1')) localStorage.setItem('flow-cabin-onboarding-v1', window.__onboardingSeed);
+    // 3.0: 词书学习 is a lab (设置 › 实验室). This suite checks the study tools themselves, so it switches the lab on first.
+    if (!localStorage.getItem('flow-cabin-labs-v1')) localStorage.setItem('flow-cabin-labs-v1', JSON.stringify({ study: true }));
     if (!localStorage.getItem(focusKey)) localStorage.setItem(focusKey, JSON.stringify({ notes: '', settings: { focusMin: 25, shortMin: 5, notify: false, chime: false } }));
     if (!localStorage.getItem(displayKey)) localStorage.setItem(displayKey, JSON.stringify({ mode: 'ring', show: 'clock', seconds: true, autoEnter: false }));
     window.__nativeCommands = [];
@@ -339,7 +341,7 @@ try {
   record('due-review-second-rating-and-reload-persist', true, `reps ${reviewedCard.memory.reps}`);
 
   // Flip clock: quick switch in the dock, immersive face changes, button + keyboard exits, reload.
-  let dock = await openDock(page, '番茄钟');
+  let dock = await openDock(page, '这一段');
   let faceSwitch = dock.locator('.face-switch');
   await faceSwitch.waitFor();
   assert.equal((await faceSwitch.locator('strong').innerText()).trim(), '像素番茄环');
@@ -393,7 +395,7 @@ try {
 
   await page.reload();
   await page.locator('.focus-badge').waitFor({ timeout: 30000 });
-  dock = await openDock(page, '番茄钟');
+  dock = await openDock(page, '这一段');
   faceSwitch = dock.locator('.face-switch');
   assert.equal((await faceSwitch.locator('strong').innerText()).trim(), '琥珀翻页钟');
   assert.equal((await display(page)).mode, 'flip');

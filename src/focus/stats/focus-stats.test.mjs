@@ -217,9 +217,10 @@ test('journal events', async () => {
   const t = new EventTarget(), seen = [];
   t.addEventListener(JOURNAL_EVENT, (e) => seen.push(e.detail.tab));
   openJournal('weekly', t); openJournal('letters', t); openJournal('bogus', t); openJournal(undefined, t);
-  assert.deepEqual(seen, ['weekly', 'letters', 'overview', undefined]);
-  assert.deepEqual(JOURNAL_TABS.map(([id]) => id), ['overview', 'entries', 'tasks', 'weekly', 'letters']);
-  assert.equal(journalTab('tasks'), 'tasks'); assert.equal(journalTab('letters'), 'letters');
+  // 3.0 唱片日记: older tab names still land on their new home; anything else opens 这一周.
+  assert.deepEqual(seen, ['collection', 'letters', 'week', undefined]);
+  assert.deepEqual(JOURNAL_TABS.map(([id]) => id), ['week', 'collection', 'wall', 'entries', 'stats', 'letters']);
+  assert.equal(journalTab('tasks'), 'stats'); assert.equal(journalTab('overview'), 'week'); assert.equal(journalTab('weekly'), 'collection'); assert.equal(journalTab('letters'), 'letters'); assert.equal(journalTab('entries'), 'entries');
   assert(isJournalKey({ key: 'l' })); assert(!isJournalKey({ key: 'L', ctrlKey: true })); assert(!isJournalKey({ key: 'k' }));
 });
 
