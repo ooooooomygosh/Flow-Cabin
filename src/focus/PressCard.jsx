@@ -49,7 +49,7 @@ export function PressCard({ record, onDone, inline = false }) {
   const weather = WEATHER_LINES[sky?.real?.kind || focus?.state?.rewards?.equipped?.weather] || '';
   const room = getRoomScene(look)?.label || '';
   const minutes = Math.max(1, Math.round(record.durationMs / 60000));
-  return <section className={`press-card ${inline ? 'is-inline' : ''} ${reduced ? 'is-reduced' : ''}`} aria-labelledby={`${id}-title`} onClick={(event) => event.stopPropagation()}>
+  return <section className={`press-card ${inline ? 'is-inline paper' : ''} ${reduced ? 'is-reduced' : ''}`} aria-labelledby={`${id}-title`} onClick={(event) => event.stopPropagation()}>
     <div className="press-art"><Sleeve cover={coverFor(record)} title={record.album?.title || ''} artist={record.album?.artist || ''} size="lg" spinning/>
       {sprite('cat-rub') && <img className="press-cat" src={sprite('cat-rub')} alt="" width={64} height={64} draggable={false} onError={(event) => { event.currentTarget.hidden = true; }}/>}</div>
     <div className="press-copy">
