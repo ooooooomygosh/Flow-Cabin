@@ -38,8 +38,9 @@ export default function HomePanels({ tool, close, filters, setFilters, visible, 
   const { deck, commands, items, look, identity } = useCabinRuntime(), labs = useLabs();
   const title = ({ calendar: '挂历与日程', postcard: '小屋明信片', recipes: '场景配方', sleep: '睡前模式', diagnostics: '功能诊断', library: '唱片架', music: '唱机旁', weather: '窗外与天气', plant: '窗边的植物', tea: '茶歇', rest: '休息角', companions: '选择伙伴' })[tool];
   if (!title) return null;
+  // The record shelf is a bookcase close-up that draws its own full-window dialog (src/listen/RecordShelf.jsx).
+  if (tool === 'library') return <RecordShelf close={close} visible={visible} filters={filters} setFilters={setFilters} openAdd={openAdd} openRecord={openRecord} openWall={openWall} openSmart={openSmart}/>;
   return <Dialog title={title} close={close} className={`home-tool home-${tool}-dialog`} size="lg">
-    {tool === 'library' && <RecordShelf visible={visible} filters={filters} setFilters={setFilters} openAdd={openAdd} openRecord={openRecord} openWall={openWall} openSmart={openSmart}/>}
     {tool === 'music' && <><RoomTurntable ownsAudio={false} physicalDeck={false} item={deck.deckItem} spinning={deck.effectiveSpin} system={deck.system} trackIndex={deck.shownTrackIndex} style={recordStyle} items={items} load={deck.load} toggle={deck.toggleVisual} track={deck.setTrackIndex} eject={deck.eject} provider={deck.provider} setProvider={deck.chooseProvider} playback={deck.playback} player={deck.player}/><div className="home-panel-links"><button type="button" onClick={() => commands.open('library')}>打开唱片架</button><button type="button" disabled={!deck.deckItem} onClick={() => window.dispatchEvent(new Event('cabin-open-corner'))}>唱机特写</button><button type="button" disabled={!deck.deckItem} onClick={() => commands.open('lyrics')}>歌词册</button>{labs.smartTurntable && <button type="button" onClick={openSmart}>让小屋挑一张</button>}</div></>}
     {tool === 'calendar' && <HomeCalendar/>}
     {tool === 'postcard' && <Postcard/>}{tool === 'recipes' && <SceneRecipes/>}

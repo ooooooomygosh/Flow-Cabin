@@ -1,127 +1,117 @@
-import React, { useMemo, useState } from 'react';
-import { RecordBoxControls } from '../RecordLibrary';
-import { SORTS, DEFAULT_FILTERS } from '../room/useShelf';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import Dialog from '../Dialog';
+import BrassPlate from '../props/BrassPlate';
+import { EASE_LOOK, moveSeconds } from '../props/motion.mjs';
+import { playSfx } from '../props/sfx.mjs';
 import { useCabinRuntime } from '../runtime/CabinRuntime';
-import { Segmented } from '../ui/Roving';
-import { Plus, Play, ShufflePixel, Search, Sparkles, Grid3X3, FolderOpen, Wand2, Album } from '../icons';
-import { likedSongs, likePlayOrder, likeQueueEntries } from '../player/likes.mjs';
-import { trackCover } from '../track-meta.mjs';
-import { displayTitle } from '../display-title.mjs';
-import { usesBrowserCollection } from '../collection-api.mjs';
-import { isAndroid } from '../mobile/platform.mjs';
+import { useRecordLibrary } from '../RecordLibrary';
+import { Search } from '../icons';
+import { likedSongs } from '../player/likes.mjs';
+import { sleeveTone } from '../player/pixel-cover.mjs';
 import useLabs from '../product/useLabs';
-import { SHELF_VIEWS, filtersShown, activeFilterCount, shelfRecords, recentSongs, shortDay } from './listen-model.mjs';
-import { useLikes, Cover, usePopover, HeartIcon } from './listen-hooks';
+import { recentSongs } from './listen-model.mjs';
+import { useLikes } from './listen-hooks';
+import { shelfBinders, binderById, binderShape, boxItems } from '../shelf/shelf-model.mjs';
+import Binder from '../shelf/Binder';
+import IndexBook from '../shelf/IndexBook';
 import './listen.css';
+import '../shelf/shelf.css';
 
-// 唱片架 (docs/design/3.0-design.md §6.2): the listening home. Three views — 唱片 (the
-// covers are the hero; 网格 ↔ 墙), 我喜欢 (the hearts) and 最近播放. Sorting, 唱片盒 and
-// the music filters sit behind one 「筛选」 button, shown from 12 records on.
-const PREFS_KEY = 'flow-cabin-shelf-view-v1';
-// Only the display mode is remembered; the shelf always opens on 唱片.
-const readMode = () => { try { return JSON.parse(localStorage.getItem(PREFS_KEY) || '{}')?.mode === 'wall' ? 'wall' : 'grid'; } catch { return 'grid'; } };
-const savePrefs = (value) => { try { localStorage.setItem(PREFS_KEY, JSON.stringify(value)); } catch { /* a convenience only */ } };
-const MODES = [{ id: 'grid', label: '网格' }, { id: 'wall', label: '墙' }];
+// 唱片架 (docs/design/3.0-design.md §6.2, re-skinned as an object in docs/v3-desk-design.md):
+// a walnut bookcase close-up. The record boxes (唱片盒) and the three views stand on the shelf as
+// leather ring binders, the A–Z index book stands at the end, and the album wall hangs beside
+// it as a framed poster. Taking one down opens it on the desk; 放回 puts it back, and so do
+// Esc, a press outside the case, and the plate in the corner.
+// Binder and book looks follow DEsk's shelf (https://github.com/fyzugx/DEsk, MIT, (c) 2026 The DEsk authors, draw.c).
+const OBJECT = 'shelf-object-open';
 
-function EmptyShelf({ openAdd }) {
-  const web = usesBrowserCollection() && !isAndroid();
-  return <div className="listen-empty-shelf">
-    <span className="listen-empty-art" aria-hidden="true"><i/><i/><i/></span>
-    <p>架子还空着。放上第一张唱片，小屋就有了声音。</p>
-    <div className="listen-row-actions">{web ? <button type="button" className="listen-primary" onClick={() => openAdd('', 'manual')}><Plus size={16}/>手动添加</button> : <button type="button" className="listen-primary" onClick={() => openAdd('', 'catalog')}><Search size={16}/>搜索添加</button>}<button type="button" className="listen-secondary" onClick={() => openAdd('', 'local')}><FolderOpen size={16}/>导入本地音乐</button></div>
-  </div>;
+function Frame({ items, openWall }) {
+  const tiles = useMemo(() => items.slice(0, 9).map((item) => ({ id: item.id, cover: item.cover || '', tone: item.cover ? '' : sleeveTone(item) })), [items]);
+  return <button type="button" className="shelf-frame" aria-label="专辑墙" title="专辑墙 · 把喜欢的封面拼成一张海报" onClick={openWall}>
+    <span className="shelf-frame-mat" aria-hidden="true">{tiles.length ? tiles.map((tile) => tile.cover ? <img key={tile.id} src={tile.cover} alt="" loading="lazy" draggable="false" referrerPolicy="no-referrer"/> : <i key={tile.id} style={{ background: tile.tone }}/>) : <b>空</b>}</span>
+    <span className="shelf-frame-plate" aria-hidden="true">专辑墙</span>
+  </button>;
 }
 
-function FilterButton({ items, filters, setFilters, count }) {
-  const pop = usePopover(), active = activeFilterCount(filters) + (filters.sort !== DEFAULT_FILTERS.sort ? 1 : 0);
-  const patchFilters = (patch) => setFilters((old) => ({ ...old, ...(typeof patch === 'function' ? patch(old) : patch) }));
-  return <span className="listen-pop-anchor">
-    <button ref={pop.button} type="button" className={`listen-secondary listen-filter-button${active ? ' is-active' : ''}`} aria-expanded={pop.open} aria-label={active ? `筛选 · 已调整 ${active} 项` : '筛选'} onClick={pop.toggle}><Wand2 size={14}/>筛选{active > 0 && <b className="listen-badge">{active}</b>}</button>
-    {pop.open && <div ref={pop.panel} className="listen-pop listen-filters" role="group" aria-label="排序与筛选" tabIndex={-1}>
-      <div className="listen-filter-row"><label>排序<select data-autofocus aria-label="排序方式" value={filters.sort} onChange={(event) => setFilters({ ...filters, sort: event.target.value })}>{Object.entries(SORTS).map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label><label>类型<select aria-label="筛选类型" value={filters.type} onChange={(event) => setFilters({ ...filters, type: event.target.value })}><option value="all">全部</option><option value="album">专辑</option><option value="song">单曲</option><option value="playlist">歌单</option></select></label></div>
-      <RecordBoxControls items={items} filters={filters} setFilters={patchFilters} count={count}/>
-      <div className="listen-row-actions"><button type="button" className="listen-secondary" onClick={() => setFilters({ ...DEFAULT_FILTERS })}>全部恢复</button><button type="button" className="listen-primary" onClick={() => pop.close()}>好了</button></div>
-    </div>}
-  </span>;
-}
+export default function RecordShelf({ close, visible, filters, setFilters, openAdd, openRecord, openWall, openSmart }) {
+  const { items, commands, deck, notify } = useCabinRuntime(), labs = useLabs(), library = useRecordLibrary();
+  const [likes] = useLikes(notify);
+  const [taken, setTaken] = useState('records');
+  const spines = useRef({}), object = useRef(null), timers = useRef([]);
+  const boxes = library?.boxes || [];
+  const counts = useMemo(() => ({ records: items.length, liked: likedSongs(likes, items).length, recent: recentSongs(deck.player?.listens, items).length }), [items, likes, deck.player?.listens]);
+  const binders = useMemo(() => shelfBinders({ boxes, items, counts }), [boxes, items, counts]);
+  const binder = taken === 'book' ? null : binderById(binders, taken);
+  const scopeItems = useMemo(() => binder?.kind === 'box' ? boxItems(items, boxes.find((box) => box.id === binder.box)) : items, [binder, boxes, items]);
 
-function RecordsView({ items, visible, filters, setFilters, openAdd, openRecord, openWall, mode, setMode }) {
-  const { deck, commands } = useCabinRuntime(), [query, setQuery] = useState('');
-  const list = useMemo(() => shelfRecords(items, visible, query), [items, visible, query]);
-  const showFilters = filtersShown(items.length);
-  if (!items.length) return <EmptyShelf openAdd={openAdd}/>;
-  const playing = (item) => String(deck.deckItem?.id) === String(item.id);
-  return <>
-    <div className="listen-toolbar">
-      <input type="search" className="listen-search" aria-label="搜索唱片架" placeholder="搜索唱片或音乐人" value={query} onChange={(event) => setQuery(event.target.value)}/>
-      <Segmented items={MODES} value={mode} onChange={setMode} label="唱片的展示方式" className="listen-segmented is-small"/>
-      {showFilters && <FilterButton items={items} filters={filters} setFilters={setFilters} count={list.length}/>}
-    </div>
-    {!list.length && <p className="listen-note">没有找到相符的唱片。<button type="button" className="listen-link" onClick={() => { setQuery(''); setFilters({ ...DEFAULT_FILTERS }); }}>清除筛选</button></p>}
-    {mode === 'wall' ? <>
-      <ul className="listen-wall" aria-label="专辑墙">{list.map((item) => <li key={item.id} data-playing={playing(item) || undefined}><button type="button" aria-label={`播放 ${item.title}`} title={`${item.title} · ${item.artist || ''}`} onClick={() => commands.load(item)}><Cover item={item}/></button></li>)}</ul>
-      <p className="listen-note">想把这面墙存成一张图？<button type="button" className="listen-link" onClick={openWall}><Grid3X3 size={14}/>制作专辑墙海报</button></p>
-    </> : <ul className="listen-grid">{list.map((item) => <li key={item.id} data-playing={playing(item) || undefined}>
-      <button type="button" className="listen-grid-cover" aria-label={`播放 ${item.title}`} onClick={() => commands.load(item)}><Cover item={item}/><span className="listen-grid-play" aria-hidden="true"><Play size={14}/></span></button>
-      <button type="button" className="listen-grid-title" onClick={() => openRecord(item.id)}><strong>{item.title}</strong><small>{item.artist}</small></button>
-      <button type="button" className="listen-grid-queue" aria-label={`${deck.isQueued(item.id) ? '移出待播' : '加入待播'} ${item.title}`} onClick={() => deck.isQueued(item.id) ? deck.player.remove(item.id) : deck.player.enqueue(item.id)}>{deck.isQueued(item.id) ? '已在待播' : '＋待播'}</button>
-    </li>)}</ul>}
-  </>;
-}
-
-function SongRow({ song, cover, meta, time, current, onPlay, action }) {
-  return <li className={`${song.available ? '' : 'is-unavailable'}${current ? ' is-current' : ''}`}>
-    <button type="button" className="listen-song" disabled={!song.available} aria-label={song.available ? `播放《${song.title}》` : `《${song.title}》· ${song.reason || '已不在唱片架上'}`} title={song.available ? `${song.title} · ${meta}` : song.reason} onClick={onPlay}>
-      <Cover item={song.item || { title: song.record || song.title, artist: song.artist }} src={cover}/>
-      <span className="listen-song-text"><strong>{displayTitle(song.title)}</strong><small>{meta}</small></span>
-      <time>{time}</time>
-    </button>
-    {action}
-  </li>;
-}
-
-function LikedView({ items }) {
-  const { deck, notify } = useCabinRuntime(), [likes, toggle] = useLikes(notify);
-  const songs = useMemo(() => likedSongs(likes, items), [likes, items]);
-  const playable = songs.filter((song) => song.available).length;
-  const play = (shuffle) => {
-    const order = likePlayOrder(songs, { shuffle });
-    if (!order.length) { notify('「我喜欢」里的歌暂时都不在唱片架上。'); return; }
-    const queued = deck.replaceQueue(likeQueueEntries(order), order[0].id);
-    deck.load(order[0].item, order[0].track);
-    notify(`${shuffle ? '随机播放' : '正在播放'}「我喜欢」· ${order.length} 首${queued ? '' : '（待播未能更新，请检查存储空间）'}`, queued ? undefined : { tone: 'error' });
+  useEffect(() => { playSfx('binder-open'); return () => timers.current.forEach(clearTimeout); }, []);
+  // After a move the focus goes where the hand went: into what was taken, or back to its place on the shelf.
+  const focusAfter = useRef('');
+  useEffect(() => {
+    const target = focusAfter.current; if (!target) return;
+    focusAfter.current = '';
+    (target === 'object' ? object.current?.querySelector('.shelf-tabs [aria-checked=true]') : spines.current[target])?.focus({ preventScroll: true });
+  }, [taken]);
+  const take = (id) => {
+    if (taken === id) { playSfx('binder-close'); focusAfter.current = id; setTaken(''); return; }
+    focusAfter.current = 'object';
+    playSfx('binder-lift');
+    timers.current.push(setTimeout(() => playSfx('binder-open'), moveSeconds(0.3) * 1000));
+    setTaken(id);
   };
-  const unlike = (song) => { if (toggle(song)) notify(`已从「我喜欢」移除《${song.title}》。`, { action: { label: '撤销', run: () => toggle({ id: song.id, index: song.index, title: song.title, artist: song.artist }) } }); };
-  if (!songs.length) return <div className="listen-empty-shelf is-small"><span className="listen-empty-heart" aria-hidden="true"><HeartIcon size={24}/></span><p>还没有喜欢的歌。听到心动的那一首，点一下正在播放条上的 ♥，它就会收在这里。</p></div>;
-  const here = (song) => String(deck.record?.id) === String(song.id) && deck.trackIndex === song.track;
-  return <>
-    <div className="listen-toolbar"><span className="listen-count">{songs.length} 首喜欢{playable < songs.length ? ` · ${songs.length - playable} 首暂不可播` : ''}</span><span className="listen-row-actions"><button type="button" className="listen-primary" disabled={!playable} onClick={() => play(false)}><Play size={14}/>全部播放</button><button type="button" className="listen-secondary" disabled={!playable} onClick={() => play(true)}><ShufflePixel size={14}/>随机播放</button></span></div>
-    <ol className="listen-songs" aria-label="我喜欢的歌">{songs.map((song) => <SongRow key={song.key} song={song} current={here(song)} cover={song.item ? trackCover(song.item, song.track) : ''} meta={(song.available ? [song.artist, song.record] : [song.artist, song.reason]).filter(Boolean).join(' · ') || '心流小屋'} time={shortDay(song.at)} onPlay={() => deck.load(song.item, song.track)}
-      action={<button type="button" className="listen-icon listen-like" aria-pressed="true" aria-label={`取消喜欢《${song.title}》`} title="取消喜欢" onClick={() => unlike(song)}><HeartIcon filled/></button>}/>)}</ol>
-  </>;
-}
+  // The binder comes off its place on the shelf and grows into the open one: from the
+  // spine's rectangle to its own, on the same spring the room's camera uses.
+  const shown = binder || taken === 'book' ? taken : '';
+  useLayoutEffect(() => {
+    const node = object.current, spine = spines.current[shown];
+    if (!node || !spine || !node.animate) return;
+    const a = spine.getBoundingClientRect(), b = node.getBoundingClientRect();
+    if (!a.width || !b.width) return;
+    const dx = a.left + a.width / 2 - (b.left + b.width / 2), dy = a.top + a.height / 2 - (b.top + b.height / 2);
+    node.animate([{ transform: `translate(${dx}px, ${dy}px) scale(.2)`, opacity: 0 }, { opacity: 1, offset: 0.2 }, { transform: 'none', opacity: 1 }], { duration: moveSeconds(0.66) * 1000, easing: EASE_LOOK, fill: 'backwards' });
+  }, [shown]);
 
-function RecentView({ items, showRecords }) {
-  const { deck } = useCabinRuntime(), songs = useMemo(() => recentSongs(deck.player?.listens, items), [deck.player?.listens, items]);
-  if (!songs.length) return <div className="listen-empty-shelf is-small"><p>还没有听过的歌。放一张唱片，听过的会按时间留在这里。</p><div className="listen-row-actions"><button type="button" className="listen-secondary" onClick={showRecords}><Album size={14}/>去唱片里挑一张</button></div></div>;
-  return <ol className="listen-songs" aria-label="最近播放的歌">{songs.map((song) => <SongRow key={`${song.id}:${song.index}:${song.at}`} song={{ ...song, reason: '这张唱片已不在唱片架上' }} current={String(deck.record?.id) === String(song.id) && deck.trackIndex === song.index} cover={song.item ? trackCover(song.item, song.index) : ''} meta={(song.available ? [song.artist, song.record] : [song.artist, '这张唱片已不在唱片架上']).filter(Boolean).join(' · ')} time={shortDay(song.at)} onPlay={() => deck.player?.playListen(song)}/>)}</ol>;
-}
-
-export default function RecordShelf({ visible, filters, setFilters, openAdd, openRecord, openWall, openSmart }) {
-  const { items, commands } = useCabinRuntime(), labs = useLabs();
-  const [view, setView] = useState('records'), [mode, setModeState] = useState(readMode);
-  const setMode = (value) => { setModeState(value); savePrefs({ mode: value }); };
-  return <section className="listen-shelf" aria-label="唱片架">
-    <div className="listen-shelf-top">
-      <Segmented items={SHELF_VIEWS} value={view} onChange={setView} label="唱片架视图" className="listen-segmented"/>
-      <span className="listen-row-actions">
-        {labs.smartTurntable && openSmart && <button type="button" className="listen-secondary" onClick={openSmart}><Sparkles size={14}/>让小屋挑一张</button>}
-        <button type="button" className="listen-secondary" onClick={() => commands.open('music-settings')}>音源与账号</button>
-        {items.length > 0 && <button type="button" className="listen-primary" onClick={() => openAdd()}><Plus size={14}/>添加到唱片架</button>}
-      </span>
-    </div>
-    {view === 'records' && <RecordsView items={items} visible={visible} filters={filters} setFilters={setFilters} openAdd={openAdd} openRecord={openRecord} openWall={openWall} mode={mode} setMode={setMode}/>}
-    {view === 'liked' && <LikedView items={items}/>}
-    {view === 'recent' && <RecentView items={items} showRecords={() => setView('records')}/>}
-  </section>;
+  // A press that starts and ends on the bare wall or the bare desk puts the shelf back
+  // (the same rule Dialog uses for its backdrop).
+  const pressed = useRef(false);
+  const away = { onPointerDown: (event) => { pressed.current = event.target === event.currentTarget; }, onClick: (event) => { if (pressed.current && event.target === event.currentTarget) close(); pressed.current = false; } };
+  const bookOpen = taken === 'book';
+  return <Dialog variant="full" title="唱片架" label="唱片架" close={close} className="shelf-dialog" initialFocus=".shelf-tabs [aria-checked=true], .shelf-typing input">
+    <section className="listen-shelf shelf-room" aria-label="唱片架" {...away}>
+      <header className="shelf-cornice">
+        <BrassPlate className="shelf-name">唱片架</BrassPlate>
+        <span className="shelf-plates">
+          {labs.smartTurntable && openSmart && <BrassPlate onClick={openSmart}>让小屋挑一张</BrassPlate>}
+          <BrassPlate onClick={() => commands.open('music-settings')}>音源与账号</BrassPlate>
+          {items.length > 0 && <BrassPlate onClick={() => openAdd()}>添加到唱片架</BrassPlate>}
+          <BrassPlate className="cabin-dialog-close shelf-put-back" aria-label="关闭唱片架（放回）" arrow="↓" onClick={close}>放回</BrassPlate>
+        </span>
+      </header>
+      <div className="shelf-bay">
+        <div className="shelf-row" onWheel={(event) => { const row = event.currentTarget; if (row.scrollWidth > row.clientWidth && Math.abs(event.deltaY) > Math.abs(event.deltaX)) row.scrollLeft += event.deltaY; }}>
+          <ul className="shelf-binders" aria-label="活页夹">
+            {binders.map((entry) => {
+              const shape = binderShape(entry.id), open = taken === entry.id;
+              return <li key={entry.id}><button type="button" ref={(node) => { spines.current[entry.id] = node; }} className={`shelf-binder is-${entry.colour.id}${open ? ' is-taken' : ''}`} aria-expanded={open} aria-controls={open ? OBJECT : undefined} aria-label={`${entry.label}活页夹，${entry.count} ${entry.unit}`}
+                style={{ '--spine': entry.colour.spine, '--edge': entry.colour.edge, '--worn': entry.colour.worn, '--w': `${shape.width}px`, '--h': shape.height, '--tilt': `${shape.tilt}deg` }} onClick={() => take(entry.id)}>
+                <span className="shelf-label"><b>{entry.label}</b><i>{entry.count}</i></span>
+              </button></li>;
+            })}
+          </ul>
+          <ul className="shelf-fixtures" aria-label="索引与专辑墙">
+            <li><button type="button" ref={(node) => { spines.current.book = node; }} className={`shelf-book${bookOpen ? ' is-taken' : ''}`} aria-expanded={bookOpen} aria-controls={bookOpen ? OBJECT : undefined} aria-label="索引本，按首字母和名字查找" onClick={() => take('book')}>
+              <span className="shelf-book-label"><b>索引</b><Search size={16}/><em>A–Z</em><small>{items.length}</small></span>
+            </button></li>
+            <li><Frame items={items} openWall={openWall}/></li>
+          </ul>
+        </div>
+        <div className="shelf-board" aria-hidden="true"/>
+      </div>
+      <div className="shelf-desk" {...away}>
+        {binder && <Binder key={binder.id} ref={object} id={OBJECT} binder={binder} scopeItems={scopeItems} visible={visible} filters={filters} setFilters={setFilters} openAdd={openAdd} openRecord={openRecord} openWall={openWall} onPutBack={() => take(binder.id)}/>}
+        {bookOpen && <IndexBook ref={object} id={OBJECT} items={items} openRecord={openRecord} openAdd={openAdd} onPutBack={() => take('book')}/>}
+        {!shown && <p className="shelf-hint">取一本下来看看：点一本活页夹，或是那本索引。</p>}
+      </div>
+    </section>
+  </Dialog>;
 }
