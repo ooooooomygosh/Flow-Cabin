@@ -1,0 +1,181 @@
+@layer guards, reset, features, skin, overrides;
+/* 信箱 (a lab feature) inside the diary: letters stand in a red post box and are flipped through
+   on a spring; each has a turned-down corner with 阅读 / 标为已读 / 丢掉 behind it. Letters are typed
+   (typewriter face), unread ones carry a red mark. Geometry and motion: post-box.mjs / PostBox.jsx,
+   ported from DEsk (https://github.com/fyzugx/DEsk, MIT, (c) 2026 The DEsk authors).
+   --curl is the registered length of a sheet's turned-down corner (src/props/index.mjs). */
+@layer overrides {
+  .cabin-journal {
+    --typewriter: 'Courier Prime', 'Courier New', 'American Typewriter', ui-monospace, 'Songti SC', 'Noto Serif CJK SC', 'Source Han Serif SC', 'STSong', 'SimSun', monospace;
+    --stamp-red: #a3301d;
+    --pen-navy: #2f3f66;
+  }
+
+  /* ── the post box ──────────────────────────────────────────────────── */
+  .cabin-journal .fs-mail-spread { grid-template-columns: minmax(340px, .92fr) 16px minmax(0, 1.08fr); }
+  .cabin-journal .fs-postbox { position: relative; flex: none; height: 392px; margin: 10px 4px 4px; }
+  /* lacquer body with a lid, worn at the edges */
+  .cabin-journal .fs-postbox::before {
+    content: ''; position: absolute; inset: 0 0 34px; border-radius: var(--ui-radius-sm);
+    background:
+      linear-gradient(180deg, rgba(255, 214, 190, .30) 0 30px, rgba(60, 8, 4, .34) 30px 32px, transparent 32px),
+      var(--paper-grain, none) 0 0 / 96px,
+      radial-gradient(ellipse at 18% 6%, rgba(255, 190, 160, .38), transparent 46%),
+      linear-gradient(172deg, #c3422f, #9d2c1e 55%, #7b1f15);
+    box-shadow: inset 0 0 0 1px rgba(255, 200, 170, .28), inset 0 -4px 9px rgba(40, 4, 2, .5),
+      calc(var(--sx, 2) * 4px) calc(var(--sy, 3) * 4px) 5px rgba(15, 10, 8, calc(.4 * var(--lamp-k, .6))),
+      calc(var(--sx, 2) * 12px) calc(var(--sy, 3) * 12px) 20px rgba(15, 10, 8, calc(.32 * var(--lamp-k, .6)));
+  }
+  /* the brass lip of the letter slot */
+  .cabin-journal .fs-postbox::after {
+    content: ''; position: absolute; z-index: 2; left: 12px; right: 12px; top: 30px; height: 6px; pointer-events: none;
+    background: linear-gradient(180deg, #d7bf84, #a9803c 55%, #6e5224); box-shadow: 0 1px 1px rgba(30, 10, 4, .6);
+  }
+  .cabin-journal .fs-postbox-slot {
+    position: absolute; z-index: 1; left: 14px; right: 14px; top: 38px; height: 304px; background: linear-gradient(180deg, #1c0d08, #2c140c 70%, #3a1a10);
+    box-shadow: inset 0 8px 14px rgba(0, 0, 0, .72), inset 0 0 0 2px rgba(0, 0, 0, .5), inset 8px 0 10px -4px rgba(0, 0, 0, .5), inset -8px 0 10px -4px rgba(0, 0, 0, .5);
+    clip-path: inset(0 0 -420px 0);
+  }
+  /* the door lies open in front of the box; letters that have been flipped fall onto it */
+  .cabin-journal .fs-postbox-door {
+    position: absolute; z-index: 0; left: 8px; right: 8px; bottom: 0; height: 66px; clip-path: polygon(5% 0, 95% 0, 100% 100%, 0 100%);
+    background: linear-gradient(180deg, rgba(0, 0, 0, .28), transparent 14px), var(--paper-grain, none) 0 0 / 96px, linear-gradient(172deg, #b53b2a, #8a2519 60%, #6d1a11);
+    box-shadow: inset 0 3px 0 rgba(255, 200, 170, .3);
+  }
+  .cabin-journal .fs-postbox-flag { position: absolute; z-index: 3; right: 22px; top: -20px; width: 4px; height: 36px; background: linear-gradient(90deg, #7d5e2a, #d7bf84, #7d5e2a); transform-origin: 50% 100%; transform: rotate(78deg); transition: transform calc(.4s * var(--pace, 1)) var(--ease-drawer, ease-out); }
+  .cabin-journal .fs-postbox-flag::after { content: ''; position: absolute; top: 0; left: 4px; width: 22px; height: 15px; background: linear-gradient(180deg, #d8402d, #a3301d); clip-path: polygon(0 0, 100% 0, 78% 50%, 100% 100%, 0 100%); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .3); }
+  .cabin-journal .fs-postbox[data-unread='true'] .fs-postbox-flag { transform: rotate(0deg); }
+
+  /* ── the standing letters ──────────────────────────────────────────── */
+  .cabin-journal .fs-mail-list { position: absolute; inset: 0; display: block; margin: 0; padding: 0; overflow: visible; list-style: none; perspective: 900px; perspective-origin: 50% -45%; }
+  .cabin-journal .fs-mail-letter {
+    --curl: 18px;
+    position: absolute; left: 4%; right: 4%; bottom: 14px; height: 172px; min-width: 0; transform-origin: 50% 100%; will-change: transform;
+    color: #2e2318; font-family: var(--typewriter);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, .55) 0 2px, rgba(0, 0, 0, .12) 2px 3px, transparent 3px),
+      repeating-linear-gradient(180deg, transparent 0 21px, rgba(60, 80, 120, .20) 21px 22px) 0 70px / 100% 100% no-repeat,
+      linear-gradient(90deg, transparent 0 24px, rgba(176, 60, 48, .32) 24px 25px, transparent 25px) 0 70px / 100% 100% no-repeat,
+      var(--paper-grain, none) 0 0 / 96px,
+      linear-gradient(rgba(243, 235, 218, .42), rgba(243, 235, 218, .42)),
+      var(--paper-tile, none) 0 0 / 128px,
+      linear-gradient(172deg, #f8f1e1, #efe6d3 55%, #e6d8b9);
+    clip-path: polygon(0 0, calc(100% - var(--curl)) 0, 100% var(--curl), 100% 100%, 0 100%);
+    transition: --curl calc(.34s * var(--pace, 1)) var(--ease-drawer, ease-out);
+  }
+  .cabin-journal .fs-mail-letter.is-out { background-color: #f3eee0; }
+  .cabin-journal .fs-mail-letter.is-ear-open { --curl: 108px; }
+  .cabin-journal .fs-mail-letter::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: #1a0d08; opacity: var(--dim, 0); }
+  /* a letter that has been flipped lies face down: its back is old paper with the print faintly through it */
+  .cabin-journal .fs-mail-letter[data-fallen='true'] { background: var(--paper-grain, none) 0 0 / 96px, linear-gradient(172deg, #e3d6b8, #d6c6a0 60%, #c9b88e); }
+  .cabin-journal .fs-mail-letter[data-fallen='true'] .fs-mail-face { cursor: pointer; opacity: .12; }
+  .cabin-journal .fs-mail-letter[data-fallen='true']::before { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0, 0, 0, .0), rgba(60, 40, 15, .22)); pointer-events: none; }
+  .cabin-journal .fs-mail-list .fs-mail-face {
+    position: absolute; inset: 0; display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; grid-template-rows: auto 1fr; align-items: start; column-gap: 9px; row-gap: 0;
+    width: 100%; min-height: 0; padding: 8px 34px 8px 8px; border: 0; border-radius: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; box-shadow: none;
+  }
+  .cabin-journal .fs-mail-list .fs-mail-face:hover { background: none; }
+  .cabin-journal .fs-mail-list .fs-mail-face:focus-visible { outline: 2px solid var(--journal-ink-hi); outline-offset: -3px; }
+  .cabin-journal .fs-mail-direction { grid-row: 1 / span 2; width: 30px; height: 30px; margin-top: 1px; border: 0; border-radius: var(--ui-radius-sm); color: #fbf3de; background: linear-gradient(180deg, #7b5a39, #5b3f25); font: 700 14px/30px var(--ui-font-display); text-align: center; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .3); }
+  .cabin-journal .fs-mail-direction.is-out { background: linear-gradient(180deg, #3d5470, #2c3e56); }
+  .cabin-journal .fs-mail-row-copy { grid-column: 2; grid-row: 1 / span 2; display: grid; align-content: start; gap: 1px; min-width: 0; }
+  .cabin-journal .fs-mail-row-copy strong { overflow: hidden; font: 700 14px/20px var(--typewriter); color: #2e2318; text-overflow: ellipsis; white-space: nowrap; }
+  .cabin-journal .fs-mail-from { font: italic 12px/16px var(--typewriter); color: var(--pen-navy); white-space: nowrap; }
+  .cabin-journal .fs-mail-row-copy small { margin-top: 24px; font: 12px/22px var(--typewriter); color: #4d3f2a; white-space: normal; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+  .cabin-journal .fs-mail-list time { grid-column: 3; grid-row: 1; align-self: start; padding: 3px 0 0; font: 12px/16px var(--typewriter); color: #4d3f2a; }
+  .cabin-journal .fs-mail-unread-dot { position: absolute; top: 12px; right: 34px; width: 10px; height: 10px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #ef5a45, #b3281b 70%); box-shadow: 0 0 0 1.5px rgba(255, 244, 230, .9), 0 0 0 2.5px rgba(163, 48, 29, .5); }
+  .cabin-journal .fs-mail-letter.is-unread .fs-mail-row-copy strong { font-weight: 700; }
+  .cabin-journal .fs-mail-list .fs-mail-face.is-selected strong { background: linear-gradient(transparent 60%, rgba(247, 224, 112, .8) 60%); }
+  .cabin-journal .fs-mail-letter[data-front='false'] .fs-mail-row-copy small { visibility: hidden; }
+  /* the turned-down corner: a real button, with what is printed on the back of the fold */
+  .cabin-journal .fs-mail-fold { position: absolute; top: 0; right: 0; z-index: 2; width: var(--curl); height: var(--curl); pointer-events: none; clip-path: polygon(0 0, 100% 100%, 0 100%); background: linear-gradient(225deg, #fbf7ec 0%, #ede7d9 50%, #cdc4af 100%); }
+  .cabin-journal .fs-mail-list .fs-mail-ear {
+    position: absolute; top: 0; right: 0; z-index: 4; display: block; width: max(34px, var(--curl)); height: max(34px, var(--curl)); min-height: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; cursor: pointer; opacity: 1;
+  }
+  .cabin-journal .fs-mail-list .fs-mail-ear:focus-visible { outline: 2px solid var(--journal-ink-hi); outline-offset: -2px; }
+  .cabin-journal .fs-mail-acts { position: absolute; top: 0; right: 0; z-index: 5; display: flex; flex-direction: column; justify-content: flex-end; width: var(--curl); height: var(--curl); }
+  .cabin-journal .fs-mail-list .fs-mail-act {
+    position: relative; display: block; width: auto; min-height: 0; height: 28px; margin: 0; padding: 0 0 0 5px; border: 0; border-radius: 0; background: none; box-shadow: none; color: #2e2318; font: 700 13px/28px var(--ui-font-display); letter-spacing: .06em; text-align: left; cursor: pointer; white-space: nowrap;
+  }
+  .cabin-journal .fs-mail-list .fs-mail-act.is-open { order: 1; }
+  .cabin-journal .fs-mail-list .fs-mail-act.is-trash, .cabin-journal .fs-mail-list .fs-mail-act.is-restore { order: 2; }
+  .cabin-journal .fs-mail-list .fs-mail-act.is-read { order: 3; }
+  .cabin-journal .fs-mail-list .fs-mail-act:hover, .cabin-journal .fs-mail-list .fs-mail-act:focus-visible { background: none; outline: none; text-decoration: underline; text-decoration-color: #4a3b28; text-decoration-thickness: 1.5px; text-underline-offset: 4px; }
+  .cabin-journal .fs-mail-list-empty { position: absolute; left: 10%; right: 10%; bottom: 14px; z-index: 5; min-height: 0; height: 168px; align-content: center; padding: 10px; background: linear-gradient(172deg, #f8f1e1, #e6d8b9); box-shadow: inset 0 0 0 1px rgba(95, 72, 40, .25); font-family: var(--typewriter); }
+  .cabin-journal .fs-mail-list-empty p, .cabin-journal .fs-mail-list-empty small { font-family: var(--typewriter); }
+
+  /* ── left page furniture: search, filters, pages, the unfinished draft ─ */
+  .cabin-journal .fs-mail-side { gap: 8px; }
+  .cabin-journal .fs-mail-art { display: none; }
+  .cabin-journal .fs-mail-search .sr-only, .cabin-journal .fs-mail-textarea-label .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .cabin-journal .fs-mail-title h3 { font: 600 16px/24px var(--ui-font-display); letter-spacing: .08em; }
+  .cabin-journal .fs-mail-title p { color: var(--journal-paper-faint); }
+  .cabin-journal .fs-mail-write, .cabin-journal .fs-mail-send {
+    color: #fffaf0; border: 1px solid #5f3d12; border-radius: var(--ui-radius); text-shadow: 0 -1px rgba(60, 35, 8, .45);
+    background: linear-gradient(#9a6a2c, #7d5019); box-shadow: inset 0 1px rgba(255, 224, 168, .35), 0 1px rgba(60, 35, 8, .22);
+  }
+  .cabin-journal .fs-mail-write:hover, .cabin-journal .fs-mail-send:hover:not(:disabled) { background: linear-gradient(#a8763a, #8a5a22); }
+  .cabin-journal .fs-mail-write:active, .cabin-journal .fs-mail-send:active:not(:disabled) { transform: translateY(1px); box-shadow: inset 0 1px 2px rgba(40, 20, 4, .4); }
+  .cabin-journal .fs-mail-search input, .cabin-journal .fs-mail-journal-picker input[type=search], .cabin-journal .fs-mail-textarea-label textarea {
+    border: 0; border-bottom: 1.5px solid rgba(76, 58, 30, .55); border-radius: 0; background: rgba(255, 252, 240, .5); font-family: var(--typewriter); color: #2e2318;
+  }
+  .cabin-journal .fs-mail-search input::placeholder { color: #6a5a40; }
+  .cabin-journal .fs-mail-filters button, .cabin-journal .fs-mail-pages button, .cabin-journal .fs-mail-quiet {
+    min-height: 28px; color: var(--journal-paper-ink); border: 1px solid #ad9163; border-radius: var(--ui-radius-sm);
+    background: linear-gradient(#f7efdf, #e4d4b2); box-shadow: inset 0 1px rgba(255, 252, 242, .8), 0 1px rgba(90, 60, 25, .14);
+  }
+  .cabin-journal .fs-mail-filters button[aria-pressed='true'], .cabin-journal .fs-mail-organize [aria-pressed=true] {
+    color: #fffaf0; border-color: #5f3d12; background: linear-gradient(#9a6a2c, #7d5019); font-weight: 700;
+  }
+  .cabin-journal .fs-mail-pages { color: var(--journal-paper-faint); }
+  .cabin-journal .fs-mail-draft { color: #3f3320; border: 0; border-radius: 0; background: #fce066; box-shadow: calc(var(--sx, 2) * 3px) calc(var(--sy, 3) * 3px) 5px rgba(15, 10, 8, calc(.3 * var(--lamp-k, .6))); transform: rotate(-.6deg); font-family: 'Kaiti SC', 'STKaiti', 'KaiTi', 'LXGW WenKai', serif; }
+  .cabin-journal .fs-mail-draft > span { background: #7d5019; border-radius: 0; }
+
+  /* ── the letter on the right page: typed, on a sheet, with a red margin ── */
+  .cabin-journal .fs-mail-main { padding-left: 28px; }
+  .cabin-journal .fs-mail-thread-head h3, .cabin-journal .fs-mail-composer-head h3 { font: 600 17px/24px var(--ui-font-display); letter-spacing: .05em; }
+  .cabin-journal .fs-mail-status { color: var(--stamp-red); border: 2px solid var(--stamp-red); border-radius: 0; font: 700 12px/16px var(--typewriter); letter-spacing: .1em; transform: rotate(-3deg); opacity: .85; }
+  .cabin-journal .fs-mail-status.is-sending { color: #7d5019; border-color: #7d5019; }
+  .cabin-journal .fs-mail-paper {
+    padding: 14px 18px 12px 38px; border: 0; background: var(--paper-grain, none) 0 0 / 96px, linear-gradient(rgba(243, 235, 218, .42), rgba(243, 235, 218, .42)), var(--paper-tile, none) 0 0 / 128px, linear-gradient(172deg, #fbf5e6, #f1e8d4 60%, #e9dcc0);
+    box-shadow: inset 0 0 0 1px rgba(95, 72, 40, .2), calc(var(--sx, 2) * 4px) calc(var(--sy, 3) * 4px) 7px rgba(15, 10, 8, calc(.3 * var(--lamp-k, .6))); image-rendering: auto; transform: rotate(-.3deg);
+  }
+  .cabin-journal .fs-mail-paper::before { inset: 0; border: 0; background: linear-gradient(90deg, transparent 0 28px, rgba(176, 60, 48, .34) 28px 29px, transparent 29px), repeating-linear-gradient(180deg, transparent 0 22px, rgba(60, 80, 120, .16) 22px 23px) 0 36px / 100% 100% no-repeat; }
+  .cabin-journal .fs-mail-paper header, .cabin-journal .fs-mail-paper footer { color: #4d3f2a; font-family: var(--typewriter); }
+  .cabin-journal .fs-mail-lines { position: relative; padding: 8px 2px 8px; gap: 0; }
+  .cabin-journal .fs-mail-lines p { font: 14px/23px var(--typewriter); color: #2e2318; letter-spacing: .01em; }
+  .cabin-journal .fs-mail-sign { font: italic 13px/18px var(--typewriter); color: var(--pen-navy); }
+  .cabin-journal .fs-mail-evidence li { color: #2e2318; border: 1px solid rgba(76, 58, 30, .3); border-radius: 0; background: rgba(255, 252, 240, .6); font-family: var(--typewriter); }
+  .cabin-journal .fs-mail-evidence li > span { color: #fff8e8; border-radius: 0; }
+  .cabin-journal .fs-mail-reply { border-top: 1px dashed rgba(76, 58, 30, .4); }
+  .cabin-journal .fs-mail-toast { color: #2b4a2a; background: #bae394; border: 0; border-radius: 0; box-shadow: calc(var(--sx, 2) * 2px) calc(var(--sy, 3) * 2px) 4px rgba(15, 10, 8, calc(.25 * var(--lamp-k, .6))); transform: rotate(.4deg); font-family: 'Kaiti SC', 'STKaiti', 'KaiTi', 'LXGW WenKai', serif; font-size: 14px; }
+  .cabin-journal .fs-mail-toast.is-error { color: #6e1f17; background: #faadbd; }
+  .cabin-journal .fs-mail-error { color: #6e1f17; background: #faadbd; border: 0; border-radius: 0; }
+  .cabin-journal .fs-mail-pending, .cabin-journal .fs-mail-context { border: 1px dashed rgba(76, 58, 30, .4); border-radius: 0; background: rgba(255, 252, 240, .4); }
+  .cabin-journal .fs-mail-textarea-label textarea { background-color: #fffbee; border: 1px solid rgba(76, 58, 30, .35); border-bottom-width: 1.5px; line-height: 23px; font-size: 14px; }
+  .cabin-journal .fs-mail-textarea-label textarea::placeholder { color: #6a5a40; }
+  .cabin-journal .fs-mail-unread-dot, .cabin-journal .fs-tab-unread { border-radius: 50%; }
+
+  /* ── small windows ─────────────────────────────────────────────────── */
+  @media (max-height: 800px) {
+    .cabin-journal .fs-postbox { height: 340px; }
+    .cabin-journal .fs-postbox-slot { height: 252px; }
+    .cabin-journal .fs-mail-letter { height: 150px; }
+    .cabin-journal .fs-mail-list-empty { height: 146px; }
+  }
+  @media (max-width: 1100px) { .cabin-journal .fs-mail-spread { grid-template-columns: minmax(300px, .9fr) 12px minmax(0, 1.1fr); } }
+  @media (max-width: 760px) {
+    .cabin-journal .fs-mail-spread { grid-template-columns: 1fr; }
+    .cabin-journal .fs-postbox { height: 392px; }
+    .cabin-journal .fs-postbox-slot { height: 304px; }
+    .cabin-journal .fs-mail-letter { height: 172px; }
+    .cabin-journal .fs-mail-main { padding-left: 16px; }
+    .cabin-journal .fs-mail-filters button, .cabin-journal .fs-mail-pages button, .cabin-journal .fs-mail-quiet, .cabin-journal .fs-mail-write { min-height: 44px; min-width: 44px; }
+    .cabin-journal .fs-mail-side .fs-mail-write { width: 100%; }
+  }
+  @media (pointer: coarse) {
+    .cabin-journal .fs-mail-letter.is-ear-open { --curl: 150px; }
+    .cabin-journal .fs-mail-list .fs-mail-act { height: 44px; line-height: 44px; }
+  }
+  html[data-perf='low'] .cabin-journal .fs-mail-letter { will-change: auto; }
+}

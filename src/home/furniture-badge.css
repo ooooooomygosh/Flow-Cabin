@@ -1,0 +1,13 @@
+@layer guards, reset, features, skin, overrides;
+/* The count on a piece of furniture (cards due on the bookshelf, letters in the post box): a small paper
+   tag with the number in red ink, hung on a loop of string, lit by the one lamp. */
+@layer overrides {
+  .home-furniture-badge {
+    min-width: 24px; height: 26px; padding: 4px 6px 0; color: #a3301d; font: 700 13px/20px var(--ui-font-display, serif); letter-spacing: 0; transform: rotate(5deg);
+    border-radius: 0; clip-path: polygon(0 24%, 24% 0, 100% 0, 100% 100%, 0 100%);
+    background: radial-gradient(circle at 7px 7px, #34261b 0 1.4px, transparent 1.9px), var(--paper-grain, none) 0 0 / 96px, linear-gradient(172deg, #fffdf5, #efe6d3);
+    box-shadow: inset 0 0 0 1px rgba(95, 72, 40, .45);
+    filter: drop-shadow(calc(var(--sx, 2) * 2px) calc(var(--sy, 3) * 2px) 2px rgba(10, 6, 3, calc(.45 * var(--lamp-k, .6))));
+  }
+  html[data-perf='low'] .home-furniture-badge { filter: none; }
+}

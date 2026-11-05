@@ -59,6 +59,7 @@ export default function Souvenirs({ state, savedIds, error, refresh }) {
         const saved = record && savedIds.includes(item.id), Icon = ICONS[item.icon];
         return <li key={item.id} className="souvenir-card" data-earned={saved ? 'true' : 'false'}>
           <span className="souvenir-emblem" aria-hidden="true"><Icon size={24}/></span>
+          {saved && <span className="souvenir-postmark" aria-hidden="true"/>}
           <div><h4>{item.name}</h4>
             {record ? <>
               <p className="souvenir-date">{saved ? '获得于' : '已达成 · 保存待确认'} <time dateTime={record.earnedOn}>{record.earnedOn}</time></p>
