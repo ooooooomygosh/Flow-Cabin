@@ -4,6 +4,8 @@ import { MAX_NOTE_LENGTH } from './focus-model.mjs';
 import { ConfirmButton } from '../ui/Confirm';
 import { archiveScratch } from './journal-entries.mjs';
 import { openJournal } from './stats/journal-events.mjs';
+import Coil from './desk/Coil';
+import './desk/desk-focus.css';
 
 const SAVE_DELAY_MS = 400, MAX_WAIT_MS = 2000;
 // Built-in local tool: plain text only, no remote requests or script execution.
@@ -14,7 +16,7 @@ const SAVE_DELAY_MS = 400, MAX_WAIT_MS = 2000;
 export default function QuickNotes({ compact = false }) {
   const focus = useFocusState(), saved = focus.state.notes || '';
   const [draft, setDraft] = useState(null), timer = useRef(0), burst = useRef(0), written = useRef(null), latest = useRef({ draft: null, focus });
-  const [archiveNotice, setArchiveNotice] = useState('');
+  const [archiveNotice, setArchiveNotice] = useState(''), coil = useRef(`memo-${Math.random().toString(36).slice(2, 8)}`).current;
   latest.current = { draft, focus };
   const write = (value) => { written.current = value; latest.current.focus.saveNotes(value); };
   const flush = () => {
@@ -43,12 +45,15 @@ export default function QuickNotes({ compact = false }) {
     setArchiveNotice(result.ok ? '已收进手记。便签原文也留着，可以继续写。' : result.error);
   };
   // 3.0: lives in 「这一段」 as the 便签 (compact); 收进日记 keeps its history in 唱片日记 › 手记.
-  return <section className={`focus-notes ${compact ? 'is-compact' : ''}`} aria-label={compact ? '便签' : '随手记'}>
-    {!compact && <p>先把突然想到的事记下来，继续专注。内容仅保存在本机。</p>}
-    <label>{compact ? <span className="focus-notes-title">便签<small>突然想到的事，先记在这里</small></span> : '随手记'}<textarea aria-label="随手记内容" maxLength={MAX_NOTE_LENGTH} value={notes} placeholder="灵感、会议要点、稍后再做的事…" onChange={(event) => change(event.target.value)} onBlur={() => flush()}/></label>
-    <div className="focus-task-footer"><span>{notes.length} / {MAX_NOTE_LENGTH}</span><ConfirmButton className="" disabled={!notes} question="清空随手记？清空后无法找回。" confirmLabel="确认清空" onConfirm={() => { clearTimeout(timer.current); timer.current = 0; burst.current = 0; latest.current.draft = null; setDraft(null); write(''); }}>清空</ConfirmButton></div>
-    {!focus.error && <small role="status">{draft !== null && draft !== written.current ? '正在保存…' : '已自动保存到本机'}</small>}
-    <div className="focus-task-footer"><button type="button" className="pixel-button" disabled={!notes.trim()} onClick={archive}>收进日记</button><button type="button" className="pixel-button" onClick={() => openJournal('entries')}>翻开手记</button></div>
-    {archiveNotice && <small role="status">{archiveNotice}</small>}
+  // 3.1: a memo pad: a wire coil, a red MEMO head, blue rules, a red margin and a handwriting hand.
+  return <section className={`focus-notes memo-pad ${compact ? 'is-compact' : ''}`} aria-label={compact ? '便签' : '随手记'}>
+    <Coil id={coil}/>
+    <div className="memo-sheet">
+      <header className="memo-head"><b aria-hidden="true">MEMO</b>{compact ? <span className="focus-notes-title">便签<small>突然想到的事，先记在这里</small></span> : <span className="focus-notes-title">随手记<small>先记下来，继续专注。内容仅保存在本机。</small></span>}</header>
+      <label className="memo-lines"><textarea aria-label="随手记内容" maxLength={MAX_NOTE_LENGTH} value={notes} placeholder="灵感、会议要点、稍后再做的事…" onChange={(event) => change(event.target.value)} onBlur={() => flush()}/></label>
+      <div className="focus-task-footer"><span>{notes.length} / {MAX_NOTE_LENGTH}</span>{!focus.error && <small role="status">{draft !== null && draft !== written.current ? '正在保存…' : '已自动保存到本机'}</small>}<ConfirmButton className="" disabled={!notes} question="清空随手记？清空后无法找回。" confirmLabel="确认清空" onConfirm={() => { clearTimeout(timer.current); timer.current = 0; burst.current = 0; latest.current.draft = null; setDraft(null); write(''); }}>清空</ConfirmButton></div>
+      <div className="memo-actions"><button type="button" className="pixel-button" disabled={!notes.trim()} onClick={archive}>收进日记</button><button type="button" className="pixel-button" onClick={() => openJournal('entries')}>翻开手记</button></div>
+      {archiveNotice && <small role="status">{archiveNotice}</small>}
+    </div>
   </section>;
 }

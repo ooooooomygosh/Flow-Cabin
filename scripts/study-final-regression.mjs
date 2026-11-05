@@ -348,7 +348,8 @@ try {
   await faceSwitch.getByRole('button', { name: '上一个专注画面' }).click();
   await page.waitForFunction((key) => JSON.parse(localStorage.getItem(key) || '{}').mode === 'flip', DISPLAY_KEY);
   assert.equal((await faceSwitch.locator('strong').innerText()).trim(), '琥珀翻页钟');
-  await page.locator('.focus-timer .focus-face[data-face=flip]').waitFor();
+  // 3.1: the dock's 这一段 is the LED clock close-up whatever the 沉浸 face is; the face switch only picks what 沉浸 shows.
+  await page.locator('.focus-timer .desk-clock-glass').waitFor();
   await shot(page, '09-flip-clock-dock');
 
   await faceSwitch.getByRole('button', { name: '沉浸', exact: true }).click();

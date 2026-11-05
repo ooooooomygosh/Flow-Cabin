@@ -14,6 +14,7 @@ import { roomCovered } from '../room/useRoomChrome';
 import { getRoomScene } from '../scene-catalog.mjs';
 import RecordNowPlaying, { useNowPlaying, playerCommand } from './RecordNowPlaying';
 import { PressCard, usePress } from './PressCard';
+import './desk/desk-display.css';
 
 // 专注画面: one face, chosen by the user (or the scene's own until they pick),
 // shown in the focus dock, the zen clock, the desktop clock widget and — with
@@ -124,7 +125,7 @@ export default function FocusDisplayStage() {
     {flash && <p className="focus-display-flash" role="status">{flash}</p>}
     {/* A finished round is pressed here: the 压制唱片 card takes the place of 「这一轮专注结束了」. */}
     {press.mine && <div className="focus-display-press"><PressCard record={press.record} inline onDone={() => setOffer('')}/></div>}
-    {offer && !(press.mine && offer === 'done') && <div className="focus-display-offer" role="group" aria-label={OFFER_TITLES[offer]} onClick={(event) => event.stopPropagation()}>
+    {offer && !(press.mine && offer === 'done') && <div className="focus-display-offer paper" role="group" aria-label={OFFER_TITLES[offer]} onClick={(event) => event.stopPropagation()}>
       <strong>{OFFER_TITLES[offer]}</strong>
       {/* The next step right here: 开始休息 / 再来一轮 / 完成任务 (or, in overtime, 结束 / +5). */}
       {offer === 'done' && focus && <>
