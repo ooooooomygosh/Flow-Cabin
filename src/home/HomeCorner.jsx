@@ -68,7 +68,7 @@ export default function HomeCorner({ zone, active = true, viewport, reduced, dim
       </>}
       {zone === 'life' && <>
         <Plane quad={view.planes?.weatherDisplay?.quad} width={200} height={78} className="corner-weather"><b>{Number.isFinite(weather?.temperature) ? `${Math.round(weather.temperature)}°` : '窗外'}</b><small>{weather ? sky.city?.name || '附近' : '设置位置'}</small></Plane>
-        {body && <div className="corner-pet" style={{ left:body.x, top:body.y, width:body.width, height:body.height }}><PixelCat petId={identity.builtinId} accessory={identity.accessory} pose={life.resting ? 'sleep' : pet.pose} reduceMotion={reduced || !active}/></div>}
+        {body && <div className="corner-pet" style={{ left:body.x, top:body.y, width:body.width, height:body.height }}><PixelCat petId={identity.builtinId} accessory={identity.accessory} pose={life.resting ? 'sleep' : pet.pose} musicBeat={Boolean(deck.audible && pet.synced && !life.resting)} reduceMotion={reduced || !active}/></div>}
         {view.petMount?.frontOccluderPolygon && <img className="corner-pet-occluder" src={image} alt="" style={{ clipPath:`polygon(${view.petMount.frontOccluderPolygon.map(([x,y])=>`${x}px ${y}px`).join(',')})` }}/ >}
       </>}
     </div>

@@ -30,9 +30,11 @@ export default function PetBehaviourSettings({ desktop = false }) {
       <div className="pet-behaviour-grid">{SWITCHES.map(([key, label, hint]) => <label key={key} className="focus-check" title={hint}><input type="checkbox" checked={Boolean(prefs[key])} onChange={(event) => set({ [key]: event.target.checked })}/><span>{label}<small>{hint}</small></span></label>)}</div>
       <label className="pet-behaviour-opacity">透明度<input type="range" min="30" max="100" step="5" aria-label="桌宠透明度" value={Math.round(prefs.opacity * 100)} onChange={(event) => set({ opacity: Number(event.target.value) / 100 })}/><span>{Math.round(prefs.opacity * 100)}%</span></label>
       <div className="pet-behaviour-actions">
+        {/* 伙伴出门 / 让伙伴回家: the room's own toggle left with the original home's toolbar (the tray menu has the same command). */}
+        <button type="button" className="pixel-button" aria-label={pet.active ? '让伙伴回家' : '伙伴出门'} aria-pressed={Boolean(pet.active)} title={pet.active ? '让伙伴回到小屋里' : '伙伴出门：到桌面上散步'} onClick={() => desktopCommand(pet.active ? 'pet-stop' : 'pet-start')}>{pet.active ? '让伙伴回家' : '伙伴出门'}</button>
         {hidden ? <button type="button" className="pixel-button" onClick={() => desktopCommand('pet-hide', { hours: 0 })}>现在叫伙伴出来</button>
           : <button type="button" className="pixel-button" disabled={!pet.active} onClick={() => desktopCommand('pet-hide', { hours: 1 })}>桌宠隐藏 1 小时</button>}
-        <small>{pet.active ? hidden ? `隐藏到 ${new Date(pet.hiddenUntil).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}` : '桌宠在桌面上。右键它也能改这些。' : '桌宠还没出门：在托盘菜单或房间里让伙伴出门。关闭应用前开着的话，下次会自己出来。'}</small>
+        <small>{pet.active ? hidden ? `隐藏到 ${new Date(pet.hiddenUntil).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}` : '桌宠在桌面上。右键它也能改这些。' : '桌宠还没出门：点上面的「伙伴出门」，或在托盘菜单里让伙伴出门。关闭应用前开着的话，下次会自己出来。'}</small>
       </div>
     </> : <p className="onboarding-hint">桌宠（独立在桌面上走动的伙伴）需要心流小屋电脑版。</p>}
   </section>;

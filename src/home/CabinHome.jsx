@@ -20,7 +20,6 @@ import HomeCorner, { CornerActions } from './HomeCorner';
 import { ClockReadout, CalendarReadout, LyricsReadout } from './HomeReadouts';
 import { FURNITURE_EXTRAS, FurnitureExtra } from './FurnitureExtras';
 import useBackLayer from '../ui/useBackLayer';
-import { shouldShowHomeNotice, dismissHomeNotice } from '../interface-mode.mjs';
 import { ZONE_ORDER, ZONE_NAMES, zoneSpots, TIMING, ZOOM, PUSH, PHONE_WIDTH, TAP_SLOP, isZone, zoneIndex, neighbour, dragOffset, velocity, snapIndex, settleDuration, wheelDistance, dotLevels, keyTarget, readZone, saveZone, zoneAfterResize, worldCamera, cameraTransform } from './corner-nav.mjs';
 import { cornerReady, preloadCorners, whenIdle } from './corner-assets.mjs';
 import './home.css';
@@ -98,8 +97,6 @@ export default function CabinHome({ reduced = false, editRequest = 0, focusOpen 
   const petHit = useRef(null);
   const placePetHit = useCallback(point => { if (petHit.current) { petHit.current.style.left = `${point.x - 38}px`; petHit.current.style.top = `${point.y - 82}px`; } }, []);
   const [intro, setIntro] = useState(() => localStorage.getItem('flow-cabin-home-intro-v1') !== 'done');
-  const [homeNotice, setHomeNotice] = useState(() => shouldShowHomeNotice());
-  const closeHomeNotice = () => { dismissHomeNotice(); setHomeNotice(false); };
   const host = useRef(null), stageHost = useRef(null), track = useRef(null), dots = useRef([]), drag = useRef(null), swipe = useRef(null), held = useRef(0), suppressClick = useRef(false), compact = useRef(innerWidth < PHONE_WIDTH);
   const zoneRef = useRef(zone), cornerRef = useRef(corner), phaseRef = useRef(phase), lookRef = useRef(look), reducedRef = useRef(reduced), editingRef = useRef(false), settle = useRef(0), timers = useRef([]), token = useRef(0), goRef = useRef(null);
   lookRef.current = look; reducedRef.current = reduced;
@@ -323,8 +320,7 @@ export default function CabinHome({ reduced = false, editRequest = 0, focusOpen 
       <CornerActions key={corner} zone={corner}/>
     </div>}
     <SleepIndicator/>
-    {homeNotice ? <aside className="home-intro home-notice" aria-label="新的首页"><span><b>首页换成了生活小屋。</b>唱片、手记和专注记录都在，原版唱片架也随时可以换回。</span><button type="button" onClick={closeHomeNotice}>好的</button><button type="button" onClick={() => { closeHomeNotice(); window.dispatchEvent(new Event('cabin:interface-choice')); }}>改用原版</button></aside>
-    : intro && !guiding && <aside className="home-intro" aria-label="小屋初次指引"><span>点唱机听歌，点书桌开始一段专注。</span><button type="button" onClick={completeIntro}>知道了</button></aside>}
+    {intro && !guiding && <aside className="home-intro" aria-label="小屋初次指引"><span>点唱机听歌，点书桌开始一段专注。</span><button type="button" onClick={completeIntro}>知道了</button></aside>}
     {store.error && <p className="home-layout-error" role="alert">{store.error}</p>}
     <footer className="home-footer"><NowPlayingBar/><nav className="home-zones" aria-label="房间区域" aria-keyshortcuts="0 1 2 3 ArrowLeft ArrowRight"><button type="button" className="brass-plate" aria-pressed={zone === 'all'} onClick={() => setZone('all')}>{overview ? '全屋' : '返回全屋'}</button>{ZONE_ORDER.map((id, i) => <button type="button" className="brass-plate" key={id} aria-pressed={zone === id} onClick={() => setZone(id)}><i className="home-zone-dot" aria-hidden="true" ref={el => { dots.current[i] = el; }}/>{ZONE_NAMES[id]}</button>)}</nav><button type="button" className="home-pet-return" aria-label="回到宠物" onClick={() => setZone('life')}><Heart size={16}/>{identity.name}</button></footer>
     <details className="home-accessible-furniture"><summary>家具与无障碍入口</summary><div>{layout.items.map(item => <button type="button" key={item.id} onClick={event => { event.currentTarget.closest('details').open = false; activate(item); }}>{FURNITURE[item.type].name}</button>)}</div></details>

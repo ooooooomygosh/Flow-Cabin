@@ -1,47 +1,26 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { INTERFACE_KEY, interfaceMode, switchInterface, shouldShowHomeNotice, dismissHomeNotice } from '../interface-mode.mjs';
+import { INTERFACE_KEY, HOME_NOTICE_KEY, retireClassicHome } from '../interface-mode.mjs';
 
-function storage(value) {
-  const data = new Map(value == null ? [] : [[INTERFACE_KEY, value]]);
-  return { getItem: key => data.get(key) ?? null, setItem: (key, value) => data.set(key, value), removeItem: key => data.delete(key) };
-}
-test('The life cabin is the default home; only an explicit classic choice keeps the shelf', () => {
-  for (const value of [null, '', 'beta', 'true', '2.1', 'unknown']) assert.equal(interfaceMode(storage(value)), 'beta');
-  assert.equal(interfaceMode(storage('classic')), 'classic');
-  assert.equal(interfaceMode({ getItem() { throw Error('unavailable'); } }), 'beta');
-});
-test('The new-home notice shows once, only to people who never chose a home', () => {
-  const fresh = storage();
-  assert.equal(shouldShowHomeNotice(fresh), true);
-  dismissHomeNotice(fresh); assert.equal(shouldShowHomeNotice(fresh), false);
-  assert.equal(shouldShowHomeNotice(storage('classic')), false);
-  assert.equal(shouldShowHomeNotice(storage('beta')), false);
-  assert.equal(shouldShowHomeNotice({ getItem() { throw Error('unavailable'); } }), false);
-});
-test('Switching persists and flushes the chosen mode before requesting restart, in both directions', async () => {
-  const saved = storage();
-  for (const mode of ['beta', 'classic']) {
-    const calls = [];
-    await switchInterface(mode, { storage: saved, flush: async () => calls.push(['saved', interfaceMode(saved)]), restart: async () => calls.push(['restart', interfaceMode(saved)]) });
-    assert.deepEqual(calls, [['saved', mode], ['restart', mode]]);
+const storage = (initial = {}) => { const data = new Map(Object.entries(initial)); return { data, getItem: key => data.has(key) ? data.get(key) : null, setItem: (key, value) => data.set(key, String(value)), removeItem: key => data.delete(key) }; };
+
+test('3.1 has one home: a stored classic (or beta) choice and the old home notice are forgotten', () => {
+  for (const value of ['classic', 'beta', 'unknown']) {
+    const saved = storage({ [INTERFACE_KEY]: value, [HOME_NOTICE_KEY]: 'done', other: 'kept' });
+    retireClassicHome(saved);
+    assert.equal(saved.getItem(INTERFACE_KEY), null); assert.equal(saved.getItem(HOME_NOTICE_KEY), null);
+    assert.equal(saved.getItem('other'), 'kept', 'other settings are untouched');
   }
-});
-test('Failed native save never restarts and restores the previous choice', async () => {
-  const saved = storage(); let restarted = false;
-  await assert.rejects(switchInterface('beta', { storage: saved, flush: async () => { throw Error('disk full'); }, restart: () => { restarted = true; } }), /disk full/);
-  assert.equal(restarted, false); assert.equal(saved.getItem(INTERFACE_KEY), null);
-});
-test('Failed restart rolls back the previous Beta choice and flushes that rollback', async () => {
-  const saved = storage('beta'), flushed = [];
-  await assert.rejects(switchInterface('classic', { storage: saved, flush: async () => flushed.push(interfaceMode(saved)), restart: () => { throw Error('restart failed'); } }), /restart failed/);
-  assert.equal(interfaceMode(saved), 'beta'); assert.deepEqual(flushed, ['classic', 'beta']);
-  await assert.rejects(switchInterface('other', { storage: saved }), /未知/);
+  retireClassicHome(storage());
 });
 
-test('Classic fallback preserves the eight-theme catalog and only uses supported shelf geometry', async () => {
-  const { ROOM_SCENES, CLASSIC_ROOM_SCENES, classicSceneId } = await import('../scene-catalog.mjs');
-  assert.equal(ROOM_SCENES.length, 8); assert.equal(CLASSIC_ROOM_SCENES.length, 6);
-  for (const scene of ROOM_SCENES) assert.ok(CLASSIC_ROOM_SCENES.some(s => s.id === classicSceneId(scene.id)));
-  assert.equal(classicSceneId('rain-train'), 'warm'); assert.equal(classicSceneId('greenhouse'), 'forest');
+test('unavailable storage never stops the app from opening', () => {
+  const blocked = { removeItem() { throw Error('SecurityError'); } };
+  assert.doesNotThrow(() => retireClassicHome(blocked));
+});
+
+test('the scene catalog no longer has a classic subset: every room is a cabin room', async () => {
+  const catalog = await import('../scene-catalog.mjs');
+  assert.equal(catalog.ROOM_SCENES.length, 8);
+  assert.equal(catalog.CLASSIC_ROOM_SCENES, undefined); assert.equal(catalog.classicSceneId, undefined);
 });

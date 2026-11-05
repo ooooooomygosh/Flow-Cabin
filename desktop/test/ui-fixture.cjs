@@ -67,9 +67,8 @@ async function mountFixture(application, site, options = {}) {
       return router(request);
     });
   }, { items, results: options.searchResults || [items[0]], slowCover: options.slowCover === true, music: options.music === true, coverResponse: options.coverResponse, autoMusic: options.autoMusic === true });
-  // These interaction fixtures exercise the classic shelf; since 2.2 the life cabin is the default home.
-  if (options.home !== 'cabin') await site.evaluate(() => { if (localStorage.getItem('flow-cabin-interface-v1') === null) localStorage.setItem('flow-cabin-interface-v1', 'classic'); });
-  await site.reload(); await site.locator('.app-titlebar').waitFor(); await site.locator('.cabin-room').waitFor();
+  // The life cabin is the only home (3.1): nothing is pinned.
+  await site.reload(); await site.locator('.cabin-home').waitFor();
   // Interaction fixtures run against the cabin, not the first-run tutorial.
   const onboarding = site.getByRole('dialog', { name: '新手引导', exact: true });
   await onboarding.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {});
@@ -89,21 +88,26 @@ async function chooseRoomScene(site, sceneId) {
   const picker = site.getByRole('dialog', { name: '设置', exact: true }); // 设置 › 小屋与奶糖 (3.0; was 房间与桌宠)
   await picker.getByRole('button', { name: `选择场景 ${scene.label}`, exact: true }).click();
   await picker.getByRole('button', { name: '关闭设置', exact: true }).click(); await picker.waitFor({ state: 'hidden' });
-  await site.locator(`.cabin-scene[data-room-look="${sceneId}"]`).waitFor();
+  await site.locator(`.cabin-home.theme-${sceneId}`).waitFor();
 }
 async function useWarmCabin(site) { await chooseRoomScene(site, 'warm'); }
 // The old 布置小屋 / 音源设置 buttons are gone; both live in the settings hub.
-async function openRoomSettings(site) {
-  await site.getByRole('button', { name: '设置', exact: true }).click();
-  await site.getByRole('tab', { name: '小屋与奶糖', exact: true }).click();
+async function openRoomSettings(site) { await openSettingsTab(site, '小屋与奶糖'); }
+// 设置 is the brass knob → 小屋日常 drawer → 全部设置.
+async function openSettingsTab(site, tab) {
+  if (!await site.getByRole('dialog', { name: '设置', exact: true }).isVisible()) {
+    for (let i = 0; i < 4 && await site.locator('dialog[open]').count(); i++) await site.keyboard.press('Escape');
+    await site.getByRole('button', { name: '设置', exact: true }).click();
+    const all = site.getByRole('button', { name: '全部设置', exact: true });
+    await all.or(site.getByRole('dialog', { name: '设置', exact: true })).first().waitFor();
+    if (await all.isVisible()) await all.click();
+  }
+  await site.getByRole('dialog', { name: '设置', exact: true }).getByRole('tab', { name: tab, exact: true }).click();
 }
 // 设置 › 音乐 (3.0; was 音源) › 账户与文件夹: logins, local folders and Music Assistant, a page inside 设置.
 const settingsDialog = (site) => site.getByRole('dialog', { name: '设置', exact: true });
 const accountsRegion = (site) => settingsDialog(site).getByRole('region', { name: '账户与文件夹', exact: true });
-async function openSourceSettings(site) {
-  if (!await settingsDialog(site).isVisible()) await site.getByRole('button', { name: '设置', exact: true }).click();
-  await settingsDialog(site).getByRole('tab', { name: '音乐', exact: true }).click();
-}
+async function openSourceSettings(site) { await openSettingsTab(site, '音乐'); }
 async function openMusicSettings(site) {
   await openSourceSettings(site);
   await settingsDialog(site).getByRole('button', { name: '账户与文件夹', exact: true }).click(); await accountsRegion(site).waitFor();
@@ -117,26 +121,62 @@ async function chooseSource(site, id) {
   const { providerLabel } = await import('../../src/player/providers.mjs');
   await openSourceSettings(site);
   const radio = settingsDialog(site).getByRole('radiogroup', { name: '唱机音源', exact: true }).getByRole('radio', { name: providerLabel(id), exact: true });
-  await radio.click(); await site.waitForFunction((value) => document.querySelector('.room-turntable')?.dataset.provider === value, id);
+  await radio.click();
+  await site.waitForFunction((value) => document.querySelector('.listen-bar')?.dataset.provider === value || !document.querySelector('.listen-bar:not(.is-empty)'), id);
   if (await radio.getAttribute('aria-checked') !== 'true') throw new Error(`唱机音源 ${id} was not selected`);
   await closeSettings(site);
 }
-// 添加到唱片架 (titlebar ＋) holds every way onto the shelf: 曲库搜索, 我的歌单, 本地音乐, 手动填写.
+// 唱片架 (top-bar plate): a bookcase close-up (Dialog variant=full). Its 唱片 binder is taken down first; 播放 loads a record on the
+// deck, the title opens its 唱片卡片, the cornice plate 添加到唱片架 holds every way onto the shelf.
+const libraryDialog = (site) => site.getByRole('dialog', { name: /^唱片(库|架)$/ });
+async function openLibrary(site) {
+  if (!await libraryDialog(site).isVisible()) await site.locator('.home-shortcuts').getByRole('button', { name: '唱片架', exact: true }).click();
+  await libraryDialog(site).waitFor(); return libraryDialog(site);
+}
+async function closeLibrary(site) { if (!await libraryDialog(site).isVisible()) return; await site.keyboard.press('Escape'); await libraryDialog(site).waitFor({ state: 'hidden' }); }
+async function takeBinder(site, name = '唱片') {
+  const dialog = await openLibrary(site);
+  const spine = name === '索引本' ? dialog.getByRole('button', { name: /^索引本/ }) : dialog.getByRole('button', { name: new RegExp(`^${name}活页夹`) });
+  if (await spine.getAttribute('aria-expanded') !== 'true') await spine.click();
+  await dialog.locator('.shelf-object').waitFor(); return dialog;
+}
+async function playRecord(site, title, { keepOpen = false } = {}) {
+  const dialog = await takeBinder(site, '唱片');
+  await dialog.getByRole('button', { name: `播放 ${title}`, exact: true }).click();
+  await site.locator('.listen-bar:not(.is-empty)').waitFor();
+  if (!keepOpen) await closeLibrary(site);
+}
+const recordCard = (site) => site.getByRole('dialog', { name: /^唱片卡片/ });
+async function openRecordCard(site, title) {
+  const dialog = await takeBinder(site, '唱片');
+  await dialog.locator('.listen-grid-title').filter({ hasText: title }).first().click();
+  await recordCard(site).waitFor(); return recordCard(site);
+}
+async function closeRecordCard(site) {
+  const card = recordCard(site);
+  if (await card.isVisible()) { await card.getByRole('button', { name: '关闭唱片卡片', exact: true }).click(); await card.waitFor({ state: 'hidden' }); }
+}
+// 唱机旁 (the console close-up) carries the deck's transport and queue; it opens from the 正在播放 strip.
+const consoleDialog = (site) => site.getByRole('dialog', { name: '唱机旁', exact: true });
+async function openConsole(site) { if (!await consoleDialog(site).isVisible()) await site.locator('.listen-meta').click(); await consoleDialog(site).waitFor(); return consoleDialog(site); }
+async function closeConsole(site) { if (!await consoleDialog(site).isVisible()) return; await site.keyboard.press('Escape'); await consoleDialog(site).waitFor({ state: 'hidden' }); }
+const deckRecord = (site) => site.evaluate(() => window.__cabinDeckItem || null);
+// 添加到唱片架 holds every way onto the shelf: 曲库搜索, 我的歌单, 本地音乐, 手动填写.
 const addDialog = (site) => site.getByRole('dialog', { name: '添加到唱片架', exact: true });
 async function openAddToShelf(site, tab = '曲库搜索') {
-  await site.getByRole('button', { name: '添加到唱片架', exact: true }).click(); await addDialog(site).waitFor();
+  const dialog = await openLibrary(site);
+  const plate = dialog.getByRole('button', { name: '添加到唱片架', exact: true });
+  if (await plate.count()) await plate.click(); else await dialog.locator('.listen-empty-shelf .listen-primary').click();
+  await addDialog(site).waitFor();
   if (tab !== '曲库搜索') await addDialog(site).getByRole('tab', { name: tab, exact: true }).click();
   return addDialog(site);
 }
-// Per-record tools (自定义唱片) live on the 唱片卡片 of the selected record.
-async function openRecordTools(site) {
-  await site.locator('.room-now-playing').getByRole('button', { name: '唱片卡片', exact: true }).click();
-  const card = site.getByRole('dialog', { name: /^唱片卡片/ }); await card.waitFor();
+// Per-record tools (自定义唱片) live on the 唱片卡片 of a record (the one on the deck unless a title is given).
+async function openRecordTools(site, title) {
+  const name = title || (await deckRecord(site))?.title;
+  if (!name) throw new Error('openRecordTools needs a title or a record on the deck');
+  const card = await openRecordCard(site, name);
   await card.getByRole('button', { name: '自定义唱片', exact: true }).click();
   return site.getByRole('dialog', { name: '自定义唱片' });
 }
-async function closeRecordCard(site) {
-  const card = site.getByRole('dialog', { name: /^唱片卡片/ });
-  if (await card.isVisible()) { await card.getByRole('button', { name: '关闭唱片卡片', exact: true }).click(); await card.waitFor({ state: 'hidden' }); }
-}
-module.exports = { mountFixture, albums, chooseRoomScene, useWarmCabin, openRoomSettings, openMusicSettings, openSourceSettings, closeSettings, chooseSource, openAddToShelf, openRecordTools, closeRecordCard, settingsDialog, accountsRegion };
+module.exports = { mountFixture, albums, chooseRoomScene, useWarmCabin, openRoomSettings, openSettingsTab, openMusicSettings, openSourceSettings, closeSettings, chooseSource, openAddToShelf, openRecordTools, closeRecordCard, settingsDialog, accountsRegion, openLibrary, closeLibrary, takeBinder, playRecord, openRecordCard, openConsole, closeConsole, deckRecord, libraryDialog, addDialog, consoleDialog };

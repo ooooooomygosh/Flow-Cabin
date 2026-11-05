@@ -20,7 +20,6 @@ if (!await fetch(origin).then(r => r.ok, () => false)) {
 const browser = await launchChromium({ args: ['--enable-precise-memory-info'] });
 try {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
-  await context.addInitScript(()=>localStorage.setItem('flow-cabin-interface-v1','beta'));
   await context.route('**/*', route => {
     const url = new URL(route.request().url());
     if (url.origin !== origin) return route.abort();

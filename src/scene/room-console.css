@@ -19,12 +19,6 @@
    A fixed height (one row, never wrapping) breaks the card-width → wrapping →
    art-size feedback loop. Tight cards drop labels to accessible icon actions. */
 .room-now-playing { display: flex; justify-content: space-between; align-items: center; }
-.room-selection-copy { min-width: 0; flex: 1; }
-.room-selection-copy > small { letter-spacing: .14em; color: #c49662; }
-.room-selection-copy h2 { overflow-wrap: anywhere; color: var(--px-ink); }
-.room-selection-copy p { font-size: 13px; color: #d3b58f; margin: 0; }
-.room-selection-actions { display: flex; gap: 10px; align-items: center; justify-content: flex-end; }
-.room-selection-actions button, .room-selection-actions a { display: inline-flex; gap: 8px; align-items: center; padding: 9px 13px; background: #573722; color: #ffe0b6; text-decoration: none; }
 .cabin-room .room-now-playing {
   container-type: inline-size; position: absolute; z-index: 12;
   left: var(--room-shelf-left, 30%); right: auto; width: var(--room-shelf-width, 48%);
@@ -32,36 +26,9 @@
   background: rgb(36 22 15 / 70%); box-shadow: 5px 5px 0 #0d0805aa;
   flex-direction: row; flex-wrap: nowrap; gap: 12px;
 }
-/* One row at every size: the copy column gives way (ellipsis), the actions never wrap. */
-.cabin-room .room-now-playing .room-selection-copy { flex: 1 1 0; min-width: 0; }
-.cabin-room .room-now-playing .room-selection-copy h2 { margin: 0; }
-.cabin-room .room-now-playing .room-selection-copy p { line-height: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.cabin-room .room-now-playing .room-selection-actions { flex: none; flex-wrap: nowrap; gap: 6px; }
-.cabin-room .room-now-playing .room-selection-actions :is(button,a) { font-size: 12px; min-height: var(--px-hit); padding: 6px 8px; }
-@container (max-width: 700px) {
-  .room-now-playing:has(.room-queue-add) .room-selection-actions span { display: none; }
-  .cabin-room .room-now-playing:has(.room-queue-add) .room-selection-actions :is(button,a) { padding: 5px; }
-}
-/* Compact windows (AES-16): a slimmer strip so the floor and the companion stay in view. */
-@media (max-width: 1000px), (max-height: 620px) { .cabin-room .room-now-playing { height: 72px; } .cabin-room .room-now-playing .room-selection-copy > small { display: none; } }
-@container (max-width: 520px) {
-  .room-now-playing .room-selection-actions span, .room-now-playing .room-selection-copy > small { display: none; }
-  .cabin-room .room-now-playing .room-selection-actions :is(button,a) { padding: 5px; }
-}
 
-/* These are ordinary buttons below the heading, outside its drag handle. */
-.turntable-room-tools { display: grid; gap: 3px; margin: 0 0 9px; }
-.turntable-room-tools button {
-  display: flex; align-items: center; gap: 8px; min-height: 30px; width: 100%;
-  padding: 5px 7px; border: 1px solid #8a5a3266; background: var(--px-surface-card);
-  color: var(--px-ink); font: inherit; font-size: 12px; text-align: left;
-}
-.turntable-room-tools button:hover { background: var(--px-surface-3); }
-.turntable-room-tools button[aria-expanded=true], .turntable-room-tools button.is-active { background: var(--px-accent); color: var(--px-ink-on-accent); }
-.turntable-room-tools svg { flex: none; }
-.cabin-room .shelf-filters { left: min(calc(var(--room-tools-right, 304px) + 12px), calc(100% - min(700px, calc(100% - 28px)) - 14px)); }
-.shelf-filters-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; font-size: 13px; }
-.shelf-filters-header button { padding: 5px 10px; background: var(--px-surface-3); border: 1px solid var(--px-brass); color: var(--px-ink); }
+/* Compact windows (AES-16): a slimmer strip so the floor and the companion stay in view. */
+@media (max-width: 1000px), (max-height: 620px) { .cabin-room .room-now-playing { height: 72px; } }
 
 /* Queue open (待播) or long match lists must never push the volume/progress
    row out of reach: the console scrolls, the sliders stay pinned to its
@@ -71,8 +38,4 @@
 .room-turntable .turntable-source-chip { display: inline-flex; align-items: center; gap: 4px; min-width: 0; max-width: 50%; min-height: var(--px-hit); margin-left: auto; padding: 0 6px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--px-ink-dim); background: var(--px-surface-2); border: 2px solid var(--px-shadow); box-shadow: inset 1px 1px 0 #ffffff1c; font: inherit; font-size: 12px; cursor: pointer; }
 .room-turntable .turntable-source-chip:hover { color: var(--px-ink-on-accent); background: var(--px-accent); }
 small.turntable-source-chip { cursor: default; }
-/* 整理唱片架 › 专辑墙: the last row of the shelf panel. */
-.shelf-filter-wall { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 2px solid var(--px-border-subtle); font-size: 12px; color: var(--px-ink-dim); }
-.shelf-filter-wall button { display: inline-flex; align-items: center; gap: 6px; min-height: var(--px-hit); padding: 4px 10px; background: var(--px-surface-3); border: 2px solid var(--px-shadow); color: var(--px-ink); font: inherit; font-size: 12px; cursor: pointer; }
-.shelf-filter-wall button:hover { background: var(--px-accent); color: var(--px-ink-on-accent); }
 }

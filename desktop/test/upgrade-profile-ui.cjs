@@ -9,7 +9,7 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const { execFileSync } = require('node:child_process');
 const { pathToFileURL } = require('node:url');
-const { openAddToShelf } = require('./ui-fixture.cjs');
+const { openAddToShelf, closeLibrary } = require('./ui-fixture.cjs');
 
 const root = path.resolve(__dirname, '../..');
 const output = path.resolve(process.env.ALBUM_QA_EVIDENCE || path.join(root, 'desktop/test-results/upgrade'));
@@ -71,7 +71,7 @@ async function launch(phase) {
   assert.ok(site);
   site.on('pageerror', error => report.pageErrors.push({ phase, message: error.message }));
   site.setDefaultTimeout(20000);
-  await site.locator('.app-titlebar').waitFor();
+  await site.locator('.cabin-home').waitFor();
   const onboarding = site.getByRole('dialog', { name: '新手引导', exact: true });
   const needsOnboarding = await site.evaluate(() => {
     const state = JSON.parse(localStorage.getItem('flow-cabin-onboarding-v1') || 'null');
@@ -79,7 +79,7 @@ async function launch(phase) {
   });
   if (needsOnboarding) await onboarding.waitFor();
   if (await onboarding.isVisible()) await onboarding.getByRole('button', { name: '跳过引导', exact: true }).click();
-  await site.locator('.cabin-room').waitFor();
+  await site.locator('.cabin-home').waitFor();
   return runtime;
 }
 async function snapshot(stage) {
@@ -124,7 +124,7 @@ async function main() {
   await add.getByLabel('曲目').fill('A preserved first track\nA preserved second track');
   await add.getByRole('button', { name: /放上唱片架/ }).click();
   await add.locator('.add-notice', { hasText: 'Upgrade acceptance album' }).waitFor();
-  await add.getByRole('button', { name: '关闭添加到唱片架' }).click();
+  await add.getByRole('button', { name: '关闭添加到唱片架' }).click(); await closeLibrary(site);
   const [focus, study, library] = await Promise.all([
     moduleAt('focus/focus-model.mjs'), moduleAt('study/study-model.mjs'), moduleAt('record-library.mjs')
   ]);
@@ -149,7 +149,7 @@ async function main() {
   // focus/study/library values are the ones persisted by the old application.
   await close();
   await launch('released-old-version-after-fixture');
-  await site.reload(); await site.locator('.cabin-room').waitFor();
+  await site.reload(); await site.locator('.cabin-home').waitFor();
   const before = await snapshot('before-upgrade');
   assert.equal(before.items.length, 1);
   assert.equal(before.stores.focus.notes, data.focus.notes);

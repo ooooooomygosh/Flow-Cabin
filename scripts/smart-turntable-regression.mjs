@@ -4,6 +4,7 @@
  * no real account, network request or user collection is used.
  */
 import assert from 'node:assert/strict';
+import { openLibrary } from './settings-actions.mjs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
@@ -161,7 +162,7 @@ try {
 
     try {
       await page.goto(origin, { waitUntil: 'domcontentloaded', timeout: 30000 });
-      await page.locator('.room-record').first().waitFor({ timeout: 30000 });
+      await page.locator('.cabin-home').waitFor({ timeout: 30000 });
       await page.locator('.focus-badge').waitFor();
       await test(page, () => savedPlaylist);
       report.checks.push({ name, passed: true });
@@ -177,7 +178,8 @@ try {
   };
 
   const openSmart = async (page) => {
-    await page.getByRole('button', { name: '智能唱片机', exact: true }).click();
+    // 让小屋挑一张 is a plate on the 唱片架 cornice (and in 唱机旁); the dialog keeps its name.
+    await (await openLibrary(page)).getByRole('button', { name: '让小屋挑一张', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: '智能唱片机', exact: true });
     await dialog.waitFor();
     return dialog;
@@ -230,7 +232,7 @@ try {
 
     await dialog.getByRole('button', { name: '收进唱片架并开始学习', exact: true }).click();
     await dialog.waitFor({ state: 'hidden' });
-    await page.waitForFunction(() => document.querySelector('.room-turntable')?.dataset.loadedId === 'ai-playlist-1');
+    await page.waitForFunction(() => window.__cabinDeckItem?.id === 'ai-playlist-1');
 
     const playlist = saved();
     assert.equal(playlist.type, 'playlist');
@@ -240,13 +242,13 @@ try {
     assert.deepEqual(playlist.trackDetails.map((track) => track.artist), requestedTracks.map((track) => track.artist));
     assert.ok(playlist.trackDetails.every((track) => track.source === 'ai' && track.providerId === ''));
     assert.match(playlist.externalIds.playlist, /^ai:/);
-    assert.equal(await page.locator('.room-turntable').getAttribute('data-provider'), 'auto');
+    assert.equal(await page.locator('.listen-bar').getAttribute('data-provider'), 'auto');
 
     await page.waitForFunction(() => {
       const audio = document.querySelector('audio[data-deck="active"]');
       return audio && audio.src.endsWith('/desktop-music/local/audio/a1111111111111') && !audio.paused && audio.currentTime > 0.1;
     }, null, { timeout: 20000 });
-    assert.equal(await page.getByRole('button', { name: '暂停音乐播放', exact: true }).count(), 1);
+    assert.equal(await page.getByRole('button', { name: '暂停播放', exact: true }).count(), 1);
     const queue = await page.evaluate((storageKey) => JSON.parse(localStorage.getItem(storageKey) || '{}'), queueKey);
     assert.deepEqual(queue.ids, [], 'a playlist replaces the old album queue');
     const focus = await page.evaluate((storageKey) => JSON.parse(localStorage.getItem(storageKey) || '{}'), focusKey);
@@ -269,7 +271,7 @@ try {
     assert.equal(await dialog.getByRole('button', { name: '已收进唱片架', exact: true }).count(), 1);
     const focus = await page.evaluate((storageKey) => JSON.parse(localStorage.getItem(storageKey) || '{}'), focusKey);
     assert.notEqual(focus.timer?.phase, 'focus');
-    assert.equal(await page.locator('.room-turntable[data-loaded-id="ai-playlist-1"]').count(), 0);
+    assert.notEqual(await page.evaluate(() => window.__cabinDeckItem?.id ?? null), 'ai-playlist-1');
     await screenshot(page, 'external-playlist-saved');
   });
 

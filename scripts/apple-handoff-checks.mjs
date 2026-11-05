@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import { chooseSource } from './settings-actions.mjs';
+import { chooseSource, playRecord, openConsole } from './settings-actions.mjs';
 import { normalizeItem } from '../desktop/collection-store.cjs';
 import { onboardingSeed } from './app-version.mjs';
 
@@ -61,41 +61,44 @@ export async function verifyAppleHandoff({ browser, origin, output, check }) {
     const stableBuild = () => assert.equal(hotUpdates.length, 0, `Apple handoff fixture invalidated by Vite hot reload: ${JSON.stringify(hotUpdates)}`);
     page.setDefaultTimeout(8000); page.on('pageerror', error => errors.push(error.message));
     const waiting = () => page.getByText('请在「音乐」App 播放所选歌曲', { exact: true }).first().waitFor();
-    const progress = page.getByRole('slider', { name: '音乐播放进度', exact: true });
+    // 唱机旁 draws a handed-over song's position as a read-only progressbar (the Music app owns it; the pocket player drew a disabled slider).
+    const progress = page.locator('[aria-label="音乐播放进度"]');
+    const progressNow = async () => await progress.count() ? Number(await progress.first().evaluate(element => element.getAttribute('aria-valuenow') ?? element.value)) : 0;
+    const unadopted = async () => { assert.equal(await progressNow(), 0); if (await progress.count()) assert.equal(await progress.first().evaluate(element => element.disabled === true || element.getAttribute('role') === 'progressbar'), true, 'never an adjustable rail'); };
     const pollAgain = async () => { const previous = polls; for (let i = 0; i < 40 && polls <= previous; i++) await page.waitForTimeout(100); assert.ok(polls > previous); await page.waitForTimeout(100); stableBuild(); };
     try {
-      await page.goto(origin); await page.locator('.room-record').first().waitFor();
+      await page.goto(origin); await page.locator('.cabin-home').waitFor();
       assert.equal(await page.evaluate(() => /mac/i.test(navigator.userAgentData?.platform || navigator.platform)), true, 'settings and player both receive the Mac fixture platform');
       assert.equal(await page.evaluate(() => document.documentElement.dataset.desktopClient), 'true');
       assert.deepEqual(errors, []);
       await chooseSource(page, 'appleMusic');
-      await page.locator('.room-record').first().dblclick(); await waiting(); await pollAgain();
+      await playRecord(page, selected.title); await openConsole(page); await waiting(); await pollAgain();
       assert.equal(resolves.length, 1); assert.equal(resolves[0].id, '1234567890'); assert.equal(resolves[0].album, initial === 'legacy' ? '' : selected.album);
       assert.equal(await page.getByRole('button', { name: '播放音乐', exact: true }).isDisabled(), true);
-      assert.equal(await progress.inputValue(), '0'); assert.equal(await progress.isDisabled(), true);
+      await unadopted();
       await page.evaluate(() => document.activeElement?.blur()); await page.keyboard.press('Space');
       assert.deepEqual(controls, []); assert.equal(resolves.length, 1);
       if (output) await page.screenshot({ path: path.join(output, `apple-handoff-unrelated-${initial}.png`), animations: 'disabled' });
       check(`apple-catalog-does-not-adopt-or-control-${initial}-unrelated-track`);
       for (const wrong of [{ album: 'Live in Concert', duration: 350 }, { album: selected.album, duration: 350 }]) {
         current = { ...selected, state: 'playing', ...wrong }; await pollAgain(); await waiting();
-        assert.equal(await progress.inputValue(), '0'); assert.deepEqual(controls, []);
+        await unadopted(); assert.deepEqual(controls, []);
       }
       current = { ...selected, state: 'playing' }; await pollAgain();
       if (initial === 'legacy') {
-        await waiting(); assert.equal(await progress.inputValue(), '0');
+        await waiting(); await unadopted();
         await page.getByRole('button', { name: '取下唱片', exact: true }).click(); await page.waitForTimeout(100);
         assert.deepEqual(controls, []); assert.deepEqual(errors, []); assert.deepEqual(await page.evaluate(() => window.__unexpectedNavigation), []); check('apple-legacy-single-without-recording-metadata-never-takes-control');
         continue;
       }
       const pause = page.getByRole('button', { name: '暂停音乐播放', exact: true }); await pause.waitFor();
-      assert.equal(await pause.isEnabled(), true); assert.equal(await progress.inputValue(), '12');
+      assert.equal(await pause.isEnabled(), true); assert.equal(await progressNow(), 12); assert.equal(await progress.getAttribute('role'), 'progressbar', 'the Music app owns the position');
       await pause.click(); assert.deepEqual(controls, [{ action: 'pause', expectedTrack: { id: selected.id, title: selected.title, artist: selected.artist, album: selected.album } }]);
       if (output) await page.screenshot({ path: path.join(output, `apple-handoff-bound-${initial}.png`), animations: 'disabled' });
       current = { ...selected, id: '0123456789ABCDEF', state: 'playing' }; await pollAgain(); await waiting(); await pollAgain(); await waiting();
-      assert.equal(await progress.inputValue(), '0'); assert.equal(controls.length, 1, 'polls cannot rebind to a different native id with identical metadata');
+      await unadopted(); assert.equal(controls.length, 1, 'polls cannot rebind to a different native id with identical metadata');
       current = { ...selected, title: '另一首歌曲', state: 'playing' }; await pollAgain(); await waiting();
-      assert.equal(await progress.inputValue(), '0');
+      await unadopted();
       failPoll = true; await pollAgain(); await waiting();
       assert.equal(resolves.length, 1, 'state errors do not auto-skip or reopen catalogue songs');
       await page.getByRole('button', { name: '取下唱片', exact: true }).click(); await page.waitForTimeout(100);

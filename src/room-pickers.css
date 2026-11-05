@@ -23,7 +23,7 @@
 .pet-choice { align-items: center; text-align: center; padding: 8px 6px 10px; gap: 6px; }
 .pet-choice .pixel-cat { width: 64px; height: 64px; image-rendering: pixelated; }
 /* All six places in one row once there is room for them. */
-@container (min-width: 600px) { .scene-options { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; } }
+@container (min-width: 600px) { .scene-options { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; } }
 @container (min-width: 900px) { .pet-choice .pixel-cat { width: 96px; height: 96px; } }
 @container (max-width: 420px) { .pet-options { grid-template-columns: repeat(3, minmax(0, 1fr)); } .personalization-heading { align-items: flex-start; flex-direction: column; gap: 4px; } }
 .room-pickers.is-compact .personalization-heading { margin: 8px 0 8px; }

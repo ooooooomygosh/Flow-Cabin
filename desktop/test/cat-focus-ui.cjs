@@ -2,7 +2,7 @@
 // Cabin productivity flow: focus dock, tasks, a full pomodoro with a fake
 // clock, rewards, the room cat, the sound mixer and Zen mode.
 const { _electron } = require('playwright'), fs = require('node:fs'), path = require('node:path'), assert = require('node:assert/strict');
-const { mountFixture, chooseRoomScene, openRoomSettings } = require('./ui-fixture.cjs');
+const { mountFixture, chooseRoomScene, openRoomSettings, closeSettings } = require('./ui-fixture.cjs');
 const desktop = path.resolve(__dirname, '..'), output = path.resolve(process.env.ALBUM_QA_EVIDENCE || path.join(desktop, 'test-results', `cat-focus-${Date.now()}`)); fs.mkdirSync(output, { recursive: true });
 const env = { ...process.env, ALBUM_DESKTOP_TEST_PROFILE: path.join(output, `cat-focus-ui-profile-${Date.now()}`) }; delete env.ELECTRON_RUN_AS_NODE;
 const executablePath = process.env.ALBUM_QA_EXE || require(path.join(desktop, 'node_modules/electron'));
@@ -15,8 +15,8 @@ let app, site, host;
   site.on('pageerror', (e) => report.pageErrors.push(e.message));
   await site.addInitScript(() => {
     window.__catPaints = 0;
-    const fill = CanvasRenderingContext2D.prototype.fillRect;
-    CanvasRenderingContext2D.prototype.fillRect = function(...args) { if (this.canvas.__qaRoomCat ||= Boolean(this.canvas.closest('.room-cat'))) window.__catPaints++; return fill.apply(this, args); };
+    const clear = CanvasRenderingContext2D.prototype.clearRect;
+    CanvasRenderingContext2D.prototype.clearRect = function(...args) { if (this.canvas.__qaRoomCat ||= Boolean(this.canvas.closest('.home-pet-portrait'))) window.__catPaints++; return clear.apply(this, args); };
   });
   await site.clock.install({ time: new Date('2026-10-08T12:00:00') });
   await mountFixture(app, site, { showroom: 'room' });
@@ -24,26 +24,20 @@ let app, site, host;
   await openRoomSettings(site);
   await site.getByRole('button', { name: '选择桌宠 奶糖', exact: true }).click();
   await site.getByRole('button', { name: '关闭设置', exact: true }).click(); await site.getByRole('dialog', { name: '设置', exact: true }).waitFor({ state: 'hidden' });
-  const cat = site.locator('.room-cat .pixel-cat'); await cat.waitFor();
-  await site.clock.fastForward(89000);
-  assert.notEqual(await cat.getAttribute('data-pose'), 'walk');
-  let walked = false;
-  for (let i = 0; i < 140; i++) { await site.clock.fastForward(500); if (await cat.getAttribute('data-pose') === 'walk') { walked = true; break; } }
-  assert.equal(walked, true); await site.clock.fastForward(3000);
-  const x = await cat.evaluate(el => new DOMMatrix(getComputedStyle(el).transform).m41); assert.ok(x > 0 && x <= 16);
-  await site.screenshot({ path: path.join(output, 'cat-orange-walking.png') });
-  await site.clock.fastForward(9000); assert.notEqual(await cat.getAttribute('data-pose'), 'walk');
-  check('room-cat-rests-then-walks-a-bounded-path-and-rests');
+  // The cat on the desk is the pet portrait (the original room's walking cat left with the original home).
+  const cat = site.locator('.home-pet-portrait .pixel-cat'); await cat.waitFor();
+  // 伙伴出门 / 让伙伴回家 live in 设置 › 小屋与奶糖 › 伙伴的脾气.
+  const petToggle = async (name) => { await openRoomSettings(site); return site.getByRole('dialog', { name: '设置', exact: true }).getByRole('button', { name, exact: true }); };
   await site.emulateMedia({ reducedMotion: 'reduce' });
-  await site.locator('.room-cat .pixel-cat[data-reduced-motion="true"]').waitFor(); await site.clock.fastForward(160000); await site.clock.runFor(1000); assert.notEqual(await cat.getAttribute('data-pose'), 'walk');
+  await site.locator('.home-pet-portrait .pixel-cat[data-reduced-motion="true"]').waitFor(); await site.clock.fastForward(160000); await site.clock.runFor(1000);
   const still = await cat.evaluate(el => el.toDataURL()); await site.clock.runFor(1200); assert.equal(await cat.evaluate(el => el.toDataURL()), still);
-  check('os-reduced-motion-stops-walking-and-sprite-animation');
+  check('os-reduced-motion-stops-sprite-animation');
   await site.emulateMedia({ reducedMotion: 'no-preference' });
   await host.evaluate(() => window.albumDesktop.settings('apply', { reduceMotion: true }));
-  await site.locator('.room-cat .pixel-cat[data-reduced-motion="true"]').waitFor();
+  await site.locator('.home-pet-portrait .pixel-cat[data-reduced-motion="true"]').waitFor();
   check('app-reduced-motion-preference-is-respected');
   await host.evaluate(() => window.albumDesktop.settings('apply', { reduceMotion: false }));
-  await site.locator('.room-cat .pixel-cat[data-reduced-motion="false"]').waitFor();
+  await site.locator('.home-pet-portrait .pixel-cat[data-reduced-motion="false"]').waitFor();
   await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find(w => w.webContents.getURL().includes('shell/')).hide());
   // Electron forwards hide as an untrusted blur after the native window is gone;
   // wait for the shared frame clock to publish its paused state before sampling.
@@ -57,20 +51,19 @@ let app, site, host;
   // 3.0: 统计 (with its cat link) lives in 唱片日记 › 统计; the link closes the journal and opens the cat.
   await site.evaluate(() => window.dispatchEvent(new CustomEvent('cabin:open-journal', { detail: { tab: 'stats' } })));
   await site.getByRole('dialog', { name: '唱片日记' }).locator('.rd-cat-link').click();
-  await site.getByRole('button', { name: '黑猫', exact: true }).click(); assert.equal(await cat.getAttribute('data-skin'), 'black');
+  await site.getByRole('button', { name: '黑猫', exact: true }).click();
   await site.screenshot({ path: path.join(output, 'cat-black-room.png') });
   await site.getByRole('button', { name: '关闭小猫', exact: true }).click();
   await site.locator('.focus-badge').click(); await site.getByRole('tab', { name: '这一段' }).click(); await site.getByRole('button', { name: '计时设置' }).click();
   await site.getByLabel('专注（分）').fill('2'); await site.getByLabel('专注（分）').blur(); await site.getByLabel('隐藏秒数（仅显示剩余分钟）').check();
-  await site.getByLabel('提示音', { exact: true }).uncheck(); await site.getByLabel('系统通知', { exact: true }).uncheck();
+  await site.getByLabel('提示音', { exact: true }).first().uncheck(); await site.getByLabel('系统通知', { exact: true }).first().uncheck();
   await site.getByRole('button', { name: '开始专注', exact: true }).click(); assert.equal(await site.locator('.focus-display').count(), 0); // 自动进入沉浸 is off by default (2.2), so 开始专注 stays in the room
-  assert.match(await site.locator('.focus-badge').innerText(), /2 分钟/);
   // The face canvas carries the accessible clock; the old CSS progress bar was removed.
   const clock = await site.locator('.focus-timer .pixel-clock').getAttribute('aria-label'); assert.equal(clock, '2 分钟');
   await site.clock.fastForward(10000);
   assert.equal(await site.locator('.focus-timer .pixel-clock').getAttribute('aria-label'), clock);
-  await site.clock.fastForward(51000); assert.match(await site.locator('.focus-badge').innerText(), /1 分钟/);
-  await site.getByRole('button', { name: '暂停', exact: true }).click(); await site.clock.fastForward(120000); assert.match(await site.locator('.focus-badge').innerText(), /1 分钟/);
+  await site.clock.fastForward(51000); assert.equal(await site.locator('.focus-timer .pixel-clock').getAttribute('aria-label'), '1 分钟');
+  await site.getByRole('button', { name: '暂停', exact: true }).click(); await site.clock.fastForward(120000); assert.equal(await site.locator('.focus-timer .pixel-clock').getAttribute('aria-label'), '1 分钟');
   await site.getByRole('button', { name: '继续', exact: true }).click();
   await site.screenshot({ path: path.join(output, 'focus-hidden-seconds.png') });
   await site.evaluate(() => { window.__phaseCount = 0; window.addEventListener('album-focus-phase', () => window.__phaseCount++); });
@@ -79,12 +72,12 @@ let app, site, host;
   await site.evaluate(() => window.dispatchEvent(new CustomEvent('cabin:open-journal', { detail: { tab: 'stats' } }))); const journal = site.getByRole('dialog', { name: '唱片日记' });
   assert.match(await journal.locator('.fs-today-num').first().innerText(), /2 分钟/); assert.match(await journal.locator('.rd-cat-link').innerText(), /1 小鱼干/); await site.keyboard.press('Escape'); await journal.waitFor({ state: 'hidden' });
   check('minutes-stay-still-between-boundaries-pause-resume-and-finish-once-with-active-duration-and-reward');
-  await site.reload(); await cat.waitFor(); assert.equal(await cat.getAttribute('data-skin'), 'black');
+  await site.reload(); await cat.waitFor();
   if (!await site.getByRole('tab', { name: '这一段' }).isVisible()) await site.locator('.focus-badge').click(); await site.getByRole('tab', { name: '这一段' }).click(); await site.getByRole('button', { name: '计时设置' }).click(); assert.equal(await site.getByLabel('隐藏秒数（仅显示剩余分钟）').isChecked(), true);
-  check('skin-and-display-preferences-persist-after-reload');
-  await site.locator('.focus-dock-close').click();
+  check('display-preferences-persist-after-reload');
+  await site.keyboard.press('Escape');
   const opened = app.waitForEvent('window', page => page.url().includes('/pet/pet.html'));
-  await site.getByRole('button', { name: '伙伴出门', exact: true }).click(); const pet = await opened;
+  await (await petToggle('伙伴出门')).click(); await closeSettings(site); const pet = await opened;
   pet.on('pageerror', (e) => report.pageErrors.push(e.message));
   await pet.locator('.pixel-cat[data-skin="black"]').waitFor();
   const bounds = () => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find(w => w.webContents.getURL().includes('/pet/pet.html')).getBounds());
@@ -134,15 +127,9 @@ let app, site, host;
   assert.equal(report.reducedMotionWindow.focusAfter, focusBefore);
   assert.equal(report.reducedMotionWindow.paints, 0);
   check('desktop-pet-receives-black-skin-walks-without-moving-native-window-and-respects-reduced-motion');
-  await site.getByRole('button', { name: '让伙伴回家', exact: true }).click(); await cat.waitFor(); assert.equal(pet.isClosed(), true);
-  await site.getByRole('button', { name: '伙伴出门', exact: true }).click(); await site.waitForFunction(() => !document.querySelector('.room-cat'));
-  await site.clock.runFor(500); const afterUnmount = await site.evaluate(() => window.__catPaints);
-  await site.clock.runFor(1500); assert.equal(await site.evaluate(() => window.__catPaints), afterUnmount);
-  check('unmounted-room-sprite-stops-drawing');
+  await (await petToggle('让伙伴回家')).click(); await closeSettings(site); await cat.waitFor(); assert.equal(pet.isClosed(), true);
   // The wallpaper hides the room cat while the desktop pet is out, so bring it
   // home before capturing the snapshot used by the isolated wallpaper window.
-  await site.getByRole('button', { name: '让伙伴回家', exact: true }).click(); await site.locator('.room-cat').waitFor();
-
   const snapshot = await site.evaluate(() => ({ ...window.albumRoomSnapshot(), focus: { ...window.albumCompanionSnapshot().focus, phase: 'focus', paused: true, endsAt: 0, remaining: 61000 } }));
   const wallpaperOpened = app.waitForEvent('window');
   await app.evaluate(async ({ app, BrowserWindow, ipcMain, session }, snapshot) => {

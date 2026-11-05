@@ -1,8 +1,8 @@
 'use strict';
-// The cabin shelf: twelve records per view, both looks, filters, the record
-// card (notes, play from a track, remove) and adding an album from the catalog.
+// The 唱片架 (bookcase close-up): every record filed in the 唱片 binder, both room looks, sort and filters,
+// the record card (notes, play from a track, remove) and adding an album from the catalog.
 const { _electron } = require('playwright'), fs = require('node:fs'), path = require('node:path'), assert = require('node:assert/strict');
-const { mountFixture, albums, chooseRoomScene, openAddToShelf } = require('./ui-fixture.cjs');
+const { mountFixture, albums, chooseRoomScene, openAddToShelf, takeBinder, closeLibrary, openRecordCard, closeRecordCard, openConsole, closeConsole, deckRecord } = require('./ui-fixture.cjs');
 const desktop = path.resolve(__dirname, '..'), output = path.join(desktop, 'test-results'); fs.mkdirSync(output, { recursive: true });
 const env = { ...process.env, ALBUM_DESKTOP_TEST_PROFILE: path.join(output, `shelf-ui-profile-${Date.now()}`) }; delete env.ELECTRON_RUN_AS_NODE;
 const executablePath = process.env.ALBUM_QA_EXE || require(path.join(desktop, 'node_modules/electron'));
@@ -15,47 +15,48 @@ let app, site;
   site.on('pageerror', (e) => report.pageErrors.push(e.message));
   const items = Array.from({ length: 14 }, (_, i) => ({ ...albums[i % albums.length], id: `shelf-${i}`, title: `${albums[i % albums.length].title} ${String(i + 1).padStart(2, '0')}`, addedAt: `2026-09-${String(20 - i).padStart(2, "0")}T00:00:00.000Z` }));
   await mountFixture(app, site, { items });
-  assert.equal(await site.locator('.room-record').count(), 12); assert.match(await site.locator('.app-brand small').innerText(), /14 张唱片/);
-  assert.equal(await site.locator('.cabin-scene').getAttribute('data-room-look'), 'pixel');
+  const shelf = await takeBinder(site, '唱片');
+  assert.equal(await shelf.locator('.listen-grid li').count(), 14); assert.match(await shelf.getByRole('button', { name: /^唱片活页夹/ }).getAttribute('aria-label'), /14/);
+  await closeLibrary(site);
+  await site.locator('.cabin-home.theme-pixel').waitFor();
   await chooseRoomScene(site, 'warm');
-  assert.equal(await site.locator('.cabin-scene-art').getAttribute('src'), '/room-scenes/warm-cabin.png');
-  await chooseRoomScene(site, 'pixel'); check('twelve-records-and-both-cabin-looks');
-  await site.getByRole('button', { name: '下一排唱片' }).click(); assert.equal(await site.locator('.room-record').count(), 10);
-  await site.getByRole('button', { name: '上一排唱片' }).click(); assert.equal(await site.locator('.room-record').count(), 12); check('shelf-rows-keep-every-album-reachable');
+  await chooseRoomScene(site, 'pixel'); check('every-record-filed-and-both-cabin-looks');
 
-  await site.getByRole('button', { name: '整理唱片架', exact: true }).click(); await site.getByLabel('排序方式').selectOption('title');
-  assert.equal(await site.locator('.room-record').first().getAttribute('aria-label'), `选择 ${[...items].sort((a, b) => a.title.localeCompare(b.title, 'zh'))[0].artist} 的 ${[...items].sort((a, b) => a.title.localeCompare(b.title, 'zh'))[0].title}`);
-  await site.getByLabel('筛选类型').selectOption('song'); await site.locator('.room-empty', { hasText: '没有符合筛选的唱片' }).waitFor();
-  await site.getByRole('button', { name: '清除筛选' }).click(); assert.equal(await site.locator('.room-record').count(), 12);
-  await site.getByLabel('排序方式').selectOption('recent'); await site.getByRole('button', { name: '整理唱片架', exact: true }).click(); check('sort-and-filter-the-shelf');
+  const bookcase = await takeBinder(site, '唱片'); const titles = () => bookcase.locator('.listen-grid-title strong').allInnerTexts();
+  await bookcase.getByRole('button', { name: /^筛选/ }).click(); await bookcase.getByLabel('排序方式').selectOption('title');
+  const sorted = [...items].sort((a, b) => a.title.localeCompare(b.title, 'zh')).map((item) => item.title);
+  assert.deepEqual(await titles(), sorted);
+  await bookcase.getByLabel('筛选类型').selectOption('song'); await bookcase.getByText('没有找到相符的唱片。').waitFor();
+  await bookcase.getByRole('button', { name: '全部恢复', exact: true }).click(); assert.equal(await bookcase.locator('.listen-grid li').count(), 14);
+  await bookcase.getByLabel('排序方式').selectOption('recent'); await bookcase.getByRole('button', { name: '好了', exact: true }).click(); await closeLibrary(site); check('sort-and-filter-the-shelf');
 
-  await site.locator('.room-record').nth(1).click(); assert.ok((await site.locator('.room-selection-copy h2').innerText()).includes(items[1].title));
-  await site.getByRole('button', { name: /唱片卡片/ }).click();
-  const card = site.getByRole('dialog', { name: `唱片卡片：${items[1].title}` }); await card.waitFor();
+  const card = await openRecordCard(site, items[1].title);
   assert.equal(await card.locator('h3').innerText(), items[1].title);
   await card.getByPlaceholder(/第一次听的场景/).fill('下雪天的晚上'); await card.locator('.record-card-saved', { hasText: '已保存' }).waitFor();
   assert.deepEqual((await app.evaluate(() => globalThis.__qaCollectionWrites)).at(-1), ['update', 'shelf-1']);
   await site.screenshot({ path: path.join(output, 'record-card.png') });
   await card.locator('.record-card-tracks button').nth(1).click(); await card.waitFor({ state: 'detached' });
-  assert.equal(await site.locator('.room-turntable').getAttribute('data-loaded-id'), 'shelf-1'); assert.match(await site.locator('.turntable-track').innerText(), /^02 ·/); check('record-card-notes-and-play-from-a-track');
+  await closeLibrary(site);
+  assert.equal((await deckRecord(site)).id, 'shelf-1'); assert.match(await (await openConsole(site)).locator('.console-track').innerText(), /^02 ·/); await closeConsole(site); check('record-card-notes-and-play-from-a-track');
 
-  await site.getByRole('button', { name: /唱片卡片/ }).click(); await card.getByRole('button', { name: '移除' }).click(); await card.getByRole('button', { name: '确认移除' }).click();
-  await site.locator('.app-toast', { hasText: '已从唱片架移除' }).waitFor(); assert.match(await site.locator('.app-brand small').innerText(), /13 张唱片/);
-  assert.equal(await site.locator('.room-turntable').getAttribute('data-loaded-id'), ''); check('remove-from-the-shelf-also-clears-the-deck');
+  { const again = await openRecordCard(site, items[1].title); await again.getByRole('button', { name: '移除' }).click(); await again.getByRole('button', { name: '确认移除' }).click();
+    await site.locator('.app-toast', { hasText: '已从唱片架移除' }).waitFor(); await closeLibrary(site);
+    assert.match(await (await takeBinder(site, '唱片')).getByRole('button', { name: /^唱片活页夹/ }).getAttribute('aria-label'), /13/); await closeLibrary(site);
+    assert.equal(await deckRecord(site), null); check('remove-from-the-shelf-also-clears-the-deck'); }
 
   const add = await openAddToShelf(site);
   await add.getByRole('searchbox').fill('周杰伦'); await add.getByRole('button', { name: '搜索' }).click();
   await add.locator('.add-results li').first().waitFor(); await add.getByRole('button', { name: /放上唱片架/ }).first().click();
-  await add.locator('.add-notice', { hasText: '已放上唱片架' }).waitFor(); assert.match(await site.locator('.app-brand small').innerText(), /14 张唱片/);
+  await add.locator('.add-notice', { hasText: '已放上唱片架' }).waitFor(); assert.match(await (await takeBinder(site, '唱片')).getByRole('button', { name: /^唱片活页夹/ }).getAttribute('aria-label'), /14/);
   await add.getByRole('tab', { name: '手动填写' }).click(); await add.getByLabel('专辑名').fill('自己的磁带'); await add.getByLabel('歌手').fill('我'); await add.getByRole('button', { name: /放上唱片架/ }).click();
   await add.locator('.add-notice', { hasText: '自己的磁带' }).waitFor(); await site.screenshot({ path: path.join(output, 'add-album.png') });
-  await add.getByRole('button', { name: '关闭添加到唱片架' }).click(); assert.match(await site.locator('.room-record').first().getAttribute('aria-label'), /自己的磁带/); check('add-from-catalog-and-by-hand');
+  await add.getByRole('button', { name: '关闭添加到唱片架' }).click(); assert.match(await site.locator('.listen-grid-title').first().innerText(), /自己的磁带/); await closeLibrary(site); check('add-from-catalog-and-by-hand');
 
   const cdp = await site.context().newCDPSession(site);
   for (const width of [1024, 1920, 3840]) {
     await cdp.send('Emulation.setDeviceMetricsOverride', { width, height: Math.round(width * .5625), deviceScaleFactor: 1, mobile: false });
     await site.waitForFunction((w) => innerWidth === w, width);
-    const metrics = await site.evaluate(() => { const bar = document.querySelector('.app-titlebar').getBoundingClientRect(), tools = document.querySelector('.cabin-toolbar').getBoundingClientRect(); return { scrollWidth: document.documentElement.scrollWidth, barRight: bar.right, toolsBottom: tools.bottom, rack: document.querySelector('.room-rack').getBoundingClientRect().top }; });
+    const metrics = await site.evaluate(() => { const bar = document.querySelector('.home-header').getBoundingClientRect(), tools = document.querySelector('.listen-bar').getBoundingClientRect(); return { scrollWidth: document.documentElement.scrollWidth, barRight: bar.right, toolsBottom: tools.bottom }; });
     assert.ok(metrics.scrollWidth <= width + 1 && metrics.barRight <= width + 1, JSON.stringify(metrics));
     check(`layout-fits-${width}`, metrics);
   }

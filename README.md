@@ -26,14 +26,14 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0--only-blue" alt="GPL-3.0-only 许可证" height="20"></a>
 </p>
 
-<img src="docs/assets/screenshots/cabin.jpg" width="100%" alt="默认原版首页：唱片架、唱机、专注与伙伴">
+<img src="docs/assets/screenshots/cabin-v21.png" width="100%" alt="生活小屋首页：听歌、工作与生活三个区域">
 
 </div>
 
 ---
 
 <details>
-<summary>原版界面功能演示</summary>
+<summary>功能演示（3.0 之前的界面）</summary>
 
 <img src="docs/assets/cabin-tour.gif" width="100%" alt="心流小屋功能演示：房间、唱片、专注与小猫">
 
@@ -45,7 +45,7 @@
 
 Android 适配版包含 Portable 同源的 QQ / 网易云登录音乐服务、全面屏布局和本地保存，安装与构建见 [Android 说明](docs/android.md)。手机版本仍待真实账号和真机验收；支持范围也在其中列出。
 
-- **原版继续保留，Beta 主动体验** —— 默认仍是熟悉的唱片架，顶部直接打开专辑墙。点击 Beta 并重启可进入新小屋，也能随时切回。Beta 的听歌、工作与生活角各有全屏近景，手机可滑动换区。
+- **生活小屋是唯一的首页** —— 听歌、工作与生活角各有全屏近景，手机可滑动换区。3.1 起原版唱片架首页已移除；唱片墙成了小屋里的「唱片架」，专辑墙仍在其中，收藏和记录原样保留。
 - **唱片库与唱机** —— 搜专辑、贴 QQ 音乐链接或手填；封面上的播放按钮直接继续音乐。曲库、队列、歌词和笔记在小屋内打开，切角落不打断播放。
 - **智能唱片机** —— 说一句「学习 50 分钟，帮我搭配音乐」，AI 排一整张歌单；可以只收进唱片架，也可以收下并直接开始这一轮。
 - **专注与学习** —— 四档番茄节奏、待办、连续天数、7 天趋势、一年热力图；15 本词书用 FSRS 复习，还能加自己的考试倒计时。
@@ -62,21 +62,17 @@ Android 适配版包含 Portable 同源的 QQ / 网易云登录音乐服务、�
   </tr>
   <tr>
     <td width="50%"><img src="docs/assets/screenshots/smart-turntable.jpg" alt="智能唱片机：根据学习 50 分钟的计划生成完整歌单，提供只收进唱片架与收进唱片架并开始这一轮两种选择"><br><sub>智能唱片机 · 按计划编排一张完整歌单</sub></td>
-    <td width="50%"><img src="docs/assets/screenshots/work-corner-v21.png" alt="Beta 全屏工作角：真实专注钟、任务板与随手记"><br><sub>Beta 全屏工作角 · 专注 · 任务 · 随手记</sub></td>
+    <td width="50%"><img src="docs/assets/screenshots/work-corner-v21.png" alt="全屏工作角：真实专注钟、任务板与随手记"><br><sub>全屏工作角 · 专注 · 任务 · 随手记</sub></td>
   </tr>
 </table>
 
 ---
 
-## Beta 生活小屋
+## 八间房
 
-从顶部「Beta」或「设置 → 小屋 Beta」主动开启，重启后生效。新小屋顶部同样保留专辑墙。
+3.1 起首页是一张书桌：顶部的铜牌、LED 台钟和铜旋钮就是入口。
 
-<img src="docs/assets/screenshots/cabin-v21.png" width="100%" alt="可选 Beta 小屋：听歌、工作与生活三个区域">
-
-## 原版六间房
-
-<img src="docs/assets/screenshots/rooms-grid.webp" width="100%" alt="六间房：像素小屋、琥珀小屋、月夜书桌、林间书屋、海边慢屋、星夜阁楼">
+<img src="docs/assets/screenshots/rooms-grid.webp" width="100%" alt="八间房中的六间：像素小屋、琥珀小屋、月夜书桌、林间书屋、海边慢屋、星夜阁楼">
 
 <sub>像素小屋 · 琥珀小屋 · 月夜书桌 · 林间书屋 · 海边慢屋 · 星夜阁楼</sub>
 

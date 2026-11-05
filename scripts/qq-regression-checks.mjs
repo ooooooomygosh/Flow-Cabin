@@ -1,6 +1,7 @@
 /** Offline renderer regression: isolated storage, synthetic responses, no external requests. */
 import assert from 'node:assert/strict';
 import { onboardingSeed } from './app-version.mjs';
+import { openAddToShelf, openSettingsSection } from './settings-actions.mjs';
 export async function verifyQQRegression({ browser, origin, check }) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'zh-CN', reducedMotion: 'reduce' });
   const errors = []; let mode = 'expired';
@@ -31,7 +32,7 @@ export async function verifyQQRegression({ browser, origin, check }) {
     return route.continue();
   });
   const page = await context.newPage(); page.setDefaultTimeout(12000); page.on('pageerror', e => errors.push(e.message));
-  const open = async next => { mode = next; await page.goto(origin); await page.getByRole('button', { name: '添加到唱片架', exact: true }).click(); await page.getByRole('tab', { name: '我的歌单', exact: true }).click(); };
+  const open = async next => { mode = next; await page.goto(origin); await openAddToShelf(page, '我的歌单'); };
   try {
     await open('expired'); await page.getByRole('button', { name: '登录QQ 音乐', exact: true }).waitFor();
     assert.equal(await page.getByRole('heading', { name: '还没有歌单', exact: true }).count(), 0);
@@ -46,14 +47,14 @@ export async function verifyQQRegression({ browser, origin, check }) {
     await open('partial-empty'); await page.getByRole('heading', { name: '部分歌单未能读取' }).waitFor();
     assert.equal(await page.getByRole('heading', { name: '还没有歌单', exact: true }).count(), 0); check('qq-unconfirmed-empty-is-not-reported-as-empty-account');
     // 学习 has one entry: the toolbar's 专注 badge opens the dock, 学习 is its tab (设置 holds only preferences).
-    await page.keyboard.press('Escape'); await page.getByRole('button', { name: '设置', exact: true }).click(); await page.getByRole('tab', { name: '专注', exact: true }).click();
+    await openSettingsSection(page, '专注');
     assert.equal(await page.getByRole('dialog', { name: '设置', exact: true }).getByRole('button', { name: /打开学习|打开番茄钟|查看统计/ }).count(), 0, 'no action rows in 设置');
     await page.getByLabel('专注（分）').waitFor();
     // 3.0: 学习 is the 词书学习 lab; switch it on in 设置 › 实验室 first.
     await page.getByRole('tab', { name: '实验室', exact: true }).click(); await page.getByRole('checkbox', { name: '词书学习', exact: true }).check(); await page.keyboard.press('Escape');
-    await page.locator('.cabin-toolbar .focus-badge').click(); await page.getByRole('tab', { name: '学习', exact: true }).click();
-    assert.equal(await page.getByRole('tab', { name: '学习', exact: true }).getAttribute('aria-selected'), 'true'); await page.locator('.focus-dock').waitFor();
-    check('toolbar-focus-badge-opens-study-dock-and-settings-holds-preferences');
+    await page.locator('.focus-badge').click(); await page.getByRole('tab', { name: '学习', exact: true }).click();
+    assert.equal(await page.getByRole('tab', { name: '学习', exact: true }).getAttribute('aria-selected'), 'true'); await page.getByRole('dialog', { name: '专注', exact: true }).waitFor();
+    check('desk-clock-opens-study-and-settings-holds-preferences');
     assert.deepEqual(errors, []);
   } finally { await context.close(); }
 }

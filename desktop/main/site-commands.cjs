@@ -15,7 +15,6 @@ function createSiteCommands(ctx) {
   const sink = () => ctx.desktopSink(), window = () => ctx.mainWindow();
   const update = ({ pathname, searchParams }) => ctx.handleUpdateCommand(pathname, searchParams);
   const table = {
-    '/interface-restart': () => ctx.restartInterface?.(),
     '/lyrics-open': () => ctx.openLyrics?.(),
     '/lyrics-toggle': () => ctx.toggleLyrics?.(),
     '/settings': () => ctx.toggleSettings(true),

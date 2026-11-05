@@ -15,7 +15,6 @@ export const SETTINGS_INDEX = Object.freeze([
   { id: 'accounts', section: 'music/accounts', title: '账户与文件夹', keywords: '登录 账号 退出登录 文件夹 扫描 music assistant 凭据 cookie', when: 'native' },
   { id: 'quality', section: 'music', title: '音质', keywords: '无损 高品质 码率 会员 quality', when: 'native' },
   { id: 'crossfade', section: 'music', title: '歌曲过渡', keywords: '淡入 淡出 无缝 交叉 crossfade gapless 下一首' },
-  { id: 'home', section: 'room', title: '经典首页（过渡）', anchor: '经典首页', keywords: '首页 生活小屋 原版 唱片架 界面 切换首页 经典 interface' },
   { id: 'decorate', section: 'room', title: '布置小屋', keywords: '家具 摆放 布局 预设 听歌 工作 休息' },
   { id: 'scene', section: 'room', title: '房间场景', anchor: '你的休憩角落', keywords: '主题 场景 房间 背景 皮肤 风景 theme' },
   { id: 'pet', section: 'room', title: '陪你的小伙伴', keywords: '桌宠 宠物 伙伴 猫 奶糖 枫糖 pet' },

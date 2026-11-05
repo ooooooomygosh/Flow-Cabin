@@ -25,7 +25,6 @@ try {
   }
   browser = await launchChromium();
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'zh-CN', reducedMotion: 'reduce' });
-  await context.addInitScript(()=>localStorage.setItem('flow-cabin-interface-v1','beta'));
   await context.addInitScript(seed => localStorage.setItem('flow-cabin-onboarding-v1', seed), onboardingSeed());
   await context.route('**/*', async route => {
     const url = new URL(route.request().url());
@@ -60,8 +59,9 @@ try {
   const drawer=await page.getByRole('dialog',{name:'布置小屋',exact:true}).boundingBox();assert.ok(drawer.y>=48&&drawer.y+drawer.height<=892,JSON.stringify(drawer));
   await page.getByRole('dialog').getByRole('button',{name:'完成布置',exact:true}).click();
   await page.getByRole('navigation',{name:'房间区域'}).getByRole('button',{name:'工作角',exact:true}).click();await page.locator('.corner-clock').waitFor();
-  await page.getByRole('button',{name:'随手记',exact:true}).first().click();
-  const sheet=page.getByRole('dialog'),inner=sheet.locator('.focus-dock');assert.equal(await inner.evaluate(n=>getComputedStyle(n).position),'static');
+  // The phone reaches 随手记 the way a user does: the LED clock opens the 专注 panel, 这一段 holds the memo pad.
+  await page.locator('.focus-badge').click();await page.getByRole('tab',{name:'这一段',exact:true}).click();await page.getByRole('textbox',{name:'随手记内容',exact:true}).waitFor();
+  const sheet=page.getByRole('dialog',{name:'专注',exact:true}),inner=sheet.locator('.focus-dock');assert.equal(await inner.evaluate(n=>getComputedStyle(n).position),'static');
   const heading=await sheet.locator('.cabin-dialog-header').boundingBox(),innerRect=await inner.boundingBox();assert.ok(innerRect.y>=heading.y+heading.height-1);
   await sheet.locator('.cabin-dialog-close').click();
   await page.screenshot({path:path.join(output,'native-csp-phone.png')});pass('phone-home-and-editor-respect-native-safe-areas');

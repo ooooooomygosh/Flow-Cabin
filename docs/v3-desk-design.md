@@ -45,3 +45,9 @@
 | 便签（问候） | `src/home/desk.css` | `.home-room-caption p` |
 | 合成声音 | `src/props/sfx*.mjs` | |
 | 灯、弹簧、纸纤维 | `src/props/lamp.mjs`、`motion.mjs`、`paper-noise.mjs` | |
+
+## 原版首页已移除
+
+3.1 起生活小屋（`src/CabinRoom.jsx` → `src/home/CabinHome.jsx`）是唯一的首页：`ClassicCabinRoom`、`InterfaceDialog`、设置里的「经典首页」开关和各平台的「重启换首页」命令都已删除。旧版本保存的首页选择（`flow-cabin-interface-v1`）在启动时被忽略并清除（`src/interface-mode.mjs`）。唱片墙的浏览功能在 **唱片架**（书柜近景）里；旧的房间场景代码（`RoomScene`、`CabinAtmosphere`、`StudyWriting`……）只剩「沉入桌面」的动态壁纸（`wallpaper.html`）在用。
+
+测试对应关系：原版唱片架的分页、拖唱片到唱机、九格月夜书架、顶栏布局等检查随它一起删除；其余检查改用 `scripts/settings-actions.mjs` 与 `desktop/test/ui-fixture.cjs` 里的共用函数（`openLibrary`、`takeBinder`、`playRecord`、`openRecordCard`、`openAddToShelf`、`openConsole`、`chooseSource`）驱动小屋。

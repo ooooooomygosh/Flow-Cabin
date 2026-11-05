@@ -1,5 +1,6 @@
-// Drive the visible paths: preferences live in 设置 (titlebar ⚙), every way onto
-// the shelf lives in 添加到唱片架 (titlebar ＋), shelf tools in 整理唱片架 (console).
+// Drive the visible paths of the life cabin (the only home since 3.1): preferences live in 设置
+// (the brass knob → 全部设置), records in the 唱片架 close-up (top-bar plate), every way onto the
+// shelf in 添加到唱片架 (inside 唱片架).
 import { providerLabel } from '../src/player/providers.mjs';
 
 // 3.0 merged nine settings sections into six. Scripts may still name an old one;
@@ -8,7 +9,14 @@ export const HUB_TAB = Object.freeze({ '音源': '音乐', '房间与桌宠': '�
 export const hubTabName = (section) => HUB_TAB[section] || section;
 export const settingsDialog = (page) => page.getByRole('dialog', { name: '设置', exact: true });
 export async function openSettingsSection(page, section) {
-  if (!await settingsDialog(page).isVisible()) { for(let i=0;i<4 && await page.locator('dialog[open]').count();i++) await page.keyboard.press('Escape'); await page.getByRole('button', { name: '设置', exact: true }).click(); if(await page.getByRole('button', { name: '全部设置', exact: true }).isVisible())await page.getByRole('button', { name: '全部设置', exact: true }).click(); }
+  if (!await settingsDialog(page).isVisible()) {
+    for (let i = 0; i < 4 && await page.locator('dialog[open]').count(); i++) await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: '设置', exact: true }).click();
+    // The brass knob pulls the 小屋日常 drawer out (全部设置 is the last object in it); the drawer loads on first use.
+    const all = page.getByRole('button', { name: '全部设置', exact: true });
+    await all.or(settingsDialog(page)).first().waitFor();
+    if (await all.isVisible()) await all.click();
+  }
   await settingsDialog(page).getByRole('tab', { name: hubTabName(section), exact: true }).click();
 }
 export async function closeSettings(page) {
@@ -24,30 +32,80 @@ export async function openMusicSettings(page) {
 export async function chooseSource(page, value) {
   await openSettingsSection(page, '音乐');
   const radio = settingsDialog(page).getByRole('radiogroup', { name: '唱机音源', exact: true }).getByRole('radio', { name: providerLabel(value), exact: true });
-  await radio.click(); await page.waitForFunction((id) => document.querySelector('.room-turntable')?.dataset.provider === id, value);
+  await radio.click();
+  await page.waitForFunction((id) => document.querySelector('.listen-bar')?.dataset.provider === id || !document.querySelector('.listen-bar:not(.is-empty)'), value);
   if (await radio.getAttribute('aria-checked') !== 'true') throw new Error(`唱机音源 ${value} was not selected`);
   await closeSettings(page);
 }
-// The cabin's 唱片架 (top bar) opens the library panel; its dialog was titled 唱片库 before 3.0.
+// The cabin's 唱片架 (top-bar plate) is a bookcase close-up (Dialog variant=full, aria-label 唱片架): ring binders
+// 唱片 / 我喜欢 / 最近播放 / one per 唱片盒, an A–Z 索引本 and the 专辑墙 frame. The 唱片 binder is taken down first.
 export const libraryDialog = (page) => page.getByRole('dialog', { name: /^唱片(库|架)$/ });
-export async function openCabinLibrary(page) {
+export async function openLibrary(page) {
   if (!await libraryDialog(page).isVisible()) await page.locator('.home-shortcuts').getByRole('button', { name: '唱片架', exact: true }).click();
   await libraryDialog(page).waitFor();
+  return libraryDialog(page);
+}
+export const openCabinLibrary = openLibrary;
+// 放回: Esc puts the shelf back (also the corner plate and a press on the bare wall).
+export async function closeLibrary(page) {
+  // In the index book Esc first clears what was typed, so a second press may be needed.
+  for (let i = 0; i < 3 && await libraryDialog(page).isVisible(); i++) { await page.keyboard.press('Escape'); await libraryDialog(page).waitFor({ state: 'hidden', timeout: 1500 }).catch(() => {}); }
+  await libraryDialog(page).waitFor({ state: 'hidden' });
+}
+// Take one binder or the index book down (names: the box name, 唱片, 我喜欢, 最近播放; 索引本 for the book).
+export async function takeBinder(page, name) {
+  const dialog = await openLibrary(page);
+  const spine = name === '索引本' ? dialog.getByRole('button', { name: /^索引本/ }) : dialog.getByRole('button', { name: new RegExp(`^${name}活页夹`) });
+  if (await spine.getAttribute('aria-expanded') !== 'true') await spine.click();
+  await dialog.locator('.shelf-object').waitFor();
+  return dialog;
+}
+// 播放 a record by its title from the 唱片 binder; the shelf is put back afterwards unless `keepOpen`.
+export async function playRecord(page, title, { keepOpen = false } = {}) {
+  const dialog = await takeBinder(page, '唱片');
+  await dialog.getByRole('button', { name: `播放 ${title}`, exact: true }).click();
+  await page.locator('.listen-bar:not(.is-empty)').waitFor();
+  if (!keepOpen) await closeLibrary(page);
+}
+// 唱片卡片 of a record, opened from the binder's title link.
+export async function openRecordCard(page, title) {
+  const dialog = await takeBinder(page, '唱片');
+  await dialog.locator('.listen-grid-title').filter({ hasText: title }).first().click();
+  const card = page.getByRole('dialog', { name: /^唱片卡片/ }); await card.waitFor();
+  return card;
+}
+export async function closeRecordCard(page) {
+  const card = page.getByRole('dialog', { name: /^唱片卡片/ });
+  if (await card.isVisible()) { await card.getByRole('button', { name: '关闭唱片卡片', exact: true }).click(); await card.waitFor({ state: 'hidden' }); }
 }
 export const addDialog = (page) => page.getByRole('dialog', { name: '添加到唱片架', exact: true });
 export async function openAddToShelf(page, tab = '曲库搜索') {
-  if (await page.locator('.cabin-home').count()) await openCabinLibrary(page);
-  // 3.0: an empty 唱片架 shows its own 手动添加 / 搜索添加 instead of the toolbar button.
-  await page.getByRole('button', { name: '添加到唱片架', exact: true }).or(page.locator('.listen-shelf .listen-primary')).first().click(); await addDialog(page).waitFor();
+  const dialog = await openLibrary(page);
+  // An empty 唱片架 shows its own 手动添加 / 搜索添加; otherwise the plate in the cornice.
+  const plate = dialog.getByRole('button', { name: '添加到唱片架', exact: true });
+  if (await plate.count()) await plate.click();
+  else await dialog.locator('.listen-empty-shelf .listen-primary').click();
+  await addDialog(page).waitFor();
   if (tab !== '曲库搜索') await addDialog(page).getByRole('tab', { name: tab, exact: true }).click();
+  return addDialog(page);
 }
-export async function openShelfTools(page) {
-  const toggle = page.getByRole('button', { name: '整理唱片架', exact: true });
-  if (await toggle.getAttribute('aria-expanded') !== 'true') await toggle.click();
-  await page.getByRole('region', { name: '整理唱片架', exact: true }).waitFor();
-}
-// Classic: the titlebar's 专辑墙. Cabin (3.0): 专辑墙 lives inside 唱片架.
+// 专辑墙 hangs on the shelf as a framed poster (the frame opens the editor).
 export async function openAlbumWall(page) {
-  if (await page.locator('.cabin-home').count()) { await openCabinLibrary(page); const dialog = libraryDialog(page); await dialog.getByRole('radio', { name: '墙', exact: true }).or(dialog.getByRole('button', { name: '墙', exact: true })).first().click(); await dialog.getByRole('button', { name: '制作专辑墙海报' }).click(); return; }
-  await page.getByRole('button', { name: '专辑墙', exact: true }).first().click();
+  const dialog = await openLibrary(page);
+  await dialog.getByRole('button', { name: '专辑墙', exact: true }).click();
 }
+// 唱机旁: the console close-up (Dialog variant=full, "唱机旁"). It carries the old pocket player's controls under the
+// same names (播放 / 暂停音乐播放, 下一首展示曲目, 音乐播放进度, 取下唱片…) and `.console[data-provider]`,
+// `.console-title/.console-track/.console-status`. It opens from the 正在播放 strip's title (needs a loaded record).
+export const consoleDialog = (page) => page.getByRole('dialog', { name: '唱机旁', exact: true });
+export async function openConsole(page) {
+  if (!await consoleDialog(page).isVisible()) await page.locator('.listen-meta').click();
+  await consoleDialog(page).waitFor();
+  return consoleDialog(page);
+}
+export async function closeConsole(page) {
+  if (!await consoleDialog(page).isVisible()) return;
+  await page.keyboard.press('Escape'); await consoleDialog(page).waitFor({ state: 'hidden' });
+}
+// The record on the deck (the home publishes it as window.__cabinDeckItem, docs/events.md).
+export const deckRecord = (page) => page.evaluate(() => window.__cabinDeckItem || null);

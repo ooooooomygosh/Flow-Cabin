@@ -99,7 +99,6 @@ async function newPage(context, label, { open = true } = {}) {
 async function run(name, test, { open = true, prepare } = {}) {
   if (process.env.SOUVENIR_FILTER && !name.includes(process.env.SOUVENIR_FILTER)) return;
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'zh-CN', reducedMotion: 'reduce' });
-  await context.addInitScript(()=>localStorage.setItem('flow-cabin-interface-v1','beta'));
   await context.addInitScript((seed) => { window.__onboardingSeed = seed; }, onboardingSeed());
   await context.addInitScript(focusKey => {
     if (location.origin === 'null') return;

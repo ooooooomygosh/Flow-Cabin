@@ -10,6 +10,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { showcaseAlbums } from './showcase-albums.mjs';
 import { onboardingSeed } from './app-version.mjs';
+import { openLibrary } from './settings-actions.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const output = path.resolve(process.env.README_ASSETS || path.join(root, 'docs/assets/screenshots'));
@@ -34,7 +35,7 @@ try {
   await context.addInitScript((fixture) => {
     window.albumDesktopAppearance = { client: true, reduceMotion: true };
     localStorage.setItem('album-circle-focus-v1:local-owner', JSON.stringify(fixture));
-    localStorage.setItem('album-circle-focus-dock-v1', JSON.stringify({ open: true, tab: 'timer' }));
+    localStorage.setItem('flow-cabin-labs-v1', JSON.stringify({ smartTurntable: true }));
     localStorage.setItem('flow-cabin-onboarding-v1', window.__onboardingSeed);
     localStorage.setItem('flow-cabin-ai-v1', JSON.stringify({ v: 1, enabled: true, baseUrl: 'https://api.mock-ai.test/v1', model: 'mock-model', cadence: 'weekly', tone: 'warm', shareNotes: false }));
     localStorage.setItem('flow-cabin-ai-key-v1', JSON.stringify({ v: 2, key: 'sk-readme-demo', endpoint: 'https://api.mock-ai.test/v1/chat/completions', revision: 'readme-demo' }));
@@ -70,16 +71,19 @@ try {
     return route.continue();
   });
   const page = await context.newPage();
-  await page.goto(origin); await page.locator('.focus-dock').waitFor(); await page.evaluate(() => document.fonts.ready);
-  await page.waitForFunction(() => document.querySelectorAll('.pixel-artwork canvas.is-painted').length >= 12).catch(() => {});
+  await page.goto(origin); await page.locator('.focus-badge').click(); await page.locator('.focus-dock').waitFor(); await page.evaluate(() => document.fonts.ready);
   const dock = page.locator('.focus-dock');
   await dock.screenshot({ path: path.join(output, 'focus-timer.png'), animations: 'disabled' });
   await page.getByRole('tab', { name: '待办' }).click(); await page.locator('.focus-task-meter').waitFor();
   await dock.screenshot({ path: path.join(output, 'focus-tasks.png'), animations: 'disabled' });
-  await page.getByRole('tab', { name: '统计' }).click(); await page.locator('.focus-stats').waitFor();
-  await dock.screenshot({ path: path.join(output, 'focus-stats.png'), animations: 'disabled' });
-  await page.getByRole('button', { name: '收起专注工具' }).click();
-  await page.getByRole('button', { name: '智能唱片机', exact: true }).click();
+  // 统计 lives in 唱片日记 (open it above the room, then the panel is put away).
+  await page.keyboard.press('Escape');
+  await page.evaluate(() => window.dispatchEvent(new CustomEvent('cabin:open-journal', { detail: { tab: 'stats' } })));
+  const journal = page.getByRole('dialog', { name: '唱片日记' }); await journal.waitFor(); await page.locator('.focus-stats, .fs-today-num').first().waitFor();
+  await journal.screenshot({ path: path.join(output, 'focus-stats.png'), animations: 'disabled' });
+  await page.keyboard.press('Escape');
+  // 智能唱片机 is the 让小屋挑一张 plate on 唱片架.
+  await (await openLibrary(page)).getByRole('button', { name: '让小屋挑一张', exact: true }).click();
   const smart = page.getByRole('dialog', { name: '智能唱片机', exact: true });
   await smart.getByLabel('告诉小屋你的计划').fill('我要学习五十分钟，帮我搭配音乐');
   await smart.getByRole('button', { name: '让小屋推荐歌单', exact: true }).click();

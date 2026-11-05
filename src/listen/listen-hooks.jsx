@@ -53,7 +53,8 @@ export function usePopover() {
   const close = useCallback((restore = true) => { setOpen(false); if (restore) button.current?.focus({ preventScroll: true }); }, []);
   useEffect(() => {
     if (!open) return;
-    const away = (event) => { if (!panel.current?.contains(event.target) && !button.current?.contains(event.target)) close(false); };
+    // A dialog opened from the panel (管理唱片盒) is not "outside": pressing in it must not unmount the panel that owns it.
+    const away = (event) => { const dialog = event.target?.closest?.('dialog'); if (dialog && !dialog.contains(button.current)) return; if (!panel.current?.contains(event.target) && !button.current?.contains(event.target)) close(false); };
     const key = (event) => { if (event.key === 'Escape' && panel.current?.contains(document.activeElement)) { event.preventDefault(); event.stopPropagation(); close(); } };
     document.addEventListener('pointerdown', away); document.addEventListener('keydown', key, true);
     requestAnimationFrame(() => { const target = panel.current?.querySelector('[data-autofocus]') || panel.current; target?.focus?.({ preventScroll: true }); });

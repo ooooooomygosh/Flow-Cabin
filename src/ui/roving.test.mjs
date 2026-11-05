@@ -79,7 +79,7 @@ test('only really reachable nodes stay in the focus list', () => {
 // The cabin's own widgets are guarded from the source side too: a <div> or a
 // <span> that only answers the mouse is a bug no unit test can see. The npm
 // test script's file list is not ours to edit, so the guard lives here.
-const OWNED = ['../Dialog.jsx', '../RecordCard.jsx', '../RecordLibrary.jsx', '../PlaylistLibrary.jsx', '../AddAlbum.jsx', '../AlbumWall.jsx', '../room/CabinDetails.jsx', './Roving.jsx', './Confirm.jsx'];
+const OWNED = ['../Dialog.jsx', '../RecordCard.jsx', '../RecordLibrary.jsx', '../PlaylistLibrary.jsx', '../AddAlbum.jsx', '../AlbumWall.jsx', './Roving.jsx', './Confirm.jsx'];
 const source = (file) => readFileSync(new URL(file, import.meta.url), 'utf8');
 
 // The end of a JSX opening tag: `>` may sit inside an arrow function, so the

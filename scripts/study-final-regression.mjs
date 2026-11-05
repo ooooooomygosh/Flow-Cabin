@@ -383,7 +383,7 @@ try {
   assert.equal(await page.evaluate(() => document.documentElement.classList.contains('room-focus-display')), false);
   await shot(page, '12-flip-clock-immersive-exited');
 
-  if (await dock.isVisible()) await page.getByRole('button', { name: '收起专注工具', exact: true }).click();
+  await page.keyboard.press('Escape'); // the focus dialog (if open) steps aside before the keyboard shortcut
   await page.evaluate(() => document.activeElement?.blur());
   await page.keyboard.press('z');
   await page.getByRole('dialog', { name: '专注画面' }).waitFor();

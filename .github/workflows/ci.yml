@@ -45,10 +45,10 @@ jobs:
       - name: Install Chromium
         working-directory: desktop
         run: npx playwright install --with-deps chromium
-      - name: Verify classic default, explicit Beta restart and shared album wall
+      - name: Verify the life cabin is the only home (stored classic choice ignored), shared album wall and phone entries
         run: npm run test:interface
-      - name: Regress original shelf, focus, playback feedback and themes
-        run: npm run test:journey && npm run test:browser && npm run test:focus-ui && npm run test:shelf-ui && npm run test:beat && npm run test:theme
+      - name: Regress the record shelf, focus, playback feedback and beat sync
+        run: npm run test:journey && npm run test:browser && npm run test:focus-ui && npm run test:shelf-ui && npm run test:beat
       - name: Run static web collection without a backend
         run: npm run test:web-static
       - name: Run full-screen home, persistent playback and furniture regressions
@@ -98,9 +98,7 @@ jobs:
             desktop/test-results/journal-entries/
             desktop/test-results/memory-deletion/
             desktop/test-results/study-ui/
-            desktop/test-results/theme-interactions/
             desktop/test-results/room-production/
-            desktop/test-results/room-studio/
             desktop/test-results/devices-ui/
             desktop/test-results/souvenirs/
           if-no-files-found: warn
