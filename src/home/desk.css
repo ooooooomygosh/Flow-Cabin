@@ -52,7 +52,7 @@
 .cabin-home .home-shortcuts .desk-clock { display: block; width: 168px; height: 50px; min-height: 0; padding: 3px; border: 0; border-radius: 6px; background: linear-gradient(180deg, #1a1511, #0b0807); color: inherit; box-shadow: inset 0 0 0 1px rgba(255, 240, 215, .12), 0 0 0 1px rgba(0, 0, 0, .75), inset 0 -2px 0 rgba(0, 0, 0, .5), var(--lamp-drop); }
 .cabin-home .home-shortcuts .desk-clock:hover { filter: brightness(1.12); }
 .cabin-home .home-shortcuts .desk-clock:focus-visible { outline: 2px solid #fff3cf; outline-offset: 3px; }
-.cabin-home .home-shortcuts .desk-clock .led-glass { height: 100%; }
+.cabin-home .home-shortcuts .desk-clock .led-glass { display: block; height: 100%; } /* home.css hides svg icons inside .home-shortcuts buttons on phones; the glass is not an icon */
 
 .cabin-home .home-header .desktop-controls { margin: 0 0 0 auto; gap: 10px; }
 .cabin-home .home-header .desktop-controls button { width: 34px; height: 34px; min-height: 34px; padding: 0; display: grid; place-items: center; border-radius: 50%; color: var(--brass-ink); background: radial-gradient(circle at 35% 28%, #c9ae72, #8f743f 55%, #6e5528); box-shadow: inset 0 0 0 1px rgba(255, 239, 204, .4), 0 0 0 1px rgba(36, 23, 8, .6), var(--lamp-drop); }
@@ -91,10 +91,15 @@
   .cabin-home .home-shortcuts .brass-plate { padding: 7px 12px; }
 }
 @media (max-width: 699px) {
-  .cabin-home .home-header { padding-left: 12px; padding-right: 12px; gap: 6px; flex-wrap: nowrap; }
+  /* Phone: two rows on the rail — photo, room plate and knobs on top; shelf door, clock and diary door below. */
+  .cabin-home .home-header { padding: 8px 12px 9px; gap: 6px 8px; flex-wrap: wrap; align-items: center; }
   .cabin-home .home-header .home-pet-portrait { width: 44px; height: 44px; }
-  .cabin-home .home-header .home-room-name { padding: 7px 10px; min-height: 36px; }
-  .cabin-home .home-shortcuts .brass-plate { min-height: 44px; }
+  .cabin-home .home-header .home-room-name { flex: 1 1 0; min-width: 0; padding: 7px 10px; min-height: 40px; }
+  .cabin-home .home-header .desktop-controls { margin: 0; gap: 8px; }
+  .cabin-home .home-header .desktop-controls button { width: 40px; height: 40px; min-height: 40px; }
+  .cabin-home .home-shortcuts { order: 5; flex: 1 0 100%; position: static; transform: none; justify-content: center; margin: 0; padding: 0; gap: 8px; }
+  .cabin-home .home-shortcuts .brass-plate { min-height: 48px; padding: 7px 12px; }
+  .cabin-home .home-shortcuts .desk-clock { width: 134px; height: 48px; }
   .cabin-home .home-zones { gap: 6px; }
   .cabin-home .home-zones button.brass-plate { min-height: 44px; padding: 7px 12px; }
 }

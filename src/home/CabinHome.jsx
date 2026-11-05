@@ -5,6 +5,9 @@ import PixelCat from '../pet/PixelCat';
 import Dialog from '../Dialog';
 import BrassPlate from '../props/BrassPlate';
 import DeskClock from './DeskClock';
+import HomeDrawer from './drawer/HomeDrawer';
+import ThemeAlbum from './drawer/ThemeAlbum';
+import DecorateTray from './drawer/DecorateTray';
 import { Down as ChevronDown, ChevronLeft, ChevronRight, Play, Pause, BookOpen, Clock, Library, Heart } from '../icons';
 import useLabs from '../product/useLabs';
 import { NAV_ENTRIES, hotspotItems, gearMenu, gatedAction } from './shell-model.mjs';
@@ -325,20 +328,17 @@ export default function CabinHome({ reduced = false, editRequest = 0, focusOpen 
     {store.error && <p className="home-layout-error" role="alert">{store.error}</p>}
     <footer className="home-footer"><NowPlayingBar/><nav className="home-zones" aria-label="房间区域" aria-keyshortcuts="0 1 2 3 ArrowLeft ArrowRight"><button type="button" className="brass-plate" aria-pressed={zone === 'all'} onClick={() => setZone('all')}>{overview ? '全屋' : '返回全屋'}</button>{ZONE_ORDER.map((id, i) => <button type="button" className="brass-plate" key={id} aria-pressed={zone === id} onClick={() => setZone(id)}><i className="home-zone-dot" aria-hidden="true" ref={el => { dots.current[i] = el; }}/>{ZONE_NAMES[id]}</button>)}</nav><button type="button" className="home-pet-return" aria-label="回到宠物" onClick={() => setZone('life')}><Heart size={16}/>{identity.name}</button></footer>
     <details className="home-accessible-furniture"><summary>家具与无障碍入口</summary><div>{layout.items.map(item => <button type="button" key={item.id} onClick={event => { event.currentTarget.closest('details').open = false; activate(item); }}>{FURNITURE[item.type].name}</button>)}</div></details>
-    {drawer && <Dialog title={drawer === 'themes' ? '选择小屋' : drawer === 'menu' ? '小屋日常' : '布置小屋'} close={() => setDrawer('')} className="home-tool home-editor" size="lg">
-      {drawer === 'menu' ? <>
-        {/* 3.0: four everyday items; 位置与天气, 功能诊断 and the classic home live in 全部设置, lab items appear only while their lab is on. */}
-        <nav className="home-menu-grid" aria-label="小屋功能">{gear.core.map(([id, name]) => <button type="button" key={id} onClick={() => { if (id === 'themes') setDrawer('themes'); else if (id === 'decorate') startEditing(); else { setDrawer(''); commands.open(id); } }}>{name}</button>)}</nav>
-        {gear.lab.length > 0 && <nav className="home-menu-grid home-menu-labs" aria-label="实验室功能"><h3>实验室</h3>{gear.lab.map(([id, name]) => <button type="button" key={id} onClick={() => { setDrawer(''); commands.open(id); }}>{name}</button>)}</nav>}
-      </> : drawer === 'themes' ? <div className="home-theme-grid">{THEMES.map(t => <button type="button" key={t.id} aria-pressed={look === t.id} onPointerEnter={() => prefetchRoomArt(t.id)} onFocus={() => prefetchRoomArt(t.id)} onClick={() => { commands.theme(t.id); setDrawer(''); }}><img src={`/room-scenes/v21/${t.id}/shell.webp`} alt=""/><span>{t.name}</span></button>)}</div> : <>
-        <p>拖动家具，或聚焦后用方向键微调。桌面小物会跟着桌子移动。</p>
-        <div className="home-editor-actions"><button type="button" disabled={!store.canUndo} onClick={store.undo}>撤销</button><button type="button" disabled={!store.canRedo} onClick={store.redo}>重做</button><button type="button" className="home-primary" onClick={() => { setDrawer(''); setEditing(false); setSelected(''); }}>完成布置</button><button type="button" onClick={() => setDrawer('')}>到屋内拖动</button></div>
-        <fieldset><legend>完整布置预设</legend>{[['listen', '听歌'], ['work', '工作'], ['rest', '休息']].map(([id, label]) => <button type="button" key={id} onClick={() => commit(defaultLayout(look, id))}>{label}</button>)}</fieldset>
-        {chosen && <section className="home-editor-selection"><h3>{FURNITURE[chosen.type].name}</h3><button type="button" onClick={() => mutate(() => placeFurniture(layout, chosen.id, { facing: chosen.facing === 'right' ? 'left' : 'right' }))}>换个朝向</button><button type="button" onClick={() => { mutate(() => removeFurniture(layout, chosen.id)); setSelected(''); }}>收起家具{FURNITURE[chosen.type].support ? '和桌面小物' : ''}</button></section>}
-        <div className="home-inventory">{Object.entries(FURNITURE).filter(([id]) => id !== 'fireplace').map(([id, spec]) => { const present = layout.items.find(i => i.type === id); return <button type="button" key={id} aria-pressed={selected === present?.id} onClick={() => { if (present) setSelected(present.id); else mutate(() => addFurniture(layout, id)); }}><span>{spec.name}</span><small>{present ? '已摆放' : '＋添加'}</small></button>; })}</div>
-        <div className="home-editor-actions"><button type="button" onClick={exportLayout}>另存布局</button><label className="home-file-button">导入布局<input type="file" accept="application/json,.json" onChange={importLayout}/></label><button type="button" onClick={() => commit(defaultLayout(look))}>恢复默认</button></div>
-        {store.error && <p role="alert">{store.error}</p>}
-      </>}
+    <HomeDrawer open={drawer === 'menu'} close={() => setDrawer('')} items={gear}
+      onPick={id => { if (id === 'themes') setDrawer('themes'); else if (id === 'decorate') startEditing(); else { setDrawer(''); commands.open(id); } }}/>
+    {drawer && drawer !== 'menu' && <Dialog title={drawer === 'themes' ? '选择小屋' : '布置小屋'} close={() => setDrawer('')} className="home-tool home-editor" size="lg">
+      {drawer === 'themes'
+        ? <ThemeAlbum look={look} prefetch={prefetchRoomArt} onPick={id => { commands.theme(id); setDrawer(''); }}/>
+        : <DecorateTray canUndo={store.canUndo} canRedo={store.canRedo} onUndo={store.undo} onRedo={store.redo} error={store.error}
+            onFinish={() => { setDrawer(''); setEditing(false); setSelected(''); }} onInRoom={() => setDrawer('')}
+            onPreset={id => commit(defaultLayout(look, id))} items={layout.items} selected={selected} onSelect={setSelected} chosen={chosen}
+            onTurn={() => mutate(() => placeFurniture(layout, chosen.id, { facing: chosen.facing === 'right' ? 'left' : 'right' }))}
+            onStow={() => { mutate(() => removeFurniture(layout, chosen.id)); setSelected(''); }}
+            onAdd={type => mutate(() => addFurniture(layout, type))} onExport={exportLayout} onImport={importLayout} onReset={() => commit(defaultLayout(look))}/>}
     </Dialog>}
   </section>;
 }
