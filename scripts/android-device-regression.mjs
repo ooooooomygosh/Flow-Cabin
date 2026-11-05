@@ -39,7 +39,7 @@ async function connect() {
     await pause(300);
   }
   if (!socket) throw Error('Install and launch the debug APK first.');
-  await until('Boolean(window.albumMobile && document.querySelector(".room-record"))');
+  await until('Boolean(window.albumMobile && document.querySelector(".cabin-home"))');
 }
 function send(method, params = {}) {
   return new Promise((resolve, reject) => {
@@ -64,23 +64,22 @@ async function screenshot(name) {
   await fs.writeFile(path.join(output, name + '.png'), png);
 }
 const check = name => { report.checks.push(name); console.log('PASS ' + name); };
+// The life cabin's desk: the rail, the 正在播放 strip and the zone plates stay on screen and inside the cutout / system bars.
 async function layout(name) {
   await pause(650);
   const value = await evaluate(`(() => {
     const rect=s=>document.querySelector(s)?.getBoundingClientRect().toJSON(),css=getComputedStyle(document.documentElement);
     const safe=Object.fromEntries(['left','right','top','bottom'].map(s=>[s,parseFloat(css.getPropertyValue('--safe-area-inset-'+s))||0]));
     return {name:${JSON.stringify(name)},viewport:[innerWidth,innerHeight],screen:[screen.width,screen.height],safe,
-      stage:rect('.cabin-scene'),art:rect('.cabin-scene-canvas'),keyboard:document.documentElement.dataset.mobileKeyboard,
-      controls:['.app-titlebar','.cabin-toolbar','.room-turntable','.room-now-playing','.room-shelf-navigation'].map(s=>({selector:s,rect:rect(s)})),
-      records:[...document.querySelectorAll('.room-record')].map(e=>{const r=e.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return {label:e.getAttribute('aria-label'),rect:r.toJSON(),hit:hit===e||e.contains(hit)};})};})()`);
-  const { art, stage, safe, viewport: [width, height] } = value;
+      keyboard:document.documentElement.dataset.mobileKeyboard,
+      controls:['.home-header','.home-shortcuts','.listen-bar','nav.home-zones'].map(s=>({selector:s,rect:rect(s)}))};})()`);
+  const { safe, viewport: [width, height] } = value;
   report.layouts.push(value);
   assert.ok(Math.abs(width - value.screen[0]) <= 2 && Math.abs(height - value.screen[1]) <= 2, name + ': WebView does not fill display');
-  assert.ok(art.left <= stage.left + 1 && art.top <= stage.top + 1 && art.right >= stage.right - 1 && art.bottom >= stage.bottom - 1, name + ': artwork leaves a solid gutter');
-  assert.ok(Math.abs(art.width / art.height - 4 / 3) < .01, name + ': distorted scene');
-  assert.ok(value.records.length > 0, name + ': no reachable records');
-  for (const item of value.records) assert.ok(item.hit && item.rect.left >= safe.left - 1 && item.rect.right <= width - safe.right + 1 && item.rect.top >= safe.top - 1 && item.rect.bottom <= height - safe.bottom + 1, name + ': covered or clipped sleeve ' + item.label);
-  for (const { selector, rect } of value.controls) if (rect?.width && rect?.height) assert.ok(rect.left >= -1 && rect.top >= -1 && rect.right <= width + 1 && rect.bottom <= height + 1, name + ': control out of screen ' + selector);
+  for (const { selector, rect } of value.controls) {
+    assert.ok(rect?.width && rect?.height, name + ': control missing ' + selector);
+    assert.ok(rect.left >= safe.left - 1 && rect.top >= -1 && rect.right <= width - safe.right + 1 && rect.bottom <= height - safe.bottom + 1, name + ': control out of the safe screen ' + selector);
+  }
   assert.equal(value.keyboard, 'false', name + ': rotation incorrectly detected as keyboard');
   await screenshot('emulator-' + name); check(name);
 }
@@ -99,17 +98,16 @@ try {
   await openSocket(target);
   await until('Boolean(window.albumMobile)');
   await evaluate(`(async()=>{const items=Array.from({length:29},(_,i)=>({id:'android-qa-'+i,type:'album',title:'全面屏测试 '+(i+1),artist:'模拟器测试',tracks:['测试曲目'],addedAt:new Date(2026,0,1,i).toISOString()}));localStorage.setItem('flow-cabin-web-collection-v1',JSON.stringify({version:1,items}));localStorage.setItem('flow-cabin-onboarding-v1',${JSON.stringify(onboardingSeed())});await window.albumMobile.flushStorage();return true;})()`);
-  await send('Page.reload'); await until('document.querySelectorAll(".room-record").length > 0');
+  await send('Page.reload'); await until('Boolean(document.querySelector(".cabin-home"))');
   await layout('portrait');
   const service = await evaluate(`window.albumMobile.musicRequest('/config').then(v=>({ready:true,qqLoggedIn:v.qqLoggedIn,neteaseLoggedIn:v.neteaseLoggedIn}))`);
   assert.equal(service.ready, true); check('android-embedded-music-engine-starts');
-  const visited = new Set();
-  for (let page = 0; page < 29; page++) {
-    const labels = await evaluate(`[...document.querySelectorAll('.room-record')].map(e=>e.getAttribute('aria-label'))`); labels.forEach(label => visited.add(label));
-    const next = await evaluate(`(()=>{const b=document.querySelector('button[aria-label="下一页唱片"]');if(!b||b.disabled)return false;b.click();return true;})()`);
-    if (!next) break; await pause(350);
-  }
-  assert.equal(visited.size, 29); check('all-29-albums-reachable-through-native-webview-pages');
+  // 唱片架 (the top-bar plate) holds all 29 records in its 唱片 binder; each cover is a real, reachable button.
+  await evaluate(`[...document.querySelectorAll('.home-shortcuts button')].find(b=>/^唱片架/.test(b.textContent)).click()`);
+  await until('document.querySelectorAll(".listen-grid-cover").length === 29');
+  const reached = await evaluate(`[...document.querySelectorAll('.listen-grid-cover')].map(e=>{e.scrollIntoView({block:'center'});const r=e.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return e===hit||e.contains(hit);}).filter(Boolean).length`);
+  assert.equal(reached, 29); check('all-29-albums-reachable-in-the-native-webview-shelf');
+  await evaluate(`document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}))`); await until('!document.querySelector("dialog[open]")');
   for (const rotation of [1, 3]) { adb('shell', 'settings', 'put', 'system', 'user_rotation', String(rotation)); await until('innerWidth > innerHeight'); await layout(rotation === 1 ? 'landscape' : 'reverse-landscape'); }
   adb('shell', 'cmd', 'overlay', 'enable', '--user', '0', overlay);
   // Changing a developer cutout overlay can recreate the Android WebView.
@@ -124,7 +122,8 @@ try {
     await evaluate('window.albumMobile.setFullscreen(false)');
   }
   adb('shell', 'settings', 'put', 'system', 'user_rotation', '0'); await until('innerHeight > innerWidth');
-  await evaluate(`document.querySelector('button[aria-label="唱片卡片"]')?.click()`);
+  await evaluate(`[...document.querySelectorAll('.home-shortcuts button')].find(b=>/^唱片架/.test(b.textContent)).click()`);
+  await until('Boolean(document.querySelector(".listen-grid-title"))'); await evaluate(`document.querySelector('.listen-grid-title').click()`);
   await until('Boolean(document.querySelector(".record-card-notes textarea"))');
   for (const rotation of [0, 1]) {
     adb('shell', 'settings', 'put', 'system', 'user_rotation', String(rotation));

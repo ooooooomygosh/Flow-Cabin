@@ -461,7 +461,6 @@ async function wireRemoteView() {
 }
 
 const siteCommands = createSiteCommands({
-  restartInterface: async () => { await siteView?.webContents.session.flushStorageData(); app.relaunch(); app.quit(); },
   openLyrics: () => lyricWindow?.show().catch(error=>writeLog('lyric-window', error.message)),
   toggleLyrics,
   isSitePage: () => isSiteUrl(siteView?.webContents.getURL()), mainWindow: () => mainWindow, desktopSink: () => desktopSink, pet: () => pet, music: () => music, appearance: () => appearance, trayPet,

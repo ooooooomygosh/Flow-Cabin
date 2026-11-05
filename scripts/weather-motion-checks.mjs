@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
 import { onboardingSeed } from './app-version.mjs';
 
+// 窗外天气 on the pixel scene. Since 3.1 only the desktop wallpaper (wallpaper.html → RoomScene) draws the scene's
+// weather canvases; the life cabin paints its own sky in the Pixi room, which has no DOM to measure here.
 export async function verifyWeatherMotion(browser, origin, check) {
-  for (const surface of ['cabin-room', 'wallpaper-room']) {
+  for (const surface of ['wallpaper-room']) {
     for (const weather of ['rain', 'snow', 'starry']) {
       const context = await browser.newContext({ reducedMotion: 'no-preference', viewport: { width: 960, height: 600 } });
       const errors = [], external = [];
@@ -72,67 +74,4 @@ export async function verifyWeatherMotion(browser, origin, check) {
       } finally { await context.close(); }
     }
   }
-}
-
-// Regression for the window "flipping back and forth" after a click: picking a 窗景 (and then
-// following real weather) cross-fades over 30 s; during that fade the clouds must drift smoothly,
-// not jump to a new place every frame, and the scene's weather must change exactly once per click.
-export async function verifyWeatherSwitchSteady(browser, origin, check) {
-  const context = await browser.newContext({ reducedMotion: 'no-preference', viewport: { width: 1280, height: 800 } });
-  const errors = [];
-  await context.route('**/*', async route => {
-    const url = new URL(route.request().url());
-    if (url.origin !== origin) return route.abort();
-    if (url.pathname === '/desktop-weather/set') { const enabled = route.request().postDataJSON()?.enabled; await new Promise(r => setTimeout(r, 150)); return route.fulfill({ json: { report: enabled ? { kind: 'cloudy', intensity: 1, wind: .95, fetchedAt: Date.now() } : null } }); }
-    if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/desktop-music/')) return route.fulfill({ json: { items: [] } });
-    return route.continue();
-  });
-  await context.addInitScript((seed) => { window.__onboardingSeed = seed; }, onboardingSeed());
-  await context.addInitScript(() => {
-    if (location.origin === 'null') return;
-    if (!sessionStorage.getItem('weather-switch')) {
-      sessionStorage.setItem('weather-switch', '1');
-      localStorage.setItem('flow-cabin-onboarding-v1', window.__onboardingSeed);
-      localStorage.setItem('album-circle-performance-v1', 'quality');
-      localStorage.setItem('album-circle-library-v1-local-owner', JSON.stringify({ rooms: { 'local-room': { look: 'forest' } } }));
-      localStorage.setItem('album-circle-focus-v1:local-owner', JSON.stringify({ rewards: { xp: 50000, equipped: { weather: 'snow' } } }));
-      localStorage.setItem('flow-cabin-sky-v1', JSON.stringify({ place: 'shanghai', realWeather: false }));
-    }
-    // Native weather now uses the same-origin API fixture above.
-    window.albumDesktopAppearance = { client: true };
-    window.open = () => null;
-  });
-  const page = await context.newPage(); page.on('pageerror', error => errors.push(error.message));
-  try {
-    await page.goto(origin); await page.locator('button.room-cat').waitFor();
-    await page.locator('.cabin-scene[data-sky="live"]').waitFor(); await page.waitForTimeout(800);
-    // Frame-to-frame change of the sky canvas (clouds) and every weather the scene showed.
-    const watch = (ms) => page.evaluate(async (ms) => {
-      const canvas = document.querySelector('.cabin-sky-canvas'), ctx = canvas.getContext('2d'), kinds = [];
-      let previous = null, worst = 0; const t0 = performance.now();
-      while (performance.now() - t0 < ms) {
-        const kind = document.querySelector('.cabin-scene').dataset.weather; if (kinds.at(-1) !== kind) kinds.push(kind);
-        const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-        // A cloud moving shows as pixels switching on/off (big alpha steps); the 30 s veil fade only nudges alpha.
-        if (previous) { let changed = 0, lit = 0; for (let i = 3; i < data.length; i += 4) { if (data[i] || previous[i]) lit++; if (Math.abs(data[i] - previous[i]) > 40) changed++; } worst = Math.max(worst, lit ? changed / lit : 0); (window.__series ||= []).push(Math.round(100 * changed / (lit || 1))); }
-        previous = data; await new Promise((r) => setTimeout(r, 100));
-      }
-      const series = window.__series; window.__series = []; return { kinds, worst: Math.round(worst * 1000) / 10, series };
-    }, ms);
-    await page.locator('button.room-cat').dblclick();
-    const steps = [];
-    for (const [name, act, kind] of [
-      ['雨天窗景', () => page.getByRole('button', { name: '雨天窗景' }).first().click(), 'rain'],
-      ['雪夜窗景', () => page.getByRole('button', { name: '雪夜窗景' }).first().click(), 'snow'],
-      ['跟随真实天气', () => page.evaluate(async () => (await import('/src/sky-clock.mjs')).writeSkySettings({ realWeather: true })), 'cloudy']
-    ]) {
-      const watching = watch(2500); await act(); const result = await watching; steps.push({ name, ...result });
-      assert.equal(result.kinds.at(-1), kind, `${name}: the window ends on ${kind} (${result.kinds})`);
-      assert.ok(result.kinds.length <= 2, `${name}: the window must not flip back and forth (${result.kinds.join(' → ')})`);
-      // Clouds drift a pixel or two per 100 ms; a jump moves most of them (≈ 40–90 % before the fix).
-      assert.ok(result.worst < 25, `${name}: clouds jumped (${result.worst}% of sky pixels changed in 100 ms)`);
-    }
-    check('window-weather-switch-steady', { steps });
-    assert.deepEqual(errors, []);
-  } finally { await context.close(); }
 }

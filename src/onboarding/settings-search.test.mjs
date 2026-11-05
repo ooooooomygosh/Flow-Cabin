@@ -15,7 +15,7 @@ test('3.0 settings have six sections in order', () => {
 test('old section ids still open the right new section and block', () => {
   for (const id of ['music', 'focus', 'room', 'desktop', 'data', 'labs']) { assert.equal(hubTab(id), id); assert.equal(hubAnchor(id), ''); }
   assert.equal(hubTab('music/accounts'), 'music', 'a sub-page keeps its section');
-  assert.equal(hubTab('beta'), 'room'); assert.equal(hubAnchor('beta'), 'hub-home');
+  assert.equal(hubTab('beta'), 'room'); assert.equal(hubAnchor('beta'), 'hub-room');
   assert.equal(hubTab('companion'), 'room'); assert.equal(hubAnchor('companion'), 'hub-companion');
   assert.equal(hubTab('sync'), 'labs'); assert.equal(hubAnchor('sync'), 'hub-sync');
   assert.equal(hubTab('ai'), 'labs'); assert.equal(hubAnchor('ai'), 'hub-ai');
@@ -46,7 +46,7 @@ test('an empty query shows nothing; titles rank above keywords', () => {
   assert.equal(ids('新功能')[0], 'whats-new');
   assert.equal(ids('明信片')[0], 'lab-postcard');
   assert.equal(ids('诊断')[0], 'diagnostics');
-  assert.equal(ids('经典首页')[0], 'home');
+  assert.ok(!ids('经典首页').includes('home'), 'the classic home switch is gone');
 });
 
 test('queries match keywords, ignore case and full-width forms, and require every term', () => {

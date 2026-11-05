@@ -38,33 +38,30 @@ async function choosePet(id, name) {
 }
 (async () => {
   await launch();
-  await page.locator('.cabin-home').waitFor(); assert.equal(await page.locator('.cabin-room').count(),0,'The life cabin is the default home since 2.2');
+  await page.locator('.cabin-home').waitFor(); assert.equal(await page.locator('.cabin-room').count(),0,'The life cabin is the only home');
   // The fresh profile's lazy guide may mount after the home. Dismiss it through its visible action if it comes.
   // A getter: each relaunch replaces `page`.
   const skipGuide=async(timeout=8000)=>{const guide=page.getByRole('dialog',{name:'新手引导',exact:true});if(await guide.waitFor({timeout}).then(()=>true,()=>false)){await guide.getByRole('button',{name:'跳过引导',exact:true}).click();await guide.waitFor({state:'hidden'});}};
   await skipGuide();
-  const restartWith=async(open,confirm,mode,selector)=>{
-    await application.evaluate(({app})=>{globalThis.__restartRequested=false;globalThis.__originalQuit=app.quit.bind(app);globalThis.__originalRelaunch=app.relaunch.bind(app);app.relaunch=()=>{globalThis.__restartRequested=true;};app.quit=()=>{};});
-    await open();await page.getByRole('dialog',{name:'选择首页'}).getByRole('button',{name:confirm,exact:true}).click();
-    await page.waitForFunction(mode=>localStorage.getItem('flow-cabin-interface-v1')===mode,mode);
-    for(let i=0;i<30&&!await application.evaluate(()=>globalThis.__restartRequested);i++)await page.waitForTimeout(100);
-    assert.equal(await application.evaluate(()=>globalThis.__restartRequested),true,'native relaunch requested after saving');
-    await application.evaluate(({app})=>{app.quit=globalThis.__originalQuit;app.relaunch=globalThis.__originalRelaunch;});
-    await application.close();application=null;await launch();await page.locator(selector).first().waitFor();
-  };
-  // 3.0: a new install gets no home-change notice; the classic home is a transition option in 设置 › 小屋与奶糖.
-  await restartWith(async()=>{await menu('全部设置');const hub=page.getByRole('dialog',{name:'设置',exact:true});await hub.getByRole('tab',{name:'小屋与奶糖',exact:true}).click();await hub.getByRole('button',{name:'改用原版唱片架',exact:true}).click();},'改用原版唱片架','classic','.cabin-room');
-  await skipGuide(30000);
-  await page.getByRole('button',{name:'专辑墙',exact:true}).first().click();await page.getByRole('dialog',{name:'专辑墙编辑器',exact:true}).waitFor();await page.keyboard.press('Escape');
-  await restartWith(()=>page.getByRole('button',{name:'回到生活小屋',exact:true}).first().click(),'回到生活小屋','beta','.cabin-home');
-  report.checks.push('The life cabin opens by default; choosing the classic shelf (album wall intact) and back saves, requests a native restart and opens that home on a new process');
+  // 随手记 is the memo pad inside 这一段 of the 专注 panel (the LED clock opens it).
+  const openMemo=async()=>{await page.locator('.focus-badge').click();await page.getByRole('tab',{name:'这一段',exact:true}).click();};
+  // 3.1: the original shelf home is gone. A "classic" choice saved by an earlier version is ignored and cleared; the 专辑墙
+  // (now inside 唱片架) is intact, and there is nothing left to switch.
+  await page.evaluate(()=>localStorage.setItem('flow-cabin-interface-v1','classic'));
+  await page.reload();await page.locator('.cabin-home').waitFor();await skipGuide(30000);
+  assert.equal(await page.evaluate(()=>localStorage.getItem('flow-cabin-interface-v1')),null,'the stored classic choice is forgotten');
+  assert.equal(await page.locator('.cabin-room, .app-titlebar').count(),0);
+  await page.locator('.home-shortcuts').getByRole('button',{name:'唱片架',exact:true}).click();
+  await page.getByRole('dialog',{name:'唱片架'}).getByRole('button',{name:'专辑墙',exact:true}).click();await page.getByRole('dialog',{name:'专辑墙编辑器',exact:true}).waitFor();await page.keyboard.press('Escape');
+  await page.keyboard.press('Escape');await page.getByRole('dialog',{name:'唱片架'}).waitFor({state:'hidden'});
+  report.checks.push('The life cabin is the only home: a stored classic choice is ignored and cleared, the album wall opens from the record shelf');
   assert.equal(await page.locator('[data-cabin-audio-host] audio').count(), 2);
   await page.getByRole('navigation', { name: '房间区域' }).getByRole('button', { name: '工作角', exact: true }).click();
-  await page.getByRole('button', { name: '随手记', exact: true }).first().click();
+  await openMemo();
   await page.getByRole('textbox', { name: '随手记内容' }).fill('原生小屋：关闭工具之后，这份草稿还在。'); await close();
   assert.equal(await page.locator('.cabin-home').getAttribute('data-zone'), 'work');
-  await page.getByRole('button', { name: '随手记', exact: true }).first().click(); assert.match(await page.getByRole('textbox', { name: '随手记内容' }).inputValue(), /这份草稿还在/); await close();
-  await page.getByRole('button', { name: '专注', exact: true }).click(); await page.getByRole('dialog').getByRole('button', { name: '开始专注', exact: true }).click(); await close();
+  await openMemo(); assert.match(await page.getByRole('textbox', { name: '随手记内容' }).inputValue(), /这份草稿还在/); await close();
+  await page.locator('.focus-badge').click(); await page.getByRole('dialog').getByRole('button', { name: '开始专注', exact: true }).click(); await close();
   assert.match(await page.locator('.corner-clock').innerText(), /24:|25:/); report.checks.push('Native home opens notes/focus in two actions and preserves camera, draft and timer');
   for (const [id, name] of [['chick','蛋挞'],['bunny','棉花'],['bear','可可'],['fox','枫糖'],['cat','奶糖']]) await choosePet(id, name);
   report.checks.push('Five pets update home, real native Dock 512/1024 and colored Retina menu icons');
@@ -73,8 +70,8 @@ async function choosePet(id, name) {
   let popup; for (let i=0;i<30;i++) { popup=application.windows().find(p=>p.url().includes('pet-menu.html')); if(popup)break;await page.waitForTimeout(100); }
   assert.ok(popup); await popup.locator('button').first().waitFor(); await popup.screenshot({ path: path.join(output,'menu-pet.png') });
   await popup.getByRole('button', { name: /暂停专注|专注/ }).click(); await page.waitForTimeout(1200);
-  await page.getByRole('button', { name: '专注', exact: true }).click(); await page.getByRole('button', { name: '继续', exact: true }).waitFor(); await close(); report.checks.push('Menu popup controls the existing home focus session');
-  } else { await page.getByRole('button',{name:'专注',exact:true}).click();await page.getByRole('button',{name:'暂停',exact:true}).click();await close(); }
+  await page.locator('.focus-badge').click(); await page.getByRole('button', { name: '继续', exact: true }).waitFor(); await close(); report.checks.push('Menu popup controls the existing home focus session');
+  } else { await page.locator('.focus-badge').click();await page.getByRole('button',{name:'暂停',exact:true}).click();await close(); }
   // 桌面歌词: the shell reads the page's lyric feed; a fixture feed stands in for a playing song.
   await application.evaluate(({ BrowserWindow }) => { globalThis.__ignore = []; const original = BrowserWindow.prototype.setIgnoreMouseEvents; BrowserWindow.prototype.setIgnoreMouseEvents = function (value, options) { globalThis.__ignore.push([value, Boolean(options?.forward)]); return original.call(this, value, options); }; });
   await page.evaluate(() => { window.cabinLyricFeed = { take: rev => ({ docRev: 7, ...(rev === 7 ? {} : { doc: { precision: 'line', lines: [{ s: 0, e: 600000, w: [['同一首歌，同一句歌词', 0, 600000]] }, { s: 600000, e: 700000, w: [['下一句仍在这里', 600000, 700000]] }] } }), title: '本机时间轴', artist: '', skin: 'forest', pet: { id: 'cat' }, prefs: { deskLayout: 'double', deskSkin: 'cabin', deskSize: 34, translation: true, deskPet: true }, anchor: { position: 1000, at: Date.now(), playing: true, rate: 1, duration: 700000 }, energy: .5, bpm: 0, beatAt: 0 }) }; });
@@ -120,8 +117,8 @@ async function choosePet(id, name) {
   await menu('睡前模式');await page.getByRole('button',{name:'开始睡前模式',exact:true}).click();await page.getByRole('button',{name:'取消睡前模式',exact:true}).click();await close();report.checks.push('Scene save/apply and sleep start/cancel operate on existing runtime');
   await page.screenshot({path:path.join(output,'native-work.png')});
   await application.close();application=null; await launch();
-  await page.getByRole('button',{name:'随手记',exact:true}).first().click();assert.match(await page.getByRole('textbox',{name:'随手记内容'}).inputValue(),/这份草稿还在/);await close();
-  await page.getByRole('button',{name:'专注',exact:true}).click();await page.getByRole('button',{name:'继续',exact:true}).waitFor();await close();
+  await openMemo();assert.match(await page.getByRole('textbox',{name:'随手记内容'}).inputValue(),/这份草稿还在/);await close();
+  await page.locator('.focus-badge').click();await page.getByRole('button',{name:'继续',exact:true}).waitFor();await close();
   await menu('场景配方');await page.locator('.home-scene-tools li').filter({hasText:'原生安静小屋'}).waitFor();await close();report.checks.push('Notes, paused focus and scene recipes survive real Electron process restart');
   assert.deepEqual(report.errors,[]); report.passed=true;
 })().catch(async error=>{report.failure=error.stack;process.exitCode=1;if(page&&!page.isClosed())await page.screenshot({path:path.join(output,'failure.png')}).catch(()=>{});}).finally(async()=>{if(application)await application.close().catch(()=>{});fs.rmSync(profile,{recursive:true,force:true});report.finishedAt=new Date().toISOString();fs.writeFileSync(path.join(output,'report.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));});

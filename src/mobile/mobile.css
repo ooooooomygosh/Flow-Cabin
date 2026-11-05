@@ -6,15 +6,10 @@
   html[data-platform=android], html[data-platform=android] body, html[data-platform=android] #root, html[data-platform=android] .app { width:100%;height:var(--mobile-height,100dvh);min-height:0;overflow:hidden;overscroll-behavior:none; }
   html[data-platform=android] body { -webkit-tap-highlight-color:transparent; }
   html[data-platform=android] .cabin-scene-canvas { transition:none; }
-  html[data-platform=android] .app-titlebar { height:var(--px-titlebar);padding:var(--safe-area-inset-top,env(safe-area-inset-top,0px)) calc(var(--mobile-right) + 8px) 0 calc(var(--mobile-left) + 8px);gap:4px; }
   html[data-platform=android] .desktop-controls { margin-left:0;gap:2px; }
   html[data-platform=android] :is(button,.pixel-button,select,input:not([type=range]):not([type=checkbox])) { min-height:44px;touch-action:manipulation; }
   html[data-platform=android] :is(input,textarea,select) { font-size:16px;max-width:100%; }
   html[data-platform=android] :is(.desktop-controls button,.cabin-dialog-close,.record-dialog header>button,.focus-dock-close) { min-width:44px;min-height:44px; }
-  html[data-platform=android] :is(.cabin-toolbar button[aria-label*=出门],.cabin-toolbar button[aria-label*=回家],.cabin-toolbar button[aria-label*=沉入桌面],.cabin-toolbar button[aria-label*=浮出桌面]) { display:none; }
-  html[data-platform=android] .cabin-room .cabin-toolbar { top:calc(var(--px-titlebar) + 2px);left:calc(var(--mobile-left) + 6px);right:calc(var(--mobile-right) + 6px);justify-content:space-between;gap:2px;flex-wrap:nowrap; }
-  html[data-platform=android] .cabin-room .cabin-toolbar button { min-height:38px;padding:4px 6px;font-size:12px; }
-  html[data-platform=android] .cabin-toolbar-group { gap:0; }
   html[data-platform=android] .app-toasts { bottom:calc(var(--mobile-bottom) + 84px); }
   html[data-platform=android] .app-toast { max-width:calc(100vw - 32px);line-height:1.6; }
   html[data-platform=android] dialog { top:var(--safe-area-inset-top,0px);bottom:var(--mobile-bottom);left:calc(var(--mobile-left) + 6px);right:calc(var(--mobile-right) + 6px);width:auto;max-width:800px;max-height:calc(var(--mobile-height,100dvh) - var(--safe-area-inset-top,0px) - var(--mobile-bottom) - 12px);margin:auto;padding:0; }
@@ -24,12 +19,8 @@
   html[data-platform=android] :is(.dialog-tabs,.focus-dock-tabs) button { flex-shrink:0;min-height:44px; }
   html[data-platform=android] .focus-dock { position:fixed;top:calc(var(--px-titlebar) + 42px);bottom:var(--mobile-bottom);left:var(--mobile-left);right:var(--mobile-right);width:auto;max-height:none;z-index:70; }
   html[data-platform=android] :is(.focus-dock-body,.settings-hub-panel,.add-album-panel,.cabin-dialog-body) { overscroll-behavior:contain;scroll-padding-block:12px; }
-  html[data-platform=android] .shelf-filters { left:calc(var(--mobile-left) + 6px);right:calc(var(--mobile-right) + 6px);width:auto;top:calc(var(--px-titlebar) + 44px);max-height:calc(var(--mobile-height,100dvh) - var(--px-titlebar) - var(--mobile-bottom) - 60px); }
   html[data-platform=android] .mobile-storage-note { padding:12px;border:2px solid var(--px-border);line-height:1.7; }
   html[data-platform=android] .mobile-storage-note button { margin-top:8px; }
-  html[data-platform=android] .room-shelf-navigation { right:calc(var(--mobile-right) + 2px);width:44px;box-sizing:border-box;padding:2px 0; }
-  html[data-platform=android] .room-shelf-navigation span { max-width:44px;overflow-wrap:anywhere;text-align:center; }
-  html[data-platform=android] .room-shelf-navigation button { min-width:40px;min-height:44px; }
   html[data-platform=android] .room-turntable .turntable-side-cabinet { max-height:inherit; }
   html[data-platform=android] .room-turntable .turntable-console { box-sizing:border-box; }
   html[data-platform=android] .turntable-console { display:grid;grid-template-columns:minmax(0,1fr) auto;padding:6px;gap:4px;font-size:12px; }
@@ -64,7 +55,6 @@
     html[data-platform=android] .room-turntable .turntable-console { max-height:inherit;overflow-y:auto; }
     html[data-platform=android] .turntable-drag-handle { pointer-events:none; }
     html[data-platform=android] .cabin-room .room-now-playing { position:fixed;left:calc(var(--mobile-left) + 8px);right:calc(var(--mobile-right) + 8px);bottom:calc(var(--mobile-bottom) + 4px);width:auto;min-height:0;max-height:112px;padding:6px;gap:4px;display:flex;flex-direction:row;align-items:center; }
-    html[data-platform=android] .cabin-scene .room-empty { width:calc(100% - 32px);max-width:340px;left:16px;right:16px;top:calc(var(--px-titlebar) + 100px);bottom:auto;transform:none;margin:auto;padding:14px 10px; }
     html[data-platform=android] :is(.record-card,.add-manual-grid,.wall-workspace) { grid-template-columns:minmax(0,1fr); }
     html[data-platform=android] .record-card-sleeve { max-width:240px;margin-inline:auto; }
     html[data-platform=android] :is(.hub-focus-settings .focus-settings-grid,.focus-settings-grid) { grid-template-columns:repeat(2,minmax(0,1fr)); }
@@ -77,12 +67,6 @@
     html[data-platform=android] .turntable-console { max-height:inherit; }
     html[data-platform=android] .focus-dock { left:15%;right:15%;top:calc(var(--px-titlebar) + 4px); }
   }
-  html[data-platform=android] .cabin-room[data-mobile-shelf-compact=true] :is(.room-turntable,.room-now-playing) { display:none; }
-  html[data-platform=android] .app-titlebar .app-brand { flex:1;min-width:0; }
-  html[data-platform=android] .app-titlebar .app-brand span { min-width:0; }
-  html[data-platform=android] .app-titlebar .app-brand h1 { font-size:16px;overflow:hidden;text-overflow:ellipsis; }
-  html[data-platform=android] .app-titlebar .app-actions { flex-shrink:0;gap:2px; }
-  html[data-platform=android] .app-titlebar :is(.app-actions button,.desktop-controls button) { min-width:48px;min-height:48px;height:48px;padding:6px; }
   /* The 2.1 focus tool lives inside a bottom sheet, not the legacy fixed dock. */
   html[data-platform=android] .home-tool .focus-dock { position:static;inset:auto;width:auto;max-height:none;z-index:auto; }
   html[data-platform=android] .home-tool .focus-dock-body { background:none; }

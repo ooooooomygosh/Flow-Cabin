@@ -1,29 +1,20 @@
 import { selectPack } from './pet/imported-pack.mjs';
 import React, { Suspense, lazy, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { reportTrayPet } from './desktop/desktop-sink-client.mjs';
-import { dismissHomeNotice } from './interface-mode.mjs';
 import { getRoomScene } from './scene-catalog.mjs';
-import { normalizePetId, getPet } from './pet/pet-catalog.mjs';
+import { normalizePetId } from './pet/pet-catalog.mjs';
 import { setBeat } from './player/beat-clock.mjs';
 import { currentCabinPlayback, onCabinPlayback } from './scene/playback-listener.mjs';
-const ModularRoom = lazy(() => import('./room2/ModularRoom'));
-import CabinWelcome from './room/CabinWelcome';
-import { Up, Down, ArrowUpRight, Wand2, Sparkles, EyeSlash, Heart, Plus, ListBullet, Check, Computer, Play, SpeakerWave, SpeakerOff, Grid3X3, Refresh, Expand } from './icons';
-import { RecordBoxControls, useRecordLibrary, useRecordStyle } from './RecordLibrary';
-import { desktopCommand, useDesktopAppearance } from './desktop-client';
+import { useRecordLibrary, useRecordStyle } from './RecordLibrary';
+import { useDesktopAppearance } from './desktop-client';
 import useReducedMotion from './useReducedMotion';
-import RoomScene, { placeRecord } from './RoomScene';
-import RoomTurntable from './RoomTurntable';
-import FocusDock, { FocusBadge, loadStudy } from './focus/FocusDock';
+import FocusDock, { loadStudy } from './focus/FocusDock';
 import { useFocusState } from './focus/useFocus';
 import CabinJournal from './focus/stats/CabinJournal.jsx';
 import { focusSnapshot } from './focus/focus-model.mjs';
 import { useSoundscape } from './audio/useSoundscape';
-import RoomCat from './pet/RoomCat';
 import DesktopWidgets, { ImmersiveChrome } from './desktop/DesktopWidgets';
-import { flyRecord } from './turntable/record-flight.mjs';
-import { displayTitle } from './display-title.mjs';
-import useShelf, { SORTS, DEFAULT_FILTERS } from './room/useShelf';
+import useShelf from './room/useShelf';
 import useDeck from './room/useDeck';
 import useRoomChrome from './room/useRoomChrome';
 import useOnboardingFlow from './room/useOnboardingFlow';
@@ -67,18 +58,13 @@ const buildSnapshot = ({ items, record, look, ...rest }) => ({ ...rest, look, ro
 
 export default function CabinRoom({ items, loading, loadError = '', reload, openRecord, openAdd, firstVisit = false, hubRequest = null, openBackup, openWall, notify, saveToShelf }) {
   const appearance = useDesktopAppearance(), reduced = useReducedMotion();
-  const stage = useRef(null);
-  // 「首页换成了生活小屋」 is news only for people who used an earlier home; a new install starts here.
-  useState(() => { if (firstVisit) dismissHomeNotice(); });
   const flow = useOnboardingFlow({ client: appearance.client, loading, loadError, firstVisit, itemCount: items.length, hubRequest, notify });
   // On a first visit the guide comes first; the home's one-line hint waits until it has been closed once.
   const [guideDone, setGuideDone] = useState(!firstVisit), guideShown = useRef(false);
   useEffect(() => { if (flow.wizard) guideShown.current = true; else if (guideShown.current) setGuideDone(true); }, [flow.wizard]);
   const chrome = useRoomChrome({ client: appearance.client, notify, restoreDock: false });
   const library = useRecordLibrary(), look = library?.data.rooms[library.roomId]?.look || 'pixel';
-  const [mobileSlotCount, setMobileSlotCount] = useState(null);
-  const [mobileShelfCompact, setMobileShelfCompact] = useState(false);
-  const { filters, setFilters, visible, view, selected, setSelectedId, changeRow, filtered } = useShelf({ items, look, stage, mobileSlotCount });
+  const { filters, setFilters, visible, view, selected, setSelectedId } = useShelf({ items, look });
   const petId = normalizePetId(library?.data.rooms[library.roomId]?.petId);
   const deck = useDeck({ items, onLoad: (item) => setSelectedId(item.id), notify });
   const { record, provider, playback, player, deckItem, effectiveSpin } = deck;
@@ -98,10 +84,8 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
     return () => window.removeEventListener('cabin-open-cat', open);
   }, []);
   const [pet, setPet] = useState(() => window.albumPetState || {});
-  const [wallpaperError, setWallpaperError] = useState(() => window.albumRoomWallpaperState?.error || '');
   useEffect(() => { const receive = (event) => { window.albumPetState = event.detail; setPet(event.detail || {}); }; window.addEventListener('album-pet-state', receive); return () => window.removeEventListener('album-pet-state', receive); }, []);
   useEffect(() => { reportTrayPet(petId); }, [petId, appearance.client]);
-  useEffect(() => { if (!wallpaperError) return; const timer = setTimeout(() => setWallpaperError(''), 5000); return () => clearTimeout(timer); }, [wallpaperError]);
   useEffect(() => { sound?.setDucked(deck.audible); }, [deck.audible]);
   usePrefetch();
   useEffect(() => {
@@ -117,6 +101,9 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
   const catFocus = useMemo(() => focus ? focusSnapshot(focus.state, Date.now()) : {}, [focus?.state]), weather = catFocus.weather || 'snow';
   // The cat keeps dancing through a moment of buffering or a track change.
   const grooving = useSustained(effectiveSpin || sound?.lofiState === 'playing', 1800);
+  // The beat clock (player/beat-clock.mjs) is fed by the playback listener only while something listens, and the home's cat
+  // (home/RoomCanvas.jsx, 生活角) reads it every frame: keep one listener attached for the room's lifetime.
+  useEffect(() => onCabinPlayback(() => {}), []);
   // Lo-fi alone: dance at its tempo (a detected song beat takes over when the deck plays).
   const lofiBpm = sound?.lofiState === 'playing' && !playback.playing ? sound.section?.bpm : 0;
   // Lo-fi alone: its tempo and its heard quarter-note phase, refreshed while it plays (the section tempo ramps).
@@ -201,17 +188,11 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
     }
     return true;
   };
-  const { zen, corner, dock, saveDock, filtersOpen, setFiltersOpen, fullscreen, desktopMode, sink } = chrome;
-  // Not memoised on purpose: the cat's placement re-measures the console and
-  // footer after every room commit (useCatPlacement), which room renders now are rare.
-  const cat = <RoomCat petId={petId} focus={catFocus} playing={grooving} track={deck.nowTrack} reduceMotion={reduced} hidden={Boolean(pet.active)}/>;
-  const petLabel = pet.active ? '让伙伴回家' : '伙伴出门', petName = getPet(petId).name;
-  const queued = deck.isQueued(selected?.id);
+  const { zen, corner, dock, saveDock, fullscreen, desktopMode } = chrome;
   const openTool = action => {
     if (['timer', 'tasks', 'study', 'notes', 'stats', 'sound'].includes(action)) { setTool(''); saveDock({ open: true, tab: action }); return; }
     saveDock({ open: false });
     if (action === 'wall') { setTool(''); openWall?.(); return; }
-    if (action === 'interface') { setTool(''); window.dispatchEvent(new Event('cabin:interface-choice')); return; }
     if (action === 'backup') { setTool(''); openBackup?.(); return; }
     if (action === 'pet') { setTool(''); setCatPanelOpen(true); return; }
     if (action === 'settings' || action === 'music-settings') { setTool(''); flow.setHub('music'); return; }
@@ -224,7 +205,6 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
     <CabinHome reduced={appearance.reduceMotion || reduced} editRequest={editRequest} focusOpen={dock.open} petOpen={catPanelOpen} guiding={flow.wizard || !guideDone}/>
     <LifeReminder/>
     {library?.error && <p className="home-layout-error" role="alert">设置未保存：{library.error}</p>}
-    {wallpaperError && <p className="wallpaper-error" role="alert">{wallpaperError}<button type="button" aria-label="关闭动态背景提示" onClick={() => setWallpaperError('')}>×</button></p>}
     <HomePanels tool={tool} close={() => setTool('')} filters={filters} setFilters={setFilters} visible={visible} recordStyle={recordStyle} openAdd={openAdd} openRecord={openRecord} openWall={openWall} openSmart={smartEntry && (() => { setTool(''); openSmart(); })} onRoomChange={personalizeRoom}/>{/* the panel is modal: close it, or the smart turntable opens inert behind it */}
     {focus && <CabinJournal/>}
     {focus && <FocusDock open={false}/>}

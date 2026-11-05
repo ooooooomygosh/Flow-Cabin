@@ -62,7 +62,6 @@ export async function initializeMobile() {
   };
   window.albumMobile.syncRequest = (path, value) => Device.syncRequest({ path: `/desktop-sync${path}`, ...(value === undefined ? {} : { body: JSON.stringify(value) }) });
   window.albumMobile.weatherRequest = (path, value) => Device.weatherRequest({ path: `/desktop-weather${path}`, ...(value === undefined ? {} : { body: JSON.stringify(value) }) });
-  window.albumMobile.restartInterface = () => Device.restartInterface();
   window.albumMobile.approximateLocation = () => Device.approximateLocation();
   window.albumMobile.ambience = config => Device.ambience({ config });
   window.albumMobile.ambienceState = () => Device.ambienceState();

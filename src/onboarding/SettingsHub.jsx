@@ -1,5 +1,3 @@
-import { InterfacePreference } from '../InterfaceMode';
-import { interfaceMode } from '../interface-mode.mjs';
 import React, { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { PERFORMANCE_MODES, performanceMode, performanceLevel, setPerformanceMode, onPerformanceChange } from '../perf-profile.mjs';
 import Dialog from '../Dialog';
@@ -131,7 +129,7 @@ export default function SettingsHub({ section = 'music', setSection, close, env,
         {tab === 'room' && <>
           <Part id="hub-room" note="房间">
             <p className="personalization-intro">选一个今天想待着的地方，再找一位安静的伙伴。换装不会打断音乐和专注。</p>
-            {interfaceMode() === 'beta' && <Row title="布置小屋" hint="调整家具位置，或套用听歌、工作、休息预设。也可以从首页的房间名打开。"><button type="button" className="pixel-button" onClick={openStudio}>布置小屋</button></Row>}
+            <Row title="布置小屋" hint="调整家具位置，或套用听歌、工作、休息预设。也可以从首页的房间名打开。"><button type="button" className="pixel-button" onClick={openStudio}>布置小屋</button></Row>
             <RoomPickers look={look} petId={petId} onChange={onRoomChange} reduceMotion={reduceMotion}/>
           </Part>
           <Part id="hub-pet" note="伙伴"><PetBehaviourSettings desktop={Boolean(env.desktop)}/></Part>
@@ -139,7 +137,6 @@ export default function SettingsHub({ section = 'music', setSection, close, env,
           <Suspense fallback={<p role="status">正在整理桌宠衣柜…</p>}>{(window.albumDesktopCapabilities?.petPacks || window.albumMobile?.petRequest) && <PetPackSettings/>}</Suspense>
           {window.albumMobile?.setLauncherIcon && <Row title="桌宠启动图标" hint="使用当前伙伴作为启动器图标；系统图标缓存可能稍后更新。"><button type="button" className="pixel-button" onClick={() => window.albumMobile.setLauncherIcon(petId)}>使用当前桌宠图标</button></Row>}
           <section id="hub-companion" className="hub-block" data-note="键鼠" aria-label="键鼠陪伴"><h3>键鼠陪伴</h3><CompanionSection env={env} player={player}/></section>
-          <Part id="hub-home" note="首页"><InterfacePreference/></Part>
           {error && <p role="alert" className="record-error">{error}</p>}
         </>}
         {tab === 'desktop' && <DisplaySection env={env} desktop={desktop}/>}

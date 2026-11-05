@@ -16,7 +16,6 @@ try {
  server=spawn(process.execPath,[path.join(root,'node_modules/vite/bin/vite.js'),'preview','--host','127.0.0.1','--port','4287','--strictPort'],{cwd:root,stdio:'ignore'});
  for(let i=0;;i++){if(server.exitCode!==null||i>100)throw new Error('Preview did not start');if(await fetch(origin).then(r=>r.ok,()=>false))break;await new Promise(r=>setTimeout(r,100));}
  browser=await launchChromium();const context=await browser.newContext({viewport:{width:1440,height:900},locale:'zh-CN',reducedMotion:'reduce',acceptDownloads:true});
- await context.addInitScript(()=>localStorage.setItem('flow-cabin-interface-v1','beta'));
   await context.addInitScript(seed=>{if(location.origin==='null'||sessionStorage.getItem('static-seeded'))return;sessionStorage.setItem('static-seeded','1');localStorage.setItem('flow-cabin-onboarding-v1',seed);localStorage.setItem('album-circle-focus-v1:local-owner',JSON.stringify({settings:{notify:false,chime:false}}));},onboardingSeed());
  const policy=JSON.parse(await fs.readFile(path.join(root,'vercel.json'),'utf8')).headers[0].headers.find(h=>h.key==='Content-Security-Policy').value;
  await context.route('**/*',async route=>{const u=new URL(route.request().url());if(u.origin!==origin){report.externalRequests.push(u.href);return route.abort();}if(route.request().resourceType()==='document'){const response=await route.fetch();return route.fulfill({response,headers:{...response.headers(),'content-security-policy':policy}});}return route.continue();});

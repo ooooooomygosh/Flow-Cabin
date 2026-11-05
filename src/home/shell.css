@@ -41,8 +41,6 @@
 .settings-hub-side .settings-hub-about:hover,.settings-hub-side .settings-hub-about:focus-visible{color:var(--ui-text,var(--px-ink))}
 .settings-hub-panel .hub-block{display:grid;gap:8px;margin-top:24px;scroll-margin-top:12px}
 .settings-hub-panel .hub-block>h3{margin:0 0 4px;font-size:15px;font-weight:500;color:var(--ui-text,var(--px-ink))}
-.settings-hub-panel .hub-classic-home p{margin:0;font-size:12px;line-height:1.6;color:var(--ui-text-2,var(--px-ink-dim))}
-.settings-hub-panel .hub-classic-home .pixel-button{justify-self:start}
 .hub-labs-list{display:grid}
 .hub-diagnostics{padding:4px 12px 12px}
 /* Phone: the tab row scrolls on its own instead of widening the whole dialog. */

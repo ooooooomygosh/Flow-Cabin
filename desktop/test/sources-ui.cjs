@@ -2,7 +2,8 @@
 // New turntable sources: a scanned local folder plays exact files, and the
 // system player mirrors onto the deck with transport controls.
 const { _electron } = require('playwright'), fs = require('node:fs'), path = require('node:path'), assert = require('node:assert/strict'), crypto = require('node:crypto');
-const { mountFixture, albums, openMusicSettings, closeSettings, chooseSource } = require('./ui-fixture.cjs');
+const { mountFixture, albums, openMusicSettings, closeSettings, chooseSource: chooseSourceInSettings, playRecord, openConsole, closeConsole } = require('./ui-fixture.cjs');
+const choose = async (site, id) => { await closeConsole(site); await chooseSourceInSettings(site, id); await openConsole(site); };
 const desktop = path.resolve(__dirname, '..'), output = path.join(desktop, 'test-results'); fs.mkdirSync(output, { recursive: true });
 const profile = path.join(output, `sources-ui-profile-${Date.now()}`);
 const env = { ...process.env, ALBUM_DESKTOP_TEST_PROFILE: profile }; delete env.ELECTRON_RUN_AS_NODE;
@@ -25,17 +26,17 @@ let app, site, host;
   assert.equal(await settings.locator('.music-local-folders li').count(), 1); check('local-folder-scan-is-listed-in-settings');
   await closeSettings(site);
 
-  await site.locator('.room-record').first().dblclick(); await chooseSource(site, 'local');
+  await playRecord(site, 'QA 本地专辑'); await openConsole(site); await choose(site, 'local');
   await site.waitForFunction(() => document.querySelector('audio').currentTime > .2 && !document.querySelector('audio').paused);
   assert.match(await site.locator('audio[data-deck="active"]').getAttribute('src'), /\/desktop-music\/local\/audio\/[a-f\d]{16}$/);
-  assert.ok((await site.locator('.turntable-status').innerText()).includes('本地文件')); check('local-album-plays-the-exact-indexed-file');
-  await site.getByRole('button', { name: '下一首展示曲目' }).click(); await site.waitForFunction((id) => document.querySelector('audio').getAttribute('src')?.endsWith(id), local.trackDetails[1].providerId); check('local-next-track-switches-file');
+  assert.ok((await site.locator('.console-status').innerText()).includes('本地文件')); check('local-album-plays-the-exact-indexed-file');
+  await site.getByRole('button', { name: '下一首展示曲目' }).click(); await site.waitForFunction((id) => document.querySelector('audio[data-deck="active"]')?.getAttribute('src')?.endsWith(id), local.trackDetails[1].providerId); check('local-next-track-switches-file');
 
-  await chooseSource(site, 'system');
-  await site.locator('.turntable-track', { hasText: '晴天' }).waitFor(); await site.locator('.room-turntable[data-spinning="true"]').waitFor();
-  assert.equal(await site.locator('audio[data-deck="active"]').getAttribute('src'), null); assert.ok((await site.locator('.turntable-status').innerText()).includes('Spotify · 正在播放'));
+  await choose(site, 'system');
+  await site.locator('.console-track', { hasText: '晴天' }).waitFor(); await site.locator('.listen-bar.is-playing').waitFor();
+  assert.equal(await site.locator('audio[data-deck="active"]').getAttribute('src'), null); assert.ok((await site.locator('.console-status').innerText()).includes('Spotify · 正在播放'));
   check('system-player-mirrors-onto-the-deck-without-local-audio');
-  await site.getByRole('button', { name: '暂停系统播放器' }).click(); await site.locator('.room-turntable[data-spinning="false"]').waitFor();
+  await site.getByRole('button', { name: '暂停系统播放器' }).click(); await site.locator('.listen-bar:not(.is-playing)').waitFor();
   await site.getByRole('button', { name: '系统播放器下一首' }).click();
   await site.waitForFunction(async () => true); assert.deepEqual(await app.evaluate(() => globalThis.__qaSystemCommands), ['toggle', 'next']); check('system-transport-controls-reach-the-player');
   await site.screenshot({ path: path.join(output, 'sources-system.png') });

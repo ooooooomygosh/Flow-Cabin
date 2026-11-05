@@ -35,7 +35,6 @@ try {
     return route.continue();
   });
   await context.addInitScript(({ fixture, yrc, translation, alternate, seed }) => {
-    localStorage.setItem('flow-cabin-interface-v1', 'beta');
     localStorage.setItem('flow-cabin-home-intro-v1', 'done');
     localStorage.setItem('flow-cabin-onboarding-v1', seed); // the guide and 新功能 sheet are covered by onboarding checks
     localStorage.setItem('flow-cabin-web-collection-v1', JSON.stringify({ version: 1, items: [fixture] }));
@@ -54,7 +53,6 @@ try {
   }, { fixture, yrc, translation, alternate, seed: onboardingSeed() });
   page = await context.newPage(); page.setDefaultTimeout(20000); page.on('pageerror', e => report.errors.push(e.message));
   await page.goto(origin); await page.locator('.home-world canvas').waitFor();
-  const notice = page.locator('.home-notice').getByRole('button', { name: '好的' }); if (await notice.isVisible()) await notice.click();
   await page.getByRole('region', { name: '正在播放', exact: true }).getByRole('button', { name: '放一张唱片', exact: true }).click(); // the bar's empty state opens 唱片架
   await page.getByRole('button', { name: '播放 歌词练习', exact: true }).click();
   await page.waitForFunction(() => [...document.querySelectorAll('[data-cabin-audio-host] audio')].some(a => !a.paused && a.currentTime > .1));

@@ -1,5 +1,5 @@
 'use strict';
-const { chooseRoomScene, openAddToShelf, openRecordTools, closeRecordCard } = require('./ui-fixture.cjs');
+const { chooseRoomScene, openAddToShelf, openRecordTools, closeRecordCard, openLibrary, closeLibrary, takeBinder, playRecord, openRecordCard, openSettingsTab, libraryDialog, addDialog } = require('./ui-fixture.cjs');
 const { _electron: electron } = require('playwright');
 const assert = require('node:assert/strict'), fs = require('node:fs'), os = require('node:os'), path = require('node:path');
 const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'album-client-ui-'));
@@ -12,7 +12,7 @@ async function launch() {
   await application.evaluate(async ({ webContents }) => { const started = Date.now(); while (!webContents.getAllWebContents().some((contents) => contents.getURL().startsWith('https://album-circle.vercel.app'))) { if (Date.now() - started > 30000) throw new Error('Site view did not open'); await new Promise((resolve) => setTimeout(resolve, 100)); } });
   site = await application.waitForEvent('window', { predicate: (page) => page.url().startsWith('https://album-circle.vercel.app'), timeout: 5000 }).catch(() => application.windows().find((page) => page.url().startsWith('https://album-circle.vercel.app')));
   assert.ok(site); site.on('pageerror', (error) => report.pageErrors.push(error.message));
-  await site.locator('.app-titlebar').waitFor({ timeout: 30000 });
+  await site.locator('.cabin-home').waitFor({ timeout: 30000 });
   // A fresh profile opens the 新手引导 (PR #16); this test checks the cabin itself, so skip it.
   const onboarding = site.getByRole('dialog', { name: '新手引导', exact: true });
   await onboarding.waitFor({ timeout: 15000 }).catch(() => {});
@@ -23,25 +23,25 @@ async function launch() {
 const check = (value) => report.checks.push(value);
 (async () => {
   await launch();
-  await site.locator('.cabin-pixel').waitFor(); assert.match(await site.locator('.app-brand small').innerText(), /0 张唱片/);
-  await site.locator('.room-empty', { hasText: '等你放上第一张' }).waitFor(); check('fresh-start-opens-the-pixel-cabin-without-an-account');
+  await site.locator('.cabin-home.theme-pixel').waitFor(); await site.getByRole('button', { name: '放一张唱片', exact: true }).waitFor();
+  assert.match(await (await openLibrary(site)).getByRole('button', { name: /^唱片活页夹/ }).getAttribute('aria-label'), /0 /); await site.locator('.listen-empty-shelf', { hasText: '架子还空着' }).waitFor(); await closeLibrary(site);
+  check('fresh-start-opens-the-pixel-cabin-without-an-account');
   const add = await openAddToShelf(site, '手动填写');
   await add.getByLabel('专辑名').fill('本地验证专辑'); await add.getByLabel('歌手').fill('离线歌手'); await add.getByLabel('曲目').fill('第一首\n第二首');
   await add.getByRole('button', { name: /放上唱片架/ }).click(); await add.locator('.add-notice', { hasText: '本地验证专辑' }).waitFor();
   await add.getByRole('button', { name: '关闭添加到唱片架' }).click();
-  await site.locator('.room-record').first().waitFor(); check('manual-album-persists-locally');
-  await openRecordTools(site);
+  await (await takeBinder(site, '唱片')).getByRole('button', { name: '播放 本地验证专辑', exact: true }).waitFor(); await closeLibrary(site); check('manual-album-persists-locally');
+  await openRecordTools(site, '本地验证专辑');
   await site.getByLabel('黑胶底色', { exact: true }).fill('#aabbcc');
-  await site.getByRole('button', { name: '保存唱片设置', exact: true }).click(); await closeRecordCard(site); check('vinyl-customization');
+  await site.getByRole('button', { name: '保存唱片设置', exact: true }).click(); await closeRecordCard(site); await closeLibrary(site); check('vinyl-customization');
   await chooseRoomScene(site, 'warm');
   await chooseRoomScene(site, 'pixel');
-  await site.locator('.room-record').first().dblclick();
-  await site.waitForFunction(() => document.querySelector('.room-turntable')?.dataset.spinning === 'true'); check('cabin-looks-and-turntable');
-  await site.getByRole('button', { name: /唱片卡片/ }).click(); const card = site.getByRole('dialog', { name: '唱片卡片：本地验证专辑' });
+  await playRecord(site, '本地验证专辑');
+  await site.locator('.listen-bar.is-playing').waitFor(); check('cabin-looks-and-turntable');
+  const card = await openRecordCard(site, '本地验证专辑');
   await card.getByPlaceholder(/第一次听的场景/).fill('安装后的第一张'); await card.locator('.record-card-saved', { hasText: '已保存' }).waitFor();
-  await card.getByRole('button', { name: '关闭唱片卡片' }).click(); check('record-card-notes');
-  await site.getByRole('button', { name: '设置', exact: true }).click();
-  await site.getByRole('tab', { name: '桌面', exact: true }).click();
+  await card.getByRole('button', { name: '关闭唱片卡片' }).click(); await closeLibrary(site); check('record-card-notes');
+  await openSettingsTab(site, '桌面');
   await application.evaluate(({ app }) => {
     if (process.platform === 'darwin') { app.setActivationPolicy('regular'); app.focus({ steal: true }); }
   });
@@ -75,12 +75,14 @@ const check = (value) => report.checks.push(value);
   await site.getByRole('button', { name: '进入全屏模式', exact:true }).click();
   await site.waitForFunction(() => document.documentElement.dataset.desktopFullscreen === 'true', null, { timeout: 20000 });
   assert.equal(await application.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find(window => window.webContents.getURL().startsWith('album-desktop://shell')).isFullScreen()), true);
-  await openAddToShelf(site, '我的歌单'); await nativeKey('ESC'); await site.getByRole('dialog').waitFor({ state:'hidden' });
+  await openAddToShelf(site, '我的歌单'); await nativeKey('ESC'); await addDialog(site).waitFor({ state:'hidden' }); await nativeKey('ESC'); await libraryDialog(site).waitFor({ state:'hidden' });
   assert.equal(await site.evaluate(() => document.documentElement.dataset.desktopFullscreen), 'true');
   await site.getByRole('button', { name:'收起工具', exact:true }).click();
   await site.getByRole('button', { name:'显示工具', exact:true }).click();
-  // 学习 is a 专注 dock tab, reached from the toolbar's 专注 badge (the toolbar stays under 显示工具).
-  if (!await site.locator('.focus-dock').count()) await site.locator('.cabin-toolbar .focus-badge').click();
+  // 学习 is a tab of the 专注 panel, reached from the LED clock (the desk rail stays under 显示工具).
+  // 词书学习 is a lab (设置 › 实验室): switch it on for this journey.
+  await site.evaluate(() => { const labs = JSON.parse(localStorage.getItem('flow-cabin-labs-v1') || '{}'); localStorage.setItem('flow-cabin-labs-v1', JSON.stringify({ ...labs, study: true })); window.dispatchEvent(new CustomEvent('cabin:labs-changed')); });
+  if (!await site.getByRole('dialog', { name: '专注', exact: true }).count()) await site.locator('.focus-badge').click();
   await site.getByRole('tab', { name:'学习', exact:true }).click(); await site.getByLabel('词书', { exact:true }).waitFor();
   await site.screenshot({ path:path.join(output, 'native-fullscreen-study.png') });
   await site.getByLabel('新卡组名称').fill('模板验收'); await site.getByRole('button',{name:'新建',exact:true}).click();
@@ -101,7 +103,7 @@ const check = (value) => report.checks.push(value);
   assert.equal(fs.readFileSync(templatePath,'utf8'),'word\tmeaning\nwindow\t窗户\n');
   check('packaged-study-template-download-saves-exact-local-tsv');
   await site.evaluate(() => document.activeElement?.blur()); await nativeKey('ESC');
-  await site.locator('.focus-dock').waitFor({state:'detached'});
+  await site.getByRole('dialog', { name: '专注', exact: true }).waitFor({state:'hidden'});
   assert.equal(await site.evaluate(()=>document.documentElement.classList.contains('room-zen')),true);
   assert.equal(await site.evaluate(()=>document.documentElement.dataset.desktopFullscreen),'true');
   check('packaged-escape-closes-study-tools-before-immersive-and-fullscreen');
@@ -113,13 +115,14 @@ const check = (value) => report.checks.push(value);
   check('packaged-native-fullscreen-normal-immersive-dialog-learning-and-escape');
 
   if (process.env.ALBUM_QA_SKIP_WALLPAPER !== '1') {
-  await site.getByRole('button', { name: '沉入桌面', exact: true }).click();
-  await site.getByRole('button', { name: '浮出桌面', exact: true }).waitFor({ timeout: 20000 });
-  await site.getByRole('button', { name: '浮出桌面', exact: true }).click(); check('native-desktop-wallpaper');
+  await openSettingsTab(site, '桌面');
+  const sink = site.getByRole('checkbox', { name: '沉入桌面' }); await sink.check();
+  await site.waitForFunction(() => document.querySelector('input[aria-label="沉入桌面"]')?.checked === true, null, { timeout: 20000 });
+  await sink.uncheck(); check('native-desktop-wallpaper'); await site.keyboard.press('Escape');
   } else report.limitations.push('Native desktop wallpaper attachment skipped by ALBUM_QA_SKIP_WALLPAPER=1');
   await site.screenshot({ path: path.join(output, 'cabin.png') });
   await application.close(); application = null;
-  await launch(); await site.locator('.cabin-pixel').waitFor(); await site.locator('.room-record').first().waitFor();
+  await launch(); await site.locator('.cabin-home.theme-pixel').waitFor();
   const saved = JSON.parse(fs.readFileSync(path.join(profile, 'collection.json'), 'utf8'));
   assert.equal(saved.items[0].title, '本地验证专辑'); assert.equal(saved.items[0].notes, '安装后的第一张'); check('collection-notes-and-style-survive-restart');
   assert.equal(report.pageErrors.length, 0, JSON.stringify(report.pageErrors)); report.passed = true;

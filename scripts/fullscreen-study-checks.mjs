@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { onboardingSeed } from './app-version.mjs';
+import { playRecord, openAddToShelf, closeLibrary } from './settings-actions.mjs';
 export async function verifyFullscreenStudy({ browser, origin, output, check }) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'zh-CN', reducedMotion: 'reduce' });
   const errors = [], commands = [];
@@ -33,44 +34,39 @@ export async function verifyFullscreenStudy({ browser, origin, output, check }) 
   const page = await context.newPage(); page.setDefaultTimeout(8000); page.on('pageerror', error => errors.push(error.message));
   const state = async on => page.evaluate(on => { document.documentElement.dataset.desktopFullscreen = String(on); window.dispatchEvent(new CustomEvent('album-desktop-fullscreen', { detail: on })); }, on);
   const shot = async name => { if (output) await page.screenshot({ path: path.join(output, name+'.png'), animations: 'disabled' }); };
-  // 学习 is a focus-dock tab, opened from the toolbar's 专注 badge (the one entry, also in immersive + 显示工具).
+  // 学习 is a tab of the 专注 panel, opened from the desk's LED clock (the one entry, also in immersive + 显示工具).
   const openStudy = async () => {
-    // Reload restores the persisted open dock. Wait for its toolbar to mount
-    // before deciding whether to toggle; count() before hydration races it shut.
-    const badge = page.locator('.cabin-toolbar .focus-badge');
+    // Wait for the rail to mount before deciding whether to toggle.
+    const badge = page.locator('.focus-badge');
     await badge.waitFor();
     if (await badge.getAttribute('aria-expanded') !== 'true') await badge.click();
     await page.getByRole('tab', { name: '学习', exact: true }).click();
   };
   const studyState = () => page.evaluate(() => JSON.parse(localStorage.getItem('album-circle-study-v1:local-owner') || '{}'));
   try {
-    await page.goto(origin); await page.locator('.room-record').first().waitFor();
+    await page.goto(origin); await page.locator('.cabin-home').waitFor();
     await page.getByRole('button', { name: '进入全屏模式', exact: true }).click();
     assert.match(await page.evaluate(() => window.__commands.at(-1)), /action\/fullscreen$/);
     await state(true); await page.getByRole('button', { name: '退出全屏模式', exact: true }).waitFor();
-    await page.locator('.room-record').first().dblclick();
-    await page.waitForFunction(() => document.querySelector('.room-turntable')?.dataset.loadedId === 'fullscreen-0');
-    await page.getByRole('button', { name: '添加到唱片架', exact: true }).click(); await page.getByRole('tab', { name: '我的歌单', exact: true }).click(); await page.getByRole('dialog', { name: '添加到唱片架', exact: true }).waitFor();
+    await playRecord(page, '小屋试听唱片 1');
+    await page.waitForFunction(() => window.__cabinDeckItem?.id === 'fullscreen-0');
+    await openAddToShelf(page, '我的歌单'); await page.getByRole('dialog', { name: '添加到唱片架', exact: true }).waitFor();
+    // Esc closes the dialog, then the shelf; neither asks the shell to leave fullscreen.
     await page.keyboard.press('Escape'); assert.equal(await page.evaluate(() => document.documentElement.dataset.desktopFullscreen), 'true');
+    await closeLibrary(page); assert.equal(await page.evaluate(() => document.documentElement.dataset.desktopFullscreen), 'true');
     assert.equal(await page.evaluate(() => window.__commands.some(x => x.endsWith('/fullscreen-exit'))), false);
-    await page.locator('.room-cat').click(); await shot('fullscreen-normal');
+    await page.locator('.home-pet-portrait').click(); await page.locator('.cat-panel').waitFor(); await shot('fullscreen-normal'); await page.keyboard.press('Escape'); await page.locator('.cat-panel').waitFor({ state: 'hidden' });
     check('fullscreen-normal-record-playlist-pet-and-dialog-remain-interactive');
     await page.getByRole('button', { name: '收起工具', exact: true }).click();
-    assert.equal(await page.locator('.app-titlebar').isVisible(), false);
+    assert.equal(await page.locator('.home-shortcuts .brass-plate').first().isVisible(), false, '收起工具 puts the plates away'); assert.equal(await page.locator('.focus-badge').isVisible(), true, 'the LED clock stays');
     await page.getByRole('button', { name: '显示工具', exact: true }).waitFor(); await shot('fullscreen-immersive');
-    // The physical deck remains an actual drag target in immersive mode.
-    const transfer = await page.evaluateHandle(() => new DataTransfer());
-    await transfer.evaluate(d => d.setData('application/x-album-circle-record', 'fullscreen-1'));
-    await page.locator('.scene-deck').dispatchEvent('drop', { dataTransfer: transfer });
-    await page.waitForFunction(() => document.querySelector('.room-turntable')?.dataset.loadedId === 'fullscreen-1');
-    await transfer.dispose();
     await page.getByRole('button', { name: '显示工具', exact: true }).click();
-    await page.locator('.app-titlebar').waitFor(); await page.getByRole('button', { name: '添加到唱片架', exact: true }).click(); await page.getByRole('dialog').waitFor(); await page.keyboard.press('Escape');
+    await page.locator('.home-shortcuts .brass-plate').first().waitFor(); await openAddToShelf(page, '我的歌单'); await page.keyboard.press('Escape'); await closeLibrary(page);
     assert.equal(await page.getByRole('toolbar', { name: '全屏与沉浸工具' }).getByRole('button', { name: '学习' }).count(), 0, 'immersive tools do not duplicate the dock tabs');
     await openStudy(); await page.getByLabel('词书', { exact: true }).waitFor();
-    await shot('fullscreen-immersive-tools-study'); check('immersive-drag-target-recovery-playlists-and-study');
+    await shot('fullscreen-immersive-tools-study'); check('immersive-tools-recovery-playlists-and-study');
     await page.evaluate(() => document.activeElement?.blur()); await page.keyboard.press('Escape');
-    await page.locator('.focus-dock').waitFor({ state:'detached' });
+    await page.getByRole('dialog', { name: '专注', exact: true }).waitFor({ state: 'hidden' });
     assert.equal(await page.evaluate(() => document.documentElement.classList.contains('room-zen')),true);
     assert.equal(await page.evaluate(() => window.__commands.some(x => x.endsWith('/fullscreen-exit'))),false);
     await page.getByRole('button', { name: '隐藏工具', exact: true }).click();

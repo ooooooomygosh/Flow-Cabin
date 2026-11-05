@@ -1,4 +1,4 @@
-/** Offline shelf/chrome regressions. Synthetic covers, muted Chromium, native window bridge mocked. */
+/** Offline 唱片架 (bookcase close-up) and desk-chrome regressions. Synthetic covers, muted Chromium, native window bridge mocked. */
 import assert from 'node:assert/strict';
 import { launchChromium } from './launch-browser.mjs';
 import fs from 'node:fs/promises';
@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
 import { hasViteLocalOrigin } from './vite-readiness.mjs';
 import { showcaseAlbums } from './showcase-albums.mjs';
-import { CLASSIC_ROOM_SCENES as ROOM_SCENES } from '../src/scene-catalog.mjs';
+import { openLibrary, closeLibrary, takeBinder, openSettingsSection, libraryDialog } from './settings-actions.mjs';
 import { onboardingSeed } from './app-version.mjs';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const output = process.env.SHELF_OUTPUT || path.join(root, 'desktop/test-results/shelf-ui');
@@ -37,32 +37,45 @@ try {
     },native);
     await context.route('**/*',route=>{const u=new URL(route.request().url()),p=u.pathname;if(u.origin!==origin){report.unexpectedRequests.push(u.href);return route.abort();}if(p==='/api/items')return route.fulfill({json:{items:collectionItems}});if(p==='/desktop-music/lyrics')return route.fulfill({json:{text:'',source:'fixture',reason:'No fixture lyrics'}});if(p==='/desktop-music/config')return route.fulfill({json:{qqLoggedIn:false,neteaseLoggedIn:false}});if(p==='/desktop-music/now-playing'||p==='/desktop-music/apple/permission')return route.fulfill({json:{available:false}});if(p==='/desktop-music/local/summary')return route.fulfill({json:{folders:[],albumCount:0,trackCount:0}});if(p.startsWith('/api/')||p.startsWith('/desktop-music/')){report.unexpectedRequests.push(p);return route.fulfill({status:500,json:{error:'Unimplemented fixture'}});}return route.continue();});
     const page=await context.newPage();page.setDefaultTimeout(12000);page.on('pageerror',e=>report.pageErrors.push(e.message));
-    try{await page.goto(origin,{waitUntil:'domcontentloaded'});await page.locator('.room-record').first().waitFor();await test(page);report.checks.push({name,passed:true});console.log(`PASS ${name}`);}
+    try{await page.goto(origin,{waitUntil:'domcontentloaded'});await page.locator('.cabin-home').waitFor();await test(page);report.checks.push({name,passed:true});console.log(`PASS ${name}`);}
     catch(e){const state=await page.evaluate(()=>({fullscreen:Boolean(document.fullscreenElement),native:document.documentElement.dataset.desktopFullscreen,client:document.documentElement.dataset.desktopClient,zen:document.documentElement.classList.contains('room-zen'),dock:document.querySelector('.focus-badge')?.getAttribute('aria-expanded'),active:document.activeElement?.getAttribute('aria-label'),trace:window.__fullscreenTrace})).catch(()=>null);report.checks.push({name,passed:false,error:e.stack,state});await shot(page,`${name}-failure`).catch(()=>{});console.error(`FAIL ${name}: ${e.message}`);}
     finally{await context.close();}
   };
-  for(const scene of ROOM_SCENES)await run(`shelf-${scene.id}-geometry-and-interaction`,async page=>{
-    await page.getByRole('button',{name:'设置',exact:true}).click();await page.getByRole('tab',{name:'小屋与奶糖',exact:true}).click();await page.getByRole('button',{name:`选择场景 ${scene.label}`,exact:true}).click();await page.keyboard.press('Escape');
+  // The bookcase: ring binders and the index book stand inside the window at every size; taking one down opens it on
+  // the desk without overflow, and the record covers (cover button → deck, title → 唱片卡片, index book + Enter) work.
+  await run('shelf-bookcase-fits-and-plays-at-three-sizes',async page=>{
     for(const [width,height] of [[1440,900],[960,600],[640,600]]){
-      await page.setViewportSize({width,height});await page.waitForFunction(()=>[...document.querySelectorAll('.room-record .pixel-artwork canvas')].every(c=>c.classList.contains('is-painted')));
-      await page.mouse.move(0,height-1);await shot(page,`${scene.id}-${width}x${height}`);
-      const metrics=await page.locator('.room-record').evaluateAll(buttons=>buttons.map(b=>{const s=b.closest('.room-record-slot').getBoundingClientRect(),a=b.querySelector(':scope > .room-record-sleeve')||b.querySelector(':scope > .showroom-artwork'),r=a.getBoundingClientRect(),c=a.querySelector('canvas');return {slot:{x:s.x,y:s.y,w:s.width,h:s.height,bottom:s.bottom},sleeve:{x:r.x,y:r.y,w:r.width,h:r.height,bottom:r.bottom},canvas:c?.width,generated:Boolean(a.querySelector('.record-sleeve')),pointer:getComputedStyle(a).pointerEvents,buttonTranslate:getComputedStyle(b).translate};}));
-      report.measurements.push({scene:scene.id,width,height,metrics});
-      if(process.env.SHELF_BASELINE)continue;
-      for(const m of metrics){assert(Math.abs(m.sleeve.w-m.sleeve.h)<=1,'sleeves remain square');assert(m.sleeve.w<m.slot.w*.94&&m.sleeve.w>m.slot.w*.8,'recess is visible beside sleeve');assert(m.sleeve.y>=m.slot.y+1,'sleeve fits inside cell');assert(m.sleeve.bottom<=m.slot.bottom&&m.sleeve.bottom>=m.slot.bottom-m.slot.h*.055,'sleeve rests on cell floor');if(m.canvas)assert.equal(m.canvas,m.generated?96:64,'room photos use the shared 64px art grid; procedural sleeves remain 32px at 3x');}
+      await page.setViewportSize({width,height});const dialog=await openLibrary(page);await shot(page,`bookcase-${width}x${height}`);
+      const spines=await dialog.locator('.shelf-binder, .shelf-book, .shelf-frame').evaluateAll(nodes=>nodes.map(n=>{const r=n.getBoundingClientRect();return {name:n.getAttribute('aria-label'),left:r.left,right:r.right,top:r.top,bottom:r.bottom};}));
+      assert(spines.length>=5,`binders, index book and wall frame stand on the shelf (${spines.length})`);
+      report.measurements.push({shelf:'bookcase',width,height,spines});
+      await takeBinder(page,'唱片');
+      const cells=await dialog.locator('.listen-grid li').evaluateAll(nodes=>nodes.map(n=>{const r=n.getBoundingClientRect();return {left:r.left,right:r.right,bottom:r.bottom,top:r.top,w:r.width};}));
+      assert.equal(cells.length,8,'every record is filed in the 唱片 binder');
+      assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`no horizontal page overflow at ${width}x${height}`);
+      assert(await dialog.locator('.shelf-object').evaluate(o=>{const r=o.getBoundingClientRect();return r.left>=-1&&r.right<=innerWidth+1&&r.top>=-1;}),'the open binder sits inside the window');
+      await closeLibrary(page);
     }
-    await page.setViewportSize({width:1440,height:900});await page.locator('.room-record').first().click({position:{x:2,y:4}});assert.equal(await page.locator('.room-record').first().getAttribute('aria-current'),'true','whole recess remains a hit target');const second=page.locator('.room-record').nth(1);await second.click();assert.equal(await second.getAttribute('aria-current'),'true');await second.focus();await page.keyboard.press('Tab');await page.keyboard.press('Shift+Tab');assert.equal(await second.evaluate(e=>e.matches(':focus-visible')),true);if(!process.env.SHELF_BASELINE)assert.equal(await second.locator('.room-record-sleeve').evaluate(e=>getComputedStyle(e).outlineStyle),'dashed');await shot(page,`${scene.id}-keyboard-focus`);await page.keyboard.press('Enter');assert.equal(await second.getAttribute('aria-current'),'true');
-    await second.dblclick();await page.waitForFunction(()=>document.querySelector('.room-turntable')?.dataset.loadedId==='shelf-1');
-    const third=page.locator('.room-record').nth(2);await third.dragTo(await page.locator('.scene-deck').isVisible()?page.locator('.scene-deck'):page.locator('.room-turntable'));
-    await page.waitForFunction(()=>document.querySelector('.room-turntable')?.dataset.loadedId==='shelf-2');
+    await page.setViewportSize({width:1440,height:900});
+    const dialog=await takeBinder(page,'唱片');
+    await dialog.locator('.listen-grid-cover').nth(1).click();
+    await page.waitForFunction(()=>window.__cabinDeckItem?.title==='OCEAN STUDY');
+    const title=dialog.locator('.listen-grid-title').first();await title.click();
+    const card=page.getByRole('dialog',{name:/^唱片卡片/});await card.waitFor();await page.keyboard.press('Escape');await card.waitFor({state:'hidden'});
+    // 索引本: typing finds a record, Enter puts it on the deck.
+    const book=await takeBinder(page,'索引本');
+    const search=book.getByRole('combobox',{name:'搜索唱片架'});await search.fill('MORNING');await search.press('Enter');
+    await page.waitForFunction(()=>window.__cabinDeckItem?.title==='MORNING LIGHT');
+    await closeLibrary(page);
   });
   const photos=await showcaseAlbums();
   await run('shelf-photographic-covers-and-fine-type',async page=>{
-    await page.getByRole('button',{name:'设置',exact:true}).click();await page.getByRole('tab',{name:'小屋与奶糖',exact:true}).click();await page.getByRole('button',{name:'选择场景 琥珀小屋',exact:true}).click();await page.keyboard.press('Escape');
-    await page.setViewportSize({width:2560,height:1600});await page.mouse.move(0,1599);await page.waitForFunction(()=>[...document.querySelectorAll('.room-record .pixel-artwork canvas')].every(c=>c.classList.contains('is-painted')));await shot(page,'photos-warm-2560x1600');
-    for(const index of [0,1,2,6])await page.locator('.room-record-slot').nth(index).screenshot({path:path.join(output,`photo-cell-${index}.png`),animations:'disabled'});
-    report.measurements.push({photos:await page.locator('.room-record .pixel-artwork canvas').evaluateAll(cs=>cs.map(c=>({width:c.getBoundingClientRect().width,resolution:c.width})))});
-    if(!process.env.SHELF_BASELINE)for(const m of report.measurements.at(-1).photos)assert.equal(m.resolution,64,'room artwork stays on its 64px grid at large window sizes');
+    await page.setViewportSize({width:2560,height:1600});const dialog=await takeBinder(page,'唱片');
+    await page.waitForFunction(()=>[...document.querySelectorAll('.listen-grid img')].every(i=>i.complete&&i.naturalWidth>0),null,{timeout:15000});await shot(page,'photos-bookcase-2560x1600');
+    for(const index of [0,1,2,6])await dialog.locator('.listen-grid li').nth(index).screenshot({path:path.join(output,`photo-cell-${index}.png`),animations:'disabled'});
+    const covers=await dialog.locator('.listen-grid .listen-cover').evaluateAll(nodes=>nodes.map(n=>{const r=n.getBoundingClientRect();return {width:r.width,height:r.height,right:r.right,bottom:r.bottom};}));
+    report.measurements.push({photos:covers});
+    if(!process.env.SHELF_BASELINE)for(const m of covers){assert(Math.abs(m.width-m.height)<=1,'sleeves stay square at large window sizes');assert(m.right<=2560&&m.bottom<=1600,'covers stay inside the window');}
   },{collectionItems:photos});
   await run('shelf-artwork-dpr2-resize-and-error-recovery',async page=>{
     const data=cover('RECOVERY TEST',190);
@@ -77,12 +90,14 @@ try {
   },{dpr:2});
   await run('chrome-single-settings-and-native-fullscreen',async page=>{
     await shot(page,'header-before-interaction');
-    assert.equal(await page.locator('.app-titlebar').getByRole('button',{name:/^(设置|软件设置|显示与字体)$/}).count(),1,'one settings gear');
+    assert.equal(await page.locator('.home-header').getByRole('button',{name:/^(设置|软件设置|显示与字体)$/}).count(),1,'one settings gear');
     assert.equal(await page.getByRole('button',{name:'最大化或还原窗口',exact:true}).count(),0,'no second square');
-    const settings=page.getByRole('button',{name:'设置',exact:true});assert.equal((await settings.innerText()).trim(),'','settings is icon-only');await settings.focus();await page.keyboard.press('Enter');await page.getByRole('tab',{name:'桌面',exact:true}).click();await page.getByRole('button',{name:'打开显示与字体',exact:true}).click();assert.match(await page.evaluate(()=>window.__nativeCommands.at(-1)),/\/settings$/);await page.keyboard.press('Escape');await settings.waitFor();assert.equal(await settings.evaluate(e=>e===document.activeElement),true);
+    const settings=page.getByRole('button',{name:'设置',exact:true});assert.equal((await settings.innerText()).trim(),'','settings is icon-only');
+    // The brass knob pulls the drawer; 全部设置 opens the hub, whose 桌面 page has the native 显示与字体 command.
+    await settings.focus();await page.keyboard.press('Enter');await page.getByRole('button',{name:'全部设置',exact:true}).click();await page.getByRole('tab',{name:'桌面',exact:true}).click();await page.getByRole('button',{name:'打开显示与字体',exact:true}).click();assert.match(await page.evaluate(()=>window.__nativeCommands.at(-1)),/\/settings$/);await page.keyboard.press('Escape');await settings.waitFor();
     const enter=page.getByRole('button',{name:'进入全屏模式',exact:true});await enter.click();assert.match(await page.evaluate(()=>window.__nativeCommands.at(-1)),/\/fullscreen$/);assert.equal(await enter.getAttribute('aria-pressed'),'false','wait for native confirmation');
     await page.evaluate(()=>{document.documentElement.dataset.desktopFullscreen='true';window.dispatchEvent(new CustomEvent('album-desktop-fullscreen',{detail:true}));});
-    assert.equal(await page.getByRole('button',{name:'退出全屏模式',exact:true}).getAttribute('aria-pressed'),'true');assert.equal(await page.getByRole('button',{name:/^退出全屏(模式)?$/}).count(),1);await page.getByRole('button',{name:'收起工具',exact:true}).click();assert.equal(await page.getByRole('button',{name:/^退出全屏(模式)?$/}).count(),1);await page.getByRole('button',{name:'显示工具',exact:true}).click();assert.equal(await page.getByRole('button',{name:/^退出全屏(模式)?$/}).count(),1);await page.getByRole('button',{name:'隐藏工具',exact:true}).click();await page.getByRole('button',{name:'退出全屏',exact:true}).click();assert.match(await page.evaluate(()=>window.__nativeCommands.at(-1)),/\/fullscreen-exit$/);await shot(page,'immersive-fullscreen-recovery');
+    assert.equal(await page.getByRole('button',{name:'退出全屏模式',exact:true}).getAttribute('aria-pressed'),'true');assert.equal(await page.getByRole('button',{name:/^退出全屏(模式)?$/}).count(),1);await page.getByRole('button',{name:'收起工具',exact:true}).click();assert.equal(await page.locator('.home-shortcuts .brass-plate').first().isVisible(),false,'收起工具 puts the plates away');assert.equal(await page.locator('.focus-badge').isVisible(),true,'the LED clock stays');assert.equal(await page.getByRole('button',{name:/^退出全屏(模式)?$/}).count(),1);await page.getByRole('button',{name:'显示工具',exact:true}).click();assert.equal(await page.getByRole('button',{name:/^退出全屏(模式)?$/}).count(),1);await page.getByRole('button',{name:'隐藏工具',exact:true}).click();await page.getByRole('button',{name:'退出全屏',exact:true}).click();assert.match(await page.evaluate(()=>window.__nativeCommands.at(-1)),/\/fullscreen-exit$/);await shot(page,'immersive-fullscreen-recovery');
   });
   await run('chrome-browser-fullscreen-and-escape',async page=>{
     await page.evaluate(()=>{window.__fullscreenTrace=[];document.addEventListener('keydown',e=>window.__fullscreenTrace.push({type:'key',key:e.key,prevented:e.defaultPrevented,fullscreen:Boolean(document.fullscreenElement)}));document.addEventListener('fullscreenchange',()=>window.__fullscreenTrace.push({type:'change',fullscreen:Boolean(document.fullscreenElement)}));});

@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
-const { openAddToShelf } = require('./ui-fixture.cjs');
+const { openAddToShelf, openSettingsTab, closeLibrary, takeBinder } = require('./ui-fixture.cjs');
 const desktop = path.resolve(process.env.ALBUM_QA_DESKTOP || path.join(__dirname, '..'));
 const output = path.resolve(process.env.ALBUM_QA_EVIDENCE || path.join(desktop, 'test-results/backup-profile-ui'));
 fs.mkdirSync(output, { recursive: true });
@@ -49,7 +49,7 @@ async function launch(profile) {
   assert.ok(site);
   site.on('pageerror', error => report.pageErrors.push(error.message));
   assert.equal(await app.evaluate(({ app }) => app.getPath('userData')), profile);
-  await site.locator('.app-titlebar').waitFor();
+  await site.locator('.cabin-home').waitFor();
   const onboarding = site.getByRole('dialog', { name: '新手引导', exact: true });
   const needsOnboarding = await site.evaluate(() => {
     const state = JSON.parse(localStorage.getItem('flow-cabin-onboarding-v1') || 'null');
@@ -60,7 +60,7 @@ async function launch(profile) {
     await onboarding.getByRole('button', { name: '跳过引导', exact: true }).click();
     await onboarding.waitFor({ state: 'hidden' });
   }
-  await site.locator('.cabin-room').waitFor();
+  await site.locator('.cabin-home').waitFor();
 }
 async function close() { await app.close(); app = null; site = null; }
 async function snapshot(name, profile) {
@@ -75,8 +75,7 @@ async function snapshot(name, profile) {
   save(name + '.json', result); return result;
 }
 async function openBackup() {
-  await site.getByRole('button', { name: '设置', exact: true }).click();
-  await site.getByRole('tab', { name: '数据', exact: true }).click();
+  await openSettingsTab(site, '数据');
   await site.getByRole('button', { name: '收藏与备份', exact: true }).click();
   const dialog = site.getByRole('dialog', { name: '收藏与备份', exact: true });
   await dialog.waitFor(); return dialog;
@@ -138,7 +137,7 @@ function compareStores(stage, expected, actual) {
   await add.getByLabel('曲目').fill('First song\nSecond song');
   await add.getByRole('button', { name: /放上唱片架/ }).click();
   await add.locator('.add-notice', { hasText: 'QA profile transfer' }).waitFor();
-  await add.getByRole('button', { name: '关闭添加到唱片架' }).click();
+  await add.getByRole('button', { name: '关闭添加到唱片架' }).click(); await closeLibrary(site);
   const items = await site.evaluate(async () => (await (await fetch('/api/items')).json()).items);
   assert.equal(items.length, 1);
   const at = Date.now() - 60000, album = items[0];
@@ -215,7 +214,7 @@ function compareStores(stage, expected, actual) {
   save('souvenir-fixture.json', { keys: souvenirDomains, records: souvenirState.records,
     sourceEvidence: { focusSession: record.id, playbackSessions: playbackRows.map(({ id }) => id),
       sentLetter: 'qa-sent', journalEntries: journalRows.map(({ id }) => id) } });
-  await site.reload(); await site.locator('.room-record').first().waitFor();
+  await site.reload(); await site.locator('.cabin-home').waitFor();
   const before = await snapshot('source-before-export', sourceProfile);
   for (const domain of Object.keys(seed)) compare('seed-loaded:' + domain, seed[domain], before.stores[domain]);
   const sourceSouvenirs = souvenirs.normalizeSouvenirs({ version: 1,
@@ -270,8 +269,8 @@ function compareStores(stage, expected, actual) {
   compareStores('after-restart', before, restarted);
   compare('after-restart:souvenirs', sourceSouvenirs, souvenirs.normalizeSouvenirs({ version: 1,
     records: Object.keys(souvenirDomains).map((domain) => restarted.stores[domain]) }));
-  await site.locator('.room-record').first().waitFor();
-  assert.match(await site.locator('.app-brand small').innerText(), /1 张唱片/);
+  await site.locator('.cabin-home').waitFor();
+  assert.match(await (await takeBinder(site, '唱片')).getByRole('button', { name: /^唱片活页夹/ }).getAttribute('aria-label'), /1 /); await closeLibrary(site);
   await site.screenshot({ path: path.join(output, 'target-restarted-room.png') });
   check('target-profile-persists-after-real-electron-restart');
   assert.deepEqual(report.pageErrors, []);

@@ -3,7 +3,7 @@ const openMusicSettings = (...args) => import('../../scripts/settings-actions.mj
 'use strict';
 const { _electron } = require('playwright'), fs = require('node:fs'), path = require('node:path'), assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
-const { mountFixture, albums } = require('./ui-fixture.cjs');
+const { mountFixture, albums, chooseRoomScene, playRecord, openConsole, closeConsole, openSettingsTab, closeSettings } = require('./ui-fixture.cjs');
 const desktop = path.resolve(__dirname, '..'), output = path.join(desktop, 'test-results');
 fs.mkdirSync(output, { recursive: true });
 const env = { ...process.env, ALBUM_DESKTOP_TEST_PROFILE: path.join(output, `night-study-${Date.now()}`) }; delete env.ELECTRON_RUN_AS_NODE;
@@ -37,45 +37,37 @@ async function desktopPixels(name) {
   return { ...captured, firstFrameMatch: match };
 }
 async function startWallpaper() {
-  await site.getByRole('button', { name: '沉入桌面', exact: true }).click();
+  await openSettingsTab(site, '桌面'); await site.getByRole('checkbox', { name: '沉入桌面' }).check();
   await site.waitForFunction(() => window.albumRoomWallpaperState?.active || window.albumRoomWallpaperState?.error);
   const state = await site.evaluate(() => window.albumRoomWallpaperState); assert.equal(state.active, true, JSON.stringify(state));
   wallpaper = app.context().pages().find(p => p.url() === 'album-desktop://wallpaper/wallpaper.html');
   wallpaper.on('pageerror', e => report.pageErrors.push(e.message));
   await wallpaper.locator('.study-writing-hand').waitFor();
   await wallpaper.waitForFunction(() => Array.from(document.images).every(i => i.complete && i.naturalWidth > 0));
+  await closeSettings(site);
 }
 (async () => {
   app = await _electron.launch({ executablePath: process.env.ALBUM_QA_EXE || require(path.join(desktop, 'node_modules/electron')), args: process.env.ALBUM_QA_EXE ? [] : [desktop], env }); app.context().setDefaultTimeout(20000); await app.firstWindow();
   for (let i = 0; i < 100; i++) { site = app.context().pages().find(p => p.url().startsWith('https://album-circle.vercel.app')); host = app.context().pages().find(p => p.url() === 'album-desktop://shell/index.html'); if (site && host) break; await new Promise(r => setTimeout(r, 100)); }
   site.on('pageerror', e => report.pageErrors.push(e.message)); await mountFixture(app, site, { items, music: true, autoMusic: true });
-  await site.locator('.cabin-night-study .study-writing-hand').waitFor(); assert.equal(await site.locator('.room-record-slot').count(), 9);
-  await site.locator('.room-record').first().click(); await site.keyboard.press('ArrowDown');
-  await site.waitForFunction(() => document.querySelector('.room-rack-grid').dataset.startRow === '1');
-  assert.ok((await site.locator('.room-record').first().getAttribute('title')).startsWith(items[3].title)); await site.keyboard.press('Home');
-  const shade = await site.locator('.room-record').first().evaluate(e => ({ filter: getComputedStyle(e.querySelector('.showroom-artwork')).filter, shadow: getComputedStyle(e, ':after').boxShadow, gradient: getComputedStyle(e, ':after').backgroundImage }));
-  assert.match(shade.filter, /brightness\(0.78\)/); assert.notEqual(shade.shadow, 'none'); assert.match(shade.gradient, /120deg/); check('new-reference-scene-nine-slots-three-column-navigation-and-directional-shadow');
-  const poses = await site.evaluate(() => new Promise(resolve => { const poses = new Set(); const timer = setInterval(() => poses.add(document.querySelector('.study-writing-hand').dataset.pose), 40); setTimeout(() => { clearInterval(timer); resolve([...poses].map(Number)); }, 7200); }));
-  assert.ok(poses.includes(0) && poses.some(p => p >= 8 && p <= 11) && poses.includes(15), JSON.stringify(poses));
-  assert.equal(await site.locator('.study-writing-hand').evaluate(e => getComputedStyle(e).transform), 'none');
-  await host.evaluate(() => window.albumDesktop.settings('apply', { reduceMotion: true })); await site.locator('.study-writing[data-animation=still]').waitFor();
-  const position = await site.locator('.study-writing-hand').evaluate(e => getComputedStyle(e).backgroundPosition); await site.waitForTimeout(350); assert.equal(await site.locator('.study-writing-hand').evaluate(e => getComputedStyle(e).backgroundPosition), position);
-  await host.evaluate(() => window.albumDesktop.settings('apply', { reduceMotion: false })); check('writing-lift-spin-catch-poses-without-image-stretch-and-reduced-motion');
-  await site.locator('.room-record').first().dblclick(); await chooseSource(site, 'netease');
+  // 3.1: the main window is the life cabin; the 月夜书桌 shelf / writing-hand checks that drew the original room there moved to the
+  // desktop wallpaper, the only surface that still paints that scene (see wallpaper-stays-rendered-and-animates-after-main-close).
+  await chooseRoomScene(site, 'night-study'); await site.locator('.cabin-home.theme-night-study').waitFor(); check('night-study-room-selected-in-the-cabin');
+  await playRecord(site, items[0].title); await chooseSource(site, 'netease');
   await site.waitForFunction(() => document.querySelector('audio').currentTime > .2 && !document.querySelector('audio').paused);
   assert.deepEqual((await app.evaluate(() => globalThis.__qaMusicResolves)).slice(-2), ['99999', '12345']);
-  await site.getByRole('button', { name: /^选择曲目/ }).click(); await site.getByRole('listbox', { name: '唱机展示曲目', exact: true }).getByRole('option').nth(1).click();
-  await site.waitForFunction(() => document.querySelector('.turntable-track').textContent.includes('懦夫') && document.querySelector('audio').currentTime > .2 && !document.querySelector('audio').paused);
-  assert.deepEqual((await app.evaluate(() => globalThis.__qaMusicResolves)).slice(-2), ['99999', '12345']); check('automatic-source-fallback-and-album-dropdown-play-real-html-audio');
+  await openConsole(site); await site.getByRole('button', { name: /^选择曲目/ }).click(); await site.getByRole('listbox', { name: '唱机展示曲目', exact: true }).getByRole('option').nth(1).click();
+  await site.waitForFunction(() => document.querySelector('.console-track').textContent.includes('懦夫') && document.querySelector('audio').currentTime > .2 && !document.querySelector('audio').paused);
+  assert.deepEqual((await app.evaluate(() => globalThis.__qaMusicResolves)).slice(-2), ['99999', '12345']); await closeConsole(site); check('automatic-source-fallback-and-album-dropdown-play-real-html-audio');
   await site.getByRole('button', { name: '进入全屏模式', exact: true }).click();
   await site.waitForFunction(() => document.documentElement.dataset.desktopFullscreen === 'true');
   const full = await app.evaluate(({ BrowserWindow, screen }) => { const w = BrowserWindow.getAllWindows().find(w => w.webContents.getURL().includes('/shell/')); return { full: w.isFullScreen(), bounds: w.getBounds(), monitor: screen.getDisplayMatching(w.getBounds()).bounds }; });
   assert.equal(full.full, true); assert.deepEqual(full.bounds, full.monitor);
-  for (const selector of ['.app-titlebar', '.cabin-toolbar', '.room-turntable', '.room-now-playing']) {
+  for (const selector of ['.home-header', '.listen-bar']) {
     if (await site.locator(selector).count()) assert.equal(await site.locator(selector).isVisible(), true);
   }
   await site.screenshot({ path: path.join(output, 'night-study-fullscreen.png') });
-  await site.reload(); await site.waitForFunction(() => document.documentElement.dataset.desktopFullscreen === 'true' && document.querySelector('.cabin-toolbar') && getComputedStyle(document.querySelector('.cabin-toolbar')).display !== 'none');
+  await site.reload(); await site.waitForFunction(() => document.documentElement.dataset.desktopFullscreen === 'true' && document.querySelector('.home-header') && getComputedStyle(document.querySelector('.home-header')).display !== 'none');
   await app.evaluate(({ webContents }) => { const contents = webContents.getAllWebContents().find(c => c.getURL().startsWith('https://album-circle.vercel.app')); contents.sendInputEvent({ type: 'keyDown', keyCode: 'ESC' }); contents.sendInputEvent({ type: 'keyUp', keyCode: 'ESC' }); });
   await site.waitForFunction(() => document.documentElement.dataset.desktopFullscreen === 'false'); check('native-fullscreen-covers-monitor-keeps-interaction-survives-reload-and-escape-restores');
   await openMusicSettings(site);

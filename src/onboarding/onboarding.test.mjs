@@ -107,7 +107,9 @@ test('a completed pre-versioning cabin sees the full companion arc from 1.18', (
 
 test('release notes are ordered, unique, and cover the build version', () => {
   const pkg = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'));
-  assert.equal(RELEASES[0].version, pkg.version, 'the newest release card matches the app version');
+  // The next version's card may be written before package.json is bumped; the build's own card must exist.
+  assert.ok(RELEASES.some((release) => release.version === pkg.version), 'the app version has a release card');
+  assert.ok(compareVersions(RELEASES[0].version, pkg.version) >= 0, 'no card is older than the app version');
   assert.equal(new Set(RELEASES.map((release) => release.version)).size, RELEASES.length);
   for (let i = 1; i < RELEASES.length; i++) assert.ok(compareVersions(RELEASES[i - 1].version, RELEASES[i].version) > 0);
   assert.deepEqual(releasesBetween('1.21.0', '1.21.0'), []);

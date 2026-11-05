@@ -9,7 +9,6 @@
 .record-library-controls>small{width:100%;color:var(--px-ink-faint);font-size:12px}
 .record-filter-count{font-size:12px;color:var(--px-ink-dim)}
 .record-tools-button{margin-top:8px}
-.shelf-filters .record-library-controls{padding:16px 28px;background:var(--px-surface)}
 
 /* A bare <dialog class=record-dialog> (音源与账户) draws its own frame; inside the shared Dialog only the form skin applies. */
 .record-dialog .cabin-dialog-body{scrollbar-width:thin;scrollbar-color:var(--px-border) transparent}
@@ -77,5 +76,5 @@
 .cabin-rack .showroom-artwork{z-index:2}
 .cabin-rack .room-record{isolation:isolate}
 
-@media(max-width:700px){.record-dialog{padding:18px}.record-editor-grid{grid-template-columns:1fr;gap:20px}.record-style-preview{margin:auto}.record-box-manager-grid{grid-template-columns:1fr}.record-box-manager nav{max-height:120px;grid-template-columns:repeat(2,minmax(0,1fr))}.record-library-controls select{max-width:165px}.record-library-controls{gap:10px}.shelf-filters .record-library-controls{padding:14px 18px}}
+@media(max-width:700px){.record-dialog{padding:18px}.record-editor-grid{grid-template-columns:1fr;gap:20px}.record-style-preview{margin:auto}.record-box-manager-grid{grid-template-columns:1fr}.record-box-manager nav{max-height:120px;grid-template-columns:repeat(2,minmax(0,1fr))}.record-library-controls select{max-width:165px}.record-library-controls{gap:10px}}
 }

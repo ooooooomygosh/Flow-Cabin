@@ -2,10 +2,8 @@ import { prepareDataUpgrade } from './backup/upgrade.mjs';
 import { startLanBridge } from './sync/storage.mjs';
 import React, { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { isNewCabin } from './onboarding/onboarding-model.mjs';
-const CabinRoom = lazy(() => import('./CabinRoom'));
-import ClassicCabinRoom from './ClassicCabinRoom';
-import { ClassicTitlebar, InterfaceDialog } from './InterfaceMode';
-import { interfaceMode } from './interface-mode.mjs';
+const Room = lazy(() => import('./CabinRoom'));
+import { retireClassicHome } from './interface-mode.mjs';
 import AddAlbum from './AddAlbum';
 import RecordCard from './RecordCard';
 import BackupDialog from './BackupDialog';
@@ -26,9 +24,8 @@ const OWNER = 'local-owner', ROOM = 'local-room';
 export default function App() {
   const [firstVisit] = useState(() => isNewCabin(localStorage));
   const [hubRequest, setHubRequest] = useState(null);
-  const [mode] = useState(interfaceMode), [interfaceOpen, setInterfaceOpen] = useState(false);
-  const Room = mode === 'beta' ? CabinRoom : ClassicCabinRoom;
-  useEffect(() => { const open = () => setInterfaceOpen(true);window.addEventListener('cabin:interface-choice',open);return () => window.removeEventListener('cabin:interface-choice',open); }, []);
+  // 3.1: the life cabin is the only home; a stored choice of the old shelf home is dropped.
+  useState(() => retireClassicHome());
   const [prepared,setPrepared] = useState(false), [upgradeError,setUpgradeError] = useState(''), [upgradeRetry,setUpgradeRetry] = useState(0);
   const [items, setItems] = useState([]), [loading, setLoading] = useState(true), [error, setError] = useState('');
   const [adding, setAdding] = useState(null), [recordId, setRecordId] = useState(''), [backup, setBackup] = useState(false), [wall, setWall] = useState(false);
@@ -65,16 +62,15 @@ export default function App() {
   if (!prepared) return <main className="app app-startup"><section aria-label="准备小屋"><small>心流小屋 · FLOW CABIN</small><h1>{loading ? '正在读取唱片…' : error ? '收藏暂时没有读到' : upgradeError ? '恢复点还没有保存' : '正在准备小屋…'}</h1>{loading || (!error && !upgradeError) ? <p role="status">{loading ? error ? '正在重新读取唱片…' : '正在取回你的收藏。' : '正在保存更新前的恢复点。'}</p> : null}{(upgradeError||error)&&<div className="app-startup-error" role="alert"><p>{error || upgradeError}</p><button type="button" className="pixel-button" disabled={loading} onClick={()=>{setUpgradeError('');setUpgradeRetry(v=>v+1);if(error)reload();}}>{loading ? '正在重试…' : error ? '重试' : '重试保存恢复点'}</button></div>}</section></main>;
   return <RecordLibraryProvider userId={OWNER} roomId={ROOM}><FocusProvider userId={OWNER} notify={notify}><StudyProvider userId={OWNER}><SoundscapeProvider>
     <CompanionBridge/>
-    <div className="app" data-interface={mode}>
-      {mode === 'classic' && <ClassicTitlebar items={items} loading={loading} onAdd={() => setAdding({query:''})} onWall={() => setWall(true)} onBeta={() => setInterfaceOpen(true)} onSettings={() => setHubRequest({section:'music',at:Date.now()})} notify={notify}/>}
+    <div className="app">
       <main className="app-cabin">
+        <h1 className="app-title-sr">心流小屋</h1>
         {error && <p className="app-error" role="alert">{error}<button type="button" disabled={loading} onClick={reload}>{loading ? '正在重试…' : '重试'}</button></p>}
         <Suspense fallback={<p role="status">正在打开小屋…</p>}><Room items={items} loading={loading} loadError={error} reload={reload} firstVisit={firstVisit} hubRequest={hubRequest} openBackup={() => setBackup(true)} openWall={() => setWall(true)} notify={notify} openRecord={setRecordId} openAdd={(query = '', tab) => setAdding({ query, tab })} saveToShelf={saveToShelf}/></Suspense>
       </main>
       <ToastStack toasts={toasts} dismiss={dismissToast}/>
       <ShortcutSheet/>
     </div>
-    {interfaceOpen && <InterfaceDialog mode={mode} items={items} close={() => setInterfaceOpen(false)}/>}
     {adding && <AddAlbum items={items} initialQuery={adding.query} initialTab={adding.tab} close={() => setAdding(null)} onAdded={addToShelf}/>}
     {record && <RecordCard key={record.id} item={record} close={() => setRecordId('')} onChanged={replaceItem} onRemove={remove}/>}
     {backup && <BackupDialog items={items} reload={reload} close={() => setBackup(false)}/>}

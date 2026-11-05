@@ -15,7 +15,6 @@ try {
  server.stdout.on('data', b => log += b); server.stderr.on('data', b => log += b);
  for (let n = 0; ; n++) { if (server.exitCode !== null || n > 100) throw Error(log); if (hasViteLocalOrigin(log, origin) && await fetch(origin).then(r => r.ok, () => false)) break; await new Promise(r => setTimeout(r, 100)); }
  browser = await launchChromium(); const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, reducedMotion: 'reduce' });
- await context.addInitScript(()=>localStorage.setItem('flow-cabin-interface-v1','beta'));
   await context.addInitScript(seed => { localStorage.setItem('flow-cabin-onboarding-v1', seed); window.albumDesktopAppearance = { client: true, reduceMotion: true }; window.albumDesktopCapabilities = { lanSync: true, petPacks: true }; window.open = () => null; }, onboardingSeed());
  let enabled = false;
  const pin = 'a'.repeat(64), token = 'b'.repeat(64);

@@ -150,7 +150,7 @@
 .hub-focus-settings .focus-settings-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
 @media(max-width:700px){.settings-hub-layout{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}.settings-hub-search{margin:8px 12px 0}.settings-hub-nav{grid-auto-flow:column;grid-auto-columns:max-content;padding:8px 12px 0}.settings-hub-panel{padding:12px}.hub-row{flex-wrap:wrap}.hub-focus-settings .focus-settings-grid{grid-template-columns:1fr 1fr}}
 /* moved from the retired cabin-welcome.css */
-@media(prefers-reduced-motion:no-preference){html:not([data-desktop-reduce-motion=true]) .focus-dock,html:not([data-desktop-reduce-motion=true]) .shelf-filters{animation:welcome-step-in .18s ease-out}}
+@media(prefers-reduced-motion:no-preference){html:not([data-desktop-reduce-motion=true]) .focus-dock{animation:welcome-step-in .18s ease-out}}
 @keyframes welcome-step-in{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
 
 .hub-row>span:first-child{gap:1px}.hub-row small{line-height:1.35}

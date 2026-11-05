@@ -1,7 +1,6 @@
-import { openRoomSettings, closeSettings } from './settings-actions.mjs';
+import { openRoomSettings, openSettingsSection, closeSettings } from './settings-actions.mjs';
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import { getRoomScene } from '../src/scene-catalog.mjs';
 import { releasesBetween } from '../src/onboarding/releases.mjs';
 import { LEGACY_SEEN_VERSION } from '../src/onboarding/onboarding-model.mjs';
 import { onboardingSeed, APP_VERSION } from './app-version.mjs';
@@ -54,11 +53,11 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
     await heading(page).filter({ hasText: '选一个房间，再挑个伙伴' }).waitFor();
     assert.equal(await page.evaluate(() => document.activeElement.id), 'onboarding-heading');
     check('wizard-auto-opens-three-sizes-web-sources-and-heading-focus');
-    // The compact 房间 picker uses the current Pixel Cabin artwork from the catalog.
-    assert.equal(await wizard.locator('.room-pickers.is-compact').getByRole('button', { name: '选择场景 像素小屋', exact: true }).locator('img').getAttribute('src'), getRoomScene('pixel').view);
+    // The compact 房间 picker shows each room's shell render.
+    assert.equal(await wizard.locator('.room-pickers.is-compact').getByRole('button', { name: '选择场景 像素小屋', exact: true }).locator('img').getAttribute('src'), '/room-scenes/v21/pixel/shell.webp');
     await button(page, '选择场景 林间书屋').click(); await button(page, '选择桌宠 枫糖').click();
     assert.equal(await button(page, '选择场景 林间书屋').getAttribute('aria-pressed'), 'true');
-    assert.equal(await page.locator('.cabin-scene').getAttribute('data-room-look'), 'forest');
+    await page.locator('.cabin-home.theme-forest').waitFor();
     await button(page, '下一步').click();
     await heading(page).filter({ hasText: '放一段声音试试' }).waitFor();
     assert.equal(await page.locator('audio[src]').count(), 0, 'no sound before 播放测试');
@@ -71,15 +70,15 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
     assert.equal(await button(page, '下一步').count(), 0, 'the last step ends the guide');
     await button(page, '进入小屋').click(); await wizard.waitFor({ state: 'hidden' });
     assert.equal(await page.locator('.focus-badge.is-running').count(), 0);
-    await page.reload(); await page.getByRole('button', { name: '添加第一张专辑' }).waitFor();
+    await page.reload(); await button(page, '放一张唱片').waitFor();
     assert.equal(await wizardOf(page).count(), 0);
-    assert.equal(await page.locator('.cabin-scene').getAttribute('data-room-look'), 'forest');
-    assert.equal(await page.locator('.room-cat .pixel-cat').getAttribute('data-pet-id'), 'fox');
+    await page.locator('.cabin-home.theme-forest').waitFor();
+    assert.equal(await page.locator('.home-pet-portrait .pixel-cat').getAttribute('data-pet-id'), 'fox');
     assert.equal(await page.evaluate(() => localStorage.getItem('album-circle-room-player-v1')), 'local');
     check('wizard-full-flow-persists-source-room-companion-and-does-not-reopen');
 
     // 2. 重新引导 from the hub, motion preferences.
-    await button(page, '设置').click(); await hubOf(page).waitFor();
+    await openSettingsSection(page, '音乐'); await hubOf(page).waitFor();
     assert.deepEqual(await hubOf(page).getByRole('tab').allInnerTexts(), ['音乐', '专注', '小屋与奶糖', '桌面', '数据', '实验室']);
     // 搜索设置: results replace the panel, Enter jumps to the first one.
     await hubOf(page).getByRole('searchbox', { name: '搜索设置' }).fill('备份');
@@ -111,7 +110,7 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
     await page.reload(); await wizardOf(page).waitFor();
     await heading(page).filter({ hasText: '选一个房间，再挑个伙伴' }).waitFor();
     // 4. 跳过引导 is final until 重新引导.
-    await button(page, '跳过引导').click(); await page.reload(); await page.getByRole('button', { name: '添加第一张专辑' }).waitFor();
+    await button(page, '跳过引导').click(); await page.reload(); await button(page, '放一张唱片').waitFor();
     assert.equal(await wizardOf(page).count(), 0);
     check('wizard-resumes-after-close-and-skip-is-remembered');
 
@@ -119,7 +118,7 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
     await openRoomSettings(page); await hubOf(page).waitFor();
     assert.equal(await page.getByRole('tab', { name: '小屋与奶糖' }).getAttribute('aria-selected'), 'true');
     await button(page, '选择场景 海边慢屋').click();
-    assert.equal(await page.locator('.cabin-scene').getAttribute('data-room-look'), 'seaside');
+    await page.locator('.cabin-home.theme-seaside').waitFor();
     await page.screenshot({ path: path.join(evidence, 'settings-hub-room.png'), animations: 'disabled' });
     await closeSettings(page);
     // The deck's 音源设置 event opens 设置 › 音源 (web: only 仅动画展示 and 本地音乐 can be chosen).
@@ -151,7 +150,7 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
     localStorage.setItem('flow-cabin-onboarding-v1', JSON.stringify({ ...JSON.parse(window.__onboardingSeed), source: 'local', permissions: {}, tested: 'skipped' }));
   }));
   try {
-    await page.goto(origin); await button(page, '设置').click(); await page.getByRole('tab', { name: '桌面' }).click();
+    await page.goto(origin); await openSettingsSection(page, '桌面');
     await hubOf(page).getByText(/当前系统不支持沉入桌面|沉入桌面需要在心流小屋桌面客户端里使用/).first().waitFor(); // #14's installDesktopApi owns window.cabinDesktop in the page
     assert.equal(await hubOf(page).getByRole('checkbox', { name: '沉入桌面' }).isDisabled(), true);
     check('desktop-mode-unsupported-reason-disables-toggle');
@@ -176,7 +175,7 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
     assert.equal(await sheet.locator('.onboarding-progress').count(), 0);
     await page.screenshot({ path: path.join(evidence, 'whats-new.png'), animations: 'disabled' });
     await button(page, '知道了').click(); await sheet.waitFor({ state: 'hidden' });
-    await page.reload(); await page.getByRole('button', { name: '添加第一张专辑' }).waitFor();
+    await page.reload(); await button(page, '放一张唱片').waitFor();
     assert.equal(await wizardOf(page, '新功能').count(), 0, 'one 知道了 is enough');
     check('legacy-welcome-cabin-sees-the-whats-new-sheet-once');
     assert.deepEqual(failures, []);
@@ -199,7 +198,7 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
   try {
     await returning.route('**/*', routeHandler);
     await returning.addInitScript(() => { if (location.origin === 'null') return; localStorage.setItem('album-circle-focus-dock-v1', JSON.stringify({ open: false, tab: 'timer' })); });
-    const page = await returning.newPage(); await page.goto(origin); await page.getByRole('button', { name: '添加第一张专辑' }).waitFor();
+    const page = await returning.newPage(); await page.goto(origin); await button(page, '放一张唱片').waitFor();
     assert.equal(await page.getByRole('dialog').count(), 0);
     check('returning-empty-collection-is-not-interrupted');
   } finally { await returning.close(); }

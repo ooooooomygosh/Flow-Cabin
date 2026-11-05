@@ -15,12 +15,11 @@ let app, site, host;
   site.on('pageerror', (error) => report.pageErrors.push(error.message));
   await site.clock.install();
   await mountFixture(app, site);
-  await host.evaluate(() => window.albumDesktop.settings('apply', { showroom: 'room' })); await site.locator('.room-record').first().waitFor();
-  assert.equal(await site.locator('.cabin-scene').getAttribute('data-room-look'), 'pixel');
-  await site.locator('.room-cat .pixel-cat').waitFor(); check('pixel-cabin-and-cat-are-default');
+  await host.evaluate(() => window.albumDesktop.settings('apply', { showroom: 'room' })); await site.locator('.cabin-home.theme-pixel').waitFor();
+  await site.locator('.home-pet-portrait .pixel-cat').waitFor(); check('pixel-cabin-and-cat-are-default');
   await site.screenshot({ path: path.join(output, 'focus-room.png') });
 
-  await site.locator('.room-cat').click(); await site.locator('.room-cat-bubble').waitFor(); check('cat-responds-to-a-poke');
+  await site.locator('.home-pet-portrait').click(); await site.locator('.cat-panel[open]').waitFor(); await site.keyboard.press('Escape'); await site.locator('.cat-panel').waitFor({ state: 'hidden' }); check('pet-portrait-opens-the-companion-panel');
 
   await site.locator('.focus-badge').click(); await site.getByRole('tablist', { name: '专注工具' }).waitFor();
   await site.getByRole('tab', { name: '待办' }).click();
@@ -50,10 +49,10 @@ let app, site, host;
   assert.equal(await site.getByLabel('随手记内容').inputValue(), '');
   check('quick-notes-persist-as-plain-text-and-clear-needs-confirmation');
   await site.getByRole('button', { name: '计时设置' }).click(); await site.getByLabel('专注（分）').fill('2');
-  await site.getByRole('button', { name: '开始专注' }).click(); assert.equal(await site.locator('.focus-display').count(), 0); // 自动进入沉浸 is off by default (2.2), so 开始专注 stays in the room
-  await site.waitForFunction(() => document.querySelector('.focus-badge')?.textContent.includes('02:00') || document.querySelector('.focus-badge')?.textContent.includes('01:5'));
-  // During focus the cat does one of its quiet-work poses (PetLife), not only 'focus'.
-  await site.locator(['focus', 'read', 'write', 'type', 'think'].map((pose) => `.room-cat .pixel-cat[data-pose="${pose}"]`).join(',')).first().waitFor(); check('focus-starts-and-cat-keeps-company');
+  await site.getByRole('button', { name: '开始专注', exact: true }).click(); assert.equal(await site.locator('.focus-display').count(), 0); // 自动进入沉浸 is off by default (2.2), so 开始专注 stays in the room
+  await site.waitForFunction(() => /还剩 0(2:00|1:5\d)/.test(document.querySelector('.focus-badge')?.getAttribute('aria-label') || ''));
+  // The LED clock counts the round down (its digits are SVG, so the time is in its name); the room's quiet-work cat poses are drawn on the home's canvas.
+  await site.locator('.focus-badge.is-running').waitFor(); check('focus-starts-and-the-led-clock-counts-down');
   await site.screenshot({ path: path.join(output, 'focus-running.png') });
   await site.evaluate(() => { window.__phase = null; window.addEventListener('album-focus-phase', (event) => { window.__phase = event.detail; }); });
   await site.clock.fastForward('02:01');
@@ -77,10 +76,9 @@ let app, site, host;
   const snapshot = await site.evaluate(() => window.albumCompanionSnapshot());
   assert.equal(snapshot.focus.fish, 1); assert.ok(snapshot.room.items.length > 0); assert.equal(JSON.stringify(snapshot).includes('desktop-qa-invalid-token'), false); check('companion-snapshot-has-no-session');
 
-  await site.locator('.focus-dock-close').click(); await site.keyboard.press('h');
+  await site.keyboard.press('Escape'); await site.keyboard.press('h');
   assert.equal(await site.evaluate(() => document.documentElement.classList.contains('room-zen')), true);
-  assert.equal(await site.locator('.app .topbar').isVisible(), false);
-  assert.equal(await site.locator('.focus-badge').isVisible(), true); assert.equal(await site.getByRole('button', { name: '恢复工具', exact: true }).isVisible(), true); assert.equal(await site.locator('.app-titlebar').isVisible(), false);
+  assert.equal(await site.locator('.focus-badge').isVisible(), true); assert.equal(await site.getByRole('button', { name: '恢复工具', exact: true }).isVisible(), true); assert.equal(await site.locator('.home-shortcuts .brass-plate').first().isVisible(), false);
   await site.screenshot({ path: path.join(output, 'focus-zen.png') });
   await site.keyboard.press('Escape'); assert.equal(await site.evaluate(() => document.documentElement.classList.contains('room-zen')), false); check('zen-mode-toggles');
   assert.deepEqual(report.pageErrors, []);

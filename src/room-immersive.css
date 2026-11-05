@@ -10,13 +10,6 @@
 .cabin-scene-art{width:100%;height:100%;object-fit:fill}
 .cabin-rack .room-record{animation:shelf-arrive .23s steps(3,end)}
 @keyframes shelf-arrive{from{opacity:.35;translate:0 20%}to{opacity:1;translate:0 0}}
-.cabin-room .cabin-toolbar>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
-.cabin-room .room-selection-copy h2{margin:3px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.cabin-room .room-selection-copy p{font-size:12px}.cabin-room .room-selection-actions button,.cabin-room .room-selection-actions a{white-space:nowrap;margin:0}
-.room-shelf-navigation{position:absolute;right:18px;top:45%;z-index:12;display:grid;justify-items:center;gap:9px;padding:10px;color:#f7dbb0;font-size:12px}
-.room-shelf-navigation button{display:grid;place-items:center;padding:7px;color:#ffe1af}.room-shelf-navigation button:disabled{opacity:.3}.room-shelf-navigation small{font-size:12px;line-height:16px;writing-mode:horizontal-tb;white-space:nowrap;letter-spacing:0}
-.wallpaper-error{position:absolute;z-index:26;left:25%;right:20px;top:132px;display:flex;align-items:center;gap:12px;overflow-wrap:anywhere;background:#471f14ed;color:#ffe0bd;padding:10px 16px;border:2px solid #e6ae67;font-size:13px}
-.wallpaper-error button{margin-left:auto;flex:none;min-width:24px;min-height:24px;border:0;background:none;color:inherit;font-size:20px;cursor:pointer}
 
 /* Console geometry (scripts/cabin-layout-checks.mjs measures this box). */
 .room-turntable{position:absolute;left:2.5%;bottom:17%;width:clamp(200px,20vw,340px);z-index:10;color:#ffe9c6;isolation:isolate}
@@ -29,9 +22,9 @@
 .turntable-controls{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:12px}.turntable-controls button{display:grid;place-items:center;border:1px solid #cfaa6660;padding:7px;color:#ffe4b7;background:#644225}.turntable-controls button:disabled{opacity:.3}.turntable-controls .turntable-toggle{background:#dcbb7d;color:#291b0b;padding:9px}.turntable-controls select{flex-basis:100%;width:100%;min-width:0;overflow:hidden;text-overflow:ellipsis;color:#ffe4b7;background-color:#332311;border:1px solid #caa26966;padding:7px;font-size:12px}
 .turntable-audio-sliders{display:grid;gap:5px;margin-top:10px;font-size:12px;color:#cfae7d}.turntable-audio-sliders label{display:flex;align-items:center;gap:7px;flex-wrap:wrap}.turntable-audio-sliders input{min-width:0;flex:1;width:60%;height:12px;accent-color:#d5b575}.turntable-audio-sliders small{flex-basis:100%;text-align:right;font-size:12px}
 .turntable-matches{display:grid;gap:4px;max-height:180px;overflow:auto;margin-top:10px}.turntable-matches button{padding:7px 8px;text-align:left;border:1px solid #cfaa6650;background:#513720;color:#ffe2b4}.turntable-matches button strong{display:block;font-size:12px;font-weight:500}.turntable-matches button span{display:block;font-size:12px;color:#c2a17a}
-@media(max-width:1300px){.room-turntable{left:1.5%;width:22%;min-width:185px}.room-shelf-navigation{right:8px}}
-@media(max-width:700px){.room-shelf-navigation small{display:none}}
-@media(max-height:750px){.room-turntable{bottom:19%;width:18%;min-width:165px}.turntable-controls button{padding:5px}.turntable-controls select{padding:5px}.room-shelf-navigation small{display:none}.turntable-console{scrollbar-width:thin;scrollbar-color:#b48753 #352518}.turntable-console>*{max-width:100%}.turntable-status{overflow-wrap:anywhere}}
+@media(max-width:1300px){.room-turntable{left:1.5%;width:22%;min-width:185px}}
+
+@media(max-height:750px){.room-turntable{bottom:19%;width:18%;min-width:165px}.turntable-controls button{padding:5px}.turntable-controls select{padding:5px}.turntable-console{scrollbar-width:thin;scrollbar-color:#b48753 #352518}.turntable-console>*{max-width:100%}.turntable-status{overflow-wrap:anywhere}}
 @media(max-height:700px){.turntable-audio-sliders{gap:2px}.turntable-status{max-height:28px}}
 /* Only the heading moves the furniture; playback, selects and album drops keep their own gestures. */
 .turntable-drag-handle{min-height:24px;display:flex;align-items:center;gap:5px;border:0;padding:3px 0;background:none;color:inherit;font:inherit;cursor:grab;touch-action:none;user-select:none}

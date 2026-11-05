@@ -12,7 +12,7 @@ html[data-perf='low'] :is(.cabin-scene-art, .cabin-scene-canvas, .cabin-scene-ca
 html[data-perf='low'] :is(.playlist-track, .desktop-widget), html[data-perf='low'] :is(.corner-pool, .corner-weather)::before { animation: none !important; }
 /* The button hover runs a brightness() filter: every hover re-rasterizes the
    button. The lift + hard shadow stay, so the hover still reads. */
-html[data-perf='low'] :is(.pixel-button, .room-selection-actions button, .room-selection-actions a, .cabin-scene .room-empty button, .record-card-tools .record-tools-button, .record-card-tools .discogs-link) { filter: none !important; }
+html[data-perf='low'] :is(.pixel-button, .record-card-tools .record-tools-button, .record-card-tools .discogs-link) { filter: none !important; }
 /* No glass on 流畅模式: every panel, chip and backdrop goes flat (the surfaces
    turn more opaque below, so text keeps its contrast without the blur). */
 html[data-perf='low'] *, html[data-perf='low'] *::before, html[data-perf='low'] *::after, html[data-perf='low'] ::backdrop { backdrop-filter: none !important; }

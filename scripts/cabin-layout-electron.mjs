@@ -7,7 +7,6 @@ import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { spawn } from 'node:child_process';
 import { verifyCabinLayout, verifyCabinToolActions, verifyFocusLayout } from './cabin-layout-checks.mjs';
-import { pinHome } from './launch-browser.mjs';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(path.join(root, 'desktop/package.json'));
 const { _electron } = require('playwright');
@@ -32,12 +31,10 @@ try {
   assert(ready, `isolated fixture server must start: ${serverLog}`);
   electron = await _electron.launch({ executablePath, args:[path.join(root,'scripts/cabin-layout-main.cjs')] });
   page = await electron.firstWindow();
-  // This checks the classic shelf's cabin; the life cabin is the default home since 2.2 (as launchChromium pins it).
-  await page.addInitScript({ content:`try { ${pinHome('classic')} } catch {}` });
   await page.addInitScript({ path:path.join(root,'scripts/preview-fixture.js') });
   await page.route('**/*', r => new URL(r.request().url()).origin === origin ? r.continue() : r.abort());
   page.on('pageerror', e => report.errors.push(e.message));
-  await page.goto(origin); await page.locator('.room-record').first().waitFor();
+  await page.goto(origin); await page.locator('.cabin-home').waitFor();
   await verifyCabinToolActions({page});
   for (const [width,height] of [[1440,900],[960,600],[1920,1080],[2560,1440]]) for (const zoom of [.75,1,1.25,1.5]) {
     await electron.evaluate(({BrowserWindow},size) => { const w=BrowserWindow.getAllWindows()[0]; w.setContentSize(size.width,size.height); w.webContents.setZoomFactor(size.zoom); }, {width,height,zoom});
@@ -53,9 +50,9 @@ try {
       await verifyCabinLayout({page}); tabs.push({tab,...await verifyFocusLayout({page})});
       if (tab==='这一段'||tab==='待办') await screenshot(`${name}-${tab}.png`);
     }
-    await page.keyboard.press('Escape'); assert.equal(await page.locator('.focus-dock').count(),0);
+    await page.keyboard.press('Escape'); assert.equal(await page.getByRole('dialog',{name:'专注',exact:true}).count(),0);
     assert.equal(await page.locator('.focus-badge').getAttribute('aria-expanded'),'false');
-    report.cases.push({width,height,zoom,card,tabs}); console.log(`PASS hidden Electron ${name}: three tabs and collapse`);
+    report.cases.push({width,height,zoom,card,tabs}); console.log(`PASS hidden Electron ${name}: desk rail, three tabs and collapse`);
   }
   await electron.evaluate(({BrowserWindow})=>{const w=BrowserWindow.getAllWindows()[0];w.setContentSize(1440,900);w.webContents.setZoomFactor(1);});
   await openRoomSettings(page); await page.getByRole('button',{name:'选择场景 月夜书桌',exact:true}).click(); await closeSettings(page);

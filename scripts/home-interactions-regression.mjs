@@ -14,7 +14,6 @@ try{
  for(let i=0;!await fetch(origin).then(r=>r.ok,()=>false);i++){if(i>100||server.exitCode!==null)throw Error('Preview failed');await new Promise(r=>setTimeout(r,100));}
  browser=await launchChromium();const context=await browser.newContext({viewport:{width:1440,height:900},reducedMotion:'reduce',acceptDownloads:true});
  await context.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());
- await context.addInitScript(()=>localStorage.setItem('flow-cabin-interface-v1','beta'));
   await context.addInitScript(()=>{if(sessionStorage.getItem('home-fixture'))return;sessionStorage.setItem('home-fixture','1');localStorage.setItem('flow-cabin-home-intro-v1','done');localStorage.setItem('album-circle-focus-v1:local-owner',JSON.stringify({settings:{notify:false,chime:false},tasks:[{id:'first',text:'先读一页书',done:false,createdAt:Date.now()}]}));});
  page=await context.newPage();page.setDefaultTimeout(15000);page.on('pageerror',e=>report.errors.push(e.message));await page.goto(origin);await page.locator('.home-canvas[data-art-ready=true]').waitFor();
  // 3.0 shell: three top entries, four everyday items behind ⚙, three always-labelled hotspots, 布置 under the room name.
@@ -52,7 +51,7 @@ try{
  await page.screenshot({path:path.join(output,'mobile-work.png')});
  const live=await browser.newContext({viewport:{width:1440,height:900}});
  await live.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());
- await live.addInitScript(()=>{localStorage.setItem('flow-cabin-interface-v1','beta');localStorage.setItem('flow-cabin-home-intro-v1','done');});
+ await live.addInitScript(()=>{localStorage.setItem('flow-cabin-home-intro-v1','done');});
  await live.addInitScript(seed=>localStorage.setItem('flow-cabin-onboarding-v1',seed),onboardingSeed()); // the guide and 新功能 sheet are covered by onboarding checks
  const cam=await live.newPage();cam.setDefaultTimeout(15000);cam.on('pageerror',e=>report.errors.push(e.message));await cam.goto(origin);
  await cam.locator('.home-canvas[data-art-ready=true]').waitFor();await cam.locator('.cabin-home[data-corners-ready=pixel]').waitFor();
@@ -81,7 +80,7 @@ try{
  await fallback.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());
  await fallback.addInitScript(seed=>localStorage.setItem('flow-cabin-onboarding-v1',seed),onboardingSeed()); // the first-run guide is covered by onboarding-checks
  await fallback.addInitScript(()=>{
-   localStorage.setItem('flow-cabin-interface-v1','beta');localStorage.setItem('flow-cabin-home-intro-v1','done');
+   localStorage.setItem('flow-cabin-home-intro-v1','done');
    localStorage.setItem('flow-cabin-labs-v1',JSON.stringify({postcard:true})); // 小屋明信片 is a 实验室 feature since 3.0
    const getContext=HTMLCanvasElement.prototype.getContext;
    HTMLCanvasElement.prototype.getContext=function(kind,...args){return /webgl/i.test(kind)?null:getContext.call(this,kind,...args);};

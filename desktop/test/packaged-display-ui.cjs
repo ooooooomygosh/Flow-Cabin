@@ -6,7 +6,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const crypto = require('node:crypto');
-const { openAddToShelf } = require('./ui-fixture.cjs');
+const { openAddToShelf, closeLibrary } = require('./ui-fixture.cjs');
 
 const root = path.resolve(__dirname, '../..');
 const DEFAULT_EXECUTABLE = path.join(root, 'desktop/release/mac-arm64/心流小屋.app/Contents/MacOS/心流小屋');
@@ -232,7 +232,7 @@ async function main() {
       report.limitations.push('Diagnostic only: no UI input or per-display interaction acceptance was performed.');
       return;
     }
-    await site.locator('.app-titlebar').waitFor();
+    await site.locator('.cabin-home').waitFor();
     const onboarding = site.getByRole('dialog', { name: '新手引导', exact: true });
     if (await site.evaluate(() => {
       const state = JSON.parse(localStorage.getItem('flow-cabin-onboarding-v1') || 'null');
@@ -242,7 +242,7 @@ async function main() {
       await onboarding.getByRole('button', { name: '跳过引导', exact: true }).click();
       await onboarding.waitFor({ state: 'hidden' });
     }
-    await site.locator('.cabin-room').waitFor();
+    await site.locator('.cabin-home').waitFor();
     const emptyItems = await site.evaluate(async () => {
       const response = await fetch('/api/items');
       if (!response.ok) throw new Error('Cannot inspect the isolated collection');
@@ -255,7 +255,7 @@ async function main() {
     await add.getByLabel('曲目').fill('Synthetic display check');
     await add.getByRole('button', { name: /放上唱片架/ }).click();
     await add.locator('.add-notice', { hasText: 'QA physical displays' }).waitFor();
-    await add.getByRole('button', { name: '关闭添加到唱片架', exact: true }).click();
+    await add.getByRole('button', { name: '关闭添加到唱片架', exact: true }).click(); await closeLibrary(site);
     await add.waitFor({ state: 'hidden' });
     check('only-synthetic-local-album-created-without-login');
 
@@ -294,8 +294,8 @@ async function main() {
         { width: row.native.contentBounds.width, height: row.native.contentBounds.height, scale: display.scaleFactor });
         await site.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
         await screenshot(row, 'room');
-        const cat = site.locator('button.room-cat'), panel = site.locator('.cat-panel[open]');
-        await cat.dblclick();
+        const cat = site.locator('.home-pet-portrait'), panel = site.locator('.cat-panel[open]');
+        await cat.click();
         await panel.waitFor();
         assert.equal(await cat.getAttribute('aria-expanded'), 'true');
         await screenshot(row, 'cat-open');

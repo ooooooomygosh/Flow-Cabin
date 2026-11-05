@@ -132,7 +132,6 @@ public class CabinDevicePlugin extends Plugin {
         android.content.SharedPreferences saved=getContext().getSharedPreferences("cabin-widget",0);String action=saved.getString("command","");saved.edit().remove("command").apply();call.resolve(new JSObject().put("action",action));
     }
     @PluginMethod public void launcherIcon(PluginCall call) { call.resolve(new JSObject().put("pet", getContext().getSharedPreferences("cabin-launcher", 0).getString("pet", "cat"))); }
-    @PluginMethod public void restartInterface(PluginCall call) { call.resolve(); new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> getActivity().recreate(), 250); }
     @PluginMethod public void syncFocus(PluginCall call) {
         CabinFocus.sync(getContext(), call.getObject("state", new JSObject())); call.resolve();
     }
