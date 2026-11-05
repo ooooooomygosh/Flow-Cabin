@@ -37,20 +37,6 @@
 .listen-bar .listen-play svg{width:16px;height:16px}.listen-bar .listen-skip svg{width:14px;height:14px}
 .listen-spin{animation:listen-spin 1s linear infinite}
 @keyframes listen-spin{to{transform:rotate(360deg)}}
-.listen-progress{display:grid;grid-template-columns:38px 1fr 38px;align-items:center;gap:8px;height:18px;font-variant-numeric:tabular-nums}
-.listen-progress small{font-size:12px;line-height:1;color:var(--listen-faint)}.listen-progress small:last-child{text-align:right}
-.listen-progress.is-empty{height:18px}
-.listen-progress input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:16px;margin:0;padding:0;background:transparent;cursor:pointer}
-.listen-progress input[type=range]::-webkit-slider-runnable-track{height:3px;border-radius:var(--ui-radius-sm);background:linear-gradient(90deg,var(--listen-accent) var(--listen-progress,0%),rgba(255,233,203,.16) var(--listen-progress,0%))}
-.listen-progress input[type=range]::-moz-range-track{height:3px;border-radius:var(--ui-radius-sm);background:rgba(255,233,203,.16)}
-.listen-progress input[type=range]::-moz-range-progress{height:3px;border-radius:var(--ui-radius-sm);background:var(--listen-accent)}
-.listen-progress input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:11px;margin-top:-4px;border-radius:50%;border:0;background:var(--listen-ink);opacity:0;transition:opacity .22s var(--listen-ease)}
-.listen-progress input[type=range]::-moz-range-thumb{width:11px;height:11px;border-radius:50%;border:0;background:var(--listen-ink);opacity:0}
-.listen-progress:hover input[type=range]::-webkit-slider-thumb,.listen-progress input[type=range]:focus-visible::-webkit-slider-thumb{opacity:1}
-.listen-progress:hover input[type=range]::-moz-range-thumb,.listen-progress input[type=range]:focus-visible::-moz-range-thumb{opacity:1}
-.listen-progress input[type=range]:focus-visible{outline:2px solid var(--listen-accent-hi);outline-offset:2px;border-radius:var(--ui-radius-sm)}
-.listen-progress-track{position:relative;display:block;height:3px;border-radius:var(--ui-radius-sm);background:rgba(255,233,203,.16);overflow:hidden}
-.listen-progress-track i{position:absolute;left:0;top:0;bottom:0;width:var(--listen-progress,0%);background:var(--listen-faint);border-radius:var(--ui-radius-sm)}
 .listen-actions{display:flex;align-items:center;justify-content:flex-end;gap:2px}
 .listen-bar .listen-like[aria-pressed=true],.listen-shelf .listen-like[aria-pressed=true]{color:var(--listen-accent)}
 .listen-bar .listen-like[aria-pressed=true] svg{animation:listen-heart .32s var(--listen-ease)}
@@ -63,9 +49,6 @@
 .listen-pop-anchor{position:relative;display:inline-flex}
 .listen-pop{position:absolute;right:0;bottom:calc(100% + 12px);z-index:30;background:var(--listen-raised);border:1px solid var(--listen-line);border-radius:var(--ui-radius-lg);box-shadow:0 16px 40px rgba(13,8,5,.5);backdrop-filter: blur(var(--ui-blur));-webkit-backdrop-filter: blur(var(--ui-blur));color:var(--listen-ink);animation:listen-pop-in .24s var(--listen-ease) both;outline:none}
 @keyframes listen-pop-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-.listen-volume{display:flex;align-items:center;gap:8px;padding:8px 12px 8px 6px;width:220px}
-.listen-volume input[type=range]{flex:1;accent-color:var(--listen-accent)}
-.listen-volume output{min-width:36px;text-align:right;font-size:12px;color:var(--listen-dim);font-variant-numeric:tabular-nums}
 .listen-queue{width:min(380px,calc(100vw - 32px));max-height:min(62vh,520px);overflow:auto;padding:4px}
 .listen-queue .player-queue{margin:0;border:0;box-shadow:none;background:transparent}
 /* Empty: 「放一张唱片」 and the last records as one-click resume. */
@@ -84,10 +67,6 @@
 @container listen (max-width:760px){
   .listen-bar{grid-template-columns:minmax(0,1fr) auto auto;gap:10px}
   .listen-transport{flex-direction:row;align-items:center}
-  .listen-progress{position:absolute;left:14px;right:14px;bottom:2px;height:3px;display:block}
-  .listen-progress small{display:none}
-  .listen-progress input[type=range]{position:absolute;inset:-6px 0;height:15px}
-  .listen-progress-track{height:2px}
   .listen-artist{display:none}
   .listen-bar .listen-focus span{display:none}.listen-bar .listen-focus{padding:0 12px}
   .listen-empty-text small{display:none}
