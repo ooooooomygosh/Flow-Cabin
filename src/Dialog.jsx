@@ -65,7 +65,7 @@ export default function Dialog({ title, icon, close, className = '', children, s
     onPointerDown={(event) => { pressedOutside.current = outside(event); }}
     onClick={(event) => { if (pressedOutside.current && outside(event)) closeRef.current(); pressedOutside.current = false; }}>
     {full ? children : <>
-      <header className="cabin-dialog-header"><h2 id={heading} className="cabin-dialog-title" tabIndex={-1}>{icon}{title}</h2><button type="button" className="cabin-dialog-close" aria-label={closeLabel || `关闭${title}`} onClick={close}><X/></button></header>
+      <header className="cabin-dialog-header"><h2 id={heading} className="cabin-dialog-title" tabIndex={-1}>{icon}{title}</h2><button type="button" className="cabin-dialog-close" aria-label={closeLabel || `关闭${title}`} onClick={close}><X/><span className="paper-flap" aria-hidden="true"><b>放回</b></span></button></header>
       <div className="cabin-dialog-body">{children}</div>
       {footer && <footer className="cabin-dialog-footer">{footer}</footer>}
     </>}

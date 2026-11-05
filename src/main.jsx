@@ -8,16 +8,19 @@ import './record-library.css';
 import './album-wall.css';
 import './app.css';
 import './styles/pixel-ui.css';
+import './props/props.css';
 import './styles/perf-low.css';
 import { frameClock } from './frame-clock.mjs';
 import { installZenConsoleReveal } from './scene/zen-console.mjs';
 import { syncPerformance, applyPerformance, startPerformanceProbe } from './perf-profile.mjs';
 import { initializeMobile } from './mobile/platform.mjs';
+import { installProps } from './props/index.mjs';
 import { installEscapeBack } from './ui/back-stack.mjs';
 import './mobile/mobile.css';
 
 async function start() {
   await initializeMobile();
+  installProps();
   syncPerformance();
   applyPerformance();
   startPerformanceProbe();

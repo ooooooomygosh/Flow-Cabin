@@ -1,0 +1,149 @@
+@layer guards, reset, features, skin, overrides;
+@layer skin {
+/* The desk's materials: paper, brass, red LED glass — all lit by one lamp (--sx/--sy/--lamp-k,
+   src/props/lamp.mjs). Colours and recipes follow DEsk (https://github.com/fyzugx/DEsk, MIT,
+   (c) 2026 The DEsk authors): cream paper #efe6d3, ink #2e2318, brass #a8783a.
+   Everything that sits on paper reads the same --ui-* tokens as the rest of the app, only
+   redefined here, so settings, shelf, journal and every other panel turn to paper at once. */
+
+/* ── paper scope ───────────────────────────────────────────────────────── */
+.paper, .cabin-dialog:not(.is-full), .record-dialog, .app-toast {
+  --ui-bg: #e7dcc6;
+  --ui-surface: #efe6d3;
+  --ui-surface-raised: #f7f0e1;
+  --ui-surface-hover: rgba(120, 84, 40, .09);
+  --ui-field: #fbf7ee;
+  --ui-line: rgba(95, 72, 40, .24);
+  --ui-line-strong: rgba(95, 72, 40, .46);
+  --ui-text: #2e2318;
+  --ui-text-2: #54452f;
+  --ui-text-3: #5f4f37;
+  --ui-accent: #7d5019;
+  --ui-accent-text: #fffaf0;
+  --ui-accent-soft: rgba(168, 120, 58, .18);
+  --ui-good: #2b6335;
+  --ui-danger: #a3301d;
+  --ui-focus-ring: 2px solid rgba(125, 80, 25, .9);
+  --ui-blur: 0px;
+  --ui-radius-lg: 6px;
+  --ui-radius: 4px;
+  --ui-radius-sm: 2px;
+  --ui-font-display: 'Songti SC', 'Noto Serif CJK SC', 'Source Han Serif SC', 'STSong', 'SimSun', Georgia, 'Times New Roman', serif;
+  /* The older pixel palette, remapped, so components still written against --px-* sit on paper too. */
+  --px-bg: #e7dcc6; --px-surface: #efe6d3; --px-surface-2: #f7f0e1; --px-surface-3: #e8dcc0; --px-surface-inset: #fbf7ee; --px-surface-card: #f3ebd9; --px-surface-hud: #efe6d3;
+  --px-ink: #2e2318; --px-ink-dim: #54452f; --px-ink-faint: #5f4f37; --px-ink-muted: #8a7658; --px-ink-on-accent: #fffaf0;
+  --px-accent: #7d5019; --px-accent-hi: #5f3d12; --px-accent-lo: #a8783a; --px-accent-hi-ghost: rgba(125, 80, 25, .12); --px-accent-ghost: rgba(125, 80, 25, .08); --px-accent-2: #2f6a5d;
+  --px-good: #2b6335; --px-warn: #a3301d; --px-warn-ink: #a3301d;
+  --px-border: #b8a07a; --px-border-hi: #a8783a; --px-border-soft: rgba(95, 72, 40, .4); --px-border-subtle: rgba(95, 72, 40, .28); --px-brass: #a8783a;
+  --px-shadow: rgba(60, 40, 15, .35); --px-focus: #7d5019; --px-focus-ring: 2px solid #7d5019;
+  --px-bevel-white: rgba(255, 252, 242, .6); --px-bevel-white-hi: rgba(255, 252, 242, .8); --px-bevel-white-soft: rgba(255, 252, 242, .4); --px-bevel-black: rgba(80, 50, 20, .18); --px-bevel-warm: #fff3d6;
+  --px-shadow-inset: inset 0 1px 2px rgba(80, 55, 25, .18);
+  --px-backdrop: rgba(13, 8, 5, .5);
+  --paper-dur: calc(.42s * var(--pace, 1));
+  --paper-ease: var(--ease-drawer, cubic-bezier(.2, .8, .2, 1));
+  --ui-shadow: calc(var(--sx, 2) * 3px) calc(var(--sy, 3) * 3px) 6px rgba(15, 10, 8, calc(.26 * var(--lamp-k, .6)));
+  --ui-shadow-lg: calc(var(--sx, 2) * 12px) calc(var(--sy, 3) * 12px) 28px rgba(15, 10, 8, calc(.36 * var(--lamp-k, .6)));
+  color-scheme: light;
+}
+
+/* A sheet: cream fibre, thick-edged, one corner turned down. The dialog itself is
+   transparent and carries the shadow (a filter, so it follows the cut corner); the paper
+   is its ::before, cut along the fold. */
+.cabin-dialog:not(.is-full), .record-dialog {
+  --curl: 20px;
+  position: fixed;
+  background: transparent; border: 0; border-radius: 0; backdrop-filter: none; box-shadow: none; color: var(--ui-text);
+  filter: drop-shadow(calc(var(--sx, 2) * 4px) calc(var(--sy, 3) * 4px) 2px rgba(15, 10, 8, calc(.30 * var(--lamp-k, .6))))
+          drop-shadow(calc(var(--sx, 2) * 16px) calc(var(--sy, 3) * 16px) 24px rgba(15, 10, 8, calc(.34 * var(--lamp-k, .6))));
+  transition: --curl calc(.34s * var(--pace, 1)) var(--ease-drawer, cubic-bezier(.2, .8, .2, 1));
+}
+.cabin-dialog:not(.is-full)::before, .record-dialog::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  border-radius: var(--ui-radius-lg);
+  background: var(--paper-grain, none) 0 0 / 96px, linear-gradient(rgba(243, 235, 218, .42), rgba(243, 235, 218, .42)), var(--paper-tile, none) 0 0 / 128px, linear-gradient(172deg, #f8f1e1, #efe6d3 55%, #e6d8b9);
+  box-shadow: inset 0 0 0 1px rgba(95, 72, 40, .16), inset 0 -2px 0 rgba(70, 52, 28, .12);
+  clip-path: polygon(0 0, calc(100% - var(--curl)) 0, 100% var(--curl), 100% 100%, 0 100%);
+}
+:is(.cabin-dialog:not(.is-full), .record-dialog):has(.cabin-dialog-close:is(:hover, :focus-visible)) { --curl: 104px; transition-delay: .12s; }
+:is(.cabin-dialog:not(.is-full), .record-dialog)[open] { animation: paper-in var(--paper-dur) var(--paper-ease) both; }
+@keyframes paper-in { 0% { opacity: 0; transform: translate(calc(var(--sx, 2) * -6px), 22px) rotate(-.4deg); } 100% { opacity: 1; transform: none; } }
+:is(.cabin-dialog:not(.is-full), .record-dialog)::backdrop { background: var(--ui-backdrop, rgba(12, 8, 5, .46)); }
+
+/* The heading is printed, not titled: serif, centred, two thin rules under it. */
+.cabin-dialog:not(.is-full) .cabin-dialog-header { position: relative; justify-content: center; min-height: 56px; padding: 14px 56px 12px; border-bottom: 0; }
+.cabin-dialog:not(.is-full) .cabin-dialog-header::after { content: ''; position: absolute; left: 20px; right: 20px; bottom: 0; height: 3px; border-top: 1px solid rgba(76, 58, 30, .34); border-bottom: 1px solid rgba(76, 58, 30, .18); }
+.cabin-dialog:not(.is-full) .cabin-dialog-header h2 { justify-content: center; font-family: var(--ui-font-display); font-weight: 600; letter-spacing: .06em; text-align: center; }
+.cabin-dialog:not(.is-full) .cabin-dialog-footer { border-top: 1px solid var(--ui-line); }
+
+/* What can be done with the sheet is printed on the back of its corner. The corner is a real
+   button: a 44-px target that grows into the flap while the pointer rests on it. */
+.cabin-dialog:not(.is-full) .cabin-dialog-close {
+  position: absolute; top: 0; right: 0; z-index: 4; width: var(--curl); height: var(--curl); min-width: 0; padding: 0;
+  background: none; border: 0; border-radius: 0; box-shadow: none; color: var(--ui-text); cursor: pointer; overflow: visible;
+}
+.cabin-dialog:not(.is-full) .cabin-dialog-close::before { content: ''; position: absolute; top: 0; right: 0; width: max(44px, 100%); height: max(44px, 100%); }
+.cabin-dialog:not(.is-full) .cabin-dialog-close > svg { display: none; }
+.paper-flap { position: absolute; inset: 0; pointer-events: none; filter: drop-shadow(-1px 2px 1.5px rgba(40, 25, 10, .42)); }
+.paper-flap::before { content: ''; position: absolute; inset: 0; clip-path: polygon(0 0, 100% 100%, 0 100%); background: linear-gradient(225deg, #fbf7ec 0%, #ede7d9 50%, #d1c9b8 100%); }
+.paper-flap::after { content: ''; position: absolute; inset: 0; clip-path: polygon(0 0, 100% 100%, calc(100% - 1.5px) 100%, 0 1.5px); background: rgba(255, 253, 242, .75); }
+.paper-flap b { position: absolute; left: 14px; bottom: 12px; font: 600 15px/1 var(--ui-font-display); letter-spacing: .08em; color: var(--ui-text); opacity: 0; white-space: nowrap; transition: opacity calc(.18s * var(--pace, 1)); }
+.cabin-dialog-close:is(:hover, :focus-visible) .paper-flap b { opacity: .96; transition-delay: .3s; }
+.cabin-dialog-close:is(:hover, :focus-visible) .paper-flap b::after { content: ''; position: absolute; left: -2px; right: -2px; bottom: -5px; height: 3px; border-bottom: 1.5px solid rgba(70, 60, 50, .7); }
+.cabin-dialog:not(.is-full) .cabin-dialog-close:focus-visible { outline: none; }
+.cabin-dialog:not(.is-full) .cabin-dialog-close:focus-visible .paper-flap::before { background: linear-gradient(225deg, #fff3cf, #f0dca6 50%, #d3b36d 100%); }
+@media (hover: none), (pointer: coarse) { .cabin-dialog:not(.is-full) { --curl: 26px; } }
+
+/* Buttons on paper: a card that presses in, brass when it is the main thing to press. */
+:is(.cabin-dialog:not(.is-full), .record-dialog, .app-toast) .pixel-button {
+  --btn-bg: linear-gradient(#f7efdf, #e4d4b2); --btn-bg-hover: linear-gradient(#fcf6ea, #eadcbe); --btn-line: #ad9163; --btn-ink: var(--ui-text);
+  border-radius: var(--ui-radius); text-shadow: 0 1px rgba(255, 250, 235, .6);
+  box-shadow: inset 0 1px rgba(255, 252, 242, .8), 0 1px rgba(90, 60, 25, .14);
+}
+:is(.cabin-dialog:not(.is-full), .record-dialog, .app-toast) .pixel-button:active:not(:disabled) { background: linear-gradient(#d8c39a, #e5d4b0); box-shadow: inset 0 1px 2px rgba(80, 50, 20, .28); transform: translateY(1px); }
+:is(.cabin-dialog:not(.is-full), .record-dialog, .app-toast) .pixel-button.is-primary { --btn-bg: linear-gradient(#9a6a2c, #7d5019); --btn-bg-hover: linear-gradient(#a8763a, #8a5a22); --btn-ink: #fffaf0; --btn-line: #5f3d12; text-shadow: 0 -1px rgba(60, 35, 8, .45); box-shadow: inset 0 1px rgba(255, 224, 168, .35), 0 1px rgba(60, 35, 8, .22); }
+:is(.cabin-dialog:not(.is-full), .record-dialog, .app-toast) .pixel-button.is-quiet { --btn-bg: transparent; --btn-bg-hover: var(--ui-surface-hover); --btn-line: transparent; --btn-ink: var(--ui-text-2); box-shadow: none; text-shadow: none; }
+:is(.cabin-dialog:not(.is-full), .record-dialog, .app-toast) .pixel-button.is-danger { --btn-bg: linear-gradient(#f4e2d6, #e3c5b5); --btn-line: #a3301d; --btn-ink: var(--ui-danger); --btn-bg-hover: linear-gradient(#f9e9de, #ebccbd); }
+:is(.cabin-dialog:not(.is-full), .record-dialog) input[type=date] { color-scheme: light; }
+:is(.cabin-dialog:not(.is-full), .record-dialog) input[type=date]::-webkit-calendar-picker-indicator { filter: none; }
+:is(.cabin-dialog:not(.is-full), .record-dialog) option { background: #fbf7ee; color: var(--ui-text); }
+
+/* Paper that is not a dialog: a slip, e.g. a toast. */
+.app-toast {
+  color: var(--ui-text); border: 0; border-radius: var(--ui-radius-sm); backdrop-filter: none;
+  background: linear-gradient(rgba(243, 235, 218, .42), rgba(243, 235, 218, .42)), var(--paper-tile, none) 0 0 / 128px, linear-gradient(172deg, #f8f1e1, #efe6d3 55%, #e6d8b9);
+  box-shadow: inset 0 0 0 1px rgba(95, 72, 40, .2), var(--ui-shadow);
+  animation: paper-slip var(--paper-dur) var(--paper-ease) both;
+}
+@keyframes paper-slip { 0% { opacity: 0; transform: translateY(14px) rotate(.8deg); } 100% { opacity: 1; transform: rotate(-.3deg); } }
+.app-toast button { color: var(--ui-text); border: 0; border-bottom: 1.5px solid rgba(70, 60, 50, .7); border-radius: 0; font-weight: 600; letter-spacing: .04em; }
+.app-toast button:hover { background: var(--ui-surface-hover); }
+.app-toast.is-error { box-shadow: inset 4px 0 0 var(--ui-danger), inset 0 0 0 1px rgba(95, 72, 40, .2), var(--ui-shadow); }
+
+/* ── brass plate ───────────────────────────────────────────────────────── */
+.brass-plate {
+  position: relative; display: inline-flex; align-items: center; gap: 8px; min-height: 28px; padding: 6px 20px; border: 0; border-radius: var(--ui-radius-sm);
+  color: #2a1c0a; font: 600 12px/1 var(--ui-font); letter-spacing: .14em; text-transform: uppercase; text-decoration: none; white-space: nowrap; cursor: default;
+  background: repeating-linear-gradient(0deg, rgba(255, 245, 219, .07) 0 1px, transparent 1px 2px), linear-gradient(180deg, #b1965c 0%, #8f743f 34%, #785f30 52%, #9e834c 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 239, 204, .42), 0 0 0 1px rgba(36, 23, 8, .55), calc(var(--sx, 2) * 3px) calc(var(--sy, 3) * 3px) 5px rgba(15, 10, 8, calc(.4 * var(--lamp-k, .6)));
+}
+button.brass-plate, a.brass-plate { cursor: pointer; }
+button.brass-plate:hover, a.brass-plate:hover { filter: brightness(1.13); }
+button.brass-plate:active { filter: brightness(.94); transform: translateY(1px); }
+button.brass-plate:focus-visible, a.brass-plate:focus-visible { outline: 2px solid #fff3cf; outline-offset: 2px; }
+.brass-plate-text { text-shadow: 0 1px 0 rgba(255, 239, 199, .34); }
+.brass-plate-arrow { font-size: 14px; letter-spacing: 0; text-shadow: 0 1px 0 rgba(255, 239, 199, .34); }
+.brass-plate::before, .brass-plate::after { content: ''; position: absolute; top: 50%; width: 5px; height: 5px; margin-top: -2.5px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #e7d29b, #6e5528 70%); box-shadow: 0 0 0 .5px rgba(30, 18, 4, .6); }
+.brass-plate::before { left: 7px; }
+.brass-plate::after { right: 7px; }
+
+/* ── red LED glass ─────────────────────────────────────────────────────── */
+.led-glass { display: block; width: 100%; height: auto; overflow: visible; filter: drop-shadow(0 0 5px rgba(255, 59, 47, .18)); }
+.led-window { fill: #0e0504; stroke: rgba(0, 0, 0, .7); stroke-width: 2; }
+.led-on { fill: #ff3b2f; stroke: rgba(255, 56, 28, .22); stroke-width: 1.6; paint-order: stroke; filter: drop-shadow(0 0 2.2px rgba(255, 59, 47, .75)); }
+.led-ghost { fill: rgba(153, 26, 15, .13); }
+.led-gloss { fill: rgba(255, 255, 255, .06); }
+html[data-perf='low'] .led-on { filter: none; }
+/* 流畅模式: no filters on sheets; a plain lamp-side shadow instead. */
+html[data-perf='low'] :is(.cabin-dialog:not(.is-full), .record-dialog) { filter: none; box-shadow: var(--ui-shadow-lg); }
+html[data-perf='low'] .paper-flap { filter: none; }
+}

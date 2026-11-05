@@ -20,16 +20,16 @@
 .focus-dock-tabs{display:flex;align-items:flex-end}
 .focus-dock-tabs nav{display:flex;flex:1;min-width:0}
 .focus-dock-tabs nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 4px 7px;color:var(--px-ink-dim);background:var(--px-surface-2);border:2px solid var(--px-border-subtle);border-bottom:0;margin:0 0 0 2px;font-size:12px;transition:color 80ms steps(2,end),background 80ms steps(2,end)}.focus-dock-tabs nav button:hover{color:var(--px-ink)}
-.focus-dock-tabs nav button[aria-selected=true]{color:var(--px-accent-hi);background:#27180e;border-color:var(--px-border);border-top:2px solid var(--px-accent);margin-bottom:-2px;padding-bottom:9px}
-.focus-dock-close{padding:0 12px;color:#e7c79b;background:none;border:0}
+.focus-dock-tabs nav button[aria-selected=true]{color:var(--px-accent-hi);background:var(--px-surface);border-color:var(--px-border);border-top:2px solid var(--px-accent);margin-bottom:-2px;padding-bottom:9px}
+.focus-dock-close{padding:0 12px;color:var(--px-ink-dim);background:none;border:0}
 .focus-save-error{flex-shrink:0;padding:10px 14px;border-bottom:2px solid var(--px-border);color:#ffc2a6;line-height:1.5;background:#472519}
 .focus-save-error .pixel-button{margin-left:4px;padding:4px 8px;min-height:28px;font-size:12px}
-.focus-dock-body{overflow:auto;padding:14px 16px 16px;background:#27180e}
+.focus-dock-body{overflow:auto;padding:14px 16px 16px;background:var(--px-surface)}
 .focus-dock button{cursor:pointer;font:inherit}
 .focus-dock input,.focus-dock select{font:inherit;color:var(--px-ink);background-color:var(--px-surface-inset);border:2px solid var(--px-border);padding:6px 8px;border-radius:0}
 
 .focus-timer{display:grid;gap:10px;justify-items:center;text-align:center}
-.focus-phase{margin:0;color:#e6bf89;font-size:12px;letter-spacing:.12em}
+.focus-phase{margin:0;color:var(--px-accent-hi);font-size:12px;letter-spacing:.12em}
 .focus-rounds{display:flex;gap:6px}.focus-rounds span{width:10px;height:10px;background:#3e281a;border:2px solid #8a5f3a}.focus-rounds .is-done{background:var(--px-warn);border-color:#ffb08f}.focus-rounds .is-active{background:var(--px-accent);animation:focus-pulse 1.2s steps(2) infinite}
 @keyframes focus-pulse{50%{opacity:.4}}
 .focus-task-now{margin:0;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:var(--px-ink)}
@@ -38,7 +38,7 @@
 .focus-controls button:active{translate:2px 2px;box-shadow:1px 1px 0 #120b06aa}
 .focus-controls .is-primary{padding:9px 18px}
 .focus-settings{display:grid;gap:7px;width:100%;text-align:left;padding:10px;background:#1f130b;border:1px dashed #8a5f3a}
-.focus-settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.focus-settings-grid label{display:grid;gap:3px;font-size:12px;color:#d3b58f}
+.focus-settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.focus-settings-grid label{display:grid;gap:3px;font-size:12px;color:var(--px-ink-dim)}
 .focus-check{display:flex;align-items:center;gap:8px;font-size:12px}.focus-check input{accent-color:var(--px-accent)}
 
 .focus-task-form{display:flex;gap:6px}.focus-task-form input{flex:1;min-width:0}
@@ -61,7 +61,7 @@
 .focus-task-rounds{display:inline-flex;align-items:center;gap:2px;color:var(--px-warn)}
 .focus-badge-paused{margin-left:4px;vertical-align:-1px}
 .focus-rewards header span{display:inline-flex;align-items:center;gap:4px}
-.focus-rewards header{display:flex;justify-content:space-between;align-items:center}.focus-rewards header strong{color:#ffe2a8}
+.focus-rewards header{display:flex;justify-content:space-between;align-items:center}.focus-rewards header strong{color:var(--px-accent-hi)}
 .focus-rewards small{color:var(--px-ink-dim);font-size:12px}
 .focus-xp{height:12px;background:var(--px-surface-inset);border:2px solid var(--px-border-subtle);box-shadow:var(--px-shadow-inset)}.focus-xp span{display:block;height:100%;background:repeating-linear-gradient(90deg,var(--px-good) 0 6px,transparent 6px 8px)}
 .focus-unlocks{display:grid;gap:8px}.focus-unlocks fieldset{display:flex;flex-wrap:wrap;gap:5px;margin:0;padding:6px 8px 8px;border:1px solid #5d3d24}
@@ -81,7 +81,7 @@
 .sound-section{margin:0;font-size:12px;color:var(--px-ink-dim);font-variant-numeric:tabular-nums}
 .sound-lofi small{font-size:12px;color:var(--px-good)}
 .sound-ambience{display:grid;gap:4px}
-.sound-slider{display:grid;grid-template-columns:72px 1fr;align-items:center;gap:8px;font-size:12px;color:#e7c79b}
+.sound-slider{display:grid;grid-template-columns:72px 1fr;align-items:center;gap:8px;font-size:12px;color:var(--px-ink-dim)}
 .sound-slider input{width:100%;accent-color:var(--px-accent);padding:0;border:0;background:none}
 .sound-note{font-size:12px;color:var(--px-ink-faint)}
 
@@ -96,7 +96,7 @@
 
 .focus-dock :is(button,input,select):focus-visible{outline-offset:3px}
 
-.focus-notes{display:grid;gap:10px}.focus-notes p{margin:0;color:#d3b58f;font-size:12px;line-height:1.6}.focus-notes label{display:grid;gap:6px}.focus-notes textarea{width:100%;min-height:180px;resize:vertical;box-sizing:border-box;font:inherit;line-height:1.6;color:var(--px-ink);background:#3e281a;border:1px solid #9c7048;padding:8px}.focus-notes small{color:var(--px-ink-dim)}.focus-notes textarea:focus-visible{outline-offset:3px}
+.focus-notes{display:grid;gap:10px}.focus-notes p{margin:0;color:var(--px-ink-dim);font-size:12px;line-height:1.6}.focus-notes label{display:grid;gap:6px}.focus-notes textarea{width:100%;min-height:180px;resize:vertical;box-sizing:border-box;font:inherit;line-height:1.6;color:var(--px-ink);background:#3e281a;border:1px solid #9c7048;padding:8px}.focus-notes small{color:var(--px-ink-dim)}.focus-notes textarea:focus-visible{outline-offset:3px}
 
 /* The face (专注画面), rhythm presets and todo polish.
    Local --focus-* variables are the single source for these pieces; they map
