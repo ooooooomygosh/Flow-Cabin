@@ -3,6 +3,8 @@ import { useCabinRuntime } from '../runtime/CabinRuntime';
 import { DesktopControls } from '../desktop-client';
 import PixelCat from '../pet/PixelCat';
 import Dialog from '../Dialog';
+import BrassPlate from '../props/BrassPlate';
+import DeskClock from './DeskClock';
 import { Down as ChevronDown, ChevronLeft, ChevronRight, Play, Pause, BookOpen, Clock, Library, Heart } from '../icons';
 import useLabs from '../product/useLabs';
 import { NAV_ENTRIES, hotspotItems, gearMenu, gatedAction } from './shell-model.mjs';
@@ -21,6 +23,7 @@ import { cornerReady, preloadCorners, whenIdle } from './corner-assets.mjs';
 import './home.css';
 import NowPlayingBar from '../listen/NowPlayingBar';
 import './shell.css';
+import './desk.css';
 
 const shortDate = date => date.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' });
 const typingTarget = target => target?.closest?.('input,textarea,select,[contenteditable="true"],[contenteditable=""],[role=slider],[role=tablist],[role=radiogroup],[role=listbox],[role=menu],.room-turntable');
@@ -280,7 +283,7 @@ export default function CabinHome({ reduced = false, editRequest = 0, focusOpen 
     <header className="home-header">
       <button type="button" className="home-pet-portrait" aria-expanded={petOpen} aria-label={`伙伴与装扮 · ${identity.name}`} onClick={() => commands.open('pet')}><PixelCat petId={identity.builtinId} accessory={identity.accessory} reduceMotion={reduced} label={identity.name}/></button>
       <div className="home-room-menu" ref={roomMenuRef}>
-        <button type="button" className="home-room-name" aria-label={`${theme.name} · 选择或布置小屋`} aria-haspopup="menu" aria-expanded={roomMenu} aria-controls="home-room-menu" onClick={() => setRoomMenu(open => !open)}><small>FLOW CABIN</small><span>{theme.name}<ChevronDown size={14}/></span></button>
+        <button type="button" className="home-room-name brass-plate" aria-label={`${theme.name} · 选择或布置小屋`} aria-haspopup="menu" aria-expanded={roomMenu} aria-controls="home-room-menu" onClick={() => setRoomMenu(open => !open)}><small>FLOW CABIN</small><span>{theme.name}<ChevronDown size={14}/></span></button>
         {roomMenu && <div className="home-room-menu-list" id="home-room-menu" role="menu" aria-label="小屋" onKeyDown={roomMenuKeys}>
           <button type="button" role="menuitem" onClick={() => { setRoomMenu(false); setDrawer('themes'); }}><span>选择小屋</span><small>换一间房间</small></button>
           <button type="button" role="menuitem" onClick={() => { if (editing) { setRoomMenu(false); finishEditing(); } else startEditing(); }}><span>{editing ? '完成布置' : '布置小屋'}</span><small>{editing ? '保存现在的摆放' : '拖动家具、套用预设'}</small></button>
@@ -288,8 +291,8 @@ export default function CabinHome({ reduced = false, editRequest = 0, focusOpen 
       </div>
       {/* 3.0: three entries (唱片架 · 专注 · 日记); 专辑墙 lives inside 唱片架, 随手记 inside 专注 and 日记, 布置 under the room name. */}
       <nav className="home-shortcuts" aria-label="小屋常用工具">{NAV_ENTRIES.map(entry => entry.id === 'focus'
-        ? <button type="button" key={entry.id} className="focus-badge" aria-expanded={focusOpen} onClick={() => commands.open(entry.action)}><Clock size={17}/><span>{entry.label}</span></button>
-        : <button type="button" key={entry.id} onClick={() => commands.open(entry.action)}>{entry.id === 'library' ? <Library size={17}/> : <BookOpen size={17}/>}<span>{entry.label}</span></button>)}{editing && <button type="button" className="home-finish-editing" aria-pressed="true" onClick={finishEditing}><span>完成布置</span></button>}</nav>
+        ? <DeskClock key={entry.id} expanded={focusOpen} open={() => commands.open(entry.action)}/>
+        : <BrassPlate key={entry.id} arrow="↑" onClick={() => commands.open(entry.action)}>{entry.label}</BrassPlate>)}{editing && <button type="button" className="home-finish-editing" aria-pressed="true" onClick={finishEditing}><span>完成布置</span></button>}</nav>
       <DesktopControls onSettings={() => setDrawer('menu')} onError={text => notify(text, { tone: 'error' })}/>
     </header>
     <div className="home-room-caption">{!overview && <button type="button" className="home-back-overview" onClick={() => setZone('all')}>‹ 返回全屋</button>}<span>{shortDate(new Date())}</span><p>{focus.state.timer.phase === 'focus' ? '留一点安静，做眼前的小事。' : playingTitle ? '唱片在转，时间慢一点。' : '灯亮着，慢慢来。'}</p></div>
@@ -312,15 +315,15 @@ export default function CabinHome({ reduced = false, editRequest = 0, focusOpen 
       </div>}
     </div>
     {stripShown && <div className="home-corner-ui" data-phase={phase}>
-      {prev && <button type="button" className="home-corner-edge is-prev" aria-label={`上一个角落：${ZONE_NAMES[prev]}`} title={`${ZONE_NAMES[prev]}（←）`} onClick={() => setZone(prev)}><ChevronLeft size={22}/></button>}
-      {next && <button type="button" className="home-corner-edge is-next" aria-label={`下一个角落：${ZONE_NAMES[next]}`} title={`${ZONE_NAMES[next]}（→）`} onClick={() => setZone(next)}><ChevronRight size={22}/></button>}
+      {prev && <button type="button" className="home-corner-edge is-prev brass-plate" aria-label={`上一个角落：${ZONE_NAMES[prev]}`} title={`${ZONE_NAMES[prev]}（←）`} onClick={() => setZone(prev)}><ChevronLeft size={22}/></button>}
+      {next && <button type="button" className="home-corner-edge is-next brass-plate" aria-label={`下一个角落：${ZONE_NAMES[next]}`} title={`${ZONE_NAMES[next]}（→）`} onClick={() => setZone(next)}><ChevronRight size={22}/></button>}
       <CornerActions key={corner} zone={corner}/>
     </div>}
     <SleepIndicator/>
     {homeNotice ? <aside className="home-intro home-notice" aria-label="新的首页"><span><b>首页换成了生活小屋。</b>唱片、手记和专注记录都在，原版唱片架也随时可以换回。</span><button type="button" onClick={closeHomeNotice}>好的</button><button type="button" onClick={() => { closeHomeNotice(); window.dispatchEvent(new Event('cabin:interface-choice')); }}>改用原版</button></aside>
     : intro && !guiding && <aside className="home-intro" aria-label="小屋初次指引"><span>点唱机听歌，点书桌开始一段专注。</span><button type="button" onClick={completeIntro}>知道了</button></aside>}
     {store.error && <p className="home-layout-error" role="alert">{store.error}</p>}
-    <footer className="home-footer"><NowPlayingBar/><nav className="home-zones" aria-label="房间区域" aria-keyshortcuts="0 1 2 3 ArrowLeft ArrowRight"><button type="button" aria-pressed={zone === 'all'} onClick={() => setZone('all')}>{overview ? '全屋' : '返回全屋'}</button>{ZONE_ORDER.map((id, i) => <button type="button" key={id} aria-pressed={zone === id} onClick={() => setZone(id)}><i className="home-zone-dot" aria-hidden="true" ref={el => { dots.current[i] = el; }}/>{ZONE_NAMES[id]}</button>)}</nav><button type="button" className="home-pet-return" aria-label="回到宠物" onClick={() => setZone('life')}><Heart size={16}/>{identity.name}</button></footer>
+    <footer className="home-footer"><NowPlayingBar/><nav className="home-zones" aria-label="房间区域" aria-keyshortcuts="0 1 2 3 ArrowLeft ArrowRight"><button type="button" className="brass-plate" aria-pressed={zone === 'all'} onClick={() => setZone('all')}>{overview ? '全屋' : '返回全屋'}</button>{ZONE_ORDER.map((id, i) => <button type="button" className="brass-plate" key={id} aria-pressed={zone === id} onClick={() => setZone(id)}><i className="home-zone-dot" aria-hidden="true" ref={el => { dots.current[i] = el; }}/>{ZONE_NAMES[id]}</button>)}</nav><button type="button" className="home-pet-return" aria-label="回到宠物" onClick={() => setZone('life')}><Heart size={16}/>{identity.name}</button></footer>
     <details className="home-accessible-furniture"><summary>家具与无障碍入口</summary><div>{layout.items.map(item => <button type="button" key={item.id} onClick={event => { event.currentTarget.closest('details').open = false; activate(item); }}>{FURNITURE[item.type].name}</button>)}</div></details>
     {drawer && <Dialog title={drawer === 'themes' ? '选择小屋' : drawer === 'menu' ? '小屋日常' : '布置小屋'} close={() => setDrawer('')} className="home-tool home-editor" size="lg">
       {drawer === 'menu' ? <>

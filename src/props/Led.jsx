@@ -46,7 +46,7 @@ export function LedBlocks({ x = 0, y = 0, w = 60, h = 10, n = 10, v = 0, grow = 
 // The glass itself: a dark window in a black bezel with a strip of gloss on top. `label` is what
 // a screen reader hears (the SVG is decoration).
 export function LedGlass({ width, height, label, className = '', children }) {
-  return <svg className={`led-glass ${className}`} viewBox={`0 0 ${width} ${height}`} role="img" aria-label={label} preserveAspectRatio="xMidYMid meet">
+  return <svg className={`led-glass ${className}`} viewBox={`0 0 ${width} ${height}`} {...(label ? { role: 'img', 'aria-label': label } : { 'aria-hidden': 'true' })} preserveAspectRatio="xMidYMid meet">
     <rect className="led-window" x="0" y="0" width={width} height={height} rx="4"/>
     <g className="led-face">{children}</g>
     <rect className="led-gloss" x="1" y="1" width={width - 2} height={height * 0.52} rx="3"/>

@@ -83,7 +83,7 @@
 }
 .cabin-dialog:not(.is-full) .cabin-dialog-close::before { content: ''; position: absolute; top: 0; right: 0; width: max(44px, 100%); height: max(44px, 100%); }
 .cabin-dialog:not(.is-full) .cabin-dialog-close > svg { display: none; }
-.paper-flap { position: absolute; inset: 0; pointer-events: none; filter: drop-shadow(-1px 2px 1.5px rgba(40, 25, 10, .42)); }
+.paper-flap { position: absolute; inset: 0; overflow: hidden; pointer-events: none; filter: drop-shadow(-1px 2px 1.5px rgba(40, 25, 10, .42)); }
 .paper-flap::before { content: ''; position: absolute; inset: 0; clip-path: polygon(0 0, 100% 100%, 0 100%); background: linear-gradient(225deg, #fbf7ec 0%, #ede7d9 50%, #d1c9b8 100%); }
 .paper-flap::after { content: ''; position: absolute; inset: 0; clip-path: polygon(0 0, 100% 100%, calc(100% - 1.5px) 100%, 0 1.5px); background: rgba(255, 253, 242, .75); }
 .paper-flap b { position: absolute; left: 14px; bottom: 12px; font: 600 15px/1 var(--ui-font-display); letter-spacing: .08em; color: var(--ui-text); opacity: 0; white-space: nowrap; transition: opacity calc(.18s * var(--pace, 1)); }

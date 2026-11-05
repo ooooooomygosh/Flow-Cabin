@@ -19,7 +19,7 @@ try{
  page=await context.newPage();page.setDefaultTimeout(15000);page.on('pageerror',e=>report.errors.push(e.message));await page.goto(origin);await page.locator('.home-canvas[data-art-ready=true]').waitFor();
  // 3.0 shell: three top entries, four everyday items behind ⚙, three always-labelled hotspots, 布置 under the room name.
  await page.waitForTimeout(400); // labels fade in once the art is ready
- assert.deepEqual(await page.locator('.home-shortcuts button').allInnerTexts().then(t=>t.map(s=>s.trim())),['唱片架','专注','日记']);
+ assert.deepEqual(await page.locator('.home-shortcuts button').evaluateAll(n=>n.map(b=>(b.getAttribute('aria-label')||b.textContent).replace(/\s*↑$/,'').replace(/^(专注) · .*/,'$1').trim())),['唱片架','专注','日记']);
  assert.deepEqual(await page.locator('.home-furniture.is-hotspot').evaluateAll(n=>n.map(b=>[b.dataset.furniture,b.querySelector('.home-furniture-label').textContent,getComputedStyle(b.querySelector('.home-furniture-label')).opacity])),[['deck','唱机','1'],['desk','书桌','1'],['bed','窝 · 日记本','1']]);
  assert.equal(await page.locator('.home-furniture:not(.is-hotspot) .home-furniture-label').evaluateAll(n=>n.filter(l=>getComputedStyle(l).opacity!=='0').length),0,'other furniture is labelled only on hover or focus');
  await page.getByRole('button',{name:'设置',exact:true}).click();assert.deepEqual(await page.getByRole('navigation',{name:'小屋功能',exact:true}).getByRole('button').allInnerTexts(),['选择小屋','布置小屋','备份与恢复','全部设置']);
