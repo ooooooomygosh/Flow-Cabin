@@ -43,7 +43,13 @@
 | LED 台钟 | `src/home/DeskClock.jsx` | 空闲显示时间，专注时显示倒计时；它就是「专注」入口，保留 `.focus-badge` |
 | 后沿（顶栏） | `src/home/desk.css` | 胡桃木、铜牌、台钟、铜钮；安全区下木板延伸到状态栏下 |
 | 便签（问候） | `src/home/desk.css` | `.home-room-caption p` |
-| 合成声音 | `src/props/sfx*.mjs` | |
+| 合成声音 | `src/props/sfx*.mjs` | 设置 › 桌面 里可关、可调音量、可选动作快慢 |
+| 书柜与索引本（唱片架） | `src/listen/RecordShelf.jsx`、`src/shelf/*` | 活页夹按唱片盒分类，深蓝皮 A–Z 索引本（打字搜索、拇指索引），专辑墙是柜上的画框 |
+| 电子管控制台（唱机旁、播放条） | `src/console/*`、`src/listen/NowPlayingBar.jsx` | VU 表、音量旋钮、拨杆、音源旋钮、LED 进度；底部播放条是同一台机器的小号 |
+| LED 台钟近景 · 台历手帐 · 推子 · 便签本（专注） | `src/focus/FocusDock.jsx`、`src/focus/desk/*` | 台历可把便签拖到某一天 |
+| 抽屉 · 相册 · 工具箱（小屋日常、选择小屋、布置小屋） | `src/home/drawer/*` | 绿呢绒抽屉里摆着实物 |
+| 文件夹（设置） · 信（新手引导） | `src/onboarding/SettingsHub.jsx`、`settings-folder.css`、`Letter.jsx` | 标签页、线圈本、六色便签索引 |
+| 真皮日记本（唱片日记） · 邮筒（信箱） · 伙伴册 · 卡片盒（词书） | `src/focus/stats/*`、`src/focus/CatPanel.jsx`、`src/study/StudyPanel.jsx` | |
 | 灯、弹簧、纸纤维 | `src/props/lamp.mjs`、`motion.mjs`、`paper-noise.mjs` | |
 
 ## 原版首页已移除
