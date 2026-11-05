@@ -9,6 +9,7 @@ import * as model from './onboarding-model.mjs';
 import WhatsNew from './WhatsNew';
 import useSourceStatus from './useSourceStatus';
 import './onboarding.css';
+import { LetterHead, LetterSign, SIGN_LINES } from './Letter';
 
 const PERMISSION_TEXT = { granted: '已允许', pending: '已开启，等待系统授权或一次输入确认', denied: '未允许 · 可在系统设置里修改', skipped: '已跳过', unsupported: '会在第一次用到时由系统询问' };
 const PERMISSION_LABELS = { typing: '跨应用键鼠陪伴', notifications: '通知', appleMusic: '音乐 App', autostart: '开机启动' };
@@ -32,6 +33,7 @@ export default function OnboardingWizard({ state, update, mode = '', currentVers
   const scene = getRoomScene(look);
   const last = model.isLastStep(step);
   return <Dialog title="新手引导" label="新手引导" close={() => close('later')} className="onboarding" size="lg">
+    <LetterHead note="写给第一次来的你"/>
     <ol className="onboarding-progress" aria-label="引导进度">{steps.map((id, i) => <li key={id} aria-current={id === step ? 'step' : undefined} className={i < index ? 'is-done' : ''}><span aria-hidden="true">{i < index ? <Check size={12}/> : i + 1}</span>{model.STEP_LABELS[id]}</li>)}</ol>
     <div className="onboarding-layout">
       <aside className="onboarding-scene" aria-hidden="true"><img src={sceneThumb(scene)} alt="" width="362" height="272"/><PixelCat petId={petId} pose={step === 'test' ? 'groove' : 'idle'} reduceMotion={reduceMotion}/><span>{scene.label}</span></aside>
@@ -41,6 +43,7 @@ export default function OnboardingWizard({ state, update, mode = '', currentVers
         {step === 'test' && <TestStep heading={heading} state={state} update={update} env={env} player={player} openMusicSettings={openMusicSettings}/>}
       </section>
     </div>
+    <LetterSign line={SIGN_LINES[step]}/>
     <footer className="onboarding-footer">
       <button type="button" className="onboarding-text" onClick={() => close('skip')}>跳过引导</button>
       <small>{last ? '以后可以在「设置 › 关于」里重新引导。' : '关掉窗口也没关系，下次打开会从这一步继续。'}</small>

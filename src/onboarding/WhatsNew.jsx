@@ -2,6 +2,7 @@ import React from 'react';
 import Dialog from '../Dialog';
 import { Sparkles } from '../icons';
 import './onboarding.css';
+import { LetterHead, LetterSign, SIGN_LINES } from './Letter';
 
 // 新功能: the one-screen summary shown once after an update (and from
 // 设置 › 关于). It never walks through settings; closing it in any way means
@@ -13,6 +14,7 @@ export default function WhatsNew({ copy, close, openSettings, history = false })
   const toVersion = copy.toVersion || latest?.version || '';
   const span = copy.fromVersion && copy.fromVersion !== toVersion ? `v${copy.fromVersion} → v${toVersion}` : `v${toVersion}`;
   return <Dialog title="新功能" label="新功能" icon={<Sparkles size={16}/>} close={close} className="onboarding whats-new" size="md" initialFocus=".whats-new-ok">
+    <LetterHead note={history ? '版本的来信' : '离开这段时间的来信'}/>
     <span className="onboarding-eyebrow">{span}</span>
     <h3 className="whats-new-title">{latest ? latest.title : `小屋已经更新到 ${toVersion}`}</h3>
     {!history && older.length > 0 && <p className="whats-new-gap">你离开的这段时间，小屋更新了 {copy.releases.length} 个版本。</p>}
@@ -25,6 +27,7 @@ export default function WhatsNew({ copy, close, openSettings, history = false })
         <ul>{release.items.map((item) => <li key={item}>{item}</li>)}</ul>
       </article>)}</div>
     </details>}
+    <LetterSign line={SIGN_LINES.news}/>
     <footer className="onboarding-footer">
       {openSettings ? <button type="button" className="onboarding-text" onClick={() => openSettings('music')}>检查音源与权限</button> : <span/>}
       <small>{openSettings ? '关掉后，这个版本不会再提示。' : `当前版本 v${toVersion}`}</small>
