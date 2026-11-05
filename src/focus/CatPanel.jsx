@@ -16,6 +16,8 @@ import PixelCat from '../pet/PixelCat';
 import Souvenirs, { useSouvenirs } from './Souvenirs.jsx';
 import useInputStats from '../desktop/useInputStats';
 import '../room/benchmark-cabin.css';
+import './companion-booklet.css';
+import { playSfx } from '../props/sfx.mjs';
 
 // While a 小鱼干 is dragged and the cat is out on the desktop, the shell lets the pet window take
 // the drop (it normally lets clicks pass through everywhere but the cat's pixels).
@@ -62,6 +64,20 @@ function InputCompanion({ stats, petName }) {
   </section>;
 }
 
+// The mood as a hand-drawn dial: a wobbly pencil arc, ticks, and a needle that swings (on the drawer
+// spring in CSS) to the value. The meter role stays on the wrapper; the drawing is decoration.
+const GAUGE_ARC = 'M10 62 C9 36 31 13 60 12 C88 12 111 35 110 62';
+const GAUGE_TICKS = [0, 25, 50, 75, 100].map((at) => { const a = Math.PI * (1 - at / 100), c = Math.cos(a), s = Math.sin(a); return { at, x1: +(60 + 55 * c).toFixed(1), y1: +(62 - 55 * s).toFixed(1), x2: +(60 + 63 * c).toFixed(1), y2: +(62 - 63 * s).toFixed(1) }; });
+function MoodGauge({ value }) {
+  const v = Math.max(0, Math.min(100, Number(value) || 0));
+  return <svg className="cat-gauge" viewBox="0 0 120 72" aria-hidden="true" focusable="false">
+    <path className="cat-gauge-track" d={GAUGE_ARC}/>
+    <path className="cat-gauge-fill" d={GAUGE_ARC} pathLength="100" strokeDasharray={`${v} 100`}/>
+    {GAUGE_TICKS.map((t) => <line key={t.at} className="cat-gauge-tick" x1={t.x1} y1={t.y1} x2={t.x2} y2={t.y2}/>)}
+    <g className="cat-gauge-needle" style={{ transform: `rotate(${((v - 50) * 1.8).toFixed(1)}deg)` }}><path d="M60 62 L60.6 21"/><circle cx="60" cy="62" r="4.2"/></g>
+  </svg>;
+}
+
 function CatPanelBody({ close, souvenirs, onChoosePet }) {
   const focus = useFocus(), { rewards } = focus.state, library = useRecordLibrary();
   const petId = normalizePetId(library?.data.rooms[library.roomId]?.petId), cat = petId === 'cat', pet = getPet(petId);
@@ -70,8 +86,9 @@ function CatPanelBody({ close, souvenirs, onChoosePet }) {
   const full = mood.feedsToday >= mood.dailyFeeds;
   return <Dialog size="sm" title={cat ? '小猫' : pet.name} close={close} className="cat-panel">
     <div className="cat-portrait">
-      <PixelCat petId={petId} skin={focus.state.settings.catSkin} accessory={rewards.equipped.accessory || ''} pose="idle" label={`${pet.name}的当前装扮`}/>
-      <div><strong>{pet.name}</strong><p>你做你的事，我在这里陪你。<br/>偶尔摸摸头，就很好。</p><small>打字或点鼠标，我会跟着敲敲。</small></div>
+      <span className="cat-photo"><i className="cat-mount is-nw" aria-hidden="true"/><i className="cat-mount is-ne" aria-hidden="true"/><i className="cat-mount is-sw" aria-hidden="true"/><i className="cat-mount is-se" aria-hidden="true"/>
+        <PixelCat petId={petId} skin={focus.state.settings.catSkin} accessory={rewards.equipped.accessory || ''} pose="idle" label={`${pet.name}的当前装扮`}/></span>
+      <div><strong className="cat-collar">{pet.name}</strong><p>你做你的事，我在这里陪你。<br/>偶尔摸摸头，就很好。</p><small>打字或点鼠标，我会跟着敲敲。</small></div>
     </div>
     {onChoosePet && <button type="button" className="pixel-button" onClick={onChoosePet}>选择伙伴</button>}
     <InputCompanion stats={input} petName={pet.name}/>
@@ -81,7 +98,7 @@ function CatPanelBody({ close, souvenirs, onChoosePet }) {
       <small>再专注 {level.need - level.into} 分钟升级。每完成一轮专注获得 1 条小鱼干。</small>
       <section className="cat-care" aria-label={`${cat ? '小猫' : pet.name}的心情`}>
         <header><strong>心情 · {mood.label}</strong><small>今天喂了 {mood.feedsToday} / {mood.dailyFeeds}</small></header>
-        <div className={`cat-mood-bar is-${mood.tier}`} role="meter" aria-label="心情" aria-valuemin={0} aria-valuemax={100} aria-valuenow={mood.mood} aria-valuetext={mood.label}><span style={{ width: `${mood.mood}%` }}/></div>
+        <div className={`cat-mood-bar is-${mood.tier}`} role="meter" aria-label="心情" aria-valuemin={0} aria-valuemax={100} aria-valuenow={mood.mood} aria-valuetext={mood.label}><MoodGauge value={mood.mood}/><span style={{ width: `${mood.mood}%` }}/></div>
         <div className="cat-care-actions">
           <button type="button" className="pixel-button is-primary" disabled={!rewards.fish || full} onClick={requestFeed} title={full ? '今天已经吃饱啦' : rewards.fish ? '喂一条小鱼干，也可以把小鱼干拖到小猫身上' : '完成一轮专注就能得到一条小鱼干'}><FishPixel size={12}/>喂一条</button>
           <span className="cat-fish-chip" draggable={rewards.fish > 0 && !full} aria-hidden="true" title="把小鱼干拖到小猫身上也能喂" onDragStart={(event) => { event.dataTransfer.setData(FISH_DRAG_TYPE, '1'); event.dataTransfer.setData('text/plain', FISH_DRAG_TEXT); event.dataTransfer.effectAllowed = 'move'; petDrag(true); }} onDragEnd={() => petDrag(false)}><FishPixel size={12}/>×{rewards.fish}</span>
@@ -90,12 +107,12 @@ function CatPanelBody({ close, souvenirs, onChoosePet }) {
         {mood.actions.length > 0 && <small className="cat-care-learned">学会了：{mood.actions.map((a) => a.name).join('、')}</small>}
       </section>
       <div className="focus-unlocks">
-        {cat && <fieldset><legend>小猫毛色 · 夜景柔光</legend>{[['orange', '橘猫'], ['black', '黑猫']].map(([skin, name]) => <button type="button" key={skin} aria-pressed={focus.state.settings.catSkin === skin} onClick={() => focus.settings({ catSkin: skin })}>{name}</button>)}</fieldset>}
+        {cat && <fieldset><legend>小猫毛色 · 夜景柔光</legend>{[['orange', '橘猫'], ['black', '黑猫']].map(([skin, name]) => <button type="button" key={skin} aria-pressed={focus.state.settings.catSkin === skin} onClick={() => { playSfx('paper-press'); focus.settings({ catSkin: skin }); }}>{name}</button>)}</fieldset>}
         {['accessory', 'weather'].map((kind) => <fieldset key={kind}><legend>{kind === 'accessory' ? (cat ? '小猫配饰' : '伙伴配饰') : '窗外天气'}</legend>
-          {kind === 'accessory' && <button type="button" aria-pressed={!rewards.equipped.accessory} onClick={() => focus.equip('accessory', '')}>不戴</button>}
-          {UNLOCKS.filter((item) => item.kind === kind).map((item) => <button type="button" key={item.id} disabled={!unlocked.has(item.id) && rewards.fish < unlockPrice(item)} aria-pressed={rewards.equipped[kind] === item.id} title={unlocked.has(item.id) ? item.name : `Lv.${item.level} 解锁，或用 ${unlockPrice(item)} 条小鱼干提前兑换`} onClick={() => {
+          {kind === 'accessory' && <button type="button" aria-pressed={!rewards.equipped.accessory} onClick={() => { playSfx('paper-press'); focus.equip('accessory', ''); }}>不戴</button>}
+          {UNLOCKS.filter((item) => item.kind === kind).map((item) => <button type="button" key={item.id} className={unlocked.has(item.id) ? undefined : 'is-locked'} disabled={!unlocked.has(item.id) && rewards.fish < unlockPrice(item)} aria-pressed={rewards.equipped[kind] === item.id} title={unlocked.has(item.id) ? item.name : `Lv.${item.level} 解锁，或用 ${unlockPrice(item)} 条小鱼干提前兑换`} onClick={() => {
             if (!unlocked.has(item.id)) { if (confirming !== item.id) { setConfirming(item.id); return; } setConfirming(''); focus.buyUnlock(item.id); return; }
-            focus.equip(kind, item.id); if (kind === 'weather' && readSkySettings().realWeather) writeSkySettings({ realWeather: false }); }}>{kind === 'accessory' && <PixelCat className="cat-accessory-preview" petId={petId} skin={focus.state.settings.catSkin} accessory={item.id} reduceMotion aria-hidden="true"/>}{!unlocked.has(item.id) && <span className="focus-lock" aria-hidden="true"/>}{item.name}{!unlocked.has(item.id) && <small> · {confirming === item.id ? `再点一次，用 ${unlockPrice(item)} 条兑换` : `Lv.${item.level} 或 ${unlockPrice(item)} 条`}</small>}</button>)}
+            playSfx('paper-press'); focus.equip(kind, item.id); if (kind === 'weather' && readSkySettings().realWeather) writeSkySettings({ realWeather: false }); }}>{kind === 'accessory' && <PixelCat className="cat-accessory-preview" petId={petId} skin={focus.state.settings.catSkin} accessory={item.id} reduceMotion aria-hidden="true"/>}{!unlocked.has(item.id) && <span className="focus-lock" aria-hidden="true"/>}{item.name}{!unlocked.has(item.id) && <small> · {confirming === item.id ? `再点一次，用 ${unlockPrice(item)} 条兑换` : `Lv.${item.level} 或 ${unlockPrice(item)} 条`}</small>}</button>)}
         </fieldset>)}
       </div>
     </section>

@@ -41,7 +41,6 @@
   .fs-mail-pages button { width: 28px; height: 26px; color: var(--journal-paper-ink); background: transparent; border: 1px solid var(--journal-rule); font: inherit; cursor: pointer; }
   .fs-mail-draft-state { min-height: 16px; margin: 0; color: var(--journal-ink-hi); font-size: 12px; line-height: 16px; }
   .fs-mail-main { position: relative; align-content: start; gap: 10px; padding-left: 24px; overflow: auto; }
-  .fs-mail-main.has-paper { background-image: var(--journal-paper-img), repeating-linear-gradient(to bottom, transparent 0 23px, var(--journal-rule) 23px 24px); background-size: auto, auto; background-position: 0 16px; }
   .fs-mail-toast { position: sticky; z-index: 3; top: 0; margin: 0; padding: 4px 8px; color: #40633c; background: #edf3d9; border: 1px solid #9ba97d; font-size: 12px; line-height: 17px; }
   .fs-mail-toast.is-error { color: #8d2f2a; background: #f7d7cd; border-color: #bc6a5d; }
   .fs-mail-empty-detail { display: grid; place-items: center; align-content: center; gap: 8px; min-height: 420px; padding: 24px; text-align: center; }

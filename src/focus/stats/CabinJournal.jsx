@@ -10,6 +10,7 @@ import './focus-stats.css';
 import { downloadBlob } from '../../lib/download.mjs';
 import './journal-art.css';
 import './record-diary.css';
+import './diary-leather.css';
 import { journalArtStyle, hasArt, JOURNAL_ART, CARD_EXPORT_SLOTS, cardArt, sprite, LETTER_PLACEHOLDER } from './journal-art.mjs';
 import { defaultWeekOffset, weekName, catPose, CAT_POSE_CAPTION, barUnits, cabinLetter } from './journal-layout.mjs';
 import { readCatMood, subscribeCatMood } from './cat-mood-source.mjs';
@@ -23,6 +24,7 @@ import useLabs from '../../product/useLabs.js';
 import { JOURNAL_CHANGE, JOURNAL_KEY, readJournalRecords } from '../journal-entries.mjs';
 import { weekDiary, weeklyCollection, collectionMarkdown, yearWall, wallColour, wallSummary, topRecords, FREE_INTENT } from './record-diary.mjs';
 import { Sleeve } from '../PressCard';
+import { playSfx } from '../../props/sfx.mjs';
 import { readCoverPixels } from '../../album-wall-canvas.mjs';
 import { dominantColour } from '../../cover-colour.mjs';
 import { DEFAULT_RECORD_STYLE } from '../../record-library.mjs';
@@ -110,8 +112,8 @@ export default function CabinJournal() {
   openRef.current = open;
   useLetterDelivery(useFocusSessions(focus?.state?.sessions), focus?.state?.notes || '');
   // Close synchronously so an L pressed in the same frame as Esc (before React re-renders) reopens.
-  const shut = () => { openRef.current = false; setOpen(false); };
-  const show = (tab) => { openRef.current = true; setView(tab); setOpen(true); };
+  const shut = () => { if (openRef.current) playSfx('binder-close'); openRef.current = false; setOpen(false); };
+  const show = (tab) => { if (!openRef.current) playSfx('binder-open'); openRef.current = true; setView(tab); setOpen(true); };
   useEffect(() => {
     const on = (event) => show(journalTab(event.detail?.tab));
     // Our own dialog may still be mid-close (exit animation / pending effect): it never blocks L.
@@ -125,7 +127,7 @@ export default function CabinJournal() {
     else if (el.open) { closingRef.current = true; el.close?.(); }
   }, [open]);
   if (!focus) return null;
-  return <dialog ref={ref} className="cabin-journal" aria-label="唱片日记" style={journalArtStyle()} onCancel={(event) => { event.preventDefault(); shut(); }} onClose={() => { // Our own close() queues this event; if L / cabin:open-journal reopened meanwhile it must not shut again.
+  return <dialog ref={ref} className="cabin-journal" aria-label="唱片日记" style={journalArtStyle()} onClick={(event) => { if (event.target === ref.current) shut(); }} onCancel={(event) => { event.preventDefault(); shut(); }} onClose={() => { // Our own close() queues this event; if L / cabin:open-journal reopened meanwhile it must not shut again.
     if (closingRef.current) { closingRef.current = false; return; } if (openRef.current && !ref.current?.open) shut(); }}>
     {open && <JournalBook state={focus.state} now={focus.now} view={view} setView={setView} close={shut}/>}
   </dialog>;
@@ -244,6 +246,7 @@ function ItemDetail({ item }) {
 
 function WeekView({ sessions, entries, tasks, now, spine }) {
   const [offset, setOffset] = useState(0), today = dayKey(now);
+  const turn = (next) => { playSfx('page-turn'); setOffset(next); };
   const week = useMemo(() => weekDiary(sessions, entries, now, { weekOffset: offset, tasks }), [sessions, entries, tasks, today, offset]);
   const all = week.days.flatMap((day) => day.items), [selected, setSelected] = useState('');
   const current = all.find((item) => item.id === selected) || [...all].reverse().find((item) => item.kind === 'record') || all.at(-1) || null;
@@ -255,12 +258,12 @@ function WeekView({ sessions, entries, tasks, now, spine }) {
     const frame = requestAnimationFrame(() => { const day = list.current?.querySelector('.rd-day.is-today'), page = list.current?.closest('.fs-page'); if (day && page && offset === 0 && day !== list.current.firstElementChild) page.scrollTop += day.getBoundingClientRect().top - page.getBoundingClientRect().top - 12; });
     return () => cancelAnimationFrame(frame);
   }, [offset]);
-  return <div className="fs-spread rd-week" key="week" role="tabpanel" aria-label="这一周">
+  return <div className="fs-spread paper rd-week" key="week" role="tabpanel" aria-label="这一周">
     <div className="fs-page is-turning rd-week-left">
       <div className="fs-weekpick rd-weekpick" role="group" aria-label="选择周">
-        <button type="button" aria-label="上一周" onClick={() => setOffset((w) => w - 1)}>‹</button>
+        <button type="button" aria-label="上一周" onClick={() => turn((w) => w - 1)}>‹</button>
         <strong>{weekName(offset)} · {week.label}</strong>
-        <button type="button" aria-label="下一周" disabled={offset >= 0} onClick={() => setOffset((w) => Math.min(0, w + 1))}>›</button>
+        <button type="button" aria-label="下一周" disabled={offset >= 0} onClick={() => turn((w) => Math.min(0, w + 1))}>›</button>
       </div>
       <p className="rd-week-sum" title={WEEK_DAYS_HINT}>{offset === 0 ? '本周来了' : '那周来了'} <b>{week.weekDays}</b> 天 · 压制 <b>{week.records}</b> 张唱片 · 专注 <b>{formatMinutes(week.totalMinutes)}</b></p>
       <ol className="rd-days" ref={list}>{shown.map((day) => <li key={day.key} className={`rd-day ${day.isToday ? 'is-today' : ''} ${day.items.length ? '' : 'is-quiet'}`}>
@@ -270,13 +273,14 @@ function WeekView({ sessions, entries, tasks, now, spine }) {
       </li>)}</ol>
     </div>
     {spine}
-    <div className="fs-page is-turning rd-week-right"><ItemDetail item={current}/></div>
+    <div className="fs-page is-turning rd-week-right" data-turn={Math.abs(offset) % 2}><ItemDetail item={current}/></div>
   </div>;
 }
 
 function CollectionView({ sessions, entries, tasks, now, labs, input, reduced, spine, flash, note }) {
   const today = dayKey(now), canvas = useRef(null);
-  const [weekOffset, setWeekOffset] = useState(() => defaultWeekOffset(sessions, tasks, now));
+  const [weekOffset, setWeekOffsetNow] = useState(() => defaultWeekOffset(sessions, tasks, now));
+  const setWeekOffset = (next) => { playSfx('page-turn'); setWeekOffsetNow(next); };
   const collection = useMemo(() => weeklyCollection(sessions, entries, now, { weekOffset, tasks }), [sessions, entries, tasks, today, weekOffset]);
   const report = useMemo(() => weeklyReport(sessions, tasks, now, weekOffset), [sessions, tasks, today, weekOffset]);
   const mood = useCatMood(report.from, report.to), pose = catPose(report.totalMinutes, mood), letter = cabinLetter(report, mood);
@@ -302,7 +306,7 @@ function CollectionView({ sessions, entries, tasks, now, labs, input, reduced, s
     const saved = await downloadBlob(blob, `心流小屋本周合集-${dayKey(collection.from)}.png`);
     if (!saved?.cancelled && !saved?.failed) flash('本周合集图片已导出');
   };
-  return <div className="fs-spread rd-collection" key="collection" role="tabpanel" aria-label="本周合集"><div className="fs-page is-turning fs-week-left rd-collection-left">
+  return <div className="fs-spread paper rd-collection" key="collection" role="tabpanel" aria-label="本周合集"><div className="fs-page is-turning fs-week-left rd-collection-left">
     <article className={`fs-card rd-card ${hasArt('card') ? 'has-stamp' : ''} ${hasArt('cardTape') ? 'has-tape' : ''}`} aria-label="本周合集卡片">
       <Tape className="is-card"/>
       {hasArt('card') && <span className="fs-stamp" aria-hidden="true"/>}
@@ -321,7 +325,7 @@ function CollectionView({ sessions, entries, tasks, now, labs, input, reduced, s
         : <p className="fs-hint fs-hand">这周没有留话，也没关系。</p>}
       <p className="fs-card-summary fs-hand rd-card-line">{collection.line}</p>
     </article>
-  </div>{spine}<div className="fs-page is-turning fs-week-right rd-collection-right">
+  </div>{spine}<div className="fs-page is-turning fs-week-right rd-collection-right" data-turn={Math.abs(weekOffset) % 2}>
     <div className="fs-weekpick" role="group" aria-label="选择周">
       <button type="button" aria-label="上一周" onClick={() => setWeekOffset((w) => w - 1)}>‹</button>
       <strong>{weekName(weekOffset)} · {collection.label}</strong>
@@ -350,7 +354,7 @@ function WallView({ sessions, now }) {
   const wall = useRef(null);
   useEffect(() => { const frame = requestAnimationFrame(() => { if (wall.current) wall.current.scrollLeft = wall.current.scrollWidth; }); return () => cancelAnimationFrame(frame); }, []);
   const cell = cells.find((c) => c.key === picked) || [...cells].reverse().find((c) => c.minutes > 0 && !c.future) || null;
-  return <div className="fs-spread rd-wall" key="wall" role="tabpanel" aria-label="一年唱片墙"><div className="fs-page is-turning rd-wall-page">
+  return <div className="fs-spread paper rd-wall" key="wall" role="tabpanel" aria-label="一年唱片墙"><div className="fs-page is-turning rd-wall-page">
     <h3 className="fs-title">一年唱片墙 <small>· 每天一格，用那天陪你最久的唱片上色</small></h3>
     {summary.days > 0 ? <figure ref={wall} className="fs-year rd-wall-figure stats-chart-well" aria-label={`过去一年 ${summary.days} 天有专注，其中 ${summary.withRecord} 天有唱片陪着`}>
       <div className="fs-year-grid rd-wall-grid">{cells.map((c) => { const colour = wallColour(c, colours, DEFAULT_RECORD_STYLE.base); return <button type="button" key={c.key} data-level={c.level} className={`${c.future ? 'is-future' : ''} ${colour ? 'has-cover' : ''} ${cell?.key === c.key ? 'is-picked' : ''}`} style={colour ? { '--cell': colour } : undefined} tabIndex={c.minutes ? 0 : -1} disabled={c.future} aria-label={`${c.key} · ${c.minutes} 分钟${c.top ? ` · 《${c.top.title}》` : ''}`} title={`${c.key} · ${c.minutes} 分钟${c.top ? ` · 《${c.top.title}》` : ''}`} onClick={() => setPicked(c.key)}/>; })}</div>
@@ -381,7 +385,7 @@ function StatsView({ state, sessions, now, input, spine, close }) {
   const slotPeak = Math.max(1, ...tod.slots.map((s) => s.minutes)), taskPeak = Math.max(1, ...taskRows.map((r) => r.minutes));
   const goal = state.settings?.dailyGoal || 0, level = levelInfo(state.rewards.xp);
   const toggle = <div className="fs-seg rd-stats-seg" role="group" aria-label="统计内容">{[['overview', '概览'], ['tasks', '待办']].map(([id, name]) => <button key={id} type="button" aria-pressed={part === id} onClick={() => setPart(id)}>{name}</button>)}</div>;
-  if (part === 'tasks') return <div className="fs-spread" key="stats-tasks" role="tabpanel" aria-label="统计 · 待办"><div className="fs-page is-turning fs-tasks-left">
+  if (part === 'tasks') return <div className="fs-spread paper" key="stats-tasks" role="tabpanel" aria-label="统计 · 待办"><div className="fs-page is-turning fs-tasks-left">
     {toggle}
     <h3 className="fs-title">时间花在哪里</h3>
     {taskRows.length ? <ol className="fs-rank fs-task-rank">{taskRows.map((r, i) => <li key={r.id || 'free'} className={`${r.free ? 'is-free' : ''} ${i === 0 ? 'is-best' : ''}`}>
@@ -399,7 +403,7 @@ function StatsView({ state, sessions, now, input, spine, close }) {
         <p className="fs-empty">{doneTasks.length ? `已经贴上 ${doneTasks.length} 张便签了。每勾掉一条待办，这一页就多一张。` : '每勾掉一条待办，就会在这一页贴一张便签。'}{openTasks ? ` 现在还有 ${openTasks} 件在路上。` : ''}</p>
         {!openTasks && <button type="button" className="fs-cta" onClick={close}>回小屋写一条待办</button>}</figcaption></figure>}
   </div></div>;
-  return <div className="fs-spread" key="stats" role="tabpanel" aria-label="统计"><div className="fs-page is-turning fs-ov-left">
+  return <div className="fs-spread paper" key="stats" role="tabpanel" aria-label="统计"><div className="fs-page is-turning fs-ov-left">
     {toggle}
     <section className="fs-today" aria-label="今天">
       <div className="fs-today-num"><small>今天</small><strong>{formatMinutes(recent.todayMinutes)}</strong>{goal ? <small>目标 {goal} 分钟{recent.todayMinutes >= goal ? ' · 达成 ✓' : ''}</small> : null}</div>
@@ -429,6 +433,9 @@ function StatsView({ state, sessions, now, input, spine, close }) {
   </div></div>;
 }
 
+// The leather cover's corner pieces: brass, riveted, one at each corner.
+const CORNERS = ['nw', 'ne', 'sw', 'se'];
+
 function JournalBook({ state, now, view, setView, close }) {
   const sessions = useFocusSessions(state.sessions), entries = useJournalTexts(), tasks = state.tasks, reduced = useReducedMotion(), labs = useLabs();
   const { unread } = useLetters();
@@ -436,12 +443,17 @@ function JournalBook({ state, now, view, setView, close }) {
   const [note, setNote] = useState('');
   const flash = (text) => { setNote(text); setTimeout(() => setNote(''), 2400); };
   const tabs = JOURNAL_TABS.filter(([id]) => id !== 'letters' || labs.letters), active = tabs.some(([id]) => id === view) ? view : 'week';
+  // Which way the leaf turns: towards the back of the book for a later tab, back to the front for an earlier one.
+  const index = tabs.findIndex(([id]) => id === active), last = useRef(index), turn = index >= last.current ? 'fwd' : 'back';
+  useEffect(() => { last.current = index; }, [index]);
+  const goTo = (id) => { if (id !== active) playSfx('page-turn'); setView(id); };
   const spine = <div className={`fs-spine ${hasArt('spine') ? 'has-art' : ''}`} aria-hidden="true"/>;
-  return <div className={`fs-book ${reduced ? 'is-reduced' : ''}`}>
+  return <div className={`fs-book ${reduced ? 'is-reduced' : ''}`} data-view={active} data-turn={turn}>
+    {CORNERS.map((corner) => <i key={corner} className={`fs-corner is-${corner}`} aria-hidden="true"/>)}
     <header className="fs-book-head">
       <h2>唱片日记</h2>
-      <div className="fs-ribbons" role="tablist" aria-label="日记分区">{tabs.map(([id, name]) => <button key={id} type="button" role="tab" aria-selected={active === id} onClick={() => setView(id)}>{name}{id === 'letters' && unread > 0 ? <b className="fs-tab-unread" aria-label={`${unread} 封未读`}>{unread}</b> : null}</button>)}</div>
-      <button type="button" className="fs-back" aria-keyshortcuts="Escape" onClick={close}>返回小屋</button>
+      <div className="fs-ribbons" role="tablist" aria-label="日记分区">{tabs.map(([id, name]) => <button key={id} type="button" role="tab" aria-selected={active === id} onClick={() => goTo(id)}><span className="fs-tab-name">{name}</span>{id === 'letters' && unread > 0 ? <b className="fs-tab-unread" aria-label={`${unread} 封未读`}>{unread}</b> : null}</button>)}</div>
+      <button type="button" className="fs-back brass-plate" aria-keyshortcuts="Escape" onClick={close}>返回小屋</button>
     </header>
     {active === 'week' && <WeekView sessions={sessions} entries={entries} tasks={tasks} now={now} spine={spine}/>}
     {active === 'collection' && <CollectionView sessions={sessions} entries={entries} tasks={tasks} now={now} labs={labs} input={input} reduced={reduced} spine={spine} flash={flash} note={note}/>}

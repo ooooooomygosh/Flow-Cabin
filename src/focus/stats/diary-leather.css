@@ -1,0 +1,274 @@
+@layer guards, reset, features, skin, overrides;
+/* 唱片日记 as a leather-bound diary (v3 desk): a calf-leather cover with a stitched edge and
+   brass corners, two cream ruled pages lit by the one lamp, a silk ribbon down the gutter and
+   thumb tabs along the page edge. The pixel cat, the stacked-record bars, stickers and cover
+   art stay as they are; everything around them is leather, paper and brass.
+   Materials follow DEsk (https://github.com/fyzugx/DEsk, MIT, (c) 2026 The DEsk authors):
+   paper fibre comes from the props tile (--paper-tile / --paper-grain), shadows from the lamp
+   (--sx / --sy / --lamp-k), springs from --ease-drawer. */
+@layer overrides {
+  .cabin-journal {
+    --journal-scrim: radial-gradient(ellipse at 50% 38%, rgba(26, 15, 8, .66), rgba(8, 4, 2, .92) 78%);
+    --journal-paper: #efe6d3;
+    --journal-paper-img: none;
+    --journal-card-paper-img: none;
+    --journal-paper-ink: #2e2318;
+    --journal-paper-faint: #5f4f37;
+    --journal-rule: rgba(95, 72, 40, .17);
+    --journal-ink-hi: #7d5019;
+    --journal-ink: #2e2318;
+    --journal-spine: transparent;
+    --journal-stamp-0: rgba(95, 72, 40, .14);
+    --journal-card: #f8f2e4;
+    --journal-card-tape: rgba(214, 190, 120, .62);
+    --journal-turn: calc(.62s * var(--pace, 1));
+    --leaf-d: calc(.58s * var(--pace, 1));
+    --calf-a: #4b2e1f;
+    --calf-b: #341f12;
+    --calf-c: #24140b;
+    --thread: #dcbb7c;
+    --silk: #9b2420;
+    --cover: 26px;
+    --tab-out: 56px;
+    --sheet: linear-gradient(172deg, #f8f1e1, #efe6d3 55%, #e6d8b9);
+    --fibre: var(--paper-tile, none) 0 0 / 128px;
+    --grain: var(--paper-grain, none) 0 0 / 96px;
+  }
+  .cabin-journal[open] { grid-template-columns: minmax(0, 1fr); }
+  .cabin-journal .fs-book, .cabin-journal .fs-hand { image-rendering: auto; }
+  .cabin-journal .fs-sprite, .cabin-journal .fs-strip img, .cabin-journal .fs-sticker, .cabin-journal .fs-stack, .cabin-journal .fs-stack-cap, .cabin-journal .fs-stamp { image-rendering: pixelated; }
+
+  /* ── the cover ──────────────────────────────────────────────────────── */
+  /* The tabs live inside the book's own box (its right margin), so nothing sticks out of it; the leather is a layer behind, short of the tabs. */
+  .cabin-journal .fs-book {
+    width: min(1152px, calc(100vw - 100px)); height: min(716px, calc(100dvh - 56px)); isolation: isolate;
+    padding: 12px calc(var(--cover) + var(--tab-out)) var(--cover) var(--cover); gap: 8px; grid-template-columns: minmax(0, 1fr); border: 0; border-image: none; border-radius: 0; background: none; box-shadow: none;
+  }
+  .cabin-journal .fs-book::after {
+    content: ''; position: absolute; inset: 0 var(--tab-out) 0 0; z-index: -1; pointer-events: none; border-radius: var(--ui-radius-sm);
+    background:
+      var(--grain),
+      radial-gradient(circle at 1px 1px, rgba(0, 0, 0, .34) 0 1px, transparent 1.6px) 0 0 / 5px 5px,
+      radial-gradient(circle at 3px 4px, rgba(255, 214, 160, .10) 0 1px, transparent 1.6px) 0 0 / 7px 7px,
+      radial-gradient(ellipse at 24% 0%, rgba(255, 214, 160, .20), transparent 58%),
+      linear-gradient(172deg, var(--calf-a), var(--calf-b) 45%, var(--calf-c));
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 225, 180, .10), inset 0 2px 0 rgba(255, 225, 180, .13), inset 0 -3px 7px rgba(0, 0, 0, .55),
+      calc(var(--sx, 2) * 3px) calc(var(--sy, 3) * 3px) 4px rgba(8, 4, 2, calc(.5 * var(--lamp-k, .6))),
+      calc(var(--sx, 2) * 16px) calc(var(--sy, 3) * 16px) 30px rgba(8, 4, 2, calc(.6 * var(--lamp-k, .6)));
+  }
+  /* the thread: four runs of stitches, sewn a little inside the edge */
+  .cabin-journal .fs-book::before {
+    content: ''; position: absolute; inset: 7px calc(var(--tab-out) + 7px) 7px 7px; pointer-events: none; z-index: 1;
+    background:
+      repeating-linear-gradient(90deg, var(--thread) 0 7px, transparent 7px 12px) 0 0 / 100% 2px no-repeat,
+      repeating-linear-gradient(90deg, var(--thread) 0 7px, transparent 7px 12px) 0 100% / 100% 2px no-repeat,
+      repeating-linear-gradient(0deg, var(--thread) 0 7px, transparent 7px 12px) 0 0 / 2px 100% no-repeat,
+      repeating-linear-gradient(0deg, var(--thread) 0 7px, transparent 7px 12px) 100% 0 / 2px 100% no-repeat;
+    opacity: .78; filter: drop-shadow(0 1px 0 rgba(0, 0, 0, .65));
+  }
+  /* brass corner pieces, each with a rivet */
+  .cabin-journal .fs-corner {
+    position: absolute; z-index: 4; width: 40px; height: 40px; pointer-events: none;
+    background:
+      radial-gradient(circle at 12px 12px, #f3e1ac 0 1.5px, #6d5428 3.2px, transparent 3.8px),
+      linear-gradient(135deg, #d9c086 0%, #b0873f 42%, #7d5e2a 100%);
+    clip-path: polygon(0 0, 100% 0, 0 100%);
+  }
+  .cabin-journal .fs-corner.is-nw { top: 0; left: 0; }
+  .cabin-journal .fs-corner.is-ne { top: 0; right: var(--tab-out); transform: scaleX(-1); }
+  .cabin-journal .fs-corner.is-sw { bottom: 0; left: 0; transform: scaleY(-1); }
+  .cabin-journal .fs-corner.is-se { bottom: 0; right: var(--tab-out); transform: scale(-1, -1); }
+
+  /* ── the title strip: gilt lettering and a brass plate ─────────────── */
+  .cabin-journal .fs-book-head { position: relative; z-index: 3; align-items: center; min-height: 44px; padding: 0 18px; gap: 16px; justify-content: space-between; }
+  .cabin-journal .fs-book-head h2 {
+    margin: 0; font: 600 22px/1 var(--ui-font-display, serif); letter-spacing: .34em; color: #d9b970;
+    font-family: 'Songti SC', 'Noto Serif CJK SC', 'Source Han Serif SC', 'STSong', 'SimSun', Georgia, serif;
+    text-shadow: 0 -1px 0 rgba(0, 0, 0, .6), 0 1px 0 rgba(255, 232, 178, .22);
+  }
+  .cabin-journal .fs-back { min-height: 32px; margin: 0; padding: 6px 22px; }
+
+  /* ── thumb tabs along the page edge ────────────────────────────────── */
+  .cabin-journal .fs-ribbons {
+    /* positioned against the title strip, which ends at the page edge: the tabs run from there to 8px short of the book's own edge */
+    position: absolute; z-index: 2; top: 76px; right: calc((var(--tab-out) + var(--cover) - 8px) * -1); width: calc(var(--tab-out) + var(--cover) - 8px);
+    display: flex; flex-direction: column; gap: 7px; align-items: stretch; align-self: auto; flex: none;
+  }
+  .cabin-journal .fs-ribbons button {
+    --tab: #7a2f26;
+    position: relative; display: flex; align-items: center; min-height: 54px; padding: 4px 8px 4px 14px; border: 0;
+    border-radius: 0 var(--ui-radius-sm) var(--ui-radius-sm) 0; clip-path: none; text-shadow: none; image-rendering: auto;
+    font: 600 13px/1.2 var(--ui-font); letter-spacing: .02em; white-space: nowrap; color: #f6ecd6; cursor: pointer;
+    background: var(--grain), linear-gradient(90deg, rgba(0, 0, 0, .28), transparent 22%), linear-gradient(180deg, rgba(255, 255, 255, .13), transparent 34%), var(--tab);
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .28), calc(var(--sx, 2) * 3px) calc(var(--sy, 3) * 3px) 5px rgba(8, 4, 2, calc(.5 * var(--lamp-k, .6)));
+    transform: translateX(0); transition: transform calc(.34s * var(--pace, 1)) var(--ease-drawer, cubic-bezier(.2, .8, .2, 1)), filter .12s;
+  }
+  .cabin-journal .fs-ribbons button:nth-child(1) { --tab: #7a2f26; }
+  .cabin-journal .fs-ribbons button:nth-child(2) { --tab: #7f5f24; }
+  .cabin-journal .fs-ribbons button:nth-child(3) { --tab: #3f5a3a; }
+  .cabin-journal .fs-ribbons button:nth-child(4) { --tab: #3d5470; }
+  .cabin-journal .fs-ribbons button:nth-child(5) { --tab: #5d3f62; }
+  .cabin-journal .fs-ribbons button:nth-child(6) { --tab: #7a4a2a; }
+  .cabin-journal .fs-ribbons button:hover { filter: brightness(1.14); transform: translateX(4px); }
+  .cabin-journal .fs-ribbons button[aria-selected='true'] {
+    z-index: 1; transform: translateX(8px); color: #2e2318; font-weight: 700; filter: none;
+    background: var(--grain), linear-gradient(90deg, var(--tab) 0 6px, transparent 6px), linear-gradient(172deg, #faf4e4, #efe6d3 60%, #e6d8b9);
+    box-shadow: inset 0 0 0 1px rgba(95, 72, 40, .3), calc(var(--sx, 2) * 4px) calc(var(--sy, 3) * 4px) 6px rgba(8, 4, 2, calc(.55 * var(--lamp-k, .6)));
+  }
+  .cabin-journal .fs-ribbons button:focus-visible { outline: 2px solid #fff3cf; outline-offset: 1px; }
+  .cabin-journal .fs-tab-unread { position: absolute; top: 3px; right: 6px; min-width: 18px; height: 18px; margin: 0; background: #b3281b; color: #fff8e8; box-shadow: 0 0 0 1.5px #f6ecd6; font: 700 12px/18px var(--ui-font); border-radius: 50%; }
+
+  /* ── the leaves ────────────────────────────────────────────────────── */
+  .cabin-journal .fs-spread {
+    overflow: visible; perspective: 2400px; border-radius: var(--ui-radius-sm);
+    background: var(--grain), linear-gradient(rgba(243, 235, 218, .42), rgba(243, 235, 218, .42)), var(--fibre), var(--sheet);
+    box-shadow: 0 1px 0 #f2e9d4, 0 2px 0 #b8a984, 0 3px 0 #ebe0c6, 0 4px 0 #a99a75, 0 5px 0 #e5d9bd, 0 6px 0 #8f8060, 0 7px 2px rgba(0, 0, 0, .55);
+  }
+  .cabin-journal .fs-page {
+    padding: 14px 28px 18px; backface-visibility: hidden; line-height: 24px; color: var(--journal-paper-ink);
+    background-attachment: local, scroll, scroll, scroll, scroll;
+    background-position: 0 16px, 0 0, 0 0, 0 0, 0 0;
+    background-image: repeating-linear-gradient(to bottom, transparent 0 23px, var(--journal-rule) 23px 24px), var(--paper-grain, none), linear-gradient(rgba(243, 235, 218, .42), rgba(243, 235, 218, .42)), var(--paper-tile, none), var(--sheet);
+    background-size: auto, 96px, auto, 128px, auto; background-repeat: repeat, repeat, no-repeat, repeat, no-repeat;
+  }
+  /* the page curves down into the gutter */
+  .cabin-journal .fs-spread > .fs-page:first-child:not(:only-child) { box-shadow: inset -30px 0 30px -22px rgba(60, 40, 15, .34); border-radius: var(--ui-radius-sm) 0 0 var(--ui-radius-sm); }
+  .cabin-journal .fs-spread > .fs-page:last-child:not(:only-child) { box-shadow: inset 30px 0 30px -22px rgba(60, 40, 15, .34); border-radius: 0 var(--ui-radius-sm) var(--ui-radius-sm) 0; }
+  .cabin-journal .fs-spine { z-index: 2; overflow: visible; background: none; filter: drop-shadow(1px 2px 1.5px rgba(40, 10, 5, .4)); }
+  .cabin-journal .fs-spine::before {
+    content: ''; position: absolute; inset: 0 -22px; background: linear-gradient(90deg, transparent, rgba(50, 32, 12, .16) 34%, rgba(30, 18, 6, .42) 50%, rgba(50, 32, 12, .16) 66%, transparent);
+    pointer-events: none; z-index: auto;
+  }
+  /* the silk ribbon: lies in the gutter and hangs out below the book */
+  .cabin-journal .fs-spine::after {
+    content: ''; position: absolute; z-index: 2; left: 50%; top: -3px; bottom: -36px; width: 13px; margin-left: -6.5px; pointer-events: none;
+    background: repeating-linear-gradient(0deg, rgba(0, 0, 0, .07) 0 1px, transparent 1px 3px), linear-gradient(90deg, #6c1613 0, #b73a32 28%, #cc4a3f 46%, #a52a24 70%, #6c1613 100%);
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - 10px), 0 100%);
+  }
+
+  /* page turn: the leaf swings round the spine on the drawer spring */
+  .cabin-journal .fs-page.is-turning { animation: none; }
+  .cabin-journal .fs-spread > .fs-page.is-turning:last-child, .cabin-journal .fs-spread > .fs-page.is-turning:only-child { transform-origin: left center; animation: diary-leaf-in var(--leaf-d) var(--ease-drawer, ease-out) both; }
+  .cabin-journal .fs-spread > .fs-page.is-turning:first-child:not(:only-child) { transform-origin: right center; animation: diary-leaf-in-left var(--leaf-d) var(--ease-drawer, ease-out) both; }
+  .cabin-journal .fs-book[data-turn='back'] .fs-spread > .fs-page.is-turning:last-child:not(:only-child) { animation-name: diary-leaf-in-back; }
+  .cabin-journal .fs-book[data-turn='back'] .fs-spread > .fs-page.is-turning:first-child:not(:only-child) { animation-name: diary-leaf-settle; }
+  .cabin-journal .fs-book[data-turn='fwd'] .fs-spread > .fs-page.is-turning:last-child:not(:only-child) { animation-name: diary-leaf-settle; }
+  /* picking another week turns the right page a little (the two names make the animation restart) */
+  .cabin-journal .fs-book[data-view] .fs-spread > .fs-page.is-turning:last-child[data-turn='1'] { animation-name: diary-leaf-small; }
+  .cabin-journal .fs-book[data-view] .fs-spread > .fs-page.is-turning:last-child[data-turn='0'] { animation-name: diary-leaf-small-b; }
+  @keyframes diary-leaf-in { from { transform: rotateY(-70deg); filter: brightness(.6); } 55% { filter: brightness(.92); } to { transform: none; filter: none; } }
+  @keyframes diary-leaf-in-left { from { transform: rotateY(170deg); filter: brightness(.55); } 60% { filter: brightness(.9); } to { transform: none; filter: none; } }
+  @keyframes diary-leaf-in-back { from { transform: rotateY(-170deg); filter: brightness(.55); } 60% { filter: brightness(.9); } to { transform: none; filter: none; } }
+  @keyframes diary-leaf-settle { from { opacity: .0; filter: brightness(.6); } 40% { opacity: 1; } to { opacity: 1; filter: none; } }
+  @keyframes diary-leaf-small { from { opacity: .55; transform: rotateY(-9deg); } to { opacity: 1; transform: none; } }
+  @keyframes diary-leaf-small-b { from { opacity: .55; transform: rotateY(-9deg); } to { opacity: 1; transform: none; } }
+  html[data-perf='low'] .cabin-journal .fs-spine, html[data-perf='low'] .cabin-journal .fs-book::before { filter: none; }
+
+  /* ── ink on paper ──────────────────────────────────────────────────── */
+  .cabin-journal .fs-hand { font-family: 'Kaiti SC', 'STKaiti', 'KaiTi', 'LXGW WenKai', serif; font-size: 14px; line-height: 22px; color: #2b3a5e; }
+  .cabin-journal .fs-book .fs-title {
+    gap: 8px; padding-bottom: 3px; font: 600 14px/22px var(--ui-font-display); letter-spacing: .08em; color: var(--journal-paper-ink);
+    border-bottom: 3px double rgba(76, 58, 30, .3);
+  }
+  .cabin-journal .fs-book .fs-title::before { display: none; }
+  .cabin-journal .fs-book .fs-title small { letter-spacing: 0; font-weight: 400; }
+  .cabin-journal .fs-book .fs-seg button, .cabin-journal .fs-book .fs-actions button, .cabin-journal .fs-book .fs-weekpick button, .cabin-journal .fs-book .fs-weeks button {
+    color: var(--journal-paper-ink); border: 1px solid #ad9163; border-radius: var(--ui-radius);
+    background: linear-gradient(#f7efdf, #e4d4b2); text-shadow: 0 1px rgba(255, 250, 235, .6); box-shadow: inset 0 1px rgba(255, 252, 242, .8), 0 1px rgba(90, 60, 25, .14);
+  }
+  .cabin-journal .fs-book .fs-seg button:hover, .cabin-journal .fs-book .fs-actions button:hover, .cabin-journal .fs-book .fs-weekpick button:hover:not(:disabled) { background: linear-gradient(#fcf6ea, #eadcbe); }
+  .cabin-journal .fs-book .fs-seg button:active, .cabin-journal .fs-book .fs-actions button:active, .cabin-journal .fs-book .fs-weekpick button:active:not(:disabled) { background: linear-gradient(#d8c39a, #e5d4b0); box-shadow: inset 0 1px 2px rgba(80, 50, 20, .28); transform: translateY(1px); }
+  .cabin-journal .fs-book .fs-seg button[aria-pressed='true'], .cabin-journal .fs-book .fs-cta {
+    color: #fffaf0; border: 1px solid #5f3d12; border-radius: var(--ui-radius); text-shadow: 0 -1px rgba(60, 35, 8, .45);
+    background: linear-gradient(#9a6a2c, #7d5019); box-shadow: inset 0 1px rgba(255, 224, 168, .35), 0 1px rgba(60, 35, 8, .22);
+  }
+  .cabin-journal .fs-book .fs-weeks button { box-shadow: none; background: transparent; border-color: transparent; text-shadow: none; }
+  .cabin-journal .fs-book .fs-weeks button[aria-pressed='true'] { border-color: var(--journal-ink-hi); background: rgba(247, 226, 120, .38); }
+  .cabin-journal .fs-weekpick strong { font: 600 14px/1.3 var(--ui-font-display); letter-spacing: .04em; text-align: center; }
+  .cabin-journal .fs-book .fs-link { color: var(--journal-ink-hi); }
+
+  /* record rows: a line in the diary; the one being read is highlighted with a marker pen */
+  .cabin-journal .rd-item button { border: 0; border-radius: 0; background: none; box-shadow: inset 0 -1px 0 var(--journal-rule); transition: none; }
+  .cabin-journal .rd-item button:hover { background: rgba(120, 84, 40, .07); }
+  .cabin-journal .rd-item.is-selected button { background: linear-gradient(transparent 10%, rgba(247, 224, 112, .62) 10% 90%, transparent 90%); box-shadow: none; }
+  .cabin-journal .rd-day-head { border-bottom: 0; background: linear-gradient(90deg, rgba(76, 58, 30, .38) 0 0) 0 100% / 100% 1px no-repeat; font: 600 13px/1.4 var(--ui-font-display); letter-spacing: .05em; }
+  .cabin-journal .rd-day.is-today .rd-day-head span { color: #9a2f1d; }
+  .cabin-journal .rd-text-mark { border: 1.5px solid var(--journal-ink-hi); border-radius: 50%; font-family: var(--ui-font-display); }
+  .cabin-journal .rd-detail-note { border-left: 0; padding: 12px 16px; background: linear-gradient(180deg, rgba(255, 253, 242, .6), rgba(240, 229, 200, .5)); box-shadow: inset 0 0 0 1px rgba(95, 72, 40, .2), calc(var(--sx, 2) * 2px) calc(var(--sy, 3) * 2px) 4px rgba(15, 10, 8, calc(.2 * var(--lamp-k, .6))); transform: rotate(-.5deg); }
+  .cabin-journal .rd-wall-facts div { border: 0; border-radius: 0; background: rgba(120, 84, 40, .07); box-shadow: inset 0 0 0 1px rgba(95, 72, 40, .22); }
+  .cabin-journal .rd-wall-grid button { box-shadow: inset 0 0 0 1px rgba(60, 40, 15, .16); }
+  .cabin-journal .rd-dots span { border-radius: 50%; }
+
+  /* the weekly card: a postcard taped into the book, the cat doodled on it */
+  .cabin-journal .fs-book .fs-card {
+    border: 0; border-radius: 0; background: var(--paper-tile, none) 0 0 / 128px, linear-gradient(180deg, #fcf8ee, #f4ecd9); background-blend-mode: multiply; image-rendering: auto;
+    box-shadow: inset 0 0 0 1px rgba(95, 72, 40, .2), calc(var(--sx, 2) * 5px) calc(var(--sy, 3) * 5px) 7px rgba(15, 10, 8, calc(.3 * var(--lamp-k, .6)));
+  }
+  .cabin-journal .fs-card header span { font-family: var(--ui-font-display); letter-spacing: .06em; }
+  .cabin-journal .fs-book .fs-card-summary { box-shadow: none; background: linear-gradient(transparent 8%, rgba(247, 224, 112, .5) 8% 92%, transparent 92%); }
+  .cabin-journal .fs-book .fs-tape { border-radius: 0; }
+
+  /* sticky notes: the six note colours, handwriting, lifted off the page on one side */
+  .cabin-journal .fs-note { color: #2e2318; font-family: 'Kaiti SC', 'STKaiti', 'KaiTi', 'LXGW WenKai', serif; font-size: 15px; background: #fce066; box-shadow: calc(var(--sx, 2) * 4px) calc(var(--sy, 3) * 4px) 6px rgba(15, 10, 8, calc(.3 * var(--lamp-k, .6))), inset 0 -3px 0 rgba(13, 8, 5, .06); }
+  .cabin-journal .fs-note:nth-child(6n+2) { background: #9ed1f5; }
+  .cabin-journal .fs-note:nth-child(6n+3) { background: #bae394; }
+  .cabin-journal .fs-note:nth-child(6n+4) { background: #faadbd; }
+  .cabin-journal .fs-note:nth-child(6n+5) { background: #fcbd73; }
+  .cabin-journal .fs-note:nth-child(6n) { background: #ccb8f0; }
+  .cabin-journal .fs-note small { color: #4d3f2a; }
+  .cabin-journal .fs-note-check { width: auto; height: auto; color: #2e5a2a; background: none; box-shadow: none; font: 700 18px/1 'Kaiti SC', 'STKaiti', 'KaiTi', serif; top: 11px; }
+  .cabin-journal .fs-notes.is-mini .fs-note { max-width: 270px; }
+  .cabin-journal .fs-week-left { align-content: safe center; padding-top: 22px; }
+  .cabin-journal .fs-note.is-blank { background: #f3ead8; color: #5f4f37; box-shadow: inset 0 0 0 1px rgba(95, 72, 40, .25); }
+  .cabin-journal .fs-task-note, .cabin-journal .fs-todo-empty.is-under { border: 0; border-top: 1px dashed rgba(95, 72, 40, .4); }
+  .cabin-journal .fs-today-num, .cabin-journal .fs-input-companion { border: 1px dashed rgba(95, 72, 40, .4); background: rgba(255, 252, 240, .45); }
+
+  /* meters and the goal bar are pencil strokes, not dark pixel wells */
+  .cabin-journal .fs-meter { height: 5px; background: rgba(95, 72, 40, .17); box-shadow: inset 0 0 0 1px rgba(95, 72, 40, .22); }
+  .cabin-journal .fs-meter i { background: repeating-linear-gradient(135deg, var(--journal-paper-ink) 0 2px, #4a3b28 2px 4px); }
+  .cabin-journal .focus-goal-bar { height: 8px; background: rgba(95, 72, 40, .17); box-shadow: inset 0 0 0 1px rgba(95, 72, 40, .3); }
+  .cabin-journal .focus-goal-bar i { background: repeating-linear-gradient(135deg, #7d5019 0 3px, #96672b 3px 6px); }
+  .cabin-journal .focus-goal.is-met .focus-goal-bar i { background: repeating-linear-gradient(135deg, #2b6335 0 3px, #3f7a49 3px 6px); }
+  .cabin-journal .focus-goal { color: var(--journal-paper-faint); }
+  .cabin-journal .fs-sessions li, .cabin-journal .fs-rank li { box-shadow: inset 0 -1px 0 var(--journal-rule); }
+  .cabin-journal .fs-rank li.is-best { box-shadow: none; background: linear-gradient(transparent 6%, rgba(247, 224, 112, .5) 6% 94%, transparent 94%); }
+  .cabin-journal .fs-rank-no { border-radius: 50%; background: rgba(95, 72, 40, .16); }
+  .cabin-journal .fs-sessions li { background: none; }
+  .cabin-journal .fs-input-today div { background: rgba(120, 84, 40, .07); }
+  .cabin-journal .fs-empty-state { color: var(--journal-paper-ink); }
+
+  /* the ribbon marks the page being read, so single-leaf pages have none */
+  .cabin-journal .fs-book[data-view='wall'] .fs-spine { display: none; }
+
+  /* ── small windows ─────────────────────────────────────────────────── */
+  @media (max-width: 1100px) {
+    .cabin-journal { --tab-out: 48px; }
+    .cabin-journal .fs-book { width: min(1152px, calc(100vw - 80px)); }
+    .cabin-journal .fs-ribbons button { padding: 4px 6px 4px 10px; font-size: 12px; letter-spacing: 0; }
+    .cabin-journal .fs-page { padding: 14px 20px 18px; }
+  }
+  @media (max-width: 760px) {
+    .cabin-journal { --cover: 12px; --tab-out: 0px; --leaf-d: calc(.4s * var(--pace, 1)); }
+    .cabin-journal .fs-book { width: 100%; height: calc(100dvh - 16px); padding-top: 10px; }
+    .cabin-journal .fs-book::before { inset: 4px; }
+    .cabin-journal .fs-corner { width: 28px; height: 28px; background-size: auto, auto; }
+    .cabin-journal .fs-book-head { flex-wrap: wrap; gap: 6px 8px; padding: 2px 8px 0; min-height: 0; align-items: flex-end; }
+    .cabin-journal .fs-book-head h2 { flex: 1; font-size: 18px; letter-spacing: .24em; }
+    .cabin-journal .fs-back { min-height: 44px; padding: 6px 14px; }
+    /* tabs stand up from the top edge of the pages */
+    .cabin-journal .fs-ribbons { position: static; order: 3; flex: 0 0 100%; width: auto; flex-direction: row; gap: 4px; margin-bottom: -9px; padding: 0 2px; overflow-x: auto; overflow-y: visible; scrollbar-width: none; align-items: flex-end; }
+    .cabin-journal .fs-ribbons button { flex: none; min-height: 44px; padding: 8px 8px 10px; letter-spacing: 0; border-radius: var(--ui-radius-sm) var(--ui-radius-sm) 0 0; transform: none; justify-content: center; background: var(--grain), linear-gradient(180deg, rgba(255, 255, 255, .15), transparent 40%), var(--tab); }
+    .cabin-journal .fs-ribbons button:hover { transform: none; }
+    .cabin-journal .fs-ribbons button[aria-selected='true'] { min-height: 50px; transform: none; background: var(--grain), linear-gradient(180deg, var(--tab) 0 4px, transparent 4px), linear-gradient(172deg, #faf4e4, #efe6d3); }
+    .cabin-journal .fs-tab-unread { top: 1px; right: 1px; }
+    .cabin-journal .fs-spread { perspective: none; overflow: auto; grid-template-rows: none; grid-auto-rows: auto; align-content: start; }
+    .cabin-journal .fs-spread > .fs-page { overflow: visible; min-height: auto; }
+    .cabin-journal .fs-book[data-turn][data-view] .fs-spread > .fs-page.is-turning:is(:first-child, :last-child) { animation: diary-leaf-rise var(--leaf-d) var(--ease-drawer, ease-out) both; transform-origin: center; }
+    .cabin-journal .fs-spread > .fs-page:first-child:not(:only-child), .cabin-journal .fs-spread > .fs-page:last-child:not(:only-child) { box-shadow: none; border-radius: 0; }
+    .cabin-journal .fs-page { padding: 14px 16px 18px; }
+    .cabin-journal .fs-book .fs-weeks button, .cabin-journal .fs-book .fs-seg button, .cabin-journal .fs-book .fs-actions button, .cabin-journal .fs-book .fs-weekpick button { min-height: 44px; min-width: 44px; }
+  }
+  @keyframes diary-leaf-rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  @media (max-height: 760px) { .cabin-journal .fs-book { padding-top: 8px; } .cabin-journal .fs-ribbons { top: 72px; } .cabin-journal .fs-ribbons button { min-height: 48px; } }
+}

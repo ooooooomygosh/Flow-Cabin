@@ -4,6 +4,7 @@ import { studyQueue } from '../study/study-model.mjs';
 import { useLetters } from '../ai/useCabinLetters.js';
 import { FRAME_PHOTO_EVENT, readFramePhoto } from './frame-photo.mjs';
 import './home-tools.css';
+import './furniture-badge.css';
 
 // What some furniture shows on its own surface, so a glance at the room is
 // enough: the bookshelf counts today's reviews, the mailbox its unopened

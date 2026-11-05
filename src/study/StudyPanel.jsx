@@ -9,6 +9,8 @@ import { WORD_BOOKS, previewWordImport } from './word-books.mjs';
 import { downloadBlob } from '../lib/download.mjs';
 import { ConfirmButton, UndoLine, useUndo } from '../ui/Confirm';
 import { NumberField } from '../lib/NumberField.jsx';
+import { playSfx } from '../props/sfx.mjs';
+import './card-box.css';
 
 // 每天新词: one number field; an empty field while typing does not save 0.
 const NewPerDay = ({ study }) => <label className="study-limit">每天新词（个）<NumberField live min={0} max={200} list="study-new-per-day" aria-label="词书每日新词" value={study.state.newPerDay} onCommit={study.setNewPerDay}/><datalist id="study-new-per-day"><option value="5"/><option value="10"/><option value="20"/></datalist></label>;
@@ -28,13 +30,14 @@ function Review({ deck, close, edit }) {
   const status = useMemo(() => deckStatus(study.state, deck.id, now), [study.state, deck.id, now]);
   useEffect(() => { if (!queue.cards.length) study.nextBookCard(deck.id); }, [study.state, deck.id, queue.cards.length]);
   const card = queue.cards[0], labels = useMemo(() => card ? previews(card, Date.now()) : {}, [card?.id, card?.memory?.reps]);
-  const rate = (rating) => { if (!card || !flipped) return; if (!study.review(card.id, rating)) return; setFlipped(false); setDone((value) => value + 1); setNow(Date.now()); };
+  const flip = () => { playSfx('card-slide'); setFlipped(true); };
+  const rate = (rating) => { if (!card || !flipped) return; if (!study.review(card.id, rating)) return; playSfx('key-press'); setFlipped(false); setDone((value) => value + 1); setNow(Date.now()); };
   const root = useRef(null), voice = useMemo(() => canSpeak(), []), [autoSpeak, setAutoSpeak] = useState(readAutoSpeak);
   useEffect(() => { root.current?.focus({ preventScroll: true }); if (card && voice && autoSpeak) speak(card.front); }, [card?.id]);
   useEffect(() => { if (!card && queue.upcoming && queue.upcoming - Date.now() < 30 * 60000) { const timer = setTimeout(() => setNow(Date.now()), Math.max(1000, queue.upcoming - Date.now())); return () => clearTimeout(timer); } }, [card?.id, queue.upcoming]);
   const key = (event) => {
     if (event.target.closest('input,textarea') || (event.target !== event.currentTarget && event.target.closest('button') && (event.key === ' ' || event.key === 'Enter'))) return; // a focused button does its own thing
-    if (event.key === ' ' || event.key === 'Enter') { event.preventDefault(); if (!flipped) setFlipped(true); else rate(RATINGS[2].rating); }
+    if (event.key === ' ' || event.key === 'Enter') { event.preventDefault(); if (!flipped) flip(); else rate(RATINGS[2].rating); }
     const choice = RATINGS.find((entry) => entry.key === event.key); if (choice && flipped) { event.preventDefault(); rate(choice.rating); }
     if ((event.key === 'p' || event.key === 'P') && card && voice && !event.ctrlKey && !event.metaKey && !event.altKey) { event.preventDefault(); speak(card.front); }
     if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(); }
@@ -52,10 +55,10 @@ function Review({ deck, close, edit }) {
       : status.kind === 'paused'
         ? { title: '今天的新词已经学完', copy: `还剩 ${status.unlearned} 张新词，明天继续；也可以回到词书架调高每天新词。` }
         : { title: done ? `今天这组复习完了，共 ${done} 张` : '这组今天的复习已完成', copy: queue.upcoming ? `下一张在 ${whenLabel(queue.upcoming)} 到期` : '全部学完，继续保持。' };
-  return <div ref={root} className="study-review" tabIndex={-1} onKeyDown={key} aria-label={`复习 ${deck.name}`}>
+  return <div ref={root} className="study-review paper" tabIndex={-1} onKeyDown={key} aria-label={`复习 ${deck.name}`}>
     <header className="study-review-head"><button type="button" className="study-back" onClick={close}><ArrowLeft size={14}/>{deck.name}</button>{voice && <label className="study-autospeak"><input type="checkbox" checked={autoSpeak} onChange={(event) => setAutoSpeak(writeAutoSpeak(event.target.checked))}/>自动朗读</label>}<span>{done ? `已复习 ${done} · ` : ''}剩 {queue.cards.length}</span></header>
     {card ? <>
-      <button type="button" className={`study-card ${flipped ? 'is-flipped' : ''}`} aria-label={flipped ? '卡片背面' : '翻到背面（空格）'} onClick={() => setFlipped(true)}>
+      <button type="button" key={card.id} className={`study-card ${flipped ? 'is-flipped' : ''}`} aria-label={flipped ? '卡片背面' : '翻到背面（空格）'} onClick={() => { if (!flipped) flip(); }}>
         <small className={`study-stage is-${cardStage(card)}`}>{{ new: '新卡', learning: '学习中', review: '复习' }[cardStage(card)]}</small>
         <span className="study-card-front">{card.front}</span>
         {flipped ? <span className="study-card-back">{card.back || '（没有背面，想一想就好）'}</span> : <span className="study-card-hint">想一想，再按空格翻面</span>}
@@ -63,7 +66,7 @@ function Review({ deck, close, edit }) {
       <div className="study-card-tools">{voice && <button type="button" className="pixel-button is-quiet study-speak" aria-label={`朗读 ${card.front}`} aria-keyshortcuts="P" onClick={() => speak(card.front)}><SpeakerWave size={14}/>发音<kbd>P</kbd></button>}<small className="study-keys">空格 翻面 · 1–4 评分{voice ? ' · P 发音' : ''} · Esc 返回</small></div>
       <Source value={card.source || deckSource(deck)}/>
       {flipped ? <div className="study-ratings" role="group" aria-label="记得怎么样">{RATINGS.map((entry) => <button type="button" key={entry.rating} className={`is-${entry.tone}`} onClick={() => rate(entry.rating)}><b>{entry.label}</b><small>{labels[entry.rating]}</small><kbd>{entry.key}</kbd></button>)}</div>
-        : <button type="button" className="pixel-button is-primary study-flip" onClick={() => setFlipped(true)}>翻面 · 空格</button>}
+        : <button type="button" className="pixel-button is-primary study-flip" onClick={flip}>翻面 · 空格</button>}
     </> : <div className="study-done">{status.kind === 'empty' || status.kind === 'new' ? <BookOpen size={22}/> : <Check size={22}/>}<strong>{notice.title}</strong><small>{notice.copy}</small><div className="study-done-actions">{notice.edit && <button type="button" className="pixel-button is-primary" onClick={edit}>添加或导入词条</button>}<button type="button" className="pixel-button is-quiet" onClick={close}>回到词书架</button></div></div>}
     {study.state.cards.length >= LIMITS.cards && <p role="status">学习卡已达 5,000 张上限；旧词仍可复习。整理不需要的卡片后再添加新词。</p>}
   </div>;
@@ -76,7 +79,7 @@ function DeckEditor({ deck, close }) {
   const visible = cards.filter(card => !needle || [card.front, card.back].some(side => side.normalize('NFKC').toLowerCase().includes(needle)));
   const saveCard = (event) => { event.preventDefault(); if (editing?.front.trim() && study.updateCard(editing.id, { front: editing.front, back: editing.back })) { setEditing(null); setMessage('卡片已保存，复习进度保持不变。'); } };
   const add = (event) => { event.preventDefault(); const added = study.addCards(deck.id, input); setMessage(added === null ? '' : added ? `添加了 ${added} 张卡片。` : '没有新卡片（可能都已经在这组里了，或已达卡片上限）。'); if (added) setInput(''); };
-  return <div className="study-editor">
+  return <div className="study-editor paper">
     <header className="study-review-head"><button type="button" className="study-back" onClick={close}><ArrowLeft size={14}/>卡组</button><span>{deck.name} · {cards.length} 张</span></header>
     <DeckSource deck={deck} cards={cards}/>
     <WordImport deck={deck} cards={cards}/>
@@ -150,7 +153,7 @@ export default function StudyPanel() {
   if (view.mode === 'edit' && deck) return <DeckEditor deck={deck} close={() => setView({ mode: 'decks' })}/>;
   const selectedBook = WORD_BOOKS.find(book => book.id === bookId);
   const totals = studyQueue(study.state, '', Date.now());
-  return <div className="study-panel">
+  return <div className="study-panel paper">
     <p className="study-summary"><BookOpen size={15}/>{totals.total ? <>今天要复习 <b>{totals.due}</b> 张 · 新卡 <b>{totals.fresh}</b> 张</> : '还没有学习卡片：选一本词书开始，或新建卡组导入词表。'}</p>
     <section className="study-books" aria-label="小屋词书架">
       <label>选一本词书<select aria-label="词书" value={bookId} onChange={event => setBookId(event.target.value)}>
@@ -172,7 +175,7 @@ export default function StudyPanel() {
       return <li key={entry.id}>
         <button type="button" className="study-deck-open" aria-label={`${entry.name}：${summary}，${shelf.action === 'edit' ? '添加或导入词条' : '打开复习'}`} onClick={() => setView({ mode: shelf.action, deckId: entry.id })}><strong>{entry.name}</strong><small>{status.total} 张 · {summary}</small><DeckSource deck={entry} cards={study.state.cards}/></button>
         {status.due + status.fresh > 0 && <span className="study-deck-badge" aria-label={`待复习 ${status.due + status.fresh} 张`}>{status.due + status.fresh}</span>}
-        <button type="button" className="study-deck-edit" onClick={() => setView({ mode: 'edit', deckId: entry.id })}>{shelf.action === 'edit' ? '添加词条' : '编辑'}</button>
+        <button type="button" className="study-deck-edit brass-plate" onClick={() => setView({ mode: 'edit', deckId: entry.id })}>{shelf.action === 'edit' ? '添加词条' : '编辑'}</button>
       </li>;
     })}</ul>}
     <form className="study-new-deck" onSubmit={(event) => { event.preventDefault(); if (name.trim() && study.addDeck(name)) setName(''); }}><input aria-label="新卡组名称" placeholder="新卡组：英语单词、高数公式…" value={name} maxLength={40} onChange={(event) => setName(event.target.value)}/><button type="submit" className="pixel-button" disabled={!name.trim()}><Plus size={14}/>新建</button></form>
