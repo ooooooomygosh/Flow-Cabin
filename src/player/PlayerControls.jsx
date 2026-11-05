@@ -51,7 +51,7 @@ export function SystemProgress({ timeline }) {
 
 // 曲目: a button showing the song, opening a scrollable list of every track.
 // Songs that just failed are greyed with the reason; they can still be tried.
-function TrackPicker({ item, names, trackIndex, track, reasonFor }) {
+export function TrackPicker({ item, names, trackIndex, track, reasonFor }) {
   const [open, setOpen] = useState(false), button = useRef(null), list = useRef(null);
   useEffect(() => { if (!open) return; const current = list.current?.querySelector('[aria-selected=true]') || list.current?.querySelector('[role=option]'); current?.scrollIntoView({ block: 'center' }); current?.focus({ preventScroll: true }); }, [open]);
   useEffect(() => { if (!open) return; const away = (event) => { if (!event.target.closest?.('.pocket-track')) setOpen(false); }; document.addEventListener('pointerdown', away); return () => document.removeEventListener('pointerdown', away); }, [open]);
@@ -77,7 +77,9 @@ function TrackPicker({ item, names, trackIndex, track, reasonFor }) {
 
 // 待播: what plays next (the decided next song, queued songs, queued records),
 // drag or Alt+↑/↓ to reorder, 立即播放, 置顶, 清空, and 最近播放.
-export function QueuePanel({ item, names, trackIndex, track, player, panel, close, reasonFor }) {
+// `embedded`: the panel is always on (the console's paper roll), so it has no close button and
+// Escape is left to the dialog around it.
+export function QueuePanel({ item, names, trackIndex, track, player, panel, close, reasonFor, embedded = false }) {
   const [view, setView] = useState('queue'), [notice, setNotice] = useState(''), [dragging, setDragging] = useState(null), [over, setOver] = useState(null);
   const upNext = player.upNext || [], entries = upNext.filter((entry) => entry.kind === 'track' || entry.kind === 'album');
   const songs = entries.filter((entry) => entry.kind === 'track'), albums = entries.filter((entry) => entry.kind === 'album');
@@ -98,8 +100,8 @@ export function QueuePanel({ item, names, trackIndex, track, player, panel, clos
     <button type="button" aria-label={`从待播移除 ${label}`} onClick={() => player.remove(entry.entry)}><X size={12}/></button>
   </li>;
   const listens = (player.listens || []).slice(0, 20);
-  return <div ref={panel} className="player-queue" role="region" aria-label="待播唱片" tabIndex={-1} onKeyDown={(event) => { if (event.key === 'Escape') { event.stopPropagation(); close(); } }}>
-    <div className="player-queue-header"><span className="player-queue-tabs" role="group" aria-label="待播视图"><button type="button" aria-pressed={view === 'queue'} onClick={() => setView('queue')}><strong>待播</strong></button><button type="button" aria-pressed={view === 'history'} aria-label="最近播放" onClick={() => setView('history')}><Clock size={12}/>最近</button></span>{view === 'queue' && entries.length > 0 && <button type="button" className="player-queue-clear" aria-label="清空待播" title="清空待播" onClick={() => { if (player.clear()) setNotice('待播已清空'); }}><Trash2 size={12}/></button>}<button type="button" aria-label="关闭待播" onClick={close}><X size={16}/></button></div>
+  return <div ref={panel} className="player-queue" role="region" aria-label="待播唱片" tabIndex={-1} onKeyDown={(event) => { if (event.key === 'Escape' && !embedded) { event.stopPropagation(); close(); } }}>
+    <div className="player-queue-header"><span className="player-queue-tabs" role="group" aria-label="待播视图"><button type="button" aria-pressed={view === 'queue'} onClick={() => setView('queue')}><strong>待播</strong></button><button type="button" aria-pressed={view === 'history'} aria-label="最近播放" onClick={() => setView('history')}><Clock size={12}/>最近</button></span>{view === 'queue' && entries.length > 0 && <button type="button" className="player-queue-clear" aria-label="清空待播" title="清空待播" onClick={() => { if (player.clear()) setNotice('待播已清空'); }}><Trash2 size={12}/></button>}{!embedded && <button type="button" aria-label="关闭待播" onClick={close}><X size={16}/></button>}</div>
     {view === 'history' ? (listens.length ? <ol className="player-queue-history">{listens.map((entry) => <li key={`${entry.id}:${entry.index}:${entry.at}`}><button type="button" className="player-queue-jump" aria-label={`再听一次 ${entry.title}`} onClick={() => { if (player.playListen(entry)) setNotice(`再听一次《${entry.title}》`); else setNotice('这张唱片已不在唱片架上'); }}><span title={`${entry.title} · ${entry.artist}`}><strong>{displayTitle(entry.title)}</strong><small>{entry.artist}</small></span><time>{new Date(entry.at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</time></button></li>)}</ol> : <p className="player-queue-state">还没有听过的歌。放一首，它会出现在这里。</p>)
     : <>
       {player.solo && <p className="player-queue-state">正在放待播里的单曲{decided?.kind === 'resume' ? ` · 之后回到《${decided.item.title}》第 ${decided.index + 1} 首` : ''}</p>}

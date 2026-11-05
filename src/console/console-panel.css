@@ -1,0 +1,248 @@
+@layer guards, reset, features, skin, overrides;
+@layer overrides {
+/* 唱机旁: the close-up of the whole console (src/console/ConsolePanel.jsx). The shared pieces
+   (push keys, brass plates, the amber screen, the rail, the knob) are in console.css; this sheet
+   has the levers, the meters, the rotary switch and the layout. Recipes after DEsk's control panel
+   (https://github.com/fyzugx/DEsk, MIT, (c) 2026 The DEsk authors). */
+
+/* ── levers, meters, rotary switch ─────────────────────────────────────── */
+
+.c-lever { position: relative; display: grid; justify-items: center; align-content: start; gap: 6px; min-width: 76px; padding: 4px 4px 2px; border: 0; border-radius: var(--ui-radius-sm); background: none; color: #e9dcc0; cursor: pointer; text-shadow: none; box-shadow: none; }
+.c-lever:focus-visible { outline: 2px solid var(--c-amber); outline-offset: 2px; }
+.c-lever-lamp { width: 14px; height: 14px; border-radius: 50%; background: radial-gradient(circle at 38% 32%, #6a4a22, #2b1a0a 70%); box-shadow: 0 0 0 2px #8f743f, 0 0 0 3px rgba(20, 12, 3, .8), inset 0 -1px 1px rgba(0, 0, 0, .5); transition: background-color var(--c-t), box-shadow var(--c-t); }
+.c-lever.is-on .c-lever-lamp { background: radial-gradient(circle at 38% 32%, #fff6d4, var(--c-amber) 55%, #c9791a); box-shadow: 0 0 0 2px #8f743f, 0 0 0 3px rgba(20, 12, 3, .8), 0 0 10px 3px var(--c-amber-glow); }
+.c-lever.is-red.is-on .c-lever-lamp { background: radial-gradient(circle at 38% 32%, #ffe0d8, #ff4333 55%, #a0150c); box-shadow: 0 0 0 2px #8f743f, 0 0 0 3px rgba(20, 12, 3, .8), 0 0 10px 3px rgba(255, 59, 47, .6); }
+.c-lever-plate { position: relative; display: block; width: 62px; height: 62px; border-radius: var(--ui-radius-sm); background: linear-gradient(180deg, #0b0806, #1a1510); box-shadow: inset 0 0 0 1px #2d251b, inset 0 3px 6px #000, 0 1px 0 rgba(255, 239, 204, .16); }
+.c-lever-slot { position: absolute; left: 50%; top: 9px; bottom: 9px; width: 10px; margin-left: -5px; border-radius: var(--ui-radius-sm); background: #000; box-shadow: inset 0 0 0 1px #2d251b, inset 0 2px 4px #000; }
+.c-lever-stick { position: absolute; left: 50%; top: 50%; width: 9px; height: 26px; margin: -13px 0 0 -4.5px; border-radius: var(--ui-radius-sm); background: linear-gradient(90deg, #6b6a66, #f1efe9 42%, #8c8a84); box-shadow: calc(var(--sx, 2) * 1px) calc(var(--sy, 3) * 1px) 3px rgba(0, 0, 0, calc(.7 * var(--lamp-k, .6))); transform: translateY(-13px); transition: transform calc(.22s * var(--pace, 1)) var(--c-spring); }
+.c-lever-stick::after { content: ''; position: absolute; left: 50%; top: -4px; width: 13px; height: 13px; margin-left: -6.5px; border-radius: 50%; background: radial-gradient(circle at 36% 30%, #fffefa, #c9c6bd 55%, #7d7b75); box-shadow: 0 0 0 1px rgba(30, 28, 24, .55); }
+.c-lever[data-position='-1'] .c-lever-stick { transform: translateY(13px); }
+.c-lever[data-position='-1'] .c-lever-stick::after { top: auto; bottom: -4px; }
+.c-lever-legend { display: grid; justify-items: center; line-height: 1.25; }
+.c-lever-legend b { padding-left: .2em; font: 600 13px/1.25 var(--ui-font); letter-spacing: .2em; color: #ecdfc2; text-shadow: 0 1px 0 rgba(0, 0, 0, .8); }
+.c-lever-legend small { min-height: 15px; font: 400 12px/15px var(--ui-font); letter-spacing: .1em; color: rgba(236, 214, 170, .78); }
+.c-lever.is-on .c-lever-legend small { color: var(--c-amber); }
+
+.c-meter { position: relative; margin: 0; }
+.c-meter-bezel { position: relative; padding: 9px; border-radius: var(--ui-radius-sm); background: var(--c-brass); box-shadow: inset 0 0 0 1px rgba(255, 239, 204, .42), 0 0 0 1px rgba(36, 23, 8, .7), var(--c-drop-lg); }
+.c-meter-bezel svg { display: block; width: 100%; height: auto; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .5), 0 0 0 2px #1a130b; }
+.c-meter-ticks line { stroke: rgba(42, 30, 16, .9); stroke-width: 1.1; }
+.c-meter-ticks line.is-long { stroke-width: 2.2; }
+.c-meter-ticks line.is-red { stroke: #a3301d; }
+.c-meter-ticks text { fill: rgba(42, 30, 16, .9); font: 600 12px/1 var(--ui-font); }
+.c-meter-red { fill: none; stroke: rgba(196, 44, 28, .8); stroke-width: 4; }
+.c-meter-title { fill: #a3301d; font: 700 18px/1 var(--ui-font); letter-spacing: .18em; }
+.c-meter-sub { fill: rgba(60, 44, 24, .85); font: 600 12px/1 var(--ui-font); letter-spacing: .16em; }
+.c-meter-hub { fill: #1c150d; }
+.c-needle { stroke: #b3261a; stroke-width: 2.4; stroke-linecap: round; }
+.c-needle-shadow { stroke: rgba(0, 0, 0, .28); stroke-width: 3.6; stroke-linecap: round; }
+.c-meter-pivot { fill: #15100b; }
+.c-meter-lamp { position: absolute; left: 17px; bottom: 16px; width: 9px; height: 9px; border-radius: 50%; background: radial-gradient(circle at 38% 32%, #2f4a30, #0f1a10); box-shadow: 0 0 0 1px rgba(0, 0, 0, .6); }
+.c-meter.is-playing .c-meter-lamp { background: radial-gradient(circle at 38% 32%, #efffe6, #46e05a 55%, #178a2a); box-shadow: 0 0 0 1px rgba(0, 0, 0, .6), 0 0 8px 2px rgba(70, 224, 90, .6); }
+.c-meter svg[data-estimated] .c-meter-title { opacity: .72; }
+
+.c-dial { display: grid; grid-template-columns: 112px minmax(0, 1fr); align-items: center; gap: 4px 10px; }
+.c-dial-knob { width: 112px; height: 112px; cursor: pointer; }
+.c-dial-knob svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.c-dial-dot { fill: #6a5330; }
+.c-dial-dot.is-on { fill: var(--c-amber); filter: drop-shadow(0 0 3px var(--c-amber-glow)); }
+.c-dial-dot.is-dead { fill: #2a2118; }
+.c-dial-base { fill: #b3924a; stroke: rgba(30, 18, 4, .8); stroke-width: 1.5; }
+.c-dial-turn { transition: transform calc(.22s * var(--pace, 1)) var(--c-spring); }
+.c-dial-cap { fill: #17120e; stroke: rgba(255, 244, 226, .18); stroke-width: 1.2; }
+.c-dial-flute { stroke: rgba(255, 244, 226, .14); stroke-width: 2.6; }
+.c-dial-pointer { fill: #eadfc4; }
+.c-dial-shine { fill: none; stroke: rgba(255, 255, 255, .13); stroke-width: 2.4; }
+.c-dial-legend { display: grid; gap: 0; }
+.c-dial-legend button { display: flex; align-items: center; gap: 9px; min-height: 28px; padding: 0 6px; border: 0; border-radius: var(--ui-radius-sm); background: none; color: rgba(236, 222, 190, .86); font: 600 12px/1 var(--ui-font); letter-spacing: .1em; text-align: left; text-shadow: 0 1px 0 rgba(0, 0, 0, .8); cursor: pointer; }
+.c-dial-legend button:hover:not(:disabled) { color: #fff0cf; background: rgba(255, 239, 204, .06); }
+.c-dial-legend button.is-on { color: var(--c-amber); text-shadow: 0 0 6px var(--c-amber-glow); }
+.c-dial-legend button:disabled { color: rgba(236, 222, 190, .38); cursor: default; }
+.c-dial-legend button:focus-visible { outline: 2px solid var(--c-amber); outline-offset: -1px; }
+.c-dial-lamp { flex: none; width: 8px; height: 8px; border-radius: 50%; background: #2b1a0a; box-shadow: 0 0 0 1.5px #8f743f, inset 0 0 0 1px rgba(0, 0, 0, .5); }
+.c-dial-lamp.is-lit { background: radial-gradient(circle at 38% 32%, #fff6d4, var(--c-amber) 55%, #c9791a); box-shadow: 0 0 0 1.5px #8f743f, 0 0 6px 2px var(--c-amber-glow); }
+.c-dial-settings { grid-column: 1 / -1; justify-self: start; min-height: 32px; margin-top: 4px; }
+
+/* ── the close-up ──────────────────────────────────────────────────────── */
+
+.console-shell { background: radial-gradient(120% 90% at 30% 0%, rgba(40, 24, 12, .42), rgba(6, 4, 2, .78)); color: #efe4c8; }
+.console-shell::backdrop { background: rgba(10, 6, 4, .4); }
+.console-stage { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; overflow: auto; overscroll-behavior: contain; }
+.console-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 272px; align-items: start; width: min(1340px, 100%); margin: auto; }
+.console { position: relative; display: grid; gap: 14px; min-width: 0; padding: 16px 46px 18px; border: 4px solid transparent; border-radius: var(--ui-radius-sm); color: #efe4c8; outline: none;
+  background: var(--c-enamel) padding-box, var(--c-brass) border-box; box-shadow: 0 0 0 1px rgba(0, 0, 0, .85), inset 0 0 0 1px rgba(0, 0, 0, .8), inset 0 -4px 0 rgba(0, 0, 0, .4), calc(var(--sx, 2) * 14px) calc(var(--sy, 3) * 14px) 36px rgba(0, 0, 0, calc(.6 * var(--lamp-k, .6))); }
+.console-cheek { position: absolute; top: 34px; bottom: 34px; width: 26px; border-radius: var(--ui-radius-sm); pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgba(0, 0, 0, .22) 0 2px, transparent 2px 6px), linear-gradient(90deg, #4a2c19, #6b4529 46%, #442815); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 222, 176, .16), 0 0 0 1px rgba(0, 0, 0, .5); }
+.console-cheek.is-left { left: 8px; }
+.console-cheek.is-right { right: 8px; }
+.console-screw { position: absolute; width: 9px; height: 9px; border-radius: 50%; pointer-events: none; background: radial-gradient(circle at 35% 30%, #e7d29b, #6e5528 70%); box-shadow: 0 0 0 1px rgba(30, 18, 4, .7), 0 1px 1px rgba(0, 0, 0, .6); }
+.console-screw::after { content: ''; position: absolute; left: 1px; right: 1px; top: 50%; height: 1.5px; margin-top: -.75px; background: rgba(30, 18, 4, .75); transform: rotate(var(--turn, 35deg)); }
+.console-screw.is-tl { top: 11px; left: 12px; --turn: 20deg; }
+.console-screw.is-tr { top: 11px; right: 12px; --turn: 80deg; }
+.console-screw.is-bl { bottom: 11px; left: 12px; --turn: 60deg; }
+.console-screw.is-br { bottom: 11px; right: 12px; --turn: 5deg; }
+.console-top { display: flex; align-items: center; gap: 16px; }
+.console-top .console-name { cursor: default; }
+.console-lamps { display: inline-flex; gap: 10px; margin-right: auto; }
+.console-lamps i { width: 10px; height: 10px; border-radius: 50%; background: #2b1a0a; box-shadow: 0 0 0 2px #8f743f, 0 0 0 3px rgba(20, 12, 3, .8); }
+.console-lamps .is-power { background: radial-gradient(circle at 38% 32%, #efffe6, #46e05a 55%, #178a2a); box-shadow: 0 0 0 2px #8f743f, 0 0 0 3px rgba(20, 12, 3, .8), 0 0 8px 2px rgba(70, 224, 90, .5); }
+.console-lamps .is-play { background: radial-gradient(circle at 38% 32%, #fff6d4, var(--c-amber) 55%, #c9791a); box-shadow: 0 0 0 2px #8f743f, 0 0 0 3px rgba(20, 12, 3, .8), 0 0 8px 2px var(--c-amber-glow); }
+.console-lamps .is-fault { background: radial-gradient(circle at 38% 32%, #ffe0d8, #ff4333 55%, #a0150c); box-shadow: 0 0 0 2px #8f743f, 0 0 0 3px rgba(20, 12, 3, .8), 0 0 8px 2px rgba(255, 59, 47, .6); }
+.console .console-close.cabin-dialog-close { width: auto; height: auto; min-width: 44px; min-height: 40px; padding: 0 16px; border-radius: var(--ui-radius-sm); color: var(--c-brass-ink); background: var(--c-brass); }
+.console .console-close span { font-size: 15px; letter-spacing: 0; }
+
+.console-body { display: grid; grid-template-columns: 230px minmax(0, 1fr) 280px; gap: 24px; align-items: start; }
+.console-meters { display: grid; gap: 16px; }
+.console-centre { display: grid; gap: 14px; min-width: 0; justify-items: stretch; }
+.console-switches { display: grid; gap: 14px; align-content: start; }
+.console-levers { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 6px; justify-items: center; }
+
+.console-display.c-screen { display: grid; gap: 8px; min-height: 196px; padding: 12px 18px 14px; align-content: start; }
+.console-display > * { position: relative; z-index: 1; }
+.console-display-status { display: flex; align-items: center; justify-content: space-between; gap: 10px; font: 600 12px/1 var(--ui-font); letter-spacing: .14em; color: rgba(255, 179, 71, .8); }
+.console-state { display: inline-flex; align-items: center; gap: 8px; }
+.console-state i { width: 8px; height: 8px; border-radius: 50%; background: #4a2f0e; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .6); }
+.console-display[data-state='playing'] .console-state i { background: var(--c-amber); box-shadow: 0 0 8px 2px var(--c-amber-glow); }
+.console-display[data-state='busy'] .console-state i { background: var(--c-amber); animation: c-blink 1s steps(2, end) infinite; }
+.console-display[data-state='error'] .console-state i { background: #ff4333; box-shadow: 0 0 8px 2px rgba(255, 59, 47, .6); }
+@keyframes c-blink { 50% { opacity: .2; } }
+.console-flags { display: inline-flex; gap: 12px; }
+.console-flags .console-source { padding: 2px 8px; border-radius: var(--ui-radius-sm); background: var(--c-amber); color: #1b1208; text-shadow: none; font-weight: 700; }
+.console-display-main { display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: 16px; align-items: center; }
+.console .console-cover { width: 104px; height: 104px; padding: 3px; }
+.console .console-cover .listen-cover { width: 100%; height: 100%; }
+.console .console-cover:disabled { opacity: .5; cursor: default; }
+.console-display-text { display: grid; gap: 3px; min-width: 0; }
+.console-title { display: block; margin: 0; font: 700 26px/1.3 var(--ui-font); letter-spacing: .03em; color: #ffc766; }
+.console-artist { font-size: 15px; line-height: 1.45; color: #e29a3a; }
+.console-track { font-size: 14px; line-height: 1.45; color: rgba(255, 211, 138, .92); }
+.console-status { display: block; min-height: 18px; font-size: 12px; line-height: 18px; letter-spacing: .04em; color: rgba(255, 179, 71, .72); }
+.console-quality { display: inline-block; margin: 0 4px; padding: 0 6px; border-radius: var(--ui-radius-sm); background: rgba(255, 179, 71, .2); color: #ffd38a; font-weight: 700; }
+.console-display-foot { position: absolute; right: 12px; bottom: 10px; z-index: 1; }
+.console-counter { width: 70px; height: auto; }
+
+.console-knob-area { display: grid; justify-items: center; gap: 4px; padding-bottom: 4px; }
+.console-knob-area .c-knob { margin-bottom: 26px; }
+.console-note { max-width: 32em; min-height: 18px; margin: 0; font-size: 12px; line-height: 1.5; text-align: center; color: rgba(236, 214, 170, .72); }
+
+.console-deck { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(0, 250px); align-items: center; gap: 22px; padding-top: 16px; border-top: 1px solid rgba(255, 239, 204, .1); }
+.console-keys { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.console-keys .c-key { width: 54px; height: 54px; }
+.console-keys .c-key.is-black { width: 64px; }
+.console-keys .c-key svg { width: 20px; height: 20px; }
+.console-spin { animation: c-spin 1s linear infinite; }
+@keyframes c-spin { to { transform: rotate(360deg); } }
+.console-progress { min-width: 0; }
+.console-progress .c-rail-row { height: 30px; }
+.console-progress .c-rail { height: 24px; }
+.console-progress .c-rail-groove { inset: 6px 6px; }
+.console-progress .c-ledtime { height: 22px; }
+.console-progress input[type=range]::-webkit-slider-thumb { height: 30px; margin-top: -3px; }
+.console-progress input[type=range]::-moz-range-thumb { height: 30px; }
+.console-tracks { position: relative; min-width: 0; }
+
+.console .pocket-track { display: flex; align-items: center; gap: 10px; position: relative; min-width: 0; font-size: 12px; color: rgba(236, 222, 190, .86); }
+.console .pocket-track > span { flex: none; font: 600 12px/1 var(--ui-font); letter-spacing: .2em; text-shadow: 0 1px 0 rgba(0, 0, 0, .8); }
+.console .pocket-track-button { display: flex; flex: 1; align-items: center; gap: 8px; min-width: 0; min-height: 44px; padding: 0 12px; border: 0; border-radius: var(--ui-radius-sm); color: var(--c-amber); text-align: left; font: 600 13px/1 var(--ui-font); cursor: pointer;
+  background: radial-gradient(120% 140% at 30% 0%, #1b1208, var(--c-glass) 70%); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .9), inset 0 2px 5px rgba(0, 0, 0, .8), 0 0 0 1px rgba(255, 233, 200, .12); text-shadow: 0 0 6px var(--c-amber-glow); }
+.console .pocket-track-button b { flex: none; font-weight: 700; color: #ffd38a; }
+.console .pocket-track-button em { flex: 1; min-width: 0; overflow: hidden; font-style: normal; white-space: nowrap; text-overflow: ellipsis; }
+.console .pocket-track-button svg { flex: none; }
+.console .pocket-track-button:hover, .console .pocket-track.is-open .pocket-track-button { filter: brightness(1.14); }
+.console .pocket-track-button:focus-visible { outline: 2px solid var(--c-amber); outline-offset: 2px; }
+.console .pocket-tracklist { position: absolute; z-index: 6; right: 0; bottom: calc(100% + 8px); left: 0; display: grid; max-height: min(320px, 46vh); overflow: auto; padding: 4px; border-radius: var(--ui-radius-sm); background: #15100c; box-shadow: 0 0 0 1px rgba(0, 0, 0, .9), 0 0 0 3px #8f743f, var(--c-drop-lg); }
+.console .pocket-tracklist [role=option] { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 4px 10px; border: 0; border-radius: var(--ui-radius-sm); background: none; color: #ecdfc2; text-align: left; font: 400 13px/1.3 var(--ui-font); cursor: pointer; }
+.console .pocket-tracklist [role=option] b { flex: none; width: 22px; font-weight: 700; color: rgba(236, 214, 170, .7); }
+.console .pocket-tracklist [role=option] span { display: grid; flex: 1; min-width: 0; }
+.console .pocket-tracklist [role=option] strong, .console .pocket-tracklist [role=option] small { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.console .pocket-tracklist [role=option] strong { font-weight: 400; }
+.console .pocket-tracklist [role=option] small { font-size: 12px; color: rgba(236, 214, 170, .7); }
+.console .pocket-tracklist [role=option]:hover, .console .pocket-tracklist [role=option]:focus-visible { background: rgba(255, 239, 204, .08); outline: 0; box-shadow: inset 3px 0 0 var(--c-amber); }
+.console .pocket-tracklist [aria-selected=true] { color: var(--c-amber); }
+.console .pocket-tracklist .is-unplayable strong { color: rgba(236, 214, 170, .5); text-decoration: line-through; }
+.console .pocket-tracklist .is-unplayable small { color: #ff8a78; }
+
+.console-notes { display: grid; gap: 8px; }
+.console-alert, .console-notice, .console-local-app { margin: 0; padding: 10px 14px; border-radius: var(--ui-radius-sm); background: linear-gradient(172deg, #f8f1e1, #e9dcc0); color: #2e2318; font-size: 13px; line-height: 1.5; box-shadow: inset 4px 0 0 #a3301d, 0 2px 4px rgba(0, 0, 0, .4); }
+.console-notice, .console-local-app { box-shadow: inset 4px 0 0 #7d5019, 0 2px 4px rgba(0, 0, 0, .4); }
+.console-alert { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.console-alert-actions { display: inline-flex; gap: 10px; }
+.console-local-app { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.console-matches { display: grid; gap: 6px; }
+.console-matches button { display: grid; justify-items: start; gap: 2px; min-height: 44px; padding: 6px 14px; border: 0; border-radius: var(--ui-radius-sm); background: linear-gradient(172deg, #f8f1e1, #e9dcc0); color: #2e2318; text-align: left; cursor: pointer; box-shadow: 0 2px 4px rgba(0, 0, 0, .4); }
+.console-matches button span { font-size: 12px; color: #54452f; }
+.console-matches button:hover { filter: brightness(1.05); }
+.console-matches button:focus-visible { outline: 2px solid var(--c-amber); outline-offset: 2px; }
+.console-alert .c-plate, .console-local-app .c-plate { min-height: 36px; padding: 0 14px; }
+.console-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; padding-top: 4px; }
+.console-links .c-plate { min-height: 40px; padding: 0 18px; letter-spacing: .14em; }
+.console-collect { min-height: 40px; }
+
+/* 待播: a roll of paper strips coming out of a slot in the console's side */
+.console-roll { position: relative; align-self: start; margin-top: 56px; margin-left: -4px; z-index: 0; min-width: 0; }
+.console-roll-slot { position: relative; z-index: 2; display: grid; place-items: center; height: 30px; margin: 0 6px 0 0; border-radius: var(--ui-radius-sm); background: var(--c-brass); color: var(--c-brass-ink); font: 600 12px/1 var(--ui-font); letter-spacing: .3em; text-shadow: 0 1px 0 rgba(255, 239, 199, .34); box-shadow: inset 0 0 0 1px rgba(255, 239, 204, .42), 0 0 0 1px rgba(36, 23, 8, .7), var(--c-drop); }
+.console-roll-slot::after { content: ''; position: absolute; left: 10px; right: 10px; bottom: -3px; height: 4px; border-radius: 0; background: #060403; box-shadow: 0 1px 0 rgba(255, 239, 204, .22); }
+.console-roll-paper { position: relative; z-index: 1; margin: 0 6px 0 14px; padding: 16px 12px 22px; max-height: min(620px, calc(100vh - 160px)); overflow: auto; }
+
+/* ── a narrower window: the roll goes below, then everything stacks ────── */
+@media (max-width: 1180px) {
+  .console-wrap { grid-template-columns: minmax(0, 1fr); width: min(900px, 100%); }
+  .console-roll { margin: -2px 0 0; }
+  .console-roll-slot { margin: 0 24px; }
+  .console-roll-paper { margin: 0 34px; max-height: 360px; }
+}
+@media (max-width: 899px) {
+  .console-body { grid-template-columns: 200px minmax(0, 1fr); }
+  .console-meters { grid-column: 1; grid-row: 1; }
+  .console-centre { grid-column: 2; grid-row: 1; }
+  .console-switches { grid-column: 1 / -1; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); align-items: start; }
+  .console-deck { grid-template-columns: auto minmax(0, 1fr); }
+  .console-tracks { grid-column: 1 / -1; }
+}
+@media (max-width: 699px) {
+  .console-stage { padding: 0; place-items: start center; }
+  .console-wrap { width: 100%; margin: 0; }
+  .console { grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 12px 12px 18px; border-width: 3px; border-radius: 0; }
+  .console-meters, .console-centre, .console-switches, .console-tracks { grid-column: auto; grid-row: auto; }
+  .console-cheek { display: none; }
+  .console-body { display: contents; }
+  .console-top { order: 0; }
+  .console-centre { order: 1; }
+  .console-deck { order: 2; grid-template-columns: minmax(0, 1fr); gap: 12px; padding-top: 12px; }
+  .console-meters { order: 3; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .console-switches { order: 4; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .console-notes { order: 5; }
+  .console-links { order: 6; }
+  .console-display.c-screen { min-height: 0; padding: 10px 12px 12px; }
+  .console-display-main { grid-template-columns: 76px minmax(0, 1fr); gap: 12px; }
+  .console .console-cover { width: 76px; height: 76px; }
+  .console-title { font-size: 20px; }
+  .console-display-foot { display: none; }
+  .console-knob-area { grid-template-columns: auto minmax(0, 1fr); justify-items: start; align-items: center; gap: 14px; }
+  .console-knob-area .c-knob.is-lg { width: 132px; height: 132px; margin-bottom: 22px; }
+  .console-note { text-align: left; }
+  .console-keys { justify-content: space-between; flex-wrap: nowrap; gap: 8px; }
+  .console-keys .c-key { width: 56px; height: 56px; }
+  .console-keys .c-key.is-black { width: 72px; }
+  .console-levers { grid-template-columns: repeat(4, 1fr); gap: 4px; }
+  .c-lever { min-width: 0; }
+  .c-lever-plate { width: 54px; height: 54px; }
+  .c-dial { grid-template-columns: 96px minmax(0, 1fr); }
+  .c-dial-knob { width: 96px; height: 96px; }
+  .c-dial-legend button { min-height: 40px; }
+  .c-dial-settings { min-height: 44px; }
+  .console .c-plate, .console-links .c-plate { min-height: 44px; }
+  .console .console-close.cabin-dialog-close { min-height: 44px; }
+  .console-roll-paper { margin: 0 12px; max-height: 420px; }
+  .console-roll-slot { margin: 0 4px; }
+  .console-roll .player-queue li button { min-width: 44px; min-height: 44px; }
+  .console-roll .player-queue li button.player-queue-grip { min-width: 32px; }
+  .console-roll .player-queue-tabs button, .console-roll .player-queue-clear { min-height: 44px; }
+}
+html[data-perf='low'] .c-knob-cast, html[data-perf='low'] .c-dial-dot.is-on { filter: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .console-spin, .console-display[data-state='busy'] .console-state i { animation: none; }
+  .c-lever-stick, .c-dial-turn { transition: none; }
+}
+}
