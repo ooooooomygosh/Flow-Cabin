@@ -2,6 +2,7 @@ import React, { useId, useLayoutEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from './icons';
 import { FOCUSABLE, focusables } from './ui/focusables.mjs';
+import { playSfx } from './props/sfx.mjs';
 
 const SIZES = new Set(['sm', 'md', 'lg', 'xl']);
 export { FOCUSABLE, focusables };
@@ -27,6 +28,7 @@ export default function Dialog({ title, icon, close, className = '', children, s
     // showModal() throws when the element is already open (a remount in dev
     // StrictMode) or when the browser has no dialog support at all.
     if (!node.open) { if (node.showModal) node.showModal(); else node.setAttribute('open', ''); }
+    if (!full) playSfx('sheet-down');
     const target = typeof initialFocus === 'string' ? node.querySelector(initialFocus) : initialFocus?.current;
     (target || node.querySelector('[data-autofocus]') || node.querySelector('[role=tab][aria-selected=true]') || node.querySelector('.cabin-dialog-title') || node).focus({ preventScroll: true });
     // Layout cleanup runs while the node is still modal: close it first, or the opener is still inert.
@@ -35,6 +37,7 @@ export default function Dialog({ title, icon, close, className = '', children, s
     // restart from the top of the page. Fall back to a stable anchor.
     return () => {
       if (node.open) node.close();
+      if (!full) playSfx('paper-settle');
       if (previous && previous !== document.body && previous !== document.documentElement && previous.isConnected && !previous.closest('[inert]') && previous.getClientRects().length) { previous.focus?.({ preventScroll: true }); if (document.activeElement === previous) return; }
       const anchor = typeof returnRef.current === 'string' ? document.querySelector(returnRef.current) : returnRef.current?.current;
       (anchor || document.querySelector('.focus-badge'))?.focus?.({ preventScroll: true });
@@ -65,7 +68,7 @@ export default function Dialog({ title, icon, close, className = '', children, s
     onPointerDown={(event) => { pressedOutside.current = outside(event); }}
     onClick={(event) => { if (pressedOutside.current && outside(event)) closeRef.current(); pressedOutside.current = false; }}>
     {full ? children : <>
-      <header className="cabin-dialog-header"><h2 id={heading} className="cabin-dialog-title" tabIndex={-1}>{icon}{title}</h2><button type="button" className="cabin-dialog-close" aria-label={closeLabel || `关闭${title}`} onClick={close}><X/><span className="paper-flap" aria-hidden="true"><b>放回</b></span></button></header>
+      <header className="cabin-dialog-header"><h2 id={heading} className="cabin-dialog-title" tabIndex={-1}>{icon}{title}</h2><button type="button" className="cabin-dialog-close" aria-label={closeLabel || `关闭${title}`} onPointerEnter={() => playSfx('corner-lift')} onClick={() => { playSfx('corner-tap'); close(); }}><X/><span className="paper-flap" aria-hidden="true"><b>放回</b></span></button></header>
       <div className="cabin-dialog-body">{children}</div>
       {footer && <footer className="cabin-dialog-footer">{footer}</footer>}
     </>}

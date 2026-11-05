@@ -4,6 +4,8 @@ import React, { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'rea
 import { PERFORMANCE_MODES, performanceMode, performanceLevel, setPerformanceMode, onPerformanceChange } from '../perf-profile.mjs';
 import Dialog from '../Dialog';
 import { Tabs, Segmented, tabPanelProps } from '../ui/Roving';
+import { playSfx, sfxEnabled, sfxVolume, setSfxEnabled, setSfxVolume } from '../props/sfx.mjs';
+import { readPace, savePace } from '../props/motion.mjs';
 import RoomPickers from '../RoomPickers';
 import SkySettings from '../SkySettings';
 import MusicAccounts from '../MusicSettings';
@@ -261,11 +263,25 @@ function AutostartRow() {
   </Row>;
 }
 
+// 桌面质感: the desk's sounds (made from nothing, see src/props/sfx.mjs) and how briskly things move.
+const PACE_ITEMS = [{ id: 'brisk', label: '利落' }, { id: 'normal', label: '正常' }, { id: 'gentle', label: '从容' }];
+function DeskFeelRows() {
+  const [sound, setSound] = useState(sfxEnabled), [volume, setVolume] = useState(sfxVolume), [pace, setPace] = useState(readPace);
+  return <>
+    <Row title="桌面音效" hint="纸、抽屉、旋钮和铜牌的声音，都是合成出来的，不是录音。">
+      <label className="hub-toggle"><input type="checkbox" aria-label="桌面音效" checked={sound} onChange={(event) => { setSfxEnabled(event.target.checked); setSound(event.target.checked); if (event.target.checked) playSfx('key-press'); }}/><span>{sound ? '开' : '关'}</span></label>
+      <input type="range" aria-label="音效音量" min="0" max="1" step="0.05" value={volume} disabled={!sound} onChange={(event) => { const value = Number(event.target.value); setSfxVolume(value); setVolume(value); }} onPointerUp={() => playSfx('knob-tick')}/>
+    </Row>
+    <Row title="动作快慢" hint="抽屉、纸张和镜头移动的节奏。"><Segmented label="动作快慢" items={PACE_ITEMS} value={pace} onChange={(id) => { savePace(id); setPace(id); }}/></Row>
+  </>;
+}
+
 // `desktop` is the room's own 沉入桌面 state and toggle (the toolbar uses the same pair).
 function DisplaySection({ env, desktop }) {
   const { active, busy, supported, reason } = desktop.state;
   return <div className="hub-rows">
     <PerformanceRow/>
+    <DeskFeelRows/>
     <Row title="沉入桌面" hint={reason || '小屋沉到所有窗口下面变成动态桌面，唱机、时钟和专注成为桌面小组件。随时按 Ctrl/⌘+Alt+D 退出。'}>
       <label className="hub-toggle"><input type="checkbox" aria-label="沉入桌面" checked={Boolean(active)} disabled={!supported || busy} onChange={desktop.toggle}/><span>{active ? '开' : '关'}</span></label>
     </Row>
