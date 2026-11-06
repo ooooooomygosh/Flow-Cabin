@@ -27,7 +27,7 @@ import { coverThumb } from './focus/session-log.mjs';
 import './companion-room.css';
 import Dialog from './Dialog';
 import { CabinRuntimeProvider } from './runtime/CabinRuntime';
-import CabinHome from './home/CabinHome';
+import DeskHome from './desk/DeskHome';
 import HomePanels, { HomeLyrics, LifeReminder } from './home/HomePanels';
 import useLabs from './product/useLabs';
 import { openJournal } from './focus/stats/journal-events.mjs';
@@ -202,7 +202,7 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
     if (action === 'journal' || action === 'mail') { window.dispatchEvent(new CustomEvent('cabin:open-journal', { detail: { tab: action === 'mail' && labs.letters ? 'letters' : 'entries' } })); return; }    setTool(action);
   };
   return <CabinRuntimeProvider deck={deck} items={items} look={look} onNavigate={openTool} onRoomChange={personalizeRoom} notify={notify}>
-    <CabinHome reduced={appearance.reduceMotion || reduced} editRequest={editRequest} focusOpen={dock.open} petOpen={catPanelOpen} guiding={flow.wizard || !guideDone}/>
+    <DeskHome reduced={appearance.reduceMotion || reduced} focusOpen={dock.open} guiding={flow.wizard || !guideDone}/>
     <LifeReminder/>
     {library?.error && <p className="home-layout-error" role="alert">设置未保存：{library.error}</p>}
     <HomePanels tool={tool} close={() => setTool('')} filters={filters} setFilters={setFilters} visible={visible} recordStyle={recordStyle} openAdd={openAdd} openRecord={openRecord} openWall={openWall} openSmart={smartEntry && (() => { setTool(''); openSmart(); })} onRoomChange={personalizeRoom}/>{/* the panel is modal: close it, or the smart turntable opens inert behind it */}

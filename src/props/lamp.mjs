@@ -4,16 +4,11 @@
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
-// Lamp position as a fraction of the window (y < 0 is above the top edge), its height as a
-// fraction of the window width, and the shadow-length clamps. Light comes from the window
-// side of the room, high and to the left, so shadows fall down and to the right.
-export const LAMP = Object.freeze({ x: 0.22, y: -0.32, h: 0.78, kmin: 0.10, kmax: 1.40 });
-const BY_THEME = Object.freeze({
-  seaside: { x: 0.30, y: -0.40 },
-  'rain-train': { x: 0.12, y: -0.20 },
-  starlight: { x: 0.50, y: -0.45 },
-  greenhouse: { x: 0.55, y: -0.50 }
-});
+// Lamp position as a fraction of the window, its height as a fraction of the window width, and
+// the shadow-length clamps: DEsk's desk lamp (tryit desk.json lamp {x 1080.5, y 737.5, h 661.8}
+// on the 1440x900 desk), low on the right, so things throw their shadows up and to the left.
+export const LAMP = Object.freeze({ x: 0.7504, y: 0.8194, h: 0.4596, kmin: 0.10, kmax: 1.40 });
+const BY_THEME = Object.freeze({});
 export const lampFor = (theme) => ({ ...LAMP, ...(BY_THEME[theme] || {}) });
 
 // The shadow of something `lift` px above the desk whose centre is at (px, py), for a window

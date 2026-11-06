@@ -35,14 +35,14 @@ test('pace: brisk < normal < gentle, stored per desk, reduced motion is a cut', 
 test('the lamp throws shadows away from itself, longer when the thing is higher', () => {
   const w = 1440, h = 900, lamp = lampFor('pixel');
   const low = shadowOffset(w / 2, h / 2, w, h, 10, lamp), high = shadowOffset(w / 2, h / 2, w, h, 40, lamp);
-  assert(low.x > 0 && low.y > 0, 'a lamp above and left casts down and right');
+  assert(low.x < 0 && low.y < 0, 'a lamp low on the right casts up and to the left');
   assert(Math.hypot(high.x, high.y) > Math.hypot(low.x, low.y) * 3.9);
   const right = shadowOffset(w * 0.9, h / 2, w, h, 20, lamp), left = shadowOffset(w * 0.1, h / 2, w, h, 20, lamp);
-  assert(right.x > left.x, 'the further from the lamp, the more it leans away');
+  assert(left.x < right.x, 'the further left of the lamp, the further left it leans');
   // right under the lamp: no NaN
   const under = shadowOffset(LAMP.x * w, LAMP.y * h, w, h, 20, lamp);
   assert(Number.isFinite(under.x) && Number.isFinite(under.y));
-  assert.notDeepEqual(lampFor('seaside'), lampFor('pixel'));
+  assert.deepEqual(lampFor('seaside'), lampFor('pixel'), 'one desk, one lamp');
 });
 
 test('night is the lamp\'s time and a dimmed room turns it down', () => {
