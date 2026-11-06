@@ -29,8 +29,8 @@ test('every exclusion still matches files that exist, so the list cannot rot', (
 
 test('nothing Android loads is left out', () => {
   // The album-wall poster draws the bundled face at 400 and 700; widgets read avatar-256.png
-  // (CabinWidgets.java); the cabin home draws the v21 rooms, furniture, corners and pet atlases.
-  const kept = ['fonts/HarmonyOS_Sans_SC_Regular.ttf', 'fonts/HarmonyOS_Sans_SC_Bold.ttf', 'fonts/LICENSE.txt', 'pet-art/v21/cat/avatar-256.png', 'pet-art/v21/cat/equipped/bow/avatar-256.png', 'pet-art/v21/cat/atlas.png', 'pet-art/v21/cat/manifest.json', 'pet-art/v2/cat/atlas.png', 'room-scenes/v21/pixel/corners/music.webp', 'room-scenes/v21/furniture/pixel/atlas.webp', 'icons/icon-192.png'];
+  // (CabinWidgets.java); the desk home draws public/desk/; the lyric stage reads the v21 music corners; the pet draws its atlases.
+  const kept = ['fonts/HarmonyOS_Sans_SC_Regular.ttf', 'fonts/HarmonyOS_Sans_SC_Bold.ttf', 'fonts/LICENSE.txt', 'pet-art/v21/cat/avatar-256.png', 'pet-art/v21/cat/equipped/bow/avatar-256.png', 'pet-art/v21/cat/atlas.png', 'pet-art/v21/cat/manifest.json', 'pet-art/v2/cat/atlas.png', 'room-scenes/v21/pixel/corners/music.webp', 'room-scenes/v21/pixel/shell.webp', 'desk/desk-wood.webp', 'desk/drawer-band.webp', 'icons/icon-192.png'];
   for (const file of kept) {
     if (!files.includes(file)) continue;
     assert.equal(isAndroidExcluded(file), false, file);
