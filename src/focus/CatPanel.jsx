@@ -86,8 +86,10 @@ function CatPanelBody({ close, souvenirs, onChoosePet }) {
   const full = mood.feedsToday >= mood.dailyFeeds;
   return <Dialog size="sm" title={cat ? '小猫' : pet.name} close={close} className="cat-panel">
     <div className="cat-portrait">
-      <span className="cat-photo"><i className="cat-mount is-nw" aria-hidden="true"/><i className="cat-mount is-ne" aria-hidden="true"/><i className="cat-mount is-sw" aria-hidden="true"/><i className="cat-mount is-se" aria-hidden="true"/>
+      {/* an instant photograph, as in the stack in the drawer: the pet sits for it, its name pencilled under */}
+      <span className="cat-photo"><span className="cat-photo-print">
         <PixelCat petId={petId} skin={focus.state.settings.catSkin} accessory={rewards.equipped.accessory || ''} pose="idle" label={`${pet.name}的当前装扮`}/></span>
+        <small className="cat-photo-caption" aria-hidden="true">{pet.name}</small></span>
       <div><strong className="cat-collar">{pet.name}</strong><p>你做你的事，我在这里陪你。<br/>偶尔摸摸头，就很好。</p><small>打字或点鼠标，我会跟着敲敲。</small></div>
     </div>
     {onChoosePet && <button type="button" className="pixel-button" onClick={onChoosePet}>选择伙伴</button>}

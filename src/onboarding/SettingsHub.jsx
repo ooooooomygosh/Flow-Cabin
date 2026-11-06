@@ -48,11 +48,12 @@ export { HUB_SECTIONS, hubTab };
 // out, fullscreen) stay in the room. Tray / menu / deck shortcuts open this
 // dialog on their section.
 //
-// It is drawn as a manila folder (docs/v3-desk-design.md, after DEsk's Shell Settings,
-// https://github.com/fyzugx/DEsk, MIT, (c) 2026 The DEsk authors): the six sections are index tabs,
-// the open one holds a wire-bound pad, and every part of the page has a sticky note on the pad's
-// edge that turns the page to it. The tablist, the search box and every setting keep their roles and names.
-export default function SettingsHub({ section = 'music', setSection, close, env, player, provider, useSource, look, petId, onRoomChange, reduceMotion, error, desktop, openBackup, restartOnboarding, openStudio }) {
+// It is DEsk's Shell Settings (https://github.com/fyzugx/DEsk, MIT, (c) 2026 The DEsk authors,
+// docs/screenshots/shell-settings.jpg): one sheet of paper on the desk, its sections as index tabs
+// along the top, the open one a wire-bound pad, and every part of the page a sticky note standing out
+// of the pad's right edge that turns the page to it. The tablist, the search box and every setting
+// keep their roles and names.
+export default function SettingsHub({ section = 'music', setSection, close, env, player, provider, useSource, look, petId, onRoomChange, reduceMotion, error, desktop, openBackup, restartOnboarding }) {
   const tab = hubTab(section);
   const [query, setQuery] = useState(''), [found, setFound] = useState(null), [news, setNews] = useState(false);
   const [scanned, setScanned] = useState({ key: '', list: [] }), [here, setHere] = useState('');
@@ -127,12 +128,11 @@ export default function SettingsHub({ section = 'music', setSection, close, env,
         </div>}
         {tab === 'focus' && <><Part id="hub-timer" note="计时"><p className="personalization-intro">番茄钟的时长和提醒。计时本身在顶栏的「专注」里。</p><FocusSettingsForm className="hub-focus-settings"/></Part><Part id="hub-goal" note="目标"><DailyGoalField/></Part></>}
         {tab === 'room' && <>
-          <Part id="hub-room" note="房间">
-            <p className="personalization-intro">选一个今天想待着的地方，再找一位安静的伙伴。换装不会打断音乐和专注。</p>
-            <Row title="布置小屋" hint="调整家具位置，或套用听歌、工作、休息预设。也可以从首页的房间名打开。"><button type="button" className="pixel-button" onClick={openStudio}>布置小屋</button></Row>
-            <RoomPickers look={look} petId={petId} onChange={onRoomChange} reduceMotion={reduceMotion}/>
+          <Part id="hub-room" note="伙伴">
+            <p className="personalization-intro">选一位安静的伙伴，它住在抽屉里的照片上，也会出门到桌面上散步。换伙伴不会打断音乐和专注。</p>
+            <RoomPickers petsOnly look={look} petId={petId} onChange={onRoomChange} reduceMotion={reduceMotion}/>
           </Part>
-          <Part id="hub-pet" note="伙伴"><PetBehaviourSettings desktop={Boolean(env.desktop)}/></Part>
+          <Part id="hub-pet" note="习性"><PetBehaviourSettings desktop={Boolean(env.desktop)}/></Part>
           <div id="hub-sky" className="hub-block" data-note="天空"><SkySettings/></div>
           <Suspense fallback={<p role="status">正在整理桌宠衣柜…</p>}>{(window.albumDesktopCapabilities?.petPacks || window.albumMobile?.petRequest) && <PetPackSettings/>}</Suspense>
           {window.albumMobile?.setLauncherIcon && <Row title="桌宠启动图标" hint="使用当前伙伴作为启动器图标；系统图标缓存可能稍后更新。"><button type="button" className="pixel-button" onClick={() => window.albumMobile.setLauncherIcon(petId)}>使用当前桌宠图标</button></Row>}
@@ -150,8 +150,8 @@ export default function SettingsHub({ section = 'music', setSection, close, env,
             {noteLines(note.label).map((line, i) => <span key={i}>{line}</span>)}
           </button>)}</nav>}
         </div>
-        <div className="hub-lip"><button type="button" className="settings-hub-about" onClick={() => go('about')}>关于 · v{version}</button></div>
       </div>
+      <button type="button" className="settings-hub-about" onClick={() => go('about')}>关于 · v{version}</button>
     </div>
     {news && <WhatsNew history copy={{ fromVersion: '', toVersion: version, releases: RELEASES.slice(0, 8) }} close={() => setNews(false)}/>}
   </Dialog>;
@@ -351,7 +351,7 @@ const PERFORMANCE_ITEMS = PERFORMANCE_MODES.map(([id, label]) => ({ id, label })
 function PerformanceRow() {
   const [mode, setMode] = useState(performanceMode), [level, setLevel] = useState(performanceLevel);
   useEffect(() => onPerformanceChange((detail) => { setLevel(detail.level); setMode(detail.mode); }), []);
-  return <Row title="流畅模式" hint={`电脑带不动时少画一些：减少飘尘、降低雪与炉火的刷新率、关掉模糊阴影。现在：${level === 'low' ? '流畅优先' : '完整画质'}${mode === 'auto' ? '（自动判断）' : ''}。`}>
+  return <Row title="流畅模式" hint={`电脑带不动时少画一些：纸张不投柔和的阴影、台钟少亮几次。现在：${level === 'low' ? '流畅优先' : '完整画质'}${mode === 'auto' ? '（自动判断）' : ''}。`}>
     <Segmented label="流畅模式" items={PERFORMANCE_ITEMS} value={mode} onChange={(id) => { setLevel(setPerformanceMode(id)); setMode(id); }}/>
   </Row>;
 }

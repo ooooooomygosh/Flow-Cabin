@@ -29,13 +29,24 @@
 .desk-clock-key.is-on::after { background: #ff5a3a; box-shadow: 0 0 5px 1px rgba(255, 70, 40, .8); }
 .desk-key-print { position: absolute; inset: 0 0 0 18%; display: flex; align-items: center; justify-content: center; font: 600 12px/1 var(--ui-font, system-ui), sans-serif; color: rgba(222, 182, 132, .82); text-shadow: 0 0 2px rgba(255, 150, 90, .35); transform: scale(calc(var(--desk-s, 1) * .62)); }
 
+/* A sheet folded away (折起): DEsk's packet, the sheet's thing and title printed on it; click opens it again. */
+.desk-packet { position: absolute; z-index: 2; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 6px 12px 16px; border: 0; border-radius: 0; background: center / 100% 100% no-repeat; cursor: pointer; filter: drop-shadow(calc(var(--sx, -.54) * 10px) calc(var(--sy, -.43) * 10px) 5px rgba(8, 5, 2, .5)); animation: desk-packet-down .28s ease-out both; }
+.desk-packet img { display: block; max-width: 42%; max-height: 52%; object-fit: contain; filter: saturate(.9) contrast(.96); mix-blend-mode: multiply; }
+.desk-packet-name { max-width: 100%; overflow: hidden; font: 600 15px/1.2 var(--ui-font-display, Georgia), serif; color: #3b2f22; text-overflow: ellipsis; white-space: nowrap; }
+.desk-packet:hover { filter: drop-shadow(calc(var(--sx, -.54) * 14px) calc(var(--sy, -.43) * 14px) 7px rgba(8, 5, 2, .55)) brightness(1.04); }
+.desk-packet:focus-visible { outline: 2px solid rgba(255, 214, 140, .95); outline-offset: 2px; }
+@keyframes desk-packet-down { from { opacity: 0; } to { opacity: 1; } }
 .desk-post { position: absolute; padding: 0; border: 0; border-radius: 0; background: center / 100% 100% no-repeat; cursor: pointer; }
 
 /* The drawer: DEsk's band, rising from below as the desk slides up by the same distance. */
 .desk-drawer { position: absolute; bottom: 0; background: center / 100% 100% no-repeat; will-change: transform; }
 .desk-drawer-thing { position: absolute; transform: translate(-50%, -50%); padding: 0; border: 0; border-radius: 0; background: none; cursor: pointer; }
-.desk-drawer-thing img { display: block; filter: drop-shadow(-3px -2px 3px rgba(8, 5, 2, .45)); transition: filter .18s, transform .18s; }
-.desk-drawer-thing.is-hot img { filter: drop-shadow(-5px -4px 6px rgba(8, 5, 2, .5)) brightness(1.12); }
+.desk-drawer-thing > img { display: block; filter: drop-shadow(-3px -2px 3px rgba(8, 5, 2, .45)); transition: filter .18s, transform .18s; }
+.desk-drawer-thing.is-hot > img { filter: drop-shadow(-5px -4px 6px rgba(8, 5, 2, .5)) brightness(1.12); }
+/* The companion's photograph: the pet's own picture printed in the top photo of the stack (PET_WINDOW). */
+.desk-pet-photo { position: absolute; overflow: hidden; pointer-events: none; }
+.desk-pet-photo img { display: block; width: 92%; height: 92%; margin: 8% auto 0; object-fit: contain; object-position: 50% 100%; image-rendering: pixelated; filter: sepia(.18) saturate(.92) contrast(.96) drop-shadow(-2px -1px 2px rgba(60, 30, 10, .35)); }
+.desk-pet-photo::after { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(255, 255, 255, .26), rgba(255, 255, 255, .04) 45%, rgba(255, 255, 255, 0) 50%); box-shadow: inset 0 0 6px rgba(70, 40, 15, .35); }
 .desk-drawer-name { position: absolute; left: 50%; top: 100%; transform: translate(-50%, 2px); font: 500 13px/1.2 var(--ui-font-display, Georgia), serif; color: rgba(246, 236, 210, .92); text-shadow: 0 1px 2px rgba(0, 0, 0, .7); white-space: nowrap; opacity: 0; transition: opacity .15s; pointer-events: none; }
 .desk-drawer-thing.is-hot .desk-drawer-name { opacity: 1; }
 .desk-shade { position: absolute; left: 0; right: 0; top: 0; background: rgb(5, 4, 2); cursor: pointer; }
@@ -62,5 +73,5 @@
 
 /* A phone: the drawer is narrower than the window's width allows a whole band, so its felt is centred. */
 .desk-home.is-phone .desk-drawer-name { font-size: 12px; }
-.desk-home.is-reduced .desk-clock-keys, .desk-home.is-reduced .desk-drawer-thing img { transition: none; }
+.desk-home.is-reduced .desk-clock-keys, .desk-home.is-reduced .desk-drawer-thing > img { transition: none; }
 }

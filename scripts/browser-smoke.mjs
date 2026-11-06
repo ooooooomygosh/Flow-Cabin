@@ -1,4 +1,4 @@
-import { verifyWeatherMotion } from './weather-motion-checks.mjs';
+// (weather-motion-checks.mjs checked the retired wallpaper room's window; 沉入桌面 is the desk since R5.)
 import { launchChromium } from './launch-browser.mjs';
 import { verifyFullscreenStudy } from './fullscreen-study-checks.mjs';
 import { verifyBenchmarkCabin } from './benchmark-cabin-checks.mjs';
@@ -93,7 +93,7 @@ try {
   await context.route('**/*', routeHandler);
   const welcomeRoute = route => new URL(route.request().url()).pathname === '/api/items' ? route.fulfill({ json: { items: [] } }) : routeHandler(route);
   if (process.env.FLOW_CABIN_BROWSER_PHASE !== 'main') {
-  await verifyWeatherMotion(browser, origin, check);
+  // 窗外天气 was drawn on the pixel room the wallpaper used to show; 沉入桌面 is the desk now (checked below).
   await verifyOnboarding({ browser, origin, routeHandler: welcomeRoute, evidence: output, output, check });
   await verifyQQRegression({ browser, origin, check });
   await verifyAppleHandoff({ browser, origin, output, check });
@@ -422,27 +422,18 @@ try {
     window.albumPet = { getSnapshot: async () => ({ companion, size: 192 }), onSnapshot: fn => { window.__pushPet = fn; return () => {}; }, setHit: v => window.__nativeFixtureCalls.push(['hit', v]), moveBy: (x, y) => window.__nativeFixtureCalls.push(['move', x, y]), dragEnd: () => {}, menu: () => window.__nativeFixtureCalls.push(['menu']), open: () => window.__nativeFixtureCalls.push(['open']), command: v => window.__nativeFixtureCalls.push(['command', v]) };
   }, { companion });
   const mainPage = page;
-  page = await context.newPage(); await page.goto(origin + '/wallpaper.html'); await page.locator('.wallpaper-room').waitFor();
-  // Wallpaper mounts RoomScene without the main .cabin-room wrapper. Dynamic
-  // viewport children must still schedule geometry without querying a null room.
+  page = await context.newPage(); await page.goto(origin + '/wallpaper.html'); await page.locator('.wallpaper-desk.is-lit').waitFor();
+  // 沉入桌面 is the desk itself (src/WallpaperRoom.jsx): the walnut, the pieces at its back edge, the LED clock, and a slip
+  // that says what is on the turntable. Nothing on it can be pressed.
   const wallpaperErrors = []; const wallpaperError = error => wallpaperErrors.push(error.stack || error.message);
   page.on('pageerror', wallpaperError);
-  await page.evaluate(() => {
-    const scene = document.querySelector('.wallpaper-room .cabin-scene'), probe = document.createElement('span');
-    scene.appendChild(probe); queueMicrotask(() => probe.remove());
-    return new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-  });
-  assert.deepEqual(wallpaperErrors, [], 'wallpaper viewport child mutations must not query a missing main room');
-  page.off('pageerror', wallpaperError); check('wallpaper-viewport-mutations-without-main-room-wrapper');
-  for (const scene of ROOM_SCENES) {
-    await page.evaluate(({ room, look }) => window.__pushWallpaper({ ...room, look }), { room: companion.room, look: scene.id });
-    await page.locator(`.cabin-scene[data-room-look="${scene.id}"]`).waitFor(); assert.equal(await page.locator('.room-record').count(), Math.min(companion.room.items.length, scene.geometry.columns.length * scene.geometry.rows.length)); await screenshot(`wallpaper-${scene.id}`);
-  }
-  check('wallpaper-renderer-all-scenes-mocked-snapshot');
-  // The room cat is hidden in the wallpaper while the interactive pet is out (沉入桌面 never shows two pets).
-  await page.evaluate(({ room }) => window.__pushWallpaper({ ...room, petOut: true }), { room: companion.room }); await page.waitForTimeout(100);
-  assert.equal(await page.locator('.wallpaper-room .room-cat:visible, .wallpaper-room .pixel-cat:visible').count(), 0, 'room cat hidden while the pet is out');
-  check('wallpaper-hides-room-cat-while-pet-is-out'); await page.close();
+  assert.equal(await page.locator('.wallpaper-desk .desk-piece').count(), 3, 'the Control Panel corner, the clock and the post box');
+  assert.equal(await page.locator('.wallpaper-desk .desk-clock-glass').count(), 1, 'the LED clock');
+  assert.equal(await page.locator('.wallpaper-desk button').count(), 0, 'nothing to press on the wallpaper');
+  await page.evaluate(({ room }) => window.__pushWallpaper({ ...room, record: { id: 'w', title: '雪夜', artist: '预览' }, spinning: true }), { room: companion.room });
+  await page.locator('.wallpaper-slip', { hasText: '雪夜' }).waitFor(); await screenshot('wallpaper-desk');
+  assert.deepEqual(wallpaperErrors, [], 'the wallpaper desk draws without errors');
+  page.off('pageerror', wallpaperError); check('wallpaper-is-the-desk'); await page.close();
   page = await context.newPage(); await page.setViewportSize({ width: 380, height: 92 }); await page.goto(origin + '/mini.html');
   await page.locator('.mini-bar').waitFor(); await page.getByText('雪夜 · 预览').waitFor();
   assert.equal(await page.locator('.mini-actions').evaluate(e => getComputedStyle(e).opacity), '0', 'controls hidden until hover');

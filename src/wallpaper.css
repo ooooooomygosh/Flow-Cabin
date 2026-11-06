@@ -1,10 +1,18 @@
 @layer guards, reset, features, skin, overrides;
 @layer features {
-html,body,#root{margin:0;width:100%;height:100%;overflow:hidden}body{font-family:var(--desktop-font,'HarmonyOS Sans SC Bundled',sans-serif);font-weight:var(--desktop-weight,400);background:#38200f}button,select{font:inherit}button{cursor:pointer}button:disabled{cursor:default}.wallpaper-room .room-record{cursor:default}.wallpaper-room .room-record.is-selected{outline:none}
-.wallpaper-focus{position:absolute;right:3%;bottom:5%;z-index:12;display:grid;gap:6px;justify-items:end;pointer-events:none}
-.wallpaper-focus .focus-face-fit{place-items:end}
-.wallpaper-focus small{padding:2px 8px;font-size:13px;color:var(--px-ink);background:var(--px-surface-hud);border:2px solid var(--px-border);box-shadow:var(--px-shadow-1)}
-/* The room caption sits top-left, clear of the cat on the floor and the clock. */
-.wallpaper-room .wallpaper-caption{top:20px;bottom:auto;left:24px;right:auto;max-width:44%}
-.wallpaper-room .room-cat{pointer-events:none}
+/* 沉入桌面 (src/WallpaperRoom.jsx): the desk under every window. The desk itself is src/desk/desk.css; here
+   only the page and the slip of paper at the front, cream fibre as the sheets are (props.css), lit by the
+   same lamp, low on the right (DEsk, https://github.com/fyzugx/DEsk, MIT, (c) 2026 The DEsk authors). */
+html, body, #root { margin: 0; width: 100%; height: 100%; overflow: hidden; }
+body { background: #120a05; font-family: var(--desktop-font, 'HarmonyOS Sans SC Bundled', sans-serif); font-weight: var(--desktop-weight, 400); }
+.wallpaper-desk { pointer-events: none; }
+.wallpaper-desk .desk-plate, .wallpaper-desk .desk-post, .wallpaper-desk .desk-clock-face { cursor: default; }
+.wallpaper-slip {
+  position: absolute; left: 4%; bottom: 7%; display: grid; gap: 4px; max-width: min(420px, 60%); margin: 0; padding: 12px 18px 14px;
+  color: #2e2318; font: 400 14px/1.45 var(--ui-font-display, Georgia), serif; transform: rotate(-1.6deg);
+  background: linear-gradient(rgba(243, 235, 218, .42), rgba(243, 235, 218, .42)), linear-gradient(172deg, #f8f1e1, #efe6d3 55%, #e6d8b9);
+  box-shadow: inset 0 0 0 1px rgba(95, 72, 40, .2), -9px -7px 14px rgba(10, 6, 3, .42), -2px -2px 3px rgba(10, 6, 3, .3);
+}
+.wallpaper-slip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wallpaper-slip b { margin-right: .6em; font: 600 12px/1 var(--ui-font, sans-serif); letter-spacing: .18em; color: #7d5019; }
 }

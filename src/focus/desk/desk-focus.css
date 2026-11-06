@@ -36,7 +36,7 @@
 .focus-dock:not(.is-embedded) .focus-dock-header { flex: none; }
 .focus-dock.focus-dock .focus-save-error { margin: 12px 0 0; padding: 10px 14px; color: #7a2112; background: #f6e3d8; border: 0; border-left: 4px solid var(--red); box-shadow: var(--drop-s); line-height: 1.5; }
 .focus-dock .focus-save-error .pixel-button { min-height: 32px; }
-.cabin-modal.home-tool.home-focus-dialog { transition: --curl calc(.34s * var(--pace, 1)) var(--ease-drawer, ease-out), width calc(.34s * var(--pace, 1)) var(--ease-drawer, ease-out); }
+.cabin-modal.home-tool.home-focus-dialog { transition: width calc(.34s * var(--pace, 1)) var(--ease-drawer, ease-out); }
 @media (min-width: 760px) {
   .cabin-modal.home-tool.home-focus-dialog:has(.focus-dock[data-tab=tasks]) { width: min(940px, calc(100vw - 32px)); }
 }

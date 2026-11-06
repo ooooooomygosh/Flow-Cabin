@@ -64,9 +64,7 @@
 @keyframes face-flash { 0% { opacity: 0; } 12%, 80% { opacity: 1; } 100% { opacity: 0; } }
 }
 @layer overrides {
-/* Under the whole-window display the dimmed room holds still: its canvas loops stop
-   (frame-clock occlusion) and its CSS sprites pause too. */
-:root.room-focus-display .cabin-stage-wrap, :root.room-focus-display .cabin-stage-wrap * { animation-play-state: paused; }
+
 }
 
 @layer features {

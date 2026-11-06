@@ -12,5 +12,5 @@
 /* The desk scene has no free surface outside the toolbar/console/footer safe areas
    (cabinet top sits under the toolbar), so the console alone is the turntable here. */
 .cabin-scene[data-room-look=night-study] .scene-deck{display:none}
-.cabin-night-study .room-turntable{left:2%;bottom:10%;width:clamp(180px,16vw,280px)}
+
 }

@@ -28,6 +28,7 @@ import './companion-room.css';
 import Dialog from './Dialog';
 import { CabinRuntimeProvider } from './runtime/CabinRuntime';
 import DeskHome from './desk/DeskHome';
+import { noteOpen } from './desk/packets.mjs';
 import HomePanels, { HomeLyrics, LifeReminder } from './home/HomePanels';
 import useLabs from './product/useLabs';
 import { openJournal } from './focus/stats/journal-events.mjs';
@@ -190,6 +191,8 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
   };
   const { zen, corner, dock, saveDock, fullscreen, desktopMode } = chrome;
   const openTool = action => {
+    // The sheet this opens can be folded into a packet on the desk and opened again by the same action.
+    noteOpen(action);
     if (['timer', 'tasks', 'study', 'notes', 'stats', 'sound'].includes(action)) { setTool(''); saveDock({ open: true, tab: action }); return; }
     saveDock({ open: false });
     if (action === 'wall') { setTool(''); openWall?.(); return; }
@@ -216,7 +219,7 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
       <CatPanel open={catPanelOpen} onClose={() => setCatPanelOpen(false)} onChoosePet={() => { setCatPanelOpen(false); setTool('companions'); }}/>
       <SmartTurntable open={smartOpen} close={closeSmart} items={items} onStart={startSmartSession} onSave={saveToShelf} onNeedAiSettings={() => { setSmartOpen(false); flow.setHub('ai'); }}/>
       {corner && <Suspense fallback={<Dialog title="唱机特写" close={() => chrome.setCorner(false)}><p role="status">正在点亮唱机旁的台灯…</p></Dialog>}><ListeningCorner item={deckItem} items={visible} vinyl={recordStyle} provider={provider} spinning={effectiveSpin} trackIndex={deck.shownTrackIndex} setTrackIndex={deck.setTrackIndex} playback={playback} player={player} toggleVisual={deck.toggleVisual} load={deck.load} close={() => chrome.setCorner(false)} reduceMotion={reduced}/></Suspense>}
-      {flow.hub && <SettingsHub openStudio={() => { flow.setHub(''); setEditRequest(value => value + 1); }} section={flow.hub} setSection={flow.setHub} close={() => flow.setHub('')} env={flow.env} player={flow.playerAdapter} provider={provider} useSource={deck.chooseProvider} look={look} petId={petId} onRoomChange={personalizeRoom} reduceMotion={appearance.reduceMotion} error={library?.error} desktop={chrome.desktop} openBackup={() => { flow.setHub(''); openBackup?.(); }} restartOnboarding={flow.restartOnboarding}/>}
+      {flow.hub && <SettingsHub section={flow.hub} setSection={flow.setHub} close={() => flow.setHub('')} env={flow.env} player={flow.playerAdapter} provider={provider} useSource={deck.chooseProvider} look={look} petId={petId} onRoomChange={personalizeRoom} reduceMotion={appearance.reduceMotion} error={library?.error} desktop={chrome.desktop} openBackup={() => { flow.setHub(''); openBackup?.(); }} restartOnboarding={flow.restartOnboarding}/>}
       {flow.wizard && <OnboardingWizard state={flow.onboarding} update={flow.saveOnboarding} env={flow.env} player={flow.playerAdapter} look={look} petId={petId} onRoomChange={personalizeRoom} useSource={deck.chooseProvider} openMusicSettings={flow.openMusicSettings} openAdd={() => { flow.closeWizard('later'); openAdd(); }} close={flow.closeWizard} reduceMotion={appearance.reduceMotion} error={library?.error}/>}
     </Suspense>
   </CabinRuntimeProvider>;
