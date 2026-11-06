@@ -4,6 +4,7 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { launchChromium } from './launch-browser.mjs';
 import { onboardingSeed } from './app-version.mjs';
+import { openConsole, closeConsole } from './settings-actions.mjs';
 const origin = process.env.HOME_TEST_ORIGIN || 'http://127.0.0.1:4292';
 const minutes = Number(process.env.SOAK_MINUTES || 0), duration = Math.max(180, Math.ceil(minutes * 60 + 60));
 const output = path.resolve('desktop/test-results/home-v21' + (minutes ? '-soak' : ''));
@@ -48,23 +49,24 @@ try {
   await page.waitForFunction(() => [...document.querySelectorAll('[data-cabin-audio-host] audio')].some(a => !a.paused && a.currentTime > .1));
   await page.locator('.cabin-dialog-close').last().click();
   await page.evaluate(() => { window.soakAudio = [...document.querySelectorAll('[data-cabin-audio-host] audio')].find(a => !a.paused); });
-  // 3.0 正在播放条 (src/listen/NowPlayingBar.jsx): the song, one line of lyric, ♥ in one click, Space still plays / pauses.
-  const bar = page.getByRole('region', { name: '正在播放', exact: true });
-  await bar.getByRole('button', { name: '暂停播放', exact: true }).waitFor();
-  assert.match(await bar.locator('.listen-meta strong').innerText(), /长时间播放/);
-  await bar.locator('.listen-line.is-lyric').waitFor();
-  const heart = bar.getByRole('button', { name: '喜欢这首歌', exact: true });
+  // 3.1 唱机 (src/desk/views/ConsoleView.jsx, DEsk's Control Panel): the tube shows the song and one line of lyric,
+  // ♥ is one click on the slip under it, Space still plays / pauses.
+  const bar = await openConsole(page);
+  await bar.getByRole('button', { name: '暂停音乐播放', exact: true }).waitFor();
+  assert.match(await bar.locator('.console-crt-head').textContent(), /长时间播放/);
+  await page.waitForFunction(() => /小屋里的测试音乐|持续播放/.test(document.querySelector('.console-crt-line')?.textContent || ''));
+  const heart = bar.locator('.console-slip [aria-pressed]');
   await heart.click(); assert.equal(await heart.getAttribute('aria-pressed'), 'true');
   assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('flow-cabin-liked-songs-v1'))[0].title), '长时间播放');
   await heart.click(); assert.equal(await heart.getAttribute('aria-pressed'), 'false');
   await page.evaluate(() => document.activeElement?.blur()); await page.keyboard.press('Space');
-  await page.waitForFunction(() => window.soakAudio.paused); await bar.getByRole('button', { name: '继续播放', exact: true }).waitFor();
+  await page.waitForFunction(() => window.soakAudio.paused); await bar.getByRole('button', { name: '播放音乐', exact: true }).waitFor();
   await page.keyboard.press('Space'); await page.waitForFunction(() => !window.soakAudio.paused);
-  assert.equal(await bar.getByRole('progressbar').count() + await bar.getByRole('slider', { name: '播放进度' }).count(), 1, 'one progress bar');
-  report.checks.push('the now-playing bar shows the song and a lyric line, hearts in one click and keeps Space as play / pause');
+  assert.equal(await bar.getByRole('progressbar').count() + await bar.getByRole('slider', { name: '音乐播放进度' }).count(), 1, 'one progress bar');
+  report.checks.push('the console shows the song and a lyric line on its tube, hearts in one click and keeps Space as play / pause');
   // 唱片架 three views: 我喜欢 lists the heart and plays it, 最近播放 lists what really played.
   await heart.click();
-  await bar.locator('.listen-meta').click(); await page.getByRole('dialog', { name: '唱机旁', exact: true }).getByRole('button', { name: '打开唱片架', exact: true }).click();
+  await bar.getByRole('button', { name: '打开唱片架', exact: true }).click();
   const shelf = page.getByRole('dialog', { name: '唱片架', exact: true });
   await shelf.getByRole('radio', { name: '唱片', exact: true }).waitFor();
   assert.equal(await shelf.getByRole('button', { name: '筛选', exact: true }).count(), 0, 'a one-record shelf has no filter button');
@@ -104,11 +106,13 @@ try {
     console.log(`Playing ${Math.round((Date.now() - started) / 60000)} min, ${sample.position.toFixed(1)} s, heap ${sample.heap}`);
   }
   if (minutes) report.checks.push(`${minutes} minutes continuous playback in actual home`);
-  // 「开始这一段」 starts the focus timer through the existing focus command, without touching the music.
-  await bar.getByRole('button', { name: '开始这一段', exact: true }).click();
-  await bar.locator('.listen-focus.is-running').waitFor();
+  // 「开始这一段」 starts the focus timer through the existing focus command, without touching the music; the desk's
+  // LED clock (专注) turns to the round.
+  await closeConsole(page);
+  await page.evaluate(() => window.dispatchEvent(new CustomEvent('album-companion-command', { detail: { command: 'focus-start' } })));
+  await page.waitForFunction(() => /专注中/.test(document.querySelector('.desk-clock-face')?.getAttribute('aria-label') || ''));
   assert.equal(await page.evaluate(() => !window.soakAudio.paused), true);
-  report.checks.push('开始这一段 starts focus from the bar while the record keeps playing');
+  report.checks.push('开始这一段 starts focus on the desk clock while the record keeps playing');
   assert.deepEqual(report.errors, []); report.passed = true;
 } catch (error) { report.failure = error.stack; process.exitCode = 1; console.error(error); }
 finally { report.finishedAt = new Date().toISOString(); await fs.writeFile(path.join(output, 'report.json'), JSON.stringify(report, null, 2)); await browser.close(); server?.kill(); }

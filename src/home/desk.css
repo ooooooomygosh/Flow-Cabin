@@ -82,9 +82,6 @@
 /* ── loading: the room is dark and only the glass is lit ──────────────── */
 .cabin-home .home-art-veil { color: #ff6b5c; font-weight: 600; letter-spacing: .3em; text-shadow: 0 0 8px rgba(255, 59, 47, .6); }
 
-/* ── the tape deck: now playing ───────────────────────────────────────── */
-.cabin-home .listen-bar { background: linear-gradient(180deg, #2a211a, #15100c); border: 0; border-radius: 6px; backdrop-filter: none; box-shadow: inset 0 0 0 1px rgba(255, 240, 215, .14), 0 0 0 1px rgba(0, 0, 0, .8), inset 0 -2px 0 rgba(0, 0, 0, .5), calc(var(--sx, 2) * 6px) calc(var(--sy, 3) * 6px) 14px rgba(8, 5, 3, calc(.6 * var(--lamp-k, .6))); }
-
 @media (max-width: 1000px) {
   .cabin-home .home-shortcuts { position: static; transform: none; margin: 0 auto; gap: 8px; }
   .cabin-home .home-shortcuts .desk-clock { width: 134px; height: 42px; }

@@ -16,6 +16,9 @@ import { BoxCard, LyingLetter } from './PostLetters';
 import { listPackets, onPackets, unfoldPacket } from './packets.mjs';
 import { slotXY } from './sheet-corner.mjs';
 import { DRAWER, PET_WINDOW } from './desk-model.mjs';
+import useDeskLamp from './useDeskLamp';
+import { VIEW_BODY } from './views';
+import { consoleLayout } from './views/console-model.mjs';
 import './desk.css';
 
 // The home: DEsk's desk (https://github.com/fyzugx/DEsk, MIT, (c) 2026 The DEsk authors), seen from
@@ -25,6 +28,8 @@ import './desk.css';
 // Looking up at the bookcase, the Control Panel or the post box plays DEsk's film of that move.
 // The post box holds the app's letters (src/desk/post.mjs): a letter in the slot while one is unread;
 // in the box they stand one behind the other, and the one in front, taken out, lies on the desk.
+// The Control Panel is the record player's console (views/ConsoleView.jsx); commands.open('music') and the
+// `cabin:desk-look` event ({ which }) look up at it from anywhere.
 const LOOK_DUR = { shelf: 0.80, console: 0.84, post: 0.86 };
 const typing = (target) => target?.closest?.('input,textarea,select,[contenteditable="true"],[contenteditable=""],[role=slider]');
 const pace = () => PACES[readPace()] || 1;
@@ -59,7 +64,7 @@ export default function DeskHome({ reduced = false, focusOpen = false, shelf = n
   const [mode, setMode] = useState(''), [keysUp, setKeysUp] = useState(false);
   const [look, setLook] = useState(null); // { which, phase: 'up' | 'there' | 'down' }
   const deskRef = useRef(null), film = useRef(null), raf = useRef(0);
-  const now = useTick(true, 1000), playback = usePlaybackClock();
+  const now = useTick(true, 1000), playback = usePlaybackClock(), lamp = useDeskLamp();
   const post = usePost(), letters = post.letters, unread = post.unread;
   const [front, setFront] = useState(0), [lying, setLying] = useState(null), taking = useRef(null), lyingRef = useRef(null);
   const [packets, setPackets] = useState(listPackets);
@@ -128,12 +133,13 @@ export default function DeskHome({ reduced = false, focusOpen = false, shelf = n
   // Asked from elsewhere (放一张唱片, 打开唱片架…): look up at the bookcase, or straight across to it.
   useEffect(() => {
     const ask = (event) => {
-      const which = event.detail;
+      const which = typeof event.detail === 'string' ? event.detail : event.detail?.which;
       if (!VIEWS[which]) return;
-      if (!look) lookTo(which);
-      else if (look.which !== which) setLook({ which, phase: 'there' });
+      if (!look || look.phase === 'gone') lookTo(which);
+      else if (look.which !== which) whenDeskImages(VIEW_IMAGES[which]).then(() => setLook({ which, phase: 'there' }));
     };
-    addEventListener('desk:look', ask); return () => removeEventListener('desk:look', ask);
+    addEventListener('desk:look', ask); addEventListener('cabin:desk-look', ask);
+    return () => { removeEventListener('desk:look', ask); removeEventListener('cabin:desk-look', ask); };
   }, [look, lookTo]);
   useEffect(() => {
     if (look?.phase !== 'gone') return;
@@ -244,7 +250,8 @@ export default function DeskHome({ reduced = false, focusOpen = false, shelf = n
       <span className="desk-engraving" style={engraving}>唱片架 <b>↑</b></span>
     </button>
   );
-  return <section className={`desk-home ${ready ? 'is-lit' : ''} ${lay.phone ? 'is-phone' : ''} ${drawer ? 'is-drawer-out' : ''} ${reduced ? 'is-reduced' : ''}`} aria-label="书桌" data-look={look?.which || undefined} style={{ '--desk-s': lay.s }}>
+  const Body = look && VIEW_BODY[look.which];
+  return <section className={`desk-home ${ready ? 'is-lit' : ''} ${lay.phone ? 'is-phone' : ''} ${drawer ? 'is-drawer-out' : ''} ${reduced ? 'is-reduced' : ''}`} aria-label="书桌" data-look={look?.which || undefined} style={{ '--desk-s': lay.s, '--desk-lamp': lamp.brightness }}>
     <div className="desk-wood" style={{ backgroundImage: `url(${deskUrl('desk-wood.webp')})` }} aria-hidden="true"/>
     <div className="desk-top" ref={deskRef} style={{ transform: lift ? `translateY(${-lift.toFixed(1)}px)` : undefined }} inert={look?.phase === 'there' || undefined}>
       {lay.console && <img className="desk-piece" src={deskUrl('edge-console.webp')} alt="" style={style(lay.console)} draggable="false"/>}
@@ -259,7 +266,7 @@ export default function DeskHome({ reduced = false, focusOpen = false, shelf = n
           <ClockFace face={ready ? face : { ...face, digits: '000000', word: 'LOAD' }} scale={lay.s}/>
         </button>
         <div className="desk-clock-keys" style={{ left: (PLATES.clock.keysAt[0] - PLATES.clock.faceAt[0]) / PLATES.clock.faceAt[2] * 100 + '%', width: PLATES.clock.keysAt[2] / PLATES.clock.faceAt[2] * 100 + '%', backgroundImage: `url(${deskUrl('clock-keys.webp')})` }} role="radiogroup" aria-label="台钟显示">
-          {CLOCK_KEYS.map((k) => <button type="button" key={k.id} role="radio" aria-checked={shown === k.id} className={`desk-clock-key ${shown === k.id ? 'is-on' : ''}`} style={{ left: `${k.rect[0] / 114 * 100}%`, top: `${k.rect[1] / 66 * 100}%`, width: `${k.rect[2] / 114 * 100}%`, height: `${k.rect[3] / 66 * 100}%` }} onClick={() => { playSfx('key-press'); setMode(mode === k.id ? '' : k.id); }}>{k.id === 'focus' ? <span className="desk-key-print">专注</span> : <span className="sr-only">{k.name}</span>}</button>)}
+          {CLOCK_KEYS.map((k) => <button type="button" key={k.id} role="radio" aria-checked={shown === k.id} className={`desk-clock-key ${shown === k.id ? 'is-on' : ''} ${k.id === 'music' && playing ? 'is-playing' : ''}`} style={{ left: `${k.rect[0] / 114 * 100}%`, top: `${k.rect[1] / 66 * 100}%`, width: `${k.rect[2] / 114 * 100}%`, height: `${k.rect[3] / 66 * 100}%` }} onClick={() => { playSfx('key-press'); setMode(mode === k.id ? '' : k.id); }}>{k.id === 'focus' ? <span className="desk-key-print">专注</span> : <span className="sr-only">{k.id === 'music' && playing ? '音乐 · 正在播放' : k.name}</span>}</button>)}
         </div>
       </div>
       {packets.map((packet, k) => {
@@ -301,7 +308,8 @@ export default function DeskHome({ reduced = false, focusOpen = false, shelf = n
     </button>
     {look && <div ref={lookRef} className={`desk-look is-${look.phase}`} role="dialog" aria-modal="true" aria-label={VIEWS[look.which].name} onClick={(e) => { if (e.target === e.currentTarget || e.target.classList.contains('desk-view') || e.target.classList.contains('desk-pan-strip')) lookBack(); }}>
       <canvas ref={film} className="desk-film" aria-hidden="true"/>
-      {look.phase === 'there' && <>
+      {look.phase === 'there' && Body && <Body back={lookBack} layout={consoleLayout(width, height)} reduced={reduced}/>}
+      {look.phase === 'there' && !Body && <>
         <div className={`desk-pan ${pan ? 'is-panning' : ''}`} ref={panRef}>
           <div className="desk-pan-strip" style={{ width: pan ? PLATES.w * vl.s : '100%' }}>
             <img className="desk-view" src={deskUrl(viewSrc)} alt="" draggable="false" style={{ left: pan ? 0 : vl.ox, top: vl.oy, width: PLATES.w * vl.s, height: PLATES.h * vl.s }}/>

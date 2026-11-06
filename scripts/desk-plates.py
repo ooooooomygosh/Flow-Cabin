@@ -159,6 +159,288 @@ def blank_letter(im):
     return Image.fromarray(np.clip(a, 0, 255).astype(np.uint8))
 
 
+# ----- the Control Panel, made into the record player's console -----
+#
+# The view of the Control Panel is DEsk's picture with what DEsk prints and moves on it taken off,
+# so the app can print its own words and move its own needles, knob and handles over it (src/desk/
+# views/ConsoleView.jsx): the tube's phosphor, the meters' cards (legend, scale, needle, lamps), the
+# legends under the levers, the faders and the key, the captions on the four push buttons, the
+# volume knob's pointer and index, the faders' handles, and the words on the front plate. Where a
+# thing comes off, what was behind it is put back from what is around it: the brass or the panel
+# carried across, the paper diffused in with the paper's own grain, a round thing filled round its
+# centre. The geometry the app draws with goes to plates.json (consoleView).
+
+def fl(im):
+    return np.array(im.convert('RGB')).astype(np.float32)
+
+
+def u8(a):
+    return Image.fromarray(np.clip(a, 0, 255).astype(np.uint8))
+
+
+def blur(a, r):
+    return fl(u8(a).filter(ImageFilter.GaussianBlur(r)))
+
+
+def lum(a):
+    return a[..., 0] * .299 + a[..., 1] * .587 + a[..., 2] * .114
+
+
+def grow(mask, px):
+    if px <= 0:
+        return mask
+    return np.array(Image.fromarray((mask * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(2 * px + 1))) > 0
+
+
+def ink(a, box, dark, t=16, size=9, px=2):
+    """Strokes thinner than `size` that stand out from what is around them (light on the panel, dark on brass or paper)."""
+    x0, y0, x1, y1 = box
+    l = Image.fromarray(np.clip(lum(a[y0:y1, x0:x1]), 0, 255).astype(np.uint8))
+    if dark:   # a closing: the dark strokes filled in with the ground
+        bg = l.filter(ImageFilter.MaxFilter(size)).filter(ImageFilter.MinFilter(size))
+        d = np.array(bg).astype(np.float32) - np.array(l)
+    else:      # an opening: the light strokes taken down to the ground
+        bg = l.filter(ImageFilter.MinFilter(size)).filter(ImageFilter.MaxFilter(size))
+        d = np.array(l).astype(np.float32) - np.array(bg)
+    m = np.zeros(a.shape[:2], bool)
+    m[y0:y1, x0:x1] = d > t
+    return grow(m, px)
+
+
+def fill(a, mask, grain=None, iters=220):
+    """Diffuse what is around a hole into it, then lay the grain of a clean patch `grain` (dx, dy) away over it."""
+    ys, xs = np.nonzero(mask)
+    if not len(ys):
+        return a
+    pad = 14
+    y0, y1 = max(0, ys.min() - pad), min(a.shape[0], ys.max() + pad + 1)
+    x0, x1 = max(0, xs.min() - pad), min(a.shape[1], xs.max() + pad + 1)
+    c, m = a[y0:y1, x0:x1].copy(), mask[y0:y1, x0:x1]
+    known = (~m).astype(np.float32)[..., None]
+    num, den = blur(c * known, 8), blur(np.repeat(known * 255, 3, axis=2), 8) / 255 + 1e-3
+    c[m] = (num / den)[m]
+    for _ in range(iters):
+        p = np.pad(c, ((1, 1), (1, 1), (0, 0)), mode='edge')
+        c[m] = ((p[:-2, 1:-1] + p[2:, 1:-1] + p[1:-1, :-2] + p[1:-1, 2:]) / 4)[m]
+    if grain:
+        dx, dy = grain
+        src = a[y0 + dy:y1 + dy, x0 + dx:x1 + dx]
+        c[m] += (src - blur(src, 2))[m]
+    out = a.copy()
+    soft = blur(np.repeat(m[..., None].astype(np.float32) * 255, 3, axis=2), .8) / 255
+    out[y0:y1, x0:x1] = c * np.maximum(soft, m[..., None]) + a[y0:y1, x0:x1] * (1 - np.maximum(soft, m[..., None]))
+    return out
+
+
+def polar_fill(a, mask, cx, cy):
+    """Fill a hole in something round from the same radius either side of it."""
+    out = a.copy()
+    h, w = mask.shape
+    for y, x in zip(*np.nonzero(mask)):
+        r = max(np.hypot(x - cx, y - cy), 1.0)
+        th, step = np.arctan2(y - cy, x - cx), 0.7 / r
+        found = []
+        for sgn in (-1, 1):
+            for k in range(1, 400):
+                t = th + sgn * k * step
+                sx, sy = int(round(cx + np.cos(t) * r)), int(round(cy + np.sin(t) * r))
+                if 0 <= sx < w and 0 <= sy < h and not mask[sy, sx]:
+                    found.append((k, a[sy, sx]))
+                    break
+        if len(found) == 2:
+            (k0, v0), (k1, v1) = found
+            out[y, x] = (v0 * k1 + v1 * k0) / (k0 + k1)
+        elif found:
+            out[y, x] = found[0][1]
+    return out
+
+
+def bridge(a, x0, x1, y0, y1):
+    """Brass brushed across: each row runs straight from the clean column before x0 to the one at x1."""
+    out = a.copy()
+    left, right = a[y0:y1, x0 - 1], a[y0:y1, x1]
+    for x in range(x0, x1):
+        u = (x - x0 + 1) / (x1 - x0 + 1)
+        out[y0:y1, x] = left * (1 - u) + right * u
+    return out
+
+
+def disc(shape, cx, cy, rx, ry=None):
+    ry = ry or rx
+    yy, xx = np.mgrid[0:shape[0], 0:shape[1]]
+    return ((xx - cx) / rx) ** 2 + ((yy - cy) / ry) ** 2 <= 1
+
+
+def sprite(a, box, feather=(4, 4, 3, 3)):
+    """A piece of the picture with soft edges (left, right, top, bottom), to be laid back over it."""
+    x0, y0, x1, y1 = box
+    part = a[y0:y1, x0:x1]
+    h, w = part.shape[:2]
+    al = np.ones((h, w), np.float32)
+    fl_, fr, ft, fb = feather
+    for i in range(w):
+        al[:, i] *= min(1, (i + .5) / fl_ if fl_ else 1, (w - i - .5) / fr if fr else 1)
+    for j in range(h):
+        al[j, :] *= min(1, (j + .5) / ft if ft else 1, (h - j - .5) / fb if fb else 1)
+    im = u8(part).convert('RGBA')
+    im.putalpha(Image.fromarray((al * 255).astype(np.uint8)))
+    return im
+
+
+CV = {
+    # the tube: the phosphor's ellipse inside the brass ring
+    'crt': {'cx': 406, 'cy': 258, 'rx': 126, 'ry': 120},
+    # the meters' cards: the visible window, and where DEsk's face (w x h) lies under it
+    'meterL': {'win': [650, 176, 175, 109], 'face': [650, 159, 175, 125], 'pivot': [737.5, 291.5], 'len': 84, 'kind': 'battery'},
+    'meterR': {'win': [957, 180, 184, 144], 'face': [955, 187, 183, 135], 'pivot': [1045, 322], 'len': 81, 'kind': 'net',
+               'lamps': [[992, 257], [1102, 257]], 'lampR': 11.5},
+    # the volume knob: centre, the bakelite's radius (DEsk's sx = 2 * it)
+    'knob': {'cx': 748.5, 'cy': 514.5, 'rad': 57, 'skirt': 98},
+    # the levers: the plate, the boss, the lamp; the lever sprites are cut at `tile` (x, y of their box)
+    'levers': [
+        {'plate': [295, 460, 120, 110], 'boss': [351, 515], 'lamp': [353, 459], 'lampR': 17, 'tile': [262, 486], 'on': [317, 538], 'off': [402, 538], 'legend': [356, 584], 'tint': [1.0, .62, .18]},
+        {'plate': [471, 462, 114, 106], 'boss': [528, 517], 'lamp': [528, 461], 'lampR': 17, 'tile': [438, 488], 'on': [497, 538], 'off': [573, 538], 'legend': [528, 582], 'tint': [.30, .48, 1.0]},
+    ],
+    'leverTile': [152, 46],
+    # the faders: the plate, the run of the handle's middle (value 0 .. 1), the legend under it
+    'faders': [
+        {'plate': [930, 421, 211, 67], 'run': [949, 1129], 'y': 426, 'legend': [1031, 501]},
+        {'plate': [930, 527, 211, 68], 'run': [949, 1131], 'y': 534, 'legend': [1031, 606]},
+    ],
+    'handle': [28, 58],
+    # the push buttons (blue alone, three under the glass), and their captions round the bottom of the ring
+    'buttons': [[343, 686, 44], [545, 686, 44], [720, 686, 44], [894, 686, 44]],
+    'leds': [[313, 750, 'amber'], [476, 750, 'green'], [638, 750, 'amber'], [800, 750, 'green'], [962, 750, 'amber'], [1126, 750, 'green']],
+    'key': {'lock': [1040, 686, 24], 'key': [1066, 668, 88, 36], 'legend': [1036, 649]},
+    'volume': [748, 624],
+    'plate': [200, 795, 346, 62],
+}
+
+
+def console_view(view):
+    a = fl(view)
+    H, W = a.shape[:2]
+
+    # the tube: everything the phosphor drew is taken off; what is left is the dark glass DEsk paints
+    # before the gun comes up (0.010, 0.020, 0.014), with the room in the curve of the glass
+    c = CV['crt']
+    inside = disc(a.shape, c['cx'], c['cy'], c['rx'] + 4, c['ry'] + 4) & ~((a[..., 0] - a[..., 2] > 34) & (lum(a) > 40))
+    inside &= disc(a.shape, c['cx'], c['cy'], c['rx'] + 8, c['ry'] + 8)
+    yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+    nx, ny = (xx - c['cx']) / c['rx'], (yy - c['cy']) / c['ry']
+    rr = np.sqrt(nx * nx + ny * ny)
+    glass = np.stack([np.full((H, W), v, np.float32) for v in (0.010 * 255, 0.020 * 255, 0.014 * 255)], axis=2)
+    gx0, gy0 = c['cx'] - c['rx'], c['cy'] - c['ry']
+    tdiag = ((xx - gx0) * (2 * c['rx'] * .62) + (yy - gy0) * (2 * c['ry'] * .86)) / ((2 * c['rx'] * .62) ** 2 + (2 * c['ry'] * .86) ** 2)
+    sheen = np.clip(1 - tdiag / .62, 0, 1) * .055 + np.clip(1 - tdiag / .30, 0, 1) * .03
+    glass = glass + sheen[..., None] * 255
+    vig = np.clip((rr - .45) / .6, 0, 1) ** 1.4 * .7
+    glass = glass * (1 - vig[..., None])
+    soft = blur(np.repeat(inside[..., None].astype(np.float32) * 255, 3, axis=2), 1.2) / 255
+    a = glass * soft + a * (1 - soft)
+
+    # the meters: the card cleaned to bare paper (the app prints the scale, the legend, the needle and the lamps)
+    for key in ('meterL', 'meterR'):
+        m = CV[key]
+        x, y, w, h = m['win']
+        box = (x + 2, y + 2, x + w - 2, y + h - 1)
+        crop = a[box[1]:box[3], box[0]:box[2]]
+        l = u8(crop)
+        closed = fl(l.filter(ImageFilter.MaxFilter(13)).filter(ImageFilter.MinFilter(13)))
+        diff = np.abs(crop - closed).sum(axis=2)
+        mask = np.zeros((H, W), bool)
+        mask[box[1]:box[3], box[0]:box[2]] = (diff > 22) | ((crop[..., 1] - crop[..., 0]) > 3)
+        for lx, ly in m.get('lamps', []):
+            mask |= disc(a.shape, lx, ly, m['lampR'] + 9)
+        if key == 'meterR':
+            mask |= disc(a.shape, m['pivot'][0], m['pivot'][1], 11)
+        mask = grow(mask, 2)
+        inner = np.zeros((H, W), bool)
+        inner[box[1]:box[3], box[0]:box[2]] = True
+        mask &= inner
+        a = fill(a, mask, iters=400)
+        # the paper's own grain, taken from a clean corner of it and laid over what was filled
+        gx, gy = (x + 6, y + h - 26) if key == 'meterL' else (x + 6, y + 8)
+        patch = a[gy:gy + 20, gx:gx + 40]
+        g = patch - blur(patch, 1.5)
+        ys, xs = np.nonzero(mask)
+        a[ys, xs] += g[(ys - ys.min()) % 20, (xs - xs.min()) % 40] * .9
+
+    # words printed on the panel (light on dark): the legends under the levers, faders and the key
+    def wipe(box, grain):
+        nonlocal a
+        a = fill(a, ink(a, box, dark=False, t=14, size=9, px=2), grain=grain)
+    for box, grain in [((300, 527, 334, 551), (0, -36)), ((385, 527, 420, 551), (0, -36)),   # 开 关
+                       ((334, 570, 390, 598), (60, 0)),                                        # 无线
+                       ((478, 525, 512, 550), (0, -34)), ((556, 525, 592, 550), (0, -34)),   # 开 关
+                       ((468, 568, 594, 596), (0, 26)),                                        # BLUETOOTH
+                       ((1004, 488, 1060, 514), (-90, 0)), ((1004, 594, 1060, 618), (-90, 2)),  # 台灯 屏幕
+                       ((1016, 636, 1058, 662), (0, -18))]:                                   # 电源
+        wipe(box, grain)
+
+    # the second fader's plate gets the first one's scale where it said 无背光 (both have something to turn)
+    # (relit by the light that falls on the second plate: the cheek's shadow lies across its right end)
+    b1, b2 = a[421:439, 930:1141], a[527:545, 930:1141]
+    light = (blur(b2, 10) + 1) / (blur(b1, 10) + 1)
+    a[527:545, 930:1141] = b1 * light
+
+    # the captions round the push buttons (dark on the brass rings)
+    for bx, by, br in CV['buttons']:
+        m = ink(a, (bx - 26, by + 12, bx + 26, by + 40), dark=True, t=14, size=9, px=1)
+        m &= ~disc(a.shape, bx, by, br - 18)
+        a = polar_fill(a, m, bx, by)
+
+    # the front plate, blank (the app engraves 唱机 ↑)
+    a = bridge(a, 252, 500, 806, 846)
+
+    film = a.copy()
+
+    # what moves: the knob's pointer and index (drawn turned by the app), the faders' handles
+    k = CV['knob']
+    near = disc(a.shape, k['cx'], k['cy'], k['rad'] - 2)
+    cream = near & (lum(a) > 70)
+    red = disc(a.shape, k['cx'], k['cy'], k['rad'] + 22) & (a[..., 0] > 110) & (a[..., 1] < 90) & (a[..., 0] - a[..., 1] > 60)
+    a = polar_fill(a, grow(cream, 2), k['cx'], k['cy'])
+    a = polar_fill(a, grow(red, 3), k['cx'], k['cy'])
+
+    handle = None
+    for i, f in enumerate(CV['faders']):
+        px, py, pw, ph = f['plate']
+        if i == 0:
+            hx = int(round(f['run'][1] - CV['handle'][0] / 2))
+            handle = sprite(a, (hx, f['y'], hx + CV['handle'][0], f['y'] + CV['handle'][1]), (1, 1, 1, 1))
+        # the slot and the plate carried right from where the handle's shadow starts
+        x0 = 1084
+        a[py + 16:py + ph - 2, x0:px + pw - 7] = a[py + 16:py + ph - 2, x0 - 1:x0][:, [0] * (px + pw - 7 - x0)]
+        # the scale's last two ticks, from the two before them
+        # (five ticks back, so the long one at the end comes from the long one in the middle)
+        a[py:py + 16, 1080:px + pw - 7] = a[py:py + 16, 1080 - 90:px + pw - 7 - 90]
+        # the plate's right end, from its left end turned round
+        a[py + 2:py + ph - 2, px + pw - 7:px + pw] = a[py + 2:py + ph - 2, px:px + 7][:, ::-1]
+
+    # the first lever's lamp, unlit: the second lever's (blue, unlit) laid over it and turned amber
+    l0, l1 = CV['levers']
+    dx, dy = l1['lamp'][0] - l0['lamp'][0], l1['lamp'][1] - l0['lamp'][1]
+    cx0, cy0 = l0['lamp']
+    r = 58
+    region = disc(a.shape, cx0, cy0, r) & (yy < 490)
+    moved = np.zeros_like(a)
+    moved[cy0 - r:cy0 + r, cx0 - r:cx0 + r] = a[cy0 - r + dy:cy0 + r + dy, cx0 - r + dx:cx0 + r + dx]
+    dist = np.sqrt((xx - cx0) ** 2 + (yy - cy0) ** 2)
+    wgt = np.clip((r - dist) / 14, 0, 1)[..., None] * region[..., None]
+    lens = dist <= l0['lampR'] + .5
+    L = lum(moved)
+    amber = np.stack([L * 1.25, L * .78, L * .28], axis=2)
+    moved = np.where(lens[..., None], amber, moved)
+    a = moved * wgt + a * (1 - wgt)
+
+    # the levers, as sprites cut from the two (the first is thrown on, the second off): both get either
+    tw, th = CV['leverTile']
+    on = sprite(film, (l0['tile'][0], l0['tile'][1], l0['tile'][0] + tw, l0['tile'][1] + th), (10, 10, 4, 4))
+    off = sprite(film, (l1['tile'][0], l1['tile'][1], l1['tile'][0] + tw, l1['tile'][1] + th), (10, 10, 4, 4))
+    return u8(film), u8(a), on, off, handle
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     os.makedirs(os.path.join(OUT, 'drawer'), exist_ok=True)
@@ -167,7 +449,7 @@ def main():
 
     # the room, the views and the films: as they are
     for rel, name in [('common/room.webp', 'room.webp'), ('common/clock-digits.webp', 'clock-digits.webp'),
-                      ('zh/view-console.webp', 'view-console.webp'),
+
                       ('zh/view-post.webp', 'view-post.webp'), ('zh/view-post-empty.webp', 'view-post-empty.webp'),
                       ('zh/sheets/editor-curl.webp', 'curl.webp'), ('zh/letter.webp', 'letter.webp')]:
         shutil.copyfile(os.path.join(TRY, rel), os.path.join(OUT, name))
@@ -189,6 +471,12 @@ def main():
 
     # a blank sheet of DEsk's letter paper, for the app's own letters
     save(blank_letter(load('zh/letter.webp')), 'letter-blank.webp', 92)
+    # the Control Panel, as the record player's console
+    film, base, lever_on, lever_off, handle = console_view(load('zh/view-console.webp'))
+    save(film, 'view-console.webp', 90)
+    save(base, 'console-base.webp', 90)
+    for im, name in ((lever_on, 'console-lever-on.webp'), (lever_off, 'console-lever-off.webp'), (handle, 'console-handle.webp')):
+        im.save(os.path.join(OUT, name), 'WEBP', quality=94, method=6)
 
     # the clock: its face with the volume read-out cleared, its keys with the last one blank
     # (the keys are on the face too, unlit: the last one's word and the first one's lamp are taken
@@ -305,6 +593,7 @@ def main():
         'postLetter': zh['post_letter'], 'letter': zh['letter']['at'],
         'films': {k: {'frames': v['frames'], 'fw': v['fw'], 'fh': v['fh'], 'steps': v['steps']} for k, v in common['films'].items()},
         'shelf': SHELF,
+        'consoleView': CV,
         'curl': {k: sheet['curl'][k] for k in ('rest', 'open', 'box', 'items', 'sizes', 'hot_sizes', 'rects')},
     }
     with open(os.path.join(ROOT, 'src', 'desk', 'plates.json'), 'w') as f:

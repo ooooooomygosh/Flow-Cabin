@@ -71,11 +71,12 @@ try {
   await page.screenshot({ path: path.join(output, 'corner-lyric-book.png') });
   pass('lyric-book-sings-the-current-line-with-word-fill-in-the-room-skin');
 
-  // 1b. The 3.0 now-playing bar shows the same line from the shared lyric feed (read twice a second).
-  await page.waitForFunction(() => /^第\d+句/.test(document.querySelector('.listen-bar .listen-line.is-lyric')?.title || ''));
-  { const shown = await page.locator('.listen-bar .listen-line').getAttribute('title'), t = await audioTime(); assert.ok([0, .6, 1.2].map(d => `第${Math.floor(Math.max(0, t - d) / 3) + 1}句`).some(line => shown.startsWith(line)), `${shown} at ${t}`); }
-  assert.equal(await page.getByRole('region', { name: '正在播放', exact: true }).getByRole('button', { name: '歌词', exact: true }).count(), 1);
-  pass('now-playing-bar-shows-the-current-lyric-line');
+  // 1b. The console's tube (唱机, DEsk's Control Panel) shows the same line from the shared lyric feed (read twice a second).
+  await page.evaluate(() => window.dispatchEvent(new CustomEvent('cabin:desk-look', { detail: { which: 'console' } })));
+  await page.waitForFunction(() => /^第\d+句/.test(document.querySelector('.console-crt-line')?.textContent || ''));
+  { const shown = await page.locator('.console-crt-line').textContent(), t = await audioTime(); assert.ok([0, .6, 1.2].map(d => `第${Math.floor(Math.max(0, t - d) / 3) + 1}句`).some(line => shown.startsWith(line)), `${shown} at ${t}`); }
+  assert.equal(await page.locator('.console-slip').getByRole('button', { name: '歌词册', exact: true }).count(), 1);
+  pass('console-tube-shows-the-current-lyric-line');
   // 2. The fullscreen stage: AMLL view, now-playing panel, live region follows the song.
   await page.locator('.corner-actions').getByRole('button', { name: '歌词册', exact: true }).click();
   const stage = page.getByRole('dialog', { name: '沉浸歌词' });
