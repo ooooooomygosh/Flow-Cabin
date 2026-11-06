@@ -26,7 +26,7 @@ export const whenDeskImages = (names) => Promise.all(names.map((n) => entry(n).p
 // the clock, the overlays).
 export const FIRST = Object.freeze(['desk-wood.webp', 'edge-console.webp', 'edge-clock.webp', 'edge-post.webp', 'plate-console.webp',
   'plate-shelf.webp', 'clock-face.webp', 'clock-digits.webp', 'clock-keys.webp', 'post0.webp', 'post-letter.webp', 'drawer-band.webp']);
-export const VIEW_IMAGES = Object.freeze({ shelf: ['film-shelf.webp', 'view-shelf.webp'], console: ['film-console.webp', 'view-console.webp'], post: ['film-post.webp', 'view-post.webp', 'view-post-empty.webp'] });
+export const VIEW_IMAGES = Object.freeze({ shelf: ['film-shelf.webp', 'view-shelf.webp'], console: ['film-console.webp', 'view-console.webp'], post: ['film-post.webp', 'view-post-box.webp', 'view-post-empty.webp', 'letter-blank.webp'] });
 export function deskProgress(names = FIRST) {
   return names.reduce((n, name) => n + (cache.get(name)?.ok || cache.get(name)?.failed ? 1 : 0), 0) / names.length;
 }

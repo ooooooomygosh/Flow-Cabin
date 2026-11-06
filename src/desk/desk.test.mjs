@@ -123,3 +123,25 @@ test('the bookcase: eight binders on the top board, each label card in its own b
   assert(Math.min(...book.map((p) => p[0])) > Math.max(...binders[6].map((p) => p[0])), 'the book stands past the binders');
   assert(!VIEWS.shelf.spots.some((spot) => spot.action === 'library'), 'the binders themselves are the library');
 });
+
+test('the letter lies where DEsk lays it, and goes back to the slot', async () => {
+  const { letterLayout, putAwayFrames, slotPoint, boxCards, LETTER } = await import('./layout.mjs');
+  const l = letterLayout(1440, 900);
+  assert.deepEqual([l.x, l.y, l.w, l.h], PLATES.letter);
+  const phone = letterLayout(390, 844);
+  assert(phone.x >= 0 && phone.x + phone.w <= 390 && phone.s < 1);
+  assert(letterLayout(1440, 600).y + letterLayout(1440, 600).h <= 600);
+  const to = slotPoint(deskLayout(1440, 900));
+  assert.deepEqual([Math.round(to.x), Math.round(to.y)], [1196, 30]);
+  const frames = putAwayFrames(l, to);
+  assert.equal(frames[0].transform, 'translate(0.0px, 0.0px) scale(1.000)');
+  assert.equal(frames.at(-1).opacity, 0);
+  assert.match(frames.at(-1).transform, /scale\(0\.200\)/);
+  assert.equal(LETTER.w, 515);
+  const ph = slotPoint(deskLayout(390, 844));
+  assert(ph.x > 0 && ph.x < 390 && ph.y > 0, 'a phone puts letters back toward the 信箱 plate');
+  const cards = boxCards(9, 2);
+  assert.deepEqual(cards.map((c) => c.index), [2, 3, 4, 5, 6]);
+  assert(cards[1].y < cards[0].y && cards[1].w < cards[0].w);
+  assert.deepEqual(boxCards(0), []);
+});

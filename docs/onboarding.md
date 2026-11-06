@@ -4,6 +4,8 @@
 
 相关验证：`src/onboarding/onboarding.test.mjs`（状态与适配层单测）、`scripts/onboarding-checks.mjs`（浏览器冒烟）、`src/ai/smart-turntable.test.mjs` 与 `scripts/smart-turntable-regression.mjs`（智能唱片机）。
 
+> **3.1：引导变成一封信。** 启动时不再有任何窗口压在书桌上。首次（或上次没走完）时，`launchPlan` 的 `first-run` / `resume` 不再打开向导，而是在书桌的灯亮起 2.5 秒后往信箱里寄一封欢迎信（`src/desk/post.mjs` `welcomeLetter`，仿 DEsk 的 try-it）；信上的「选音源 / 挑伙伴 / 试听」各自打开向导的那一步（`cabin:onboarding-step`），「设置 › 重新引导」照旧。`update` 也不再弹出「新功能」，而是寄一封这个版本的信（`releaseLetter`），同时记为已看过；完整的版本历史仍在「设置 › 关于」。下文描述的是向导本身。
+
 ## 1. 三种打开方式
 
 | 场景 | 什么时候打开 | 从哪里开始 |

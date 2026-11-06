@@ -109,3 +109,50 @@ export function clockFace(mode, { now = new Date(), focus = null, music = null }
   }
   return { digits: two(now.getHours()) + two(now.getMinutes()) + two(now.getSeconds()), colon: now.getSeconds() % 2 === 0, word: mode === 'focus' ? 'READY' : 'CLOCK', bar: null };
 }
+
+// ----- the post box's letters -----
+// A letter taken out lies on the desk where DEsk lays it (zh/desk.json `letter`: 515x414 at 463,227 on
+// the 1440x900 desk); on a phone it is as wide as the window allows, in the middle.
+export const LETTER = Object.freeze({ w: plates.letter[2], h: plates.letter[3] });
+export function letterLayout(width, height) {
+  const [lx, ly, lw, lh] = plates.letter;
+  if (width >= PHONE) {
+    const s0 = clamp(width / W, 0.5, 1.5), s = Math.min(s0, Math.max(0.4, (height - 40) / lh));
+    const cx = width / 2 + (lx + lw / 2 - W / 2) * s0;
+    return { s, x: cx - lw * s / 2, y: Math.max(12, Math.min(ly * s0, height - lh * s - 28)), w: lw * s, h: lh * s };
+  }
+  const s = Math.min(1, (width - 16) / lw);
+  return { s, x: (width - lw * s) / 2, y: Math.max(12, (height - lh * s) / 2 - 24), w: lw * s, h: lh * s };
+}
+
+// Putting it away (DEsk's tryit: 0.82 s; k = 1 - smoothstep(u) shrinks the letter to a fifth, carries its
+// centre to the post box's slot and fades it once k is under 0.625). Keyframes for element.animate,
+// relative to where it lies: `to` is the slot, in the same coordinates as `rect`.
+export const PUT_AWAY = 0.82;
+export function putAwayFrames(rect, to, n = 12) {
+  const cx = rect.x + rect.w / 2, cy = rect.y + rect.h / 2;
+  return Array.from({ length: n + 1 }, (_, i) => {
+    const u = i / n, k = 1 - u * u * (3 - 2 * u);
+    const dx = (to.x - cx) * (1 - k), dy = (to.y - cy) * (1 - k), sc = 0.2 + 0.8 * k;
+    return { offset: u, opacity: Math.min(1, k * 1.6), transform: `translate(${dx.toFixed(1)}px, ${dy.toFixed(1)}px) scale(${sc.toFixed(3)})` };
+  });
+}
+// DEsk's slot is at (1196, 30) on its desk: on ours, the same point of the post box wherever it stands.
+export function slotPoint(lay) {
+  if (!lay.postBox) return { x: lay.postPlate.x + lay.postPlate.w / 2, y: lay.postPlate.y + lay.postPlate.h / 2 }; // a phone: the 信箱 plate
+  const k = lay.postBox.w / plates.post1[2];
+  return { x: lay.postBox.x + (1196 - plates.post1[0]) * k, y: lay.postBox.y + 30 * k };
+}
+
+// Letters standing in the open post box (the view's 1440x900 picture), front one first: the front one
+// in the slot where DEsk's welcome stands (VIEWS.post), each one behind it higher up, a little smaller
+// and darker, so only its head shows -- as in DEsk's post box (docs/screenshots/post-box.jpg).
+export const CARD = Object.freeze({ w: 416, h: 150, x: 512, y: 525, rise: 46, shrink: 0.03, dim: 0.075, behind: 4 });
+export function boxCards(count, front = 0) {
+  const cards = [];
+  for (let i = front; i < count && i - front <= CARD.behind; i++) {
+    const d = i - front, k = 1 - CARD.shrink * d;
+    cards.push({ index: i, depth: d, k, x: CARD.x + CARD.w * (1 - k) / 2, y: CARD.y - CARD.rise * d, w: CARD.w * k, h: CARD.h * k, dim: CARD.dim * d });
+  }
+  return cards;
+}
