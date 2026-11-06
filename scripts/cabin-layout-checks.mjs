@@ -9,7 +9,7 @@ export async function verifyCabinLayout({ page, check = () => {} }) {
   const measure = await page.evaluate(() => {
     const box = (selector) => { const r = document.querySelector(selector)?.getBoundingClientRect(); return r && { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width, height: r.height }; };
     return {
-      console: box('.desk-console-plate'), clock: box('.desk-clock-face'), post: box('.desk-post'), shelf: box('.desk-shelf-plate'), pull: box('.desk-pull'), window: box('.desk-window'),
+      console: box('.desk-console-plate'), clock: box('.desk-clock-face'), post: box('.desk-post, .desk-post-plate'), shelf: box('.desk-shelf-plate'), pull: box('.desk-pull'), window: box('.desk-window'),
       horizontalOverflow: document.documentElement.scrollWidth > innerWidth, width: innerWidth, height: innerHeight
     };
   });
@@ -18,10 +18,16 @@ export async function verifyCabinLayout({ page, check = () => {} }) {
     const entry = measure[name];
     assert(entry && entry.width > 0 && entry.left >= 0 && entry.right <= measure.width + 0.5 && entry.top >= 0 && entry.bottom <= measure.height + 0.5, `${name} stays inside the window: ${JSON.stringify(entry)}`);
   }
-  // The back edge is one row along the top, in DEsk's order; the bookcase plate is in the top-right corner.
-  assert(measure.console.right <= measure.clock.left && measure.clock.right <= measure.post.left, 'back edge runs 唱机 · 台钟 · 信箱, left to right');
-  for (const name of ['console', 'clock', 'post', 'shelf']) assert(measure[name].bottom <= measure.height * 0.2, `${name} sits at the back of the desk`);
-  assert(measure.shelf.left > measure.post.right && measure.width - measure.shelf.right < 40, '唱片架 plate hangs top-right');
+  if (measure.width >= 700) {
+    // The back edge is one row along the top, in DEsk's order; the bookcase plate is in the top-right corner.
+    assert(measure.console.right <= measure.clock.left && measure.clock.right <= measure.post.left, 'back edge runs 唱机 · 台钟 · 信箱, left to right');
+    for (const name of ['console', 'clock', 'post', 'shelf']) assert(measure[name].bottom <= measure.height * 0.2, `${name} sits at the back of the desk`);
+    assert(measure.shelf.left > measure.post.right && measure.width - measure.shelf.right < 40, '唱片架 plate hangs top-right');
+  } else {
+    // A phone-width desk: the clock across the top, then the 唱机 · 信箱 · 唱片架 plates in one row under it, at least 44 px tall.
+    assert(measure.clock.bottom <= measure.console.top + 1 && measure.console.right <= measure.post.left && measure.post.right <= measure.shelf.left, 'clock, then 唱机 · 信箱 · 唱片架 in a row');
+    for (const name of ['console', 'post', 'shelf']) assert(measure[name].height >= 43.5, `${name} plate is a full touch target`);
+  }
   assert(Math.abs(measure.pull.bottom - measure.height) < 2, 'the drawer pull is on the front edge');
   // The window controls (full screen; minimise and close in the frameless desktop window) cover nothing at the back edge.
   const overlaps = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;

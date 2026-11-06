@@ -19,10 +19,10 @@ function usePlayback() {
 }
 const time = (s) => { s = Math.max(0, Math.floor(s || 0)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
 
-export default function RecordDesk({ lay, shelf, reduced, hidden = false }) {
+export default function RecordDesk({ lay, shelf, reduced, hidden = false, chrome = 0 }) {
   const { deck, commands } = useCabinRuntime(), playback = usePlayback();
   const list = useMemo(() => (shelf?.visible || []).filter((item) => item?.cover || item?.title), [shelf?.visible]);
-  const L = useMemo(() => recordDeskLayout(lay), [lay]);
+  const L = useMemo(() => recordDeskLayout(lay, { chrome }), [lay, chrome]);
   const perPage = L.grid.scroll ? list.length : L.grid.cols * L.grid.rows;
   const pages = Math.max(1, Math.ceil(list.length / Math.max(1, perPage)));
   const [page, setPage] = useState(0), [selected, setSelected] = useState(''), [drag, setDrag] = useState(null);

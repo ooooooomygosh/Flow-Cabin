@@ -65,7 +65,7 @@ try {
   await page.screenshot({ path: path.join(output, 'cabin-phone.png') });
   // The back of the desk on a phone: the 唱机 and 唱片架 plates, the clock, the post box and the drawer pull, all on screen and at
   // least 24 px each way (WCAG 2.5.8; the phone's brass plates are 44 px tall). On a phone the post box is a 信箱 plate.
-  for (const [name, button] of [['唱机', page.getByRole('button', { name: /^唱机 · 抬头看控制面板/ })], ['唱片架', page.getByRole('button', { name: /^唱片架 · / })], ['专注', page.locator('.desk-clock-face')], ['信箱', page.locator('.desk-post, .desk-plate.is-brass').filter({ hasText: '信箱' }).first()], ['抽屉', page.locator('.desk-pull')]]) {
+  for (const [name, button] of [['唱机', page.getByRole('button', { name: /^唱机 · 抬头看控制面板/ })], ['唱片架', page.getByRole('button', { name: /^唱片架 · / })], ['专注', page.locator('.desk-clock-face')], ['信箱', page.locator('.desk-post, .desk-post-plate')], ['抽屉', page.locator('.desk-pull')]]) {
     const box = await button.boundingBox(); assert.ok(box && box.x >= 0 && box.x + box.width <= 391 && box.y >= 0 && box.y + box.height <= 845 && Math.min(box.width, box.height) >= 24, `${name} ${JSON.stringify(box)}`);
   }
   pass('notes-intact-and-reachable-phone-entries');

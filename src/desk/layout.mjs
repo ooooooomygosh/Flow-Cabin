@@ -160,8 +160,9 @@ export function boxCards(count, front = 0) {
 // The records on the desk (src/desk/RecordDesk.jsx): sleeves laid out in a grid on the left, the
 // turntable on the right, a paper slip under it. Everything between the back edge and the drawer's pull.
 // A phone: the turntable as a band across the top, the sleeves two to a row under it, scrolling.
-export function recordDeskLayout(lay) {
-  const { width, height } = lay, top = lay.top + 18 * (lay.phone ? 1 : lay.s), bottom = height - lay.pull - 14;
+// `chrome`: room kept at the top of a phone-width desk for the window keys (a narrow frameless desktop window).
+export function recordDeskLayout(lay, { chrome = 0 } = {}) {
+  const { width, height } = lay, top = lay.top + 18 * (lay.phone ? 1 : lay.s) + (lay.phone ? chrome : 0), bottom = height - lay.pull - 14;
   const room = Math.max(120, bottom - top);
   if (lay.phone) {
     const tt = { x: 16, y: top, w: width - 32, h: Math.min((width - 32) * 0.78, 240) };

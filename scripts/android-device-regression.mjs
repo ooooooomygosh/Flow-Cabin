@@ -72,7 +72,7 @@ async function layout(name) {
     const safe=Object.fromEntries(['left','right','top','bottom'].map(s=>[s,parseFloat(css.getPropertyValue('--safe-area-inset-'+s))||0]));
     return {name:${JSON.stringify(name)},viewport:[innerWidth,innerHeight],screen:[screen.width,screen.height],safe,
       keyboard:document.documentElement.dataset.mobileKeyboard,
-      controls:['.desk-console-plate','.desk-clock-face','.desk-post','.desk-shelf-plate','.desk-pull'].map(s=>({selector:s,rect:rect(s)}))};})()`);
+      controls:['.desk-console-plate','.desk-clock-face','.desk-post, .desk-post-plate','.desk-shelf-plate','.desk-pull'].map(s=>({selector:s,rect:rect(s)}))};})()`);
   const { safe, viewport: [width, height] } = value;
   report.layouts.push(value);
   assert.ok(Math.abs(width - value.screen[0]) <= 2 && Math.abs(height - value.screen[1]) <= 2, name + ': WebView does not fill display');

@@ -37,7 +37,7 @@ const press = async (locator) => { const hit = await reachable(locator); await l
 async function noOverflow(page) {
   const layout = await page.evaluate(() => {
     const root = document.documentElement;
-    const selectors = ['.desk-console-plate', '.desk-clock-face', '.desk-post', '.desk-shelf-plate', '.desk-pull', '.desk-window', '.desk-look', '.cat-panel', 'dialog[open]'];
+    const selectors = ['.desk-console-plate', '.desk-clock-face', '.desk-post, .desk-post-plate', '.desk-shelf-plate', '.desk-pull', '.desk-window', '.desk-look', '.cat-panel', 'dialog[open]'];
     const outside = selectors.flatMap(selector => [...document.querySelectorAll(selector)].flatMap(node => {
       const style = getComputedStyle(node), r = node.getBoundingClientRect();
       if (!r.width || !r.height || style.display === 'none' || style.visibility === 'hidden') return [];
@@ -118,7 +118,7 @@ export async function verifyBenchmarkCabin(browser, origin, { output, check = ()
     try {
       // The desk's entries: the 唱机 plate (C), the LED clock (专注), the post box (N), the 唱片架 plate (A),
       // the drawer pull (D) and the window controls.
-      const entries = (page) => [page.getByRole('button', { name: /^唱机 · 抬头看控制面板/ }), page.locator('.desk-clock-face'), page.locator('.desk-post'), page.getByRole('button', { name: /^唱片架 · / }), page.locator('.desk-pull'), page.getByRole('button', { name: '进入全屏模式', exact: true })];
+      const entries = (page) => [page.getByRole('button', { name: /^唱机 · 抬头看控制面板/ }), page.locator('.desk-clock-face'), page.locator('.desk-post, .desk-post-plate'), page.getByRole('button', { name: /^唱片架 · / }), page.locator('.desk-pull'), page.getByRole('button', { name: '进入全屏模式', exact: true })];
       await run('desk-entries-and-layout', async (page, shot) => {
         const hits = [];
         for (const entry of entries(page)) hits.push(await reachable(entry));

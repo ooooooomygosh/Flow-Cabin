@@ -20,7 +20,7 @@ import { DRAWER, PET_WINDOW } from './desk-model.mjs';
 import useDeskLamp from './useDeskLamp';
 import { VIEW_BODY } from './views';
 import { consoleLayout } from './views/console-model.mjs';
-import { DesktopControls } from '../desktop-client';
+import { DesktopControls, useDesktopAppearance } from '../desktop-client';
 import './desk.css';
 
 // The home: DEsk's desk (https://github.com/fyzugx/DEsk, MIT, (c) 2026 The DEsk authors), seen from
@@ -77,7 +77,7 @@ function useZen() {
 export default function DeskHome({ reduced = false, focusOpen = false, shelf = null }) {
   const { deck, commands, identity, notify, sceneCapture } = useCabinRuntime(), focus = useFocus(), labs = useLabs();
   const petPhoto = identity?.builtinId ? `/pet-art/v21/${identity.builtinId}/avatar-256.png` : '';
-  const zen = useZen(), homeRef = useRef(null), { width, height } = useDeskSize(homeRef), lay = useMemo(() => deskLayout(width, height), [width, height]);
+  const client = useDesktopAppearance().client, zen = useZen(), homeRef = useRef(null), { width, height } = useDeskSize(homeRef), lay = useMemo(() => deskLayout(width, height), [width, height]);
   const [ready, setReady] = useState(false), [drawer, setDrawer] = useState(false), [hot, setHot] = useState('');
   const [mode, setMode] = useState(''), [keysUp, setKeysUp] = useState(false);
   const [look, setLook] = useState(null); // { which, phase: 'up' | 'there' | 'down' }
@@ -286,7 +286,7 @@ export default function DeskHome({ reduced = false, focusOpen = false, shelf = n
   return <section ref={homeRef} className={`desk-home ${ready ? 'is-lit' : ''} ${lay.phone ? 'is-phone' : ''} ${drawer ? 'is-drawer-out' : ''} ${zen ? 'is-zen' : ''} ${reduced ? 'is-reduced' : ''}`} aria-label="书桌" data-look={look?.which || undefined} style={{ '--desk-s': lay.s, '--desk-lamp': lamp.brightness }}>
     <div className="desk-wood" style={{ backgroundImage: `url(${deskUrl('desk-wood.webp')})` }} aria-hidden="true"/>
     <div className="desk-top" ref={deskRef} style={{ transform: lift ? `translateY(${-lift.toFixed(1)}px)` : undefined }} inert={look?.phase === 'there' || undefined}>
-      <RecordDesk lay={lay} shelf={shelf} reduced={reduced} hidden={Boolean(look) || drawer}/>
+      <RecordDesk chrome={lay.phone && client ? 40 : 0} lay={lay} shelf={shelf} reduced={reduced} hidden={Boolean(look) || drawer}/>
       {lay.console && <img className="desk-piece" src={deskUrl('edge-console.webp')} alt="" style={style(lay.console)} draggable="false"/>}
       <img className="desk-piece" src={deskUrl('edge-clock.webp')} alt="" style={style(lay.clock)} draggable="false"/>
       {lay.post && <img className="desk-piece" src={deskUrl('edge-post.webp')} alt="" style={style(lay.post)} draggable="false"/>}
@@ -316,7 +316,7 @@ export default function DeskHome({ reduced = false, focusOpen = false, shelf = n
         ? <button type="button" className="desk-post" style={{ ...style(lay.postBox), backgroundImage: `url(${deskUrl(unread ? 'post-letter.webp' : 'post0.webp')})` }} aria-label={`信箱${unread ? ` · ${unread} 封未读` : letters.length ? ` · ${letters.length} 封信` : ''}（N）`} onClick={() => lookTo('post')}>
         <span className="desk-engraving desk-post-engraving" style={{ ...engraving, height: 15 * lay.postBox.w / PLATES.post1[2] }}>信箱{unread > 0 && <i>{unread}</i>} <b>↑</b></span>
       </button>
-        : <button type="button" className="desk-plate is-brass" style={{ ...style(lay.postPlate), backgroundImage: `url(${deskUrl('plate-shelf.webp')})` }} aria-label={`信箱${unread ? ` · ${unread} 封未读` : ''}（N）`} onClick={() => lookTo('post')}>
+        : <button type="button" className="desk-plate is-brass desk-post-plate" style={{ ...style(lay.postPlate), backgroundImage: `url(${deskUrl('plate-shelf.webp')})` }} aria-label={`信箱${unread ? ` · ${unread} 封未读` : ''}（N）`} onClick={() => lookTo('post')}>
           <span className="desk-engraving" style={engraving}>信箱{unread ? ` ${unread}` : ''} <b>↑</b></span>
         </button>}
       {lyingLetter && <div className="post-letter-lying" ref={lyingRef} key={lyingLetter.id}>
@@ -368,7 +368,7 @@ export default function DeskHome({ reduced = false, focusOpen = false, shelf = n
       </>}
     </div>}
     {/* The window is frameless on the desktop: a grip to drag it by, full screen, minimise and close (设置 is in the drawer). */}
-    {!lay.phone && <div className="desk-window" style={{ top: Math.max(...[lay.shelfPlate, lay.postBox || lay.postPlate].filter(Boolean).map((r) => r.y + r.h)) + 6 }}><DesktopControls onError={(text) => notify?.(text, { tone: 'error' })}/></div>}
+    {(!lay.phone || client) && <div className="desk-window" style={{ top: Math.max(...[lay.shelfPlate, lay.postBox || lay.postPlate].filter(Boolean).map((r) => r.y + r.h)) + 6 }}><DesktopControls onError={(text) => notify?.(text, { tone: 'error' })}/></div>}
     {!ready && <div className="desk-dark" aria-hidden="true"/>}
   </section>;
 }
