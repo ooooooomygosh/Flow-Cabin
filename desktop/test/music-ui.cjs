@@ -28,7 +28,7 @@ const check = (name) => { report.checks.push({ name, passed: true }); console.lo
   const ids = await app.evaluate(() => globalThis.__qaMusicResolves); assert.equal(ids.at(-1), albums[0].trackDetails[1].providerId); check('next-original-track-stops-old-source-and-plays-new-source');
   await site.getByRole('button', { name: /^选择曲目/ }).click(); await site.getByRole('listbox', { name: '唱机展示曲目', exact: true }).getByRole('option').nth(2).click(); await site.waitForFunction(() => document.querySelector('.console-status').textContent.includes('会员权限')); assert.equal(await site.evaluate(() => [...document.querySelectorAll('[data-cabin-audio-host] audio')].some((a) => !a.paused)), false); assert.equal(await site.locator('audio[data-deck="active"]').getAttribute('src'), null); check('restricted-source-never-claims-playing');
   await choose(site, 'visual'); assert.ok((await site.locator('.console-status').innerText()).includes('无音频')); assert.equal(await site.locator('audio[data-deck="active"]').getAttribute('src'), null); check('visual-mode-does-not-play-audio');
-  await site.getByRole('button', { name: /^选择曲目/ }).click(); await site.getByRole('listbox', { name: '唱机展示曲目', exact: true }).getByRole('option').nth(0).click(); await choose(site, 'netease');
+  await site.getByRole('button', { name: /^选择曲目/ }).click(); await site.getByRole('listbox', { name: '唱机展示曲目', exact: true }).getByRole('option').nth(0).click(); const resolvedBefore = (await app.evaluate(() => globalThis.__qaMusicResolves)).length; await choose(site, 'netease');
   // The deck has switched to 网易云 and its active deck is playing (the two <audio> decks swap, so the first one is not always it).
   await site.waitForFunction(() => { const a = document.querySelector('audio[data-deck="active"]'); return document.querySelector('.console')?.dataset.provider === 'netease' && /网易云/.test(document.querySelector('.console')?.textContent || '') && a && a.currentTime > .2 && !a.paused; });
   report.neteaseSelection = {
@@ -37,7 +37,8 @@ const check = (name) => { report.checks.push({ name, passed: true }); console.lo
       rememberedMatches: JSON.parse(localStorage.getItem('flow-cabin-track-matches-v1') || '{}') })),
     ...await app.evaluate(() => ({ resolvedIds: globalThis.__qaMusicResolves, neteaseSearches: globalThis.__qaMusicSearches }))
   };
-  assert.equal((await app.evaluate(() => globalThis.__qaMusicResolves)).at(-1), '12345'); check('netease-matches-the-recording-and-plays-automatically');
+  // What 网易云 resolved for the song (later entries may be the next track being preloaded once it plays).
+  assert.equal((await app.evaluate(() => globalThis.__qaMusicResolves)).slice(resolvedBefore).filter((id) => /^\d+$/.test(id))[0], '12345'); check('netease-matches-the-recording-and-plays-automatically');
   await choose(site, 'ma'); await site.waitForFunction(() => document.querySelector('.console-status').textContent.includes('配置 Music Assistant'));
   await closeConsole(site); const settings = await openMusicSettings(site); await settings.getByText('Music Assistant · 连接家里的播放器', { exact: true }).click(); await settings.getByLabel('Music Assistant 服务器地址').fill('http://127.0.0.1:8095'); await settings.getByLabel('Music Assistant 访问令牌').fill('QA_MA_TOKEN');
   await settings.getByRole('button', { name: '连接并读取播放器', exact: true }).click(); await settings.getByLabel('Music Assistant 播放器').selectOption('qa-speaker'); await settings.getByRole('button', { name: '保存播放器', exact: true }).click();

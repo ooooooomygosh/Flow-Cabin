@@ -36,8 +36,10 @@ let app, site;
   assert.deepEqual((await app.evaluate(() => globalThis.__qaCollectionWrites)).at(-1), ['update', 'shelf-1']);
   await site.screenshot({ path: path.join(output, 'record-card.png') });
   await card.locator('.record-card-tracks button').nth(1).click(); await card.waitFor({ state: 'detached' });
+  // The deck took the second track (read now: an unplayable fixture track may move on by itself while the desk looks up at the console).
+  assert.equal(await site.evaluate(() => window.albumRoomSnapshot().trackIndex), 1);
   await closeLibrary(site);
-  assert.equal((await deckRecord(site)).id, 'shelf-1'); assert.match(await (await openConsole(site)).locator('.console-track').innerText(), /^02 ·/); await closeConsole(site); check('record-card-notes-and-play-from-a-track');
+  assert.equal((await deckRecord(site)).id, 'shelf-1'); await openConsole(site); await closeConsole(site); check('record-card-notes-and-play-from-a-track');
 
   { const again = await openRecordCard(site, items[1].title); await again.getByRole('button', { name: '移除' }).click(); await again.getByRole('button', { name: '确认移除' }).click();
     await site.locator('.app-toast', { hasText: '已从唱片架移除' }).waitFor(); await closeLibrary(site);
@@ -57,6 +59,8 @@ let app, site;
   for (const width of [1024, 1920, 3840]) {
     await cdp.send('Emulation.setDeviceMetricsOverride', { width, height: Math.round(width * .5625), deviceScaleFactor: 1, mobile: false });
     await site.waitForFunction((w) => innerWidth === w, width);
+    // The desk lays itself out from its own box after the resize: give React two frames to re-render.
+    await site.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     const metrics = await site.evaluate(() => { const shelf = document.querySelector('.desk-shelf-plate').getBoundingClientRect(), pull = document.querySelector('.desk-pull').getBoundingClientRect(); return { scrollWidth: document.documentElement.scrollWidth, barRight: shelf.right, toolsBottom: pull.bottom }; });
     assert.ok(metrics.scrollWidth <= width + 1 && metrics.barRight <= width + 1 && metrics.toolsBottom <= innerHeightFor(width) + 1, JSON.stringify(metrics));
     check(`layout-fits-${width}`, metrics);
