@@ -69,7 +69,7 @@ export const clockText = (seconds) => { const s = Math.max(0, Math.floor(Number(
 export const CRT_COLS = Object.freeze({ head: 16, sub: 28, line: 28, foot: 24 });
 export function crtLines({ state, item = null, trackName = '', trackIndex = 0, trackCount = 0, artist = '', album = '', lyric = '', status = '', position = 0, duration = 0, shelfEmpty = false }) {
   if (state.screen === 'empty') {
-    return { head: '架子还空着', sub: shelfEmpty ? '先放上第一张唱片' : '去唱片架挑一张', line: '按播放键，去唱片架', foot: fitText(`--:-- ${state.word}`, CRT_COLS.foot), progress: null };
+    return { head: shelfEmpty ? '架子还空着' : '唱机空着', sub: shelfEmpty ? '先放上第一张唱片' : '在桌上挑一张唱片', line: shelfEmpty ? '按播放键，去唱片架' : '双击封面，或拖到唱机上', foot: fitText(`--:-- ${state.word}`, CRT_COLS.foot), progress: null };
   }
   const head = fitText(trackName || item?.title || '', CRT_COLS.head);
   const sub = fitText([artist, album && album !== trackName ? album : ''].filter(Boolean).join(' · ') || item?.title || '', CRT_COLS.sub);

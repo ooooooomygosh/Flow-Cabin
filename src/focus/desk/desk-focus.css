@@ -18,7 +18,8 @@
   --drop-l: calc(var(--sx, 2) * 8px) calc(var(--sy, 3) * 9px) 22px rgba(0, 0, 0, calc(.55 * var(--lamp-k, .7)));
   --sheet: linear-gradient(rgba(251, 247, 238, .55), rgba(251, 247, 238, .55)), var(--paper-tile, none) 0 0 / 128px, linear-gradient(172deg, #fbf7ee, #f3ecdd 70%, #ece2cd);
   position: fixed; inset: 0; display: grid; grid-template-rows: auto auto minmax(0, 1fr); color: var(--ink); font: 400 14px/1.5 var(--print);
-  background: radial-gradient(ellipse 80% 70% at 50% 46%, #2c1e14, #1d130c 62%, #120b06);
+  /* the desk itself, the lamp turned low: the sheet lies on the walnut it was taken from */
+  background: radial-gradient(ellipse 70% 60% at 64% 72%, rgba(255, 196, 120, .12), transparent 70%), linear-gradient(rgba(14, 8, 4, .64), rgba(14, 8, 4, .8)), #1d130c url('/desk/desk-wood.webp') center / cover;
 }
 .note-0 { --note: #FCE066; } .note-1 { --note: #FAADBD; } .note-2 { --note: #9ED1F5; } .note-3 { --note: #BAE394; } .note-4 { --note: #FCBD73; } .note-5 { --note: #CCB8F0; }
 .cabin-modal.focus-closeup-dialog { background: #120b06; color: #f3e6c8; }

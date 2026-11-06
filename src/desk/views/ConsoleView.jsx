@@ -395,7 +395,7 @@ export default function ConsoleView({ back, layout, reduced = false }) {
     if (state.failed) { playback.retry(); return; }
     playback?.toggle();
   };
-  const playLabel = !item && !(state.follow && system?.active) ? '播放 · 架子还空着，去唱片架挑一张'
+  const playLabel = !item && !(state.follow && system?.active) ? '播放 · 唱机空着，去挑一张唱片'
     : state.follow ? (system?.playing ? '暂停系统播放器' : '继续系统播放器')
     : state.visual ? (deck.effectiveSpin ? '暂停唱片旋转' : '继续唱片旋转')
     : state.failed ? '重试这首' : state.playing ? '暂停音乐播放' : '播放音乐';
@@ -449,7 +449,7 @@ export default function ConsoleView({ back, layout, reduced = false }) {
         <text className="console-plate-text" x={CV.plate[0] + CV.plate[2] / 2} y={CV.plate[1] + CV.plate[3] / 2 + 9} textAnchor="middle">唱机 ↑</text>
       </svg>
 
-      <button type="button" className="console-hit console-crt" style={at(F.x, F.y, F.w, F.h)} aria-label={item ? `打开唱机特写：${item.title}` : '架子还空着 · 去唱片架挑一张'} title={item ? '唱机特写 · T' : '去唱片架'} onClick={() => { playSfx('key-press'); if (item) openCorner(); else commands.open('library'); }}/>
+      <button type="button" className="console-hit console-crt" style={at(F.x, F.y, F.w, F.h)} aria-label={item ? `打开唱机特写：${item.title}` : '唱机空着 · 去唱片架挑一张'} title={item ? '唱机特写 · T' : '去唱片架'} onClick={() => { playSfx('key-press'); if (item) openCorner(); else commands.open('library'); }}/>
       {state.follow ? (system?.active && <SystemSeek timeline={system.timeline} onPosition={onPosition}/>)
         : caps.progress && playback && !state.visual && item ? <TubeSeek playback={playback} seekable={caps.seek} onPosition={onPosition}/> : null}
       <VolumeKnob value={canVolume ? volume : 0} disabled={!canVolume} muted={Boolean(playback?.muted)} valueText={!canVolume ? (state.visual ? '仅展示 · 这个音源没有声音' : '这个音源的音量请在它自己的播放器里调') : playback.muted ? '已静音' : `${volumePercent(volume)}%`}
@@ -477,7 +477,7 @@ export default function ConsoleView({ back, layout, reduced = false }) {
     </div>
 
     <div className="console-screen-text sr-only" aria-label="唱机屏幕">
-      <span className="console-title">{displayTitle(item?.title) || '架子还空着'}</span>
+      <span className="console-title">{displayTitle(item?.title) || '唱机空着'}</span>
       <span className="console-artist">{[artist, album && album !== item?.title ? album : ''].filter(Boolean).join(' · ')}</span>
       <span className="console-track">{item ? `${names.length ? `${two(trackIndex)} · ` : ''}${displayTitle(trackName)}` : ''}</span>
       <span className="console-status" role="status">{statusNode(deck.statusText)}</span>

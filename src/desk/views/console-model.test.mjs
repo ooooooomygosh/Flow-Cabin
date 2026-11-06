@@ -27,9 +27,9 @@ test('the deck as the console sees it: nothing on it, playing, failing, visual, 
   assert.equal(system.screen, 'paused'); assert(system.follow);
 });
 
-test('the tube: 架子还空着 with nothing on the deck; title, artist, lyric and time when something plays', () => {
+test('the tube: 唱机空着 with nothing on the deck (架子还空着 with nothing on the shelf); title, artist, lyric and time when something plays', () => {
   const empty = crtLines({ state: consoleState({}) });
-  assert.equal(empty.head, '架子还空着'); assert.equal(empty.progress, null);
+  assert.equal(empty.head, '唱机空着'); assert.equal(crtLines({ state: consoleState({}), shelfEmpty: true }).head, '架子还空着'); assert.equal(empty.progress, null);
   const state = consoleState({ item: { id: 1, title: '晚风' }, provider: 'local', playback: { playing: true, status: 'playing' } });
   const lines = crtLines({ state, item: { title: '晚风' }, trackName: '留给自己的晚风', trackIndex: 1, trackCount: 12, artist: '某人', album: '晚风', lyric: '风吹过来', position: 75, duration: 300 });
   assert.equal(lines.head, '留给自己的晚风'); assert.equal(lines.sub, '某人 · 晚风'); assert.equal(lines.line, '风吹过来');

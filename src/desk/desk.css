@@ -62,7 +62,8 @@
 
 /* Looking up: the film plays on a canvas over everything, then the view itself, with buttons on its things. */
 .desk-look { position: fixed; inset: 0; z-index: 20; cursor: pointer; }
-.desk-look.is-there { background: #120a05; }
+/* where a view does not reach the window (the console on a phone): the wall behind it, darkening down to the desk */
+.desk-look.is-there { background: linear-gradient(#4a4236, #3b342b 55%, #24180f); }
 .desk-film { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .desk-look.is-there .desk-film { display: none; }
 .desk-view { position: absolute; display: block; }

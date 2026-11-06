@@ -56,10 +56,10 @@ try {
     // Idle: nothing on the deck. The tube says so, and 播放 leads to the shelf.
     const dialog = await openConsole(page);
     await page.waitForTimeout(1700);
-    assert.equal(await dialog.locator('.console-crt-head').textContent(), '架子还空着');
+    assert.match(await dialog.locator('.console-crt-head').textContent(), /^(唱机空着|架子还空着)$/);
     await page.screenshot({ path: path.join(output, `console-idle-${label}.png`) });
-    check(`${label}: idle console says 架子还空着`);
-    await dialog.getByRole('button', { name: /^播放 · 架子还空着/ }).click();
+    check(`${label}: idle console says the deck is empty`);
+    await dialog.getByRole('button', { name: /^播放 · 唱机空着/ }).click();
     const shelf = page.getByRole('dialog', { name: /^唱片(库|架)$/ }); await shelf.waitFor();
     check(`${label}: 播放 with nothing on the deck opens the shelf`);
     const spine = shelf.getByRole('button', { name: /^唱片活页夹/ });

@@ -29,6 +29,7 @@
     "qa": "npm run check && npm --prefix desktop run build:music && npm run test:interface && npm run test:journey && npm run test:browser && npm run test:focus-ui && npm run test:shelf-ui && npm run test:beat && npm run test:web-static && npm run test:home && npm run test:home-interactions && npm run test:lyrics && npm run test:room-production && npm run test:native-playback && npm run test:promo && npm run test:playback && npm run test:ai && npm run test:journal && npm run test:memory && npm run test:study-ui && npm run test:devices-ui && npm run test:souvenirs",
     "screenshots:product": "node scripts/product-showcase.mjs",
     "screenshots:readme": "node scripts/readme-assets.mjs",
+    "screenshots:desk": "node scripts/readme-desk.mjs",
     "test:focus-ui": "node scripts/focus-ui-regression.mjs",
     "test:shelf-ui": "node scripts/shelf-ui-regression.mjs",
     "test:ai": "node scripts/ai-beta-regression.mjs",
