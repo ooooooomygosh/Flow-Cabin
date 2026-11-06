@@ -243,6 +243,7 @@ try {
   await run('quick-notes-archive-keeps-source-and-does-not-duplicate', async (page) => {
     const note = '会议结束后要先整理三条结论，再回来继续专注。';
     const dock = await openFocus(page);
+    await dock.getByRole('tab', { name: '随手记', exact: true }).click(); // 3.1: 随手记 is its own page
     const noteBox = page.getByLabel('随手记内容');
     await noteBox.fill(note);
     await page.waitForFunction(({ key, note }) => JSON.parse(localStorage.getItem(key) || '{}').notes === note, { key: FOCUS_KEY, note });
