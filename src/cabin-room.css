@@ -19,7 +19,7 @@
 /* The cabin is a fixed stage, never a scroller. overflow:hidden boxes can still be
    scrolled by scrollIntoView / focus / automation retries (the 1280×800 tour jumped
    160px when a record was scrolled to block:start). overflow:clip forbids that. */
-.cabin-room, .cabin-scene.room-scene, .cabin-rack .room-record-slot, .ambient-life, .cabin-atmosphere, .wallpaper-room { overflow: hidden; overflow: clip; }
+.cabin-room, .cabin-scene.room-scene, .cabin-rack .room-record-slot, .ambient-life, .cabin-atmosphere { overflow: hidden; overflow: clip; }
 .cabin-scene.room-scene { overscroll-behavior: none; }
 /* Short windows scale the art down to keep deck + shelf clear of the toolbar and
    footer (roomGeometry band). The side gutters show the scene's own solid colour

@@ -13,6 +13,9 @@ import ClockFace from './ClockFace';
 import ShelfView from './ShelfView';
 import usePost, { announceDeskLit } from './usePost';
 import { BoxCard, LyingLetter } from './PostLetters';
+import { listPackets, onPackets, unfoldPacket } from './packets.mjs';
+import { slotXY } from './sheet-corner.mjs';
+import { DRAWER, PET_WINDOW } from './desk-model.mjs';
 import './desk.css';
 
 // The home: DEsk's desk (https://github.com/fyzugx/DEsk, MIT, (c) 2026 The DEsk authors), seen from
@@ -49,7 +52,8 @@ function usePlaybackClock() {
 const postView = (which, count) => which === 'post' ? (count ? 'view-post-box.webp' : 'view-post-empty.webp') : `view-${which}.webp`;
 
 export default function DeskHome({ reduced = false, focusOpen = false, shelf = null }) {
-  const { deck, commands } = useCabinRuntime(), focus = useFocus(), labs = useLabs();
+  const { deck, commands, identity } = useCabinRuntime(), focus = useFocus(), labs = useLabs();
+  const petPhoto = identity?.builtinId ? `/pet-art/v21/${identity.builtinId}/avatar-256.png` : '';
   const { width, height } = useWindowSize(), lay = useMemo(() => deskLayout(width, height), [width, height]);
   const [ready, setReady] = useState(false), [drawer, setDrawer] = useState(false), [hot, setHot] = useState('');
   const [mode, setMode] = useState(''), [keysUp, setKeysUp] = useState(false);
@@ -58,6 +62,8 @@ export default function DeskHome({ reduced = false, focusOpen = false, shelf = n
   const now = useTick(true, 1000), playback = usePlaybackClock();
   const post = usePost(), letters = post.letters, unread = post.unread;
   const [front, setFront] = useState(0), [lying, setLying] = useState(null), taking = useRef(null), lyingRef = useRef(null);
+  const [packets, setPackets] = useState(listPackets);
+  useEffect(() => onPackets((list) => setPackets([...list])), []);
 
   // The lamp comes up as the room is made: dark until the first pictures are in (at least a moment).
   useEffect(() => {
@@ -256,6 +262,14 @@ export default function DeskHome({ reduced = false, focusOpen = false, shelf = n
           {CLOCK_KEYS.map((k) => <button type="button" key={k.id} role="radio" aria-checked={shown === k.id} className={`desk-clock-key ${shown === k.id ? 'is-on' : ''}`} style={{ left: `${k.rect[0] / 114 * 100}%`, top: `${k.rect[1] / 66 * 100}%`, width: `${k.rect[2] / 114 * 100}%`, height: `${k.rect[3] / 66 * 100}%` }} onClick={() => { playSfx('key-press'); setMode(mode === k.id ? '' : k.id); }}>{k.id === 'focus' ? <span className="desk-key-print">专注</span> : <span className="sr-only">{k.name}</span>}</button>)}
         </div>
       </div>
+      {packets.map((packet, k) => {
+        const r = slotXY(k, { width, height, s: lay.phone ? 0.7 : lay.s }), thing = DRAWER.find((t) => t.action === packet.action);
+        return <button type="button" key={packet.id} className="desk-packet" style={{ ...style(r), backgroundImage: `url(${deskUrl('packet.webp')})` }} aria-label={`打开折起的「${packet.title}」`}
+          onClick={() => { const p = unfoldPacket(packet.id); if (p) { playSfx('paper-unfold'); commands.open(p.action); } }}>
+          {thing && <img src={deskUrl(`drawer/${thing.art}`)} alt="" draggable="false"/>}
+          <span className="desk-packet-name" style={{ fontSize: Math.max(12, 15 * (lay.phone ? 0.7 : lay.s)) }}>{packet.title}</span>
+        </button>;
+      })}
       {lay.postBox
         ? <button type="button" className="desk-post" style={{ ...style(lay.postBox), backgroundImage: `url(${deskUrl(unread ? 'post-letter.webp' : 'post0.webp')})` }} aria-label={`信箱${unread ? ` · ${unread} 封未读` : letters.length ? ` · ${letters.length} 封信` : ''}（N）`} onClick={() => lookTo('post')}>
         <span className="desk-engraving desk-post-engraving" style={{ ...engraving, height: 15 * lay.postBox.w / PLATES.post1[2] }}>信箱{unread > 0 && <i>{unread}</i>} <b>↑</b></span>
@@ -277,6 +291,7 @@ export default function DeskHome({ reduced = false, focusOpen = false, shelf = n
         return <button type="button" key={thing.id} className={`desk-drawer-thing ${hot === thing.id ? 'is-hot' : ''}`} style={{ left: p.x * s, top: p.y * s }} aria-label={thing.name}
           onPointerEnter={() => setHot(thing.id)} onPointerLeave={() => setHot('')} onFocus={() => setHot(thing.id)} onBlur={() => setHot('')} onClick={() => pick(thing)}>
           <img src={deskUrl(`drawer/${thing.art}`)} alt="" draggable="false" style={size}/>
+          {thing.id === 'pet' && petPhoto && <span className="desk-pet-photo" style={{ left: `${PET_WINDOW.x / 2.56}%`, top: `${PET_WINDOW.y / 2.56}%`, width: `${PET_WINDOW.w / 2.56}%`, height: `${PET_WINDOW.h / 2.56}%`, transform: `rotate(${PET_WINDOW.angle}deg)`, transformOrigin: "50% 61.9%" }} aria-hidden="true"><img src={petPhoto} alt="" draggable="false"/></span>}
           <span className="desk-drawer-name" aria-hidden="true">{thing.name}</span>
         </button>;
       })}

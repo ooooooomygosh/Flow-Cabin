@@ -1,61 +1,52 @@
 @layer guards, reset, features, skin, overrides;
 @layer overrides {
-/* 设置 as a manila folder (docs/v3-desk-design.md): index tabs along the top edge, a wire-bound pad in the
-   pocket, sticky notes standing out of the pad's right edge, a lip of folder across the pad's foot.
-   Recipes after DEsk's Shell Settings (https://github.com/fyzugx/DEsk, MIT, (c) 2026 The DEsk authors,
-   src/settings.c draw_tabs / note_paint / rings_paint). Everything is lit by the one lamp (--sx/--sy/--lamp-k). */
+/* 设置 is DEsk's Shell Settings (https://github.com/fyzugx/DEsk, MIT, (c) 2026 The DEsk authors,
+   docs/screenshots/shell-settings.jpg; src/settings.c draw_tabs / note_paint / rings_paint): one cream sheet
+   with its title printed between double rules, index tabs under it, a wire-bound white pad, and sticky notes
+   standing out of the pad's right edge. Everything is lit by the one lamp (--sx/--sy/--lamp-k). */
 
 .settings-hub {
-  --folder: #e4cb94;
-  /* manila = the desk's cream fibre with a warm tint over it (the tile is opaque, so the tint goes on top) */
-  --folder-skin: linear-gradient(rgba(224, 186, 108, .68), rgba(224, 186, 108, .68)), var(--paper-tile, none) 0 0 / 128px, linear-gradient(var(--folder), var(--folder));
-  --rule: rgba(74, 54, 28, .55);
-  --pad-paper: linear-gradient(rgba(255, 252, 244, .5), rgba(255, 252, 244, .5)), var(--paper-tile, none) 0 0 / 128px, linear-gradient(172deg, #fbf6ea, #f3ebd9);
+  /* the sheet's own cream, a shade darker for the tabs behind, and the pad's whiter paper */
+  --tab-back: linear-gradient(rgba(214, 204, 184, .55), rgba(214, 204, 184, .55)), var(--paper-tile, none) 0 0 / 128px, linear-gradient(#ebe4d4, #e2d9c6);
+  --rule: rgba(82, 70, 56, .62);
+  --pad-paper: linear-gradient(rgba(255, 254, 250, .72), rgba(255, 254, 250, .72)), var(--paper-tile, none) 0 0 / 128px, linear-gradient(#faf8f3, #f4f1ea);
   --type: 'Courier Prime', 'Courier New', ui-monospace, monospace;
-  --hand: 'Kaiti SC', 'STKaiti', 'KaiTi', 'LXGW WenKai', var(--ui-font-display);
   --wires: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='20'%3E%3Cg stroke-linecap='round' fill='none'%3E%3Cpath d='M13.5 1.5V17M18.7 1.5V17' stroke='rgba(0,0,0,.25)' stroke-width='2.3'/%3E%3Cpath d='M12.4 1V17M17.6 1V17' stroke='rgb(19,19,22)' stroke-width='2'/%3E%3Cpath d='M11.95 1.2V16.6M17.15 1.2V16.6' stroke='rgba(168,168,178,.7)' stroke-width='.6'/%3E%3C/g%3E%3C/svg%3E");
   --holes: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='14'%3E%3Cg fill='rgba(84,71,59,.85)'%3E%3Crect x='11' y='6.4' width='2.8' height='3.4' rx='1.4'/%3E%3Crect x='16.2' y='6.4' width='2.8' height='3.4' rx='1.4'/%3E%3C/g%3E%3C/svg%3E");
 }
 
-/* ── the folder: manila, with the title written on its top edge ───────────── */
-.settings-hub.cabin-dialog.is-lg { width: min(940px, calc(100vw - 32px)); height: min(680px, calc(100dvh - 32px)); }
-.settings-hub.cabin-dialog:not(.is-full)::before {
-  background: var(--paper-grain, none) 0 0 / 96px, radial-gradient(130% 80% at 24% 0, rgba(255, 244, 210, .3), transparent 62%), var(--folder-skin);
-  box-shadow: inset 0 0 0 1px rgba(95, 72, 40, .3), inset 0 -2px 0 rgba(70, 52, 28, .16);
-}
-.settings-hub.cabin-dialog:not(.is-full) .cabin-dialog-header { min-height: 46px; padding: 10px 56px 0 28px; justify-content: flex-start; }
-.settings-hub.cabin-dialog:not(.is-full) .cabin-dialog-header::after { display: none; }
-.settings-hub.cabin-dialog:not(.is-full) .cabin-dialog-header h2 { justify-content: flex-start; font-size: 17px; text-align: left; letter-spacing: .14em; }
+/* ── the sheet: the desk's paper, its title printed centred between two rules (props.css) ── */
+.settings-hub.cabin-dialog.is-lg { width: min(760px, calc(100vw - 32px)); height: min(740px, calc(100dvh - 32px)); }
 
-.settings-hub .hub-folder { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); gap: 0; padding: 0 16px 14px; }
+.settings-hub .hub-folder { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; gap: 0; padding: 14px 0 6px; }
 
-/* ── index tabs: the front one is the folder's own paper and the rule breaks into it ── */
+/* ── index tabs: the front one is the pad's own paper and the rule breaks into it ── */
 .settings-hub .hub-folder-top {
-  position: relative; display: flex; flex-direction: row; align-items: flex-end; gap: 14px; min-height: 0; padding: 0 6px;
+  position: relative; display: flex; flex-direction: row; align-items: flex-end; gap: 14px; min-height: 0; padding: 0 14px;
   background: linear-gradient(var(--rule), var(--rule)) 0 100% / 100% 1.2px no-repeat;
 }
 .settings-hub .hub-folder .hub-tabs { order: 1; display: flex; flex: 0 1 auto; align-items: flex-end; gap: 4px; min-width: 0; padding: 8px 8px 2px 14px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
 .settings-hub .hub-tabs::-webkit-scrollbar { display: none; }
 .settings-hub .hub-folder .hub-tabs button {
-  position: relative; flex: none; isolation: isolate; min-height: 40px; padding: 0 20px; border: 0; border-radius: 0; background: none; box-shadow: none;
-  color: var(--ui-text-2); font: 600 14px/40px var(--ui-font-display); letter-spacing: .06em; white-space: nowrap; cursor: pointer;
+  position: relative; flex: none; isolation: isolate; min-height: 40px; padding: 0 15px; border: 0; border-radius: 0; background: none; box-shadow: none;
+  color: #4a3f33; font: 500 15px/38px var(--ui-font); letter-spacing: .04em; white-space: nowrap; cursor: pointer;
 }
 .settings-hub .hub-tabs button::before {
-  content: ''; position: absolute; z-index: -1; inset: 0; border: 1.2px solid var(--rule); border-bottom: 0; border-radius: var(--ui-radius-lg) var(--ui-radius-lg) 0 0;
-  background: rgba(104, 72, 28, .14); transform: perspective(40px) rotateX(8deg); transform-origin: 50% 100%;
+  content: ''; position: absolute; z-index: -1; inset: 0; border: 1.2px solid var(--rule); border-bottom: 0; border-radius: var(--ui-radius) var(--ui-radius) 0 0;
+  background: var(--tab-back); transform: perspective(40px) rotateX(7deg); transform-origin: 50% 100%;
   transition: background calc(.12s * var(--pace, 1));
 }
 .settings-hub .hub-folder .hub-tabs button:hover:not(:disabled, [aria-selected=true]) { background: none; color: var(--ui-text); }
-.settings-hub .hub-tabs button:hover:not(:disabled, [aria-selected=true])::before { background: rgba(255, 244, 214, .34); }
+.settings-hub .hub-tabs button:hover:not(:disabled, [aria-selected=true])::before { background: linear-gradient(#f1ebde, #e9e1cf); }
 .settings-hub .hub-folder .hub-tabs button[aria-selected=true] { z-index: 2; background: none; border-color: transparent; color: var(--ui-text); }
-.settings-hub .hub-tabs button[aria-selected=true]::before { bottom: -2px; background: var(--folder-skin); }
+.settings-hub .hub-tabs button[aria-selected=true]::before { bottom: -2px; background: var(--pad-paper); }
 .settings-hub .hub-tabs button:disabled { opacity: .45; cursor: default; }
 .settings-hub .hub-tabs button:focus-visible { outline: var(--ui-focus-ring); outline-offset: -4px; }
 .settings-hub .hub-tabs .settings-hub-count { margin-left: 6px; padding: 0 5px; border-radius: 50%; background: var(--ui-accent); color: var(--ui-accent-text); font: 600 12px/16px var(--ui-font); }
 
-/* ── 搜索设置: a line typed on a slip stuck to the folder ────────────────── */
+/* ── 搜索设置: a line typed on a slip lying on the sheet ─────────────────── */
 .settings-hub .hub-folder .hub-typed {
-  position: relative; order: 2; flex: none; width: 224px; min-height: 30px; margin: 0 8px 9px auto; padding: 0 8px; color: var(--ui-text-2);
+  position: relative; order: 2; flex: none; width: 176px; min-height: 30px; margin: 0 8px 9px auto; padding: 0 8px; color: var(--ui-text-2);
   background: var(--pad-paper); border: 0; border-radius: var(--ui-radius-sm); transform: rotate(.5deg);
   box-shadow: inset 0 0 0 1px rgba(95, 72, 40, .22), calc(var(--sx, 2) * 2px) calc(var(--sy, 3) * 2px) 3px rgba(15, 10, 8, calc(.26 * var(--lamp-k, .6)));
 }
@@ -67,13 +58,13 @@
 .settings-hub .hub-typed input::placeholder { color: var(--ui-text-3); opacity: 1; }
 .settings-hub .hub-typed .settings-hub-clear { color: var(--ui-text-2); }
 
-/* ── the pocket: the pad slid into it, a lip of folder across its foot ───── */
+/* ── the pad: lies on the sheet under the tabs, its sticky notes standing out to the right ── */
 .settings-hub .hub-pocket { position: relative; min-height: 0; overflow: hidden; margin: 0 -2px; }
-.settings-hub .hub-sheet { position: absolute; inset: 0; z-index: 1; display: grid; grid-template-columns: minmax(0, 1fr) 84px; grid-template-rows: minmax(0, 1fr); padding: 14px 8px 22px 12px; }
+.settings-hub .hub-sheet { position: absolute; inset: 0; z-index: 1; display: grid; grid-template-columns: minmax(0, 1fr) 96px; grid-template-rows: minmax(0, 1fr); padding: 12px 0 10px 28px; }
 .settings-hub .hub-sheet.is-ghost { z-index: 0; pointer-events: none; }
 .settings-hub .hub-pad-slot { position: relative; min-height: 0; perspective: 1400px; perspective-origin: 50% 0; }
 .settings-hub .hub-pad {
-  position: relative; display: flex; height: 100%; min-height: 0; background: var(--pad-paper); border: 1px solid rgba(76, 58, 30, .34);
+  position: relative; display: flex; height: 100%; min-height: 0; background: var(--pad-paper); border: 1px solid rgba(76, 64, 50, .3);
   box-shadow: 0 1.6px 0 #f4ecdc, 0 2.4px 0 rgba(95, 72, 40, .3), 0 3.2px 0 #f1e8d6, 0 4px 0 rgba(95, 72, 40, .3), 0 4.8px 0 #eee4cf, 0 5.6px 0 rgba(95, 72, 40, .3),
     calc(var(--sx, 2) * 4px) calc(var(--sy, 3) * 4px) 10px rgba(15, 10, 8, calc(.34 * var(--lamp-k, .6)));
 }
@@ -87,20 +78,19 @@
   -webkit-mask-image: linear-gradient(transparent 0, #000 18px); mask-image: linear-gradient(transparent 0, #000 18px);
 }
 
-.settings-hub .hub-lip { position: absolute; z-index: 6; left: -2px; right: -2px; bottom: 0; height: 26px; background: var(--folder-skin); border-top: 1.2px solid var(--rule); box-shadow: 0 -3px 6px rgba(60, 40, 15, .22); }
-.settings-hub .hub-lip .settings-hub-about {
-  position: absolute; left: 26px; top: 3px; width: auto; min-height: 20px; margin: 0; padding: 0 8px; color: var(--ui-text-2); background: var(--pad-paper); border: 0; border-radius: var(--ui-radius-sm);
-  box-shadow: inset 0 0 0 1px rgba(95, 72, 40, .22); font: 400 12px/20px var(--type); letter-spacing: .04em; text-align: left; cursor: pointer;
+.settings-hub .settings-hub-about {
+  justify-self: end; width: auto; min-height: 28px; margin: 2px 110px 0 0; padding: 0 6px; border: 0; border-radius: 0; background: none; box-shadow: none;
+  color: #6b5f50; font: 600 12px/28px var(--ui-font); letter-spacing: .16em; cursor: pointer;
 }
-.settings-hub .hub-lip .settings-hub-about:hover, .settings-hub .hub-lip .settings-hub-about:focus-visible { color: var(--ui-text); }
-.settings-hub .hub-lip .settings-hub-about:focus-visible { outline: var(--ui-focus-ring); outline-offset: 2px; }
+.settings-hub .settings-hub-about:hover { color: var(--ui-text); }
+.settings-hub .settings-hub-about:focus-visible { outline: var(--ui-focus-ring); outline-offset: 2px; }
 
-/* ── sticky notes: one per part of the page, in the six desk colours, written by hand ── */
-.settings-hub .hub-notes { position: relative; z-index: 2; display: flex; flex-direction: column; align-self: start; gap: 8px; width: 100px; margin-left: -16px; padding-top: 36px; }
+/* ── sticky notes: one per part of the page, in the six desk colours, as DEsk prints them ── */
+.settings-hub .hub-notes { position: relative; z-index: 0; display: flex; flex-direction: column; align-self: start; gap: 8px; width: 98px; margin-left: -6px; padding-top: 34px; }
 .settings-hub .hub-note {
-  position: relative; display: grid; align-content: center; justify-items: start; width: 100%; min-height: 34px; padding: 2px 6px 2px 23px; margin: 0; border: 0; border-radius: 0 var(--ui-radius-sm) var(--ui-radius-sm) 0;
-  background: linear-gradient(90deg, color-mix(in srgb, var(--note) 78%, transparent) 0 16px, color-mix(in srgb, var(--note) 90%, #000) 16px 18px, var(--note) 18px);
-  color: #33291f; font: 400 15px/1.1 var(--hand); letter-spacing: .04em; text-align: left; white-space: nowrap; cursor: pointer;
+  position: relative; display: grid; align-content: center; justify-items: start; width: 100%; min-height: 34px; padding: 3px 6px 3px 20px; margin: 0; border: 0; border-radius: 0 var(--ui-radius-sm) var(--ui-radius-sm) 0;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--note) 80%, #000) 0 2px, var(--note) 2px);
+  color: #4a4238; font: 400 13px/1.25 var(--ui-font); letter-spacing: .02em; text-align: left; white-space: nowrap; cursor: pointer;
   box-shadow: inset 0 0 0 1px rgba(60, 45, 20, .18), calc(var(--sx, 2) * 2px) calc(var(--sy, 3) * 2px) 3px rgba(15, 10, 8, calc(.3 * var(--lamp-k, .6)));
   transition: transform calc(.12s * var(--pace, 1)) var(--ease-drawer, ease-out);
 }
@@ -117,9 +107,9 @@
 .settings-hub .settings-hub-panel .hub-sources { gap: 0; margin-bottom: 8px; }
 .settings-hub .settings-hub-panel .hub-sources button { padding: 8px 6px; }
 .settings-hub .settings-hub-panel .hub-sources button:hover:not(:disabled), .settings-hub .settings-hub-panel .settings-hub-results button:hover { background: var(--ui-surface-hover); border-color: var(--ui-line); }
-.settings-hub .settings-hub-panel .hub-sources button[aria-checked=true] { box-shadow: none; border-color: var(--ui-line); background: linear-gradient(transparent 52%, rgba(247, 214, 90, .5) 52%); }
-.settings-hub .settings-hub-panel .hub-row strong, .settings-hub .settings-hub-panel .hub-sources strong, .settings-hub .settings-hub-panel .settings-hub-results strong { font-family: var(--ui-font-display); font-weight: 600; letter-spacing: .02em; }
-.settings-hub .settings-hub-panel .hub-block > h3 { margin: 0 0 6px; padding-bottom: 5px; border-bottom: 1px solid var(--ui-line-strong); color: var(--ui-text-2); font: 600 12px/1.4 var(--ui-font); letter-spacing: .18em; }
+.settings-hub .settings-hub-panel .hub-sources button[aria-checked=true] { box-shadow: inset 3px 0 0 var(--ui-accent); border-color: var(--ui-line); background: rgba(168, 120, 58, .08); }
+.settings-hub .settings-hub-panel .hub-row strong, .settings-hub .settings-hub-panel .hub-sources strong, .settings-hub .settings-hub-panel .settings-hub-results strong { font-family: var(--ui-font-display); font-size: 16px; font-weight: 600; letter-spacing: .01em; color: #2e2720; }
+.settings-hub .settings-hub-panel .hub-block > h3 { margin: 0 0 8px; padding-bottom: 6px; border-bottom: 1px solid var(--ui-line-strong); color: #5a4e40; font: 600 12px/1.4 var(--ui-font); letter-spacing: .22em; }
 .settings-hub .settings-hub-panel .hub-block { margin-top: 26px; }
 .settings-hub .settings-hub-panel .hub-part { scroll-margin-top: 12px; }
 .settings-hub .settings-hub-panel .hub-part + .hub-part, .settings-hub .settings-hub-panel .hub-part + .hub-block, .settings-hub .settings-hub-panel .hub-rows > .hub-part + .hub-part { margin-top: 26px; }
@@ -128,26 +118,24 @@
 .settings-hub .settings-hub-panel .hub-rows > .hub-part:first-child, .settings-hub .settings-hub-panel > .hub-part:first-child { margin-top: 0; }
 .settings-hub .settings-hub-panel .personalization-intro { color: var(--ui-text-2); }
 /* headings of the components inside the pad (room pickers…) are printed, not pixel-set */
-.settings-hub .settings-hub-panel .personalization-heading h3 { margin: 0; padding-bottom: 5px; border-bottom: 1px solid var(--ui-line-strong); color: var(--ui-text-2); font: 600 12px/1.4 var(--ui-font); letter-spacing: .18em; -webkit-font-smoothing: auto; }
+.settings-hub .settings-hub-panel .personalization-heading h3 { margin: 0; padding-bottom: 6px; border-bottom: 1px solid var(--ui-line-strong); color: #5a4e40; font: 600 12px/1.4 var(--ui-font); letter-spacing: .22em; -webkit-font-smoothing: auto; }
 .settings-hub .settings-hub-panel .onboarding-hint { color: var(--ui-text-2); background: rgba(120, 84, 40, .08); border-left-color: var(--ui-accent); }
 .settings-hub .settings-hub-panel .settings-hub-empty { padding: 40px 12px; font-family: var(--type); }
 
 /* ── phone: tabs scroll along the folder's edge, the notes lie along the pad's top ── */
 @media (max-width: 700px) {
   .settings-hub.cabin-dialog.is-lg { height: calc(100dvh - 32px); }
-  .settings-hub.cabin-dialog:not(.is-full) .cabin-dialog-header { padding-left: 20px; }
-  .settings-hub .hub-folder { padding: 0 8px 10px; }
+  .settings-hub .hub-folder { padding: 8px 0 4px; }
   .settings-hub .hub-folder-top { flex-wrap: wrap; gap: 0; padding: 0 2px; }
   .settings-hub .hub-folder .hub-tabs { flex: 1 1 100%; padding-left: 8px; }
   .settings-hub .hub-folder .hub-tabs button { min-height: 44px; line-height: 44px; padding: 0 18px; }
   .settings-hub .hub-folder .hub-typed { flex: 1 1 100%; width: auto; min-height: 40px; margin: 8px 4px 8px; }
   .settings-hub .hub-folder .hub-typed input { height: 36px; font-size: 14px; }
-  .settings-hub .hub-sheet { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); padding: 6px 4px 14px 4px; }
+  .settings-hub .hub-sheet { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); padding: 6px 10px 10px; }
   .settings-hub .hub-notes { order: -1; flex-direction: row; width: auto; margin: 0 0 12px; padding: 0 0 4px; overflow-x: auto; scrollbar-width: none; }
   .settings-hub .hub-note { flex: none; width: auto; min-height: 44px; padding: 2px 16px; border-radius: var(--ui-radius-sm); background: var(--note); }
   .settings-hub .hub-note:hover, .settings-hub .hub-note:focus-visible { transform: none; }
-  .settings-hub .hub-lip { height: 12px; }
-  .settings-hub .hub-lip .settings-hub-about { display: none; }
+  .settings-hub .settings-hub-about { margin-right: 12px; }
   .settings-hub .settings-hub-panel { padding: 32px 14px 16px 16px; }
   .settings-hub .settings-hub-panel .hub-row { flex-wrap: wrap; }
 }

@@ -1,6 +1,7 @@
 @layer guards, reset, features, skin, overrides;
-/* The pet panel as a companion booklet: a small stitched passport on paper. The portrait is a
-   photo held by corner mounts, the name hangs on a brass collar tag, the mood is a hand-drawn dial,
+/* The pet panel as a companion booklet, one of DEsk's sheets (https://github.com/fyzugx/DEsk, MIT,
+   (c) 2026 The DEsk authors): printed, not handwritten. The portrait is an instant photograph like the
+   top one of the stack in the drawer, the name hangs on a brass collar tag, the mood is a hand-drawn dial,
    accessories are stickers on a page (locked ones are faded outlines with the unlock note in
    handwriting) and souvenirs are postage stamps. The sheet itself (corner, shadow, heading) is the
    paper dialog from src/props/props.css; everything here sits on it. Shadows follow the one lamp
@@ -11,17 +12,15 @@
     --ink: #2e2318;
     --ink-2: #5f4f37;
     --brass-ink: #7d5019;
-    --pen: #2b3a5e;
-    --hand: 'Kaiti SC', 'STKaiti', 'KaiTi', 'LXGW WenKai', serif;
+    --pen: #3b3226;
     --thread: #a3301d;
+    --hand: var(--ui-font-display);
     --slip: linear-gradient(180deg, rgba(255, 252, 240, .62), rgba(244, 235, 214, .5));
   }
-  /* the booklet's spine: a column of red thread stitches that runs the whole length of the page */
-  .cat-panel .cabin-dialog-body {
-    position: relative; padding-left: 30px;
-    background: repeating-linear-gradient(180deg, var(--thread) 0 8px, transparent 8px 15px) 11px 0 / 2px 100% no-repeat, linear-gradient(90deg, rgba(60, 40, 15, .1), transparent 18px) 0 0 / 18px 100% no-repeat;
-    background-attachment: local, local;
-  }
+  /* a sheet on the desk: wider than the old booklet, and its body scrolls under the printed heading
+     (the sheet itself does not, so its corner stays where it is) */
+  .cabin-dialog.cat-panel { width: min(430px, calc(100vw - 24px)); overflow: hidden; }
+  .cat-panel .cabin-dialog-body { position: relative; padding: 18px 26px 24px; }
 
   /* ── the photo and the collar tag ──────────────────────────────────── */
   .cat-panel .cat-portrait {
@@ -29,19 +28,18 @@
     background: none; border: 0; border-bottom: 1px dashed rgba(76, 58, 30, .45);
   }
   .cat-panel .cat-photo {
-    position: relative; display: block; width: 128px; height: 128px; padding: 14px; background: #fbf8ef; transform: rotate(-2deg);
-    box-shadow: inset 0 0 0 1px rgba(95, 72, 40, .22), calc(var(--sx, 2) * 4px) calc(var(--sy, 3) * 4px) 6px rgba(15, 10, 8, calc(.34 * var(--lamp-k, .6)));
+    position: relative; display: block; width: 132px; padding: 10px 10px 30px; transform: rotate(-3deg);
+    background: var(--paper-grain, none) 0 0 / 96px, linear-gradient(135deg, #e9e4d7, #fbfaf5);
+    box-shadow: inset 0 0 0 1px rgba(95, 72, 40, .2), calc(var(--sx, -.54) * 5px) calc(var(--sy, -.43) * 5px) 5px rgba(15, 10, 8, calc(.4 * var(--lamp-k, .6)));
   }
-  .cat-panel .cat-photo::before {
-    content: ''; position: absolute; inset: 11px; background: var(--paper-grain, none) 0 0 / 96px, radial-gradient(ellipse at 50% 88%, #f6dfae, #d9b57c 58%, #b58b52);
-    box-shadow: inset 0 0 0 1px rgba(60, 40, 15, .4), inset 0 0 16px rgba(70, 40, 10, .38);
+  .cat-panel .cat-photo-print {
+    position: relative; display: grid; place-items: end center; height: 112px; overflow: hidden;
+    background: radial-gradient(ellipse at 60% 40%, #f3d9a8, #c79a62 70%, #8a5f37), #c79a62;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .22), inset 0 0 14px rgba(70, 40, 10, .4);
   }
-  .cat-panel .cat-photo .pixel-cat { position: relative; display: block; width: 100px; height: 100px; image-rendering: pixelated; }
-  .cat-panel .cat-mount { position: absolute; z-index: 2; width: 17px; height: 17px; background: linear-gradient(135deg, #5a4430, #33251a); box-shadow: 0 0 0 .5px rgba(0, 0, 0, .4); }
-  .cat-panel .cat-mount.is-nw { top: 11px; left: 11px; clip-path: polygon(0 0, 100% 0, 0 100%); }
-  .cat-panel .cat-mount.is-ne { top: 11px; right: 11px; clip-path: polygon(0 0, 100% 0, 100% 100%); }
-  .cat-panel .cat-mount.is-sw { bottom: 11px; left: 11px; clip-path: polygon(0 0, 100% 100%, 0 100%); }
-  .cat-panel .cat-mount.is-se { bottom: 11px; right: 11px; clip-path: polygon(100% 0, 100% 100%, 0 100%); }
+  .cat-panel .cat-photo-print::after { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(255, 255, 255, .3), rgba(255, 255, 255, .05) 45%, rgba(255, 255, 255, 0) 50%); pointer-events: none; }
+  .cat-panel .cat-photo .pixel-cat { position: relative; display: block; width: 100px; height: 100px; image-rendering: pixelated; filter: sepia(.15) saturate(.94) drop-shadow(-2px -2px 2px rgba(60, 30, 10, .35)); }
+  .cat-panel .cat-photo-caption { position: absolute; left: 12px; right: 12px; bottom: 6px; overflow: hidden; font: 600 13px/18px var(--ui-font-display); color: #4b4436; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
   .cat-panel .cat-collar {
     position: relative; display: inline-block; margin-left: -4px; padding: 5px 24px 5px 32px; font: 700 18px/1.25 var(--ui-font-display); letter-spacing: .06em; color: #2a1c0a;
     background: radial-gradient(circle at 15px 50%, #2b1d0e 0 3px, #f3dfa6 3.4px 5px, transparent 5.4px), linear-gradient(180deg, #cdb273, #a9803c 55%, #8a6a30);

@@ -1,6 +1,8 @@
 // What is on the desk and in its drawer, and where each thing leads, as plain data (tested).
-// The desk is DEsk's (https://github.com/fyzugx/DEsk, MIT, (c) 2026 The DEsk authors); the things in the
-// drawer are DEsk's own pictures (cut from its drawer, or drawn by its themes/make-icons.py).
+// The desk is DEsk's (https://github.com/fyzugx/DEsk, MIT, (c) 2026 The DEsk authors); in the drawer lie
+// four things cut from DEsk's own drawer (notepad, compass, folder, screwdriver) and five drawn the way
+// DEsk draws its icons, lit by its lamp (scripts/desk-drawer-art.py: diary, companion, cardbox, postcard,
+// nightlamp).
 
 // The four things at the back of the desk. `key` opens it from the keyboard, as Super+A/C/N/D do on DEsk.
 export const EDGE = Object.freeze([
@@ -12,16 +14,20 @@ export const EDGE = Object.freeze([
 
 // The drawer, left to right. `lab` names the 实验室 switch the thing waits for.
 export const DRAWER = Object.freeze([
-  { id: 'diary', name: '唱片日记', art: 'record.svg', size: 104, action: 'diary' },
-  { id: 'pet', name: '伙伴', art: 'photos.svg', size: 104, action: 'pet' },
+  { id: 'diary', name: '唱片日记', art: 'diary.svg', size: 92, action: 'diary' },
+  { id: 'pet', name: '伙伴', art: 'companion.svg', size: 96, action: 'pet' },
   { id: 'notes', name: '随手记', art: 'notepad.webp', action: 'notes' },
   { id: 'weather', name: '窗外与天气', art: 'compass.webp', action: 'weather' },
-  { id: 'study', name: '词书', art: 'carton.svg', size: 96, action: 'study', lab: 'study' },
-  { id: 'postcard', name: '明信片', art: 'document.svg', size: 96, action: 'postcard', lab: 'postcard' },
-  { id: 'sleep', name: '睡前模式', art: 'folder-music.svg', size: 96, action: 'sleep', lab: 'scenes' },
+  { id: 'study', name: '词书', art: 'cardbox.svg', size: 90, action: 'study', lab: 'study' },
+  { id: 'postcard', name: '明信片', art: 'postcard.svg', size: 92, action: 'postcard', lab: 'postcard' },
+  { id: 'sleep', name: '睡前模式', art: 'nightlamp.svg', size: 86, action: 'sleep', lab: 'scenes' },
   { id: 'backup', name: '备份与恢复', art: 'folder.webp', action: 'backup' },
   { id: 'settings', name: '设置', art: 'screwdriver.webp', action: 'settings' },
 ]);
+
+// The companion's photograph on top of the stack (companion.svg, 256 units): the window the pet's own
+// picture is laid into, and how far the photo is turned (scripts/desk-drawer-art.py PET_WINDOW).
+export const PET_WINDOW = Object.freeze({ x: 69, y: 45, w: 118, h: 118, angle: -6 });
 
 export const drawerItems = (labs = {}) => DRAWER.filter((item) => !item.lab || labs[item.lab]);
 
