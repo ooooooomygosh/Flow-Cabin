@@ -35,8 +35,10 @@
 .record-desk-player { position: absolute; }
 .record-desk-platter { display: block; width: 100%; height: 100%; padding: 0; border: 0; border-radius: var(--ui-radius, 4px); background: none; cursor: pointer; }
 .record-desk-player.is-target .desk-turntable { filter: drop-shadow(0 0 14px rgba(255, 214, 140, .55)); }
-.desk-turntable { display: block; width: 100%; height: 100%; overflow: visible; }
-.desk-tt-disc { animation: tt-turn 1.8s linear infinite; animation-play-state: paused; }
+.desk-turntable { position: relative; display: block; width: 100%; height: 100%; }
+.desk-tt-layer { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.desk-tt-disc { position: absolute; border-radius: 50%; will-change: transform; animation: tt-turn 1.8s linear infinite; animation-play-state: paused; }
+.desk-tt-disc svg { display: block; width: 100%; height: 100%; }
 .desk-turntable.is-playing .desk-tt-disc { animation-play-state: running; }
 .desk-turntable.is-still .desk-tt-disc { animation: none; }
 .desk-tt-arm { transition: transform calc(.9s * var(--pace, 1)) var(--ease-drawer, ease-out); }
