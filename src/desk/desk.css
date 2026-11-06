@@ -27,6 +27,10 @@
 .desk-clock-key { position: absolute; padding: 0; border: 0; border-radius: 0; background: none; cursor: pointer; }
 .desk-clock-key::after { content: ''; position: absolute; left: 23.5%; top: 53%; width: 8%; aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%; background: rgba(120, 30, 20, .55); }
 .desk-clock-key.is-on::after { background: #ff5a3a; box-shadow: 0 0 5px 1px rgba(255, 70, 40, .8); }
+/* 音乐 while something plays: its lamp beats slowly (the bottom bar that used to say so is gone) */
+.desk-clock-key.is-playing::after { background: #ff5a3a; animation: desk-key-beat 1.4s ease-in-out infinite; }
+@keyframes desk-key-beat { 0%, 100% { box-shadow: 0 0 2px 0 rgba(255, 70, 40, .5); } 50% { box-shadow: 0 0 7px 2px rgba(255, 70, 40, .9); } }
+.desk-clock:not(.is-awake) .desk-clock-keys:has(.is-playing) { opacity: .7; }
 .desk-key-print { position: absolute; inset: 0 0 0 18%; display: flex; align-items: center; justify-content: center; font: 600 12px/1 var(--ui-font, system-ui), sans-serif; color: rgba(222, 182, 132, .82); text-shadow: 0 0 2px rgba(255, 150, 90, .35); transform: scale(calc(var(--desk-s, 1) * .62)); }
 
 .desk-post { position: absolute; padding: 0; border: 0; border-radius: 0; background: center / 100% 100% no-repeat; cursor: pointer; }
@@ -57,10 +61,13 @@
 .desk-dark { position: absolute; inset: 0; z-index: 30; background: radial-gradient(ellipse at 75% 82%, rgba(18, 10, 5, .55), #050302 70%); pointer-events: none; }
 .desk-home .desk-wood, .desk-home .desk-piece, .desk-home .desk-plate, .desk-home .desk-post, .desk-home .desk-drawer { transition: filter .9s ease-out; }
 .desk-home:not(.is-lit) .desk-wood, .desk-home:not(.is-lit) .desk-piece { filter: brightness(.25); }
+/* the desk lamp (the console's 台灯 fader, useDeskLamp) */
+.desk-home.is-lit .desk-wood, .desk-home.is-lit .desk-top, .desk-home.is-lit .desk-drawer, .desk-home .desk-view { filter: brightness(var(--desk-lamp, 1)); }
 
 .desk-home .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
 /* A phone: the drawer is narrower than the window's width allows a whole band, so its felt is centred. */
 .desk-home.is-phone .desk-drawer-name { font-size: 12px; }
 .desk-home.is-reduced .desk-clock-keys, .desk-home.is-reduced .desk-drawer-thing img { transition: none; }
+.desk-home.is-reduced .desk-clock-key.is-playing::after { animation: none; }
 }

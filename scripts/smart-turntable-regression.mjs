@@ -178,7 +178,7 @@ try {
   };
 
   const openSmart = async (page) => {
-    // 让小屋挑一张 is a plate on the 唱片架 cornice (and in 唱机旁); the dialog keeps its name.
+    // 让小屋挑一张 is a plate on the 唱片架 cornice (and on the slip under the console, 唱机); the dialog keeps its name.
     await (await openLibrary(page)).getByRole('button', { name: '让小屋挑一张', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: '智能唱片机', exact: true });
     await dialog.waitFor();
@@ -242,7 +242,7 @@ try {
     assert.deepEqual(playlist.trackDetails.map((track) => track.artist), requestedTracks.map((track) => track.artist));
     assert.ok(playlist.trackDetails.every((track) => track.source === 'ai' && track.providerId === ''));
     assert.match(playlist.externalIds.playlist, /^ai:/);
-    assert.equal(await page.locator('.listen-bar').getAttribute('data-provider'), 'auto');
+    assert.equal(await page.evaluate(() => localStorage.getItem('album-circle-room-player-v1')), 'auto');
 
     await page.waitForFunction(() => {
       const audio = document.querySelector('audio[data-deck="active"]');

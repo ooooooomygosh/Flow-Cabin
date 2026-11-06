@@ -61,7 +61,7 @@ try {
   check('add-record-and-confirm-real-shelf-update');
   // 唱片架 › 唱片: the record's cover button is a real button; the first Enter loads it on the deck.
   const record = (await openLibrary(page)).getByRole('button', { name: '播放 留给自己的晚风', exact: true }); await record.focus(); await page.keyboard.press('Enter');
-  await page.getByRole('button', { name: '打开唱机特写：留给自己的晚风', exact: true }).waitFor();
+  await page.waitForFunction(() => window.__cabinDeckItem?.title === '留给自己的晚风'); // on the deck (the console's tube names it)
   await closeLibrary(page);
   check('keyboard-loads-record-on-the-first-enter');
   await page.locator('.focus-badge').click();
@@ -90,7 +90,7 @@ try {
   check('journal-shows-the-round-and-its-record');
   await page.getByRole('button', { name: '返回小屋', exact: true }).click();
   // After a reload the deck still holds the record (重启后接着上次的歌) and the round was not duplicated.
-  await page.reload(); await page.getByRole('button', { name: '打开唱机特写：留给自己的晚风', exact: true }).waitFor();
+  await page.reload(); await page.waitForFunction(() => window.__cabinDeckItem?.title === '留给自己的晚风');
   assert.equal((await page.evaluate(log => JSON.parse(localStorage.getItem(log)), LOG)).length, 1);
   await page.screenshot({ path: path.join(output, 'return.png'), animations: 'disabled' });
   check('return-after-reload-remembers-the-record-without-duplicating-the-round');

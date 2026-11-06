@@ -126,7 +126,7 @@ export async function verifyBenchmarkCabin(browser, origin, { output, check = ()
         await shot('room'); return { hotspots, layout };
       });
       await run('hotspots-open-their-pillars', async (page, shot) => {
-        for (const [id, dialog] of [['listen', '唱机旁'], ['focus', '专注'], ['journal', '唱片日记']]) {
+        for (const [id, dialog] of [['listen', '唱机'], ['focus', '专注'], ['journal', '唱片日记']]) {
           await press(page.locator(`[data-hotspot="${id}"]`));
           const opened = page.getByRole('dialog', { name: dialog, exact: true }); await opened.waitFor();
           await noOverflow(page); if (id === 'focus') await shot('focus');

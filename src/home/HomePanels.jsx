@@ -2,10 +2,8 @@ import React, { lazy, Suspense, useEffect, useState } from 'react';
 import Dialog from '../Dialog';
 import { useCabinRuntime } from '../runtime/CabinRuntime';
 import SkySettings from '../SkySettings';
-import ConsolePanel from '../console/ConsolePanel';
 import { SceneRecipes, SleepPanel, Diagnostics } from './SceneTools';
 import RecordShelf from '../listen/RecordShelf';
-import useLabs from '../product/useLabs';
 import Postcard from './Postcard';
 import HomeCalendar from './HomeCalendar';
 import RoomPickers from '../RoomPickers';
@@ -35,9 +33,7 @@ export function LifeReminder() {
   return null;
 }
 export default function HomePanels({ tool, close, filters, setFilters, visible, recordStyle, openAdd, openRecord, openWall, openSmart, onRoomChange }) {
-  const { items, look, identity } = useCabinRuntime(), labs = useLabs();
-  // 唱机旁 is the full console close-up (src/console/ConsolePanel.jsx), which draws its own dialog.
-  if (tool === 'music') return <ConsolePanel close={close} openSmart={labs.smartTurntable ? openSmart : null}/>;
+  const { items, look, identity } = useCabinRuntime();
   const title = ({ calendar: '挂历与日程', postcard: '小屋明信片', recipes: '场景配方', sleep: '睡前模式', diagnostics: '功能诊断', library: '唱片架', weather: '窗外与天气', plant: '窗边的植物', tea: '茶歇', rest: '休息角', companions: '选择伙伴' })[tool];
   if (!title) return null;
   // The record shelf is a bookcase close-up that draws its own full-window dialog (src/listen/RecordShelf.jsx).

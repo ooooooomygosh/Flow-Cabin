@@ -70,7 +70,7 @@ try {
     check(`empty-cabin-two-paths-and-visible-controls-${viewport.width}x${viewport.height}`);
   }
   items = albums; await page.setViewportSize({ width: 1440, height: 900 }); await page.reload(); await page.locator('.cabin-home').waitFor();
-  await playRecord(page, albums[5].title); await page.getByRole('button', { name: new RegExp('^打开唱机特写：') }).waitFor();
+  await playRecord(page, albums[5].title); await page.waitForFunction(() => Boolean(window.__cabinDeckItem));
   await page.waitForTimeout(400); await shot('cabin', true);
   { const shelf = await openLibrary(page); await shelf.locator('.listen-grid li').first().waitFor(); assert.equal(await shelf.locator('.listen-grid li').count(), albums.length); await shot('record-shelf', true); await closeLibrary(page); }
   check('every-album-stands-on-the-shelf-and-the-bar-shows-the-record');

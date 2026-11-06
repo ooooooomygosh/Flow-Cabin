@@ -145,7 +145,7 @@ try {
   check('collection-update-notes-and-delete');
   { const add = await openAddToShelf(page); await add.getByRole('searchbox').fill('测试'); await add.getByRole('button', { name: '搜索', exact: true }).click(); } await page.locator('.add-results li').first().waitFor(); await screenshot('catalog-results'); await closeDialog(); await closeLibrary(page); check('catalog-search-fixture');
   await playRecord(page, '晨光本地唱片'); await chooseSource(page, 'local'); await page.waitForFunction(() => { const a = document.querySelector('audio[data-deck="active"]'); return a && !a.paused && a.currentTime > .2 && a.duration > 10; }); check('actual-generated-wav-decodes-and-plays');
-  // The rest of the playback checks drive 唱机旁, the console close-up (the old pocket player's controls, same names).
+  // The rest of the playback checks drive 唱机: DEsk's Control Panel on the desk is the console (the old pocket player's controls, same names).
   await openConsole(page);
   for (const [width, height] of [[1440, 900], [1280, 720], [960, 600]]) { await page.setViewportSize({ width, height }); await page.waitForTimeout(150); await screenshot(`console-${width}x${height}`); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `no horizontal page overflow at ${width}x${height}`); }
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -211,10 +211,11 @@ try {
   await page.waitForFunction(() => { const a = document.querySelector('audio[data-deck="active"]'); return a && !a.paused && a.currentTime >= 5.8; });
   check('reload-restores-the-song-and-spot-paused-then-resumes-there');
   await closeConsole(page);
-  // 待播: queue a record from its binder on the 唱片架, then manage the queue on the console's paper roll.
+  // 待播: queue a record from its binder on the 唱片架, then manage the queue on the console's paper roll (the blue push button unrolls it).
   { const shelf = await takeBinder(page, '唱片'); await shelf.getByRole('button', { name: '加入待播 测试唱片 2', exact: true }).click(); await shelf.getByRole('button', { name: '移出待播 测试唱片 2', exact: true }).waitFor(); await closeLibrary(page); }
-  await openConsole(page);
   const roll = page.getByRole('complementary', { name: '待播纸带' });
+  const unroll = async () => { await openConsole(page); if (!await roll.isVisible()) await consoleDialog(page).getByRole('button', { name: /^待播/ }).click(); await roll.waitFor(); };
+  await unroll();
   await roll.locator('.player-queue li', { hasText: '测试唱片 2' }).waitFor(); await screenshot('player-queue');
   await page.setViewportSize({ width: 960, height: 600 });
   { const queueBounds = await roll.locator('.player-queue').boundingBox(), removeBounds = await roll.getByRole('button', { name: '从待播移除 测试唱片 2', exact: true }).boundingBox();
@@ -224,13 +225,13 @@ try {
   check('queue-adds-selected-album');
   await closeConsole(page);
   { const shelf = await takeBinder(page, '唱片'); await shelf.getByRole('button', { name: '加入待播 测试唱片 3', exact: true }).click(); await shelf.getByRole('button', { name: '移出待播 测试唱片 3', exact: true }).waitFor(); await closeLibrary(page); }
-  await openConsole(page);
+  await unroll();
   await roll.getByRole('button', { name: '下一张播 测试唱片 3', exact: true }).click();
   assert.match(await roll.locator('.player-queue-albums li').first().innerText(), /测试唱片 3/);
-  await page.getByRole('button', { name: '播放模式：顺序播放', exact: true }).click(); await page.getByRole('button', { name: '播放模式：整张循环', exact: true }).click();
+  await page.getByRole('switch', { name: '播放模式：顺序播放', exact: true }).click(); await page.getByRole('switch', { name: '播放模式：整张循环', exact: true }).click();
   await roll.getByText('单曲循环中 · 切换为顺序播放后继续待播', { exact: true }).waitFor();
   assert.equal(await roll.locator('.player-queue-tracks').count(), 0);
-  await screenshot('queue-priority-and-repeat'); await page.getByRole('button', { name: '播放模式：单曲循环', exact: true }).click();
+  await screenshot('queue-priority-and-repeat'); await page.getByRole('switch', { name: '播放模式：单曲循环', exact: true }).click();
   await roll.getByRole('button', { name: '从待播移除 测试唱片 3', exact: true }).click();
   check('queue-priority-and-repeat-state-match-playback');
   await closeConsole(page);

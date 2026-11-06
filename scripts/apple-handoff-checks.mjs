@@ -61,7 +61,7 @@ export async function verifyAppleHandoff({ browser, origin, output, check }) {
     const stableBuild = () => assert.equal(hotUpdates.length, 0, `Apple handoff fixture invalidated by Vite hot reload: ${JSON.stringify(hotUpdates)}`);
     page.setDefaultTimeout(8000); page.on('pageerror', error => errors.push(error.message));
     const waiting = () => page.getByText('请在「音乐」App 播放所选歌曲', { exact: true }).first().waitFor();
-    // 唱机旁 draws a handed-over song's position as a read-only progressbar (the Music app owns it; the pocket player drew a disabled slider).
+    // 唱机 (the console on the desk) draws a handed-over song's position as a read-only progressbar under its tube (the Music app owns it; the pocket player drew a disabled slider).
     const progress = page.locator('[aria-label="音乐播放进度"]');
     const progressNow = async () => await progress.count() ? Number(await progress.first().evaluate(element => element.getAttribute('aria-valuenow') ?? element.value)) : 0;
     const unadopted = async () => { assert.equal(await progressNow(), 0); if (await progress.count()) assert.equal(await progress.first().evaluate(element => element.disabled === true || element.getAttribute('role') === 'progressbar'), true, 'never an adjustable rail'); };

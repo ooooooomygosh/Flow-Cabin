@@ -47,12 +47,9 @@ export const VIEWS = Object.freeze({
       { id: 'post', name: '信箱', rect: [944, 596, 132, 142], action: 'mail' },
     ],
   },
-  console: {
-    name: '唱机', back: '回到书桌',
-    spots: [
-      { id: 'panel', name: '唱机面板', rect: [210, 120, 1020, 690], action: 'music' },
-    ],
-  },
+  // The Control Panel is the record player's console: its parts are drawn and handled by
+  // views/ConsoleView.jsx (views/index.js VIEW_BODY), not as spots.
+  console: { name: '唱机', back: '回到书桌', spots: [] },
   post: {
     name: '信箱', back: '回到书桌',
     spots: [

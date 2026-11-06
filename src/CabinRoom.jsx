@@ -197,6 +197,9 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
     if (action === 'pet') { setTool(''); setCatPanelOpen(true); return; }
     if (action === 'settings' || action === 'music-settings') { setTool(''); flow.setHub('music'); return; }
     if (action === 'lyrics') { setLyricsOpen(true); return; }
+    // 唱机: look up at the Control Panel on the desk, which is the console (src/desk/views/ConsoleView.jsx).
+    if (action === 'music') { setTool(''); window.dispatchEvent(new CustomEvent('cabin:desk-look', { detail: { which: 'console' } })); return; }
+    if (action === 'smart') { setTool(''); if (smartEntry) openSmart(); return; }
     // 日记 (top bar, the 窝/日记本 hotspot): the journal's own first page, the same as L.
     if (action === 'diary') { openJournal(); return; }
     if (action === 'journal' || action === 'mail') { window.dispatchEvent(new CustomEvent('cabin:open-journal', { detail: { tab: action === 'mail' && labs.letters ? 'letters' : 'entries' } })); return; }    setTool(action);
