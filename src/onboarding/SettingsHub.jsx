@@ -53,7 +53,7 @@ export { HUB_SECTIONS, hubTab };
 // along the top, the open one a wire-bound pad, and every part of the page a sticky note standing out
 // of the pad's right edge that turns the page to it. The tablist, the search box and every setting
 // keep their roles and names.
-export default function SettingsHub({ section = 'music', setSection, close, env, player, provider, useSource, look, petId, onRoomChange, reduceMotion, error, desktop, openBackup, restartOnboarding }) {
+export default function SettingsHub({ section = 'music', setSection, close, env, player, provider, useSource, petId, onRoomChange, reduceMotion, error, desktop, openBackup, restartOnboarding }) {
   const tab = hubTab(section);
   const [query, setQuery] = useState(''), [found, setFound] = useState(null), [news, setNews] = useState(false);
   const [scanned, setScanned] = useState({ key: '', list: [] }), [here, setHere] = useState('');
@@ -130,7 +130,7 @@ export default function SettingsHub({ section = 'music', setSection, close, env,
         {tab === 'room' && <>
           <Part id="hub-room" note="伙伴">
             <p className="personalization-intro">选一位安静的伙伴，它住在抽屉里的照片上，也会出门到桌面上散步。换伙伴不会打断音乐和专注。</p>
-            <RoomPickers petsOnly look={look} petId={petId} onChange={onRoomChange} reduceMotion={reduceMotion}/>
+            <RoomPickers petId={petId} onChange={onRoomChange} reduceMotion={reduceMotion}/>
           </Part>
           <Part id="hub-pet" note="习性"><PetBehaviourSettings desktop={Boolean(env.desktop)}/></Part>
           <div id="hub-sky" className="hub-block" data-note="天空"><SkySettings/></div>

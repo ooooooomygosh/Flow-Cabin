@@ -1,6 +1,6 @@
 'use strict';
 const { _electron } = require('playwright'), fs = require('node:fs'), path = require('node:path'), assert = require('node:assert/strict');
-const { mountFixture, albums, chooseRoomScene, openRecordTools, closeRecordCard, takeBinder, closeLibrary, playRecord } = require('./ui-fixture.cjs');
+const { mountFixture, albums, openRoomSettings, closeSettings, openRecordTools, closeRecordCard, takeBinder, closeLibrary, playRecord } = require('./ui-fixture.cjs');
 const desktop = path.resolve(__dirname, '..'), output = path.join(desktop, 'test-results');
 const env = { ...process.env, ALBUM_DESKTOP_TEST_PROFILE: path.join(output, `library-ui-profile-${Date.now()}`) }; delete env.ELECTRON_RUN_AS_NODE;
 const executablePath = process.env.ALBUM_QA_EXE || require(path.join(desktop, 'node_modules/electron'));
@@ -54,10 +54,12 @@ const ROOM = 'local-room';
   await site.getByRole('button', { name: '清除音乐筛选' }).click(); assert.equal(await shelf.locator('.listen-grid li').count(), 14); await shelf.getByRole('button', { name: '好了', exact: true }).click(); await closeLibrary(site);
   check('custom-vinyl-is-stored-and-genres-filter');
 
-  await chooseRoomScene(site, 'warm');
-  await site.reload(); await site.locator('.desk-home').waitFor(); assert.equal((await saved()).rooms[ROOM].look, 'warm');
-  await chooseRoomScene(site, 'pixel');
-  check('cabin-look-persists');
+  // 3.1: 设置 › 小屋与奶糖 picks the companion (there is no room-scene picker); the choice is kept per room and survives a reload.
+  const lookBefore = (await saved()).rooms[ROOM]?.look;
+  await openRoomSettings(site); await site.getByRole('button', { name: '选择桌宠 枫糖', exact: true }).click(); await closeSettings(site);
+  await site.reload(); await site.locator('.desk-home').waitFor(); assert.equal((await saved()).rooms[ROOM].petId, 'fox'); assert.equal((await saved()).rooms[ROOM].look, lookBefore);
+  await openRoomSettings(site); assert.equal(await site.getByRole('button', { name: '选择桌宠 枫糖', exact: true }).getAttribute('aria-pressed'), 'true'); await closeSettings(site);
+  check('cabin-companion-persists');
 
   shelf = await takeBinder(site, '唱片'); await shelf.getByRole('button', { name: /^筛选/ }).click(); await shelf.getByRole('button', { name: '管理唱片盒', exact: true }).click();
   await manager.getByRole('button', { name: '最爱', exact: false }).click();
@@ -72,8 +74,8 @@ const ROOM = 'local-room';
   for (let i = 0; i < 100; i++) { site = app.context().pages().find((p) => p.url().startsWith('https://album-circle.vercel.app')); if (site) break; await new Promise((r) => setTimeout(r, 100)); }
   await mountFixture(app, site, { items }); await site.locator('.desk-home').waitFor();
   const after = await saved();
-  assert.equal(after.rooms[ROOM].boxes[0].name, '周末唱片'); assert.equal(after.styles['qq:' + items[0].externalIds.qqAlbumMid].opacity, 62); assert.deepEqual(after.genres['qq:' + items[0].externalIds.qqAlbumMid], ['爵士', '电子']);
-  check('restart-retains-boxes-genres-vinyl-and-look');
+  assert.equal(after.rooms[ROOM].boxes[0].name, '周末唱片'); assert.equal(after.styles['qq:' + items[0].externalIds.qqAlbumMid].opacity, 62); assert.deepEqual(after.genres['qq:' + items[0].externalIds.qqAlbumMid], ['爵士', '电子']); assert.equal(after.rooms[ROOM].petId, 'fox');
+  check('restart-retains-boxes-genres-vinyl-and-companion');
   assert.equal(report.pageErrors.length, 0, JSON.stringify(report.pageErrors));
   report.passed = true;
 })().catch((error) => { report.error = error.stack; report.passed = false; process.exitCode = 1; }).finally(async () => {

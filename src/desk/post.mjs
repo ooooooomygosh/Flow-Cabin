@@ -81,7 +81,7 @@ export function welcomeLetter(at = Date.now()) {
     body: '这张书桌上的东西都能用：抬头是唱片架和唱机，台钟管专注，抽屉里是日记和设置。先花一分钟准备三件事，每一件都能跳过，以后在「设置」里随时改。',
     steps: [
       { id: 'source', label: '选音源', hint: '本地音乐、QQ 音乐或网易云' },
-      { id: 'room', label: '挑伙伴', hint: '一个房间，一只陪你的伙伴' },
+      { id: 'room', label: '挑伙伴', hint: '五只小动物，挑一只陪你' },
       { id: 'test', label: '试听', hint: '放一段声音，确认听得到' },
     ],
     actions: [{ id: 'settings', label: '打开设置', arg: 'music' }],

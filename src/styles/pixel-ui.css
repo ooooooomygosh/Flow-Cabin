@@ -69,8 +69,6 @@
 :is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) option { background: var(--px-surface); color: var(--ui-text); }
 :is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) input[type=date] { color-scheme: dark; }
 :is(.cabin-room, .cabin-dialog, .record-dialog, .focus-dock, .album-wall-overlay) input[type=date]::-webkit-calendar-picker-indicator { filter: invert(72%) sepia(40%) saturate(600%) hue-rotate(345deg); opacity: .9; cursor: pointer; }
-/* compact contexts keep their own height (pocket player owns .pocket-track) */
-.cabin-room .pocket-track select { min-height: 0; }
 /* 专辑墙 search and 添加 search: the label / row is the well, the input inside it stays bare. */
 .album-wall-overlay .wall-search > label > input, .add-search input { border: 0; background: transparent; box-shadow: none; min-height: 0; }
 .add-search input:focus-visible { outline: 0; }
@@ -99,32 +97,21 @@ input[type=checkbox], input[type=radio] { accent-color: var(--ui-accent); }
 @keyframes ui-toast-in { 0% { opacity: 0; transform: translateY(8px); } 100% { opacity: 1; transform: none; } }
 
 /* ── choice cards (scenes / companions): soft tiles that light up ──────── */
-.scene-choice, .pet-choice { border: 1px solid var(--ui-line); border-radius: var(--ui-radius-lg); box-shadow: none; transition: border-color var(--ui-dur) var(--ui-ease), background-color var(--ui-dur) var(--ui-ease), transform var(--ui-dur) var(--ui-ease); }
-.scene-choice:hover, .pet-choice:hover { border-color: var(--ui-line-strong); }
-.scene-choice:active, .pet-choice:active { transform: scale(.99); transition-duration: 80ms; }
-.scene-choice[aria-pressed=true], .pet-choice[aria-pressed=true] { border-color: var(--ui-accent); background: var(--ui-accent-soft); box-shadow: 0 0 0 1px var(--ui-accent); }
-.scene-choice > img { image-rendering: pixelated; }
+.pet-choice { border: 1px solid var(--ui-line); border-radius: var(--ui-radius-lg); box-shadow: none; transition: border-color var(--ui-dur) var(--ui-ease), background-color var(--ui-dur) var(--ui-ease), transform var(--ui-dur) var(--ui-ease); }
+.pet-choice:hover { border-color: var(--ui-line-strong); }
+.pet-choice:active { transform: scale(.99); transition-duration: 80ms; }
+.pet-choice[aria-pressed=true] { border-color: var(--ui-accent); background: var(--ui-accent-soft); box-shadow: 0 0 0 1px var(--ui-accent); }
 
 /* ══ Room scene pieces (the desktop wallpaper still draws the pixel room): scene-specific pixel pieces ══════
    These sit on the pixel scene, so they keep the pixel display face on its 12px
    grid, the 9-slice frames and the hard bevels (docs/art-direction.md). */
-.record-card-copy h3,.turntable-copy > strong,.turntable-heading,.room-cat-bubble,.cabin-room .focus-badge,.turntable-controls button,.record-card-kicker{
+.record-card-copy h3, .room-cat-bubble, .turntable-controls button, .record-card-kicker {
   font-family: var(--px-font-cn); font-weight: 400; letter-spacing: 0; -webkit-font-smoothing: none;
 }
-.room-cat-bubble,.turntable-controls button,.turntable-heading,.turntable-copy > strong,.record-card-kicker{ font-size: var(--px-text-chrome); line-height: var(--px-leading-chrome); }
+.room-cat-bubble, .turntable-controls button, .record-card-kicker { font-size: var(--px-text-chrome); line-height: var(--px-leading-chrome); }
 .record-card-copy h3 { font-size: var(--px-text-title); line-height: var(--px-leading-title-lg); }
-.turntable-artist,.turntable-track{ font-family: var(--px-font-body); }
-/* The provider tag is CJK (仅展示 / 本地音乐): the pixel CJK face at 12px, never 8px Latin. */
-.turntable-heading > small { font-family: var(--px-font-cn); font-weight: 400; font-size: var(--px-text-chrome); line-height: var(--px-leading-chrome); letter-spacing: 0; }
 
-/* Scene panels: 9-slice notched pixel frames. */
-.cabin-room .room-now-playing{
-  border: 6px solid transparent; border-image: var(--px-frame-img) 2 / 6px stretch; background-clip: padding-box;
-}
 
-/* Shrunk below 1:1 the art's 4-px cells land on 2/3-px steps (a plaid on the wood);
-   an even box-filter downscale reads cleaner there. At 1:1 and above it stays crisp. */
-.cabin-scene[data-scene-scale='down'] .cabin-scene-art { image-rendering: auto; }
 
 /* The cat's speech bubble: a paper tag with a pixel tail (it lives in the scene). */
 .room-cat-bubble {

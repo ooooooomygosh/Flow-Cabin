@@ -78,21 +78,17 @@ async function mountFixture(application, site, options = {}) {
   }
   return { items };
 }
-// Exercise the public picker, then verify the rendered scene rather than
-// relying on the retired two-way style toggle.
-async function chooseRoomScene(site, sceneId) {
-  const { getRoomScene } = await import('../../src/scene-catalog.mjs');
-  const scene = getRoomScene(sceneId);
-  if (scene.id !== sceneId) throw new Error(`Unknown scene in test: ${sceneId}`);
-  await openRoomSettings(site);
-  const picker = site.getByRole('dialog', { name: '设置', exact: true }); // 设置 › 小屋与奶糖 (3.0; was 房间与桌宠)
-  const choice = picker.getByRole('button', { name: `选择场景 ${scene.label}`, exact: true });
-  await choice.click();
-  // The scene is the 沉入桌面 wallpaper's room (the desk itself does not change): the picker shows it saved.
-  await site.waitForFunction((label) => document.querySelector(`.scene-choice[aria-label="选择场景 ${label}"]`)?.getAttribute('aria-pressed') === 'true', scene.label);
-  await picker.getByRole('button', { name: '关闭设置', exact: true }).click(); await picker.waitFor({ state: 'hidden' });
+// 3.1: there is no room-scene picker (the home and the 沉入桌面 wallpaper are the desk); 设置 › 小屋与奶糖 picks the companion.
+// The stored room `look` still picks the lyric skin (src/lyrics/lyric-skins.mjs): a test that needs one writes it to the saved
+// library (album-circle-library-v1-local-owner › rooms › local-room) and reloads, as an older install would have it.
+async function storeRoomLook(site, look) {
+  await site.evaluate((look) => {
+    const key = 'album-circle-library-v1-local-owner', saved = JSON.parse(localStorage.getItem(key) || '{}');
+    const rooms = saved.rooms || {}; localStorage.setItem(key, JSON.stringify({ ...saved, rooms: { ...rooms, 'local-room': { ...(rooms['local-room'] || {}), look } } }));
+  }, look);
+  await site.reload(); await site.locator('.desk-home').waitFor();
+  await site.waitForFunction((look) => window.albumRoomSnapshot?.()?.look === look, look);
 }
-async function useWarmCabin(site) { await chooseRoomScene(site, 'warm'); }
 // The old 布置小屋 / 音源设置 buttons are gone; both live in the settings hub.
 async function openRoomSettings(site) { await openSettingsTab(site, '小屋与奶糖'); }
 // ---- the desk (src/desk/DeskHome.jsx); the same helpers as scripts/settings-actions.mjs ----
@@ -227,4 +223,4 @@ async function openRecordTools(site, title) {
   await card.getByRole('button', { name: '自定义唱片', exact: true }).click();
   return site.getByRole('dialog', { name: '自定义唱片' });
 }
-module.exports = { backToDesk, lookUp, pressSpot, openDrawerThing, openFocus, focusDialog, mountFixture, albums, chooseRoomScene, useWarmCabin, openRoomSettings, openSettingsTab, openMusicSettings, openSourceSettings, closeSettings, chooseSource, openAddToShelf, openRecordTools, closeRecordCard, settingsDialog, accountsRegion, openLibrary, closeLibrary, takeBinder, playRecord, openRecordCard, openConsole, closeConsole, deckRecord, libraryDialog, addDialog, consoleDialog };
+module.exports = { backToDesk, lookUp, pressSpot, openDrawerThing, openFocus, focusDialog, mountFixture, albums, storeRoomLook, openRoomSettings, openSettingsTab, openMusicSettings, openSourceSettings, closeSettings, chooseSource, openAddToShelf, openRecordTools, closeRecordCard, settingsDialog, accountsRegion, openLibrary, closeLibrary, takeBinder, playRecord, openRecordCard, openConsole, closeConsole, deckRecord, libraryDialog, addDialog, consoleDialog };

@@ -3,7 +3,7 @@ const openMusicSettings = (...args) => import('../../scripts/settings-actions.mj
 'use strict';
 const { _electron } = require('playwright'), fs = require('node:fs'), path = require('node:path'), assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
-const { mountFixture, albums, chooseRoomScene, playRecord, openConsole, closeConsole, openSettingsTab, closeSettings } = require('./ui-fixture.cjs');
+const { mountFixture, albums, storeRoomLook, playRecord, openConsole, closeConsole, openSettingsTab, closeSettings } = require('./ui-fixture.cjs');
 const desktop = path.resolve(__dirname, '..'), output = path.join(desktop, 'test-results');
 fs.mkdirSync(output, { recursive: true });
 const env = { ...process.env, ALBUM_DESKTOP_TEST_PROFILE: path.join(output, `night-study-${Date.now()}`) }; delete env.ELECTRON_RUN_AS_NODE;
@@ -17,7 +17,7 @@ async function desktopPixels(name) {
   await wallpaper.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
   await new Promise(r => setTimeout(r, 180));
   const owned = await app.evaluate(({ BrowserWindow }) => { const w = BrowserWindow.getAllWindows().find(w => w.webContents.getURL().includes('/wallpaper/wallpaper.html')); return { hwnd: w.getNativeWindowHandle().readBigUInt64LE().toString(), pid: String(process.pid) }; });
-  const box = await wallpaper.locator('.room-record-slot').nth(8).boundingBox();
+  const box = await wallpaper.locator('.desk-shelf-plate').boundingBox();
   const size = await wallpaper.evaluate(() => ({ width: innerWidth, height: innerHeight }));
   const clip = { x: Math.round(box.x + box.width * .3), y: Math.round(box.y + box.height * .3), width: Math.round(box.width * .4), height: Math.round(box.height * .4) };
   const file = path.join(output, name + '.png'), reference = path.join(output, name + '-reference.png');
@@ -33,7 +33,7 @@ async function desktopPixels(name) {
     for (let i = 0; i < a.length; i += 4) if (Math.abs(a[i]-b[i])+Math.abs(a[i+1]-b[i+1])+Math.abs(a[i+2]-b[i+2]) <= 45) close++;
     return close / (a.length / 4);
   }, { first, bytes: bytes.toString('base64'), reference, width: captured.width, height: captured.height });
-  assert.ok(match > .9, 'Desktop first frame did not contain scene: ' + match);
+  assert.ok(match > .9, 'Desktop first frame did not contain the desk: ' + match);
   return { ...captured, firstFrameMatch: match };
 }
 async function startWallpaper() {
@@ -42,7 +42,7 @@ async function startWallpaper() {
   const state = await site.evaluate(() => window.albumRoomWallpaperState); assert.equal(state.active, true, JSON.stringify(state));
   wallpaper = app.context().pages().find(p => p.url() === 'album-desktop://wallpaper/wallpaper.html');
   wallpaper.on('pageerror', e => report.pageErrors.push(e.message));
-  await wallpaper.locator('.study-writing-hand').waitFor();
+  await wallpaper.locator('.wallpaper-desk.is-lit').waitFor();
   await wallpaper.waitForFunction(() => Array.from(document.images).every(i => i.complete && i.naturalWidth > 0));
   await closeSettings(site);
 }
@@ -50,9 +50,10 @@ async function startWallpaper() {
   app = await _electron.launch({ executablePath: process.env.ALBUM_QA_EXE || require(path.join(desktop, 'node_modules/electron')), args: process.env.ALBUM_QA_EXE ? [] : [desktop], env }); app.context().setDefaultTimeout(20000); await app.firstWindow();
   for (let i = 0; i < 100; i++) { site = app.context().pages().find(p => p.url().startsWith('https://album-circle.vercel.app')); host = app.context().pages().find(p => p.url() === 'album-desktop://shell/index.html'); if (site && host) break; await new Promise(r => setTimeout(r, 100)); }
   site.on('pageerror', e => report.pageErrors.push(e.message)); await mountFixture(app, site, { items, music: true, autoMusic: true });
-  // 3.1: the main window is the life cabin; the 月夜书桌 shelf / writing-hand checks that drew the original room there moved to the
-  // desktop wallpaper, the only surface that still paints that scene (see wallpaper-stays-rendered-and-animates-after-main-close).
-  await chooseRoomScene(site, 'night-study'); check('night-study-room-selected-in-the-cabin');
+  // 3.1: the home and the 沉入桌面 wallpaper are the desk; the 月夜书桌 look survives only as the lyric skin it picks. An install
+  // that chose it keeps it: the stored look reaches the room snapshot the wallpaper and the lyric windows read.
+  await storeRoomLook(site, 'night-study');
+  assert.equal((await site.evaluate(() => window.albumCompanionSnapshot())).room.look, 'night-study'); check('stored-night-study-look-reaches-the-room-snapshot');
   await playRecord(site, items[0].title); await chooseSource(site, 'netease');
   await site.waitForFunction(() => document.querySelector('audio').currentTime > .2 && !document.querySelector('audio').paused);
   assert.deepEqual((await app.evaluate(() => globalThis.__qaMusicResolves)).slice(-2), ['99999', '12345']);
@@ -80,18 +81,19 @@ async function startWallpaper() {
   await startWallpaper();
   const native = await app.evaluate(({ app, BrowserWindow }) => { const rq = process.getBuiltinModule('module').createRequire(app.getAppPath() + '/main.cjs'), w = BrowserWindow.getAllWindows().find(w => w.webContents.getURL().includes('/wallpaper/wallpaper.html')), helper = app.isPackaged ? rq('node:path').join(process.resourcesPath, 'native/DesktopHost.exe') : app.getAppPath() + '/native/bin/DesktopHost.exe'; return JSON.parse(rq('node:child_process').execFileSync(helper, ['probe', w.getNativeWindowHandle().readBigUInt64LE().toString(), String(process.pid)], { windowsHide: true, encoding: 'utf8' })); });
   assert.equal(native.behindIcons, true); assert.equal(native.hasFrame, false); assert.equal(native.coversMonitor, true); check('native-wallpaper-behind-icons-no-border-covers-entire-monitor', native);
-  check('actual-desktop-first-frame-matches-scene', await desktopPixels('night-desktop-first'));
+  check('actual-desktop-first-frame-matches-the-desk', await desktopPixels('night-desktop-first'));
   await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find(w => w.webContents.getURL().includes('/shell/')).close());
   assert.equal(await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find(w => w.webContents.getURL().includes('/shell/')).isVisible()), false);
-  const before = await wallpaper.locator('.study-writing-hand').getAttribute('data-pose');
-  await wallpaper.waitForFunction(p => document.querySelector('.study-writing-hand').dataset.pose !== p, before);
+  // The desk's LED clock keeps ticking with the main window hidden.
+  const before = await wallpaper.locator('.desk-clock-glass').evaluate(c => c.toDataURL());
+  await wallpaper.waitForFunction(p => document.querySelector('.desk-clock-glass').toDataURL() !== p, before);
   check('wallpaper-stays-rendered-and-animates-after-main-close', await desktopPixels('night-desktop-closed'));
   const owned = await app.evaluate(({ BrowserWindow }) => { const w = BrowserWindow.getAllWindows().find(w => w.webContents.getURL().includes('/wallpaper/wallpaper.html')); return { hwnd: w.getNativeWindowHandle().readBigUInt64LE().toString(), pid: String(process.pid) }; });
-  const hand = await wallpaper.locator('.study-writing-hand').boundingBox(), size = await wallpaper.evaluate(() => ({ width: innerWidth, height: innerHeight }));
+  const hand = await wallpaper.locator('.desk-clock-glass').boundingBox(), size = await wallpaper.evaluate(() => ({ width: innerWidth, height: innerHeight }));
   const captureHand = name => { const file = path.join(output, name + '.png'); execFileSync(pixelHelper, [owned.hwnd, owned.pid, file, String(hand.x / size.width), String(hand.y / size.height), String(hand.width / size.width), String(hand.height / size.height)], { windowsHide: true }); return fs.readFileSync(file).toString('base64'); };
-  const firstHand = captureHand('night-hand-first'); await wallpaper.waitForTimeout(450); const nextHand = captureHand('night-hand-next');
+  const firstHand = captureHand('night-clock-first'); await wallpaper.waitForTimeout(1100); const nextHand = captureHand('night-clock-next');
   const changed = await app.evaluate(({ nativeImage }, { first, next }) => { const a = nativeImage.createFromBuffer(Buffer.from(first, 'base64')).getBitmap(), b = nativeImage.createFromBuffer(Buffer.from(next, 'base64')).getBitmap(); let count = 0; for (let i = 0; i < a.length; i += 4) if (Math.abs(a[i]-b[i])+Math.abs(a[i+1]-b[i+1])+Math.abs(a[i+2]-b[i+2]) > 30) count++; return count; }, { first: firstHand, next: nextHand });
-  assert.ok(changed > 100, 'Desktop hand did not animate: ' + changed); check('actual-desktop-hand-pixels-change-with-main-hidden', { changedPixels: changed });
+  assert.ok(changed > 100, 'Desktop clock did not tick: ' + changed); check('actual-desktop-clock-pixels-change-with-main-hidden', { changedPixels: changed });
   await site.evaluate(() => window.open('album-desktop://action/wallpaper-stop', '_blank')); await site.waitForFunction(() => !window.albumRoomWallpaperState?.active); assert.equal(wallpaper.isClosed(), true);
   assert.equal(await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find(w => w.webContents.getURL().includes('/shell/')).isVisible()), true);
   await startWallpaper(); check('stop-restores-main-and-reapplication-renders-again', await desktopPixels('night-desktop-reapplied'));

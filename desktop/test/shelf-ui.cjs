@@ -2,7 +2,7 @@
 // The 唱片架 (bookcase close-up): every record filed in the 唱片 binder, both room looks, sort and filters,
 // the record card (notes, play from a track, remove) and adding an album from the catalog.
 const { _electron } = require('playwright'), fs = require('node:fs'), path = require('node:path'), assert = require('node:assert/strict');
-const { mountFixture, albums, chooseRoomScene, openAddToShelf, takeBinder, closeLibrary, openRecordCard, closeRecordCard, openConsole, closeConsole, deckRecord } = require('./ui-fixture.cjs');
+const { mountFixture, albums, openAddToShelf, takeBinder, closeLibrary, openRecordCard, closeRecordCard, openConsole, closeConsole, deckRecord } = require('./ui-fixture.cjs');
 const desktop = path.resolve(__dirname, '..'), output = path.join(desktop, 'test-results'); fs.mkdirSync(output, { recursive: true });
 const env = { ...process.env, ALBUM_DESKTOP_TEST_PROFILE: path.join(output, `shelf-ui-profile-${Date.now()}`) }; delete env.ELECTRON_RUN_AS_NODE;
 const executablePath = process.env.ALBUM_QA_EXE || require(path.join(desktop, 'node_modules/electron'));
@@ -19,8 +19,7 @@ let app, site;
   assert.equal(await shelf.locator('.listen-grid li').count(), 14); assert.match(await shelf.getByRole('button', { name: /^唱片活页夹/ }).getAttribute('aria-label'), /14/);
   await closeLibrary(site);
   await site.locator('.desk-home').waitFor();
-  await chooseRoomScene(site, 'warm');
-  await chooseRoomScene(site, 'pixel'); check('every-record-filed-and-both-cabin-looks');
+  check('every-record-filed-on-the-shelf');
 
   const bookcase = await takeBinder(site, '唱片'); const titles = () => bookcase.locator('.listen-grid-title strong').allInnerTexts();
   await bookcase.getByRole('button', { name: /^筛选/ }).click(); await bookcase.getByLabel('排序方式').selectOption('title');

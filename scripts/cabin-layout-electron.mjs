@@ -1,4 +1,3 @@
-import { openRoomSettings, closeSettings } from './settings-actions.mjs';
 /** Hidden Electron QA: real webContents zoom, no OS inputs/accounts/bridges. */
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
@@ -55,9 +54,8 @@ try {
     report.cases.push({width,height,zoom,card,tabs}); console.log(`PASS hidden Electron ${name}: desk rail, three tabs and collapse`);
   }
   await electron.evaluate(({BrowserWindow})=>{const w=BrowserWindow.getAllWindows()[0];w.setContentSize(1440,900);w.webContents.setZoomFactor(1);});
-  await openRoomSettings(page); await page.getByRole('button',{name:'选择场景 月夜书桌',exact:true}).click(); await closeSettings(page);
   await page.waitForTimeout(400); await verifyCabinLayout({page});
-  await screenshot('night-study-1440x900.png');
+  await screenshot('desk-1440x900.png');
   await page.keyboard.press('h'); await page.locator('.focus-badge').click(); await page.waitForTimeout(400); await verifyFocusLayout({page});
   await page.keyboard.press('Escape'); await page.keyboard.press('h');
   assert.deepEqual(report.errors,[]); report.passed=true;

@@ -6,9 +6,7 @@
    plain replacements sit in `overrides`, the last layer. */
 @layer guards, reset, features, skin, overrides;
 @layer guards {
-/* SVG presentation attributes on the mask's <use> need their own override. */
-html[data-perf='low'] .cabin-atmosphere [filter] { filter: none !important; }
-html[data-perf='low'] :is(.cabin-scene-art, .cabin-scene-canvas, .cabin-scene-canvas svg, .pixel-clock, .pet-cat .pixel-cat) { filter: none !important; }
+html[data-perf='low'] :is(.pixel-clock, .pet-cat .pixel-cat) { filter: none !important; }
 html[data-perf='low'] :is(.playlist-track, .desktop-widget), html[data-perf='low'] :is(.corner-pool, .corner-weather)::before { animation: none !important; }
 /* The button hover runs a brightness() filter: every hover re-rasterizes the
    button. The lift + hard shadow stay, so the hover still reads. */
@@ -22,10 +20,6 @@ html[data-perf='low'] *, html[data-perf='low'] *::before, html[data-perf='low'] 
 }
 }
 @layer overrides {
-html[data-perf='low'] .ambient-mote:nth-child(odd) { display: none; }
-html[data-perf='low'] .ambient-shaft { animation: none; opacity: var(--shaft, 0); }
-html[data-perf='low'] .scene-deck-notes { display: none; }
-html[data-perf='low'] .scene-deck-glow { transition: none; }
 html[data-perf='low'] .desktop-widget { background: color-mix(in srgb, var(--px-bg) 94%, transparent); }
 html[data-perf='low'] .corner-pool::after { transition: none; }
 /* Dialog entrance without the scale: scaling a full-window dialog re-rasterizes

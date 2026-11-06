@@ -20,7 +20,7 @@ export function LetterSign({ line = '' }) {
 // What the cat writes under each step.
 export const SIGN_LINES = Object.freeze({
   source: '先挑个音源，不急。',
-  room: '房间和伙伴，随你喜欢。',
+  room: '挑个伙伴，随你喜欢。',
   test: '试一下声音，我们就开门了。',
   news: '慢慢看，有空再试。'
 });

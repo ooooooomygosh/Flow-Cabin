@@ -55,7 +55,8 @@ async function launch(profile) {
     const state = JSON.parse(localStorage.getItem('flow-cabin-onboarding-v1') || 'null');
     return !state || ['new', 'active'].includes(state.status);
   });
-  if (needsOnboarding) await onboarding.waitFor();
+  // 3.1: a first run gets the welcome letter in the post box, not the guide over the desk (as ui-fixture.cjs mountFixture).
+  if (needsOnboarding) await onboarding.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {});
   if (await onboarding.isVisible()) {
     await onboarding.getByRole('button', { name: '跳过引导', exact: true }).click();
     await onboarding.waitFor({ state: 'hidden' });
@@ -170,7 +171,10 @@ function compareStores(stage, expected, actual) {
   const journalRows = journal.readJournalRecords({ getItem: () => JSON.stringify(rawJournalRows) });
   assert.equal(journalRows.length, rawJournalRows.length, 'Journal fixture must not lose records');
   assert.deepEqual(journalRows.map(({ id }) => id), ['qa-trash', 'qa-page', 'qa-second-page', 'qa-first-page']);
-  const writingDays = [...new Set(journalRows.map(({ createdAt }) => care.dayKey(createdAt)))].sort();
+  // Souvenirs key a writing day by the shared local calendar (src/lib/local-calendar.mjs, zero-padded and sortable),
+  // not by cat-care's own unpadded care-day key, which only matched while the fixture dates had two-digit days.
+  const { dayKey: calendarDay } = await moduleAt('lib/local-calendar.mjs');
+  const writingDays = [...new Set(journalRows.map(({ createdAt }) => calendarDay(createdAt)))].sort();
   assert.equal(writingDays.length, 3, 'Journal fixture must represent three distinct local writing days');
   const rawPlaybackRows = [
     { id: 'qa-listen-a', start: at - 700000, end: at - 370000, durationMs: 330000, reason: 'pause',
@@ -222,7 +226,7 @@ function compareStores(stage, expected, actual) {
   compare('seed:souvenirs', souvenirState, sourceSouvenirs);
   await openBackup();
   const exported = await exportBackup('source-export.json');
-  assert.equal(exported.version, 4);
+  assert.equal(exported.version, 5); // the backup format is v5 since 2.1 (src/backup-model.mjs BACKUP_VERSION)
   compare('export:collection', before.items, exported.items);
   for (const domain of ['library', 'study']) compare('export:' + domain, before.stores[domain], exported[domain]);
   for (const domain of ['focusSessions', 'catMood', 'catCare', 'letters', 'journalEntries', 'playbackSessions'])

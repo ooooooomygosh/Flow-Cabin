@@ -9,7 +9,6 @@ import { usePlaybackDuration, usePlaybackPosition } from '../deck/usePlaybackClo
 import { deckCapabilities } from './providers.mjs';
 import { volumePercent, wheelVolume } from './volume-curve.mjs';
 import './player.css';
-import './pocket-player.css';
 
 const REPEAT_LABEL = { off: '顺序播放', all: '整张循环', one: '单曲循环' };
 

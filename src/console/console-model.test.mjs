@@ -4,7 +4,6 @@ import { valueToAngle, angleToValue, pointerAngle, dragValue, detentOf, crossedD
 import { needleStep, needleSettled, targetFor, peakStep, readingToAngle, meterTicks, NEEDLE_SWEEP_DEG } from './vu-model.mjs';
 import { sliderToGain, gainToSlider, wheelVolume } from '../player/volume-curve.mjs';
 import { sourceDial, nextSource, dialAngle } from './source-model.mjs';
-import { ledTimeSize } from './led-time.mjs';
 
 test('knob: the arc is 264 degrees and angle and value are inverses', () => {
   assert.ok(Math.abs(valueToAngle(0) + KNOB_SWEEP_DEG) < 1e-9);
@@ -134,10 +133,3 @@ test('source dial: the selector points at the chosen position', () => {
   assert.equal(dialAngle(0, 5), -120); assert.equal(dialAngle(4, 5), 120); assert.equal(dialAngle(0, 1), 0); assert.equal(dialAngle(2, 5), 0);
 });
 
-test('led time: the glass is as wide as the numerals', () => {
-  const four = ledTimeSize('0:06'), five = ledTimeSize('10:00');
-  assert.ok(five.width > four.width, 'five numerals are wider than four');
-  assert.equal(four.width, 12 + 4 + 11 + (12 + 4 + 12) + 6, '0 : 06 plus padding');
-  assert.equal(four.height, 26);
-  assert.equal(ledTimeSize('123').width, 3 * 12 + 2 * 4 + 6, 'no colon, no colon gap');
-});

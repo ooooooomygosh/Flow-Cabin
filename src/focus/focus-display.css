@@ -84,10 +84,6 @@
 :root[data-desktop-reduce-motion=true] .record-now.is-playing .record-now-label { animation: none; }
 @keyframes record-now-spin { to { rotate: 1turn; } }
 }
-@layer overrides {
-/* The shelf caption under the display would sit on the bottom bar. */
-:root.room-focus-display .room-now-playing { visibility: hidden; }
-}
 @layer features {
 .focus-display-bar .face-tabs, .focus-display-bar .face-show { display: inline-flex; flex: none; }
 .focus-display-bar .face-tabs button, .focus-display-bar .face-show button { white-space: nowrap; padding: 0 8px; }

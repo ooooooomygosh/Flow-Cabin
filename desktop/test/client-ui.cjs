@@ -1,5 +1,5 @@
 'use strict';
-const { chooseRoomScene, openAddToShelf, openRecordTools, closeRecordCard, openLibrary, closeLibrary, takeBinder, playRecord, openRecordCard, openSettingsTab, libraryDialog, addDialog, openFocus, openConsole, closeConsole } = require('./ui-fixture.cjs');
+const { openAddToShelf, openRecordTools, closeRecordCard, openLibrary, closeLibrary, takeBinder, playRecord, openRecordCard, openSettingsTab, libraryDialog, addDialog, openFocus, openConsole, closeConsole } = require('./ui-fixture.cjs');
 const { _electron: electron } = require('playwright');
 const assert = require('node:assert/strict'), fs = require('node:fs'), os = require('node:os'), path = require('node:path');
 const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'album-client-ui-'));
@@ -34,11 +34,9 @@ const check = (value) => report.checks.push(value);
   await openRecordTools(site, '本地验证专辑');
   await site.getByLabel('黑胶底色', { exact: true }).fill('#aabbcc');
   await site.getByRole('button', { name: '保存唱片设置', exact: true }).click(); await closeRecordCard(site); await closeLibrary(site); check('vinyl-customization');
-  await chooseRoomScene(site, 'warm');
-  await chooseRoomScene(site, 'pixel');
   await playRecord(site, '本地验证专辑');
   // The record turns on the deck (audibly, or as the visual-only deck): 唱机旁's play key offers to stop it.
-  await (await openConsole(site)).getByRole('button', { name: /^暂停(唱片旋转|音乐播放)$/ }).waitFor(); await closeConsole(site); check('cabin-looks-and-turntable');
+  await (await openConsole(site)).getByRole('button', { name: /^暂停(唱片旋转|音乐播放)$/ }).waitFor(); await closeConsole(site); check('record-turns-on-the-deck');
   const card = await openRecordCard(site, '本地验证专辑');
   await card.getByPlaceholder(/第一次听的场景/).fill('安装后的第一张'); await card.locator('.record-card-saved', { hasText: '已保存' }).waitFor();
   await card.getByRole('button', { name: '关闭唱片卡片' }).click(); await closeLibrary(site); check('record-card-notes');

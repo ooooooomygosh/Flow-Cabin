@@ -3,7 +3,7 @@
 // covers), a few days of focus history and the cat in its scarf.
 // Run: npm --prefix desktop run screenshots   (writes docs/images/*.jpg)
 const { _electron } = require('playwright'), fs = require('node:fs'), path = require('node:path');
-const { mountFixture, chooseRoomScene, openAddToShelf, playRecord, openRecordCard, closeRecordCard, closeLibrary, takeBinder, openFocus } = require('./ui-fixture.cjs');
+const { mountFixture, openAddToShelf, playRecord, openRecordCard, closeRecordCard, closeLibrary, takeBinder, openFocus } = require('./ui-fixture.cjs');
 const desktop = path.resolve(__dirname, '..'), output = path.join(desktop, '..', 'docs', 'images'); fs.mkdirSync(output, { recursive: true });
 const env = { ...process.env, ALBUM_DESKTOP_TEST_PROFILE: path.join(desktop, 'test-results', `screenshots-profile-${Date.now()}`) }; delete env.ELECTRON_RUN_AS_NODE;
 const executablePath = process.env.ALBUM_QA_EXE || require(path.join(desktop, 'node_modules/electron'));
@@ -57,8 +57,6 @@ const items = ALBUMS.map(([title, artist, background, accent, motif], index) => 
   await openFocus(site); await site.getByRole('button', { name: '开始专注' }).click(); await shot('cabin-focus.jpg');
   await site.keyboard.press('Escape'); await site.evaluate(() => window.dispatchEvent(new CustomEvent('cabin:open-journal', { detail: { tab: 'stats' } }))); await site.getByRole('dialog', { name: '唱片日记' }).waitFor(); await shot('cabin-stats.jpg'); await site.keyboard.press('Escape');
   await site.keyboard.press('h'); await shot('cabin-zen.jpg'); await site.keyboard.press('Escape');
-  await chooseRoomScene(site, 'warm'); await site.waitForTimeout(600); await shot('cabin-warm.jpg');
-  await chooseRoomScene(site, 'pixel');
   await openRecordCard(site, ALBUMS[2][0]); await site.locator('.record-card').waitFor(); await shot('record-card.jpg');
   await closeRecordCard(site); await closeLibrary(site);
   const add = await openAddToShelf(site);

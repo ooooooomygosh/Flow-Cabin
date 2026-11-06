@@ -61,11 +61,13 @@ let app, site;
     globalThis.__qaWallpaper = win;
   }, snapshot);
   const wallpaper = app.context().pages().find((page) => page.url() === 'album-desktop://wallpaper/wallpaper.html'); assert.ok(wallpaper);
-  wallpaper.on('pageerror', (error) => report.pageErrors.push(error.message)); await wallpaper.locator('.room-turntable').waitFor();
+  wallpaper.on('pageerror', (error) => report.pageErrors.push(error.message)); await wallpaper.locator('.wallpaper-desk.is-lit').waitFor(); // 3.1: the wallpaper is the desk
   assert.equal(await wallpaper.evaluate(() => typeof window.require), 'undefined'); assert.equal(await wallpaper.evaluate(() => typeof window.albumDesktop), 'undefined');
   assert.deepEqual(await wallpaper.evaluate(() => Object.keys(window.albumWallpaper).sort()), ['getSnapshot', 'onSnapshot']);
-  assert.equal(await wallpaper.getByRole('button', { name: '移动唱机', exact: true }).count(), 0);
-  assert.equal(await wallpaper.locator('.custom-vinyl').evaluate((node) => node.style.getPropertyValue('--vinyl-base')), '#2255aa');
+  assert.equal(await wallpaper.locator('button, a, input').count(), 0, 'nothing to press on the wallpaper');
+  // The desk draws no vinyl; the record colour still crosses the isolated bridge with the snapshot.
+  assert.equal((await wallpaper.evaluate(() => window.albumWallpaper.getSnapshot())).recordStyle.base, '#2255aa');
+  await wallpaper.waitForFunction(() => Array.from(document.images).every((image) => image.complete && image.naturalWidth > 0));
   await wallpaper.screenshot({ path: path.join(output, 'wallpaper-protocol-smoke.png') });
   const resources = await app.evaluate(async ({ session }) => {
     const partition = session.fromPartition('album-circle-wallpaper');

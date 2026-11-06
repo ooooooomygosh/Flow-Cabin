@@ -2,7 +2,7 @@
 // Cabin productivity flow: focus dock, tasks, a full pomodoro with a fake
 // clock, rewards, the room cat, the sound mixer and Zen mode.
 const { _electron } = require('playwright'), fs = require('node:fs'), path = require('node:path'), assert = require('node:assert/strict');
-const { mountFixture, chooseRoomScene, openRoomSettings, closeSettings, openDrawerThing, openFocus } = require('./ui-fixture.cjs');
+const { mountFixture, openRoomSettings, closeSettings, openDrawerThing, openFocus } = require('./ui-fixture.cjs');
 const desktop = path.resolve(__dirname, '..'), output = path.resolve(process.env.ALBUM_QA_EVIDENCE || path.join(desktop, 'test-results', `cat-focus-${Date.now()}`)); fs.mkdirSync(output, { recursive: true });
 const env = { ...process.env, ALBUM_DESKTOP_TEST_PROFILE: path.join(output, `cat-focus-ui-profile-${Date.now()}`) }; delete env.ELECTRON_RUN_AS_NODE;
 const executablePath = process.env.ALBUM_QA_EXE || require(path.join(desktop, 'node_modules/electron'));
@@ -20,7 +20,6 @@ let app, site, host;
   });
   await site.clock.install({ time: new Date('2026-10-08T12:00:00') });
   await mountFixture(app, site, { showroom: 'room' });
-  await chooseRoomScene(site, 'pixel');
   await openRoomSettings(site);
   await site.getByRole('button', { name: '选择桌宠 奶糖', exact: true }).click();
   await site.getByRole('button', { name: '关闭设置', exact: true }).click(); await site.getByRole('dialog', { name: '设置', exact: true }).waitFor({ state: 'hidden' });

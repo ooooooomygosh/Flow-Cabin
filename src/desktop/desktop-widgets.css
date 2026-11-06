@@ -71,7 +71,6 @@
 
 /* Desktop mode layout: the room fills the screen; window chrome steps aside. */
 :root.room-desktop .app-cabin { inset: 0; }
-:root.room-desktop .room-turntable .turntable-console { visibility: hidden; }
 
 /* Fullscreen / immersive: a mouse-reachable way out, and the cursor rests. */
 .immersive-exit { position: fixed; left: 16px; bottom: 16px; z-index: 90; display: flex; gap: 2px; padding: 4px 6px; max-width: calc(100vw - 32px); color: #2e2318; background: #efe6d3; box-shadow: -3px -3px 6px rgba(8, 5, 2, .38), -10px -10px 20px rgba(8, 5, 2, .22); transform: rotate(-.5deg); font-family: var(--ui-font-display, Georgia), serif; opacity: .82; -webkit-app-region: no-drag; transition: opacity 160ms ease-out; }

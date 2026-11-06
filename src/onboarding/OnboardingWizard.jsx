@@ -2,8 +2,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import { version as buildVersion } from '../../package.json';
 import Dialog from '../Dialog';
 import PixelCat from '../pet/PixelCat';
-import { getRoomScene } from '../scene-catalog.mjs';
-import RoomPickers, { sceneThumb } from '../RoomPickers';
+import { getPet } from '../pet/pet-catalog.mjs';
+import { deskUrl } from '../desk/images.mjs';
+import RoomPickers from '../RoomPickers';
 import { Check, Music2 } from '../icons';
 import * as model from './onboarding-model.mjs';
 import WhatsNew from './WhatsNew';
@@ -16,10 +17,10 @@ const PERMISSION_LABELS = { typing: '跨应用键鼠陪伴', notifications: '通
 // Where each optional permission lives once the guide is closed.
 const PERMISSION_HOME = { typing: 'companion', notifications: 'focus', autostart: 'desktop', appleMusic: 'music/accounts' };
 
-// First-run guide: three steps (音源 → 房间与伙伴 → 试听). Each step only changes
+// First-run guide: three steps (音源 → 伙伴 → 试听). Each step only changes
 // what the user explicitly picks: it never starts a timer, and sound plays only
 // after 「播放测试」 is pressed. A version update is the dismissible 新功能 sheet.
-export default function OnboardingWizard({ state, update, mode = '', currentVersion = buildVersion, env, player, look, petId, onRoomChange, useSource, openMusicSettings, openAdd, close, reduceMotion, error }) {
+export default function OnboardingWizard({ state, update, mode = '', currentVersion = buildVersion, env, player, petId, onRoomChange, useSource, openMusicSettings, openAdd, close, reduceMotion, error }) {
   const heading = useRef(null), first = useRef(true);
   // `fromVersion` is set only while a version update is pending, so the mode
   // stays derivable from state (and an app quit before 知道了 shows it again).
@@ -30,16 +31,17 @@ export default function OnboardingWizard({ state, update, mode = '', currentVers
   useEffect(() => { if (first.current) { first.current = false; return; } heading.current?.focus({ preventScroll: true }); }, [step]);
   if (effectiveMode === 'update') return <WhatsNew copy={model.updateContext(state, currentVersion)} close={() => close('done')} openSettings={(section) => { close('done'); openMusicSettings?.(section); }}/>;
   const move = (offset) => update(model.goTo(state, steps[Math.min(steps.length - 1, Math.max(0, index + offset))]));
-  const scene = getRoomScene(look);
+  const pet = getPet(petId);
   const last = model.isLastStep(step);
   return <Dialog title="新手引导" label="新手引导" close={() => close('later')} className="onboarding" size="lg">
     <LetterHead note="写给第一次来的你"/>
     <ol className="onboarding-progress" aria-label="引导进度">{steps.map((id, i) => <li key={id} aria-current={id === step ? 'step' : undefined} className={i < index ? 'is-done' : ''}><span aria-hidden="true">{i < index ? <Check size={12}/> : i + 1}</span>{model.STEP_LABELS[id]}</li>)}</ol>
     <div className="onboarding-layout">
-      <aside className="onboarding-scene" aria-hidden="true"><img src={sceneThumb(scene)} alt="" width="362" height="272"/><PixelCat petId={petId} pose={step === 'test' ? 'groove' : 'idle'} reduceMotion={reduceMotion}/><span>{scene.label}</span></aside>
+      {/* the snapshot pinned to the letter: the companion on the desk (the home is the desk; the stored look only picks the lyric skin) */}
+      <aside className="onboarding-scene" aria-hidden="true"><img src={deskUrl('desk-wood.webp')} alt="" width="362" height="272"/><PixelCat petId={petId} pose={step === 'test' ? 'groove' : 'idle'} reduceMotion={reduceMotion}/><span>{pet.name} · {pet.species}</span></aside>
       <section className="onboarding-step" key={step} aria-labelledby="onboarding-heading">
         {step === 'source' && <SourceStep heading={heading} state={state} update={update} env={env} player={player} useSource={useSource} openMusicSettings={openMusicSettings} openAdd={openAdd}/>}
-        {step === 'room' && <RoomStep heading={heading} look={look} petId={petId} onRoomChange={onRoomChange} reduceMotion={reduceMotion} error={error}/>}
+        {step === 'room' && <RoomStep heading={heading} petId={petId} onRoomChange={onRoomChange} reduceMotion={reduceMotion} error={error}/>}
         {step === 'test' && <TestStep heading={heading} state={state} update={update} env={env} player={player} openMusicSettings={openMusicSettings}/>}
       </section>
     </div>
@@ -77,7 +79,7 @@ function SourceStep({ heading, state, update, env, player, useSource, openMusicS
   const selected = sources.find((item) => item.id === state.source);
   return <>
     <Heading heading={heading} eyebrow="欢迎来到心流小屋">想从哪里听歌？</Heading>
-    <p>三步就好：选音源、挑房间、试听一下。每一步都能跳过，以后在「设置」里随时改。</p>
+    <p>三步就好：选音源、挑伙伴、试听一下。每一步都能跳过，以后在「设置」里随时改。</p>
     <div className="onboarding-sources" role="radiogroup" aria-label="音乐来源">{sources.map((source) => <button type="button" role="radio" key={source.id} aria-checked={state.source === source.id} disabled={!source.available} aria-label={`音源 ${source.label}`} onClick={() => choose(source)}>
       <strong>{source.label}</strong><small>{source.available ? source.hint : source.reason}</small>{state.source === source.id && <Check size={14}/>}
     </button>)}</div>
@@ -113,10 +115,11 @@ function OptionalPermissions({ state, update, env, player, openSettings }) {
   </details>;
 }
 
-function RoomStep({ heading, look, petId, onRoomChange, reduceMotion, error }) {
+// The step keeps its stored id 'room' (saved guide state); since 3.1 it picks the companion only.
+function RoomStep({ heading, petId, onRoomChange, reduceMotion, error }) {
   return <>
-    <Heading heading={heading} eyebrow="房间与伙伴">选一个房间，再挑个伙伴</Heading>
-    <RoomPickers look={look} petId={petId} onChange={onRoomChange} reduceMotion={reduceMotion} compact/>
+    <Heading heading={heading} eyebrow="伙伴">挑个伙伴</Heading>
+    <RoomPickers petId={petId} onChange={onRoomChange} reduceMotion={reduceMotion} compact/>
     {error && <p role="alert" className="record-error">{error}</p>}
   </>;
 }

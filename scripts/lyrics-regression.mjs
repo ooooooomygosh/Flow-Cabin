@@ -6,8 +6,7 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { launchChromium } from './launch-browser.mjs';
 import { onboardingSeed } from './app-version.mjs';
-import { takeBinder, closeLibrary, openConsole, openRoomSettings, closeSettings, settingsDialog } from './settings-actions.mjs';
-import { getRoomScene } from '../src/scene-catalog.mjs';
+import { takeBinder, closeLibrary, openConsole, storeRoomLook } from './settings-actions.mjs';
 // 歌词册 from the desk: 唱机 plate → 唱机旁 → its 歌词册 plate.
 const openStage = async (page) => { const panel = await openConsole(page); await panel.getByRole('button', { name: '歌词册', exact: true }).click(); };
 import { parseLyrics } from '../src/lyrics/lyrics-model.mjs';
@@ -121,8 +120,9 @@ try {
 
   // 6. Every room's skin, desktop and phone.
   for (const id of ['rain-train', 'starlight', 'forest', 'warm']) {
-    // The room is chosen in 设置 › 小屋与奶糖 (the desk itself does not change with it).
-    await openRoomSettings(page); await settingsDialog(page).getByRole('button', { name: `选择场景 ${getRoomScene(id).label}`, exact: true }).click(); await closeSettings(page);
+    // 3.1: there is no room picker; the stored look (an older install's room) picks the skin. The reload clears the deck.
+    await storeRoomLook(page, id);
+    await (await takeBinder(page, '唱片')).getByRole('button', { name: '播放 歌词练习', exact: true }).click(); await closeLibrary(page);
     await openStage(page);
     await stage.locator('.cabin-amll').waitFor();
     assert.equal(await stage.locator('.lyrics-stage').getAttribute('data-skin'), id);

@@ -39,7 +39,6 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
   };
   // The desk has no room picture any more: the chosen room and companion are read from the saved library.
   const room = (page) => page.evaluate(() => { try { return JSON.parse(localStorage.getItem('album-circle-library-v1-local-owner') || '{}').rooms?.['local-room'] || {}; } catch { return {}; } });
-  const roomIs = async (page, look) => { for (let i = 0; i < 40 && (await room(page)).look !== look; i++) await page.waitForTimeout(100); assert.equal((await room(page)).look, look); };
   const inViewport = async (page, locator) => {
     const box = await locator.boundingBox(), view = page.viewportSize();
     assert(box && box.x >= 0 && box.y >= 0 && box.x + box.width <= view.width + 1 && box.y + box.height <= view.height + 1, 'control must be inside the viewport');
@@ -56,7 +55,7 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
     await page.evaluate(() => document.fonts.ready);
     await heading(page).filter({ hasText: '想从哪里听歌？' }).waitFor();
     await wizard.locator('.onboarding-eyebrow').filter({ hasText: '欢迎来到心流小屋' }).waitFor();
-    assert.deepEqual(await wizard.locator('.onboarding-progress li').allInnerTexts(), ['1\n音源', '2\n房间与伙伴', '3\n试听'], 'the first run is three steps');
+    assert.deepEqual(await wizard.locator('.onboarding-progress li').allInnerTexts(), ['1\n音源', '2\n伙伴', '3\n试听'], 'the first run is three steps');
     for (const viewport of [{ width: 1440, height: 900 }, { width: 960, height: 600 }, { width: 640, height: 600 }]) {
       await page.setViewportSize(viewport);
       for (const name of ['下一步', '跳过引导']) await inViewport(page, button(page, name));
@@ -68,17 +67,25 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
     await page.getByRole('radio', { name: '音源 本地音乐' }).click();
     assert.equal(await page.getByRole('radio', { name: '音源 本地音乐' }).getAttribute('aria-checked'), 'true');
     await button(page, '选择音乐文件').waitFor();
+    // The snapshot pinned to the letter is the desk with the companion on it (no room render).
+    assert.equal(await wizard.locator('.onboarding-scene img').getAttribute('src'), '/desk/desk-wood.webp');
     await wizard.locator('.onboarding-scene img').evaluate((image) => image.decode());
+    assert.equal(await wizard.locator('.onboarding-scene > span').innerText(), '奶糖 · 小猫');
     await page.screenshot({ path: path.join(output, 'onboarding.png'), animations: 'disabled' });
     await button(page, '下一步').click();
-    await heading(page).filter({ hasText: '选一个房间，再挑个伙伴' }).waitFor();
+    await heading(page).filter({ hasText: '挑个伙伴' }).waitFor();
+    await wizard.locator('.onboarding-eyebrow').filter({ hasText: /^伙伴$/ }).waitFor();
     assert.equal(await page.evaluate(() => document.activeElement.id), 'onboarding-heading');
     check('wizard-auto-opens-three-sizes-web-sources-and-heading-focus');
-    // The compact 房间 picker shows each room's shell render.
-    assert.equal(await wizard.locator('.room-pickers.is-compact').getByRole('button', { name: '选择场景 像素小屋', exact: true }).locator('img').getAttribute('src'), '/room-scenes/v21/pixel/shell.webp');
-    await button(page, '选择场景 林间书屋').click(); await button(page, '选择桌宠 枫糖').click();
-    assert.equal(await button(page, '选择场景 林间书屋').getAttribute('aria-pressed'), 'true');
-    await roomIs(page, 'forest');
+    // 3.1: the step picks the companion only (the home is the desk); the stored look is left as it is.
+    assert.equal(await wizard.getByRole('button', { name: /^选择场景/ }).count(), 0, 'no room-scene picker in the guide');
+    assert.equal(await wizard.locator('.room-pickers.is-compact .pet-choice').count(), 5);
+    const lookBefore = (await room(page)).look || 'pixel'; // a fresh cabin saves no room yet: the library's default look
+    await button(page, '选择桌宠 枫糖').click();
+    assert.equal(await button(page, '选择桌宠 枫糖').getAttribute('aria-pressed'), 'true');
+    await wizard.locator('.onboarding-scene > span', { hasText: '枫糖 · 小狐狸' }).waitFor();
+    for (let i = 0; i < 40 && (await room(page)).petId !== 'fox'; i++) await page.waitForTimeout(100);
+    assert.equal((await room(page)).petId, 'fox'); assert.equal((await room(page)).look, lookBefore, 'the guide does not change the stored look');
     await button(page, '下一步').click();
     await heading(page).filter({ hasText: '放一段声音试试' }).waitFor();
     assert.equal(await page.locator('audio[src]').count(), 0, 'no sound before 播放测试');
@@ -93,7 +100,7 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
     assert.equal(await page.locator('.focus-badge.is-running').count(), 0);
     await page.reload(); await desk(page).waitFor();
     assert.equal(await wizardOf(page).count(), 0);
-    await roomIs(page, 'forest');
+    assert.equal((await room(page)).look, lookBefore);
     assert.equal((await room(page)).petId, 'fox');
     assert.equal(await page.evaluate(() => localStorage.getItem('album-circle-room-player-v1')), 'local');
     check('wizard-full-flow-persists-source-room-companion-and-does-not-reopen');
@@ -126,12 +133,12 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
 
     // 3. Closing half-way does not pop the guide on the next launch; the letter's steps reopen it.
     assert.equal(await page.getByRole('radio', { name: '音源 本地音乐' }).getAttribute('aria-checked'), 'true', 'earlier choices survive');
-    await button(page, '下一步').click(); await heading(page).filter({ hasText: '选一个房间，再挑个伙伴' }).waitFor();
+    await button(page, '下一步').click(); await heading(page).filter({ hasText: '挑个伙伴' }).waitFor();
     await page.keyboard.press('Escape'); await wizardOf(page).waitFor({ state: 'hidden' });
     await page.reload(); await desk(page).waitFor(); await page.waitForTimeout(3200);
     assert.equal(await wizardOf(page).count(), 0, 'the guide waits in the letter');
     await guideFromLetter(page, '挑伙伴');
-    await heading(page).filter({ hasText: '选一个房间，再挑个伙伴' }).waitFor();
+    await heading(page).filter({ hasText: '挑个伙伴' }).waitFor();
     // 4. 跳过引导 is final until 重新引导.
     await button(page, '跳过引导').click(); await page.reload(); await desk(page).waitFor();
     assert.equal(await wizardOf(page).count(), 0);
@@ -141,7 +148,7 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
     await openRoomSettings(page); await hubOf(page).waitFor();
     assert.equal(await page.getByRole('tab', { name: '小屋与奶糖' }).getAttribute('aria-selected'), 'true');
     // The room scene is chosen in the guide only (R5): 设置 picks the companion.
-    assert.equal(await hubOf(page).locator('.scene-options').count(), 0, '设置 has no room-scene picker');
+    assert.equal(await hubOf(page).getByRole('button', { name: /^选择场景/ }).count(), 0, '设置 has no room-scene picker');
     await button(page, '选择桌宠 奶糖').click(); for (let i = 0; i < 40 && (await room(page)).petId !== 'cat'; i++) await page.waitForTimeout(100);
     assert.equal((await room(page)).petId, 'cat');
     await page.screenshot({ path: path.join(evidence, 'settings-hub-room.png'), animations: 'disabled' });
@@ -208,7 +215,7 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
     await page.goto(origin); await desk(page).waitFor({ timeout: 20000 }); await guideFromLetter(page);
     await button(page, '下一步').click();
     await page.evaluate(() => { const set = Storage.prototype.setItem; Storage.prototype.setItem = function (key, value) { if (key.startsWith('album-circle-library')) throw new DOMException('Storage full', 'QuotaExceededError'); return set.call(this, key, value); }; });
-    await button(page, '选择场景 海边慢屋').click();
+    await button(page, '选择桌宠 棉花').click();
     await wizardOf(page).getByRole('alert').waitFor();
     await button(page, '跳过引导').click(); await wizardOf(page).waitFor({ state: 'hidden' });
     check('wizard-storage-failure-is-shown-and-allows-exit');

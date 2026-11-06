@@ -142,19 +142,10 @@ button.brass-plate, a.brass-plate { cursor: pointer; }
 button.brass-plate:hover, a.brass-plate:hover { filter: brightness(1.13); }
 button.brass-plate:active { filter: brightness(.94); transform: translateY(1px); }
 button.brass-plate:focus-visible, a.brass-plate:focus-visible { outline: 2px solid #fff3cf; outline-offset: 2px; }
-.brass-plate-text { text-shadow: 0 1px 0 rgba(255, 239, 199, .34); }
-.brass-plate-arrow { font-size: 14px; letter-spacing: 0; text-shadow: 0 1px 0 rgba(255, 239, 199, .34); }
 .brass-plate::before, .brass-plate::after { content: ''; position: absolute; top: 50%; width: 5px; height: 5px; margin-top: -2.5px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #e7d29b, #6e5528 70%); box-shadow: 0 0 0 .5px rgba(30, 18, 4, .6); }
 .brass-plate::before { left: 7px; }
 .brass-plate::after { right: 7px; }
 
-/* ── red LED glass ─────────────────────────────────────────────────────── */
-.led-glass { display: block; width: 100%; height: auto; overflow: visible; filter: drop-shadow(0 0 5px rgba(255, 59, 47, .18)); }
-.led-window { fill: #0e0504; stroke: rgba(0, 0, 0, .7); stroke-width: 2; }
-.led-on { fill: #ff3b2f; stroke: rgba(255, 56, 28, .22); stroke-width: 1.6; paint-order: stroke; filter: drop-shadow(0 0 2.2px rgba(255, 59, 47, .75)); }
-.led-ghost { fill: rgba(153, 26, 15, .13); }
-.led-gloss { fill: rgba(255, 255, 255, .06); }
-html[data-perf='low'] .led-on { filter: none; }
 /* 流畅模式: no filters on sheets; the same lamp-side shadow as a box-shadow (it cannot follow the cut corner). */
 html[data-perf='low'] .cabin-dialog:not(.is-full) { filter: none; box-shadow: calc(var(--sx, -.54) * 4px) calc(var(--sy, -.43) * 4px) 3px rgba(15, 10, 8, calc(.34 * var(--lamp-k, .6))), calc(var(--sx, -.54) * 44px) calc(var(--sy, -.43) * 44px) 30px rgba(10, 6, 3, calc(.85 * var(--lamp-k, .6))); }
 }

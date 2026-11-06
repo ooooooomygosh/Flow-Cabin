@@ -16,7 +16,7 @@ export const LEGACY_SEEN_VERSION = '1.17.0';
 // 2.2: three short steps. Permissions (键鼠陪伴, 通知, 开机启动) are optional and
 // live in 设置; a version update is a dismissible 新功能 sheet, not a walkthrough.
 export const STEPS = Object.freeze(['source', 'room', 'test']);
-export const STEP_LABELS = Object.freeze({ source: '音源', room: '房间与伙伴', test: '试听' });
+export const STEP_LABELS = Object.freeze({ source: '音源', room: '伙伴', test: '试听' });
 // Steps saved by 2.1 and earlier resume at the closest 2.2 step.
 const LEGACY_STEPS = Object.freeze({ welcome: 'source', updates: 'source', permissions: 'room', done: 'test' });
 const STATUSES = ['new', 'active', 'skipped', 'done'];

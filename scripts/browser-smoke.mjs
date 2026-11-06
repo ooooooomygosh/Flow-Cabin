@@ -1,4 +1,4 @@
-// (weather-motion-checks.mjs checked the retired wallpaper room's window; 沉入桌面 is the desk since R5.)
+// (The retired wallpaper room's window weather checks are gone; 沉入桌面 is the desk since R5.)
 import { launchChromium } from './launch-browser.mjs';
 import { verifyFullscreenStudy } from './fullscreen-study-checks.mjs';
 import { verifyBenchmarkCabin } from './benchmark-cabin-checks.mjs';
@@ -116,7 +116,7 @@ try {
   assert.equal(ROOM_SCENES.length, 8); assert.equal(PETS.length, 5);
   // 设置 › 小屋与奶糖 picks the companion; the room scene is chosen in the first-run guide only (R5: the desk has no room picture).
   await openRoomSettings(page);
-  assert.equal(await settingsDialog(page).locator('.scene-options').count(), 0, '设置 has no room-scene picker');
+  assert.equal(await settingsDialog(page).getByRole('button', { name: /^选择场景/ }).count(), 0, '设置 has no room-scene picker');
   for (const pet of PETS) { await page.getByRole('button', { name: `选择桌宠 ${pet.name || pet.label}`, exact: true }).click(); await waitForSavedRoom(page, { petId: pet.id }); }
   await screenshot('room-personalization');
   // One fixed dialog size: switching sections never resizes 设置.

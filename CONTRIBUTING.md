@@ -72,6 +72,6 @@ PR 描述说明问题、变化与实际检查结果。明确区分代码实现�
 - `test:home/home-interactions/room-production`：书桌后沿、唱片架铜牌、抽屉与按键 A / C / N / D / Esc，抬头看书柜和控制面板时播放不断，生产包在原生 CSP 下渲染，手机安全区与横屏。
 - `test:web-static/playback/ai/journal/memory/study-ui/devices-ui/souvenirs`：共用功能、数据往返与服务边界。
 - 实际 Electron `npm --prefix desktop run test:client`：书桌首页、系统宠物与真实媒体解码。
-- 动态桌面（“沉入桌面”）画的也是书桌（`src/WallpaperRoom.jsx`）。桌面端的 `test:room`、`test:night-study`、`test:improvements` 里壁纸部分仍按旧的房间画面查找元素，尚未随书桌改写。
+- 动态桌面（“沉入桌面”）画的也是书桌（`src/WallpaperRoom.jsx`），由 `test:browser`（wallpaper-is-the-desk）与 `npm --prefix desktop run test:wallpaper` 覆盖；`test:room`、`test:night-study`、`test:improvements` 的壁纸部分也查书桌（唱片纸条、LED 台钟）。
 
-两小时播放使用 `SOAK_MINUTES=120 npm run test:home`，默认短回归不等待两小时。长测使用静音生成 WAV，不宣称真实账号音源通过。Android 实际 WebView 用 `scripts/android-home-v21.mjs --fixture`，仅在明确命名的专用 AVD 执行；这个脚本仍按 2.1 的房间首页操作，尚未随书桌改写。
+两小时播放使用 `SOAK_MINUTES=120 npm run test:home`，默认短回归不等待两小时。长测使用静音生成 WAV，不宣称真实账号音源通过。Android 实际 WebView 用 `scripts/android-home-v21.mjs --fixture`，仅在明确命名的专用 AVD 执行；它按书桌操作（抽屉、台钟、设置 › 小屋与奶糖），在本环境未能实机运行。

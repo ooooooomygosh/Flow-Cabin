@@ -79,19 +79,15 @@ try {
   await page.locator('.focus-badge').click(); await page.getByRole('button', { name: '开始专注', exact: true }).click(); await page.keyboard.press('Escape'); await page.waitForFunction(() => /专注中/.test(document.querySelector('.desk-clock-face')?.getAttribute('aria-label') || ''));
   await page.locator('.focus-badge').click(); await page.getByRole('button', { name: '暂停', exact: true }).click(); check('focus-start-and-pause-from-visible-tool'); await page.keyboard.press('Escape');
   await openRoomSettings(page);
-  await page.locator('.scene-choice img').evaluateAll(images => Promise.all(images.map(image => image.decode())));
   for (const name of ['奶糖', '蛋挞', '棉花', '可可', '枫糖']) await fits(page.locator('.pet-choice strong', { hasText: name }));
-  await fits(page.getByRole('button', { name: '关闭设置', exact: true })); check('room-thumbnails-and-all-partner-names-visible');
+  await fits(page.getByRole('button', { name: '关闭设置', exact: true })); check('all-partner-names-visible');
   await shot('personalization', true); await closeSettings(page);
   await page.keyboard.press('h'); assert(await page.evaluate(() => document.documentElement.classList.contains('room-zen'))); await shot('immersive'); await page.keyboard.press('Escape'); check('immersive-enter-and-exit');
   await page.setViewportSize({ width: 960, height: 600 }); await shot('cabin-960x600');
-  const { ROOM_SCENES } = await import('../src/scene-catalog.mjs');
-  for (const scene of ROOM_SCENES) {
-    await openRoomSettings(page); await page.getByRole('button', { name: `选择场景 ${scene.label}`, exact: true }).click(); await closeSettings(page); await shot(`scene-${scene.id}-960x600`);
-    for (const name of ['设置', '进入全屏模式']) await fits(page.getByRole('button', { name, exact: true }));
-    await fits(page.getByRole('button', { name: /^唱片架 · / }));
-  }
-  check('all-eight-scenes-compact-controls-fit');
+  // 3.1: one home (the desk) for every stored look, so the compact controls are checked once at 960x600.
+  for (const name of ['设置', '进入全屏模式']) await fits(page.getByRole('button', { name, exact: true }));
+  await fits(page.getByRole('button', { name: /^唱片架 · / }));
+  check('compact-controls-fit-at-960x600');
   if (process.env.SHOWCASE_TOUR === '1') {
     const tour = await browser.newContext({ viewport: { width: 1280, height: 800 }, locale: 'zh-CN', reducedMotion: 'no-preference', recordVideo: { dir: evidence, size: { width: 1280, height: 800 } } });
     await tour.route('**/*', routeHandler);
@@ -113,7 +109,6 @@ try {
     await demo.getByRole('button', { name: '开始专注', exact: true }).click(); await demo.waitForTimeout(1700);
     await demo.keyboard.press('Escape');
     await openRoomSettings(demo); await demo.waitForTimeout(1300);
-    await demo.getByRole('button', { name: '选择场景 林间书屋', exact: true }).click();
     await demo.getByRole('button', { name: '选择桌宠 枫糖', exact: true }).click(); await demo.waitForTimeout(1200);
     await closeSettings(demo); await demo.waitForTimeout(1700);
     await demo.keyboard.press('h'); await demo.waitForTimeout(2000);

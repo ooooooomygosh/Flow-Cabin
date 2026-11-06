@@ -9,10 +9,19 @@ export const HUB_TAB = Object.freeze({ '音源': '音乐', '房间与桌宠': '�
 export const hubTabName = (section) => HUB_TAB[section] || section;
 export const settingsDialog = (page) => page.getByRole('dialog', { name: '设置', exact: true });
 // ---- the desk ----
-// The room the scene / companion pickers save (record-library rooms[...]: look, petId); the desk itself does not change
-// with the scene (the 沉入桌面 wallpaper draws it), and has no pet portrait.
+// The saved room (record-library rooms[...]: look, petId). 3.1: the home and the 沉入桌面 wallpaper are the desk, and the
+// only picker is the companion one; the stored `look` still picks the lyric skin (src/lyrics/lyric-skins.mjs).
 export const savedRoom = (page) => page.evaluate(() => { const key = Object.keys(localStorage).find((k) => k.startsWith('album-circle-library-v1-')); const rooms = key ? JSON.parse(localStorage.getItem(key)).rooms || {} : {}; return Object.values(rooms)[0] || null; });
 export async function waitForSavedRoom(page, patch) { await page.waitForFunction((want) => { const key = Object.keys(localStorage).find((k) => k.startsWith('album-circle-library-v1-')); const room = key ? Object.values(JSON.parse(localStorage.getItem(key)).rooms || {})[0] : null; return Boolean(room) && Object.entries(want).every(([k, v]) => room[k] === v); }, patch); }
+// A lyric skin needs a stored look: write it to the saved library (local-owner › local-room), as an older install would
+// have it, and reload. What was on the deck is not kept across the reload.
+export async function storeRoomLook(page, look) {
+  await page.evaluate((look) => {
+    const key = 'album-circle-library-v1-local-owner', saved = JSON.parse(localStorage.getItem(key) || '{}'), rooms = saved.rooms || {};
+    localStorage.setItem(key, JSON.stringify({ ...saved, rooms: { ...rooms, 'local-room': { ...(rooms['local-room'] || {}), look } } }));
+  }, look);
+  await page.reload(); await page.locator('.desk-home').waitFor();
+}
 export const deskHome = (page) => page.locator('.desk-home');
 // The desk once its lamp is up (the first pictures are in).
 export async function deskReady(page, options) { await page.locator('.desk-home.is-lit').waitFor(options); }

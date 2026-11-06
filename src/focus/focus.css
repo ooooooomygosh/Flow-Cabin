@@ -3,7 +3,6 @@
 @layer guards, reset, features, skin, overrides;
 @layer features {
 .focus-badge{font-variant-numeric:tabular-nums}
-.cabin-toolbar .focus-badge{color:var(--px-ink-dim);cursor:pointer}
 .focus-badge:hover{color:var(--px-ink)}
 .focus-badge.is-running{color:var(--px-accent-hi)}
 .focus-badge.is-running::before{content:"";order:0;flex:none;width:6px;height:6px;background:var(--px-accent);animation:focus-lamp 1s steps(1,end) infinite}
@@ -13,8 +12,6 @@
 .focus-badge.phase-shortBreak::before,.focus-badge.phase-longBreak::before{background:var(--px-good)}
 .focus-badge.is-open .focus-badge-time{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 @keyframes focus-lamp{50%{background:var(--px-accent-lo)}}
-.cabin-toolbar .focus-badge.is-running{color:var(--px-accent-hi)}
-.cabin-toolbar .focus-badge.phase-shortBreak,.cabin-toolbar .focus-badge.phase-longBreak{color:var(--px-good)}
 .focus-save-error{flex-shrink:0;padding:10px 14px;border-bottom:2px solid var(--px-border);color:#ffc2a6;line-height:1.5;background:#472519}
 .focus-save-error .pixel-button{margin-left:4px;padding:4px 8px;min-height:28px;font-size:12px}
 .focus-settings{display:grid;gap:7px;width:100%;text-align:left;padding:10px;background:#1f130b;border:1px dashed #8a5f3a}

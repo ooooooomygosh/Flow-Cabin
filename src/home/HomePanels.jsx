@@ -20,7 +20,7 @@ export function LifeReminder() {
   return null;
 }
 export default function HomePanels({ tool, close, filters, setFilters, visible, recordStyle, openAdd, openRecord, openWall, openSmart, onRoomChange }) {
-  const { items, look, identity } = useCabinRuntime();
+  const { items, identity } = useCabinRuntime();
   const title = ({ postcard: '小屋明信片', recipes: '场景配方', sleep: '睡前模式', diagnostics: '功能诊断', weather: '窗外与天气', companions: '选择伙伴' })[tool];
   if (!title) return null;
   return <Dialog title={title} close={close} className={`home-tool home-${tool}-dialog`} size="lg">
@@ -28,6 +28,6 @@ export default function HomePanels({ tool, close, filters, setFilters, visible, 
     {tool === 'sleep' && <SleepPanel/>}
     {tool === 'diagnostics' && <Diagnostics/>}
     {tool === 'weather' && <SkySettings/>}
-    {tool === 'companions' && <RoomPickers petsOnly look={look} petId={identity.builtinId} onChange={onRoomChange}/>}
+    {tool === 'companions' && <RoomPickers petId={identity.builtinId} onChange={onRoomChange}/>}
   </Dialog>;
 }
