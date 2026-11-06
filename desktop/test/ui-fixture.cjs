@@ -168,6 +168,8 @@ async function closeLibrary(site) {
   await libraryDialog(site).waitFor({ state: 'hidden' });
   await backToDesk(site);
 }
+// The binder's spine stands on the bookcase (the 唱片架 view), not in the sheet it opens; its label counts the records.
+const binderSpine = (site, name = '唱片') => libraryDialog(site).getByRole('button', { name: new RegExp(`^${name}活页夹`) });
 const shelfSheet = (site, name) => site.getByRole('dialog', { name: name === '索引本' ? /^索引本/ : `${name}活页夹`, exact: name !== '索引本' });
 async function takeBinder(site, name = '唱片') {
   const sheet = shelfSheet(site, name);
@@ -223,4 +225,4 @@ async function openRecordTools(site, title) {
   await card.getByRole('button', { name: '自定义唱片', exact: true }).click();
   return site.getByRole('dialog', { name: '自定义唱片' });
 }
-module.exports = { backToDesk, lookUp, pressSpot, openDrawerThing, openFocus, focusDialog, mountFixture, albums, storeRoomLook, openRoomSettings, openSettingsTab, openMusicSettings, openSourceSettings, closeSettings, chooseSource, openAddToShelf, openRecordTools, closeRecordCard, settingsDialog, accountsRegion, openLibrary, closeLibrary, takeBinder, playRecord, openRecordCard, openConsole, closeConsole, deckRecord, libraryDialog, addDialog, consoleDialog };
+module.exports = { binderSpine, backToDesk, lookUp, pressSpot, openDrawerThing, openFocus, focusDialog, mountFixture, albums, storeRoomLook, openRoomSettings, openSettingsTab, openMusicSettings, openSourceSettings, closeSettings, chooseSource, openAddToShelf, openRecordTools, closeRecordCard, settingsDialog, accountsRegion, openLibrary, closeLibrary, takeBinder, playRecord, openRecordCard, openConsole, closeConsole, deckRecord, libraryDialog, addDialog, consoleDialog };

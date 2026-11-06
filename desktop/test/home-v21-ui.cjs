@@ -23,7 +23,8 @@ async function launch() {
     if (app.dock) { const dock = app.dock.setIcon.bind(app.dock); app.dock.setIcon = image => { globalThis.__dockIcons.push({ size: image.getSize(), scales: image.getScaleFactors() }); return dock(image); }; }
   });
 }
-const close = async () => { await page.locator('.cabin-dialog-close').last().click(); };
+// Put the top sheet back: its folded corner when it has one, Esc otherwise (the focus close-up has 放回 · Esc, no corner).
+const close = async () => { const corner = page.locator('dialog[open] .cabin-dialog-close').last(); if (await corner.isVisible().catch(() => false)) { await corner.click(); return; } const n = await page.locator('dialog[open]').count(); await page.keyboard.press('Escape'); await page.waitForFunction((k) => document.querySelectorAll('dialog[open]').length < k, n); };
 // The desk's drawer holds what the old 小屋日常 menu held (小屋明信片 is 明信片 there).
 async function menu(name) { await openDrawerThing(page, ({ 小屋明信片: '明信片' })[name] || name); }
 async function choosePet(id, name) {
@@ -31,7 +32,7 @@ async function choosePet(id, name) {
   await page.getByRole('button', { name: `选择桌宠 ${name}`, exact: true }).click(); await close();
   // The desk draws no pet: the choice is saved for the tray, the Dock and the desktop pet.
   await page.waitForFunction(id => { const key = Object.keys(localStorage).find(k => k.startsWith('album-circle-library-v1-')); return key && Object.values(JSON.parse(localStorage.getItem(key)).rooms || {})[0]?.petId === id; }, id);
-  await page.waitForTimeout(1100);
+  for (let i = 0; i < 50 && await application.evaluate(() => globalThis.__qaTray?.__petId) !== id; i++) await page.waitForTimeout(100);
   assert.equal(await application.evaluate(() => globalThis.__qaTray?.__petId), id);
   const icon = await application.evaluate(() => ({ tray: globalThis.__icons.at(-1), dock: globalThis.__dockIcons.at(-1) }));
   assert.equal(icon.tray.template, false); assert.ok(icon.tray.size.width >= 16);
@@ -47,7 +48,7 @@ async function choosePet(id, name) {
   const skipGuide=async(timeout=8000)=>{const guide=page.getByRole('dialog',{name:'新手引导',exact:true});if(await guide.waitFor({timeout}).then(()=>true,()=>false)){await guide.getByRole('button',{name:'跳过引导',exact:true}).click();await guide.waitFor({state:'hidden'});}};
   await skipGuide();
   // 随手记 is the memo pad inside 这一段 of the 专注 panel (the LED clock opens it).
-  const openMemo=async()=>{await openFocus(page);await page.getByRole('tab',{name:'这一段',exact:true}).click();};
+  const openMemo=async()=>{await openFocus(page);await page.getByRole('tab',{name:'随手记',exact:true}).click();};
   // 3.1: the original shelf home is gone. A "classic" choice saved by an earlier version is ignored and cleared; the 专辑墙
   // (now inside 唱片架) is intact, and there is nothing left to switch.
   await page.evaluate(()=>localStorage.setItem('flow-cabin-interface-v1','classic'));

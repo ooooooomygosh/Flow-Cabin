@@ -1,5 +1,5 @@
 'use strict';
-const { openAddToShelf, openRecordTools, closeRecordCard, openLibrary, closeLibrary, takeBinder, playRecord, openRecordCard, openSettingsTab, libraryDialog, addDialog, openFocus, openConsole, closeConsole } = require('./ui-fixture.cjs');
+const { binderSpine, openAddToShelf, openRecordTools, closeRecordCard, openLibrary, closeLibrary, takeBinder, playRecord, openRecordCard, openSettingsTab, libraryDialog, addDialog, openFocus, openConsole, closeConsole } = require('./ui-fixture.cjs');
 const { _electron: electron } = require('playwright');
 const assert = require('node:assert/strict'), fs = require('node:fs'), os = require('node:os'), path = require('node:path');
 const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'album-client-ui-'));
@@ -24,7 +24,7 @@ const check = (value) => report.checks.push(value);
 (async () => {
   await launch();
   await site.locator('.desk-home.is-lit').waitFor();
-  assert.match(await (await openLibrary(site)).getByRole('button', { name: /^唱片活页夹/ }).getAttribute('aria-label'), /0 /); await site.locator('.shelf-letter-note', { hasText: '添加第一张专辑' }).waitFor(); await closeLibrary(site);
+  assert.match(await (await openLibrary(site), binderSpine(site)).getAttribute('aria-label'), /0 /); await site.locator('.shelf-letter-note', { hasText: '添加第一张专辑' }).waitFor(); await closeLibrary(site);
   check('fresh-start-opens-the-pixel-cabin-without-an-account');
   const add = await openAddToShelf(site, '手动填写');
   await add.getByLabel('专辑名').fill('本地验证专辑'); await add.getByLabel('歌手').fill('离线歌手'); await add.getByLabel('曲目').fill('第一首\n第二首');

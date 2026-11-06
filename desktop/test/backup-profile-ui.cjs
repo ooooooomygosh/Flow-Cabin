@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
-const { openAddToShelf, openSettingsTab, closeLibrary, takeBinder } = require('./ui-fixture.cjs');
+const { binderSpine, openAddToShelf, openSettingsTab, closeLibrary, takeBinder } = require('./ui-fixture.cjs');
 const desktop = path.resolve(process.env.ALBUM_QA_DESKTOP || path.join(__dirname, '..'));
 const output = path.resolve(process.env.ALBUM_QA_EVIDENCE || path.join(desktop, 'test-results/backup-profile-ui'));
 fs.mkdirSync(output, { recursive: true });
@@ -274,7 +274,7 @@ function compareStores(stage, expected, actual) {
   compare('after-restart:souvenirs', sourceSouvenirs, souvenirs.normalizeSouvenirs({ version: 1,
     records: Object.keys(souvenirDomains).map((domain) => restarted.stores[domain]) }));
   await site.locator('.desk-home').waitFor();
-  assert.match(await (await takeBinder(site, '唱片')).getByRole('button', { name: /^唱片活页夹/ }).getAttribute('aria-label'), /1 /); await closeLibrary(site);
+  assert.match(await (await takeBinder(site, '唱片'), binderSpine(site)).getAttribute('aria-label'), /1 /); await closeLibrary(site);
   await site.screenshot({ path: path.join(output, 'target-restarted-room.png') });
   check('target-profile-persists-after-real-electron-restart');
   assert.deepEqual(report.pageErrors, []);

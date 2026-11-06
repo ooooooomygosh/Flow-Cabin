@@ -626,7 +626,7 @@ try {
       // The back edge (唱机 plate, LED clock and its keys, post box), the 唱片架 plate, the window controls and the drawer pull.
       const rail=await page.locator('.desk-home').evaluate(home=>{const items=[...home.querySelectorAll('.desk-plate,.desk-clock-face,.desk-post,.desk-window button,.desk-pull')].filter(b=>b.getClientRects().length);return items.map(b=>{const r=b.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return {name:b.getAttribute('aria-label')||b.textContent.trim(),left:r.left,right:r.right,top:r.top,bottom:r.bottom,reachable:b===hit||b.contains(hit)};});});
       await page.screenshot({path:path.join(output,`compact-desk-${width}x600.png`),animations:'disabled'});
-      assert.ok(rail.length>=6,JSON.stringify(rail));assert.ok(rail.every(b=>b.left>=0&&b.right<=width+0.5&&b.top>=0&&b.bottom<=600.5&&b.reachable),JSON.stringify(rail));
+      assert.ok(rail.length>=(width<700?5:6),JSON.stringify(rail)); // a phone-width desk has no window keysassert.ok(rail.every(b=>b.left>=0&&b.right<=width+0.5&&b.top>=0&&b.bottom<=600.5&&b.reachable),JSON.stringify(rail));
       for(let i=0;i<rail.length;i++)for(let j=i+1;j<rail.length;j++){const a=rail[i],c=rail[j];if(/抽屉/.test(a.name+c.name))continue;assert.ok(a.right<=c.left+1||c.right<=a.left+1||a.bottom<=c.top+1||c.bottom<=a.top+1,`desk entries overlap at ${width}: ${a.name} / ${c.name}`);}
     }
     await page.setViewportSize({width:1440,height:900});

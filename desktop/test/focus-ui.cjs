@@ -34,9 +34,10 @@ let app, site, host;
   await site.getByLabel('从待办里选').selectOption('');
   assert.equal(await site.getByLabel('从待办里选').inputValue(), '');
   check('free-focus-clears-task-selection');
+  await site.getByRole('tab', { name: '随手记' }).click(); // 3.1: 随手记 is its own page (the memo pad)
   await site.getByLabel('随手记内容').fill('稍后整理笔记\n<script>window.__noteExecuted = true</script>');
   await site.getByRole('tab', { name: '待办' }).click();
-  await site.getByRole('tab', { name: '这一段' }).click();
+  await site.getByRole('tab', { name: '随手记' }).click();
   assert.match(await site.getByLabel('随手记内容').inputValue(), /稍后整理笔记/);
   assert.equal(await site.evaluate(() => window.__noteExecuted), undefined);
   const persistedNote = await site.evaluate(() => Object.keys(localStorage).filter((key) => key.startsWith('album-circle-focus-v1:')).some((key) => JSON.parse(localStorage.getItem(key)).notes?.includes('稍后整理笔记')));

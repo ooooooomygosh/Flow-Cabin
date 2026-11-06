@@ -1,6 +1,6 @@
 'use strict';
 const { _electron } = require('playwright'), fs = require('node:fs'), path = require('node:path'), assert = require('node:assert/strict');
-const { mountFixture, albums, openRoomSettings, closeSettings, openRecordTools, closeRecordCard, takeBinder, closeLibrary, playRecord } = require('./ui-fixture.cjs');
+const { binderSpine, mountFixture, albums, openRoomSettings, closeSettings, openRecordTools, closeRecordCard, takeBinder, closeLibrary, playRecord } = require('./ui-fixture.cjs');
 const desktop = path.resolve(__dirname, '..'), output = path.join(desktop, 'test-results');
 const env = { ...process.env, ALBUM_DESKTOP_TEST_PROFILE: path.join(output, `library-ui-profile-${Date.now()}`) }; delete env.ELECTRON_RUN_AS_NODE;
 const executablePath = process.env.ALBUM_QA_EXE || require(path.join(desktop, 'node_modules/electron'));
@@ -34,7 +34,7 @@ const ROOM = 'local-room';
   await site.getByLabel('筛选唱片盒').selectOption('all'); assert.equal(await shelf.locator('.listen-grid li').count(), 14);
   await shelf.getByRole('button', { name: '好了', exact: true }).click();
   // The box is also a binder of its own, holding just its two records.
-  await shelf.getByRole('button', { name: /^周末唱片活页夹，2/ }).click(); assert.equal(await shelf.locator('.shelf-open-binder .listen-grid li').count(), 2);
+  await closeLibrary(site); const weekend = await takeBinder(site, '周末唱片'); assert.match(await binderSpine(site, '周末唱片').getAttribute('aria-label'), /，2/); assert.equal(await weekend.locator('.shelf-open-binder .listen-grid li').count(), 2);
   await closeLibrary(site);
   check('create-rename-boxes-and-filter-the-shelf');
 
