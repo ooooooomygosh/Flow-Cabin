@@ -8,7 +8,7 @@ the blurred outline), what is pressed in (an inner shadow), and the shadow it la
 What changed: the light is DEsk's desk lamp, low on the right of the desk (its tryit lamp at 1080,737
 on the 1440x900 desk), not the icon theme's light from above -- edges catch it on their lower right and
 shadows fall up and to the left, as they do for the notepad, the compass, the folder and the screwdriver
-cut from DEsk's own drawer. Five things, 256 units square each, written to public/desk/drawer/:
+cut from DEsk's own drawer. Six things, 256 units square each, written to public/desk/drawer/:
 
     diary.svg      唱片日记  a leather notebook, a record blind-stamped on it, an elastic band, a ribbon
     companion.svg  伙伴      a stack of instant photographs; the top one is left for the companion
@@ -16,6 +16,7 @@ cut from DEsk's own drawer. Five things, 256 units square each, written to publi
     cardbox.svg    词书      a card-index box with word cards standing in it
     postcard.svg   明信片    a postcard, stamped and postmarked
     nightlamp.svg  睡前模式  a small night lamp seen from above, its shade lit from inside
+    recipe.svg     场景配方  a recipe card with a tab, a record and a few lines on it, a paper clip
 
     python3 -I scripts/desk-drawer-art.py
 """
@@ -344,7 +345,30 @@ def nightlamp(ic):
     place(ic, lead + base + shade + moon + top, cx, cy, 84, 84, 0.3, (1.3, 4.5, 0.45))
 
 
-THINGS = {'diary': diary, 'companion': photos, 'cardbox': cardbox, 'postcard': postcard, 'nightlamp': nightlamp}
+# ---- 场景配方: a recipe card -- what to put on, how long, how loud --------------------------
+
+def recipe(ic):
+    x, y, w, h, a = 40, 58, 176, 132, 4
+    tab = f'<path d="M{x + 18},{y} v-16 a4,4 0 0 1 4,-4 h52 a4,4 0 0 1 4,4 v16 Z" fill="{ic.lin([(0, "#d9b98a"), (1, "#ecd3a6")])}" stroke="#a88a5a" stroke-width="1"/>'
+    card = f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="2.5" fill="{ic.lin([(0, "#efe6cf"), (1, "#fbf6e8")], 0, 0, 1, 1)}" stroke="#bfae86" stroke-width="1.2"/>'
+    card = g(tab + card, grain(ic, 0.05, '0.85', 2, 81, '#4a3a20'))
+    # the ruled lines of an index card: one red rule under the head, blue below
+    rules = f'<path d="M{x + 8},{y + 30} H{x + w - 8}" stroke="#c0574a" stroke-width="1" opacity=".7"/>'
+    rules += ''.join(f'<path d="M{x + 8},{y + 48 + k * 17} H{x + w - 8}" stroke="#8fa3bf" stroke-width=".8" opacity=".6"/>' for k in range(5))
+    # a little record printed in the corner, and the writing
+    rec = (f'<circle cx="{x + 30}" cy="{y + 70}" r="17" fill="#262321"/>'
+           + ''.join(f'<circle cx="{x + 30}" cy="{y + 70}" r="{r}" fill="none" stroke="#3b3734" stroke-width=".7"/>' for r in (14, 11, 8.5))
+           + f'<circle cx="{x + 30}" cy="{y + 70}" r="6" fill="#d9774e"/><circle cx="{x + 30}" cy="{y + 70}" r="1.4" fill="#262321"/>')
+    words = typed(x + 12, x + w - 50, y + 14, 1, 13, 4.2, '#3b3b4a', 81, False, 0.85)
+    words += typed(x + 56, x + w - 14, y + 58, 3, 17, 3.6, '#3b4a6a', 82, True, 0.8)
+    words += typed(x + 12, x + w - 30, y + 109, 1, 17, 3.6, '#3b4a6a', 83, True, 0.8)
+    # a paper clip over the top edge, catching the lamp
+    clip = (f'<path d="M{x + w - 34},{y + 30} V{y - 10} a7,7 0 0 1 14,0 V{y + 38} a10,10 0 0 1 -20,0 V{y - 2}" fill="none" stroke="{ic.lin([(0, "#8f8a80"), (0.5, "#eeeae0"), (1, "#7d786e")], 0, 0, 1, 0)}" stroke-width="2.6" stroke-linecap="round"/>')
+    inner = g(card + rules + rec + words + g(clip, dropped(ic, 0.3, 0.9, 0.35)), tf=f'rotate({a} {x + w / 2} {y + h / 2})')
+    place(ic, inner, 128, 128, 96, 76, 0.22, (0.5, 3.0, 0.36))
+
+
+THINGS = {'diary': diary, 'companion': photos, 'cardbox': cardbox, 'postcard': postcard, 'nightlamp': nightlamp, 'recipe': recipe}
 
 
 def main():

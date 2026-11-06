@@ -65,10 +65,19 @@ function usePlaybackClock() {
 // The post box from in front: letters standing in it, or DEsk's 没有信件.
 const postView = (which, count) => which === 'post' ? (count ? 'view-post-box.webp' : 'view-post-empty.webp') : `view-${which}.webp`;
 
+// 收起工具 (H, room-zen without room-zen-tools): the desk keeps what plays and what tells the time --
+// the record player, its slip, the clock at the back -- and puts the rest away.
+function useZen() {
+  const read = () => { const c = document.documentElement.classList; return c.contains('room-zen') && !c.contains('room-zen-tools'); };
+  const [zen, setZen] = useState(read);
+  useEffect(() => { const o = new MutationObserver(() => setZen(read())); o.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] }); return () => o.disconnect(); }, []);
+  return zen;
+}
+
 export default function DeskHome({ reduced = false, focusOpen = false, shelf = null }) {
   const { deck, commands, identity, notify, sceneCapture } = useCabinRuntime(), focus = useFocus(), labs = useLabs();
   const petPhoto = identity?.builtinId ? `/pet-art/v21/${identity.builtinId}/avatar-256.png` : '';
-  const homeRef = useRef(null), { width, height } = useDeskSize(homeRef), lay = useMemo(() => deskLayout(width, height), [width, height]);
+  const zen = useZen(), homeRef = useRef(null), { width, height } = useDeskSize(homeRef), lay = useMemo(() => deskLayout(width, height), [width, height]);
   const [ready, setReady] = useState(false), [drawer, setDrawer] = useState(false), [hot, setHot] = useState('');
   const [mode, setMode] = useState(''), [keysUp, setKeysUp] = useState(false);
   const [look, setLook] = useState(null); // { which, phase: 'up' | 'there' | 'down' }
@@ -216,13 +225,14 @@ export default function DeskHome({ reduced = false, focusOpen = false, shelf = n
         if (turn) { event.preventDefault(); flip(turn); return; }
       }
       const act = deskKey(event.key, { look: Boolean(look) || Boolean(lying), drawer });
-      if (!act) return;
+      if (!act || (zen && act.type === 'drawer')) return;
       event.preventDefault();
       if (act.type === 'drawer') setDrawer(act.open);
       else if (act.type === 'look') lookTo(act.which);
     };
     addEventListener('keydown', key); return () => removeEventListener('keydown', key);
-  }, [look, drawer, lookTo, lying, letters.length, front]);
+  }, [look, drawer, lookTo, lying, letters.length, front, zen]);
+  useEffect(() => { if (zen) setDrawer(false); }, [zen]);
 
   const open = (action) => { setDrawer(false); commands.open(action); };
 
@@ -273,7 +283,7 @@ export default function DeskHome({ reduced = false, focusOpen = false, shelf = n
     </button>
   );
   const Body = look && VIEW_BODY[look.which];
-  return <section ref={homeRef} className={`desk-home ${ready ? 'is-lit' : ''} ${lay.phone ? 'is-phone' : ''} ${drawer ? 'is-drawer-out' : ''} ${reduced ? 'is-reduced' : ''}`} aria-label="书桌" data-look={look?.which || undefined} style={{ '--desk-s': lay.s, '--desk-lamp': lamp.brightness }}>
+  return <section ref={homeRef} className={`desk-home ${ready ? 'is-lit' : ''} ${lay.phone ? 'is-phone' : ''} ${drawer ? 'is-drawer-out' : ''} ${zen ? 'is-zen' : ''} ${reduced ? 'is-reduced' : ''}`} aria-label="书桌" data-look={look?.which || undefined} style={{ '--desk-s': lay.s, '--desk-lamp': lamp.brightness }}>
     <div className="desk-wood" style={{ backgroundImage: `url(${deskUrl('desk-wood.webp')})` }} aria-hidden="true"/>
     <div className="desk-top" ref={deskRef} style={{ transform: lift ? `translateY(${-lift.toFixed(1)}px)` : undefined }} inert={look?.phase === 'there' || undefined}>
       <RecordDesk lay={lay} shelf={shelf} reduced={reduced} hidden={Boolean(look) || drawer}/>
@@ -289,8 +299,10 @@ export default function DeskHome({ reduced = false, focusOpen = false, shelf = n
           <ClockFace face={ready ? face : { ...face, digits: '000000', word: 'LOAD' }} scale={lay.s}/>
         </button>
         <div className="desk-clock-keys" style={{ left: (PLATES.clock.keysAt[0] - PLATES.clock.faceAt[0]) / PLATES.clock.faceAt[2] * 100 + '%', width: PLATES.clock.keysAt[2] / PLATES.clock.faceAt[2] * 100 + '%', backgroundImage: `url(${deskUrl('clock-keys.webp')})` }} role="radiogroup" aria-label="台钟显示">
-          {CLOCK_KEYS.map((k) => <button type="button" key={k.id} role="radio" aria-checked={shown === k.id} className={`desk-clock-key ${shown === k.id ? 'is-on' : ''} ${k.id === 'music' && playing ? 'is-playing' : ''}`} style={{ left: `${k.rect[0] / 114 * 100}%`, top: `${k.rect[1] / 66 * 100}%`, width: `${k.rect[2] / 114 * 100}%`, height: `${k.rect[3] / 66 * 100}%` }} onClick={() => { playSfx('key-press'); setMode(mode === k.id ? '' : k.id); }}>{k.id === 'focus' ? <span className="desk-key-print">专注</span> : <span className="sr-only">{k.id === 'music' && playing ? '音乐 · 正在播放' : k.name}</span>}</button>)}
+          {CLOCK_KEYS.map((k) => <button type="button" key={k.id} role="radio" aria-checked={shown === k.id} className={`desk-clock-key ${shown === k.id ? 'is-on' : ''} ${k.id === 'music' && playing ? 'is-playing' : ''}`} style={{ left: `${k.rect[0] / 114 * 100}%`, top: `${k.rect[1] / 66 * 100}%`, width: `${k.rect[2] / 114 * 100}%`, height: `${k.rect[3] / 66 * 100}%` }} onClick={() => { playSfx('key-press'); setMode(mode === k.id ? '' : k.id); }}><span className="sr-only">{k.id === 'music' && playing ? '音乐 · 正在播放' : k.name}</span></button>)}
         </div>
+        {/* the fourth key came from DEsk blank (it was the power key there): its print stays, whether the keys are up or not */}
+        <span className="desk-key-print" aria-hidden="true" style={{ left: `${(PLATES.clock.keysAt[0] - PLATES.clock.faceAt[0] + PLATES.clock.keysAt[2] * 0.59) / PLATES.clock.faceAt[2] * 100}%`, top: '50%', width: `${PLATES.clock.keysAt[2] * 0.41 / PLATES.clock.faceAt[2] * 100}%`, height: '50%' }}>专注</span>
       </div>
       {packets.map((packet, k) => {
         const r = slotXY(k, { width, height, s: lay.phone ? 0.7 : lay.s }), thing = DRAWER.find((t) => t.action === packet.action);
@@ -356,7 +368,7 @@ export default function DeskHome({ reduced = false, focusOpen = false, shelf = n
       </>}
     </div>}
     {/* The window is frameless on the desktop: a grip to drag it by, full screen, minimise and close (设置 is in the drawer). */}
-    <div className="desk-window" style={{ top: Math.max(...[lay.shelfPlate, lay.postBox || lay.postPlate].filter(Boolean).map((r) => r.y + r.h)) + 6 }}><DesktopControls onError={(text) => notify?.(text, { tone: 'error' })}/></div>
+    {!lay.phone && <div className="desk-window" style={{ top: Math.max(...[lay.shelfPlate, lay.postBox || lay.postPlate].filter(Boolean).map((r) => r.y + r.h)) + 6 }}><DesktopControls onError={(text) => notify?.(text, { tone: 'error' })}/></div>}
     {!ready && <div className="desk-dark" aria-hidden="true"/>}
   </section>;
 }

@@ -20,6 +20,7 @@ export const DRAWER = Object.freeze([
   { id: 'weather', name: '窗外与天气', art: 'compass.webp', action: 'weather' },
   { id: 'study', name: '词书', art: 'cardbox.svg', size: 90, action: 'study', lab: 'study' },
   { id: 'postcard', name: '明信片', art: 'postcard.svg', size: 92, action: 'postcard', lab: 'postcard' },
+  { id: 'recipes', name: '场景配方', art: 'recipe.svg', size: 88, action: 'recipes', lab: 'scenes' },
   { id: 'sleep', name: '睡前模式', art: 'nightlamp.svg', size: 86, action: 'sleep', lab: 'scenes' },
   { id: 'backup', name: '备份与恢复', art: 'folder.webp', action: 'backup' },
   { id: 'settings', name: '设置', art: 'screwdriver.webp', action: 'settings' },

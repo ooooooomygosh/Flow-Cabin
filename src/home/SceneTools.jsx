@@ -3,7 +3,6 @@ import React,{useEffect,useState} from 'react';
 import {useCabinRuntime} from '../runtime/CabinRuntime';
 import {readLayout,LAYOUT_PREFIX} from './spatial-layout.mjs';
 import {readRecipes,writeRecipes,readLights,setRoomLight,recipeRecordIdentity,RECIPES_EVENT} from './recipes.mjs';
-import {THEMES} from './spatial-layout.mjs';
 import {diagnosticRows} from './diagnostics-model.mjs';
 import './home-tools.css';
 import {UndoLine,useUndo} from '../ui/Confirm';
@@ -26,14 +25,13 @@ export function SceneRecipes(){
    offerUndo(`已移除场景「${recipe.name}」`,()=>{try{const now=safeRecipes();if(now.recipes.some(x=>x.id===recipe.id))return;const recipes=[...now.recipes];recipes.splice(Math.min(index,recipes.length),0,recipe);setSaved(writeRecipes({...now,recipes}));}catch(e){setNotice(`没能恢复「${recipe.name}」：${e.message}`);}});
   }catch(e){setNotice(e.message);}
  };
- const themeName=id=>THEMES.find(t=>t.id===id)?.name||'小屋';
- return <section className="home-scene-tools"><p>把喜欢的房间布置、灯光、环境音和唱片一起记下来，下次一键回到这里。</p>
+ return <section className="home-scene-tools"><p>把台灯、环境音、唱机上的唱片和专注时长一起记在一张卡片上，下次一键回到这里。</p>
   <label>场景名称<input value={name} maxLength={60} onChange={e=>setName(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&name.trim()&&!full){e.preventDefault();save();}}} placeholder="例如：雨天读书"/></label>
   <label>同时开始专注（分钟，0 为不启动）<input type="number" min="0" max="180" value={minutes} onChange={e=>setMinutes(Number(e.target.value))}/></label>
   <button className="home-primary" disabled={!name.trim()||full} onClick={save}>保存当前场景</button>
   {full&&<p className="home-tools-hint">最多保存 30 个场景，移除一个后才能再存。</p>}
-  {saved.recipes.length?<><h4 className="home-tools-subhead">已保存 · {saved.recipes.length}</h4><ul className="home-recipe-list">{saved.recipes.map(recipe=><li key={recipe.id}><span>{recipe.name}<small>{themeName(recipe.theme)} · {recipe.focusMinutes?`${recipe.focusMinutes} 分钟专注`:'自由时间'}{recipe.dim?' · 暗灯':''}{recipe.sound?' · 环境音':''}</small></span><button onClick={()=>apply(recipe)}>进入</button><button aria-label={`删除场景 ${recipe.name}`} onClick={()=>remove(recipe)}>移除</button></li>)}</ul></>
-   :<div className="home-tools-empty" role="note"><strong>还没有场景配方</strong><small>先把房间布置好、调好灯光和环境音，放上一张唱片，再起个名字保存。比如「雨天读书」「深夜写代码」。</small></div>}
+  {saved.recipes.length?<><h4 className="home-tools-subhead">已保存 · {saved.recipes.length}</h4><ul className="home-recipe-list">{saved.recipes.map(recipe=><li key={recipe.id}><span>{recipe.name}<small>{recipe.focusMinutes?`${recipe.focusMinutes} 分钟专注`:'自由时间'}{recipe.dim?' · 暗灯':''}{recipe.sound?' · 环境音':''}</small></span><button onClick={()=>apply(recipe)}>进入</button><button aria-label={`删除场景 ${recipe.name}`} onClick={()=>remove(recipe)}>移除</button></li>)}</ul></>
+   :<div className="home-tools-empty" role="note"><strong>还没有场景配方</strong><small>先调好台灯和环境音，在唱机上放一张唱片，再起个名字保存。比如「雨天读书」「深夜写代码」。</small></div>}
   <UndoLine offer={undo} clear={clearUndo}/>
   {notice&&<p role="status">{notice}</p>}
  </section>;

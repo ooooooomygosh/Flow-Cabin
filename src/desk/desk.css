@@ -33,7 +33,7 @@
 .desk-clock-key.is-playing::after { background: #ff5a3a; animation: desk-key-beat 1.4s ease-in-out infinite; }
 @keyframes desk-key-beat { 0%, 100% { box-shadow: 0 0 2px 0 rgba(255, 70, 40, .5); } 50% { box-shadow: 0 0 7px 2px rgba(255, 70, 40, .9); } }
 .desk-clock:not(.is-awake) .desk-clock-keys:has(.is-playing) { opacity: .7; }
-.desk-key-print { position: absolute; inset: 0 0 0 18%; display: flex; align-items: center; justify-content: center; font: 600 12px/1 var(--ui-font, system-ui), sans-serif; color: rgba(222, 182, 132, .82); text-shadow: 0 0 2px rgba(255, 150, 90, .35); transform: scale(calc(var(--desk-s, 1) * .62)); }
+.desk-key-print { position: absolute; z-index: 1; white-space: nowrap; pointer-events: none; display: flex; align-items: center; justify-content: center; font: 400 12px/1 'HarmonyOS Sans SC Bundled', var(--ui-font, system-ui), sans-serif; color: rgba(198, 194, 186, .66); text-shadow: 0 1px 0 rgba(0, 0, 0, .55); transform: scale(calc(var(--desk-s, 1) * .62)); }
 
 /* A sheet folded away (折起): DEsk's packet, the sheet's thing and title printed on it; click opens it again. */
 .desk-packet { position: absolute; z-index: 2; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 6px 12px 16px; border: 0; border-radius: 0; background: center / 100% 100% no-repeat; cursor: pointer; filter: drop-shadow(calc(var(--sx, -.54) * 10px) calc(var(--sy, -.43) * 10px) 5px rgba(8, 5, 2, .5)); animation: desk-packet-down .28s ease-out both; }
@@ -126,10 +126,15 @@
 /* the desk lamp (the console's 台灯 fader, useDeskLamp) */
 .desk-home.is-lit .desk-wood, .desk-home.is-lit .desk-top, .desk-home.is-lit .desk-drawer, .desk-home .desk-view { filter: brightness(var(--desk-lamp, 1)); }
 
-.desk-window { position: absolute; right: 8px; z-index: 4; display: flex; padding: 2px 2px 2px 14px; border-radius: var(--ui-radius-sm, 2px); background: rgba(18, 10, 5, .42); -webkit-app-region: drag; }
-.desk-window .desktop-controls button { color: rgba(246, 236, 210, .78); }
+.desk-window { position: absolute; right: 8px; z-index: 4; display: flex; padding: 2px 2px 2px 14px; -webkit-app-region: drag; }
+/* the window's own keys, pressed into the wood rather than floated over it: no box, a carved shadow (light from the lamp, low right) */
+.desk-window .desktop-controls button { color: rgba(240, 222, 190, .62); background: none; filter: drop-shadow(-1px -1px 0 rgba(10, 6, 3, .7)) drop-shadow(1px 1px 0 rgba(255, 228, 182, .12)); transition: color .15s; }
+.desk-window .desktop-controls button:hover, .desk-window .desktop-controls button:focus-visible { color: #ffe6b8; }
 /* 收起工具 (H) leaves the room and the clock: the window buttons step aside (the tool strip keeps 退出全屏). */
 :root.room-zen:not(.room-zen-tools) .desk-window { visibility: hidden; }
+/* ...and so does the rest of the desk: the spread of records, the drawer, the packets. What plays stays. */
+.desk-home.is-drawer-out .desk-window { visibility: hidden; }
+.desk-home.is-zen :is(.record-desk-grid, .record-desk-caption, .record-desk-empty, .desk-drawer, .desk-pull, .desk-packet) { visibility: hidden; }
 /* Android draws edge to edge: the desk keeps clear of the status bar, the gesture bar and a side cutout (src/mobile/mobile.css). */
 :root[data-platform=android] .desk-home { top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px)); bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)); left: var(--safe-area-inset-left, env(safe-area-inset-left, 0px)); right: var(--safe-area-inset-right, env(safe-area-inset-right, 0px)); }
 .desk-home .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }

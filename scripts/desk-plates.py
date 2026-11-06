@@ -39,7 +39,6 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, '..', '..', 'fyzugx', 'desk-pages'))
 TRY = os.path.join(SRC, 'tryit')
 OUT = os.path.join(ROOT, 'public', 'desk')
-ICONS = os.path.join(os.path.dirname(SRC), 'desk', 'themes', 'icons', 'DEsk', 'scalable')
 
 
 def load(rel):
@@ -536,13 +535,6 @@ def main():
         part = part.crop(box)
         part.save(os.path.join(OUT, 'drawer', f'{name}.webp'), 'WEBP', quality=92, method=6)
         objects[name] = [a + box[0], 10 + box[1], box[2] - box[0], box[3] - box[1]]
-
-    # DEsk's own drawings of things (themes/make-icons.py): photographs, a record in its sleeve
-    if os.path.isdir(ICONS):
-        for rel, name in [('mimetypes/image-x-generic.svg', 'photos.svg'), ('mimetypes/audio-x-generic.svg', 'record.svg'),
-                          ('mimetypes/x-office-document.svg', 'document.svg'), ('places/folder-music.svg', 'folder-music.svg'),
-                          ('mimetypes/package-x-generic.svg', 'carton.svg')]:
-            shutil.copyfile(os.path.join(ICONS, rel), os.path.join(OUT, 'drawer', name))
 
     # the desk without what stands at its back edge (the wood carried down from further in -- the
     # planks run front to back, so a row from below continues them), and those things as pieces,

@@ -74,15 +74,14 @@
 :root.room-desktop .room-turntable .turntable-console { visibility: hidden; }
 
 /* Fullscreen / immersive: a mouse-reachable way out, and the cursor rests. */
-.immersive-exit { position: fixed; top: 8px; left: 50%; z-index: 90; translate: -50% 0; display: flex; gap: 0; padding: 0; max-width: calc(100vw - 24px); background: var(--px-surface-hud); border: 2px solid var(--px-border); box-shadow: 2px 2px 0 var(--px-shadow); opacity: .78; -webkit-app-region: no-drag; transition: opacity 160ms steps(3, end); }
+.immersive-exit { position: fixed; left: 16px; bottom: 16px; z-index: 90; display: flex; gap: 2px; padding: 4px 6px; max-width: calc(100vw - 32px); color: #2e2318; background: #efe6d3; box-shadow: -3px -3px 6px rgba(8, 5, 2, .38), -10px -10px 20px rgba(8, 5, 2, .22); transform: rotate(-.5deg); font-family: var(--ui-font-display, Georgia), serif; opacity: .82; -webkit-app-region: no-drag; transition: opacity 160ms ease-out; }
 .immersive-exit *, .immersive-exit:hover, .immersive-exit:focus-within { -webkit-app-region: no-drag; }
 .immersive-exit:hover, .immersive-exit:focus-within { opacity: 1; }
-.immersive-exit button { height: 28px; padding: 0 10px; font: inherit; font-size: 12px; white-space: nowrap; color: var(--px-ink-dim); background: var(--px-surface-2); border: 0; border-left: 2px solid var(--px-border); cursor: pointer; transition: background-color 120ms steps(2, end), color 120ms steps(2, end); }
-.immersive-exit button:first-child { border-left: 0; }
-.immersive-exit button:hover { color: var(--px-ink); background: var(--px-surface-3); }
-.immersive-exit button[aria-pressed=true] { color: var(--px-ink-on-accent); background: var(--px-accent); box-shadow: inset 2px 2px 0 var(--px-accent-hi), inset -2px -2px 0 var(--px-accent-lo); }
-/* The desk rail is showing (fullscreen, or zen with tools): the toolbar hangs under it at the right, clear of the plates and the LED clock. */
-.immersive-exit:not(.is-zen), :root.room-zen-tools .immersive-exit { top: calc(var(--px-titlebar) + 8px); left: auto; right: 16px; translate: none; }
+/* a slip of paper at the front left of the desk (out of the way of the clock at the back and the records): words underlined, as on DEsk's sheets */
+.immersive-exit button { min-height: 32px; padding: 4px 10px; font: 500 13px/1.2 var(--ui-font-display, Georgia), serif; white-space: nowrap; color: #2e2318; background: none; border: 0; border-bottom: 1px solid rgba(46, 35, 24, .4); border-radius: 0; cursor: pointer; transition: color 120ms ease-out, border-color 120ms ease-out; }
+.immersive-exit button:hover { color: #7d5019; border-bottom-color: #7d5019; }
+.immersive-exit button[aria-pressed=true] { color: #a3301d; border-bottom-color: #a3301d; }
+.immersive-exit button:focus-visible { outline: 2px solid #a3301d; outline-offset: 2px; }
 
 @keyframes widget-in { from { opacity: 0; transform: translateY(6px); } }
 @media (max-width: 760px) { .desktop-widget { width: min(300px, calc(100vw - 32px)); } }
