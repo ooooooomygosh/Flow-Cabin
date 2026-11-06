@@ -19,7 +19,7 @@
 - 补齐多显示器、DPI、睡眠唤醒、输入法和真实音乐账号的验收证据。
 - 反馈看不清的文字、键盘绕路和窄窗口布局，附复现步骤与只包含小屋的截图。
 
-新功能先说明它如何加强「房间 × 唱片 × 这一轮专注」；优先合并已有入口，保留轻量待办与安静陪伴的定位。
+新功能先说明它如何加强「书桌 × 唱片 × 这一轮专注」；优先合并已有入口，保留轻量待办与安静陪伴的定位。
 
 ## 本地开发
 
@@ -58,20 +58,20 @@ npm run test:home && npm run test:home-interactions
 
 PR 描述说明问题、变化与实际检查结果。明确区分代码实现、夹具验证与真实设备验收；未运行的检查直接写明。别把旧提交的成功记录当成当前提交结果。
 
-保持温暖、简洁的房间体验，避免增加无目的的面板。保留稳定的本地存储键、迁移路径、原创素材来源与上游许可证。根项目许可及 GPL 组合发行义务仍待明确，贡献不自动解决再分发许可。
+保持温暖、简洁的书桌体验，避免增加无目的的面板。书桌的图片、动作和音效移植自 MIT 许可的 [DEsk](https://github.com/fyzugx/DEsk)（© 2026 The DEsk authors，许可见 [public/licenses/DEsk-MIT.txt](public/licenses/DEsk-MIT.txt)），改动时保留来源说明。保留稳定的本地存储键、迁移路径、原创素材来源与上游许可证。根项目许可及 GPL 组合发行义务仍待明确，贡献不自动解决再分发许可。
 
 新增截图可运行 `npm run screenshots:product`；只启动隐藏浏览器和回环服务器，使用公开曲库的真实专辑与封面，来源与复现方式见[展示素材说明](docs/showcase-sources.md)。原始封面只缓存在被忽略的测试目录，不随应用分发。生成图是真实渲染，不能标成真实平台账号播放证据。原版入门向导检查已纳入 `npm run test:browser`，这套离线回归无需下载真实封面。
 
 小屋核心旅程回归运行 `npm run test:home`，使用合成收藏与隔离浏览器，不连接真实账号；证据写入 `desktop/test-results/home-v21/`。
 
 
-3.1 起生活小屋是唯一的首页（原版唱片架首页已移除）。完整离线门禁是 `npm run qa`：
+3.1 起首页是从 DEsk 移植的书桌（原版唱片架首页和等距房间首页都已移除）。完整离线门禁是 `npm run qa`：
 
-- `test:interface`：小屋是唯一首页、旧的“原版”选择被忽略并清除、专辑墙草稿与 PNG、记录共用、唯一音频引擎、手机入口。
-- `test:journey/browser/focus-ui/beat/shelf-ui`：在小屋的「唱片架」里验证收藏、播放、专注与节拍同步。
-- `test:home/home-interactions/room-production`：检查角落、家具、播放持续、布置和横竖屏。
+- `test:interface`：书桌是唯一首页、旧的“原版”选择被忽略并清除、专辑墙草稿与 PNG、记录共用、唯一音频引擎、手机入口。
+- `test:journey/browser/focus-ui/beat/shelf-ui`：在书柜（「唱片架」）和书桌上验证收藏、播放、专注与节拍同步。
+- `test:home/home-interactions/room-production`：书桌后沿、唱片架铜牌、抽屉与按键 A / C / N / D / Esc，抬头看书柜和控制面板时播放不断，生产包在原生 CSP 下渲染，手机安全区与横屏。
 - `test:web-static/playback/ai/journal/memory/study-ui/devices-ui/souvenirs`：共用功能、数据往返与服务边界。
-- 实际 Electron `npm --prefix desktop run test:client`：小屋默认、系统宠物与真实媒体解码。
-- 动态桌面（“沉入桌面”）仍使用旧的房间画面（`RoomScene`），由 `weather-motion-checks` 与桌面端测试覆盖。
+- 实际 Electron `npm --prefix desktop run test:client`：书桌首页、系统宠物与真实媒体解码。
+- 动态桌面（“沉入桌面”）画的也是书桌（`src/WallpaperRoom.jsx`）。桌面端的 `test:room`、`test:night-study`、`test:improvements` 里壁纸部分仍按旧的房间画面查找元素，尚未随书桌改写。
 
-两小时播放使用 `SOAK_MINUTES=120 npm run test:home`，默认短回归不等待两小时。长测使用静音生成 WAV，不宣称真实账号音源通过。Android 实际 WebView 用 `scripts/android-home-v21.mjs --fixture`，仅在明确命名的专用 AVD 执行。
+两小时播放使用 `SOAK_MINUTES=120 npm run test:home`，默认短回归不等待两小时。长测使用静音生成 WAV，不宣称真实账号音源通过。Android 实际 WebView 用 `scripts/android-home-v21.mjs --fixture`，仅在明确命名的专用 AVD 执行；这个脚本仍按 2.1 的房间首页操作，尚未随书桌改写。
