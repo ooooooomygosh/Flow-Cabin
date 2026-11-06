@@ -7,10 +7,14 @@ box, the Control Panel and the bookcase, as DEsk renders them for its
 in-browser try-it (desk-pages/tryit). This copies those pictures into
 public/desk/ and makes the few changes Flow Cabin needs:
 
-  - the words engraved on the brass plates and printed on the clock's keys
+  - the words engraved on the brass plates (the post box's too) and printed on the clock's keys
     are taken off (the brushed brass is carried across where they were), so
     the app can engrave its own;
   - the clock's volume read-out is cleared, the app lights its own;
+  - DEsk's letter is copied blank (letter-blank.webp), for the post box's
+    letters;
+  - the open post box is copied without DEsk's 没有信件 (view-post-box.webp),
+    so the app's letters can stand in it;
   - the drawer's felt is emptied and the five things in it are cut out, so
     the drawer holds what Flow Cabin puts in it.
 
@@ -50,6 +54,47 @@ def carry(im, col, x0, x1, y0, y1):
     return Image.fromarray(a)
 
 
+def box(v, r):
+    """A running mean of width 2r+1 along the last axis (edges held)."""
+    p = np.pad(v, [(0, 0)] * (v.ndim - 1) + [(r, r)], mode='edge')
+    c = np.cumsum(p, axis=-1)
+    c = np.concatenate([np.zeros(c.shape[:-1] + (1,)), c], axis=-1)
+    return (c[..., 2 * r + 1:] - c[..., :-2 * r - 1]) / (2 * r + 1)
+
+
+def blank_letter(im):
+    """DEsk's letter with its writing taken off: the paper, its ruling, the line under the heading and
+    the turned-down corner stay; the app writes its own letters on it."""
+    a = np.array(im.convert('RGBA')).astype(np.float32)
+    rgb = a[:, :, :3]
+    g = rgb.mean(2)
+    x0, x1, y0, y1 = 22, 496, 24, 242
+    reg = g[y0:y1, x0:x1]
+    H, W = reg.shape
+    # a row's paper: the upper part of its values (text is darker than the paper it is on)
+    bgrow = np.array([[np.percentile(reg[j, max(0, i - 80):i + 81], 85) for i in range(W)] for j in range(H)])
+    mask = (bgrow - reg) > 9
+    m = Image.fromarray((mask * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(5))
+    mask = np.array(m) > 0
+    xs = np.arange(W)
+    smooth = np.zeros((H, W, 3), np.float32)
+    for j in range(H):
+        ok = ~mask[j]
+        for c in range(3):
+            v = np.interp(xs, xs[ok], rgb[y0 + j, x0:x1, c][ok]) if ok.any() else rgb[y0 + j, x0:x1, c]
+            smooth[j, :, c] = box(v, 15)
+    # the grain from the clean paper under the writing, mirrored up and down so no seam repeats
+    clean = rgb[246:350, x0:x1]
+    rows = [k % (2 * len(clean)) for k in range(H)]
+    donor = np.stack([clean[k] if k < len(clean) else clean[2 * len(clean) - 1 - k] for k in rows])
+    grain = donor - box(donor.transpose(0, 2, 1), 15).transpose(0, 2, 1)
+    fill = smooth + grain
+    blend = np.array(m.filter(ImageFilter.GaussianBlur(1))).astype(np.float32)[:, :, None] / 255
+    rgb[y0:y1, x0:x1] = rgb[y0:y1, x0:x1] * (1 - blend) + fill * blend
+    a[:, :, :3] = rgb
+    return Image.fromarray(np.clip(a, 0, 255).astype(np.uint8))
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     os.makedirs(os.path.join(OUT, 'drawer'), exist_ok=True)
@@ -62,8 +107,23 @@ def main():
                       ('zh/view-post.webp', 'view-post.webp'), ('zh/view-post-empty.webp', 'view-post-empty.webp'),
                       ('zh/sheets/editor-curl.webp', 'curl.webp'), ('zh/letter.webp', 'letter.webp')]:
         shutil.copyfile(os.path.join(TRY, rel), os.path.join(OUT, name))
+    # the open post box with nothing in it and nothing written there (DEsk prints 没有信件 on its back
+    # wall): the felt above carried down over the words, so the app can stand its letters in it
+    view = np.array(load('zh/view-post-empty.webp')).astype(np.float32)
+    x0, x1, y0, y1 = 650, 790, 436, 482
+    patch = view[y0 - 60:y1 - 60, x0:x1].copy()
+    a = np.ones((y1 - y0, x1 - x0, 1), np.float32)
+    for i in range(x1 - x0):
+        a[:, i] *= min(1, (i + .5) / 10, (x1 - x0 - i - .5) / 10)
+    for j in range(y1 - y0):
+        a[j, :] *= min(1, (j + .5) / 10, (y1 - y0 - j - .5) / 10)
+    view[y0:y1, x0:x1] = view[y0:y1, x0:x1] * (1 - a) + patch * a
+    save(Image.fromarray(np.clip(view, 0, 255).astype(np.uint8)), 'view-post-box.webp', 90)
     for which in ('shelf', 'console', 'post'):
         shutil.copyfile(os.path.join(TRY, 'common', f'film-{which}.webp'), os.path.join(OUT, f'film-{which}.webp'))
+
+    # a blank sheet of DEsk's letter paper, for the app's own letters
+    save(blank_letter(load('zh/letter.webp')), 'letter-blank.webp', 92)
 
     # the clock: its face with the volume read-out cleared, its keys with the last one blank
     # (the keys are on the face too, unlit: the last one's word and the first one's lamp are taken
@@ -81,7 +141,8 @@ def main():
     save(console, 'plate-console.webp', 95)
     allapps = carry(load('zh/ov-allapps.webp'), 13, 15, 101, 3, 29)
     save(allapps, 'plate-shelf.webp', 95)
-    shutil.copyfile(os.path.join(TRY, 'zh', 'ov-post0.webp'), os.path.join(OUT, 'post0.webp'))
+    # the post box's plate, blank too: the app engraves 信箱 and how many letters wait
+    save(carry(load('zh/ov-post0.webp'), 60, 64, 120, 0, 15), 'post0.webp', 95)
     shutil.copyfile(os.path.join(TRY, 'zh', 'ov-post1.webp'), os.path.join(OUT, 'post1.webp'))
 
     # the drawer: the felt emptied, and what lay on it cut out
@@ -161,8 +222,8 @@ def main():
             a[j, :] *= min(1, (h - j - .5) / f)
         part.putalpha(Image.fromarray((a * 255).astype(np.uint8)))
         save(part, f'edge-{name}.webp', 95)
-    # the post box with a letter in its slot, under the plain plate (the number is the app's to show)
-    p0, p1 = load('zh/ov-post0.webp'), load('zh/ov-post1.webp')
+    # the post box with a letter in its slot, under the blank plate (the words and the number are the app's)
+    p0, p1 = carry(load('zh/ov-post0.webp'), 60, 64, 120, 0, 15), load('zh/ov-post1.webp')
     letter = p1.copy()
     letter.paste(p0.crop((0, 0, p0.width, 40)), (0, 0))
     save(letter, 'post-letter.webp', 95)

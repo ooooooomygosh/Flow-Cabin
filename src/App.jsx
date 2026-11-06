@@ -15,6 +15,7 @@ import { StudyProvider } from './study/useStudy';
 import { SoundscapeProvider } from './audio/useSoundscape';
 import { addItem, importItems, listItems, removeItem } from './collection-api.mjs';
 import { useToasts, ToastStack } from './ui/Toasts';
+import { postNotice } from './desk/usePost';
 import ShortcutSheet from './ui/ShortcutSheet';
 
 // Stable identifiers keep vinyl styles, crates and focus records saved by
@@ -29,7 +30,9 @@ export default function App() {
   const [prepared,setPrepared] = useState(false), [upgradeError,setUpgradeError] = useState(''), [upgradeRetry,setUpgradeRetry] = useState(0);
   const [items, setItems] = useState([]), [loading, setLoading] = useState(true), [error, setError] = useState('');
   const [adding, setAdding] = useState(null), [recordId, setRecordId] = useState(''), [backup, setBackup] = useState(false), [wall, setWall] = useState(false);
-  const [toasts, notify, dismissToast] = useToasts();
+  const [toasts, toast, dismissToast] = useToasts();
+  // A toast that matters (an error, or notify(text, { keep: true })) is also kept as a letter in the desk's post box.
+  const notify = useCallback((text, options = {}) => { toast(text, options); if (options?.tone === 'error' || options?.keep) postNotice(text, options); }, [toast]);
   useEffect(() => { if (prepared && (window.albumMobile?.syncRequest || window.albumDesktopCapabilities?.lanSync)) return startLanBridge({onError:error=>{window.cabinSyncError=error.message;}}); }, [prepared]);
   useEffect(() => { const notice = event => notify(event.detail, { tone: event.detail.includes('未完成') ? 'error' : '' }); window.addEventListener('cabin:mobile-notice', notice); return () => window.removeEventListener('cabin:mobile-notice', notice); }, [notify]);
   const reload = useCallback(async () => {

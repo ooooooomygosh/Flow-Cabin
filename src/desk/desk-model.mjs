@@ -55,9 +55,8 @@ export const VIEWS = Object.freeze({
   },
   post: {
     name: '信箱', back: '回到书桌',
-    spots: [
-      { id: 'letter', name: '取出信', rect: [512, 525, 416, 150], action: 'mail' },
-    ],
+    // the letters standing in it are the desk's own (src/desk/PostLetters.jsx, layout.mjs boxCards)
+    spots: [],
   },
 });
 

@@ -1,0 +1,87 @@
+@layer guards, reset, features, skin, overrides;
+@layer features {
+/* The post box's letters (src/desk/PostLetters.jsx), drawn as DEsk draws them
+   (https://github.com/fyzugx/DEsk, MIT, (c) 2026 The DEsk authors; src/draw.c post_card_face and
+   desk-pages/tryit zh/letter.webp): letter paper ruled in pale blue, the sender's square mark, the head
+   in type (DEsk's Nimbus Mono / Courier with Noto CJK), a hand-ruled line under it, the writing on the lines. */
+.desk-home { --post-type: 'Courier Prime', 'Nimbus Mono PS', 'Courier New', 'Courier 10 Pitch', FreeMono, Courier, 'Noto Sans Mono CJK SC', 'Noto Sans CJK SC', 'PingFang SC', 'Microsoft YaHei', monospace; }
+
+/* The plate on the post box, engraved like the others; the number of letters waiting beside the word. */
+.desk-post .desk-post-engraving { left: 7%; right: 7%; top: 0; gap: .45em; }
+.desk-post .desk-post-engraving i { font-style: normal; font-family: var(--post-type); font-weight: 700; }
+
+/* ----- standing in the box (the view) ----- */
+.post-box-letters { position: absolute; inset: 0; pointer-events: none; }
+.post-card { font-synthesis: weight style; position: absolute; display: block; padding: 0; border: 0; border-radius: 0; background: none; transform-origin: 0 0; cursor: pointer; pointer-events: auto; text-align: left; color: rgb(38, 31, 23); filter: brightness(calc(1 - var(--dim, 0))); }
+.post-card-face { position: absolute; inset: 0; overflow: hidden; display: block; padding: 0 23px; background:
+    linear-gradient(90deg, rgba(20, 13, 8, .16), rgba(20, 13, 8, 0) 7%, rgba(20, 13, 8, 0) 93%, rgba(20, 13, 8, .16)),
+    linear-gradient(0deg, rgba(20, 13, 8, .22), rgba(20, 13, 8, 0) 16%),
+    repeating-linear-gradient(180deg, rgba(0, 0, 0, 0) 0 85px, rgba(92, 133, 179, .22) 85px 86px, rgba(0, 0, 0, 0) 86px 111px) 0 0 / 100% 111px,
+    linear-gradient(#f4f0e7, #ece6d9);
+  clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 0 100%); }
+.post-card-face::after { content: ''; position: absolute; right: 0; top: 0; width: 18px; height: 18px; background: linear-gradient(225deg, rgba(0, 0, 0, 0) 50%, #d8d0bf 50%, #e9e3d6); box-shadow: -1px 1px 2px rgba(40, 28, 16, .3); }
+.post-card-head { position: absolute; left: 23px; right: 23px; top: 8px; height: 48px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid rgba(77, 61, 46, .35); }
+.post-mark { flex: none; width: 36px; height: 36px; border-radius: 0; image-rendering: pixelated; box-shadow: 0 0 0 1px rgba(40, 28, 16, .25); }
+.post-card-who { display: flex; flex-direction: column; min-width: 0; flex: 1; line-height: 1.15; }
+.post-card-title { font: 700 19px/1.15 var(--post-type); color: rgb(38, 31, 23); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; letter-spacing: .02em; }
+.post-from { font: 400 13px/1.2 var(--post-type); color: rgba(102, 87, 71, .9); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.post-from b { color: rgb(36, 46, 87); font-weight: 700; }
+.post-time { flex: none; align-self: flex-start; margin: 4px 14px 0 0; font: 400 13px/1 var(--post-type); letter-spacing: .08em; color: rgba(107, 94, 79, .85); }
+.post-card.is-unread .post-time::before { content: ''; display: inline-block; width: 7px; height: 7px; margin-right: 6px; vertical-align: 1px; border-radius: 50%; background: rgba(168, 40, 28, .8); }
+.post-card-body { position: absolute; left: 23px; right: 23px; top: 64px; bottom: 6px; overflow: hidden; font: 400 16px/25px var(--post-type); color: rgba(66, 59, 77, .9); white-space: pre-line; }
+.post-card.is-express .post-card-face, .post-letter.is-express { box-shadow: inset 6px 0 0 rgba(173, 31, 23, .55); }
+.post-card:hover .post-card-face { background-color: #fff; }
+.post-card:hover { filter: brightness(calc(1.06 - var(--dim, 0))); }
+.post-card:focus-visible { outline: 2px solid rgba(255, 214, 140, .95); outline-offset: 2px; }
+
+/* The slip beside the box: which letter is in front, and turning to the next. */
+.post-box-turn { position: absolute; right: 16px; bottom: 56px; display: flex; align-items: center; gap: 10px; padding: 6px 10px; pointer-events: auto; background: linear-gradient(#f2ede2, #e6dfcf); color: rgb(58, 46, 34); box-shadow: 0 2px 6px rgba(0, 0, 0, .45); font: 400 13px/1.2 var(--post-type); cursor: default; }
+.post-box-turn button { padding: 3px 8px; border: 1px solid rgba(77, 61, 46, .45); border-radius: 0; background: none; color: rgb(36, 46, 87); font: 700 13px/1.2 var(--post-type); cursor: pointer; }
+.post-box-turn button:disabled { opacity: .4; cursor: default; }
+.post-box-turn button:focus-visible { outline: 2px solid rgba(160, 110, 40, .9); outline-offset: 1px; }
+
+/* ----- lying on the desk ----- */
+.post-letter-lying { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
+.post-letter-at { position: absolute; pointer-events: auto; cursor: pointer; animation: post-letter-down .26s ease-out; }
+.post-letter { position: absolute; left: 0; top: 0; font-synthesis: weight style; transform-origin: 0 0; background: center / 100% 100% no-repeat; color: rgb(38, 31, 23); font-family: var(--post-type); outline: none; }
+.post-letter:focus-visible { outline: 2px solid rgba(255, 214, 140, .85); outline-offset: -6px; }
+.post-letter-head { position: absolute; left: 40px; right: 38px; top: 30px; height: 36px; display: flex; align-items: center; gap: 14px; }
+.post-letter-head .post-mark { width: 35px; height: 35px; }
+.post-letter-from { flex: 1; min-width: 0; font: 700 17px/1 var(--post-type); letter-spacing: .04em; color: rgb(38, 31, 23); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.post-letter-head .post-time { align-self: center; margin: 0; font-size: 15px; }
+.post-letter-title { position: absolute; left: 40px; right: 40px; top: 103px; margin: 0; font: 700 26px/1.3 var(--post-type); letter-spacing: .02em; color: rgb(38, 31, 23); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.post-letter-body { position: absolute; left: 40px; right: 36px; top: 154px; bottom: 72px; overflow: auto; font: 400 16px/24px var(--post-type); color: rgba(66, 59, 77, .92); scrollbar-width: thin; scrollbar-color: rgba(77, 61, 46, .35) transparent; cursor: auto; }
+.post-letter-body p { margin: 0; white-space: pre-wrap; }
+.post-letter-steps { margin: 0; padding: 0; list-style: none; }
+.post-letter-steps li { margin: 0; }
+.post-letter-steps button { display: block; width: 100%; padding: 0; border: 0; border-radius: 0; background: none; color: rgb(36, 46, 87); font: 400 16px/24px var(--post-type); text-align: left; cursor: pointer; }
+.post-letter-steps button b { text-decoration: underline; text-underline-offset: 3px; text-decoration-color: rgba(36, 46, 87, .45); }
+.post-letter-steps button small { font-size: 14px; color: rgba(102, 87, 71, .9); }
+.post-step-n { display: inline-block; width: 1.6em; color: rgba(102, 87, 71, .9); }
+.post-letter-steps button:hover b { text-decoration-color: currentColor; }
+.post-letter-actions { position: absolute; left: 40px; right: 70px; bottom: 30px; display: flex; flex-wrap: wrap; gap: 4px 18px; border-top: 1px solid rgba(77, 61, 46, .3); padding-top: 8px; }
+.post-letter-actions button { padding: 2px 0; border: 0; border-radius: 0; background: none; color: rgb(36, 46, 87); font: 700 14px/1.3 var(--post-type); letter-spacing: .04em; cursor: pointer; }
+.post-letter-actions button:hover { text-decoration: underline; text-underline-offset: 3px; }
+.post-letter-actions .post-letter-away { margin-left: auto; color: rgba(102, 87, 71, .95); }
+.post-letter-steps button:focus-visible, .post-letter-actions button:focus-visible { outline: 2px solid rgba(160, 110, 40, .9); outline-offset: 1px; }
+/* a phone holds the sheet smaller: the writing is set larger on it, so it still reads at about 14px */
+.post-letter.is-phone .post-letter-from { font-size: 21px; }
+.post-letter.is-phone .post-letter-head .post-time { font-size: 18px; }
+.post-letter.is-phone .post-letter-title { font-size: 30px; }
+.post-letter.is-phone .post-letter-body, .post-letter.is-phone .post-letter-steps button { font-size: 19px; line-height: 29px; }
+.post-letter.is-phone .post-letter-steps button small { font-size: 17px; }
+.post-letter.is-phone .post-letter-actions button { font-size: 18px; }
+@keyframes post-letter-down { from { opacity: 0; transform: translateY(-14px) scale(.97); } to { opacity: 1; transform: none; } }
+.desk-home.is-reduced .post-letter-at { animation: none; }
+
+}
+@layer skin {
+/* Toasts are paper slips that come out of the post box's slot, at the top right, as DEsk's letters do. */
+html:has(.desk-home) .app-toasts { inset: 96px 18px auto auto; margin: 0; align-items: flex-end; }
+html:has(.desk-home.is-phone) .app-toasts { inset: 12px 12px auto 12px; align-items: stretch; }
+html:has(.desk-home) .app-toast { animation: post-slip-out .32s cubic-bezier(.2, .8, .3, 1); }
+@keyframes post-slip-out { from { opacity: 0; transform: translateY(-18px) scale(.94); } to { opacity: 1; transform: none; } }
+}
+@layer guards {
+@media (prefers-reduced-motion: reduce) { .post-letter-at, html:has(.desk-home) .app-toast { animation: none !important; } }
+}

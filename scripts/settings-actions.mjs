@@ -11,7 +11,12 @@ export const settingsDialog = (page) => page.getByRole('dialog', { name: '设置
 export async function openSettingsSection(page, section) {
   if (!await settingsDialog(page).isVisible()) {
     for (let i = 0; i < 4 && await page.locator('dialog[open]').count(); i++) await page.keyboard.press('Escape');
-    await page.getByRole('button', { name: '设置', exact: true }).click();
+    // 3.1: on the desk, 设置 (the screwdriver) lies in the drawer: pull it out first.
+    const pull = page.getByRole('button', { name: '拉开抽屉（D）', exact: true });
+    const knob = page.getByRole('button', { name: '设置', exact: true });
+    await pull.or(knob).first().waitFor();
+    if (await pull.count()) await pull.click();
+    await knob.click();
     // The brass knob pulls the 小屋日常 drawer out (全部设置 is the last object in it); the drawer loads on first use.
     const all = page.getByRole('button', { name: '全部设置', exact: true });
     await all.or(settingsDialog(page)).first().waitFor();

@@ -1,5 +1,5 @@
 import { selectPack } from './pet/imported-pack.mjs';
-import React, { Suspense, lazy, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, lazy, useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { reportTrayPet } from './desktop/desktop-sink-client.mjs';
 import { getRoomScene } from './scene-catalog.mjs';
 import { normalizePetId } from './pet/pet-catalog.mjs';
@@ -59,9 +59,6 @@ const buildSnapshot = ({ items, record, look, ...rest }) => ({ ...rest, look, ro
 export default function CabinRoom({ items, loading, loadError = '', reload, openRecord, openAdd, firstVisit = false, hubRequest = null, openBackup, openWall, notify, saveToShelf }) {
   const appearance = useDesktopAppearance(), reduced = useReducedMotion();
   const flow = useOnboardingFlow({ client: appearance.client, loading, loadError, firstVisit, itemCount: items.length, hubRequest, notify });
-  // On a first visit the guide comes first; the home's one-line hint waits until it has been closed once.
-  const [guideDone, setGuideDone] = useState(!firstVisit), guideShown = useRef(false);
-  useEffect(() => { if (flow.wizard) guideShown.current = true; else if (guideShown.current) setGuideDone(true); }, [flow.wizard]);
   const chrome = useRoomChrome({ client: appearance.client, notify, restoreDock: false });
   const library = useRecordLibrary(), look = library?.data.rooms[library.roomId]?.look || 'pixel';
   const { filters, setFilters, visible, view, selected, setSelectedId } = useShelf({ items, look });
@@ -202,7 +199,7 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
     if (action === 'journal' || action === 'mail') { window.dispatchEvent(new CustomEvent('cabin:open-journal', { detail: { tab: action === 'mail' && labs.letters ? 'letters' : 'entries' } })); return; }    setTool(action);
   };
   return <CabinRuntimeProvider deck={deck} items={items} look={look} onNavigate={openTool} onRoomChange={personalizeRoom} notify={notify}>
-    <DeskHome reduced={appearance.reduceMotion || reduced} focusOpen={dock.open} guiding={flow.wizard || !guideDone}/>
+    <DeskHome reduced={appearance.reduceMotion || reduced} focusOpen={dock.open}/>
     <LifeReminder/>
     {library?.error && <p className="home-layout-error" role="alert">设置未保存：{library.error}</p>}
     <HomePanels tool={tool} close={() => setTool('')} filters={filters} setFilters={setFilters} visible={visible} recordStyle={recordStyle} openAdd={openAdd} openRecord={openRecord} openWall={openWall} openSmart={smartEntry && (() => { setTool(''); openSmart(); })} onRoomChange={personalizeRoom}/>{/* the panel is modal: close it, or the smart turntable opens inert behind it */}
