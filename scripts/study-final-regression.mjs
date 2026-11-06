@@ -80,7 +80,7 @@ async function openDock(page, tab = '学习') {
 
 async function openStudy(page) {
   const dock = await openDock(page, '学习');
-  await page.getByLabel('词书', { exact: true }).waitFor();
+  await page.locator('.focus-dock').getByLabel('词书', { exact: true }).waitFor();
   return dock;
 }
 
@@ -340,39 +340,31 @@ try {
   await shot(page, '08-study-review-progress-after-reload');
   record('due-review-second-rating-and-reload-persist', true, `reps ${reviewedCard.memory.reps}`);
 
-  // Flip clock: quick switch in the dock, immersive face changes, button + keyboard exits, reload.
+  // 沉浸 (3.1): the desk's red LED clock, enlarged; 唱片计时 instead; button + keyboard exits; the choice survives a reload.
   let dock = await openDock(page, '这一段');
-  let faceSwitch = dock.locator('.face-switch');
-  await faceSwitch.waitFor();
-  assert.equal((await faceSwitch.locator('strong').innerText()).trim(), '像素番茄环');
-  await faceSwitch.getByRole('button', { name: '上一个专注画面' }).click();
-  await page.waitForFunction((key) => JSON.parse(localStorage.getItem(key) || '{}').mode === 'flip', DISPLAY_KEY);
-  assert.equal((await faceSwitch.locator('strong').innerText()).trim(), '琥珀翻页钟');
-  // 3.1: the dock's 这一段 is the LED clock close-up whatever the 沉浸 face is; the face switch only picks what 沉浸 shows.
-  await page.locator('.focus-timer .desk-clock-glass').waitFor();
-  await shot(page, '09-flip-clock-dock');
-
-  await faceSwitch.getByRole('button', { name: '沉浸', exact: true }).click();
+  await dock.getByRole('button', { name: '沉浸专注', exact: true }).click();
   const stage = page.getByRole('dialog', { name: '专注画面' });
   await stage.waitFor();
-  assert.equal(await stage.locator('.focus-display').getAttribute('data-face'), 'flip');
+  assert.equal(await stage.locator('.focus-display').getAttribute('data-face'), 'desk');
   assert.equal(await page.evaluate(() => document.documentElement.classList.contains('room-focus-display')), true);
-  const canvas = await stage.locator('.focus-face.is-full[data-face=flip] .focus-face-canvas').evaluate((element) => {
-    const context = element.getContext('2d');
-    const pixels = context.getImageData(0, 0, element.width, element.height).data;
+  await stage.locator('.display-led-glass').waitFor();
+  await page.waitForFunction(() => document.querySelector('.display-led-glass')?.width > 456);
+  const canvas = await stage.locator('.display-led-glass').evaluate((element) => {
+    const pixels = element.getContext('2d').getImageData(0, 0, element.width, element.height).data;
     let painted = 0;
     for (let index = 3; index < pixels.length; index += 4) if (pixels[index]) painted++;
     return { width: element.width, height: element.height, painted };
   });
-  assert.ok(canvas.width > 0 && canvas.height > 0 && canvas.painted > 100, 'flip clock canvas is painted');
-  await shot(page, '10-flip-clock-immersive');
+  assert.ok(canvas.width > 0 && canvas.height > 0 && canvas.painted > 100, 'the red clock is painted');
+  await shot(page, '10-desk-clock-immersive');
 
-  await stage.getByRole('radio', { name: '极简大字', exact: true }).click();
-  await page.waitForFunction((key) => JSON.parse(localStorage.getItem(key) || '{}').mode === 'minimal', DISPLAY_KEY);
-  await page.locator('.focus-display[data-face=minimal]').waitFor();
-  await shot(page, '11-immersive-face-switched-minimal');
-  await stage.getByRole('radio', { name: '琥珀翻页钟', exact: true }).click();
-  await page.waitForFunction((key) => JSON.parse(localStorage.getItem(key) || '{}').mode === 'flip', DISPLAY_KEY);
+  await stage.getByRole('radio', { name: '唱片计时', exact: true }).click();
+  await page.waitForFunction((key) => JSON.parse(localStorage.getItem(key) || '{}').mode === 'record', DISPLAY_KEY);
+  await page.locator('.focus-display[data-face=record]').waitFor();
+  await shot(page, '11-immersive-record');
+  await stage.getByRole('radio', { name: '红色台钟', exact: true }).click();
+  await page.waitForFunction((key) => JSON.parse(localStorage.getItem(key) || '{}').mode !== 'record', DISPLAY_KEY);
+  await page.locator('.focus-display[data-face=desk]').waitFor();
   const showTabs = stage.getByRole('radiogroup', { name: '画面显示' });
   await showTabs.getByRole('radio', { name: '计时', exact: true }).click();
   await page.waitForFunction((key) => JSON.parse(localStorage.getItem(key) || '{}').show === 'timer', DISPLAY_KEY);
@@ -382,25 +374,24 @@ try {
   await stage.getByRole('navigation', { name: '专注画面工具' }).getByRole('button', { name: '返回小屋', exact: true }).click();
   await stage.waitFor({ state: 'detached' });
   assert.equal(await page.evaluate(() => document.documentElement.classList.contains('room-focus-display')), false);
-  await shot(page, '12-flip-clock-immersive-exited');
+  await shot(page, '12-desk-clock-immersive-exited');
 
-  await page.keyboard.press('Escape'); // the focus dialog (if open) steps aside before the keyboard shortcut
+  await page.keyboard.press('Escape'); // the focus close-up (if open) is put back before the keyboard shortcut
   await page.evaluate(() => document.activeElement?.blur());
   await page.keyboard.press('z');
   await page.getByRole('dialog', { name: '专注画面' }).waitFor();
-  assert.equal(await page.getByRole('dialog', { name: '专注画面' }).locator('.focus-display').getAttribute('data-face'), 'flip');
-  await shot(page, '13-flip-clock-immersive-keyboard');
+  assert.equal(await page.getByRole('dialog', { name: '专注画面' }).locator('.focus-display').getAttribute('data-face'), 'desk');
+  await page.getByRole('dialog', { name: '专注画面' }).getByRole('radio', { name: '唱片计时', exact: true }).click();
+  await shot(page, '13-immersive-keyboard');
   await page.keyboard.press('Escape');
   await page.getByRole('dialog', { name: '专注画面' }).waitFor({ state: 'detached' });
   assert.equal(await page.evaluate(() => document.documentElement.classList.contains('room-focus-display')), false);
 
   await page.reload();
   await page.locator('.focus-badge').waitFor({ timeout: 30000 });
-  dock = await openDock(page, '这一段');
-  faceSwitch = dock.locator('.face-switch');
-  assert.equal((await faceSwitch.locator('strong').innerText()).trim(), '琥珀翻页钟');
-  assert.equal((await display(page)).mode, 'flip');
-  await shot(page, '14-flip-clock-after-reload');
+  assert.equal((await display(page)).mode, 'record');
+  assert.equal((await display(page)).show, 'clock');
+  await shot(page, '14-immersive-choice-after-reload');
   record('flip-clock-switch-immersive-face-change-and-exit', true, `painted canvas ${canvas.width}×${canvas.height}, ${canvas.painted} px`);
   record('flip-clock-selection-survives-reload', true);
 } catch (error) {

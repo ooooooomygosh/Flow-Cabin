@@ -11,10 +11,10 @@ const C = PLATES.clock, [FX, , FW, FH] = C.faceAt;
 const LIT = '#ff4b2f', GLOW = 'rgba(255, 64, 32, .85)', GHOST = 'rgba(255, 72, 48, .075)';
 const WORD_X = 196, WORD_Y = 13, BAR_X = 196, BAR_Y = 41, BAR_W = 132;
 
-export function paintClock(canvas, face, scale = 1) {
+export function paintClock(canvas, face, scale = 1, max = 3) {
   const fimg = deskImage('clock-face.webp'), digits = deskImage('clock-digits.webp');
   if (!canvas || !fimg || !digits) return false;
-  const dpr = Math.min(3, (globalThis.devicePixelRatio || 1) * scale);
+  const dpr = Math.min(max, (globalThis.devicePixelRatio || 1) * scale);
   const w = Math.round(FW * dpr), h = Math.round(FH * dpr);
   if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
   const g = canvas.getContext('2d');

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useCabinRuntime } from '../runtime/CabinRuntime';
+import { todayTasks } from '../focus/focus-model.mjs';
 import { DesktopControls } from '../desktop-client';
 import PixelCat from '../pet/PixelCat';
 import Dialog from '../Dialog';
@@ -54,7 +55,7 @@ function FurnitureLive({ item, manifest }) {
   const spec = FURNITURE[item.type], frame = manifest?.frames?.[`${item.type}-${item.facing === 'left' ? 'nw' : 'se'}`];
   if(item.type==='tasks'&&frame){
     const factor=Math.min(spec.w/frame.frame[2],spec.h/frame.frame[3]),w=frame.frame[2]*factor,h=frame.frame[3]*factor;
-    const tasks=focus.state.tasks.filter(t=>!t.done).slice(0,3);
+    const tasks=todayTasks(focus.state.tasks,Date.now()).filter(t=>!t.done).slice(0,3);
     return <span className="home-task-readout" style={{left:(spec.w-w)/2,top:spec.h-h,width:w,height:h}}>{[[.15,.25],[.405,.47],[.67,.33]].map(([x,y],i)=><span key={i} className="home-task-paper" style={{left:`${(item.facing==='left'?x:.82-x)*100}%`,top:`${y*100}%`}}>{tasks[i]?tasks[i].text.slice(0,6):i===0?'今日小事':'＋'}</span>)}</span>;
   }
   const rect = frame?.blankRect;

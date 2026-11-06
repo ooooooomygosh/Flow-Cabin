@@ -19,6 +19,8 @@ export function noteColor(id) {
   for (const ch of String(id)) { h ^= ch.codePointAt(0); h = Math.imul(h, 16777619) >>> 0; }
   return h % NOTE_COLORS.length;
 }
+// The pad a note was torn from (picked on the planner's left leaf), else its own colour for life.
+export const taskColor = (task) => Number.isInteger(task?.color) && task.color >= 0 && task.color < NOTE_COLORS.length ? task.color : noteColor(task?.id);
 
 export const monthKey = (year, month) => `${year}-${String(month + 1).padStart(2, '0')}`;
 export function shiftMonth({ year, month }, delta) {
@@ -103,3 +105,35 @@ export function ringPath(cx, cy, rx, ry, steps = 64) {
   }
   return points.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(2)} ${y.toFixed(2)}`).join('');
 }
+
+// ── the planner's page for one day (DEsk's agenda: 计划 with a time, 待办 without) ──
+// today: what is on today's page (今天, planned for today or earlier, done or not); a later day: the open
+// notes stuck on it; an earlier day: what was finished that day (read only).
+export function dayPage(tasks, key, today) {
+  const list = Array.isArray(tasks) ? tasks : [];
+  let notes;
+  if (key === today) notes = list.filter((task) => listOf(task, today) === 'today');
+  else if (key > today) notes = list.filter((task) => !task.done && task.list === 'today' && task.plannedFor === key);
+  else notes = list.filter((task) => task.done && task.doneAt && dayKey(task.doneAt) === key);
+  const plans = notes.filter((task) => task.at).sort((a, b) => a.at.localeCompare(b.at));
+  return { plans, todos: notes.filter((task) => !task.at), past: key < today, today: key === today };
+}
+// 「10:00–11:00」 for a plan's time.
+export const planLabel = (at) => String(at || '').replace('-', '–');
+
+// The seven days of the week a day is in, Monday first.
+export function weekOf(key, now = Date.now()) {
+  const [y, m, d] = String(key).split('-').map(Number), date = new Date(y, m - 1, d), lead = (date.getDay() + 6) % 7, today = dayKey(now);
+  return Array.from({ length: 7 }, (_, i) => {
+    const day = new Date(y, m - 1, d - lead + i), k = dayKey(day);
+    return { key: k, day: day.getDate(), month: day.getMonth(), year: day.getFullYear(), weekday: day.getDay(), today: k === today, past: k < today };
+  });
+}
+// A day's focus rounds, in order: when, how long, on what.
+export function daySessions(sessions, key) {
+  return (Array.isArray(sessions) ? sessions : [])
+    .filter((session) => Number.isFinite(Number(session?.start)) && Number(session.end) > Number(session.start) && dayKey(session.start) === key)
+    .sort((a, b) => a.start - b.start)
+    .map((session) => ({ start: session.start, end: session.end, minutes: Math.round((session.end - session.start) / 60000), completed: session.completed !== false, text: session.taskText || '' }));
+}
+export const clockTime = (time) => { const date = new Date(time); return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`; };

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ledFace, glassSize, roundLamps, LED_BLOCKS } from './clock-model.mjs';
+import { ledFace, deskFace, roundLamps, LED_BLOCKS } from './clock-model.mjs';
 
 const MIN = 60000, NOW = new Date(2026, 10, 5, 9, 30, 15).getTime();
 const running = { phase: 'focus', paused: false, endsAt: NOW + 10 * MIN, remaining: 0, duration: 25 * MIN, hideSeconds: false, due: false, over: 0, longEvery: 4, round: 1, focusMin: 25 };
@@ -55,12 +55,19 @@ test('the wall clock shows hours and minutes, CLOCK, and optional seconds', () =
   assert.equal(ledFace({ now: NOW, focus: running, show: 'clock' }).small, '');
 });
 
-test('the glass grows by a digit for a long session', () => {
-  const short = glassSize('25:00'), long = glassSize('120:00');
-  assert.equal(short.width, 250);
-  assert.ok(long.width > short.width);
-  assert.equal(long.digitsX >= 0, true);
-  assert.equal(glassSize('25').height, short.height);
+test('on the desk clock a round reads minutes, seconds and today\'s rounds; the wall clock HH MM SS', () => {
+  const round = deskFace(ledFace({ now: NOW, focus: running, show: 'timer' }), { now: NOW, rounds: 3 });
+  assert.deepEqual(round, { digits: '100003', colon: false, word: 'FOCUS', bar: round.bar });
+  assert.ok(Math.abs(round.bar - 0.6) < 1e-9);
+  assert.equal(deskFace(ledFace({ now: NOW, focus: running, show: 'timer' }), { now: NOW + 1000, rounds: 3 }).colon, true, 'the colon blinks while it runs');
+  const idle = deskFace(ledFace({ now: NOW, focus: { phase: 'idle', focusMin: 25 }, show: 'timer' }), { now: NOW });
+  assert.equal(idle.digits, '250000'); assert.equal(idle.word, 'READY'); assert.equal(idle.bar, null); assert.equal(idle.colon, true);
+  const minutes = deskFace(ledFace({ now: NOW, focus: { ...running, hideSeconds: true }, show: 'timer' }), { now: NOW, rounds: 1 });
+  assert.equal(minutes.digits, '10--01', 'hidden seconds leave their cells dark');
+  const wall = deskFace(ledFace({ now: NOW, focus: running, show: 'clock', seconds: true }), { now: NOW });
+  assert.equal(wall.digits, '093015'); assert.equal(wall.word, 'CLOCK'); assert.equal(wall.bar, null);
+  assert.equal(deskFace(ledFace({ now: NOW, focus: running, show: 'clock' }), { now: NOW }).digits, '0930--');
+  assert.equal(deskFace({ text: '120:00', caption: 'FOCUS', mode: 'timer', phase: 'focus', progress: 0.1, blink: false }).digits.slice(0, 4), '9959', 'a long round shows 99:59 until it fits');
 });
 
 test('round lamps: done, the one running, the ones to come', () => {

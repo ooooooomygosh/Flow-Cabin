@@ -31,12 +31,6 @@
 .face-show button[aria-checked=true] { color: var(--px-ink-on-accent); background: var(--px-accent); box-shadow: inset 2px 2px 0 var(--px-accent-hi), inset -2px -2px 0 var(--px-accent-lo); }
 
 /* The dock header's quick switch */
-.face-switch { display: flex; align-items: center; gap: 2px; padding: 0 6px 4px 10px; font-size: 12px; color: var(--px-ink-dim); }
-.face-switch-title { margin-right: 6px; }
-.face-switch strong { min-width: 6em; text-align: center; font-weight: 400; color: var(--px-ink); white-space: nowrap; }
-.face-switch button { display: inline-flex; align-items: center; gap: 4px; min-width: var(--px-hit); min-height: var(--px-hit); padding: 0 4px; font: inherit; color: var(--px-ink-dim); background: none; border: 0; cursor: pointer; }
-.face-switch button:hover { color: var(--px-ink); }
-.face-switch .face-switch-full { margin-left: auto; padding: 0 8px; color: var(--px-ink); background: var(--px-surface-2); border: 2px solid var(--px-border); }
 
 /* The whole window becomes the clock: the room dims to a stepped, lamp-lit vignette. */
 .focus-display { position: fixed; inset: 0; z-index: 85; display: grid; place-items: center; outline: none; cursor: default;

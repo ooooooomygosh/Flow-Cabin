@@ -8,15 +8,17 @@ import { providerLabel } from '../src/player/providers.mjs';
 export const HUB_TAB = Object.freeze({ '音源': '音乐', '房间与桌宠': '小屋与奶糖', '键鼠陪伴': '小屋与奶糖', '专注工具': '专注', '同步与设备': '实验室', '显示与桌面': '桌面', '数据与备份': '数据', 'AI（Beta）': '实验室', '关于': '实验室' });
 export const hubTabName = (section) => HUB_TAB[section] || section;
 export const settingsDialog = (page) => page.getByRole('dialog', { name: '设置', exact: true });
+// On the desk (3.1) 设置 is the screwdriver in the drawer: pull the drawer out (D) first. A home with a visible
+// 设置 button (the brass knob of the older homes) uses that.
+export async function pressSettings(page) {
+  const button = page.getByRole('button', { name: '设置', exact: true });
+  if (!await button.isVisible().catch(() => false)) { const pull = page.getByRole('button', { name: /^拉开抽屉/ }); if (await pull.count()) await pull.click(); }
+  await button.click();
+}
 export async function openSettingsSection(page, section) {
   if (!await settingsDialog(page).isVisible()) {
     for (let i = 0; i < 4 && await page.locator('dialog[open]').count(); i++) await page.keyboard.press('Escape');
-    // 3.1: on the desk, 设置 (the screwdriver) lies in the drawer: pull it out first.
-    const pull = page.getByRole('button', { name: '拉开抽屉（D）', exact: true });
-    const knob = page.getByRole('button', { name: '设置', exact: true });
-    await pull.or(knob).first().waitFor();
-    if (await pull.count()) await pull.click();
-    await knob.click();
+    await pressSettings(page);
     // The brass knob pulls the 小屋日常 drawer out (全部设置 is the last object in it); the drawer loads on first use.
     const all = page.getByRole('button', { name: '全部设置', exact: true });
     await all.or(settingsDialog(page)).first().waitFor();
@@ -58,6 +60,8 @@ export async function closeLibrary(page) {
   // In the index book Esc first clears what was typed, so more presses may be needed.
   for (let i = 0; i < 4 && await libraryDialog(page).isVisible(); i++) { await page.keyboard.press('Escape'); await libraryDialog(page).waitFor({ state: 'hidden', timeout: 1500 }).catch(() => {}); }
   await libraryDialog(page).waitFor({ state: 'hidden' });
+  // On the desk the camera is still up at the bookcase: look back down.
+  if (await page.locator('.desk-look').count()) { await page.keyboard.press('Escape'); await page.locator('.desk-look').waitFor({ state: 'detached' }); }
 }
 // The sheet a binder (or the index book) becomes once it is carried down to the desk.
 export const shelfSheet = (page, name) => page.getByRole('dialog', { name: name === '索引本' ? /^索引本/ : `${name}活页夹`, exact: name !== '索引本' });
