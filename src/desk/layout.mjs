@@ -41,28 +41,24 @@ export function deskLayout(width, height) {
       top: plates.trayBottom * s,
     };
   }
-  // A phone: the clock across the top, the Control Panel's corner and the post box under it, the
-  // bookcase plate at the right; the drawer's felt cropped to its middle so its things stay big enough.
-  const s = clamp((width - 24) / edge.clock[2], 0.45, 0.9);
+  // A phone: the clock across the top and, under it, three brass plates in a row (唱机 · 信箱 · 唱片架):
+  // the Control Panel's corner and the post box would be too small to read at a phone's width. The
+  // drawer's band is shown larger, its wooden sides cut off, so its things stay big enough to take.
+  const s = clamp((width - 16) / edge.clock[2], 0.45, 0.9);
   const clockX = (width - edge.clock[2] * s) / 2, clockShift = clockX - edge.clock[0] * s;
-  const rowY = edge.clock[3] * s + 6;
-  const cs = clamp((width * 0.56) / edge.console[2], 0.4, 0.8), ps = clamp((width * 0.34) / edge.post[2], 0.4, 0.9);
-  const consoleShift = { x: 8 - edge.console[0] * cs, y: rowY }, postShift = { x: width - 8 - (edge.post[0] + edge.post[2]) * ps, y: rowY };
-  const ss = 1;
-  const drawerS = width / 1100;
+  const rowY = edge.clock[3] * s + 10, gap = 8, plateW = (width - 24 - gap * 2) / 3, plateH = Math.max(44, plateW * plates.shelfPlate[3] / plates.shelfPlate[2]);
+  const plate = (i) => ({ x: 12 + i * (plateW + gap), y: rowY, w: plateW, h: plateH });
+  const drawerS = width / 900;
   return {
     phone, s, width, height,
     clock: at(edge.clock, s, clockShift, 0),
     clockFace: at(plates.clock.faceAt, s, clockShift, 0),
     clockKeys: at(plates.clock.keysAt, s, clockShift, 0),
-    console: at(edge.console, cs, consoleShift.x, consoleShift.y),
-    consolePlate: at(plates.console, cs, consoleShift.x, consoleShift.y),
-    post: at(edge.post, ps, postShift.x, postShift.y),
-    postBox: at(plates.post1, ps, postShift.x, postShift.y),
-    shelfPlate: at([0, 0, plates.shelfPlate[2], plates.shelfPlate[3]], ss, width - plates.shelfPlate[2] - 8, rowY + Math.max(edge.console[3] * cs, edge.post[3] * ps) + 8),
-    drawer: { s: drawerS, x: (width - W * drawerS) / 2, w: W * drawerS, h: plates.drawerBand * drawerS, band: plates.drawer.bandH * drawerS },
+    console: null, post: null,
+    consolePlate: plate(0), postPlate: plate(1), shelfPlate: plate(2), postBox: null,
+    drawer: { s: drawerS, x: (width - W * drawerS) / 2, w: W * drawerS, h: plates.drawerBand * drawerS, band: plates.drawer.bandH * drawerS, span: Math.min(940, width / drawerS - 140) },
     pull: 44,
-    top: rowY + Math.max(edge.console[3] * cs, edge.post[3] * ps) + plates.shelfPlate[3] + 20,
+    top: rowY + plateH + 12,
   };
 }
 

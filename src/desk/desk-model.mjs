@@ -26,10 +26,10 @@ export const DRAWER = Object.freeze([
 export const drawerItems = (labs = {}) => DRAWER.filter((item) => !item.lab || labs[item.lab]);
 
 // Where each of n things lies on the felt (the band's coordinates: felt from x 200 to 1240).
-export function drawerPlaces(n) {
-  const left = 250, right = 1190, y = 70;
-  if (n <= 1) return [{ x: (left + right) / 2, y }];
-  const step = Math.min(170, (right - left) / (n - 1)), start = (left + right) / 2 - step * (n - 1) / 2;
+export function drawerPlaces(n, span = 940) {
+  const mid = 720, y = 70;
+  if (n <= 1) return [{ x: mid, y }];
+  const step = Math.min(170, span / (n - 1)), start = mid - step * (n - 1) / 2;
   return Array.from({ length: n }, (_, i) => ({ x: start + i * step, y }));
 }
 

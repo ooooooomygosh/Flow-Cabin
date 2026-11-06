@@ -15,6 +15,7 @@
 .desk-console-plate .desk-engraving { left: 7%; right: 66%; top: 46%; bottom: 13%; }
 .desk-shelf-plate { z-index: 3; }
 .desk-shelf-plate .desk-engraving { left: 13%; right: 12%; top: 10%; bottom: 10%; justify-content: space-between; }
+.desk-plate.is-brass .desk-engraving { left: 13%; right: 12%; top: 10%; bottom: 10%; justify-content: space-between; }
 .desk-plate:hover .desk-engraving { color: rgba(40, 26, 8, .95); }
 .desk-plate:focus-visible, .desk-post:focus-visible, .desk-clock-face:focus-visible, .desk-clock-key:focus-visible, .desk-drawer-thing:focus-visible, .desk-pull:focus-visible, .desk-spot:focus-visible, .desk-look-back:focus-visible { outline: 2px solid rgba(255, 214, 140, .95); outline-offset: 2px; }
 
@@ -62,5 +63,6 @@
 
 /* A phone: the drawer is narrower than the window's width allows a whole band, so its felt is centred. */
 .desk-home.is-phone .desk-drawer-name { font-size: 12px; }
+.desk-home.is-phone .desk-drawer-thing { min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; }
 .desk-home.is-reduced .desk-clock-keys, .desk-home.is-reduced .desk-drawer-thing img { transition: none; }
 }

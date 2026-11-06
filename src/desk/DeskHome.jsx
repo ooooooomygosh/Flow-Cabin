@@ -69,7 +69,7 @@ export default function DeskHome({ reduced = false, focusOpen = false, guiding =
     : `专注 · 现在 ${String(new Date(now).getHours()).padStart(2, '0')}:${String(new Date(now).getMinutes()).padStart(2, '0')} · 开始一段专注`;
 
   // ----- the drawer -----
-  const things = drawerItems(labs), places = drawerPlaces(things.length);
+  const things = drawerItems(labs), places = drawerPlaces(things.length, lay.drawer.span);
   const [slide, setSlide] = useState(0); // 0 shut .. 1 out, on DEsk's drawer spring
   const slideRef = useRef(0);
   useEffect(() => {
@@ -91,8 +91,10 @@ export default function DeskHome({ reduced = false, focusOpen = false, guiding =
   const lift = lay.drawer.h * Math.max(-0.06, Math.min(1.06, slide));
 
   // ----- looking up, and back down -----
+  const opener = useRef(null), lookLayer = useRef(null);
   const lookTo = useCallback((which) => {
     if (look) return;
+    opener.current = document.activeElement;
     setDrawer(false);
     playSfx(which === 'post' ? 'post-open' : 'binder-lift');
     whenDeskImages(VIEW_IMAGES[which]).then(() => setLook({ which, phase: reduced ? 'there' : 'up' }));
@@ -104,6 +106,11 @@ export default function DeskHome({ reduced = false, focusOpen = false, guiding =
   }, [look, reduced]);
   useBackLayer(Boolean(look), lookBack, 'look');
   useEffect(() => { if (look?.phase === 'gone') setLook(null); }, [look]);
+  // There: the hand (and the keyboard focus) is on the first thing in the view; back down: on what was used to look up.
+  useEffect(() => {
+    if (look?.phase === 'there') lookLayer.current?.querySelector('.desk-spot')?.focus({ preventScroll: true });
+    if (!look && opener.current?.isConnected) { opener.current.focus({ preventScroll: true }); opener.current = null; }
+  }, [look?.phase, Boolean(look)]);
   // The film: DEsk's frames of the move, mixed over the desk as it slides away, then the view itself.
   useLayoutEffect(() => {
     if (!look || (look.phase !== 'up' && look.phase !== 'down')) return undefined;
@@ -155,15 +162,21 @@ export default function DeskHome({ reduced = false, focusOpen = false, guiding =
   const viewSrc = look && (look.which === 'post' && !unread ? 'view-post-empty.webp' : `view-${look.which}.webp`);
   const engraving = { fontSize: Math.max(12, 13 * lay.s) };
 
+  const shelfPlate = (
+    <button type="button" className={`desk-plate desk-shelf-plate ${lay.phone ? 'is-brass' : ''}`} style={{ ...style(lay.shelfPlate), backgroundImage: `url(${deskUrl('plate-shelf.webp')})` }} aria-label="唱片架 · 抬头看书柜（A）" onClick={() => lookTo('shelf')}>
+      <span className="desk-engraving" style={engraving}>唱片架 <b>↑</b></span>
+    </button>
+  );
   return <section className={`desk-home ${ready ? 'is-lit' : ''} ${lay.phone ? 'is-phone' : ''} ${drawer ? 'is-drawer-out' : ''} ${reduced ? 'is-reduced' : ''}`} aria-label="书桌" data-look={look?.which || undefined} style={{ '--desk-s': lay.s }}>
     <div className="desk-wood" style={{ backgroundImage: `url(${deskUrl('desk-wood.webp')})` }} aria-hidden="true"/>
     <div className="desk-top" ref={deskRef} style={{ transform: lift ? `translateY(${-lift.toFixed(1)}px)` : undefined }} inert={look?.phase === 'there' || undefined}>
-      <img className="desk-piece" src={deskUrl('edge-console.webp')} alt="" style={style(lay.console)} draggable="false"/>
+      {lay.console && <img className="desk-piece" src={deskUrl('edge-console.webp')} alt="" style={style(lay.console)} draggable="false"/>}
       <img className="desk-piece" src={deskUrl('edge-clock.webp')} alt="" style={style(lay.clock)} draggable="false"/>
-      <img className="desk-piece" src={deskUrl('edge-post.webp')} alt="" style={style(lay.post)} draggable="false"/>
-      <button type="button" className="desk-plate desk-console-plate" style={{ ...style(lay.consolePlate), backgroundImage: `url(${deskUrl('plate-console.webp')})` }} aria-label="唱机 · 抬头看控制面板（C）" onClick={() => lookTo('console')}>
-        <span className="desk-engraving" style={engraving}>唱机 ↑</span>
+      {lay.post && <img className="desk-piece" src={deskUrl('edge-post.webp')} alt="" style={style(lay.post)} draggable="false"/>}
+      <button type="button" className={`desk-plate desk-console-plate ${lay.phone ? 'is-brass' : ''}`} style={{ ...style(lay.consolePlate), backgroundImage: `url(${deskUrl(lay.phone ? 'plate-shelf.webp' : 'plate-console.webp')})` }} aria-label="唱机 · 抬头看控制面板（C）" onClick={() => lookTo('console')}>
+        <span className="desk-engraving" style={engraving}>唱机 <b>↑</b></span>
       </button>
+      {lay.phone && shelfPlate}
       <div className={`desk-clock ${keysUp ? 'is-awake' : ''}`} style={style({ x: lay.clockFace.x, y: lay.clockFace.y, w: lay.clockFace.w, h: lay.clockFace.h })} onPointerEnter={() => setKeysUp(true)} onPointerLeave={() => setKeysUp(false)} onFocus={() => setKeysUp(true)} onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setKeysUp(false); }}>
         <button type="button" className="focus-badge desk-clock-face" aria-expanded={focusOpen} aria-label={clockLabel} title="专注" onClick={() => { playSfx('key-press'); open(shown === 'music' ? 'music' : shown === 'date' ? 'tasks' : 'timer'); }}>
           <ClockFace face={ready ? face : { ...face, digits: '000000', word: 'LOAD' }} scale={lay.s}/>
@@ -172,11 +185,13 @@ export default function DeskHome({ reduced = false, focusOpen = false, guiding =
           {CLOCK_KEYS.map((k) => <button type="button" key={k.id} role="radio" aria-checked={shown === k.id} className={`desk-clock-key ${shown === k.id ? 'is-on' : ''}`} style={{ left: `${k.rect[0] / 114 * 100}%`, top: `${k.rect[1] / 66 * 100}%`, width: `${k.rect[2] / 114 * 100}%`, height: `${k.rect[3] / 66 * 100}%` }} onClick={() => { playSfx('key-press'); setMode(mode === k.id ? '' : k.id); }}>{k.id === 'focus' ? <span className="desk-key-print">专注</span> : <span className="sr-only">{k.name}</span>}</button>)}
         </div>
       </div>
-      <button type="button" className="desk-post" style={{ ...style(lay.postBox), backgroundImage: `url(${deskUrl(unread ? 'post-letter.webp' : 'post0.webp')})` }} aria-label={`信箱${unread ? ` · ${unread} 封未读` : ''}（N）`} onClick={() => lookTo('post')}/>
+      {lay.postBox
+        ? <button type="button" className="desk-post" style={{ ...style(lay.postBox), backgroundImage: `url(${deskUrl(unread ? 'post-letter.webp' : 'post0.webp')})` }} aria-label={`信箱${unread ? ` · ${unread} 封未读` : ''}（N）`} onClick={() => lookTo('post')}/>
+        : <button type="button" className="desk-plate is-brass" style={{ ...style(lay.postPlate), backgroundImage: `url(${deskUrl('plate-shelf.webp')})` }} aria-label={`信箱${unread ? ` · ${unread} 封未读` : ''}（N）`} onClick={() => lookTo('post')}>
+          <span className="desk-engraving" style={engraving}>信箱{unread ? ` ${unread}` : ''} <b>↑</b></span>
+        </button>}
     </div>
-    <button type="button" className="desk-plate desk-shelf-plate" style={{ ...style(lay.shelfPlate), backgroundImage: `url(${deskUrl('plate-shelf.webp')})` }} aria-label="唱片架 · 抬头看书柜（A）" onClick={() => lookTo('shelf')}>
-      <span className="desk-engraving" style={engraving}>唱片架 <b>↑</b></span>
-    </button>
+    {!lay.phone && shelfPlate}
     {slide > 0.004 && <div className="desk-shade" style={{ opacity: 0.42 * slide, bottom: lift }} onClick={() => setDrawer(false)} aria-hidden="true"/>}
     <div className="desk-drawer" style={{ height: lay.drawer.h, left: lay.drawer.x, width: lay.drawer.w, transform: `translateY(${(lay.drawer.h - lift).toFixed(1)}px)`, backgroundImage: `url(${deskUrl('drawer-band.webp')})` }} inert={!drawer || undefined} aria-hidden={!drawer || undefined} role="group" aria-label="抽屉">
       {things.map((thing, i) => {
@@ -192,7 +207,7 @@ export default function DeskHome({ reduced = false, focusOpen = false, guiding =
     <button type="button" className="desk-pull" style={{ height: lay.pull, bottom: lift }} aria-label={drawer ? '推回抽屉（D）' : '拉开抽屉（D）'} aria-expanded={drawer} onClick={() => setDrawer((v) => !v)}>
       <span className="desk-pull-handle" aria-hidden="true"/>
     </button>
-    {look && <div className={`desk-look is-${look.phase}`} role="dialog" aria-modal="true" aria-label={VIEWS[look.which].name} onClick={(e) => { if (e.target === e.currentTarget || e.target.classList.contains('desk-view')) lookBack(); }}>
+    {look && <div ref={lookLayer} className={`desk-look is-${look.phase}`} role="dialog" aria-modal="true" aria-label={VIEWS[look.which].name} onClick={(e) => { if (e.target === e.currentTarget || e.target.classList.contains('desk-view')) lookBack(); }}>
       <canvas ref={film} className="desk-film" aria-hidden="true"/>
       {look.phase === 'there' && <>
         <img className="desk-view" src={deskUrl(viewSrc)} alt="" draggable="false" style={{ left: vl.ox, top: vl.oy, width: PLATES.w * vl.s, height: PLATES.h * vl.s }}/>

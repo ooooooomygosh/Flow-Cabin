@@ -28,8 +28,12 @@ test('a phone stacks the back of the desk and keeps every target at least 44 px'
     const lay = deskLayout(w, h);
     assert(lay.phone);
     assert(lay.clock.x >= 0 && lay.clock.x + lay.clock.w <= w + 0.5, `${w}: clock fits`);
-    assert(lay.console.y >= lay.clock.h, 'console under the clock');
-    assert(lay.post.x + lay.post.w <= w + 0.5 && lay.console.x >= 0);
+    for (const plate of [lay.consolePlate, lay.postPlate, lay.shelfPlate]) {
+      assert(plate.y >= lay.clock.h && plate.h >= 44 && plate.x >= 0 && plate.x + plate.w <= w + 0.5, `${w}: plate under the clock, 44 px tall, inside`);
+    }
+    assert(lay.consolePlate.x + lay.consolePlate.w <= lay.postPlate.x && lay.postPlate.x + lay.postPlate.w <= lay.shelfPlate.x, 'three plates in a row');
+    const shown = drawerPlaces(9, lay.drawer.span).map((p) => lay.drawer.x + p.x * lay.drawer.s);
+    assert(shown[0] >= 20 && shown.at(-1) <= w - 20, `${w}: every drawer thing on screen`);
     assert(lay.clockFace.h >= 28, 'clock readable');
     assert(lay.pull >= 44);
     assert(lay.shelfPlate.x + lay.shelfPlate.w <= w);
