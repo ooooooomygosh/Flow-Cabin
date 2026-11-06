@@ -1,0 +1,151 @@
+@layer guards, reset, features, skin, overrides;
+@layer guards {
+/* Opened out (展开) is DEsk's MAX_RECT -- below the desk's back edge, the full width -- whatever size a panel
+   asks for elsewhere (a sheet's own width and height sit in later layers), so it is a guard. */
+.cabin-dialog.is-max:not(.is-full) { inset: auto !important; left: 0 !important; top: var(--sheet-max-top, 86px) !important; width: 100vw !important; max-width: none !important; height: calc(100dvh - var(--sheet-max-top, 86px)) !important; max-height: none !important; margin: 0 !important; translate: none !important; }
+}
+@layer skin {
+/* The desk's materials: paper, brass, red LED glass — all lit by one lamp (--sx/--sy/--lamp-k,
+   src/props/lamp.mjs). Colours and recipes follow DEsk (https://github.com/fyzugx/DEsk, MIT,
+   (c) 2026 The DEsk authors): cream paper #efe6d3, ink #2e2318, brass #a8783a.
+   Everything that sits on paper reads the same --ui-* tokens as the rest of the app, only
+   redefined here, so settings, shelf, journal and every other panel turn to paper at once. */
+
+/* ── paper scope ───────────────────────────────────────────────────────── */
+.paper, .cabin-dialog:not(.is-full), .app-toast {
+  --ui-bg: #e7dcc6;
+  --ui-surface: #efe6d3;
+  --ui-surface-raised: #f7f0e1;
+  --ui-surface-hover: rgba(120, 84, 40, .09);
+  --ui-field: #fbf7ee;
+  --ui-line: rgba(95, 72, 40, .24);
+  --ui-line-strong: rgba(95, 72, 40, .46);
+  --ui-text: #2e2318;
+  --ui-text-2: #54452f;
+  --ui-text-3: #5f4f37;
+  --ui-accent: #7d5019;
+  --ui-accent-text: #fffaf0;
+  --ui-accent-soft: rgba(168, 120, 58, .18);
+  --ui-good: #2b6335;
+  --ui-danger: #a3301d;
+  --ui-focus-ring: 2px solid rgba(125, 80, 25, .9);
+  --ui-blur: 0px;
+  --ui-radius-lg: 6px;
+  --ui-radius: 4px;
+  --ui-radius-sm: 2px;
+  --ui-font-display: 'Songti SC', 'Noto Serif CJK SC', 'Source Han Serif SC', 'STSong', 'SimSun', Georgia, 'Times New Roman', serif;
+  /* The older pixel palette, remapped, so components still written against --px-* sit on paper too. */
+  --px-bg: #e7dcc6; --px-surface: #efe6d3; --px-surface-2: #f7f0e1; --px-surface-3: #e8dcc0; --px-surface-inset: #fbf7ee; --px-surface-card: #f3ebd9; --px-surface-hud: #efe6d3;
+  --px-ink: #2e2318; --px-ink-dim: #54452f; --px-ink-faint: #5f4f37; --px-ink-muted: #8a7658; --px-ink-on-accent: #fffaf0;
+  --px-accent: #7d5019; --px-accent-hi: #5f3d12; --px-accent-lo: #a8783a; --px-accent-hi-ghost: rgba(125, 80, 25, .12); --px-accent-ghost: rgba(125, 80, 25, .08); --px-accent-2: #2f6a5d;
+  --px-good: #2b6335; --px-warn: #a3301d; --px-warn-ink: #a3301d;
+  --px-border: #b8a07a; --px-border-hi: #a8783a; --px-border-soft: rgba(95, 72, 40, .4); --px-border-subtle: rgba(95, 72, 40, .28); --px-brass: #a8783a;
+  --px-shadow: rgba(60, 40, 15, .35); --px-focus: #7d5019; --px-focus-ring: 2px solid #7d5019;
+  --px-bevel-white: rgba(255, 252, 242, .6); --px-bevel-white-hi: rgba(255, 252, 242, .8); --px-bevel-white-soft: rgba(255, 252, 242, .4); --px-bevel-black: rgba(80, 50, 20, .18); --px-bevel-warm: #fff3d6;
+  --px-shadow-inset: inset 0 1px 2px rgba(80, 55, 25, .18);
+  --px-backdrop: rgba(13, 8, 5, .5);
+  --paper-dur: calc(.42s * var(--pace, 1));
+  --paper-ease: var(--ease-drawer, cubic-bezier(.2, .8, .2, 1));
+  --ui-shadow: calc(var(--sx, 2) * 3px) calc(var(--sy, 3) * 3px) 6px rgba(15, 10, 8, calc(.26 * var(--lamp-k, .6)));
+  --ui-shadow-lg: calc(var(--sx, 2) * 12px) calc(var(--sy, 3) * 12px) 28px rgba(15, 10, 8, calc(.36 * var(--lamp-k, .6)));
+  color-scheme: light;
+}
+
+/* A sheet: cream fibre, thick-edged, its top-right corner DEsk's turned-down corner (src/desk/SheetCorner.jsx
+   draws the corner's picture and sets --curl, the size of the fold, every frame). The sheet is cut along
+   the fold as DEsk's drawSheet cuts it; the cut reaches far out on the other sides, so it keeps the
+   shadow. The shadow is DEsk's: the sheet lies 44 px above the desk, the lamp low on the right, so it
+   falls up and to the left. The paper is the dialog's ::before. */
+.cabin-dialog:not(.is-full) {
+  --curl: 19px;
+  position: fixed;
+  background: transparent; border: 0; border-radius: 0; backdrop-filter: none; box-shadow: none; color: var(--ui-text);
+  filter: drop-shadow(calc(var(--sx, -.54) * 4px) calc(var(--sy, -.43) * 4px) 2px rgba(15, 10, 8, calc(.34 * var(--lamp-k, .6))))
+          drop-shadow(calc(var(--sx, -.54) * 44px) calc(var(--sy, -.43) * 44px) 22px rgba(10, 6, 3, calc(.95 * var(--lamp-k, .6))));
+  clip-path: polygon(-200px -200px, calc(100% - var(--curl)) -200px, calc(100% - var(--curl)) 0, 100% var(--curl), calc(100% + 200px) var(--curl), calc(100% + 200px) calc(100% + 200px), -200px calc(100% + 200px));
+}
+.cabin-dialog:not(.is-full)::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  border-radius: var(--ui-radius-sm);
+  background: var(--paper-grain, none) 0 0 / 96px, linear-gradient(rgba(243, 235, 218, .42), rgba(243, 235, 218, .42)), var(--paper-tile, none) 0 0 / 128px, linear-gradient(172deg, #f8f1e1, #efe6d3 55%, #e6d8b9);
+  box-shadow: inset 0 0 0 1px rgba(95, 72, 40, .22), inset 0 -2px 0 rgba(70, 52, 28, .14), inset -2px 0 0 rgba(70, 52, 28, .08);
+}
+.cabin-dialog:not(.is-full)[open] { animation: paper-in var(--paper-dur) var(--paper-ease) both; }
+@keyframes paper-in { 0% { opacity: 0; transform: translate(calc(var(--sx, -.54) * -10px), 22px) rotate(-.4deg); } 100% { opacity: 1; transform: none; } }
+/* The desk stays as it is under a sheet: DEsk does not dim it, the sheet's own shadow puts it in front. */
+.cabin-dialog:not(.is-full)::backdrop { background: transparent; }
+
+/* Opened out (展开): square-cornered (its rectangle is a guard, above). */
+.cabin-dialog.is-max:not(.is-full)::before { border-radius: 0; }
+
+/* The heading is printed, not titled: serif, centred, two thin rules under it. */
+.cabin-dialog:not(.is-full) .cabin-dialog-header { position: relative; justify-content: center; min-height: 50px; padding: 13px 64px 11px; border-bottom: 0; }
+.cabin-dialog:not(.is-full) .cabin-dialog-header::after { content: ''; position: absolute; left: 12px; right: 12px; bottom: 0; height: 3px; border-top: 1px solid rgba(76, 58, 30, .38); border-bottom: 1px solid rgba(76, 58, 30, .2); }
+.cabin-dialog:not(.is-full) .cabin-dialog-header h2 { justify-content: center; font-family: var(--ui-font-display); font-size: 16px; font-weight: 600; letter-spacing: .04em; text-align: center; color: #3b2f22; }
+.cabin-dialog:not(.is-full) .cabin-dialog-footer { border-top: 1px solid var(--ui-line); }
+
+/* The corner: DEsk's picture in a canvas; the fold is the close button, the three printed words are
+   buttons laid over their print while the corner is up. */
+.sheet-corner { position: absolute; top: 0; right: 0; z-index: 8; width: 0; height: 0; }
+.sheet-curl { position: absolute; top: 0; right: 0; width: 360px; height: 360px; pointer-events: none; }
+.cabin-dialog:not(.is-full) .cabin-dialog-close {
+  position: absolute; top: 0; right: 0; display: block; width: 48px; height: 48px; min-width: 0; padding: 0;
+  background: none; border: 0; border-radius: 0; box-shadow: none; cursor: pointer;
+}
+.cabin-dialog:not(.is-full) .cabin-dialog-close:hover { background: none; }
+.cabin-dialog:not(.is-full) .cabin-dialog-close:focus-visible { outline: 2px solid rgba(125, 80, 25, .9); outline-offset: -4px; }
+.sheet-corner-acts { position: absolute; top: 0; right: 0; width: 188px; height: 188px; pointer-events: none; }
+.sheet-corner-act { position: absolute; padding: 0; border: 0; border-radius: 0; background: none; cursor: pointer; opacity: 0; }
+.sheet-corner.is-up .sheet-corner-act { pointer-events: auto; }
+.sheet-corner-act[aria-disabled=true] { cursor: not-allowed; }
+.sheet-corner-act:focus-visible { opacity: 1; outline: 2px solid rgba(125, 80, 25, .9); outline-offset: 1px; }
+.sheet-corner .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* The copy of a sheet that is folded or thrown away while the sheet itself has already closed. */
+.sheet-ghost { position: fixed; z-index: 2147483000; display: flex; flex-direction: column; margin: 0; pointer-events: none; transform-origin: 0 0; animation: none; }
+.sheet-ghost .sheet-corner-acts, .sheet-ghost .cabin-dialog-close { display: none; }
+
+/* Buttons on paper: a card that presses in, brass when it is the main thing to press. */
+:is(.cabin-dialog:not(.is-full), .app-toast) .pixel-button {
+  --btn-bg: linear-gradient(#f7efdf, #e4d4b2); --btn-bg-hover: linear-gradient(#fcf6ea, #eadcbe); --btn-line: #ad9163; --btn-ink: var(--ui-text);
+  border-radius: var(--ui-radius); text-shadow: 0 1px rgba(255, 250, 235, .6);
+  box-shadow: inset 0 1px rgba(255, 252, 242, .8), 0 1px rgba(90, 60, 25, .14);
+}
+:is(.cabin-dialog:not(.is-full), .app-toast) .pixel-button:active:not(:disabled) { background: linear-gradient(#d8c39a, #e5d4b0); box-shadow: inset 0 1px 2px rgba(80, 50, 20, .28); transform: translateY(1px); }
+:is(.cabin-dialog:not(.is-full), .app-toast) .pixel-button.is-primary { --btn-bg: linear-gradient(#9a6a2c, #7d5019); --btn-bg-hover: linear-gradient(#a8763a, #8a5a22); --btn-ink: #fffaf0; --btn-line: #5f3d12; text-shadow: 0 -1px rgba(60, 35, 8, .45); box-shadow: inset 0 1px rgba(255, 224, 168, .35), 0 1px rgba(60, 35, 8, .22); }
+:is(.cabin-dialog:not(.is-full), .app-toast) .pixel-button.is-quiet { --btn-bg: transparent; --btn-bg-hover: var(--ui-surface-hover); --btn-line: transparent; --btn-ink: var(--ui-text-2); box-shadow: none; text-shadow: none; }
+:is(.cabin-dialog:not(.is-full), .app-toast) .pixel-button.is-danger { --btn-bg: linear-gradient(#f4e2d6, #e3c5b5); --btn-line: #a3301d; --btn-ink: var(--ui-danger); --btn-bg-hover: linear-gradient(#f9e9de, #ebccbd); }
+.cabin-dialog:not(.is-full) input[type=date] { color-scheme: light; }
+.cabin-dialog:not(.is-full) input[type=date]::-webkit-calendar-picker-indicator { filter: none; }
+.cabin-dialog:not(.is-full) option { background: #fbf7ee; color: var(--ui-text); }
+
+/* Paper that is not a dialog: a slip, e.g. a toast. */
+.app-toast {
+  color: var(--ui-text); border: 0; border-radius: var(--ui-radius-sm); backdrop-filter: none;
+  background: linear-gradient(rgba(243, 235, 218, .42), rgba(243, 235, 218, .42)), var(--paper-tile, none) 0 0 / 128px, linear-gradient(172deg, #f8f1e1, #efe6d3 55%, #e6d8b9);
+  box-shadow: inset 0 0 0 1px rgba(95, 72, 40, .2), var(--ui-shadow);
+  animation: paper-slip var(--paper-dur) var(--paper-ease) both;
+}
+@keyframes paper-slip { 0% { opacity: 0; transform: translateY(14px) rotate(.8deg); } 100% { opacity: 1; transform: rotate(-.3deg); } }
+.app-toast button { color: var(--ui-text); border: 0; border-bottom: 1.5px solid rgba(70, 60, 50, .7); border-radius: 0; font-weight: 600; letter-spacing: .04em; }
+.app-toast button:hover { background: var(--ui-surface-hover); }
+.app-toast.is-error { box-shadow: inset 4px 0 0 var(--ui-danger), inset 0 0 0 1px rgba(95, 72, 40, .2), var(--ui-shadow); }
+
+/* ── brass plate ───────────────────────────────────────────────────────── */
+.brass-plate {
+  position: relative; display: inline-flex; align-items: center; gap: 8px; min-height: 28px; padding: 6px 20px; border: 0; border-radius: var(--ui-radius-sm);
+  color: #2a1c0a; font: 600 12px/1 var(--ui-font); letter-spacing: .14em; text-transform: uppercase; text-decoration: none; white-space: nowrap; cursor: default;
+  background: repeating-linear-gradient(0deg, rgba(255, 245, 219, .07) 0 1px, transparent 1px 2px), linear-gradient(180deg, #b1965c 0%, #8f743f 34%, #785f30 52%, #9e834c 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 239, 204, .42), 0 0 0 1px rgba(36, 23, 8, .55), calc(var(--sx, 2) * 3px) calc(var(--sy, 3) * 3px) 5px rgba(15, 10, 8, calc(.4 * var(--lamp-k, .6)));
+}
+button.brass-plate, a.brass-plate { cursor: pointer; }
+button.brass-plate:hover, a.brass-plate:hover { filter: brightness(1.13); }
+button.brass-plate:active { filter: brightness(.94); transform: translateY(1px); }
+button.brass-plate:focus-visible, a.brass-plate:focus-visible { outline: 2px solid #fff3cf; outline-offset: 2px; }
+.brass-plate::before, .brass-plate::after { content: ''; position: absolute; top: 50%; width: 5px; height: 5px; margin-top: -2.5px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #e7d29b, #6e5528 70%); box-shadow: 0 0 0 .5px rgba(30, 18, 4, .6); }
+.brass-plate::before { left: 7px; }
+.brass-plate::after { right: 7px; }
+
+/* 流畅模式: no filters on sheets; the same lamp-side shadow as a box-shadow (it cannot follow the cut corner). */
+html[data-perf='low'] .cabin-dialog:not(.is-full) { filter: none; box-shadow: calc(var(--sx, -.54) * 4px) calc(var(--sy, -.43) * 4px) 3px rgba(15, 10, 8, calc(.34 * var(--lamp-k, .6))), calc(var(--sx, -.54) * 44px) calc(var(--sy, -.43) * 44px) 30px rgba(10, 6, 3, calc(.85 * var(--lamp-k, .6))); }
+}

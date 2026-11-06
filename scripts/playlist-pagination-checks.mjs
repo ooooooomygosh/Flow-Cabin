@@ -1,5 +1,6 @@
 /** Offline large-playlist integration. Isolated context; no account or external traffic. */
 import assert from 'node:assert/strict';
+import { openAddToShelf } from './settings-actions.mjs';
 export async function verifyPlaylistPagination({ browser, origin, check }) {
   const context = await browser.newContext({ viewport: { width: 960, height: 600 }, reducedMotion: 'reduce', locale: 'zh-CN' });
   let mode = 'fail', revision = 3, pending, listPending, detailPending, delayDetail = false, delayList = true, items = [{ id: 'fixture-page-record', type: 'album', title: 'Fixture', artist: 'Test', tracks: [] }];
@@ -44,8 +45,8 @@ export async function verifyPlaylistPagination({ browser, origin, check }) {
   const count = n => page.waitForFunction(expected => document.querySelector('.playlist-facts b')?.textContent === String(expected), n);
   const waitPending = async () => { for (let i = 0; i < 100 && !pending; i++) await new Promise(resolve => setTimeout(resolve, 20)); assert(pending, 'next page request started'); };
   try {
-    await page.goto(origin); await page.locator('.room-record').first().waitFor();
-    await page.getByRole('button', { name: '添加到唱片架', exact: true }).click(); await page.getByRole('tab', { name: '我的歌单', exact: true }).click();
+    await page.goto(origin); await page.locator('.desk-home').waitFor();
+    await openAddToShelf(page, '我的歌单');
     await page.getByLabel('正在读取歌单').waitFor();
     for (let i = 0; i < 100 && !listPending; i++) await new Promise(resolve => setTimeout(resolve, 20)); assert(listPending);
     await page.getByRole('tab', { name: /网易云音乐/ }).click(); listPending(); listPending = null;

@@ -3,7 +3,7 @@
 // covers), a few days of focus history and the cat in its scarf.
 // Run: npm --prefix desktop run screenshots   (writes docs/images/*.jpg)
 const { _electron } = require('playwright'), fs = require('node:fs'), path = require('node:path');
-const { mountFixture, chooseRoomScene, openAddToShelf } = require('./ui-fixture.cjs');
+const { mountFixture, openAddToShelf, playRecord, openRecordCard, closeRecordCard, closeLibrary, takeBinder, openFocus } = require('./ui-fixture.cjs');
 const desktop = path.resolve(__dirname, '..'), output = path.join(desktop, '..', 'docs', 'images'); fs.mkdirSync(output, { recursive: true });
 const env = { ...process.env, ALBUM_DESKTOP_TEST_PROFILE: path.join(desktop, 'test-results', `screenshots-profile-${Date.now()}`) }; delete env.ELECTRON_RUN_AS_NODE;
 const executablePath = process.env.ALBUM_QA_EXE || require(path.join(desktop, 'node_modules/electron'));
@@ -50,17 +50,15 @@ const items = ALBUMS.map(([title, artist, background, accent, motif], index) => 
     localStorage.setItem('album-circle-focus-v1:local-owner', JSON.stringify({ version: 1, tasks: [{ id: 'a', text: '写周报', pomodoros: 2, createdAt: now }, { id: 'b', text: '整理唱片架', pomodoros: 1, createdAt: now }, { id: 'c', text: '给小猫拍照', done: true, doneAt: now, createdAt: now }], sessions, rewards: { fish: sessions.length, xp: 160, equipped: { accessory: 'scarf', weather: 'rain' } }, timer: { phase: 'idle', round: 3, taskId: 'a' } }));
     localStorage.setItem('album-circle-focus-dock-v1', JSON.stringify({ open: false, tab: 'timer' }));
   });
-  await site.reload(); await site.locator('.cabin-room').waitFor();
-  await site.waitForFunction(() => document.querySelectorAll('.pixel-artwork canvas.is-painted').length >= 12);
+  await site.reload(); await site.locator('.desk-home').waitFor();
   const shot = async (name) => { await site.waitForTimeout(400); await site.screenshot({ path: path.join(output, name), type: 'jpeg', quality: 84 }); console.log('wrote ' + name); };
-  await site.locator('.room-record').nth(5).dblclick(); await shot('cabin-pixel.jpg');
-  await site.locator('.focus-badge').click(); await site.getByRole('button', { name: '开始专注' }).click(); await shot('cabin-focus.jpg');
-  await site.getByRole('tab', { name: '统计' }).click(); await shot('cabin-stats.jpg');
-  await site.locator('.focus-dock-close').click(); await site.keyboard.press('h'); await shot('cabin-zen.jpg'); await site.keyboard.press('Escape');
-  await chooseRoomScene(site, 'warm'); await site.waitForTimeout(600); await shot('cabin-warm.jpg');
-  await chooseRoomScene(site, 'pixel');
-  await site.locator('.room-record').nth(2).click(); await site.getByRole('button', { name: /唱片卡片/ }).click(); await site.locator('.record-card').waitFor(); await shot('record-card.jpg');
-  await site.getByRole('button', { name: '关闭唱片卡片' }).click();
+  await playRecord(site, ALBUMS[5][0]); await shot('cabin-pixel.jpg');
+  await takeBinder(site, '唱片'); await shot('record-shelf.jpg'); await closeLibrary(site);
+  await openFocus(site); await site.getByRole('button', { name: '开始专注' }).click(); await shot('cabin-focus.jpg');
+  await site.keyboard.press('Escape'); await site.evaluate(() => window.dispatchEvent(new CustomEvent('cabin:open-journal', { detail: { tab: 'stats' } }))); await site.getByRole('dialog', { name: '唱片日记' }).waitFor(); await shot('cabin-stats.jpg'); await site.keyboard.press('Escape');
+  await site.keyboard.press('h'); await shot('cabin-zen.jpg'); await site.keyboard.press('Escape');
+  await openRecordCard(site, ALBUMS[2][0]); await site.locator('.record-card').waitFor(); await shot('record-card.jpg');
+  await closeRecordCard(site); await closeLibrary(site);
   const add = await openAddToShelf(site);
   await add.getByRole('searchbox').fill('lofi winter'); await add.getByRole('button', { name: '搜索' }).click(); await add.locator('.add-results li').first().waitFor(); await shot('add-album.jpg');
   await app.close();

@@ -2,32 +2,46 @@
 
 Owner of this document: art direction (beauty).
 
-**3.0 direction — 高级温馨 (premium, warm, quiet).** The painted v2.1 rooms and the
-pixel sprites (cat, turntable, sky, weather) stay the hero and keep their pipeline
-below. The UI chrome around them steps back: warm walnut glass, one amber accent,
-soft corners and shadows, a readable sans face. The 2.x rule "pixel everything,
-nothing glossy or rounded" is **superseded for chrome** (see the end of this
-section); it still describes the classic room's scene pieces and the sprite art.
-Spec: [`docs/design/3.0-design.md` §7](design/3.0-design.md).
+**3.1 home — the walnut desk.** Since 3.1 the home is a flat, top-down
+walnut desk ported from DEsk (https://github.com/fyzugx/DEsk, MIT, © 2026 The
+DEsk authors; licence in `public/licenses/DEsk-MIT.txt`). The painted isometric
+rooms, their corners, furniture and scene picker are gone from the home. The
+desk is the hero; the chrome rules below still apply to everything laid over it.
+
+| Area | Rule |
+|---|---|
+| Pictures | The desk, its back edge (Control Panel corner, red LED clock, post box), the brass plates, the drawer band, the bookcase / Control Panel / post-box views and the films between them are DEsk's own renders, copied into `public/desk/` by `scripts/desk-plates.py` (label cards wiped so the app can type its own). The paper packet is DEsk's too (`scripts/desk-packet.py`). Four drawer things (notepad, compass, folder, screwdriver) are cut from DEsk's drawer; the rest (diary, companion photo, card box, postcard, recipe card, night lamp) are drawn the way DEsk draws its icons, lit by its lamp (`scripts/desk-drawer-art.py`). Nothing is repainted by hand; `src/desk/layout.mjs` places every picture where DEsk places it on a 1440×900 desk and scales it. |
+| Light | One lamp. The 台灯 fader on the Control Panel sets `--desk-lamp` (`src/desk/useDeskLamp.js`); 场景配方 and 睡前模式 dim the same lamp. On launch the desk stays dark until the first pictures are in, then the lamp comes up. |
+| Paper | Dialogs are sheets of paper on the desk with a turned-down corner (`src/desk/SheetCorner.jsx`, DEsk's `curl.webp`): rest on it and 折起 · 展开 · 丢掉 are printed on its back. A folded sheet lies on the desk as a packet with its title. Settings is a sheet over a wire-bound pad with coloured sticky notes for its parts. |
+| Type on things | Brass plates are engraved (唱机 ↑, 唱片架 ↑, 信箱 ↑); binder cards and the index book's spine are typed at the picture's own size and scaled with it. |
+| Motion | DEsk's underdamped springs (`src/props/motion.mjs`): the drawer, looking up and down, sheets drawn from the folder, pages turned over the wire. 设置 › 桌面 › 动作快慢 scales them (利落 / 正常 / 从容); reduced motion skips the films and the springs. |
+| Sound | Desk sounds (paper, drawer, keys, brass, letters) are synthesised, ported from DEsk's `src/sfx.c` (`src/props/sfx.mjs`); 设置 › 桌面 › 桌面音效 turns them off. |
+| Phone (< 700 px) | The clock across the top, then three brass plates in a row (唱机 · 信箱 · 唱片架), the record player, the sleeves in two scrolling columns and the drawer at the bottom; the bookcase view pans sideways. |
+
+**3.0 direction — 高级温馨 (premium, warm, quiet).** The UI chrome steps back:
+warm walnut glass, one amber accent, soft corners and shadows, a readable sans
+face. The 2.x rule "pixel everything, nothing glossy or rounded" is
+**superseded for chrome** (see the end of this section); it still describes
+the sprite art. Spec: [`docs/design/3.0-design.md` §7](design/3.0-design.md).
 
 ## 3.0 UI chrome (current)
 
 | Area | Rule |
 |---|---|
-| Hierarchy | One hero per screen: home = the room, 唱片架 = covers, 专注 = the time, 日记 = the records. Everything else drops contrast (`--ui-text-2/3`, hairlines, low-alpha glass). |
+| Hierarchy | One hero per screen: home = the desk, 唱片架 = covers, 专注 = the time, 日记 = the records. Everything else drops contrast (`--ui-text-2/3`, hairlines, low-alpha glass). |
 | Tokens | New chrome reads the semantic `--ui-*` tokens in `src/styles/tokens.css` only; `--px-*` stay as the palette underneath and for scene art. Feature files use a fallback while streams merge: `var(--ui-surface, var(--px-surface))`. `css-lint.test.mjs` fails on an unknown `--ui-*` name. |
 | Panels | Dialogs, drawers, bars, chips: `--ui-surface` (walnut glass, α .88) + `backdrop-filter: blur(var(--ui-blur))` + 1px `--ui-line` + `--ui-shadow` / `--ui-shadow-lg`. Corners `--ui-radius-lg` 12px (panels, cards), `--ui-radius` 8px (buttons, fields), `--ui-radius-pill` (chips, segmented, switchers), `--ui-radius-sm` 4px (key caps, thumbnails). No 9-slice frames, bevels or hard offset shadows on chrome. Padding 20/24px; list rows ≥ 44px. |
 | Colour | Amber `--ui-accent` is the only accent: primary buttons, the open tab's rule, selected washes (`--ui-accent-soft`), slider knobs, focus ring. `--ui-good` / `--ui-danger` only for state. Text `--ui-text` / `--ui-text-2` / `--ui-text-3`. |
 | Buttons | `.pixel-button` (name kept for compatibility) is a ghost with a `--ui-line-strong` hairline; `.is-primary` amber with `--ui-accent-text`; `.is-quiet` text only; `.is-danger` danger ink + hairline. Hover = `--ui-surface-hover` wash, press = `scale(.98)`. The face reads `--btn-bg`, `--btn-bg-hover`, `--btn-ink`, `--btn-line`: set those from a feature file to tune one button without fighting the skin layer. Icon buttons (close, window controls): 36px, 8px corners, `--ui-text-2` → `--ui-text`. |
 | Fields | `--ui-field` well, 1px `--ui-line-strong`, 8px corners, amber edge on hover/focus, placeholder `--ui-text-3`, a smooth chevron on selects. Checkbox/radio take `accent-color`. Sliders: 4px pill track, 14px amber knob. |
 | Tabs / segmented | `.dialog-tabs`: quiet labels over a hairline, the open tab gets a 2px amber rule. `.segmented`: one pill, the chosen option is `--ui-accent-soft` with an amber hairline. |
-| Toasts, chips, tooltips | Toast = raised glass note (`--ui-surface-raised`), 12px corners, centred; errors add a 3px `--ui-danger` rule. Furniture / zone / corner labels and the hint pill are glass chips (`--ui-radius-pill`). Furniture labels are hidden until hover/focus; a hotspot the shell keeps on gets `data-hotspot` on `.home-furniture` and rests at low contrast. |
+| Toasts, chips, tooltips | Toast = raised glass note (`--ui-surface-raised`), 12px corners, centred; errors add a 3px `--ui-danger` rule. The hint pill is a glass chip (`--ui-radius-pill`). |
 | Type | `--ui-font` (the user's font from 设置 › 显示与字体; HarmonyOS Sans when installed, else the system CJK face — the bundled HarmonyOS files load only when 「内置」 is picked, 8 MB a weight). Scale `--ui-fs-xs…3xl` = 12/13/15/18/24/32/48px; line height `--ui-lh` 1.5 body / `--ui-lh-tight` 1.2 titles. Titles use the same family at 300–500 (`--ui-font-display`), never bold. |
 | Pixel face | `--ui-font-digits` (= `--px-font-en`, 8px grid) only for timer digits and small decorative labels (badges, kickers on the classic record card). Never on buttons, tabs, dialog titles, toasts or body copy; `css-lint.test.mjs` checks the chrome sheets. |
 | Motion | `--ui-dur` 240ms / `--ui-dur-slow` 320ms on `--ui-ease` `cubic-bezier(.2,.8,.2,1)`. Move only `transform` / `opacity` (colour washes may fade). Every entrance has a reduced-motion fallback: the `guards` layer kills animation and transition under `prefers-reduced-motion` and `html[data-desktop-reduce-motion=true]`; the home also honours `.is-reduced`. |
 | Glass & performance | 流畅模式 (`html[data-perf=low]`) and `prefers-reduced-transparency` drop every `backdrop-filter` in one rule (`perf-low.css`, `guards`) and make the surfaces near-opaque, so text keeps its contrast without the blur. `backdrop-filter` is only ever `blur(var(--ui-blur))` (lint). |
-| Contrast | Body text ≥ 4.5:1 on `--ui-surface` composited over the darkest (#000) and the lightest (#fff) room, and on a raised card / hover wash on top (numbers in `tokens.css`, enforced by `css-lint.test.mjs`): `--ui-text` 15.5 / 10.7, `--ui-text-2` 10.4 / 7.2, `--ui-text-3` 8.3 / 5.7, lowest pair 4.65 (`--ui-danger` on the hover wash over white). |
-| Classic home | `data-interface="classic"` keeps its pixel scene pieces — the toolbar HUD frames, shelf filters, the selection card and empty-shelf card, turntable copy, the cat's paper bubble — in the pixel face on its 12px grid. Shared chrome there (title bar, dialogs, buttons, fields, toasts) is 3.0. |
+| Contrast | Body text ≥ 4.5:1 on `--ui-surface` composited over the darkest (#000) and the lightest (#fff) background, and on a raised card / hover wash on top (numbers in `tokens.css`, enforced by `css-lint.test.mjs`): `--ui-text` 15.5 / 10.7, `--ui-text-2` 10.4 / 7.2, `--ui-text-3` 8.3 / 5.7, lowest pair 4.65 (`--ui-danger` on the hover wash over white). |
+| Original room | The original shelf home (`data-interface="classic"`) and the isometric room home were removed in 3.1. The desktop wallpaper (`wallpaper.html`) now draws the desk too: the back edge, the LED clock and a slip saying what plays. |
 
 Cascade: `guards → reset (tokens, fonts) → features (component files, app.css)
 → skin (styles/pixel-ui.css: the shared faces) → overrides (home.css, 流畅模式)`.
@@ -35,22 +49,29 @@ Layout lives in feature files; the skin sets faces only.
 
 ### Superseded: 2.x pixel chrome rules
 
-Kept for the classic room's scene pieces and the sprite art; **not** for new chrome.
+Kept for the sprite art; **not** for new chrome.
 
 | Area | 2.x rule | 3.0 status |
 |---|---|---|
 | Palette | Only the tokens in `src/styles/tokens.css` (`--px-*`). JS/canvas: `src/styles/tokens.ts`. | Palette stays; chrome reads `--ui-*`. |
-| Type | Pixel display face `--px-font-cn` (Fusion Pixel 12px) / `--px-font-en` (Silkscreen) for chrome, titles, buttons; snap to **12 px or 24 px**. Long prose uses `--px-font-body`. | Superseded for chrome; scene pieces and timer digits only. |
-| Shape | No radii. Panels use the 9-slice notched frame `border-image: var(--px-frame-img) 2 / 6px`; buttons get a 2 px bevel + hard shadow (`--px-shadow-*`). | Superseded for chrome; classic scene pieces only. |
+| Type | Pixel display face `--px-font-cn` (Fusion Pixel 12px) / `--px-font-en` (Silkscreen) for chrome, titles, buttons; snap to **12 px or 24 px**. Long prose uses `--px-font-body`. | Superseded for chrome; sprites and pixel timer digits only. |
+| Shape | No radii. Panels use the 9-slice notched frame `border-image: var(--px-frame-img) 2 / 6px`; buttons get a 2 px bevel + hard shadow (`--px-shadow-*`). | Superseded for chrome. |
 | Motion | `steps()` easing (`--px-ease`), durations `--px-dur-fast/med/slow`. Animate `translate/scale/opacity` only. Every animation has a reduced-motion fallback. | Sprites and scene props still move in frames; chrome eases (`--ui-ease`). |
 
-## Scene art rules (current)
+## Scene art rules (before 3.1)
+
+Everything from here through 「Fitting short windows」 describes the room home that
+3.1 replaced with the desk. The files are still in the repository (the scene
+catalogue, sky and weather code), and some pieces live on elsewhere — the
+pixel cat sprites in the desktop pet, the focus faces — but the home no longer
+draws a room, a sky, a scene deck or a room cat.
+
 
 | Area | Rule |
 |---|---|
 | Images | Pixel art always `image-rendering: pixelated` (`.px-crisp`). Room covers are centre-cropped and box-filtered to 64×64 then upscaled, preserving the album’s own colours. Original files remain intact for exports and future edits; generated coverless sleeves keep their hand-drawn 32×32 grid. |
 | Scenes | All six rooms are pixel art — Pixel Cabin 像素小屋 (default), Amber Cabin 琥珀小屋, Moonlit Study 月夜书桌, Forest Glade 林间书屋, Seaside 海边慢屋, Starry Night 星夜阁楼 (`labelEn` in `scene-catalog.mjs`). Vector sources stay in `public/room-scenes/*.svg`; the room shows `*-cabin-pixel.png` (`scene.view`), made with `scripts/art/pixelate-scene.py`; Forest / Seaside / Starry Night are repainted by `scripts/art/paint-scenes.mjs` + `paint-scene.py` (wood grain, boards, planks, rug weave, sparse grain, one warm lamp in five dithered steps with hue-shifted ramps and a 1 px rim, 56 colours, 4× nearest). Every window's sky is transparent in the art: the live sky shows through it. |
-| v2.1 home | The painted isometric rooms and corner close-ups (`public/room-scenes/v21/`) are the 3.0 reference look; chrome over them uses the glass above and never covers more than it must. |
+| v2.1 home | The painted isometric rooms and corner close-ups (`public/room-scenes/v21/`) were the 3.0 reference look; 3.1 replaced them with the desk. |
 
 ## Live layers on top of the art
 
@@ -88,7 +109,8 @@ starter accessory; the sprout hat joins the existing earned wardrobe.
 | Scene pixel renders | derived from the repo's own scene art | project licence |
 | Sky, weather, moon, repainted Forest / Seaside / Starry Night | drawn in code in this repo (`src/sky-paint.mjs`, `scripts/art/paint-scene.py`) | project licence |
 | SunCalc (sun / moon position, moon phase) | github.com/mourner/suncalc @21449f3, vendored as `src/sky-suncalc.mjs` | BSD-2-Clause (`public/licenses/suncalc-LICENSE.txt`) |
-| Weather data (desktop, opt-in) | open-meteo.com forecast API, fetched in the Electron main process | data CC BY 4.0, attributed in 设置 › 房间与桌宠 |
+| Weather data (desktop, opt-in) | open-meteo.com forecast API, fetched in the Electron main process | data CC BY 4.0, attributed in 窗外与天气 (the drawer) and 设置 › 小屋与奶糖 › 天空 |
+| Desk, bookcase, Control Panel, post box, drawer, paper, films, desk sounds and springs | DEsk, github.com/fyzugx/DEsk | MIT, © 2026 The DEsk authors (`public/licenses/DEsk-MIT.txt`) |
 | Cloud puff layout idea | Skycons (darkskyapp/skycons) | CC0 — idea only, no code |
 | Focus faces (专注画面), pixel digits | drawn in code in this repo (`src/focus/faces/`, `src/focus/pixel-digits.mjs`) | project licence |
 | Flip-card maths (squash + darken) | ported from github.com/alexanderk23/gluqlo `render_digits()` (font not used) | ISC-style, notice in `public/licenses/gluqlo-LICENSE.txt` |
@@ -182,10 +204,8 @@ Generated by `python3 scripts/art/v118-art.py` (after `scripts/art/cat-mood.py`)
 
 The journal's letter spot (`LetterSpot` in `CabinJournal.jsx`) reads the v1.18 letter slots above through `JOURNAL_SPRITES` (`letter-envelope`, `letter-seal`, `mailbox`, `letter-paper`, `cat-deliver`). Same-size placeholders live in `public/letters/` (`envelope.png` 96×32, `wax-seal.png` 16×16, `mailbox.png` 64×32, `letter-paper.png` 32×32, `cat-deliver.png` 512×64) and are swapped in by `<img onError>` only when a final file is missing, so the build works before #59 lands. Use: mailbox frame 1 (flag up) while a letter is unread — on the journal letter header and the 统计 tab's 信箱 entry; sealed envelope (frame 0) + wax seal until 「拆开看看」, with `cat-deliver` played once (8 × 140 ms, holds the last frame; reduced motion shows the last frame only); the open envelope (frame 1) and `letter-paper` tile behind an opened AI letter.
 
-## Scene warmth and typography
+## Typography
 
-Cool sea and night windows remain part of each room’s identity. The turntable plinth stays warm wood; brass and small cool rim highlights connect it to the room without becoming its brightest object. Seaside and Starry Night use darker wood ramps in `DECK_PALETTES`, mirrored by the existing CSS variables.
-
-Prose uses `--ui-font` (see 3.0 UI chrome); Fusion Pixel remains the display face of the classic room's scene pieces and the timer digits. Original HarmonyOS files stay intact and available when explicitly selected. The bundled font licence prohibits modifications, so the default loading fix does not subset or alter those files.
+Prose uses `--ui-font` (see 3.0 UI chrome); Fusion Pixel remains the face of the pixel sprites' labels and the timer digits. Original HarmonyOS files stay intact and available when explicitly selected. The bundled font licence prohibits modifications, so the default loading fix does not subset or alter those files.
 
 Paper’s small secondary text uses `--px-paper-dim`; bevel colours are decorative. The semantic text/background contrast pairs are checked in `src/css-lint.test.mjs`.

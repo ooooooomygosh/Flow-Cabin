@@ -12,6 +12,7 @@ import { normalizeLetter, LETTERS_KEY, LETTER_EVENT } from '../src/ai/ai-model.m
 import { saveJournalEntry, JOURNAL_KEY, JOURNAL_CHANGE } from '../src/focus/journal-entries.mjs';
 import { SOUVENIR_PREFIX, SOUVENIR_KEYS } from '../src/focus/souvenirs.mjs';
 import { onboardingSeed } from './app-version.mjs';
+import { openDrawerThing, drawer } from './settings-actions.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const output = path.resolve(process.env.SOUVENIR_OUTPUT || path.join(root, 'desktop/test-results/souvenirs'));
@@ -62,7 +63,7 @@ const stored = page => page.evaluate(keys => keys.flatMap(key => {
 const section = page => page.getByRole('region', { name: '小屋纪念物', exact: true });
 async function openPanel(page) {
   const intro=page.getByRole('button',{name:'知道了',exact:true});if(await intro.isVisible())await intro.click();
-  await page.locator('.home-pet-portrait').click();
+  await openDrawerThing(page, '伙伴'); // 伙伴 is a thing in the desk's drawer
   await page.locator('.cat-panel[open]').waitFor();
   await section(page).waitFor();
 }
@@ -99,7 +100,6 @@ async function newPage(context, label, { open = true } = {}) {
 async function run(name, test, { open = true, prepare } = {}) {
   if (process.env.SOUVENIR_FILTER && !name.includes(process.env.SOUVENIR_FILTER)) return;
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'zh-CN', reducedMotion: 'reduce' });
-  await context.addInitScript(()=>localStorage.setItem('flow-cabin-interface-v1','beta'));
   await context.addInitScript((seed) => { window.__onboardingSeed = seed; }, onboardingSeed());
   await context.addInitScript(focusKey => {
     if (location.origin === 'null') return;
@@ -152,9 +152,10 @@ try {
   const panelGate = new Promise(resolve => { releasePanel = resolve; });
   try {
     await run('cold-pet-panel-first-click-and-controls', async page => {
-      const cat = page.locator('button.home-pet-portrait'), panel = page.locator('.cat-panel[open]');
-      await cat.waitFor({ state: 'visible' });
-      assert.equal(heldRequests, 1, 'CatPanel module is still blocked when the cat becomes visible');
+      // 伙伴 in the desk's drawer opens the panel; the first press counts even while its module is still loading.
+      const cat = drawer(page).getByRole('button', { name: '伙伴', exact: true }), panel = page.locator('.cat-panel[open]');
+      await page.locator('.desk-pull').click({ position: { x: 24, y: 8 } }); await cat.waitFor({ state: 'visible' });
+      assert.equal(heldRequests, 1, 'CatPanel module is still blocked when 伙伴 becomes reachable');
       const intro=page.getByRole('button',{name:'知道了',exact:true});if(await intro.isVisible())await intro.click();await cat.click();
       const beforeRelease = await page.evaluate(() => ({ ...window.__catOpenEvents, dialogs: document.querySelectorAll('.cat-panel').length }));
       assert.deepEqual(beforeRelease, { doubleClicks: 0, openEvents: 0, dialogs: 0 });
@@ -164,13 +165,12 @@ try {
       await panel.waitFor({ timeout: 5000 });
       await section(page).waitFor();
       assert.deepEqual(await page.evaluate(() => window.__catOpenEvents), { doubleClicks: 0, openEvents: 0 }, 'opens after release without another input or event');
-      assert.equal(await cat.getAttribute('aria-expanded'), 'true');
       await shot(page, '00-cold-first-open');
 
       await page.keyboard.press('Escape'); await panel.waitFor({ state: 'detached' });
-      assert.equal(await cat.getAttribute('aria-expanded'), 'false');
-      assert.equal(await cat.evaluate(node => document.activeElement === node), true, 'Escape returns focus to the cat');
-      await cat.click(); await panel.waitFor();
+      // The drawer slid shut as 伙伴 was taken out: the focus comes back to the desk, not to <body>.
+      assert.equal(await page.evaluate(() => { const e = document.activeElement; return Boolean(e && e !== document.body && document.querySelector('.desk-home').contains(e) && !e.closest('[inert]')); }), true, 'Escape returns focus to the desk');
+      await openDrawerThing(page, '伙伴'); await panel.waitFor();
       const portrait = panel.locator('.cat-portrait canvas');
       const pixels = node => Array.from(node.getContext('2d').getImageData(0, 0, node.width, node.height).data);
       const beforeAccessory = await portrait.evaluate(pixels);
@@ -186,8 +186,7 @@ try {
       await panel.getByRole('button', { name: '不戴', exact: true }).click();
       await page.waitForFunction(() => document.querySelector('.cat-portrait canvas')?.dataset.accessory === '');
       await page.keyboard.press('Escape'); await panel.waitFor({ state: 'detached' });
-      assert.equal(await cat.getAttribute('aria-expanded'), 'false');
-      report.coldLoad.controls = ['Escape and focus return', 'portrait click', 'accessory pixels and persistence', 'close button', 'normal portrait click', 'unequip'];
+      report.coldLoad.controls = ['Escape and focus return', '伙伴 in the drawer', 'accessory pixels and persistence', 'close button', 'normal portrait click', 'unequip'];
     }, { open: false, prepare: async context => {
       await context.addInitScript(() => {
         window.__catOpenEvents = { doubleClicks: 0, openEvents: 0 };

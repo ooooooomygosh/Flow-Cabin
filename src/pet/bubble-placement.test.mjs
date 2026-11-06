@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { CAT_FLOOR_MIN, catFloorOffset, chooseBubbleOffset } from './bubble-placement.mjs';
 import { ROOM_SCENES } from '../scene-catalog.mjs';
-import { readFileSync } from 'node:fs';
 
 const view = { left: 0, right: 1000, top: 0, bottom: 700 };
 const cat = { left: 400, right: 500, top: 500, bottom: 600 };
@@ -35,11 +34,9 @@ test('cat floor: the painted floor line maps to a bottom offset, clamped to the 
   assert.equal(catFloorOffset({ height: 900, sceneY: 23.5, k: .994, floor: 900 }), CAT_FLOOR_MIN);
   assert.equal(catFloorOffset({ height: 900, sceneY: 0, k: 1, floor: Number.NaN }), null);
 });
-test('every scene has a floor on the painted floor, mirrored in companion-room.css', () => {
-  const css = readFileSync(new URL('../companion-room.css', import.meta.url), 'utf8');
+// (The --scene-floor CSS mirror went with the isometric room renderer in 3.1; the catalog keeps the floors.)
+test('every scene has a floor on the painted floor', () => {
   for (const scene of ROOM_SCENES) {
     assert.ok(scene.floor > Math.max(...scene.geometry.rows.map(([y, h]) => y + h)) && scene.floor < 1086, `${scene.id} floor is below the shelf, inside the art`);
-    const rule = [...css.matchAll(/([^{}]+)\{--scene-floor:(\d+)\}/g)].find(([, selector]) => selector.includes(`[data-room-look=${scene.id}]`));
-    assert.equal(Number(rule?.[2]), scene.floor, `${scene.id} --scene-floor`);
   }
 });

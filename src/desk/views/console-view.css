@@ -1,0 +1,154 @@
+@layer guards, reset, features, skin, overrides;
+@layer features {
+/* The record player's console (src/desk/views/ConsoleView.jsx): DEsk's Control Panel
+   (https://github.com/fyzugx/DEsk, MIT, (c) 2026 The DEsk authors). The picture is DEsk's; what is
+   drawn over it here follows DEsk's draw.c: the tube's phosphor, the meters' cards and needles, the
+   knob's pointer, the levers' lamps, the faders' handles, the legends stamped on the panel. The
+   controls themselves are transparent buttons and sliders over the parts of the picture. */
+.console-view { position: absolute; inset: 0; cursor: default; color: #f3e6c8; --console-tube: "DejaVu Sans Mono", "Liberation Mono", "Noto Sans Mono CJK SC", "Noto Sans Mono", ui-monospace, monospace; --console-engrave: "Nimbus Sans", "Liberation Sans", Arimo, var(--ui-font, system-ui), sans-serif; --console-type: "Nimbus Mono PS", "Courier Prime", "Liberation Mono", "Noto Sans Mono CJK SC", ui-monospace, monospace; }
+.console-frame { position: absolute; inset: 0; overflow: hidden; }
+.console-picture { position: absolute; }
+.console-base { position: absolute; inset: 0; width: 100%; height: 100%; display: block; filter: brightness(var(--desk-lamp, 1)); transition: filter .35s ease-out; }
+.console-live { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+
+/* the tube (cc_face_crt): the gun comes up, the raster breathes, a hum bar drifts up the glass */
+.console-crt-phosphor { opacity: 0; transition: opacity 1.4s cubic-bezier(.3, .6, .4, 1) .12s; }
+.console-crt-face.is-warm .console-crt-phosphor { opacity: 1; animation: console-crt-breathe 2.7s ease-in-out infinite; }
+.console-crt-grat line { stroke: rgb(133, 189, 148); stroke-opacity: .2; stroke-width: .9; }
+.console-crt-trace { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.console-crt-trace.is-halo { stroke: rgb(51, 224, 77); stroke-opacity: .12; stroke-width: 20; }
+.console-crt-trace.is-soft { stroke: rgb(92, 255, 112); stroke-opacity: .34; stroke-width: 7; }
+.console-crt-trace.is-core { stroke: rgb(209, 255, 219); stroke-opacity: .9; stroke-width: 2.6; }
+.console-crt-text text { font-family: var(--console-tube); fill: rgb(194, 255, 204); fill-opacity: .95; letter-spacing: .02em; }
+.console-crt-head { font-size: 22px; font-weight: 700; }
+.console-crt-sub, .console-crt-line { font-size: 14px; }
+.console-crt-line { fill-opacity: .82; }
+.console-crt-foot { font-size: 12px; }
+.console-crt-bar { stroke: rgb(66, 235, 87); stroke-opacity: .28; stroke-width: 3; stroke-linecap: round; }
+.console-crt-bar.is-lit { stroke: rgb(194, 255, 204); stroke-opacity: .95; }
+.console-crt-head-dot { fill: rgb(240, 255, 240); }
+.console-crt-hum { animation: console-crt-hum 12s linear infinite; }
+@keyframes console-crt-breathe { 0%, 100% { opacity: 1; } 37% { opacity: .93; } 61% { opacity: .98; } 83% { opacity: .95; } }
+@keyframes console-crt-hum { from { transform: translateY(-90px); } to { transform: translateY(300px); } }
+
+/* the meters (cc_face_battery / cc_face_net): printed card, the scale, the legend, the needle */
+.console-meter-scale line { stroke: rgb(46, 41, 33); stroke-opacity: .85; stroke-width: 1; }
+.console-meter-scale line.is-long { stroke-width: 2; }
+.console-meter-legend { font: 700 19px var(--console-engrave); fill: rgb(51, 43, 33); fill-opacity: .9; letter-spacing: .04em; }
+.console-meter-word { font: 700 25px var(--console-engrave); fill: rgb(158, 41, 31); fill-opacity: .92; }
+.console-meter-socket { fill: rgb(26, 23, 20); fill-opacity: .55; }
+.console-needle { stroke: rgb(41, 36, 31); stroke-linecap: round; }
+.console-needle.is-red { stroke: rgb(158, 41, 31); }
+.console-needle-shadow { stroke: #000; stroke-opacity: .3; stroke-linecap: round; }
+.console-needle-hub { fill: rgb(26, 23, 20); }
+.console-lamp { opacity: 0; transition: opacity .22s ease-out; mix-blend-mode: screen; }
+.console-lamp.is-on { opacity: 1; }
+
+/* the legends stamped on the panel (cc_legend), and ON / OFF either side of a lever */
+.console-legend { font: 600 16px var(--console-engrave); fill: rgb(214, 201, 168); fill-opacity: .78; letter-spacing: .06em; }
+.console-legend.is-small { font-size: 14px; fill-opacity: .4; }
+.console-legend.is-small.is-lit { fill: rgb(224, 214, 184); fill-opacity: .95; }
+.console-legend.is-key { font-size: 13px; fill: rgb(170, 158, 132); fill-opacity: .85; }
+.console-lever-face.is-dim .console-legend { fill-opacity: .4; }
+.console-lever-sprite { opacity: 0; transition: opacity .09s linear; }
+.console-lever-sprite.is-shown { opacity: 1; }
+.console-key-tag { font: 600 12px var(--console-engrave); fill: rgb(214, 201, 168); fill-opacity: .72; letter-spacing: .05em; }
+
+/* the faders: the handle and the shadow it throws to the left, away from the lamp */
+.console-fader-shadow { fill: rgb(30, 26, 20); fill-opacity: .36; }
+.console-fader-face image { transition: x .12s ease-out; }
+
+/* the push buttons: pressed in, lit from inside, a caption round the bottom of the ring */
+.console-button-press { fill: #000; opacity: 0; transition: opacity .06s; }
+.console-button-face.is-pressed .console-button-press { opacity: .3; }
+.console-button-glow { fill: rgb(255, 196, 120); opacity: 0; mix-blend-mode: screen; transition: opacity .3s; }
+.console-button-face.is-lit .console-button-glow { opacity: .22; }
+.console-caption { font: 700 13px var(--console-engrave); fill: rgb(42, 29, 12); fill-opacity: .88; letter-spacing: .08em; }
+.console-caption.is-lip { fill: rgb(255, 236, 190); fill-opacity: .35; transform: translateY(1px); }
+
+/* the front plate: engraved, as the plates on the desk are */
+.console-plate-text { font: italic 800 28px var(--console-engrave); fill: rgb(38, 24, 6); fill-opacity: .94; letter-spacing: .12em; transform-box: fill-box; transform-origin: center; transform: skewX(-9deg); }
+.console-plate-text.is-lip { fill: rgb(255, 238, 196); fill-opacity: .45; }
+
+/* the controls: the picture's own parts are the controls; these only take the hand and the keys */
+.console-hit { position: absolute; z-index: 2; margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; color: inherit; cursor: pointer; touch-action: none; }
+.console-hit:disabled, .console-hit[aria-disabled="true"] { cursor: default; }
+.console-hit:focus-visible { outline: 2px solid rgba(255, 214, 140, .95); outline-offset: 2px; }
+.console-crt, .console-knob, .console-button { border-radius: 50%; }
+.console-crt { touch-action: manipulation; }
+.console-button:not(:disabled):hover, .console-crt:hover, .console-key:hover, .console-plate:hover, .console-lever:not(:disabled):hover { background: rgba(255, 236, 190, .05); }
+.console-knob { cursor: grab; }
+.console-knob:active { cursor: grabbing; }
+.console-fader { cursor: ew-resize; }
+
+/* paper: the slip under the panel, the source card, the 待播 roll (DEsk's typed paper) */
+.console-slip, .console-card, .console-roll-paper { background: linear-gradient(176deg, #f4ecd6, #e9dfc3 70%, #dfd2b1); color: rgb(44, 36, 24); box-shadow: 0 1px 0 rgba(255, 255, 255, .5) inset, -6px 8px 14px rgba(8, 5, 2, .55); font: 13px/1.45 var(--console-type); }
+.console-slip { position: absolute; z-index: 2; box-sizing: border-box; height: auto; max-height: 11%; padding: 6px 10px; overflow: auto; transform: rotate(-.6deg); }
+.console-slip-keys { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; }
+.console-type-key { padding: 3px 6px; border: 0; border-radius: 0; background: none; color: inherit; font: inherit; letter-spacing: .02em; cursor: pointer; text-decoration: underline; text-decoration-color: rgba(44, 36, 24, .3); text-underline-offset: 3px; }
+.console-type-key:hover:not(:disabled) { background: rgba(80, 52, 14, .1); }
+.console-type-key:disabled { opacity: .45; cursor: default; text-decoration: none; }
+.console-type-key[aria-pressed="true"] { color: rgb(150, 30, 20); }
+.console-type-key:focus-visible { outline: 2px solid rgba(120, 70, 20, .9); outline-offset: 1px; }
+.console-alert, .console-notice, .console-local-app, .console-matches { margin: 0 0 4px; }
+.console-alert { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; color: rgb(150, 30, 20); }
+.console-local-app small { margin-left: 6px; opacity: .75; font-size: 12px; }
+.console-matches { display: flex; flex-direction: column; align-items: flex-start; }
+.console-tracks { display: inline-flex; }
+
+.console-card-place { position: absolute; z-index: 4; }
+.console-card { position: absolute; right: 0; bottom: 0; box-sizing: border-box; width: 248px; padding: 10px 12px 8px; transform: rotate(.8deg); }
+.console-card-title { margin: 0 0 6px; font-size: 12px; opacity: .78; }
+.console-source-rows { display: flex; flex-direction: column; }
+.console-source-rows button { display: flex; align-items: center; gap: 8px; padding: 4px 4px; border: 0; border-radius: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.console-source-rows button:hover:not(:disabled), .console-source-rows button.is-on { background: rgba(80, 52, 14, .1); }
+.console-source-rows button:disabled { opacity: .5; cursor: default; }
+.console-source-rows button:focus-visible { outline: 2px solid rgba(120, 70, 20, .9); outline-offset: -2px; }
+.console-source-rows small { margin-left: auto; font-size: 12px; opacity: .8; }
+.console-card-lamp { width: 9px; height: 9px; flex: none; border-radius: 50%; background: rgb(70, 52, 30); box-shadow: inset 0 1px 1px rgba(0, 0, 0, .5); }
+.console-card-lamp.is-lit { background: rgb(66, 220, 92); box-shadow: 0 0 6px 1px rgba(66, 255, 92, .7); }
+.console-card-foot { display: flex; justify-content: space-between; margin-top: 6px; border-top: 1px dashed rgba(44, 36, 24, .3); padding-top: 4px; }
+
+.console-roll { position: absolute; z-index: 5; top: 24px; right: 24px; width: min(340px, calc(100% - 32px)); max-height: calc(100% - 48px); display: flex; flex-direction: column; }
+.console-roll-slot { align-self: stretch; padding: 6px 12px; background: linear-gradient(#3a2c1c, #20160c); color: rgb(214, 201, 168); font: 600 13px var(--console-engrave); letter-spacing: .12em; box-shadow: 0 3px 6px rgba(0, 0, 0, .5); }
+.console-roll-paper { min-height: 0; overflow: auto; padding: 8px 10px 14px; margin: 0 8px; }
+
+.console-view .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* a phone: the panel across the top, fitted to the width; the paper under it */
+.console-view.is-phone { display: flex; flex-direction: column; justify-content: safe center; overflow: auto; overscroll-behavior: contain; }
+.console-view.is-phone > * { flex: none; }
+.console-slip-now { margin: 0 0 6px; font-size: 14px; }
+.console-slip-now small { display: block; font-size: 12px; opacity: .75; }
+.console-view.is-phone .console-frame { position: relative; inset: auto; }
+.console-view.is-phone .console-slip { position: relative; max-height: none; margin: 10px 12px; transform: none; }
+.console-view.is-phone .console-roll { position: relative; top: auto; right: auto; width: auto; max-height: none; margin: 0 12px 16px; }
+.console-view.is-phone .console-type-key { padding: 8px 8px; }
+.console-view.is-phone .console-card { width: 220px; }
+
+/* the room's light: the slip lies on the desk, under the same lamp */
+.console-slip { filter: brightness(calc(.25 + .75 * var(--desk-lamp, 1))); }
+.console-view:focus { outline: none; }
+.console-view.is-reduced .console-crt-phosphor, .console-view.is-reduced .console-lever-sprite, .console-view.is-reduced .console-fader-face image, .console-view.is-reduced .console-lamp { transition: none; }
+.console-view.is-reduced .console-crt-face.is-warm .console-crt-phosphor, .console-view.is-reduced .console-crt-hum { animation: none; }
+}
+/* the progress under the tube: a native range made invisible, over the phosphor bar (the shared
+   pixel range styles come later in the cascade, so these sit in overrides) */
+@layer overrides {
+.console-view .console-seek { z-index: 3; margin: 0; appearance: none; -webkit-appearance: none; background: transparent; border: 0; box-shadow: none; cursor: pointer; }
+.console-view .console-seek::-webkit-slider-runnable-track { height: 100%; border: 0; background: transparent; box-shadow: none; }
+.console-view .console-seek::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 100%; border: 0; background: transparent; box-shadow: none; }
+.console-view .console-seek::-moz-range-track { border: 0; background: transparent; }
+.console-view .console-seek::-moz-range-thumb { width: 14px; height: 14px; border: 0; background: transparent; box-shadow: none; }
+.console-view .console-tracks { position: relative; }
+.console-view .pocket-track { display: inline-flex; align-items: center; gap: 4px; }
+.console-view .pocket-track > span { font-size: 12px; opacity: .7; }
+.console-view .pocket-track-button { display: inline-flex; align-items: center; gap: 6px; max-width: 220px; min-height: 0; padding: 3px 6px; border: 0; border-radius: 0; background: rgba(80, 52, 14, .08); color: inherit; font: inherit; box-shadow: none; cursor: pointer; }
+.console-view .pocket-track-button b { font-weight: 700; }
+.console-view .pocket-track-button em { overflow: hidden; font-style: normal; white-space: nowrap; text-overflow: ellipsis; }
+.console-view .pocket-tracklist { position: absolute; left: 0; bottom: calc(100% + 6px); z-index: 6; display: flex; flex-direction: column; width: 280px; max-height: 300px; overflow: auto; padding: 6px; background: linear-gradient(176deg, #f4ecd6, #e6dbbd); color: rgb(44, 36, 24); box-shadow: -6px 8px 14px rgba(8, 5, 2, .55); }
+.console-view .pocket-tracklist button { display: flex; gap: 8px; align-items: baseline; padding: 4px 6px; border: 0; border-radius: 0; background: none; color: inherit; font: inherit; text-align: left; box-shadow: none; cursor: pointer; }
+.console-view .pocket-tracklist button[aria-selected="true"], .console-view .pocket-tracklist button:hover, .console-view .pocket-tracklist button:focus-visible { background: rgba(80, 52, 14, .12); outline: none; }
+.console-view .pocket-tracklist small { display: block; font-size: 12px; opacity: .7; }
+.console-view.is-phone .pocket-tracklist { position: fixed; left: 12px; right: 12px; bottom: 12px; width: auto; }
+}

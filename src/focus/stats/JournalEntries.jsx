@@ -137,8 +137,8 @@ export default function JournalEntries() {
       setNotice('这一页的正文、标签和全部编辑历史已永久删除，已获得的纪念物保留。');
     } else setNotice(result.error);
   };
-  return <div className="fs-spread journal-entries-spread" role="tabpanel" aria-label="手记">
-    <section className="fs-page journal-entry-index" aria-label="手记列表">
+  return <div className="fs-spread paper journal-entries-spread" role="tabpanel" aria-label="手记">
+    <section className="fs-page is-turning journal-entry-index" aria-label="手记列表">
       <header><div><h3>我的手记</h3><p>把日子一页一页收好。</p></div><button type="button" className="journal-entry-new" disabled={Boolean(data.error)} onClick={create}>写一页</button></header>
       <label className="journal-entry-search"><span className="sr-only">搜索手记</span><input aria-label="搜索手记" type="search" placeholder="找一句话；#标签 只搜标签" value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === 'Escape' && query) { event.preventDefault(); event.stopPropagation(); setQuery(''); } }}/></label>
       <div className="journal-entry-filter">
@@ -157,7 +157,7 @@ export default function JournalEntries() {
       <small>{query.trim() ? `找到 ${rows.length} 页` : `${rows.length} 页`} · 永久删除会一并移除编辑历史</small>
     </section>
     <div className="fs-spine has-art" aria-hidden="true"/>
-    <section className="fs-page journal-entry-main" aria-label="手记内容">
+    <section className="fs-page is-turning journal-entry-main" aria-label="手记内容">
       {trash && purging && selected?.id === purging.id && selected.deletedAt != null && <div role="group" aria-label="确认永久删除手记">
         <p>永久删除这一页的正文、标签和全部编辑历史？此操作不能撤销。已获得的纪念物保留。</p>
         <p>本机只保留编号和删除时间，导入旧备份也不会恢复这一页。外部旧备份不会被擦除；在没有删除记录的新小屋仍可恢复旧备份。已寄信中的摘录和原随手记不受此操作影响。</p>

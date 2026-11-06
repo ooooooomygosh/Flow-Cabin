@@ -1,0 +1,70 @@
+@layer guards, reset, features, skin, overrides;
+@layer features {
+/* The records on the desk (RecordDesk.jsx): sleeves of card on the walnut, the record player, a paper slip.
+   Lit by DEsk's lamp, low on the right, so shadows fall up and to the left. */
+.record-desk { position: absolute; inset: 0; pointer-events: none; }
+.record-desk > * { pointer-events: auto; }
+.record-desk-grid { position: absolute; display: grid; align-content: start; }
+.record-desk-grid.is-scroll { overflow: auto; padding: 4px 4px 24px; scrollbar-width: none; }
+.desk-sleeve { position: relative; padding: 0; border: 0; border-radius: 0; background: #e9e1cf; cursor: pointer; transform: rotate(var(--tilt, 0deg)); box-shadow: -3px -3px 4px rgba(8, 5, 2, .42), -10px -9px 18px rgba(8, 5, 2, .28), inset 0 0 0 1px rgba(255, 246, 225, .16); transition: transform calc(.22s * var(--pace, 1)) var(--ease-drawer, ease-out), box-shadow calc(.22s * var(--pace, 1)); }
+.desk-sleeve img { display: block; width: 100%; height: 100%; object-fit: cover; }
+/* the card's edge: a hair of lighter card round the print, a little wear at the corners */
+.desk-sleeve::after { content: ''; position: absolute; inset: 0; box-shadow: inset 0 0 0 1px rgba(255, 250, 238, .22), inset 0 0 14px rgba(40, 24, 10, .18); pointer-events: none; }
+.desk-sleeve:hover { transform: rotate(var(--tilt, 0deg)) translate(-2px, -3px); box-shadow: -5px -6px 6px rgba(8, 5, 2, .38), -16px -16px 26px rgba(8, 5, 2, .3); }
+.desk-sleeve.is-chosen { transform: rotate(0deg) translate(-4px, -6px) scale(1.03); box-shadow: -7px -8px 8px rgba(8, 5, 2, .36), -22px -22px 34px rgba(8, 5, 2, .34), 0 0 0 2px rgba(255, 224, 160, .55); z-index: 1; }
+.desk-sleeve.is-on-deck img { filter: brightness(.82) saturate(.9); }
+.desk-sleeve.is-lifted { opacity: .35; }
+.desk-sleeve:focus-visible { outline: 2px solid rgba(255, 214, 140, .95); outline-offset: 3px; }
+.desk-sleeve-plain { display: flex; flex-direction: column; justify-content: flex-end; gap: 4px; height: 100%; padding: 12px; text-align: left; color: #2e2318; background: linear-gradient(160deg, #f1e8d4, #dccdab); font-family: var(--ui-font-display, Georgia), serif; }
+.desk-sleeve-plain b { font-size: 15px; line-height: 1.25; }
+.desk-sleeve-plain small { font-size: 12px; color: #5f4f37; }
+.desk-sleeve-tag { position: absolute; right: -6px; top: 10px; padding: 3px 8px; font: 500 12px/1.2 var(--ui-font-display, Georgia), serif; color: #2e2318; background: #efe6d3; box-shadow: -2px -2px 4px rgba(8, 5, 2, .35); transform: rotate(3deg); }
+.desk-sleeve-ghost { position: fixed; z-index: 40; pointer-events: none; object-fit: cover; transform: translate(-50%, -50%) rotate(-4deg); box-shadow: -14px -14px 30px rgba(8, 5, 2, .45); }
+
+/* the caption under the spread: what the chosen sleeve is, and the way through the piles */
+.record-desk-caption { position: absolute; display: flex; align-items: center; gap: 10px; min-height: 34px; padding: 6px 14px; color: #2e2318; background: #efe6d3; box-shadow: -4px -4px 8px rgba(8, 5, 2, .35); font-family: var(--ui-font-display, Georgia), serif; }
+.record-desk-what { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+.record-desk-what i { font-style: normal; color: #5f4f37; }
+.record-desk-caption button, .record-desk-slip button, .record-desk-empty button { padding: 4px 10px; border: 0; border-bottom: 1px solid rgba(46, 35, 24, .45); border-radius: 0; background: none; color: #2e2318; font: 500 13px/1.2 var(--ui-font-display, Georgia), serif; cursor: pointer; }
+.record-desk-caption button:hover, .record-desk-slip button:hover, .record-desk-empty button:hover { color: #7d5019; border-bottom-color: #7d5019; }
+.record-desk-caption button:disabled { opacity: .35; cursor: default; }
+.record-desk-pages { display: inline-flex; align-items: center; gap: 4px; }
+.record-desk-pages small { font-size: 12px; color: #5f4f37; }
+
+/* the player */
+.record-desk-player { position: absolute; }
+.record-desk-platter { display: block; width: 100%; height: 100%; padding: 0; border: 0; border-radius: var(--ui-radius, 4px); background: none; cursor: pointer; }
+.record-desk-player.is-target .desk-turntable { filter: drop-shadow(0 0 14px rgba(255, 214, 140, .55)); }
+.desk-turntable { position: relative; display: block; width: 100%; height: 100%; }
+.desk-tt-layer { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.desk-tt-disc { position: absolute; border-radius: 50%; will-change: transform; animation: tt-turn 1.8s linear infinite; animation-play-state: paused; }
+.desk-tt-disc svg { display: block; width: 100%; height: 100%; }
+.desk-turntable.is-playing .desk-tt-disc { animation-play-state: running; }
+.desk-turntable.is-still .desk-tt-disc { animation: none; }
+.desk-tt-arm { transition: transform calc(.9s * var(--pace, 1)) var(--ease-drawer, ease-out); }
+.desk-turntable.is-still .desk-tt-arm { transition: none; }
+@keyframes tt-turn { to { transform: rotate(360deg); } }
+.record-desk-closeup { position: absolute; left: 3%; bottom: 3%; padding: 2px 6px; border: 0; border-radius: 0; background: none; color: rgba(255, 228, 182, .78); font: 500 12px/1.2 var(--ui-font-display, Georgia), serif; letter-spacing: .12em; cursor: pointer; text-shadow: 0 1px 1px rgba(0, 0, 0, .6); }
+.record-desk-closeup:hover { color: #ffe6b8; }
+.record-desk-platter:focus-visible, .record-desk-closeup:focus-visible { outline: 2px solid rgba(255, 214, 140, .95); outline-offset: 2px; }
+
+/* the slip of paper under the player */
+.record-desk-slip { position: absolute; display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 10px 16px; color: #2e2318; background: #efe6d3; box-shadow: -4px -4px 8px rgba(8, 5, 2, .36), -12px -12px 22px rgba(8, 5, 2, .22); transform: rotate(-.6deg); font-family: var(--ui-font-display, Georgia), serif; }
+.record-desk-slip p { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.record-desk-slip-title { font-size: 16px; font-weight: 600; }
+.record-desk-slip-sub { font-size: 13px; color: #54452f; }
+.record-desk-slip-row { display: flex; align-items: center; gap: 4px; margin-top: 4px; }
+.record-desk-slip-time { margin-left: 6px; font: 12px/1 ui-monospace, 'Courier Prime', monospace; color: #5f4f37; }
+.record-desk-slip-bar { flex: 1; height: 2px; margin-left: 8px; background: rgba(46, 35, 24, .18); }
+.record-desk-slip-bar i { display: block; height: 100%; background: #a3301d; }
+
+/* nothing on the shelf yet: a note on the desk */
+.record-desk-empty { position: absolute; padding: 18px 22px; color: #2e2318; background: #efe6d3; box-shadow: -4px -4px 8px rgba(8, 5, 2, .35), -14px -14px 26px rgba(8, 5, 2, .25); transform: rotate(-1.2deg); font-family: var(--ui-font-display, Georgia), serif; }
+.record-desk-empty p { margin: 0 0 10px; font-size: 15px; line-height: 1.6; }
+.record-desk-empty-to { color: #a3301d; letter-spacing: .2em; font-size: 13px; }
+
+.record-desk.is-phone .record-desk-closeup { left: 6%; bottom: 4%; }
+}
+@layer guards {
+  @media (prefers-reduced-motion: reduce) { .desk-tt-disc { animation: none !important; } .desk-tt-arm, .desk-sleeve { transition: none !important; } }
+}

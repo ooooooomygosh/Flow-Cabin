@@ -1,0 +1,148 @@
+@layer guards, reset, features, skin, overrides;
+@layer features {
+/* The desk (src/desk/DeskHome.jsx): DEsk's walnut desk and what stands on it, all pictures DEsk rendered
+   (https://github.com/fyzugx/DEsk, MIT, (c) 2026 The DEsk authors). Nothing here is drawn by CSS but the
+   engraving on the plates and the shade of the open drawer: the rest is laid over the pictures as buttons. */
+.desk-home { position: fixed; inset: 0; overflow: hidden; background: #120a05; color: #f3e6c8; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+.desk-wood { position: absolute; inset: 0; background: #2a1a10 center top / cover no-repeat; }
+.desk-top { position: absolute; inset: 0; will-change: transform; }
+.desk-piece { position: absolute; display: block; pointer-events: none; }
+
+/* Brass plates: the plate is DEsk's (blank); the words are engraved here, dark with a light lip under them. */
+.desk-plate { position: absolute; padding: 0; border: 0; border-radius: 0; background: transparent center / 100% 100% no-repeat; cursor: pointer; color: #3b2a12; }
+.desk-engraving { position: absolute; display: flex; align-items: center; justify-content: center; gap: .3em; font: 600 13px/1 var(--ui-font, system-ui), sans-serif; letter-spacing: .14em; color: rgba(38, 24, 6, .94); text-shadow: 0 1px 0 rgba(255, 238, 196, .45), 0 -1px 0 rgba(30, 18, 4, .25); white-space: nowrap; pointer-events: none; }
+.desk-engraving b { font-weight: 700; font-size: 1.25em; }
+.desk-console-plate .desk-engraving { left: 7%; right: 66%; top: 46%; bottom: 13%; }
+.desk-shelf-plate { z-index: 3; }
+.desk-shelf-plate .desk-engraving { left: 13%; right: 12%; top: 10%; bottom: 10%; justify-content: space-between; }
+.desk-plate.is-brass .desk-engraving { left: 13%; right: 12%; top: 10%; bottom: 10%; justify-content: space-between; }
+.desk-plate:hover .desk-engraving { color: rgba(40, 26, 8, .95); }
+.desk-plate:focus-visible, .desk-post:focus-visible, .desk-clock-face:focus-visible, .desk-clock-key:focus-visible, .desk-drawer-thing:focus-visible, .desk-pull:focus-visible, .desk-spot:focus-visible, .desk-look-back:focus-visible { outline: 2px solid rgba(255, 214, 140, .95); outline-offset: 2px; }
+
+/* The clock: its glass is a canvas (ClockFace.jsx); its four keys show when the hand comes near, as on DEsk. */
+.desk-clock { position: absolute; }
+.desk-clock-face { position: absolute; inset: 0 25% 0 0; padding: 0; border: 0; border-radius: 0; background: none; cursor: pointer; }
+.desk-clock-face.focus-badge::before { content: none; }  /* the clock's own glass says it runs: no lamp of the toolbar badge */
+.desk-clock-glass { display: block; position: absolute; left: 0; top: 0; width: 133.33%; height: 100%; pointer-events: none; }
+.desk-clock-keys { position: absolute; top: 0; height: 100%; background: center / 100% 100% no-repeat; opacity: 0; transition: opacity .2s; }
+.desk-clock.is-awake .desk-clock-keys, .desk-clock:focus-within .desk-clock-keys { opacity: 1; }
+.desk-clock-key { position: absolute; padding: 0; border: 0; border-radius: 0; background: none; cursor: pointer; }
+.desk-clock-key::after { content: ''; position: absolute; left: 23.5%; top: 53%; width: 8%; aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%; background: rgba(120, 30, 20, .55); }
+.desk-clock-key.is-on::after { background: #ff5a3a; box-shadow: 0 0 5px 1px rgba(255, 70, 40, .8); }
+/* 音乐 while something plays: its lamp beats slowly (the bottom bar that used to say so is gone) */
+.desk-clock-key.is-playing::after { background: #ff5a3a; animation: desk-key-beat 1.4s ease-in-out infinite; }
+@keyframes desk-key-beat { 0%, 100% { box-shadow: 0 0 2px 0 rgba(255, 70, 40, .5); } 50% { box-shadow: 0 0 7px 2px rgba(255, 70, 40, .9); } }
+.desk-clock:not(.is-awake) .desk-clock-keys:has(.is-playing) { opacity: .7; }
+.desk-key-print { position: absolute; z-index: 1; white-space: nowrap; pointer-events: none; display: flex; align-items: center; justify-content: center; font: 400 12px/1 'HarmonyOS Sans SC Bundled', var(--ui-font, system-ui), sans-serif; color: rgba(198, 194, 186, .66); text-shadow: 0 1px 0 rgba(0, 0, 0, .55); transform: scale(calc(var(--desk-s, 1) * .62)); }
+
+/* A sheet folded away (折起): DEsk's packet, the sheet's thing and title printed on it; click opens it again. */
+.desk-packet { position: absolute; z-index: 2; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 6px 12px 16px; border: 0; border-radius: 0; background: center / 100% 100% no-repeat; cursor: pointer; filter: drop-shadow(calc(var(--sx, -.54) * 10px) calc(var(--sy, -.43) * 10px) 5px rgba(8, 5, 2, .5)); animation: desk-packet-down .28s ease-out both; }
+.desk-packet img { display: block; max-width: 42%; max-height: 52%; object-fit: contain; filter: saturate(.9) contrast(.96); mix-blend-mode: multiply; }
+.desk-packet-name { max-width: 100%; overflow: hidden; font: 600 15px/1.2 var(--ui-font-display, Georgia), serif; color: #3b2f22; text-overflow: ellipsis; white-space: nowrap; }
+.desk-packet:hover { filter: drop-shadow(calc(var(--sx, -.54) * 14px) calc(var(--sy, -.43) * 14px) 7px rgba(8, 5, 2, .55)) brightness(1.04); }
+.desk-packet:focus-visible { outline: 2px solid rgba(255, 214, 140, .95); outline-offset: 2px; }
+@keyframes desk-packet-down { from { opacity: 0; } to { opacity: 1; } }
+.desk-post { position: absolute; padding: 0; border: 0; border-radius: 0; background: center / 100% 100% no-repeat; cursor: pointer; }
+
+/* The drawer: DEsk's band, rising from below as the desk slides up by the same distance. */
+.desk-drawer { position: absolute; bottom: 0; background: center / 100% 100% no-repeat; will-change: transform; }
+.desk-drawer-thing { position: absolute; transform: translate(-50%, -50%); padding: 0; border: 0; border-radius: 0; background: none; cursor: pointer; }
+.desk-drawer-thing > img { display: block; filter: drop-shadow(-3px -2px 3px rgba(8, 5, 2, .45)); transition: filter .18s, transform .18s; }
+.desk-drawer-thing.is-hot > img { filter: drop-shadow(-5px -4px 6px rgba(8, 5, 2, .5)) brightness(1.12); }
+/* The companion's photograph: the pet's own picture printed in the top photo of the stack (PET_WINDOW). */
+.desk-pet-photo { position: absolute; overflow: hidden; pointer-events: none; }
+.desk-pet-photo img { display: block; width: 92%; height: 92%; margin: 8% auto 0; object-fit: contain; object-position: 50% 100%; image-rendering: pixelated; filter: sepia(.18) saturate(.92) contrast(.96) drop-shadow(-2px -1px 2px rgba(60, 30, 10, .35)); }
+.desk-pet-photo::after { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(255, 255, 255, .26), rgba(255, 255, 255, .04) 45%, rgba(255, 255, 255, 0) 50%); box-shadow: inset 0 0 6px rgba(70, 40, 15, .35); }
+.desk-drawer-name { position: absolute; left: 50%; top: 100%; transform: translate(-50%, 2px); font: 500 13px/1.2 var(--ui-font-display, Georgia), serif; color: rgba(246, 236, 210, .92); text-shadow: 0 1px 2px rgba(0, 0, 0, .7); white-space: nowrap; opacity: 0; transition: opacity .15s; pointer-events: none; }
+.desk-drawer-thing.is-hot .desk-drawer-name { opacity: 1; }
+.desk-shade { position: absolute; left: 0; right: 0; top: 0; background: rgb(5, 4, 2); cursor: pointer; }
+.desk-pull { position: absolute; left: 0; right: 0; padding: 0; border: 0; border-radius: 0; background: none; cursor: pointer; }
+.desk-pull-handle { position: absolute; left: 50%; bottom: 6px; width: 96px; height: 8px; transform: translateX(-50%); border-radius: var(--ui-radius-sm, 2px); background: linear-gradient(#e2c27c, #a8783a 55%, #6d4a1c); box-shadow: 0 1px 0 rgba(255, 236, 190, .4) inset, -2px -2px 4px rgba(0, 0, 0, .45); opacity: .9; }
+.desk-home.is-drawer-out .desk-pull-handle { opacity: 0; }
+
+/* Looking up: the film plays on a canvas over everything, then the view itself, with buttons on its things. */
+.desk-look { position: fixed; inset: 0; z-index: 20; cursor: pointer; }
+/* where a view does not reach the window (the console on a phone): the wall behind it, darkening down to the desk */
+.desk-look.is-there { background: linear-gradient(#4a4236, #3b342b 55%, #24180f); }
+.desk-film { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.desk-look.is-there .desk-film { display: none; }
+.desk-view { position: absolute; display: block; }
+.desk-spot { position: absolute; padding: 0; border: 0; border-radius: var(--ui-radius-sm, 2px); background: transparent; cursor: pointer; transition: background .15s, box-shadow .15s; }
+.desk-spot:hover { background: rgba(255, 236, 190, .06); box-shadow: 0 0 0 1px rgba(255, 228, 170, .22) inset; }
+.desk-look-back { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); padding: 6px 14px; border: 0; border-radius: var(--ui-radius-sm, 2px); background: rgba(18, 10, 5, .55); color: rgba(246, 236, 210, .9); font: 500 13px/1.2 var(--ui-font-display, Georgia), serif; letter-spacing: .1em; cursor: pointer; }
+
+/* A view wider than the window (a phone) is a strip that slides sideways. */
+.desk-pan { position: absolute; inset: 0; overflow: hidden; }
+.desk-pan.is-panning { overflow-x: auto; overflow-y: hidden; scrollbar-width: none; overscroll-behavior-x: contain; }
+.desk-pan.is-panning::-webkit-scrollbar { display: none; }
+.desk-pan-strip { position: relative; height: 100%; }
+
+/* The bookcase (ShelfView.jsx): every binder is a slice of DEsk's picture over itself, clipped to its
+   outline. Under the hand it comes forward off the board, as DEsk's do (larger, lower, its shadow longer
+   toward the lamp's far side); taken down, it stays pulled out until it is put back. */
+.shelf-view { position: absolute; inset: 0; pointer-events: none; }
+.shelf-stand { position: absolute; padding: 0; border: 0; border-radius: 0; background: none; cursor: pointer; pointer-events: none; transform-origin: 50% 0; transition: transform .22s cubic-bezier(.2, .8, .3, 1.15), filter .22s; }
+.shelf-stand-slice { position: absolute; inset: 0; display: block; background-repeat: no-repeat; pointer-events: auto; }
+.shelf-stand:hover, .shelf-stand:focus-visible { z-index: 2; transform: translateY(1.6%) scale(1.045); filter: drop-shadow(-6px 10px 9px rgba(5, 3, 1, .62)) brightness(1.08); }
+.shelf-stand.is-taken { z-index: 2; transform: translateY(5%) scale(1.07); filter: drop-shadow(-9px 16px 12px rgba(5, 3, 1, .7)) brightness(.92); }
+.shelf-stand:focus-visible { outline: 0; }
+.shelf-stand:focus-visible .shelf-stand-slice { box-shadow: inset 0 0 0 2px rgba(255, 214, 140, .95); }
+
+/* the label card in the binder's pocket: typed once, the name over a rule and the count in red */
+.shelf-card { position: absolute; display: grid; grid-template-rows: 54% 40%; justify-items: center; align-items: center; padding: 0 8px; box-sizing: border-box; color: rgba(41, 30, 22, .8); transform-origin: 0 0; }
+.shelf-card::after { content: ''; position: absolute; left: 22%; right: 22%; top: 57%; height: 1px; background: rgba(77, 56, 38, .5); }
+.shelf-card-name { display: block; max-width: 100%; align-self: end; padding-bottom: 6%; font-family: 'Courier Prime', 'Courier New', 'STFangsong', 'FangSong', 'Songti SC', serif; font-size: 12.5px; font-weight: 700; line-height: 1.15; letter-spacing: 0; text-align: center; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; word-break: break-all; text-shadow: 0 0 .6px rgba(41, 30, 22, .5); }
+.shelf-card-count { display: block; font-family: 'Courier Prime', 'Courier New', ui-monospace, monospace; font-size: 13px; font-style: normal; font-weight: 700; line-height: 1; color: rgba(107, 36, 26, .9); letter-spacing: .08em; }
+
+/* the index book's spine: gold tooled on the red lettering-piece and between the rules */
+.shelf-spine-label, .shelf-spine-count { position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; color: #e6c46a; text-shadow: 0 1px 0 rgba(40, 10, 4, .7); font-family: 'Songti SC', 'Noto Serif CJK SC', 'STSong', serif; font-weight: 700; line-height: 1; transform-origin: 0 0; pointer-events: none; }
+.shelf-spine-label b { font-size: 12px; letter-spacing: .1em; }
+.shelf-spine-count b { font-size: 13px; font-family: Georgia, 'Times New Roman', serif; }
+.shelf-spine-count small { font-size: 12px; transform: scale(.75); opacity: .85; }
+
+/* the empty library: a letter left on the desk under the bookcase */
+.shelf-letter-note { position: absolute; display: flex; flex-direction: column; gap: 6px; padding: 12px 16px 12px; box-sizing: border-box; border: 0; border-radius: 0; cursor: pointer; pointer-events: auto; text-align: left; color: #3a2c1c; transform: rotate(-2.2deg);
+  font-family: 'Kaiti SC', 'STKaiti', 'KaiTi', 'LXGW WenKai', 'Songti SC', serif; line-height: 1.5;
+  background: linear-gradient(transparent 0 calc(100% - 1px), rgba(79, 110, 150, .12) 0) 0 10px / 100% 1.5em, linear-gradient(172deg, #f6efdd, #e9dcbc);
+  box-shadow: -6px 9px 10px rgba(5, 3, 1, .55), inset 0 0 0 1px rgba(110, 85, 50, .25); transition: transform .2s, box-shadow .2s; }
+.shelf-letter-note:hover, .shelf-letter-note:focus-visible { transform: rotate(-1.4deg) translateY(-3px); box-shadow: -8px 13px 14px rgba(5, 3, 1, .6), inset 0 0 0 1px rgba(110, 85, 50, .25); }
+.shelf-letter-note:focus-visible { outline: 2px solid rgba(255, 214, 140, .95); outline-offset: 3px; }
+.shelf-letter-to { font-size: 12px; letter-spacing: .3em; color: #8c2615; }
+.shelf-letter-sign { align-self: flex-end; font-weight: 700; color: #8c2615; }
+
+/* brass plates screwed to the desk's front edge: what else the bookcase is for */
+.shelf-view-plates { position: fixed; left: 0; right: 0; bottom: 12px; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 10px; padding: 0 16px; pointer-events: none; }
+.shelf-view-plate { min-width: 124px; height: 32px; padding: 0 24px; border: 0; border-radius: 0; background: center / 100% 100% no-repeat; cursor: pointer; pointer-events: auto; white-space: nowrap;
+  font: 600 13px/32px var(--ui-font, system-ui), sans-serif; letter-spacing: .08em; color: rgba(38, 24, 6, .94); text-shadow: 0 1px 0 rgba(255, 238, 196, .45), 0 -1px 0 rgba(30, 18, 4, .25); filter: drop-shadow(-2px 3px 3px rgba(5, 3, 1, .55)); }
+.shelf-view-plate:hover { filter: drop-shadow(-2px 3px 3px rgba(5, 3, 1, .55)) brightness(1.1); }
+.shelf-view-plate:focus-visible { outline: 2px solid rgba(255, 214, 140, .95); outline-offset: 2px; }
+.desk-home.is-phone .shelf-view-plates { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; pointer-events: auto; scrollbar-width: none; padding-bottom: env(safe-area-inset-bottom, 0px); }
+.desk-home.is-phone .shelf-view-plate { flex: none; min-width: 112px; height: 44px; line-height: 44px; }
+.desk-home.is-reduced .shelf-stand, .desk-home.is-reduced .shelf-letter-note { transition: none; }
+
+/* The lamp coming up (DEsk: the room starts dark and the lamp comes up as it is made). */
+.desk-dark { position: absolute; inset: 0; z-index: 30; background: radial-gradient(ellipse at 75% 82%, rgba(18, 10, 5, .55), #050302 70%); pointer-events: none; }
+.desk-home .desk-wood, .desk-home .desk-piece, .desk-home .desk-plate, .desk-home .desk-post, .desk-home .desk-drawer { transition: filter .9s ease-out; }
+.desk-home:not(.is-lit) .desk-wood, .desk-home:not(.is-lit) .desk-piece { filter: brightness(.25); }
+/* the desk lamp (the console's 台灯 fader, useDeskLamp) */
+.desk-home.is-lit .desk-wood, .desk-home.is-lit .desk-top, .desk-home.is-lit .desk-drawer, .desk-home .desk-view { filter: brightness(var(--desk-lamp, 1)); }
+
+.desk-window { position: absolute; right: 8px; z-index: 4; display: flex; padding: 2px 2px 2px 14px; -webkit-app-region: drag; }
+/* the window's own keys, pressed into the wood rather than floated over it: no box, a carved shadow (light from the lamp, low right) */
+.desk-window .desktop-controls button { color: rgba(240, 222, 190, .62); background: none; filter: drop-shadow(-1px -1px 0 rgba(10, 6, 3, .7)) drop-shadow(1px 1px 0 rgba(255, 228, 182, .12)); transition: color .15s; }
+.desk-window .desktop-controls button:hover, .desk-window .desktop-controls button:focus-visible { color: #ffe6b8; }
+/* 收起工具 (H) leaves the room and the clock: the window buttons step aside (the tool strip keeps 退出全屏). */
+:root.room-zen:not(.room-zen-tools) .desk-window { visibility: hidden; }
+/* ...and so does the rest of the desk: the spread of records, the drawer, the packets. What plays stays. */
+.desk-home.is-drawer-out .desk-window { visibility: hidden; }
+.desk-home.is-zen :is(.record-desk-grid, .record-desk-caption, .record-desk-empty, .desk-drawer, .desk-pull, .desk-packet) { visibility: hidden; }
+/* Android draws edge to edge: the desk keeps clear of the status bar, the gesture bar and a side cutout (src/mobile/mobile.css). */
+:root[data-platform=android] .desk-home { top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px)); bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)); left: var(--safe-area-inset-left, env(safe-area-inset-left, 0px)); right: var(--safe-area-inset-right, env(safe-area-inset-right, 0px)); }
+.desk-home .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* A phone: the drawer is narrower than the window's width allows a whole band, so its felt is centred. */
+.desk-home.is-phone .desk-drawer-name { font-size: 12px; }
+.desk-home.is-phone .desk-drawer-thing { min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; }
+.desk-home.is-reduced .desk-clock-keys, .desk-home.is-reduced .desk-drawer-thing > img { transition: none; }
+.desk-home.is-reduced .desk-clock-key.is-playing::after { animation: none; }
+}

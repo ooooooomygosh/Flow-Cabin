@@ -1,6 +1,7 @@
 /** Silent, offline state/data regression pass. Native fullscreen is a mock. */
 import assert from 'node:assert/strict';
 import { launchChromium } from './launch-browser.mjs';
+import { openSettingsSection, openLibrary, closeLibrary, openAlbumWall, openFocus as openDeskFocus, openDrawerThing, libraryDialog } from './settings-actions.mjs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -18,9 +19,9 @@ await fs.mkdir(output, { recursive: true });
 let browser, server;
 const focusState = page => page.evaluate(key => JSON.parse(localStorage.getItem(key) || '{}'), KEY);
 // 专辑墙 opens from 整理唱片架 (the console's shelf panel).
-const openAlbumWall = async page => { const tools = page.getByRole('button',{name:'整理唱片架',exact:true}); if (await tools.getAttribute('aria-expanded') !== 'true') await tools.click(); await page.getByRole('region',{name:'整理唱片架',exact:true}).getByRole('button',{name:'专辑墙',exact:true}).click(); };
-// 3.0: 这一段 / 待办 / 声音 (+ 学习 with the study lab). 随手记 is the 便签 inside 这一段.
-const openFocus = async (page, tab = '这一段') => { tab = { 番茄钟: '这一段', 随手记: '这一段' }[tab] || tab; const badge = page.locator('.focus-badge'); await badge.waitFor({timeout:30000}); if (await badge.getAttribute('aria-expanded') === 'false') await badge.click(); await page.locator('.focus-dock').waitFor(); await page.locator('.focus-dock').getByRole('tab', { name: tab, exact: true }).click(); };
+// 3.1: 专注 is a close-up of the desk, opened from its red clock: 这一段 / 待办 / 随手记 / 声音 (+ 学习 with the study lab).
+const openFocus = async (page, tab = '这一段') => { tab = { 番茄钟: '这一段' }[tab] || tab; const badge = page.locator('.focus-badge'); await badge.waitFor({timeout:30000}); if (await badge.getAttribute('aria-expanded') === 'false') await openDeskFocus(page); await page.locator('.focus-dock').waitFor(); await page.locator('.focus-dock').getByRole('tab', { name: tab, exact: true }).click(); };
+const closeDialogs = async page => { for (let i = 0; i < 4 && await page.locator('dialog[open]').count(); i++) await page.keyboard.press('Escape'); };
 const screenshot = async (page, name) => { for (const [width, height] of [[1440,900],[960,600]]) { await page.setViewportSize({width,height}); await page.screenshot({ path: path.join(output, `${name}-${width}x${height}.png`), animations:'disabled', timeout:15000 }); } };
 // screenshot() resizes the window twice, and the cat panel follows the repositioned cat asynchronously.
 // Return drag handles only after the chip, cat and the chip's real hit-test target have stayed put
@@ -90,19 +91,16 @@ try {
   };
   await run('cat-feeding-spends-fish-cheers-the-cat-and-caps-friendly',async page=>{
     await page.evaluate(key=>{const v=JSON.parse(localStorage.getItem(key)||'{}');v.rewards={...(v.rewards||{}),fish:4};localStorage.setItem(key,JSON.stringify(v));localStorage.setItem('flow-cabin-cat-mood-v1',JSON.stringify({v:1,mood:40,tier:'droopy',updatedAt:Date.now(),feeds:[],totalFeeds:2,unlockedActions:[]}));},KEY);await page.reload();
-    await page.locator('.room-cat').waitFor();assert.equal(await page.locator('.room-cat').getAttribute('data-mood'),'droopy');
     await page.evaluate(()=>{window.__fed=[];window.addEventListener('cabin:cat-fed',e=>window.__fed.push(e.detail));});
-    // The panel is lazy-loaded; keep asking until its listener is mounted.
+    // The pet portrait on the desk opens 伙伴与装扮; the panel is lazy-loaded, so keep asking until its listener is mounted.
     const panel=page.getByRole('dialog',{name:'小猫'});await page.waitForFunction(()=>{if(document.querySelector('[role=dialog][aria-label="小猫"]'))return true;window.dispatchEvent(new Event('cabin-open-cat'));return false;},null,{polling:250,timeout:15000}).catch(()=>{});await panel.waitFor();
     await panel.getByRole('button',{name:'喂一条'}).click();
     await page.waitForFunction(()=>window.__fed.length===1);const fed=await page.evaluate(()=>window.__fed[0]);
     assert.deepEqual(Object.keys(fed).sort(),['at','fishLeft','mood','tier','totalFeeds']);assert.equal(fed.fishLeft,3);assert.equal(fed.mood,52);assert.equal(fed.tier,'ok');assert.equal(fed.totalFeeds,3);assert.equal((await focusState(page)).rewards.fish,3);
-    assert.match(await panel.locator('.cat-care-note').innerText(),/伸懒腰/);assert.match(await page.locator('.room-cat').getAttribute('class'),/cat--eating/);await screenshot(page,'cat-fed');
-    // A 小鱼干 dragged with the real mouse from the panel chip onto the cat feeds it too.
-    {const {from,to}=await stableDragHandles(page);await page.mouse.move(from.x+from.width/2,from.y+from.height/2);await page.mouse.down();await page.mouse.move(to.x+to.width/2,to.y+to.height/2,{steps:12});await page.mouse.move(to.x+to.width/2+2,to.y+to.height/2,{steps:2});await page.mouse.up();}
-    await page.waitForFunction(()=>window.__fed.length===2,null,{timeout:5000});assert.equal((await focusState(page)).rewards.fish,2);
-        // A 小鱼干 dropped on the cat feeds it too.
-    await page.evaluate(()=>{const dt=new DataTransfer();dt.setData('application/x-cabin-fish','1');const cat=document.querySelector('.room-cat');for(const type of ['dragover','drop'])cat.dispatchEvent(new DragEvent(type,{dataTransfer:dt,bubbles:true,cancelable:true}));});
+    assert.match(await panel.locator('.cat-care-note').innerText(),/伸懒腰/);await screenshot(page,'cat-fed');
+    // The same 喂一条 from the panel again, then the request the desktop pet and the tray send (cabin:cat-feed-request).
+    await panel.getByRole('button',{name:'喂一条'}).click();await page.waitForFunction(()=>window.__fed.length===2,null,{timeout:5000});assert.equal((await focusState(page)).rewards.fish,2);
+    await page.evaluate(()=>window.dispatchEvent(new CustomEvent('cabin:cat-feed-request')));
     await page.waitForFunction(()=>window.__fed.length===3);assert.equal((await focusState(page)).rewards.fish,1);
     const store=await page.evaluate(()=>JSON.parse(localStorage.getItem('flow-cabin-cat-mood-v1')));assert.equal(store.totalFeeds,5);assert.equal(store.feeds.length,3);assert.equal(store.feeds[2].fishLeft,1);assert.deepEqual(store.unlockedActions,['stretch']);
     // Daily cap: friendly, no fish spent.
@@ -149,7 +147,7 @@ try {
   await run('intention-and-pressed-record-card',async page=>{
     // 3.0 loop: one line of intention, Enter starts; a finished round of 5+ minutes is pressed into a record.
     await page.evaluate(key=>{const v=JSON.parse(localStorage.getItem(key)||'{}');v.settings={...v.settings,focusMin:5,shortMin:1,sleepPolicy:'count'};localStorage.setItem(key,JSON.stringify(v));},KEY);await page.reload();
-    await openFocus(page);assert.equal(await page.locator('.focus-dock').getByRole('tab').count(),3,'这一段 / 待办 / 声音');
+    await openFocus(page);assert.equal(await page.locator('.focus-dock').getByRole('tab').count(),4,'这一段 / 待办 / 随手记 / 声音');
     assert.equal(await page.locator('.focus-dock .smart-turntable-entry').count(),0,'智能唱片机 stays in its lab');
     assert.equal(await page.locator('.focus-dock .focus-presets').count(),0,'rhythms sit behind 节奏');await page.getByRole('button',{name:/^节奏/}).click();assert.equal(await page.locator('.focus-dock .focus-presets [role=radio]').count(),4);await page.getByRole('button',{name:/^节奏/}).click();
     await page.getByLabel('这一段做什么？').fill('读论文第二节');await page.getByLabel('这一段做什么？').press('Enter');
@@ -199,10 +197,10 @@ try {
     const today=page.locator('.focus-dock .focus-today');await today.waitFor();
     assert.match(await today.innerText(),/今日\s*1\s*轮\s*·\s*25\s*分钟/,'playback does not add to focus minutes; the legacy/log pair is deduplicated');
     assert.match(await today.innerText(),/本周来了\s*\d+\s*天/);assert.doesNotMatch(await page.locator('.focus-dock').innerText(),/连续/,'no streak in the focus panel');
-    assert.equal(await page.locator('.focus-dock').getByRole('tab').count(),3,'这一段 / 待办 / 声音');
+    assert.equal(await page.locator('.focus-dock').getByRole('tab').count(),4,'这一段 / 待办 / 随手记 / 声音');
     assert.equal(await page.locator('.focus-dock').getByLabel('每日专注目标分钟').count(),0,'goal is edited in Settings only');
     // Let the dock settle after the viewport changes above before using the keyboard.
-    await page.evaluate(()=>document.activeElement?.blur());await page.keyboard.press('l');
+    await closeDialogs(page);await page.evaluate(()=>document.activeElement?.blur());await page.keyboard.press('l');
     const journal=page.getByRole('dialog',{name:'唱片日记'});await journal.waitFor();
     assert.equal(await journal.getByRole('tab',{name:'这一周'}).getAttribute('aria-selected'),'true','唱片日记 opens on 这一周');
     assert.equal(await journal.getByRole('tab',{name:'信箱'}).count(),0,'信箱 only with the letters lab');
@@ -285,7 +283,7 @@ try {
     assert.equal(await page.evaluate(()=>document.documentElement.classList.contains('room-zen')),false,'H while typing must not hide the tools');
     assert.equal(await page.evaluate(()=>document.documentElement.classList.contains('room-corner-open')),false,'T while typing must not open 唱机特写');
     assert.equal(await page.locator('.listening-corner').count(),0);
-    await page.evaluate(()=>document.activeElement?.blur());
+    await closeDialogs(page);await page.evaluate(()=>document.activeElement?.blur());
     await page.keyboard.press('l');
     const journal=page.getByRole('dialog',{name:'唱片日记'});
     await journal.waitFor();
@@ -297,7 +295,7 @@ try {
     await page.reload();await openFocus(page);assert.equal((await focusState(page)).timer.remaining,paused.timer.remaining);await page.getByRole('button',{name:'继续',exact:true}).click();const resumed=await focusState(page);assert.equal(resumed.timer.paused,false);assert.equal(resumed.timer.duration,paused.timer.duration);assert.equal(resumed.sessions.length,0);await screenshot(page,'timer-reloaded-resumed');
   });
   await run('backup-focus-failure-is-transactional-and-visible',async page=>{
-    await failStorage(page,true);await page.getByRole('button',{name:'设置',exact:true}).click();await page.getByRole('tab',{name:'数据',exact:true}).click();await page.getByRole('button',{name:'收藏与备份',exact:true}).click();
+    await failStorage(page,true);await openSettingsSection(page, '数据');await page.getByRole('button',{name:'收藏与备份',exact:true}).click();
     await page.getByLabel('导入备份文件').setInputFiles({name:'synthetic-backup.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify({kind:'FlowCabinBackup',items:[],focus:{notes:'导入的新内容',tasks:[],settings:{notify:false,chime:false}}}))});
     await page.getByRole('status').filter({hasText:'导入完成'}).waitFor();assert.equal((await focusState(page)).notes,'原有随手记','nothing is replaced before the inline confirm');
     await page.getByRole('group',{name:'替换本机记录'}).getByRole('button',{name:'替换这些内容',exact:true}).click();await page.getByRole('alert').filter({hasText:'未能保存'}).waitFor();
@@ -328,8 +326,7 @@ try {
   }, { keys: backupKeys, memory });
   const backupStorage = page => page.evaluate(keys => Object.fromEntries(Object.entries(keys).map(([domain, key]) => [domain, localStorage.getItem(key)])), backupKeys);
   const openBackup = async page => {
-    await page.getByRole('button', { name: '设置', exact: true }).click();
-    await page.getByRole('tab', { name: '数据', exact: true }).click();
+    await openSettingsSection(page, '数据');
     await page.getByRole('button', { name: '收藏与备份', exact: true }).click();
     await page.locator('.backup-dialog').waitFor();
   };
@@ -392,7 +389,7 @@ try {
     const merged = Object.fromEntries(Object.entries(await backupStorage(page)).map(([key, value]) => [key, JSON.parse(value)]));
     for (const domain of ['focusSessions', 'letters', 'playbackSessions']) assert.equal(merged[domain].length, 2, domain + ' retains local history');
     assert.deepEqual(merged.catCare.rewarded, ['local', 'imported']); assert.equal(merged.catMood.feeds.length, 2);
-    await page.waitForFunction(() => document.querySelector('.room-cat')?.dataset.mood === 'happy');
+    await page.waitForFunction(() => JSON.parse(localStorage.getItem('flow-cabin-cat-mood-v1') || '{}').tier === 'happy');
     const events = await page.evaluate(() => ({ keys: window.__backupRefreshes, completions: window.__backupCompletions }));
     for (const key of Object.values(backupKeys)) assert(events.keys.includes(key), key + ' refresh');
     assert.equal(events.completions, 0);
@@ -489,14 +486,16 @@ try {
     await page.evaluate(end=>{const real=Date.now.bind(Date),offset=end+60000-real();Date.now=()=>real()+offset;window.dispatchEvent(new Event('focus'));},state.timer.endsAt);
     await page.waitForFunction(key=>JSON.parse(localStorage.getItem(key)).timer.due===true,KEY);
     state=await focusState(page);assert.equal(state.timer.phase,'focus','overtime keeps the round going');assert.equal(state.rewards.fish,0);
-    await page.locator('.focus-badge-time',{hasText:'+'}).waitFor();
+    await page.waitForFunction(()=>/专注中/.test(document.querySelector('.desk-clock-face')?.getAttribute('aria-label')||'')); // the LED clock keeps the round on its face (it has no separate overtime '+')
     await page.getByRole('button',{name:'结束这一轮，去休息'}).click();
     await page.waitForFunction(key=>JSON.parse(localStorage.getItem(key)).rewards?.fish===1,KEY);
     state=await focusState(page);assert.equal(state.sessions.at(-1).completed,true);assert.ok(state.sessions.at(-1).end-state.sessions.at(-1).start>=7*60000,'the extra minute counts');
   });
   await run('pomodoro-start-and-zen-enter-focus-display-tools-hide-separately',async page=>{
     const shown=()=>page.locator('.focus-display').count();
-    await openFocus(page);await page.getByRole('button',{name:'开始专注',exact:true}).click();await page.locator('.focus-display').waitFor();await screenshot(page,'focus-display-auto-enter');
+    // 开始专注 on the 这一段 sheet with 沉浸 on: the sheet goes back on the desk and the red clock fills the window.
+    await openFocus(page);await page.getByRole('button',{name:'开始专注',exact:true}).click();await page.locator('.focus-display').waitFor();assert.equal(await page.locator('.focus-closeup').count(),0,'the sheet is put back');
+    await page.locator('.focus-display .display-led').waitFor();await screenshot(page,'focus-display-auto-enter');
     const bar=page.getByRole('navigation',{name:'专注画面工具'});await bar.getByRole('button',{name:'暂停专注'}).click();await page.getByRole('group',{name:'专注已暂停'}).waitFor();await screenshot(page,'focus-display-pause-offer');
     await page.getByRole('button',{name:'留在这里',exact:true}).click();assert.equal(await page.getByRole('group',{name:'专注已暂停'}).count(),0);assert.equal(await shown(),1,'staying keeps the display');
     await bar.getByRole('button',{name:'继续专注'}).click();await bar.getByRole('button',{name:'暂停专注'}).click();await page.getByRole('button',{name:'返回小屋',exact:true}).first().click();assert.equal(await shown(),0,'the pause offer returns to the cabin');
@@ -508,7 +507,7 @@ try {
     assert.equal(await page.locator('.focus-display').count(),1,'clicking the record does not close 沉浸');await screenshot(page,'focus-display-record-now');
     assert.equal(await page.evaluate(()=>getComputedStyle(document.querySelector('.room-now-playing')||document.body).visibility),await page.locator('.room-now-playing').count()?'hidden':'visible');
     await page.keyboard.press('Escape');assert.equal(await shown(),0,'Esc leaves 沉浸');
-    await page.getByRole('navigation',{name:'小屋工具'}).getByRole('button',{name:'沉浸',exact:true}).click();await page.locator('.focus-display').waitFor();await page.mouse.click(40,300);assert.equal(await shown(),0,'a click on empty space leaves 沉浸');
+    await page.evaluate(()=>document.activeElement?.blur());await page.keyboard.press('z');await page.locator('.focus-display').waitFor();await page.mouse.click(40,300);assert.equal(await shown(),0,'a click on empty space leaves 沉浸');
     await page.evaluate(()=>document.activeElement?.blur());await page.keyboard.press('h');assert.equal(await page.evaluate(()=>document.documentElement.classList.contains('room-zen')),true);assert.equal(await shown(),0,'收起工具 does not open the focus display');await screenshot(page,'tools-hidden');
     await page.keyboard.press('h');assert.equal(await page.evaluate(()=>document.documentElement.classList.contains('room-zen')),false);
     assert.equal(await page.getByRole('button',{name:'整窗'}).count(),0,'整窗 is folded into 沉浸');
@@ -520,27 +519,27 @@ try {
     await page.evaluate(()=>window.dispatchEvent(new CustomEvent('cabin:open-journal',{detail:{tab:'weekly'}})));await page.locator('.focus-display').waitFor({state:'detached'});
  },{autoEnter:true});
   await run('immersive-tools-keep-focus-button-clickable',async page=>{
-    await page.getByRole('button',{name:'收起工具',exact:true}).click();await page.getByRole('button',{name:'显示工具',exact:true}).click();await screenshot(page,'immersive-tools-focus-entry');await openFocus(page);assert.equal(await page.locator('.focus-dock').count(),1);await screenshot(page,'immersive-tools-focus-open');
+    await page.evaluate(()=>document.activeElement?.blur());await page.keyboard.press('h');await page.getByRole('button',{name:'显示工具',exact:true}).click();await screenshot(page,'immersive-tools-focus-entry');await openFocus(page);assert.equal(await page.locator('.focus-dock').count(),1);await screenshot(page,'immersive-tools-focus-open');
   });
   await run('album-wall-escape-preserves-lower-layers',async page=>{
-    await openFocus(page,'随手记');
+    // 专辑墙 opens above 唱片架; Esc takes down only the top layer, never fullscreen or the tools state beneath.
     await page.evaluate(()=>{document.documentElement.dataset.desktopFullscreen='true';window.dispatchEvent(new CustomEvent('album-desktop-fullscreen',{detail:true}));});
-    await page.getByRole('button',{name:'收起工具',exact:true}).click();await page.getByRole('button',{name:'显示工具',exact:true}).click();
-    await openAlbumWall(page);await page.getByRole('dialog',{name:'专辑墙编辑器',exact:true}).waitFor();await screenshot(page,'album-wall-over-focus');await page.keyboard.press('Escape');
-    assert.equal(await page.locator('.album-wall-overlay').count(),0);assert.equal(await page.locator('.focus-dock').count(),1,'only the top album-wall modal should close');
+    await page.keyboard.press('h');await page.getByRole('button',{name:'显示工具',exact:true}).click();
+    await openAlbumWall(page);await page.getByRole('dialog',{name:'专辑墙编辑器',exact:true}).waitFor();await screenshot(page,'album-wall-over-shelf');await page.keyboard.press('Escape');
+    assert.equal(await page.locator('.album-wall-overlay').count(),0);assert.equal(await libraryDialog(page).count(),1,'only the top album-wall modal should close');assert.equal(await page.locator('.desk-look.is-there').count(),1,'the view of the bookcase stays under the shelf');
     assert.equal(await page.evaluate(()=>document.documentElement.classList.contains('room-zen')),true);assert.equal(await page.evaluate(()=>window.__nativeCommands.some(x=>x.endsWith('/fullscreen-exit'))),false);
     await openAlbumWall(page);await page.getByRole('dialog',{name:'专辑墙编辑器',exact:true}).waitFor();
     await page.getByRole('button',{name:'关闭专辑墙编辑器',exact:true}).dispatchEvent('keydown',{key:'Escape',repeat:true});assert.equal(await page.locator('.album-wall-overlay').count(),1,'held Escape must not unwind layers');
     await page.keyboard.press('Escape');await screenshot(page,'album-wall-escape-restored');
   });
   await run('twenty-mode-cycles-preserve-timer-and-notes',async page=>{
-    await openFocus(page,'随手记');await page.getByLabel('随手记内容').fill('模式切换保留的草稿');await openFocus(page);await page.getByRole('button',{name:'开始专注',exact:true}).click();const before=await focusState(page);await page.getByRole('button',{name:'收起专注工具',exact:true}).click();
+    await openFocus(page,'随手记');await page.getByLabel('随手记内容').fill('模式切换保留的草稿');await openFocus(page);await page.getByRole('button',{name:'开始专注',exact:true}).click();const before=await focusState(page);await closeDialogs(page);
+    // The desk has no window buttons of its own (F11 / the shell's): the native fullscreen state is driven directly.
     for(let i=0;i<20;i++){
-      await page.getByRole('button',{name:'进入全屏模式',exact:true}).click();assert.match(await page.evaluate(()=>window.__nativeCommands.at(-1)),/\/fullscreen$/);
       await page.evaluate(()=>{document.documentElement.dataset.desktopFullscreen='true';window.dispatchEvent(new CustomEvent('album-desktop-fullscreen',{detail:true}));});
       await page.evaluate(()=>document.activeElement?.blur());await page.keyboard.press('h');assert.equal(await page.evaluate(()=>document.documentElement.classList.contains('room-zen')),true);
       await page.keyboard.press('Escape');assert.equal(await page.evaluate(()=>document.documentElement.classList.contains('room-zen')),false);
-      await page.getByRole('button',{name:'退出全屏模式',exact:true}).click();await page.evaluate(()=>{document.documentElement.dataset.desktopFullscreen='false';window.dispatchEvent(new CustomEvent('album-desktop-fullscreen',{detail:false}));});
+      await page.evaluate(()=>{document.documentElement.dataset.desktopFullscreen='false';window.dispatchEvent(new CustomEvent('album-desktop-fullscreen',{detail:false}));});
     }
     const after=await focusState(page);assert.equal(after.timer.endsAt,before.timer.endsAt);assert.equal(after.notes,before.notes);assert.equal(after.sessions.length,0);
     await openFocus(page,'随手记');await page.getByLabel('随手记内容').focus();await page.keyboard.type(' z m ');assert.equal(await page.evaluate(()=>document.documentElement.classList.contains('room-zen')),false);await screenshot(page,'twenty-modes-retained-state');
@@ -548,11 +547,11 @@ try {
   let calls=0,pending;
   await run('collection-error-retry-has-distinct-states',async page=>{
     await page.getByRole('alert').filter({hasText:'模拟收藏读取失败'}).waitFor();assert.equal(await page.getByRole('status').count(),0,'failed collection is not still loading');
-    assert.equal(await page.locator('.cabin-room').count(),0,'migration does not mount mutating providers before collection and recovery point are ready');
+    assert.equal(await page.locator('.desk-home').count(),0,'migration does not mount mutating providers before collection and recovery point are ready');
     assert.equal(await page.locator('.onboarding-wizard').count(),0);await screenshot(page,'collection-error');
     await page.getByRole('button',{name:'重试',exact:true}).click();await page.waitForFunction(()=>document.querySelector('.app-startup-error button')?.disabled);
     assert.match(await page.getByRole('status').innerText(),/正在重新读取/);await screenshot(page,'collection-retrying');await pending.fulfill({json:{items}});
-    await page.locator('.room-record').first().waitFor();assert.equal(await page.locator('.app-startup-error, .app-error').count(),0);await screenshot(page,'collection-retry-success');
+    await page.locator('.desk-home').waitFor();assert.equal(await page.locator('.app-startup-error, .app-error').count(),0);await screenshot(page,'collection-retry-success');
   },{firstVisit:true,collection:route=>++calls===1?route.fulfill({status:503,json:{error:'模拟收藏读取失败'}}):(pending=route,undefined)});
   const STUDY_KEY = 'album-circle-study-v1:local-owner';
   const studyState = page => page.evaluate(key => JSON.parse(localStorage.getItem(key) || '{}'), STUDY_KEY);
@@ -606,29 +605,35 @@ try {
     await failStudyStorage(page,false);await page.locator('.study-review').focus();await page.keyboard.press('3');assert.equal((await studyState(page)).cards[0].memory.reps,1);await page.keyboard.press('Escape');assert.equal(await page.locator('.study-panel').count(),1);assert.equal(await page.locator('.focus-dock').count(),1);await screenshot(page,'study-review-returned');
   });
   await run('productivity-settings-keyboard-navigation',async page=>{
-    await page.getByRole('button',{name:'设置',exact:true}).click();const nav=page.getByRole('tablist',{name:'设置分区',exact:true});await nav.getByRole('tab',{name:'音乐',exact:true}).focus();await page.keyboard.press('ArrowDown');
+    await openSettingsSection(page,'音乐');const nav=page.getByRole('tablist',{name:'设置分区',exact:true});await nav.getByRole('tab',{name:'音乐',exact:true}).focus();await page.keyboard.press('ArrowDown');
     assert.equal(await nav.getByRole('tab',{name:'专注',exact:true}).getAttribute('aria-selected'),'true');assert.equal(await page.evaluate(()=>document.activeElement?.id),'hub-tab-focus');assert.equal(await nav.locator('[tabindex="0"]').count(),1);await screenshot(page,'settings-keyboard-focus');
     await page.keyboard.press('End');assert.equal(await page.evaluate(()=>document.activeElement?.id),'hub-tab-labs');await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>document.activeElement?.id),'hub-tab-music');await page.keyboard.press('ArrowLeft');assert.equal(await page.evaluate(()=>document.activeElement?.id),'hub-tab-labs');await page.keyboard.press('Home');assert.equal(await page.evaluate(()=>document.activeElement?.id),'hub-tab-music');
     await page.setViewportSize({width:640,height:600});await page.waitForFunction(()=>document.querySelector('[aria-label="设置分区"]')?.getAttribute('aria-orientation')==='horizontal');await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>document.activeElement?.id),'hub-tab-focus');await page.screenshot({path:path.join(output,'settings-keyboard-640x600.png'),animations:'disabled'});await page.keyboard.press('Home');
-    await page.keyboard.press('Tab');assert.equal(await page.locator('#hub-tab-panel').evaluate(e=>e.contains(document.activeElement)),true);await page.keyboard.press('Escape');assert.equal(await page.getByRole('dialog',{name:'设置',exact:true}).count(),0);assert.equal(await page.getByRole('button',{name:'设置',exact:true}).evaluate(e=>e===document.activeElement),true);
+    await page.keyboard.press('Tab');assert.equal(await page.locator('#hub-tab-panel').evaluate(e=>e.contains(document.activeElement)),true);await page.keyboard.press('Escape');assert.equal(await page.getByRole('dialog',{name:'设置',exact:true}).count(),0);assert.equal(await page.evaluate(()=>{const e=document.activeElement;return Boolean(e&&e!==document.body&&document.querySelector('.desk-home').contains(e)&&!e.closest('[inert]'));}),true,'Esc returns the focus to the desk');
   });
   await run('productivity-settings-sections-and-shortcut-return',async page=>{
-    await openFocus(page,'随手记');await page.getByLabel('随手记内容').fill('设置面板往返保留');await page.getByRole('button',{name:'设置',exact:true}).click();
+    await openFocus(page,'随手记');await page.getByLabel('随手记内容').fill('设置面板往返保留');await openSettingsSection(page,'音乐');
     for(const [index,name] of ['音乐','专注','小屋与奶糖','桌面','数据','实验室'].entries()) { await page.getByRole('tablist',{name:'设置分区',exact:true}).getByRole('tab',{name,exact:true}).click();await screenshot(page,`settings-section-${index}`);if(name==='桌面')assert.equal(await page.locator('.hub-row-actions .segmented button').evaluateAll(buttons=>buttons.every(button=>{const range=document.createRange();range.selectNodeContents(button);return range.getClientRects().length===1;})),true,'performance option labels stay on one line'); }
     // 专注 holds the timer preferences (the dock's own form), not shortcuts into the dock.
     const hub=page.getByRole('dialog',{name:'设置',exact:true});await page.getByRole('tablist',{name:'设置分区',exact:true}).getByRole('tab',{name:'专注',exact:true}).click();assert.equal(await hub.getByRole('button',{name:/打开学习|打开番茄钟|查看统计|随手记/}).count(),0,'no action rows');
     await hub.getByLabel('专注（分）').fill('31');await hub.getByLabel('专注（分）').press('Enter');await page.keyboard.press('Escape');assert.equal(await hub.count(),0);
-    assert.equal(await page.locator('.focus-badge').innerText().then(text=>text.includes('31')),true,'a 设置 change reaches the timer');await openFocus(page,'随手记');assert.equal(await page.getByLabel('随手记内容').inputValue(),'设置面板往返保留');await screenshot(page,'settings-shortcut-restored');
+    await openFocus(page);assert.match(await page.locator('.focus-timer').innerText(),/31/,'a 设置 change reaches the timer');await openFocus(page,'随手记');assert.equal(await page.getByLabel('随手记内容').inputValue(),'设置面板往返保留');await screenshot(page,'settings-shortcut-restored');
   });
-  await run('companion-compact-header-keeps-brand-and-controls',async page=>{
+  await run('desk-entries-stay-reachable-at-compact-widths',async page=>{
     await page.evaluate(()=>document.fonts.ready);
     for(const width of [1440,960,640]) {
-      await page.setViewportSize({width,height:600});
-      const bounds=await page.locator('.app-titlebar').evaluate(header=>{const r=header.getBoundingClientRect(), brand=header.querySelector('.app-brand h1'), count=header.querySelector('.app-brand small'), range=document.createRange();range.selectNodeContents(brand);return {lines:range.getClientRects().length,brandBottom:brand.getBoundingClientRect().bottom,countBottom:count.getBoundingClientRect().bottom,headerBottom:r.bottom,buttons:[...header.querySelectorAll('button')].map(button=>{const b=button.getBoundingClientRect();return {name:button.getAttribute('aria-label'),left:b.left,right:b.right,top:b.top,bottom:b.bottom,reachable:document.elementFromPoint(b.left+b.width/2,b.top+b.height/2)?.closest('button')===button};})};});
-      await page.screenshot({path:path.join(output,`compact-header-${width}x600.png`),animations:'disabled'});assert.equal(bounds.lines,1,JSON.stringify(bounds));assert.ok(bounds.countBottom<=bounds.headerBottom);assert.ok(bounds.buttons.every(b=>b.left>=0&&b.right<=width&&b.top>=0&&b.bottom<=bounds.headerBottom&&b.reachable),JSON.stringify(bounds.buttons));
+      await page.setViewportSize({width,height:600});await page.locator('.desk-home.is-lit').waitFor();
+      // The back edge (唱机 plate, LED clock and its keys, post box), the 唱片架 plate, the window controls and the drawer pull.
+      const rail=await page.locator('.desk-home').evaluate(home=>{const items=[...home.querySelectorAll('.desk-plate,.desk-clock-face,.desk-post,.desk-window button,.desk-pull')].filter(b=>b.getClientRects().length);return items.map(b=>{const r=b.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return {name:b.getAttribute('aria-label')||b.textContent.trim(),left:r.left,right:r.right,top:r.top,bottom:r.bottom,reachable:b===hit||b.contains(hit)};});});
+      await page.screenshot({path:path.join(output,`compact-desk-${width}x600.png`),animations:'disabled'});
+      assert.ok(rail.length>=(width<700?5:6),JSON.stringify(rail)); // a phone-width desk has no window keysassert.ok(rail.every(b=>b.left>=0&&b.right<=width+0.5&&b.top>=0&&b.bottom<=600.5&&b.reachable),JSON.stringify(rail));
+      for(let i=0;i<rail.length;i++)for(let j=i+1;j<rail.length;j++){const a=rail[i],c=rail[j];if(/抽屉/.test(a.name+c.name))continue;assert.ok(a.right<=c.left+1||c.right<=a.left+1||a.bottom<=c.top+1||c.bottom<=a.top+1,`desk entries overlap at ${width}: ${a.name} / ${c.name}`);}
     }
-    await page.getByRole('button',{name:'添加到唱片架',exact:true}).click();await page.getByRole('dialog',{name:'添加到唱片架',exact:true}).waitFor();await page.keyboard.press('Escape');assert.equal(await page.getByRole('button',{name:'添加到唱片架',exact:true}).evaluate(e=>e===document.activeElement),true);
-    await page.getByRole('button',{name:'设置',exact:true}).click();await page.getByRole('dialog',{name:'设置',exact:true}).waitFor();await page.keyboard.press('Escape');assert.equal(await page.getByRole('button',{name:'设置',exact:true}).evaluate(e=>e===document.activeElement),true);
+    await page.setViewportSize({width:1440,height:900});
+    const shelf=await openLibrary(page);await shelf.getByRole('button',{name:'添加到唱片架',exact:true}).click();await page.getByRole('dialog',{name:'添加到唱片架',exact:true}).waitFor();await page.keyboard.press('Escape');assert.equal(await shelf.getByRole('button',{name:'添加到唱片架',exact:true}).evaluate(e=>e===document.activeElement),true,'Esc returns to the plate that opened it');await closeLibrary(page);
+    // 设置 is in the drawer, which slides shut as it opens; Esc lands on the desk (Dialog's stable anchor, the LED clock), not on <body>.
+    await openDrawerThing(page,'设置');await page.getByRole('dialog',{name:'设置',exact:true}).waitFor();await page.keyboard.press('Escape');await page.getByRole('dialog',{name:'设置',exact:true}).waitFor({state:'hidden'});
+    assert.equal(await page.evaluate(()=>{const e=document.activeElement;return Boolean(e&&e!==document.body&&document.querySelector('.desk-home').contains(e)&&!e.closest('[inert]'));}),true,'Esc returns the focus to the desk');
   });
   await run('stale-cat-mood-on-load-is-rewritten-and-announced',async page=>{
     // 72/happy saved 30 h ago decays to 42 (droopy): storage is rewritten and cabin:cat-mood fires.
@@ -638,26 +643,8 @@ try {
     const [first]=await page.evaluate(()=>window.__moods);assert.equal(first.tier,'droopy');assert.equal(first.stored,'droopy','store written before the event');
     const stored=await page.evaluate(()=>JSON.parse(localStorage.getItem('flow-cabin-cat-mood-v1')));assert.equal(stored.tier,'droopy');assert.ok(Date.now()-stored.updatedAt<60000);
   });
-  await run('room-cat-moves-on-the-beat-and-listens-without-one',async page=>{
-    await page.evaluate(()=>localStorage.setItem('flow-cabin-cat-mood-v1',JSON.stringify({v:1,mood:90,tier:'happy',updatedAt:Date.now(),feeds:[],totalFeeds:0,unlockedActions:[]})));await page.reload();await page.locator('.room-cat').waitFor();
-    const cat=page.locator('.room-cat');assert.equal(await cat.getAttribute('data-music'),null,'nothing playing: no music pose');
-    await openFocus(page,'声音');await page.getByRole('checkbox',{name:'Lo-fi 电台 · 实时生成',exact:true}).check();
-    await page.waitForFunction(()=>document.querySelector('.room-cat')?.dataset.music==='beat',null,{timeout:30000}); // lo-fi: its own tempo
-    // Deck audio that cannot be analysed (estimated energy, bpm 0): listen, nothing moves.
-    await page.evaluate(()=>window.dispatchEvent(new CustomEvent('cabin:playback',{detail:{playing:true,energy:.4,estimated:true,bpm:0,beatAt:0}})));
-    await page.waitForFunction(()=>document.querySelector('.room-cat').dataset.music==='free'&&!document.querySelector('.room-cat').dataset.beatMotion,null,{timeout:5000});
-    // Clicking the sound controls briefly gives 奶糖 an input-feedback pose. Wait
-    // for the eventual listening pose instead of guessing which feedback clears last.
-    await page.waitForFunction(()=>document.querySelector('.room-cat .pixel-cat')?.dataset.pose==='listen',null,{timeout:15000});
-    assert.equal(await cat.locator('.pixel-cat').getAttribute('data-pose'),'listen');
-    // A detected beat: the shared cat sprite hops once per beat, phase-locked to beatAt.
-    const beatAt=await page.evaluate(()=>{const at=Date.now()-130;window.dispatchEvent(new CustomEvent('cabin:playback',{detail:{playing:true,energy:.5,bpm:120,beatAt:at}}));return at;});
-    await page.waitForFunction(()=>['listen','nod','sway','dance'].includes(document.querySelector('.room-cat .pixel-cat')?.dataset.pose),null,{timeout:5000});
-    await page.waitForFunction(()=>document.querySelector('.room-cat .pixel-cat')?.getAnimations().some(a=>a.effect.getTiming().duration===500&&a.effect.getKeyframes().some(k=>k.translate)),null,{timeout:5000});
-    const lock=await page.evaluate(beatAt=>{const a=document.querySelector('.room-cat .pixel-cat').getAnimations().find(x=>x.effect.getKeyframes().some(k=>k.translate));const d=a.effect.getTiming().duration;const want=((Date.now()-beatAt)%d+d)%d,at=a.currentTime%d;return {d,off:Math.min(Math.abs(at-want),d-Math.abs(at-want))};},beatAt);
-    assert.equal(lock.d,500);assert.ok(lock.off<40,`groove is ${Math.round(lock.off)} ms off the beat`);
-    await screenshot(page,'cat-on-the-beat');
-  },{motion:true});
+  // room-cat-moves-on-the-beat-and-listens-without-one belonged to the original room's DOM cat (button.room-cat with data-music and a PetLife hop):
+  // the cabin draws its cat on a canvas, and scripts/beat-sync-regression.mjs measures those pixels against the heard beat in 生活角.
   await run('companion-generated-lofi-tempo-reaches-pet',async page=>{
     const { cleanCompanion } = createRequire(path.join(root,'desktop/package.json'))('./wallpaper-model.cjs');
     await openFocus(page,'声音');await page.getByRole('checkbox',{name:'Lo-fi 电台 · 实时生成',exact:true}).check(); // enabling lo-fi starts sound itself

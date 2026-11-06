@@ -14,6 +14,4 @@
 @container (max-width: 63px) { .record-sleeve strong { display: none; } .record-sleeve::after { box-shadow: inset 0 0 0 1px var(--px-accent-lo); } }
 /* Still loading a real cover: the print without its title, so nothing flashes when the cover lands. */
 .record-sleeve.is-loading strong { display: none; }
-/* On the shelf, the playlist corner tab (cabin-room.css) sits on the strip's right end. */
-.room-record-sleeve:has(> .room-record-tag) .record-sleeve strong { padding-right: 40px; }
 }

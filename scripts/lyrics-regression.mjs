@@ -6,6 +6,9 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { launchChromium } from './launch-browser.mjs';
 import { onboardingSeed } from './app-version.mjs';
+import { takeBinder, closeLibrary, openConsole, storeRoomLook } from './settings-actions.mjs';
+// 歌词册 from the desk: 唱机 plate → 唱机旁 → its 歌词册 plate.
+const openStage = async (page) => { const panel = await openConsole(page); await panel.getByRole('button', { name: '歌词册', exact: true }).click(); };
 import { parseLyrics } from '../src/lyrics/lyrics-model.mjs';
 import { packLyrics, alignSecondary } from '../src/lyrics/lyric-timing.mjs';
 const origin = 'http://127.0.0.1:4297', output = path.resolve('desktop/test-results/lyrics');
@@ -35,7 +38,6 @@ try {
     return route.continue();
   });
   await context.addInitScript(({ fixture, yrc, translation, alternate, seed }) => {
-    localStorage.setItem('flow-cabin-interface-v1', 'beta');
     localStorage.setItem('flow-cabin-home-intro-v1', 'done');
     localStorage.setItem('flow-cabin-onboarding-v1', seed); // the guide and 新功能 sheet are covered by onboarding checks
     localStorage.setItem('flow-cabin-web-collection-v1', JSON.stringify({ version: 1, items: [fixture] }));
@@ -53,33 +55,20 @@ try {
     } };
   }, { fixture, yrc, translation, alternate, seed: onboardingSeed() });
   page = await context.newPage(); page.setDefaultTimeout(20000); page.on('pageerror', e => report.errors.push(e.message));
-  await page.goto(origin); await page.locator('.home-world canvas').waitFor();
-  const notice = page.locator('.home-notice').getByRole('button', { name: '好的' }); if (await notice.isVisible()) await notice.click();
-  await page.getByRole('region', { name: '正在播放', exact: true }).getByRole('button', { name: '放一张唱片', exact: true }).click(); // the bar's empty state opens 唱片架
-  await page.getByRole('button', { name: '播放 歌词练习', exact: true }).click();
+  await page.goto(origin); await page.locator('.desk-home').waitFor();
+  await (await takeBinder(page, '唱片')).getByRole('button', { name: '播放 歌词练习', exact: true }).click();
   await page.waitForFunction(() => [...document.querySelectorAll('[data-cabin-audio-host] audio')].some(a => !a.paused && a.currentTime > .1));
-  await page.locator('.cabin-dialog-close').last().click();
+  await closeLibrary(page);
   const audioTime = () => page.evaluate(() => [...document.querySelectorAll('[data-cabin-audio-host] audio')].find(a => !a.paused)?.currentTime ?? 0);
 
-  // 1. The lyric book in the music corner sings the current line in the room's skin.
-  await page.getByRole('navigation', { name: '房间区域' }).getByRole('button', { name: '听歌角', exact: true }).click();
-  const book = page.locator('[data-corner="music"] .lyric-readout');
-  await book.locator('.karaoke-line').waitFor();
-  const fills = await book.locator('[data-karaoke-word]').evaluateAll(words => words.map(w => Number(w.style.getPropertyValue('--p'))));
-  assert.ok(fills.length === 2 && fills.every(v => v >= 0 && v <= 1), `karaoke progress ${fills}`);
-  const sung = (await book.locator('.karaoke-base').first().innerText()).trim(), now = await audioTime();
-  assert.ok([now, Math.max(0, now - .4)].map(t => `第${Math.floor(t / 3) + 1}句`).includes(sung), `${sung} at ${now}`);
-  assert.match(await book.getAttribute('style'), /--lyric-fill/);
-  await page.screenshot({ path: path.join(output, 'corner-lyric-book.png') });
-  pass('lyric-book-sings-the-current-line-with-word-fill-in-the-room-skin');
-
-  // 1b. The 3.0 now-playing bar shows the same line from the shared lyric feed (read twice a second).
-  await page.waitForFunction(() => /^第\d+句/.test(document.querySelector('.listen-bar .listen-line.is-lyric')?.title || ''));
-  { const shown = await page.locator('.listen-bar .listen-line').getAttribute('title'), t = await audioTime(); assert.ok([0, .6, 1.2].map(d => `第${Math.floor(Math.max(0, t - d) / 3) + 1}句`).some(line => shown.startsWith(line)), `${shown} at ${t}`); }
-  assert.equal(await page.getByRole('region', { name: '正在播放', exact: true }).getByRole('button', { name: '歌词', exact: true }).count(), 1);
-  pass('now-playing-bar-shows-the-current-lyric-line');
-  // 2. The fullscreen stage: AMLL view, now-playing panel, live region follows the song.
-  await page.locator('.corner-actions').getByRole('button', { name: '歌词册', exact: true }).click();
+  // 1b. The console's tube (唱机, DEsk's Control Panel) shows the same line from the shared lyric feed (read twice a second).
+  await page.evaluate(() => window.dispatchEvent(new CustomEvent('cabin:desk-look', { detail: { which: 'console' } })));
+  await page.waitForFunction(() => /^第\d+句/.test(document.querySelector('.console-crt-line')?.textContent || ''));
+  { const shown = await page.locator('.console-crt-line').textContent(), t = await audioTime(); assert.ok([0, .6, 1.2].map(d => `第${Math.floor(Math.max(0, t - d) / 3) + 1}句`).some(line => shown.startsWith(line)), `${shown} at ${t}`); }
+  assert.equal(await page.locator('.console-slip').getByRole('button', { name: '歌词册', exact: true }).count(), 1);
+  pass('console-tube-shows-the-current-lyric-line');
+  // 2. The fullscreen stage (唱机旁 › 歌词册): AMLL view, now-playing panel, live region follows the song.
+  await openStage(page);
   const stage = page.getByRole('dialog', { name: '沉浸歌词' });
   await stage.locator('.cabin-amll').waitFor();
   await page.waitForTimeout(600);
@@ -130,10 +119,11 @@ try {
   pass('keyboard-controls-play-seek-and-close-the-stage-and-idle-chrome-fades');
 
   // 6. Every room's skin, desktop and phone.
-  for (const [id, name] of [['rain-train', '雨夜列车书房'], ['starlight', '星光小屋'], ['forest', '林间书屋'], ['warm', '琥珀小屋']]) {
-    await page.locator('.home-room-name').click(); await page.getByRole('menuitem', { name: /^选择小屋/ }).click();
-    await page.locator('.home-theme-grid').getByRole('button', { name }).click();
-    await page.locator('.corner-actions').getByRole('button', { name: '歌词册', exact: true }).click();
+  for (const id of ['rain-train', 'starlight', 'forest', 'warm']) {
+    // 3.1: there is no room picker; the stored look (an older install's room) picks the skin. The reload clears the deck.
+    await storeRoomLook(page, id);
+    await (await takeBinder(page, '唱片')).getByRole('button', { name: '播放 歌词练习', exact: true }).click(); await closeLibrary(page);
+    await openStage(page);
     await stage.locator('.cabin-amll').waitFor();
     assert.equal(await stage.locator('.lyrics-stage').getAttribute('data-skin'), id);
     await page.waitForTimeout(400);
@@ -141,7 +131,7 @@ try {
     await page.keyboard.press('Escape'); await stage.waitFor({ state: 'hidden' });
   }
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.locator('.corner-actions').getByRole('button', { name: '歌词册', exact: true }).click();
+  await openStage(page);
   await stage.locator('.cabin-amll').waitFor(); await page.waitForTimeout(400);
   for (const name of ['收起歌词', '歌词设置', '上一首', '下一首']) { const box = await stage.getByRole('button', { name }).boundingBox(); assert.ok(box && box.x >= 0 && box.x + box.width <= 391, name); }
   await page.screenshot({ path: path.join(output, 'stage-phone.png') });
@@ -159,7 +149,7 @@ try {
       command: action => window.barCalls.push(['command', action]), hoverLock: on => window.barCalls.push(['hover', on]), setPrefs: patch => window.barCalls.push(['prefs', patch]) };
   }, { packed: packLyrics(doc) });
   await bar.goto(origin + '/lyrics.html');
-  await bar.addStyleTag({ content: "body{background:url('/room-scenes/v21/forest/shell.png') center/cover !important}" });
+  await bar.addStyleTag({ content: "body{background:url('/room-scenes/v21/forest/shell.webp') center/cover !important}" });
   const active = bar.locator('.desk-lyrics-row.is-active');
   await active.waitFor();
   assert.match(await active.innerText(), /第3句/); assert.match(await active.innerText(), /Line 3/);

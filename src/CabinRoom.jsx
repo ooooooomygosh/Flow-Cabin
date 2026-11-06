@@ -1,29 +1,20 @@
 import { selectPack } from './pet/imported-pack.mjs';
-import React, { Suspense, lazy, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, lazy, useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { reportTrayPet } from './desktop/desktop-sink-client.mjs';
-import { dismissHomeNotice } from './interface-mode.mjs';
 import { getRoomScene } from './scene-catalog.mjs';
-import { normalizePetId, getPet } from './pet/pet-catalog.mjs';
+import { normalizePetId } from './pet/pet-catalog.mjs';
 import { setBeat } from './player/beat-clock.mjs';
 import { currentCabinPlayback, onCabinPlayback } from './scene/playback-listener.mjs';
-const ModularRoom = lazy(() => import('./room2/ModularRoom'));
-import CabinWelcome from './room/CabinWelcome';
-import { Up, Down, ArrowUpRight, Wand2, Sparkles, EyeSlash, Heart, Plus, ListBullet, Check, Computer, Play, SpeakerWave, SpeakerOff, Grid3X3, Refresh, Expand } from './icons';
-import { RecordBoxControls, useRecordLibrary, useRecordStyle } from './RecordLibrary';
-import { desktopCommand, useDesktopAppearance } from './desktop-client';
+import { useRecordLibrary, useRecordStyle } from './RecordLibrary';
+import { useDesktopAppearance } from './desktop-client';
 import useReducedMotion from './useReducedMotion';
-import RoomScene, { placeRecord } from './RoomScene';
-import RoomTurntable from './RoomTurntable';
-import FocusDock, { FocusBadge, loadStudy } from './focus/FocusDock';
+import FocusDock, { loadStudy } from './focus/FocusDock';
 import { useFocusState } from './focus/useFocus';
 import CabinJournal from './focus/stats/CabinJournal.jsx';
 import { focusSnapshot } from './focus/focus-model.mjs';
 import { useSoundscape } from './audio/useSoundscape';
-import RoomCat from './pet/RoomCat';
 import DesktopWidgets, { ImmersiveChrome } from './desktop/DesktopWidgets';
-import { flyRecord } from './turntable/record-flight.mjs';
-import { displayTitle } from './display-title.mjs';
-import useShelf, { SORTS, DEFAULT_FILTERS } from './room/useShelf';
+import useShelf from './room/useShelf';
 import useDeck from './room/useDeck';
 import useRoomChrome from './room/useRoomChrome';
 import useOnboardingFlow from './room/useOnboardingFlow';
@@ -36,7 +27,8 @@ import { coverThumb } from './focus/session-log.mjs';
 import './companion-room.css';
 import Dialog from './Dialog';
 import { CabinRuntimeProvider } from './runtime/CabinRuntime';
-import CabinHome from './home/CabinHome';
+import DeskHome from './desk/DeskHome';
+import { noteOpen } from './desk/packets.mjs';
 import HomePanels, { HomeLyrics, LifeReminder } from './home/HomePanels';
 import useLabs from './product/useLabs';
 import { openJournal } from './focus/stats/journal-events.mjs';
@@ -67,24 +59,16 @@ const buildSnapshot = ({ items, record, look, ...rest }) => ({ ...rest, look, ro
 
 export default function CabinRoom({ items, loading, loadError = '', reload, openRecord, openAdd, firstVisit = false, hubRequest = null, openBackup, openWall, notify, saveToShelf }) {
   const appearance = useDesktopAppearance(), reduced = useReducedMotion();
-  const stage = useRef(null);
-  // 「首页换成了生活小屋」 is news only for people who used an earlier home; a new install starts here.
-  useState(() => { if (firstVisit) dismissHomeNotice(); });
   const flow = useOnboardingFlow({ client: appearance.client, loading, loadError, firstVisit, itemCount: items.length, hubRequest, notify });
-  // On a first visit the guide comes first; the home's one-line hint waits until it has been closed once.
-  const [guideDone, setGuideDone] = useState(!firstVisit), guideShown = useRef(false);
-  useEffect(() => { if (flow.wizard) guideShown.current = true; else if (guideShown.current) setGuideDone(true); }, [flow.wizard]);
   const chrome = useRoomChrome({ client: appearance.client, notify, restoreDock: false });
   const library = useRecordLibrary(), look = library?.data.rooms[library.roomId]?.look || 'pixel';
-  const [mobileSlotCount, setMobileSlotCount] = useState(null);
-  const [mobileShelfCompact, setMobileShelfCompact] = useState(false);
-  const { filters, setFilters, visible, view, selected, setSelectedId, changeRow, filtered } = useShelf({ items, look, stage, mobileSlotCount });
+  const { filters, setFilters, visible, view, selected, setSelectedId } = useShelf({ items, look });
   const petId = normalizePetId(library?.data.rooms[library.roomId]?.petId);
   const deck = useDeck({ items, onLoad: (item) => setSelectedId(item.id), notify });
   const { record, provider, playback, player, deckItem, effectiveSpin } = deck;
   const focus = useFocusState(), sound = useSoundscape();
   useCatCareHost();
-  const [tool, setTool] = useState(''), [lyricsOpen, setLyricsOpen] = useState(false), [editRequest, setEditRequest] = useState(0);
+  const [tool, setTool] = useState(''), [lyricsOpen, setLyricsOpen] = useState(false);
   const [catPanelOpen, setCatPanelOpen] = useState(false);
   const [smartOpen, setSmartOpen] = useState(false);
   const closeSmart = useCallback(() => setSmartOpen(false), []);
@@ -98,10 +82,8 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
     return () => window.removeEventListener('cabin-open-cat', open);
   }, []);
   const [pet, setPet] = useState(() => window.albumPetState || {});
-  const [wallpaperError, setWallpaperError] = useState(() => window.albumRoomWallpaperState?.error || '');
   useEffect(() => { const receive = (event) => { window.albumPetState = event.detail; setPet(event.detail || {}); }; window.addEventListener('album-pet-state', receive); return () => window.removeEventListener('album-pet-state', receive); }, []);
   useEffect(() => { reportTrayPet(petId); }, [petId, appearance.client]);
-  useEffect(() => { if (!wallpaperError) return; const timer = setTimeout(() => setWallpaperError(''), 5000); return () => clearTimeout(timer); }, [wallpaperError]);
   useEffect(() => { sound?.setDucked(deck.audible); }, [deck.audible]);
   usePrefetch();
   useEffect(() => {
@@ -117,6 +99,9 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
   const catFocus = useMemo(() => focus ? focusSnapshot(focus.state, Date.now()) : {}, [focus?.state]), weather = catFocus.weather || 'snow';
   // The cat keeps dancing through a moment of buffering or a track change.
   const grooving = useSustained(effectiveSpin || sound?.lofiState === 'playing', 1800);
+  // The beat clock (player/beat-clock.mjs) is fed by the playback listener only while something listens, and the home's cat
+  // (home/RoomCanvas.jsx, 生活角) reads it every frame: keep one listener attached for the room's lifetime.
+  useEffect(() => onCabinPlayback(() => {}), []);
   // Lo-fi alone: dance at its tempo (a detected song beat takes over when the deck plays).
   const lofiBpm = sound?.lofiState === 'playing' && !playback.playing ? sound.section?.bpm : 0;
   // Lo-fi alone: its tempo and its heard quarter-note phase, refreshed while it plays (the section tempo ramps).
@@ -201,34 +186,37 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
     }
     return true;
   };
-  const { zen, corner, dock, saveDock, filtersOpen, setFiltersOpen, fullscreen, desktopMode, sink } = chrome;
-  // Not memoised on purpose: the cat's placement re-measures the console and
-  // footer after every room commit (useCatPlacement), which room renders now are rare.
-  const cat = <RoomCat petId={petId} focus={catFocus} playing={grooving} track={deck.nowTrack} reduceMotion={reduced} hidden={Boolean(pet.active)}/>;
-  const petLabel = pet.active ? '让伙伴回家' : '伙伴出门', petName = getPet(petId).name;
-  const queued = deck.isQueued(selected?.id);
+  const { zen, corner, dock, saveDock, fullscreen, desktopMode } = chrome;
   const openTool = action => {
+    // The sheet this opens can be folded into a packet on the desk and opened again by the same action.
+    noteOpen(action);
     if (['timer', 'tasks', 'study', 'notes', 'stats', 'sound'].includes(action)) { setTool(''); saveDock({ open: true, tab: action }); return; }
     saveDock({ open: false });
     if (action === 'wall') { setTool(''); openWall?.(); return; }
-    if (action === 'interface') { setTool(''); window.dispatchEvent(new Event('cabin:interface-choice')); return; }
     if (action === 'backup') { setTool(''); openBackup?.(); return; }
     if (action === 'pet') { setTool(''); setCatPanelOpen(true); return; }
     if (action === 'settings' || action === 'music-settings') { setTool(''); flow.setHub('music'); return; }
     if (action === 'lyrics') { setLyricsOpen(true); return; }
+    // 唱片架 is DEsk's bookcase: look up at it from the desk (src/desk/ShelfView.jsx).
+    if (action === 'library') { setTool(''); window.dispatchEvent(new CustomEvent('desk:look', { detail: 'shelf' })); return; }
+    // 唱机: look up at the Control Panel on the desk, which is the console (src/desk/views/ConsoleView.jsx).
+    if (action === 'music') { setTool(''); window.dispatchEvent(new CustomEvent('cabin:desk-look', { detail: { which: 'console' } })); return; }
+    // 信箱: the red post box on the desk (src/desk/PostLetters.jsx), from the bookcase's own post box too.
+    if (action === 'post') { setTool(''); window.dispatchEvent(new CustomEvent('desk:look', { detail: 'post' })); return; }
+    if (action === 'smart') { setTool(''); if (smartEntry) openSmart(); return; }
     // 日记 (top bar, the 窝/日记本 hotspot): the journal's own first page, the same as L.
     if (action === 'diary') { openJournal(); return; }
     if (action === 'journal' || action === 'mail') { window.dispatchEvent(new CustomEvent('cabin:open-journal', { detail: { tab: action === 'mail' && labs.letters ? 'letters' : 'entries' } })); return; }    setTool(action);
   };
   return <CabinRuntimeProvider deck={deck} items={items} look={look} onNavigate={openTool} onRoomChange={personalizeRoom} notify={notify}>
-    <CabinHome reduced={appearance.reduceMotion || reduced} editRequest={editRequest} focusOpen={dock.open} petOpen={catPanelOpen} guiding={flow.wizard || !guideDone}/>
+    <DeskHome reduced={appearance.reduceMotion || reduced} focusOpen={dock.open} shelf={{ visible, filters, setFilters, openAdd, openRecord, openWall, openSmart: smartEntry && openSmart }}/>
     <LifeReminder/>
     {library?.error && <p className="home-layout-error" role="alert">设置未保存：{library.error}</p>}
-    {wallpaperError && <p className="wallpaper-error" role="alert">{wallpaperError}<button type="button" aria-label="关闭动态背景提示" onClick={() => setWallpaperError('')}>×</button></p>}
     <HomePanels tool={tool} close={() => setTool('')} filters={filters} setFilters={setFilters} visible={visible} recordStyle={recordStyle} openAdd={openAdd} openRecord={openRecord} openWall={openWall} openSmart={smartEntry && (() => { setTool(''); openSmart(); })} onRoomChange={personalizeRoom}/>{/* the panel is modal: close it, or the smart turntable opens inert behind it */}
     {focus && <CabinJournal/>}
     {focus && <FocusDock open={false}/>}
-    {focus && dock.open && <Dialog title="专注" close={() => saveDock({ open: false })} className="home-tool home-focus-dialog" size="lg"><FocusDock embedded open tab={dock.tab} setTab={tab => saveDock({ tab })} close={() => saveDock({ open: false })} onOpenSmart={smartEntry}/></Dialog>}
+    {/* 专注 is a close-up of the desk (calendar and planner, memo pad, a sheet for the timer): it fills the window. */}
+    {focus && dock.open && <Dialog variant="full" title="专注" close={() => saveDock({ open: false })} className="focus-closeup-dialog"><FocusDock embedded open tab={dock.tab} setTab={tab => saveDock({ tab })} close={() => saveDock({ open: false })} onOpenSmart={smartEntry}/></Dialog>}
     {lyricsOpen && <HomeLyrics close={() => setLyricsOpen(false)}/>}
     {desktopMode ? <DesktopWidgets mode="desktop" exit={chrome.toggleDesktopMode} item={deckItem} provider={provider} playback={playback} player={player} spinning={effectiveSpin} toggleVisual={deck.toggleVisual} trackIndex={deck.shownTrackIndex}/> : zen && !chrome.zenTools && <DesktopWidgets mode="zen"/>}
     {!desktopMode && <ImmersiveChrome zen={zen} fullscreen={fullscreen} exitFullscreen={chrome.exitFullscreen} toggleZen={chrome.toggleZen} tools={chrome.zenTools} setTools={chrome.setZenTools}/>}
@@ -236,8 +224,8 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
       <CatPanel open={catPanelOpen} onClose={() => setCatPanelOpen(false)} onChoosePet={() => { setCatPanelOpen(false); setTool('companions'); }}/>
       <SmartTurntable open={smartOpen} close={closeSmart} items={items} onStart={startSmartSession} onSave={saveToShelf} onNeedAiSettings={() => { setSmartOpen(false); flow.setHub('ai'); }}/>
       {corner && <Suspense fallback={<Dialog title="唱机特写" close={() => chrome.setCorner(false)}><p role="status">正在点亮唱机旁的台灯…</p></Dialog>}><ListeningCorner item={deckItem} items={visible} vinyl={recordStyle} provider={provider} spinning={effectiveSpin} trackIndex={deck.shownTrackIndex} setTrackIndex={deck.setTrackIndex} playback={playback} player={player} toggleVisual={deck.toggleVisual} load={deck.load} close={() => chrome.setCorner(false)} reduceMotion={reduced}/></Suspense>}
-      {flow.hub && <SettingsHub openStudio={() => { flow.setHub(''); setEditRequest(value => value + 1); }} section={flow.hub} setSection={flow.setHub} close={() => flow.setHub('')} env={flow.env} player={flow.playerAdapter} provider={provider} useSource={deck.chooseProvider} look={look} petId={petId} onRoomChange={personalizeRoom} reduceMotion={appearance.reduceMotion} error={library?.error} desktop={chrome.desktop} openBackup={() => { flow.setHub(''); openBackup?.(); }} restartOnboarding={flow.restartOnboarding}/>}
-      {flow.wizard && <OnboardingWizard state={flow.onboarding} update={flow.saveOnboarding} env={flow.env} player={flow.playerAdapter} look={look} petId={petId} onRoomChange={personalizeRoom} useSource={deck.chooseProvider} openMusicSettings={flow.openMusicSettings} openAdd={() => { flow.closeWizard('later'); openAdd(); }} close={flow.closeWizard} reduceMotion={appearance.reduceMotion} error={library?.error}/>}
+      {flow.hub && <SettingsHub section={flow.hub} setSection={flow.setHub} close={() => flow.setHub('')} env={flow.env} player={flow.playerAdapter} provider={provider} useSource={deck.chooseProvider} petId={petId} onRoomChange={personalizeRoom} reduceMotion={appearance.reduceMotion} error={library?.error} desktop={chrome.desktop} openBackup={() => { flow.setHub(''); openBackup?.(); }} restartOnboarding={flow.restartOnboarding}/>}
+      {flow.wizard && <OnboardingWizard state={flow.onboarding} update={flow.saveOnboarding} env={flow.env} player={flow.playerAdapter} petId={petId} onRoomChange={personalizeRoom} useSource={deck.chooseProvider} openMusicSettings={flow.openMusicSettings} openAdd={() => { flow.closeWizard('later'); openAdd(); }} close={flow.closeWizard} reduceMotion={appearance.reduceMotion} error={library?.error}/>}
     </Suspense>
   </CabinRuntimeProvider>;
 }

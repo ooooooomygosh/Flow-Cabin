@@ -216,3 +216,34 @@ test('ending a round settles worked time without starting a break or giving rewa
   assert.equal(model.endRound(paused, start + 900000).state.sessions[0].end - model.endRound(paused, start + 900000).state.sessions[0].start, 90000);
   assert.equal(model.endRound(initial, start).state, initial);
 });
+
+test('today\'s tasks leave out what waits on a later day, and the 之后 list', () => {
+  const now = new Date(2026, 10, 6, 10).getTime(), yesterday = new Date(2026, 10, 5, 18).getTime();
+  const tasks = [
+    { id: 'a', text: '今天的事', list: 'today', plannedFor: '2026-11-06', done: false },
+    { id: 'b', text: '贴到下周的事', list: 'today', plannedFor: '2026-11-12', done: false },
+    { id: 'c', text: '之后的事', list: 'later', plannedFor: '', done: false },
+    { id: 'd', text: '昨天做完的', list: 'today', plannedFor: '2026-11-05', done: true, doneAt: yesterday },
+    { id: 'e', text: '今天做完的', list: 'today', plannedFor: '2026-11-06', done: true, doneAt: now },
+    { id: 'f', text: '旧版没有日期的', list: 'today', plannedFor: '', done: false }
+  ];
+  assert.deepEqual(model.todayTasks(tasks, now).map((task) => task.id), ['a', 'e', 'f']);
+  assert.equal(model.isTodayTask(tasks[1], new Date(2026, 10, 12, 9).getTime()), true, 'its day comes, it is today\'s');
+});
+
+test('a plan keeps its time and its pad colour; a bad time or colour is dropped', () => {
+  assert.equal(model.planTime('9:00'), '09:00');
+  assert.equal(model.planTime('14:30 - 16:00'), '14:30-16:00');
+  assert.equal(model.planTime('16:00-14:00'), '16:00');
+  assert.equal(model.planTime('25:00'), '');
+  assert.equal(model.planTime('明天'), '');
+  let n = 0; const makeId = () => `p${++n}`, now = new Date(2026, 10, 6, 10).getTime();
+  let state = model.normalizeFocus({});
+  state = model.addTask(state, '看牙医', now, { makeId, at: '10:00-11:00', color: 2, plannedFor: '2026-11-10' });
+  state = model.addTask(state, '寄信', now, { makeId, at: 'soon', color: 9, plannedFor: '2026-11-01' });
+  assert.deepEqual(state.tasks.map(({ id, at, color, plannedFor }) => ({ id, at, color, plannedFor })), [
+    { id: 'p1', at: '10:00-11:00', color: 2, plannedFor: '2026-11-10' },
+    { id: 'p2', at: undefined, color: undefined, plannedFor: '2026-11-06' }
+  ], 'a past day is planned for today');
+  assert.deepEqual(model.normalizeFocus(JSON.parse(JSON.stringify(state))).tasks, state.tasks, 'survives a save and load');
+});

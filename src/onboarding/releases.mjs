@@ -2,6 +2,16 @@
 // product-facing; technical verification notes belong in RELEASE-NOTES.md.
 export const RELEASES = Object.freeze([
   {
+    version: '3.1.0',
+    title: '一张书桌',
+    items: [
+      '首页换成一张从上往下看的胡桃木书桌（画面来自开源项目 DEsk）：唱片封面摊在桌上，右手边是唱机。双击封面、按回车或把它拖到唱机上就开始放。',
+      '后沿是唱机（C）、红色台钟、信箱（N）和唱片架（A）：抬头看唱片架是一整面书柜，抬头看唱机是一台控制台；点台钟开始专注。',
+      '抽屉（D）里有唱片日记、伙伴、随手记、备份和设置；新手引导和版本说明是信箱里的信。',
+      '等距小屋、角落、家具布置和选择房间都已移除；收藏、记录、专辑墙、备份和伙伴原样保留。'
+    ]
+  },
+  {
     version: '3.0.0',
     title: '放一张唱片，做完这一段',
     items: [

@@ -1,0 +1,126 @@
+@layer guards, reset, features, skin, overrides;
+/* 学习 (a lab feature) as a card box: each deck is a cardboard box with a brass label holder and its
+   due count on a tag, reviewing takes index cards out of the box one by one (the card stands in
+   a stack, flips over on the drawer spring, rises into place), and 1-4 are four brass keys.
+   Materials follow DEsk (https://github.com/fyzugx/DEsk, MIT, (c) 2026 The DEsk authors): brass,
+   paper fibre (--paper-tile / --paper-grain) and the one lamp (--sx / --sy / --lamp-k). The FSRS
+   logic is untouched; only markup hooks (a key on the card, sounds) were added in StudyPanel.jsx. */
+@layer overrides {
+  .study-panel, .study-review, .study-editor {
+    --ink: #2e2318;
+    --ink-2: #5f4f37;
+    --pen: #2b3a5e;
+    --hand: 'Kaiti SC', 'STKaiti', 'KaiTi', 'LXGW WenKai', serif;
+    --serif: var(--ui-font-display, 'Songti SC', 'Noto Serif CJK SC', 'STSong', 'SimSun', Georgia, serif);
+    --flip-d: calc(.5s * var(--pace, 1));
+    --brass: linear-gradient(180deg, #cdb273, #a9803c 52%, #8a6a30);
+    color: var(--ink);
+  }
+
+  /* ── the shelf of boxes ────────────────────────────────────────────── */
+  .study-panel .study-summary { align-self: start; justify-self: start; padding: 4px 12px 4px 10px; color: #2a1c0a; font-size: 13px; background: var(--brass); box-shadow: inset 0 0 0 1px rgba(255, 239, 204, .42), 0 0 0 1px rgba(36, 23, 8, .55), calc(var(--sx, 2) * 2px) calc(var(--sy, 3) * 2px) 4px rgba(15, 10, 8, calc(.35 * var(--lamp-k, .6))); text-shadow: 0 1px 0 rgba(255, 239, 199, .34); }
+  .study-panel .study-summary b { color: #2a1c0a; font-weight: 700; }
+  .study-panel .study-decks { gap: 14px; margin-top: 4px; }
+  .study-panel .study-decks li {
+    position: relative; align-items: stretch; gap: 8px; padding: 10px 10px 14px; border-radius: var(--ui-radius-sm);
+    background: var(--paper-grain, none) 0 0 / 96px, linear-gradient(180deg, rgba(0, 0, 0, .18), transparent 20px), linear-gradient(172deg, #bf9660, #a67b47 60%, #8e6538);
+    box-shadow: inset 0 0 0 1px rgba(60, 35, 10, .45), inset 0 -6px 0 rgba(60, 35, 10, .22), calc(var(--sx, 2) * 4px) calc(var(--sy, 3) * 4px) 6px rgba(15, 10, 8, calc(.35 * var(--lamp-k, .6)));
+  }
+  /* the label holder: a brass frame with a paper card in it */
+  .study-panel .study-deck-open {
+    gap: 3px; padding: 8px 12px; color: var(--ink); border: 0; border-radius: 0; background: var(--paper-tile, none) 0 0 / 128px, linear-gradient(172deg, #fbf5e6, #efe6d3);
+    box-shadow: 0 0 0 2.5px #b79a58, 0 0 0 3.5px #5e4720, inset 0 0 0 1px rgba(95, 72, 40, .3); text-shadow: none;
+  }
+  .study-panel .study-deck-open:hover { background: var(--paper-tile, none) 0 0 / 128px, linear-gradient(172deg, #fffaf0, #f4ecd9); }
+  .study-panel .study-deck-open:active { box-shadow: 0 0 0 2.5px #b79a58, 0 0 0 3.5px #5e4720, inset 0 1px 3px rgba(60, 40, 15, .35); }
+  .study-panel .study-deck-open:focus-visible, .study-panel .study-deck-edit:focus-visible { outline: 2px solid #fff3cf; outline-offset: 2px; }
+  .study-panel .study-deck-open strong { font: 700 15px/1.3 var(--serif); letter-spacing: .05em; color: var(--ink); }
+  .study-panel .study-deck-open small { font: 12px/1.5 'Courier Prime', 'Courier New', ui-monospace, 'Songti SC', 'Noto Serif CJK SC', 'STSong', 'SimSun', monospace; color: var(--ink-2); }
+  /* the due count hangs on the box as a tag */
+  .study-panel .study-deck-badge {
+    top: -10px; left: auto; right: 14px; min-width: 30px; padding: 3px 9px 2px; transform: rotate(3deg); font: 700 14px/1.2 var(--serif); color: #a3301d; text-align: center; background: #fffdf5;
+    box-shadow: 0 0 0 1px rgba(95, 72, 40, .5), calc(var(--sx, 2) * 2px) calc(var(--sy, 3) * 2px) 3px rgba(15, 10, 8, calc(.35 * var(--lamp-k, .6))); border: 0; clip-path: polygon(0 18%, 14% 0, 100% 0, 100% 100%, 0 100%);
+  }
+  .study-panel .study-deck-edit.brass-plate {
+    align-self: center; min-height: 44px; padding: 6px 22px; font-size: 13px; letter-spacing: .08em; color: #2a1c0a; border: 0; border-radius: var(--ui-radius-sm);
+    background: repeating-linear-gradient(0deg, rgba(255, 245, 219, .07) 0 1px, transparent 1px 2px), linear-gradient(180deg, #b1965c 0%, #8f743f 34%, #785f30 52%, #9e834c 100%);
+    box-shadow: inset 0 0 0 1px rgba(255, 239, 204, .42), 0 0 0 1px rgba(36, 23, 8, .55), calc(var(--sx, 2) * 3px) calc(var(--sy, 3) * 3px) 5px rgba(15, 10, 8, calc(.4 * var(--lamp-k, .6)));
+  }
+  .study-panel .study-new-deck input, .study-panel .study-countdown-add input { border: 0; border-bottom: 1.5px solid rgba(76, 58, 30, .55); border-radius: 0; background: rgba(255, 252, 240, .55); box-shadow: none; }
+  .study-panel .study-books { border: 0; background: linear-gradient(rgba(255, 252, 240, .5), rgba(244, 235, 214, .45)); box-shadow: inset 0 0 0 1px rgba(95, 72, 40, .3); }
+  .study-panel .study-guide, .study-panel .study-import { border: 0; box-shadow: inset 0 0 0 1px rgba(95, 72, 40, .3); background: rgba(255, 252, 240, .35); }
+  .study-panel .study-empty { color: var(--ink-2); background: none; border-color: rgba(95, 72, 40, .45); }
+  .study-panel .study-countdowns h4 { font: 600 13px/1.4 var(--serif); letter-spacing: .06em; }
+  .study-panel .study-countdowns li { border: 0; background: rgba(120, 84, 40, .07); box-shadow: inset 0 0 0 1px rgba(95, 72, 40, .28); }
+  .study-panel .study-countdowns li b { font: 700 16px/1.2 var(--serif); color: #7d5019; }
+  .study-panel .study-countdowns li.is-soon b { color: #a3301d; }
+
+  /* ── taking cards out of the box ───────────────────────────────────── */
+  .study-review { perspective: 1100px; }
+  .study-review .study-review-head > span {
+    padding: 3px 12px; font: 600 12px/1.4 var(--ui-font); letter-spacing: .04em; color: #2a1c0a; background: var(--brass);
+    box-shadow: inset 0 0 0 1px rgba(255, 239, 204, .42), 0 0 0 1px rgba(36, 23, 8, .55); text-shadow: 0 1px 0 rgba(255, 239, 199, .34);
+  }
+  .study-review .study-back { color: var(--ink); font-weight: 600; }
+  /* an index card: red head line, blue rules, a stack of cards behind it; the box's front board hides the foot */
+  .study-review .study-card {
+    min-height: 196px; margin: 20px 6px 18px; padding: 30px 20px 26px; color: var(--ink); border: 0; border-radius: var(--ui-radius-sm); cursor: pointer;
+    background:
+      linear-gradient(rgba(190, 70, 56, .55), rgba(190, 70, 56, .55)) 0 36px / 100% 1.5px no-repeat,
+      repeating-linear-gradient(180deg, transparent 0 23px, rgba(60, 90, 140, .26) 23px 24px) 0 37px / 100% calc(100% - 37px) no-repeat,
+      var(--paper-grain, none) 0 0 / 96px, var(--paper-tile, none) 0 0 / 128px, linear-gradient(172deg, #fdf8ea, #f3ead4);
+    box-shadow: 0 -5px 0 -2px #f0e6cf, 0 -5px 0 -1.5px rgba(95, 72, 40, .35), 0 -10px 0 -4px #e2d6b8, 0 -10px 0 -3.5px rgba(95, 72, 40, .3), 0 -15px 0 -6px #d4c6a2, 0 -15px 0 -5.5px rgba(95, 72, 40, .26),
+      inset 0 0 0 1px rgba(95, 72, 40, .28), calc(var(--sx, 2) * 5px) calc(var(--sy, 3) * 5px) 8px rgba(15, 10, 8, calc(.34 * var(--lamp-k, .6)));
+    animation: study-card-rise var(--flip-d) var(--ease-drawer, ease-out) both; transform-origin: 50% 100%;
+  }
+  .study-review .study-card::after {
+    content: ''; position: absolute; left: -8px; right: -8px; bottom: -14px; height: 32px; pointer-events: none; border-radius: 0 0 var(--ui-radius-sm) var(--ui-radius-sm);
+    background: linear-gradient(180deg, rgba(0, 0, 0, .3), transparent 8px), var(--paper-grain, none) 0 0 / 96px, linear-gradient(172deg, #bf9660, #a67b47 60%, #8e6538);
+    box-shadow: inset 0 0 0 1px rgba(60, 35, 10, .5), 0 3px 5px rgba(15, 10, 8, calc(.35 * var(--lamp-k, .6)));
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+  }
+  .study-review .study-card:focus-visible { outline: 2px solid #7d5019; outline-offset: 5px; }
+  /* turned over: the back of the card, no head line, the answer in pen */
+  .study-review .study-card.is-flipped {
+    cursor: default; animation: study-flip-over var(--flip-d) var(--ease-drawer, ease-out) both; transform-origin: 50% 50%;
+    background: repeating-linear-gradient(180deg, transparent 0 23px, rgba(60, 90, 140, .22) 23px 24px) 0 12px / 100% calc(100% - 12px) no-repeat, var(--paper-grain, none) 0 0 / 96px, var(--paper-tile, none) 0 0 / 128px, linear-gradient(172deg, #f6efdb, #ebe0c4);
+  }
+  .study-review .study-card-front { font: 600 26px/1.4 var(--hand); color: var(--ink); }
+  .study-review .study-card-back { padding-top: 12px; font: 17px/1.7 var(--hand); color: var(--pen); border-top: 1.5px dashed rgba(76, 58, 30, .55); }
+  .study-review .study-card-hint { font: 14px/1.5 var(--hand); color: var(--ink-2); }
+  /* the stage is a rubber stamp in the corner of the card */
+  .study-review .study-stage { top: 7px; left: 10px; padding: 0 8px; font: 700 12px/18px var(--ui-font); letter-spacing: .1em; color: #2b6335; background: none; border: 1.5px solid currentColor; border-radius: 0; transform: rotate(-3deg); opacity: .9; }
+  .study-review .study-stage.is-new { color: #3d5470; }
+  .study-review .study-stage.is-learning { color: #a3301d; }
+  .study-review .study-keys, .study-review .study-speak kbd { color: var(--ink-2); }
+
+  /* ── 1 – 4: four brass keys ────────────────────────────────────────── */
+  .study-review .study-ratings { gap: 10px; padding-top: 6px; }
+  .study-review .study-ratings button {
+    gap: 4px; padding: 4px 0 2px; color: var(--ink); background: none; border: 0; border-radius: var(--ui-radius-sm); box-shadow: none; transition: none;
+  }
+  .study-review .study-ratings button:active { translate: none; box-shadow: none; }
+  .study-review .study-ratings kbd {
+    order: -1; position: static; display: grid; place-items: center; width: 48px; height: 46px; margin-bottom: 2px; font: 700 22px/1 var(--serif); color: #2a1c0a; border-radius: var(--ui-radius-sm);
+    background: radial-gradient(circle at 50% 30%, rgba(255, 245, 219, .35), transparent 60%), repeating-linear-gradient(0deg, rgba(255, 245, 219, .07) 0 1px, transparent 1px 2px), linear-gradient(180deg, #c3a86a 0%, #a07a38 55%, #8a6a30 100%);
+    box-shadow: inset 0 0 0 1.5px var(--ring, rgba(255, 239, 204, .5)), 0 0 0 1px rgba(36, 23, 8, .65), 0 4px 0 #5a431a, calc(var(--sx, 2) * 3px) calc(4px + var(--sy, 3) * 3px) 4px rgba(15, 10, 8, calc(.4 * var(--lamp-k, .6)));
+    text-shadow: 0 1px 0 rgba(255, 239, 199, .45); transition: translate .07s, box-shadow .07s;
+  }
+  .study-review .study-ratings button:hover kbd { filter: brightness(1.1); }
+  .study-review .study-ratings button:active kbd { translate: 0 3px; box-shadow: inset 0 0 0 1.5px var(--ring, rgba(255, 239, 204, .5)), 0 0 0 1px rgba(36, 23, 8, .65), 0 1px 0 #5a431a; }
+  .study-review .study-ratings button:focus-visible { outline: 2px solid #7d5019; outline-offset: 2px; }
+  .study-review .study-ratings .is-again { --ring: #a3301d; } .study-review .study-ratings .is-hard { --ring: #b8741a; } .study-review .study-ratings .is-good { --ring: #2b6335; } .study-review .study-ratings .is-easy { --ring: #3d5a80; }
+  .study-review .study-ratings b { font: 700 13px/1.3 var(--serif); letter-spacing: .06em; color: var(--ink); }
+  .study-review .study-ratings small { color: var(--ink-2); font-size: 12px; }
+  .study-review .study-ratings .is-again, .study-review .study-ratings .is-hard, .study-review .study-ratings .is-good, .study-review .study-ratings .is-easy { border-bottom: 0; }
+
+  .study-review .study-done { color: var(--ink); }
+  .study-review .study-done strong { font: 600 14px/1.5 var(--serif); letter-spacing: .05em; }
+  @media (max-width: 760px), (pointer: coarse) {
+    .study-ratings button { min-height: 76px; }
+    .study-ratings kbd { width: 52px; height: 48px; }
+  }
+  @keyframes study-card-rise { from { opacity: 0; transform: translateY(34px) rotate(1.4deg); } to { opacity: 1; transform: none; } }
+  @keyframes study-flip-over { from { transform: rotateY(-88deg); filter: brightness(.7); } 55% { filter: brightness(.95); } to { transform: none; filter: none; } }
+  html[data-perf='low'] .study-review .study-card, html[data-perf='low'] .study-decks li { box-shadow: inset 0 0 0 1px rgba(95, 72, 40, .35); }
+}

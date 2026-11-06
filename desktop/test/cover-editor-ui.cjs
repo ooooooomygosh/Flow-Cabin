@@ -1,6 +1,6 @@
 'use strict';
 const { _electron } = require('playwright'), fs = require('node:fs'), path = require('node:path'), assert = require('node:assert/strict');
-const { mountFixture, albums, openRecordTools, closeRecordCard } = require('./ui-fixture.cjs');
+const { mountFixture, albums, openRecordTools, closeRecordCard, closeLibrary, playRecord } = require('./ui-fixture.cjs');
 const desktop = path.resolve(__dirname, '..'), output = path.join(desktop, 'test-results/cover-editor'); fs.mkdirSync(output, { recursive: true });
 const env = { ...process.env, ALBUM_DESKTOP_TEST_PROFILE: path.join(output, `profile-${Date.now()}`) }; delete env.ELECTRON_RUN_AS_NODE;
 const executablePath = process.env.ALBUM_QA_EXE || require(path.join(desktop, 'node_modules/electron'));
@@ -16,7 +16,7 @@ const report = { fixtureData: true, checks: [], pageErrors: [] }; let app, site;
     const item = { ...albums[0], id, title: scenario, externalIds: undefined, collectionId: undefined, cover: `https://album-circle.vercel.app/qa-colour.png?qa-slow-cover=${testCase}` };
     if (scenario === 'reset-base') await site.evaluate((key) => localStorage.setItem('album-circle-library-v1-local-owner', JSON.stringify({ styles: { [key]: { base: '#2255aa' } } })), key);
     await mountFixture(app, site, { items: [item], coverResponse: cover, slowCover: true });
-    await site.locator('.room-record').first().click(); await openRecordTools(site);
+    await openRecordTools(site, scenario);
     const editor = site.getByRole('dialog', { name: '自定义唱片' });
     assert.equal(await editor.getByLabel('黑胶底色', { exact: true }).inputValue(), scenario === 'reset-base' ? '#2255aa' : '#16191d');
     if (scenario === 'manual-base') await editor.getByLabel('黑胶底色', { exact: true }).fill('#00aa77');
@@ -27,12 +27,10 @@ const report = { fixtureData: true, checks: [], pageErrors: [] }; let app, site;
       await editor.getByLabel('泼溅颜色数量', { exact: true }).selectOption('2');
       await editor.getByLabel('泼溅颜色 1', { exact: true }).fill('#cc00aa');
     }
-    if (earlySave) { await editor.getByRole('button', { name: '保存唱片设置', exact: true }).click(); await closeRecordCard(site); }
+    if (earlySave) { await editor.getByRole('button', { name: '保存唱片设置', exact: true }).click(); await closeRecordCard(site); await closeLibrary(site); }
     await app.evaluate(() => globalThis.__qaReleaseImage());
     const expected = scenario === 'manual-base' ? '#00aa77' : '#d23c1e';
-    // Wait on the independent shelf result first, then assert the editor did not
-    // mistake an opacity/palette change for an explicit base-colour choice.
-    if (scenario !== 'reset-base' && scenario !== 'manual-base') await site.waitForFunction(() => document.querySelector('.room-drag-record .custom-vinyl')?.style.getPropertyValue('--vinyl-base') === '#d23c1e');
+    // Assert the editor did not mistake an opacity/palette change for an explicit base-colour choice.
     if (!earlySave) {
       await site.waitForFunction((expected) => document.querySelector('.record-editor input[type=color]')?.value === expected, expected);
       assert.equal(await editor.getByLabel('黑胶透明度').inputValue(), '62');
@@ -42,14 +40,16 @@ const report = { fixtureData: true, checks: [], pageErrors: [] }; let app, site;
       }
       await editor.getByRole('button', { name: '保存唱片设置', exact: true }).click(); await closeRecordCard(site);
     }
+    await closeLibrary(site);
     const saved = await site.evaluate((key) => JSON.parse(localStorage.getItem('album-circle-library-v1-local-owner')).styles[key], key);
     assert.equal(saved.base, earlySave && scenario !== 'manual-base' ? '#16191d' : expected); assert.equal(saved.opacity, 62);
     assert.equal(saved.autoBase, scenario === 'manual-base' ? undefined : true);
     if (scenario === 'splatter') { assert.equal(saved.splatter, true); assert.deepEqual(saved.splashes, ['#cc00aa', '#ede3c7']); }
-    await site.locator('.room-record').first().dblclick();
-    await site.waitForFunction((expected) => document.querySelector('.room-turntable .custom-vinyl')?.style.getPropertyValue('--vinyl-base') === expected, expected);
-    await site.reload(); await site.locator('.room-record').first().dblclick();
-    await site.waitForFunction((expected) => document.querySelector('.room-turntable .custom-vinyl')?.style.getPropertyValue('--vinyl-base') === expected, expected);
+    // The record on the deck hands its style to the wallpaper snapshot (the cabin paints the disc on a canvas, not DOM).
+    await playRecord(site, scenario);
+    await site.waitForFunction((expected) => window.albumRoomSnapshot?.().recordStyle?.base === expected, expected);
+    await site.reload(); await site.locator('.desk-home').waitFor(); await playRecord(site, scenario);
+    await site.waitForFunction((expected) => window.albumRoomSnapshot?.().recordStyle?.base === expected, expected);
     report.checks.push(testCase); console.log('PASS delayed-cover-' + testCase);
   }
   assert.deepEqual(report.pageErrors, []); report.passed = true;

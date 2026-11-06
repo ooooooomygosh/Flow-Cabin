@@ -8,6 +8,7 @@ import { launchChromium } from './launch-browser.mjs';
 import { hasViteLocalOrigin } from './vite-readiness.mjs';
 import { JOURNAL_BODY_LIMIT, JOURNAL_KEY } from '../src/focus/journal-entries.mjs';
 import { onboardingSeed } from './app-version.mjs';
+import { openFocus as openDeskFocus } from './settings-actions.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const output = process.env.JOURNAL_OUTPUT || path.join(root, 'desktop/test-results/journal-entries');
@@ -35,7 +36,7 @@ async function waitForBody(page, body) {
 async function openFocus(page, tab = '这一段') { // 3.0: 随手记 is the 便签 in 这一段
   const badge = page.locator('.focus-badge');
   await badge.waitFor({ timeout: 30000 });
-  if (await badge.getAttribute('aria-expanded') === 'false') await badge.click();
+  if (await badge.getAttribute('aria-expanded') === 'false') await openDeskFocus(page);
   const dock = page.locator('.focus-dock');
   await dock.waitFor();
   await dock.getByRole('tab', { name: tab, exact: true }).click();
@@ -242,6 +243,7 @@ try {
   await run('quick-notes-archive-keeps-source-and-does-not-duplicate', async (page) => {
     const note = '会议结束后要先整理三条结论，再回来继续专注。';
     const dock = await openFocus(page);
+    await dock.getByRole('tab', { name: '随手记', exact: true }).click(); // 3.1: 随手记 is its own page
     const noteBox = page.getByLabel('随手记内容');
     await noteBox.fill(note);
     await page.waitForFunction(({ key, note }) => JSON.parse(localStorage.getItem(key) || '{}').notes === note, { key: FOCUS_KEY, note });

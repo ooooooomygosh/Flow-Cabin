@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { launchChromium } from './launch-browser.mjs';
 import { showcaseAlbums } from './showcase-albums.mjs';
 import { verifyOnboarding } from './onboarding-checks.mjs';
-import { openRoomSettings, closeSettings } from './settings-actions.mjs';
+import { openRoomSettings, closeSettings, openLibrary, closeLibrary, takeBinder, playRecord, openDrawerThing } from './settings-actions.mjs';
 import { spawn, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import fs from 'node:fs/promises';
@@ -57,44 +57,37 @@ try {
   await context.route('**/*', routeHandler);
   await verifyOnboarding({ browser, origin, routeHandler, evidence, output, check });
   page = await context.newPage(); page.setDefaultTimeout(10000); page.on('pageerror', e => report.errors.push(e.message)); page.on('console', m => { if (m.type() === 'error') report.errors.push(m.text()); });
-  await page.goto(origin); await page.getByRole('button', { name: '先专注一会儿' }).waitFor(); await page.evaluate(() => document.fonts.ready);
+  await page.goto(origin); await page.locator('.desk-home').waitFor(); await page.evaluate(() => document.fonts.ready);
+  // An empty desk offers two paths with nothing set up first: the 唱片架 plate (A) or a round from the LED clock.
   for (const viewport of [{ width: 1440, height: 900 }, { width: 960, height: 600 }]) {
     await page.setViewportSize(viewport);
-    assert.equal(await page.locator('.room-now-playing').count(), 0); assert.equal(await page.locator('.room-shelf-navigation').count(), 0);
-    for (const name of ['添加第一张专辑', '先专注一会儿']) await fits(page.getByRole('button', { name, exact: true }));
+    for (const entry of [page.getByRole('button', { name: /^唱片架 · / }), page.locator('.desk-clock-face')]) await fits(entry);
     await shot(`welcome-${viewport.width}x${viewport.height}`);
-    await page.getByRole('button', { name: '先专注一会儿' }).click(); await page.getByRole('button', { name: '开始专注', exact: true }).waitFor();
-    assert.equal(await page.getByRole('tab', { name: '番茄钟' }).getAttribute('aria-selected'), 'true'); assert.equal(await page.locator('.focus-badge').getAttribute('aria-expanded'), 'true');
-    await fits(page.getByRole('button', { name: '开始专注', exact: true })); await page.getByRole('button', { name: '收起专注工具' }).click();
-    await page.getByRole('button', { name: '添加第一张专辑' }).click(); await page.getByRole('dialog', { name: '添加到唱片架' }).waitFor(); await page.keyboard.press('Escape');
-    check(`welcome-two-paths-and-visible-controls-${viewport.width}x${viewport.height}`);
+    await page.locator('.focus-badge').click(); await page.getByRole('button', { name: '开始专注', exact: true }).waitFor();
+    assert.equal(await page.getByRole('tab', { name: '这一段' }).getAttribute('aria-selected'), 'true'); assert.equal(await page.locator('.focus-badge').getAttribute('aria-expanded'), 'true');
+    await fits(page.getByRole('button', { name: '开始专注', exact: true })); await page.keyboard.press('Escape');
+    await openLibrary(page); await closeLibrary(page);
+    check(`empty-cabin-two-paths-and-visible-controls-${viewport.width}x${viewport.height}`);
   }
-  items = albums; await page.setViewportSize({ width: 1440, height: 900 }); await page.reload(); await page.locator('.room-record').first().waitFor();
-  await page.waitForFunction(() => document.querySelectorAll('.pixel-artwork canvas.is-painted').length >= 12);
-  await page.locator('.room-record').nth(5).dblclick(); await page.locator('.room-turntable[data-loaded-id="showcase-5"]').waitFor();
-  await page.locator('.turntable-status', { hasText: '无音频' }).waitFor(); // visual mode says so in the status
+  items = albums; await page.setViewportSize({ width: 1440, height: 900 }); await page.reload(); await page.locator('.desk-home').waitFor();
+  await playRecord(page, albums[5].title); await page.waitForFunction(() => Boolean(window.__cabinDeckItem));
   await page.waitForTimeout(400); await shot('cabin', true);
-  assert.equal(await page.locator('.room-shelf-navigation').count(), 0); check('twelve-albums-no-redundant-paging-and-visual-audio-hint');
-  // Poke before focus: while the partner speaks (and a paused timer keeps 专注暂停中 up) it lets clicks
-  // through to the scene (companion-room.css), so the poke is checked while it is quiet.
-  await page.locator('.room-cat').click(); await page.locator('.room-cat-bubble').waitFor(); check('partner-poke-shows-response');
-  await page.locator('.room-cat-bubble').waitFor({ state: 'detached', timeout: 20000 });
-  await page.locator('.focus-badge').click(); await page.getByRole('button', { name: '开始专注', exact: true }).click(); await page.locator('.focus-badge.is-running').waitFor(); await page.locator('.room-cat-bubble', { hasText: '还剩 25 分钟' }).waitFor(); await shot('focus', true);
-  await page.keyboard.press('Escape'); await page.locator('.focus-display').waitFor({ state: 'detached' });
-  await page.getByRole('button', { name: '暂停', exact: true }).click(); check('focus-start-and-pause-from-visible-tool'); await page.getByRole('button', { name: '收起专注工具' }).click();
+  { const shelf = await takeBinder(page, '唱片'); await shelf.locator('.listen-grid li').first().waitFor(); assert.equal(await shelf.locator('.listen-grid li').count(), albums.length); await shot('record-shelf', true); await closeLibrary(page); }
+  check('every-album-stands-on-the-shelf-and-the-bar-shows-the-record');
+  // The pet portrait on the desk opens 伙伴与装扮.
+  await openDrawerThing(page, '伙伴'); await page.locator('.cat-panel[open]').waitFor(); check('drawer-companion-opens-the-panel'); await page.keyboard.press('Escape');
+  await page.locator('.focus-badge').click(); await page.getByRole('button', { name: '开始专注', exact: true }).click(); await page.keyboard.press('Escape'); await page.waitForFunction(() => /专注中/.test(document.querySelector('.desk-clock-face')?.getAttribute('aria-label') || ''));
+  await page.locator('.focus-badge').click(); await page.getByRole('button', { name: '暂停', exact: true }).click(); check('focus-start-and-pause-from-visible-tool'); await page.keyboard.press('Escape');
   await openRoomSettings(page);
-  await page.locator('.scene-choice img').evaluateAll(images => Promise.all(images.map(image => image.decode())));
   for (const name of ['奶糖', '蛋挞', '棉花', '可可', '枫糖']) await fits(page.locator('.pet-choice strong', { hasText: name }));
-  await fits(page.getByRole('button', { name: '关闭设置', exact: true })); check('six-scene-thumbnails-and-all-partner-names-visible');
+  await fits(page.getByRole('button', { name: '关闭设置', exact: true })); check('all-partner-names-visible');
   await shot('personalization', true); await closeSettings(page);
   await page.keyboard.press('h'); assert(await page.evaluate(() => document.documentElement.classList.contains('room-zen'))); await shot('immersive'); await page.keyboard.press('Escape'); check('immersive-enter-and-exit');
   await page.setViewportSize({ width: 960, height: 600 }); await shot('cabin-960x600');
-  const { CLASSIC_ROOM_SCENES: ROOM_SCENES } = await import('../src/scene-catalog.mjs');
-  for (const scene of ROOM_SCENES) {
-    await openRoomSettings(page); await page.getByRole('button', { name: `选择场景 ${scene.label}`, exact: true }).click(); await closeSettings(page); await shot(`scene-${scene.id}-960x600`);
-    for (const name of ['设置', '添加到唱片架']) await fits(page.getByRole('button', { name, exact: true }));
-  }
-  check('all-six-scenes-compact-controls-fit');
+  // 3.1: one home (the desk) for every stored look, so the compact controls are checked once at 960x600.
+  for (const name of ['设置', '进入全屏模式']) await fits(page.getByRole('button', { name, exact: true }));
+  await fits(page.getByRole('button', { name: /^唱片架 · / }));
+  check('compact-controls-fit-at-960x600');
   if (process.env.SHOWCASE_TOUR === '1') {
     const tour = await browser.newContext({ viewport: { width: 1280, height: 800 }, locale: 'zh-CN', reducedMotion: 'no-preference', recordVideo: { dir: evidence, size: { width: 1280, height: 800 } } });
     await tour.route('**/*', routeHandler);
@@ -104,9 +97,9 @@ try {
     });
     const demo = await tour.newPage();
     demo.on('pageerror', error => report.errors.push(error.message));
-    await demo.goto(origin); await demo.waitForFunction(() => document.querySelectorAll('.pixel-artwork canvas.is-painted').length >= 12);
-    await demo.locator('.room-record').nth(5).dblclick(); await demo.waitForTimeout(2000);
-    await demo.getByRole('button', { name: '设置', exact: true }).click(); await demo.waitForTimeout(1300);
+    await demo.goto(origin); await demo.locator('.desk-home').waitFor();
+    await playRecord(demo, albums[5].title); await demo.waitForTimeout(2000);
+    await openDrawerThing(demo, '设置'); await demo.waitForTimeout(1300);
     await demo.getByRole('tab', { name: '实验室', exact: true }).click(); await demo.waitForTimeout(900);
     await demo.getByRole('button', { name: '重新引导', exact: true }).click(); await demo.waitForTimeout(1800);
     await demo.getByRole('button', { name: '下一步', exact: true }).click(); await demo.waitForTimeout(2200);
@@ -114,9 +107,8 @@ try {
     await demo.getByRole('button', { name: '跳过引导', exact: true }).click(); await demo.waitForTimeout(900);
     await demo.locator('.focus-badge').click(); await demo.waitForTimeout(1500);
     await demo.getByRole('button', { name: '开始专注', exact: true }).click(); await demo.waitForTimeout(1700);
-    await demo.getByRole('button', { name: '收起专注工具', exact: true }).click();
+    await demo.keyboard.press('Escape');
     await openRoomSettings(demo); await demo.waitForTimeout(1300);
-    await demo.getByRole('button', { name: '选择场景 林间书屋', exact: true }).click();
     await demo.getByRole('button', { name: '选择桌宠 枫糖', exact: true }).click(); await demo.waitForTimeout(1200);
     await closeSettings(demo); await demo.waitForTimeout(1700);
     await demo.keyboard.press('h'); await demo.waitForTimeout(2000);

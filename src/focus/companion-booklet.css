@@ -1,0 +1,177 @@
+@layer guards, reset, features, skin, overrides;
+/* The pet panel as a companion booklet, one of DEsk's sheets (https://github.com/fyzugx/DEsk, MIT,
+   (c) 2026 The DEsk authors): printed, not handwritten. The portrait is an instant photograph like the
+   top one of the stack in the drawer, the name hangs on a brass collar tag, the mood is a hand-drawn dial,
+   accessories are stickers on a page (locked ones are faded outlines with the unlock note in
+   handwriting) and souvenirs are postage stamps. The sheet itself (corner, shadow, heading) is the
+   paper dialog from src/props/props.css; everything here sits on it. Shadows follow the one lamp
+   (--sx / --sy / --lamp-k). Stamp perforations and the photo corners are drawn with masks and
+   clip-paths; the dial's needle swings on the drawer spring (--ease-drawer). */
+@layer overrides {
+  .cabin-dialog.cat-panel {
+    --ink: #2e2318;
+    --ink-2: #5f4f37;
+    --brass-ink: #7d5019;
+    --pen: #3b3226;
+    --thread: #a3301d;
+    --hand: var(--ui-font-display);
+    --slip: linear-gradient(180deg, rgba(255, 252, 240, .62), rgba(244, 235, 214, .5));
+  }
+  /* a sheet on the desk: wider than the old booklet, and its body scrolls under the printed heading
+     (the sheet itself does not, so its corner stays where it is) */
+  .cabin-dialog.cat-panel { width: min(430px, calc(100vw - 24px)); overflow: hidden; }
+  .cat-panel .cabin-dialog-body { position: relative; padding: 18px 26px 24px; }
+
+  /* ── the photo and the collar tag ──────────────────────────────────── */
+  .cat-panel .cat-portrait {
+    display: grid; grid-template-columns: 128px minmax(0, 1fr); align-items: center; gap: 18px; margin: 0 0 14px; padding: 8px 0 16px;
+    background: none; border: 0; border-bottom: 1px dashed rgba(76, 58, 30, .45);
+  }
+  .cat-panel .cat-photo {
+    position: relative; display: block; width: 132px; padding: 10px 10px 30px; transform: rotate(-3deg);
+    background: var(--paper-grain, none) 0 0 / 96px, linear-gradient(135deg, #e9e4d7, #fbfaf5);
+    box-shadow: inset 0 0 0 1px rgba(95, 72, 40, .2), calc(var(--sx, -.54) * 5px) calc(var(--sy, -.43) * 5px) 5px rgba(15, 10, 8, calc(.4 * var(--lamp-k, .6)));
+  }
+  .cat-panel .cat-photo-print {
+    position: relative; display: grid; place-items: end center; height: 112px; overflow: hidden;
+    background: radial-gradient(ellipse at 60% 40%, #f3d9a8, #c79a62 70%, #8a5f37), #c79a62;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .22), inset 0 0 14px rgba(70, 40, 10, .4);
+  }
+  .cat-panel .cat-photo-print::after { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(255, 255, 255, .3), rgba(255, 255, 255, .05) 45%, rgba(255, 255, 255, 0) 50%); pointer-events: none; }
+  .cat-panel .cat-photo .pixel-cat { position: relative; display: block; width: 100px; height: 100px; image-rendering: pixelated; filter: sepia(.15) saturate(.94) drop-shadow(-2px -2px 2px rgba(60, 30, 10, .35)); }
+  .cat-panel .cat-photo-caption { position: absolute; left: 12px; right: 12px; bottom: 6px; overflow: hidden; font: 600 13px/18px var(--ui-font-display); color: #4b4436; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
+  .cat-panel .cat-collar {
+    position: relative; display: inline-block; margin-left: -4px; padding: 5px 24px 5px 32px; font: 700 18px/1.25 var(--ui-font-display); letter-spacing: .06em; color: #2a1c0a;
+    background: radial-gradient(circle at 15px 50%, #2b1d0e 0 3px, #f3dfa6 3.4px 5px, transparent 5.4px), linear-gradient(180deg, #cdb273, #a9803c 55%, #8a6a30);
+    clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%); text-shadow: 0 1px rgba(255, 239, 199, .4);
+  }
+  .cat-panel .cat-portrait p { margin: 8px 0 4px; font: 15px/24px var(--hand); color: var(--pen); }
+  .cat-panel .cat-portrait small { font: 14px/22px var(--hand); color: #2b5a35; }
+  .cat-panel .cabin-dialog-body > .pixel-button { margin-bottom: 8px; }
+
+  /* ── what you typed together: a tally on graph paper ───────────────── */
+  .cat-panel .cat-input-companion { display: grid; gap: 8px; margin: 0 0 14px; padding: 12px 14px; background: var(--slip); border: 0; box-shadow: inset 0 0 0 1px rgba(95, 72, 40, .28); }
+  .cat-panel .cat-input-companion header { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+  .cat-panel .cat-input-companion header strong { font: 600 14px/1.4 var(--ui-font-display); letter-spacing: .06em; color: var(--ink); }
+  .cat-panel .cat-input-companion header small { max-width: 66%; font: 13px/1.45 var(--hand); color: var(--ink-2); text-align: right; }
+  .cat-panel .cat-input-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .cat-panel .cat-input-tiles > div { display: flex; align-items: baseline; gap: 4px; min-width: 0; padding: 6px 8px; background: rgba(120, 84, 40, .07); border: 0; box-shadow: inset 0 0 0 1px rgba(95, 72, 40, .28); }
+  .cat-panel .cat-input-tiles span, .cat-panel .cat-input-tiles small { color: var(--ink-2); font-size: 12px; }
+  .cat-panel .cat-input-tiles strong { margin-left: auto; font: 700 19px/1 var(--ui-font-display); color: var(--brass-ink); font-variant-numeric: tabular-nums; }
+  .cat-panel .cat-input-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; height: 62px; padding: 4px 2px 0; border-bottom: 1.5px solid var(--ink); background: repeating-linear-gradient(0deg, rgba(60, 80, 120, .13) 0 1px, transparent 1px 9px); }
+  .cat-panel .cat-input-stack { background: none; box-shadow: none; }
+  .cat-panel .cat-input-stack .is-keyboard { background: repeating-linear-gradient(135deg, #3d5a80 0 2px, #5f7ca0 2px 4px); }
+  .cat-panel .cat-input-stack .is-click { background: repeating-linear-gradient(135deg, #b8741a 0 2px, #d19a4a 2px 4px); box-shadow: none; }
+  .cat-panel .cat-input-day small { color: var(--ink-2); }
+  .cat-panel .cat-input-companion p { color: var(--ink-2); font-size: 12px; }
+  .cat-panel .cat-input-companion .cat-input-total { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .cat-panel .cat-input-companion .cat-input-privacy { color: var(--ink-2); }
+
+  /* ── level, fish, pencil bars ──────────────────────────────────────── */
+  .cat-panel .focus-rewards header strong { font: 600 15px/1.4 var(--ui-font-display); letter-spacing: .05em; color: var(--ink); }
+  .cat-panel .focus-rewards header span { color: var(--brass-ink); font-weight: 600; }
+  .cat-panel .focus-xp { height: 12px; background: rgba(95, 72, 40, .12); border: 0; box-shadow: inset 0 0 0 1.5px var(--ink); }
+  .cat-panel .focus-xp span { background: repeating-linear-gradient(135deg, #2b6335 0 3px, #3f7a49 3px 6px); }
+  .cat-panel .focus-rewards small { color: var(--ink-2); font: 14px/22px var(--hand); }
+
+  /* ── the mood dial ─────────────────────────────────────────────────── */
+  .cat-panel .cat-care { display: grid; grid-template-columns: 148px minmax(0, 1fr); gap: 6px 12px; align-items: center; padding: 10px 12px; background: var(--slip); border: 0; box-shadow: inset 0 0 0 1px rgba(95, 72, 40, .28); }
+  .cat-panel .cat-care > header, .cat-panel .cat-care > .cat-care-note, .cat-panel .cat-care > .cat-care-learned { grid-column: 1 / -1; }
+  .cat-panel .cat-care header strong { font: 600 14px/1.4 var(--ui-font-display); letter-spacing: .05em; color: var(--ink); }
+  .cat-panel .cat-care header small { font: 13px/1.4 var(--hand); color: var(--ink-2); }
+  .cat-panel .cat-mood-bar { position: relative; grid-row: 2; height: auto; background: none; border: 0; box-shadow: none; }
+  .cat-panel .cat-mood-bar > span { position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; }
+  .cat-panel .cat-gauge { display: block; width: 100%; height: auto; overflow: visible; }
+  .cat-panel .cat-gauge-track, .cat-panel .cat-gauge-fill { fill: none; stroke-linecap: round; }
+  .cat-panel .cat-gauge-track { stroke: var(--ink); stroke-width: 2; }
+  .cat-panel .cat-gauge-fill { stroke: #b8741a; stroke-width: 7; opacity: .75; stroke-dashoffset: 0; transition: stroke-dasharray calc(.5s * var(--pace, 1)) var(--ease-drawer, ease-out); }
+  .cat-panel .cat-mood-bar.is-happy .cat-gauge-fill { stroke: #2b6335; }
+  .cat-panel .cat-mood-bar.is-droopy .cat-gauge-fill { stroke: #5f4f37; }
+  .cat-panel .cat-gauge-tick { stroke: var(--ink); stroke-width: 1.6; stroke-linecap: round; }
+  .cat-panel .cat-gauge-needle { transform-origin: 60px 62px; transition: transform calc(.7s * var(--pace, 1)) var(--ease-drawer, ease-out); }
+  .cat-panel .cat-gauge-needle path { fill: none; stroke: var(--thread); stroke-width: 2.2; stroke-linecap: round; }
+  .cat-panel .cat-gauge-needle circle { fill: var(--ink); }
+  .cat-panel .cat-care-actions { grid-row: 2; flex-wrap: wrap; }
+  .cat-panel .cat-fish-chip { color: var(--ink-2); border: 1.5px dashed rgba(95, 72, 40, .55); background: rgba(255, 252, 240, .5); }
+  .cat-panel .cat-care-note { font: 14px/22px var(--hand); color: var(--pen); }
+  .cat-panel .cat-care-learned { font: 14px/22px var(--hand); color: #2b5a35; }
+
+  /* ── the sticker pages ─────────────────────────────────────────────── */
+  .cat-panel .focus-unlocks { gap: 14px; margin-top: 14px; }
+  .cat-panel .focus-unlocks fieldset { gap: 9px 10px; padding: 10px 10px 12px; border: 0; background: var(--slip); box-shadow: inset 0 0 0 1px rgba(95, 72, 40, .28); }
+  .cat-panel .focus-unlocks legend { padding: 0 6px; font: 600 13px/1.4 var(--ui-font-display); letter-spacing: .08em; color: var(--ink); background: #efe6d3; }
+  .cat-panel .focus-unlocks fieldset > button {
+    position: relative; min-height: 40px; padding: 5px 10px; font: 600 13px/1.3 var(--ui-font); color: var(--ink); background: #fffdf5; border: 0; border-radius: var(--ui-radius-sm);
+    box-shadow: 0 0 0 2px #fffdf5, 0 0 0 3px rgba(95, 72, 40, .3), calc(var(--sx, 2) * 2px) calc(var(--sy, 3) * 2px) 3px rgba(15, 10, 8, calc(.3 * var(--lamp-k, .6)));
+    transform: rotate(var(--tilt, 0deg)); transition: transform calc(.3s * var(--pace, 1)) var(--ease-drawer, ease-out), box-shadow .12s;
+  }
+  .cat-panel .focus-unlocks fieldset > button:nth-of-type(3n+1) { --tilt: -1.4deg; }
+  .cat-panel .focus-unlocks fieldset > button:nth-of-type(3n+2) { --tilt: 1deg; }
+  .cat-panel .focus-unlocks fieldset > button:nth-of-type(3n) { --tilt: -.5deg; }
+  .cat-panel .focus-unlocks fieldset > button:not(:disabled):hover { transform: rotate(0deg) translateY(-2px); border: 0; }
+  .cat-panel .focus-unlocks fieldset > button:focus-visible { outline: 2px solid var(--brass-ink); outline-offset: 3px; }
+  /* the one in use is circled in red pencil */
+  .cat-panel .focus-unlocks fieldset > button[aria-pressed='true'] {
+    color: var(--ink); background: #fff3c9; border: 0; box-shadow: 0 0 0 2px #fff3c9, 0 0 0 3.5px var(--thread), calc(var(--sx, 2) * 2px) calc(var(--sy, 3) * 2px) 3px rgba(15, 10, 8, calc(.3 * var(--lamp-k, .6)));
+  }
+  .cat-panel .focus-unlocks fieldset > button[aria-pressed='true']::after { content: '✓' / ''; position: absolute; top: -9px; right: -7px; width: 18px; height: 18px; border-radius: 50%; background: var(--thread); color: #fff8e8; font: 700 12px/18px var(--ui-font); text-align: center; }
+  /* not yet won: a faded outline, the unlock note written beside it */
+  .cat-panel .focus-unlocks fieldset > button.is-locked, .cat-panel .focus-unlocks fieldset > button.is-locked:disabled {
+    color: var(--ink-2); background: none; font-weight: 400; opacity: 1; cursor: default; box-shadow: none; border: 0; outline: 1.5px dashed rgba(95, 72, 40, .55); outline-offset: -1px; transform: rotate(var(--tilt, 0deg));
+  }
+  .cat-panel .focus-unlocks fieldset > button.is-locked:not(:disabled) { cursor: pointer; }
+  .cat-panel .focus-unlocks fieldset > button.is-locked .cat-accessory-preview { opacity: .38; filter: grayscale(1) contrast(.8); }
+  .cat-panel .focus-unlocks fieldset > button.is-locked small { font: 14px/1.3 var(--hand); color: #4d3f2a; }
+  .cat-panel .focus-lock { color: var(--ink-2); }
+
+  /* ── souvenirs: postage stamps ─────────────────────────────────────── */
+  .cat-panel .cabin-souvenirs { margin-top: 18px; padding-top: 14px; border-top: 1px dashed rgba(76, 58, 30, .5); color: var(--ink); }
+  .cat-panel .cabin-souvenirs h3 { font: 600 15px/1.5 var(--ui-font-display); letter-spacing: .06em; }
+  .cat-panel .cabin-souvenirs > p, .cat-panel .cabin-souvenirs > small { color: var(--ink-2); font: 14px/22px var(--hand); }
+  .cat-panel .souvenir-list { gap: 12px; }
+  .cat-panel .souvenir-card {
+    --stamp: #7a2f26;
+    position: relative; grid-template-columns: 44px minmax(0, 1fr); gap: 12px; padding: 14px 16px; border: 0; color: var(--ink);
+    background: linear-gradient(172deg, #fffdf5, #f1e8d2); box-shadow: inset 0 0 0 7px #fffdf5, inset 0 0 0 8px var(--stamp);
+    -webkit-mask: linear-gradient(#000 0 0) center / calc(100% - 8px) calc(100% - 8px) no-repeat,
+      radial-gradient(circle at 50% 0, #0000 2.7px, #000 3.1px) 0 0 / 9px 4px repeat-x, radial-gradient(circle at 50% 100%, #0000 2.7px, #000 3.1px) 0 100% / 9px 4px repeat-x,
+      radial-gradient(circle at 0 50%, #0000 2.7px, #000 3.1px) 0 0 / 4px 9px repeat-y, radial-gradient(circle at 100% 50%, #0000 2.7px, #000 3.1px) 100% 0 / 4px 9px repeat-y;
+    mask: linear-gradient(#000 0 0) center / calc(100% - 8px) calc(100% - 8px) no-repeat,
+      radial-gradient(circle at 50% 0, #0000 2.7px, #000 3.1px) 0 0 / 9px 4px repeat-x, radial-gradient(circle at 50% 100%, #0000 2.7px, #000 3.1px) 0 100% / 9px 4px repeat-x,
+      radial-gradient(circle at 0 50%, #0000 2.7px, #000 3.1px) 0 0 / 4px 9px repeat-y, radial-gradient(circle at 100% 50%, #0000 2.7px, #000 3.1px) 100% 0 / 4px 9px repeat-y;
+  }
+  .cat-panel .souvenir-card:nth-child(2) { --stamp: #3d5470; }
+  .cat-panel .souvenir-card:nth-child(3) { --stamp: #3f5a3a; }
+  .cat-panel .souvenir-card:nth-child(4) { --stamp: #7f5f24; }
+  .cat-panel .souvenir-card h4 { font: 700 14px/1.5 var(--ui-font-display); letter-spacing: .06em; color: var(--stamp); }
+  .cat-panel .souvenir-card p { color: var(--ink); }
+  .cat-panel .souvenir-card .souvenir-date { margin: 2px 0; color: var(--ink-2); font: 13px/1.5 var(--ui-font); }
+  .cat-panel .souvenir-card p:not(.souvenir-date) { font: 14px/22px var(--hand); color: var(--pen); }
+  .cat-panel .souvenir-emblem { width: 44px; height: 44px; border: 0; color: var(--stamp); background: none; box-shadow: inset 0 0 0 1.5px var(--stamp); }
+  .cat-panel .souvenir-card[data-earned=true] { background: linear-gradient(172deg, #fffdf5, #f6ecd2); }
+  .cat-panel .souvenir-card[data-earned=true] .souvenir-emblem { color: #fffaf0; background: var(--stamp); box-shadow: inset 0 0 0 2px #fffdf5, inset 0 0 0 3px var(--stamp); }
+  /* not yet earned: the empty frame of a stamp, faded */
+  .cat-panel .souvenir-card[data-earned=false] { background: repeating-linear-gradient(135deg, rgba(95, 72, 40, .05) 0 3px, transparent 3px 7px), #f3ead6; box-shadow: inset 0 0 0 7px #f3ead6, inset 0 0 0 8px rgba(95, 72, 40, .4); }
+  .cat-panel .souvenir-card[data-earned=false] h4 { color: var(--ink-2); }
+  .cat-panel .souvenir-card[data-earned=false] .souvenir-emblem { color: var(--ink-2); opacity: .55; box-shadow: inset 0 0 0 1.5px rgba(95, 72, 40, .5); }
+  /* the postmark: a ring and wavy lines struck across the corner when a stamp has been won */
+  .cat-panel .souvenir-postmark {
+    position: absolute; right: 8px; bottom: 8px; width: 58px; height: 58px; border-radius: 50%; border: 2px solid var(--stamp); opacity: .38; pointer-events: none; transform: rotate(-14deg);
+    background: repeating-linear-gradient(180deg, transparent 0 9px, var(--stamp) 9px 10.5px, transparent 10.5px 14px) center / 100% 38px no-repeat;
+  }
+  .cat-panel .souvenir-error { border: 1.5px dashed var(--thread); }
+  .cat-panel .souvenir-error p { color: #8f2a18; }
+
+  @media (max-width: 760px) {
+    .cat-panel .cat-portrait { grid-template-columns: 112px minmax(0, 1fr); gap: 12px; }
+    .cat-panel .cat-photo { width: 112px; height: 112px; padding: 12px; }
+    .cat-panel .cat-photo::before { inset: 9px; }
+    .cat-panel .cat-photo .pixel-cat { width: 88px; height: 88px; }
+    .cat-panel .cat-care { grid-template-columns: 1fr; }
+    .cat-panel .cat-mood-bar { max-width: 180px; justify-self: center; }
+    .cat-panel .cat-care-actions { grid-row: auto; }
+    .cat-panel .focus-unlocks fieldset > button { min-height: 44px; }
+    .cat-panel .souvenir-card { grid-template-columns: 40px minmax(0, 1fr); padding: 12px; }
+  }
+  html[data-perf='low'] .cat-panel .cat-photo, html[data-perf='low'] .cat-panel .focus-unlocks fieldset > button { box-shadow: inset 0 0 0 1px rgba(95, 72, 40, .3); }
+}

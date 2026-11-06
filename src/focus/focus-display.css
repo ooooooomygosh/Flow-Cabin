@@ -31,12 +31,6 @@
 .face-show button[aria-checked=true] { color: var(--px-ink-on-accent); background: var(--px-accent); box-shadow: inset 2px 2px 0 var(--px-accent-hi), inset -2px -2px 0 var(--px-accent-lo); }
 
 /* The dock header's quick switch */
-.face-switch { display: flex; align-items: center; gap: 2px; padding: 0 6px 4px 10px; font-size: 12px; color: var(--px-ink-dim); }
-.face-switch-title { margin-right: 6px; }
-.face-switch strong { min-width: 6em; text-align: center; font-weight: 400; color: var(--px-ink); white-space: nowrap; }
-.face-switch button { display: inline-flex; align-items: center; gap: 4px; min-width: var(--px-hit); min-height: var(--px-hit); padding: 0 4px; font: inherit; color: var(--px-ink-dim); background: none; border: 0; cursor: pointer; }
-.face-switch button:hover { color: var(--px-ink); }
-.face-switch .face-switch-full { margin-left: auto; padding: 0 8px; color: var(--px-ink); background: var(--px-surface-2); border: 2px solid var(--px-border); }
 
 /* The whole window becomes the clock: the room dims to a stepped, lamp-lit vignette. */
 .focus-display { position: fixed; inset: 0; z-index: 85; display: grid; place-items: center; outline: none; cursor: default;
@@ -64,11 +58,10 @@
 @keyframes face-flash { 0% { opacity: 0; } 12%, 80% { opacity: 1; } 100% { opacity: 0; } }
 }
 @layer overrides {
-/* Under the whole-window display the dimmed room holds still: its canvas loops stop
-   (frame-clock occlusion) and its CSS sprites pause too. */
-:root.room-focus-display .cabin-stage-wrap, :root.room-focus-display .cabin-stage-wrap * { animation-play-state: paused; }
+
 }
 
+@layer features {
 /* 唱片计时 in the whole window: the deck's record, its cover as the label. */
 .focus-face-art { position: relative; display: inline-block; line-height: 0; }
 .record-now { position: absolute; inset: 0; pointer-events: none; }
@@ -90,13 +83,12 @@
 @media (prefers-reduced-motion: reduce) { .record-now.is-playing .record-now-label { animation: none; } }
 :root[data-desktop-reduce-motion=true] .record-now.is-playing .record-now-label { animation: none; }
 @keyframes record-now-spin { to { rotate: 1turn; } }
-@layer overrides {
-/* The shelf caption under the display would sit on the bottom bar. */
-:root.room-focus-display .room-now-playing { visibility: hidden; }
 }
+@layer features {
 .focus-display-bar .face-tabs, .focus-display-bar .face-show { display: inline-flex; flex: none; }
 .focus-display-bar .face-tabs button, .focus-display-bar .face-show button { white-space: nowrap; padding: 0 8px; }
 @media (max-width: 1100px) { .focus-display-bar .face-show { display: none; } }
+}
 
 @layer overrides {
 .cabin-modal.focus-display-shell { background: transparent; color: var(--px-ink); }

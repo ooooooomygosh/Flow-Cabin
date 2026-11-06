@@ -1,0 +1,78 @@
+@layer guards, reset, features, skin, overrides;
+@layer overrides {
+/* 沉浸 as the desk seen close: the clock is DEsk's red LED clock (its picture, enlarged), the controls a
+   black console of bakelite keys, what to do next a slip of paper, the task a sticky note. One material to
+   each: the LED only on the clock, bakelite on the console, paper and ink on the slips. Recipes follow DEsk
+   (https://github.com/fyzugx/DEsk, MIT, (c) 2026 The DEsk authors). */
+
+.focus-display {
+  --d-ink: #2e2318; --d-ink-2: #54452f; --d-red: #a3301d; --d-pen: #1c2a66;
+  --d-hand: 'Kaiti SC', 'STKaiti', 'KaiTi', 'LXGW WenKai', var(--ui-font-display, serif);
+  --d-drop: calc(var(--sx, 2) * 6px) calc(var(--sy, 3) * 6px) 14px rgba(0, 0, 0, calc(.5 * var(--lamp-k, .6)));
+  --d-sheet: var(--paper-tile, none) 0 0 / 128px, linear-gradient(172deg, #faf4e4, #f1e8d4 60%, #e8dcc0);
+}
+
+/* the task, written on a sticky note */
+.focus-display-note { max-width: min(80vw, 640px); padding: 10px 20px 12px; color: #3a2c12; font: 400 20px/1.4 var(--d-hand); letter-spacing: .04em; text-shadow: none; text-overflow: ellipsis; background: linear-gradient(180deg, #f3d760 0 14%, #fce066 14%); box-shadow: var(--d-drop), inset 0 -10px 12px -10px rgba(120, 90, 10, .35); transform: rotate(-1deg); }
+/* a message that comes and goes: a slip of paper */
+.focus-display-flash { padding: 8px 22px; color: var(--d-ink); font: 600 16px/1.3 var(--ui-font); letter-spacing: .2em; background: var(--d-sheet); border: 0; border-radius: 0; box-shadow: var(--d-drop); }
+
+/* the red clock: DEsk's housing, its glass with the digits cell by cell, its four keys */
+.display-led { position: relative; width: min(92vw, 1180px, calc(68vh * 486 / 90)); aspect-ratio: 486 / 90; filter: drop-shadow(0 18px 30px rgba(0, 0, 0, .55)); }
+.display-led-body, .display-led-glass, .display-led-keys { position: absolute; display: block; }
+.display-led-body { inset: 0; width: 100%; height: 100%; }
+.display-led-glass { left: 3.292%; top: 0; width: 93.827%; height: 73.333%; }
+.display-led-keys { left: 73.457%; top: 0; width: 23.457%; height: 73.333%; }
+.display-led-print { position: absolute; left: 87.1%; top: 36.7%; width: 9.6%; height: 36.6%; display: grid; place-items: center; color: rgba(222, 182, 132, .82); font: 600 clamp(12px, 1.5vw, 20px)/1 var(--ui-font); text-shadow: 0 0 3px rgba(255, 150, 90, .35); }
+.focus-display:has(.display-led) { background: radial-gradient(ellipse 70% 60% at 50% 46%, rgba(30, 20, 12, .86), rgba(14, 9, 5, .96) 70%); }
+
+/* the console along the bottom */
+.focus-display-bar {
+  gap: 10px; padding: 10px 14px; color: #e8ddc6; border: 0; border-radius: var(--ui-radius);
+  background:
+    radial-gradient(circle at 8px 8px, #8d7340 0 1.5px, #2a2118 2.5px 3.5px, transparent 4px), radial-gradient(circle at calc(100% - 8px) 8px, #8d7340 0 1.5px, #2a2118 2.5px 3.5px, transparent 4px),
+    radial-gradient(circle at 8px calc(100% - 8px), #8d7340 0 1.5px, #2a2118 2.5px 3.5px, transparent 4px), radial-gradient(circle at calc(100% - 8px) calc(100% - 8px), #8d7340 0 1.5px, #2a2118 2.5px 3.5px, transparent 4px),
+    linear-gradient(180deg, #2c2621, #15110e 38%, #0b0908);
+  box-shadow: inset 0 1px 0 rgba(255, 240, 215, .16), inset 0 0 0 1px rgba(0, 0, 0, .85), 0 0 0 1px rgba(0, 0, 0, .6), var(--d-drop);
+}
+.focus-display-bar > button, .focus-display-offer button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 0 16px; color: #eadfc8; font: 600 14px/1 var(--ui-font); letter-spacing: .1em; text-shadow: 0 1px 0 rgba(0, 0, 0, .75); white-space: nowrap; cursor: pointer;
+  background: linear-gradient(180deg, #403a33 0%, #28231e 48%, #191512 100%); border: 0; border-radius: var(--ui-radius-sm);
+  box-shadow: inset 0 1px 0 rgba(255, 244, 222, .3), inset 0 -3px 0 rgba(0, 0, 0, .5), 0 0 0 1px #000, 0 3px 0 #000, 0 6px 7px rgba(0, 0, 0, .45);
+  transition: transform calc(.06s * var(--pace, 1)) ease-out, box-shadow calc(.06s * var(--pace, 1)) ease-out;
+}
+.focus-display-bar > button:first-child { border: 0; }
+.focus-display-bar > button:hover { color: #fff6e2; background: linear-gradient(180deg, #4a443c 0%, #302a24 48%, #1e1a16 100%); }
+.focus-display-bar > button:active, .focus-display-offer button:active { transform: translateY(3px); box-shadow: inset 0 1px 0 rgba(255, 244, 222, .2), 0 0 0 1px #000, 0 1px 2px rgba(0, 0, 0, .5); }
+.focus-display-bar > button:focus-visible, .focus-display-offer button:focus-visible { outline: 2px solid #fff3cf; outline-offset: 3px; }
+.focus-display-bar .face-tabs, .focus-display-bar .face-show { display: inline-flex; gap: 6px; padding: 0; background: none; border: 0; box-shadow: none; }
+.focus-display-bar .face-tabs button, .focus-display-bar .face-show button { min-height: 44px; padding: 0 12px; margin: 0; color: #cfc3aa; font: 600 13px/1 var(--ui-font); letter-spacing: .08em; text-shadow: 0 1px 0 rgba(0, 0, 0, .75); background: linear-gradient(180deg, #403a33 0%, #28231e 48%, #191512 100%); border: 0; border-radius: var(--ui-radius-sm); box-shadow: inset 0 1px 0 rgba(255, 244, 222, .3), inset 0 -3px 0 rgba(0, 0, 0, .5), 0 0 0 1px #000, 0 3px 0 #000; cursor: pointer; }
+.focus-display-bar .face-tabs button:hover, .focus-display-bar .face-show button:hover { color: #fff6e2; }
+/* a key that stays down: pushed in, its letters lit from inside */
+.focus-display-bar .face-tabs button[aria-checked=true], .focus-display-bar .face-show button[aria-checked=true] { color: #fff3d6; transform: translateY(3px); background: linear-gradient(180deg, #1c1814, #2a241f); box-shadow: inset 0 2px 4px #000, 0 0 0 1px #000, 0 1px 0 #000; }
+
+/* what to do next: a slip of paper with paper-card buttons */
+.focus-display-offer { flex-wrap: wrap; justify-content: center; gap: 10px; max-width: min(92vw, 720px); padding: 14px 18px; color: var(--d-ink); background: var(--d-sheet); border: 0; border-radius: 0; box-shadow: inset 0 0 0 1px rgba(95, 72, 40, .2), var(--d-drop); transform: translateX(0) rotate(-.4deg); }
+.focus-display-offer strong { padding: 0 8px; color: var(--d-ink); font: 600 17px/1.3 var(--ui-font-display); letter-spacing: .08em; }
+.focus-display-offer button { min-height: 44px; padding: 0 16px; color: var(--d-ink); text-shadow: 0 1px rgba(255, 250, 235, .6); background: linear-gradient(#f7efdf, #e4d4b2); border: 0; border-radius: var(--ui-radius-sm); box-shadow: inset 0 1px rgba(255, 252, 242, .8), 0 0 0 1px #ad9163, 0 2px 3px rgba(60, 40, 15, .25); }
+.focus-display-offer button:hover { background: linear-gradient(#fcf6ea, #eadcbe); }
+.focus-display-offer button:active { box-shadow: inset 0 1px 2px rgba(80, 50, 20, .3), 0 0 0 1px #ad9163; }
+
+/* the pressed record over the dimmed room */
+.focus-display-press .press-card.is-inline { box-shadow: inset 0 0 0 1px rgba(95, 72, 40, .22), var(--d-drop); }
+
+/* ── the pressed record's card: a paper slip with a stamp ───────────────── */
+.press-card.is-inline.paper { color: var(--ui-text); background: var(--paper-tile, none) 0 0 / 128px, linear-gradient(172deg, #faf4e4, #f1e8d4 60%, #e8dcc0); border: 0; border-radius: 0; backdrop-filter: none; }
+.press-card.is-inline.paper .press-kicker { justify-self: center; padding: 1px 10px; color: var(--ui-danger); font: 700 12px/1.6 var(--ui-font); letter-spacing: .24em; border: 2px solid var(--ui-danger); transform: rotate(-2.5deg); opacity: .9; }
+.press-card.is-inline.paper .press-title { font-family: var(--ui-font-display); letter-spacing: .04em; }
+.press-card.is-inline.paper .press-note input { color: #1c2a66; font: 400 17px/1.4 'Kaiti SC', 'STKaiti', 'KaiTi', 'LXGW WenKai', var(--ui-font-display); background: transparent; border: 0; border-bottom: 1.5px dashed rgba(76, 58, 30, .55); border-radius: 0; }
+.press-card.is-inline.paper .press-actions button { border-radius: var(--ui-radius-sm); }
+.press-card.is-inline.paper .press-actions button.is-primary { color: #fff6e2; background: linear-gradient(180deg, #403a33, #191512); border-color: #000; text-shadow: 0 1px 0 rgba(0, 0, 0, .75); box-shadow: inset 0 1px 0 rgba(255, 244, 222, .3), 0 2px 0 #000; }
+.press-card.is-inline.paper .press-actions button.is-primary:hover { background: linear-gradient(180deg, #4a443c, #1e1a16); }
+
+@media (max-width: 720px) {
+  .focus-display-bar { flex-wrap: wrap; justify-content: center; padding: 8px 10px; gap: 8px; }
+  .focus-display-bar > button { flex: 1 1 auto; min-height: 46px; padding: 0 10px; }
+  .focus-display-note { font-size: 17px; }
+}
+}

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useCabinRuntime } from '../runtime/CabinRuntime';
+import { todayTasks } from '../focus/focus-model.mjs';
 import { downloadBlob } from '../lib/download.mjs';
 import { THEMES } from './spatial-layout.mjs';
 import { DEFAULT_INCLUDE, cleanCaption, postcardItems, postcardLines } from './postcard-model.mjs';
@@ -17,7 +18,7 @@ export default function Postcard() {
   const { sceneCapture, focus, identity, look, sky } = useCabinRuntime();
   const [include, setInclude] = useState(DEFAULT_INCLUDE);
   const [caption, setCaption] = useState('留一盏灯，给今天。'), [preview, setPreview] = useState(null), [busy, setBusy] = useState(false), [error, setError] = useState(''), [notice, setNotice] = useState('');
-  const items = useMemo(() => postcardItems({ theme: THEMES.find((t) => t.id === look)?.name || '小屋', pet: identity.name, tasks: focus.state.tasks, notes: focus.state.notes, weather: { on: sky.settings.realWeather && Boolean(sky.real), city: sky.city?.name, temperature: sky.real?.temperature } }), [look, identity.name, focus.state.tasks, focus.state.notes, sky.settings.realWeather, sky.real, sky.city?.name]);
+  const items = useMemo(() => postcardItems({ theme: THEMES.find((t) => t.id === look)?.name || '小屋', pet: identity.name, tasks: todayTasks(focus.state.tasks, Date.now()), notes: focus.state.notes, weather: { on: sky.settings.realWeather && Boolean(sky.real), city: sky.city?.name, temperature: sky.real?.temperature } }), [look, identity.name, focus.state.tasks, focus.state.notes, sky.settings.realWeather, sky.real, sky.city?.name]);
   const lines = postcardLines(items, include), text = cleanCaption(caption);
   const compose = async () => {
     const scene = await sceneCapture.render(), canvas = document.createElement('canvas'); canvas.width = 1200; canvas.height = 1020;

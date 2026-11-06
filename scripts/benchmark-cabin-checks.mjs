@@ -4,21 +4,26 @@ import path from 'node:path';
 import { onboardingSeed } from './app-version.mjs';
 
 const FOCUS_KEY = 'album-circle-focus-v1:local-owner';
-const SOUND_KEY = 'album-circle-sound-v1';
 const VIEWPORTS = [{ width: 1440, height: 900 }, { width: 960, height: 600 }];
 
-// Real pointer/keyboard input is required here: dispatchEvent or force would
-// conceal a hotspot inheriting pointer-events:none from the painted canvas.
+// Real pointer/keyboard input is required here: dispatchEvent or force would conceal a button on the desk
+// (src/desk/DeskHome.jsx) inheriting pointer-events:none from the pictures under it. Things on the desk
+// overlap a little (the bookcase plate over the wood, the drawer over the front edge), so a button only has to
+// receive the pointer somewhere inside its box: the first of a 5 x 5 grid of points that hits it is returned.
 async function reachable(locator) {
   await locator.waitFor({ state: 'visible' });
   const hit = await locator.evaluate(node => {
-    const r = node.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
-    const top = document.elementFromPoint(x, y);
+    const r = node.getBoundingClientRect();
+    const probe = (x, y) => { const top = document.elementFromPoint(x, y); return x >= 0 && x < innerWidth && y >= 0 && y < innerHeight && Boolean(top && (top === node || node.contains(top))); };
+    const points = [[.5, .5], ...[.5, .25, .75, .1, .9].flatMap(fy => [.5, .25, .75, .1, .9].map(fx => [fx, fy]))];
+    const found = points.find(([fx, fy]) => probe(r.left + r.width * fx, r.top + r.height * fy));
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2, top = document.elementFromPoint(cx, cy);
     return {
       label: node.getAttribute('aria-label') || node.textContent.trim(),
       pointerEvents: getComputedStyle(node).pointerEvents,
-      centerInside: x >= 0 && x < innerWidth && y >= 0 && y < innerHeight,
-      receivesPointer: Boolean(top && (top === node || node.contains(top))),
+      centerInside: cx >= 0 && cx < innerWidth && cy >= 0 && cy < innerHeight,
+      receivesPointer: Boolean(found),
+      point: found ? { x: r.width * found[0], y: r.height * found[1] } : null,
       coveringElement: top ? `${top.tagName.toLowerCase()}.${String(top.className)}` : null,
       bounds: { x: r.x, y: r.y, width: r.width, height: r.height }
     };
@@ -27,11 +32,12 @@ async function reachable(locator) {
   assert(hit.centerInside && hit.receivesPointer, JSON.stringify(hit));
   return hit;
 }
+const press = async (locator) => { const hit = await reachable(locator); await locator.click({ position: hit.point }); return hit; };
 
 async function noOverflow(page) {
   const layout = await page.evaluate(() => {
     const root = document.documentElement;
-    const selectors = ['.cabin-toolbar', '.cabin-welcome', '.room-cat', '.room-turntable', '.focus-dock', '.cat-panel', 'dialog[open]'];
+    const selectors = ['.desk-console-plate', '.desk-clock-face', '.desk-post, .desk-post-plate', '.desk-shelf-plate', '.desk-pull', '.desk-window', '.desk-look', '.cat-panel', 'dialog[open]'];
     const outside = selectors.flatMap(selector => [...document.querySelectorAll(selector)].flatMap(node => {
       const style = getComputedStyle(node), r = node.getBoundingClientRect();
       if (!r.width || !r.height || style.display === 'none' || style.visibility === 'hidden') return [];
@@ -98,13 +104,8 @@ export async function verifyBenchmarkCabin(browser, origin, { output, check = ()
       };
       try {
         await page.goto(origin, { waitUntil: 'domcontentloaded' });
-        await page.locator('.room-scene[data-room-look="pixel"]').waitFor();
-        await page.locator('.room-cat[data-pet-id="cat"]').waitFor();
-        await page.waitForFunction(() => {
-          const art = document.querySelector('.cabin-scene-art');
-          return art?.complete && art.naturalWidth > 0 && document.querySelectorAll('.cabin-object').length === 3;
-        });
-        // The cat is rendered before its lazy panel listener finishes loading.
+        await page.locator('.desk-home.is-lit').waitFor();
+        // The pet panel's listener is attached before its lazy module finishes loading.
         await page.waitForLoadState('networkidle');
         const details = await verify(page, shot);
         report.checks.push({ name: id, passed: true, ...details });
@@ -115,63 +116,54 @@ export async function verifyBenchmarkCabin(browser, origin, { output, check = ()
       } finally { await page.close(); }
     };
     try {
-      await run('hotspots-and-layout', async (page, shot) => {
-        const hotspots = [];
-        for (const label of ['阅读灯', '窗外天气与时间设置', '壁炉声音']) hotspots.push(await reachable(page.getByRole('button', { name: label, exact: true })));
+      // The desk's entries: the 唱机 plate (C), the LED clock (专注), the post box (N), the 唱片架 plate (A),
+      // the drawer pull (D) and the window controls.
+      const entries = (page) => [page.getByRole('button', { name: /^唱机 · 抬头看控制面板/ }), page.locator('.desk-clock-face'), page.locator('.desk-post, .desk-post-plate'), page.getByRole('button', { name: /^唱片架 · / }), page.locator('.desk-pull'), page.getByRole('button', { name: '进入全屏模式', exact: true })];
+      await run('desk-entries-and-layout', async (page, shot) => {
+        const hits = [];
+        for (const entry of entries(page)) hits.push(await reachable(entry));
         const layout = await noOverflow(page);
-        await shot('room'); return { hotspots, layout };
+        await shot('room'); return { hotspots: hits, layout };
       });
-      await run('lamp-toggle-and-shade', async (page, shot) => {
-        const lamp = page.getByRole('button', { name: '阅读灯', exact: true });
-        await lamp.waitFor({ state: 'visible' }); assert.equal(await lamp.getAttribute('aria-pressed'), 'true');
-        const initial = await page.locator('.cabin-rest-light').evaluate(node => Number(getComputedStyle(node).opacity));
-        assert.equal(initial, 0);
-        await lamp.click();
-        await page.waitForFunction(() => document.querySelector('.cabin-lamp')?.getAttribute('aria-pressed') === 'false'
-          && Number(getComputedStyle(document.querySelector('.cabin-rest-light')).opacity) > .25);
-        await noOverflow(page); await shot('dim');
-        await lamp.click();
-        await page.waitForFunction(() => document.querySelector('.cabin-lamp')?.getAttribute('aria-pressed') === 'true'
-          && Number(getComputedStyle(document.querySelector('.cabin-rest-light')).opacity) === 0);
+      await run('desk-entries-open-their-pillars', async (page, shot) => {
+        // 唱机: the plate looks up at the Control Panel (the console view, a look named 唱机).
+        await press(page.getByRole('button', { name: /^唱机 · 抬头看控制面板/ }));
+        const console = page.getByRole('dialog', { name: '唱机', exact: true }); await console.locator('.console-view').waitFor(); await noOverflow(page);
+        await page.keyboard.press('Escape'); await page.locator('.desk-look').waitFor({ state: 'detached' });
+        // 专注: the clock.
+        await press(page.locator('.desk-clock-face'));
+        const focus = page.getByRole('dialog', { name: '专注', exact: true }); await focus.waitFor(); await noOverflow(page); await shot('focus');
+        await page.keyboard.press('Escape'); await focus.waitFor({ state: 'hidden' });
+        // 唱片日记: the record in the drawer.
+        await press(page.locator('.desk-pull'));
+        await press(page.getByRole('group', { name: '抽屉', exact: true }).getByRole('button', { name: '唱片日记', exact: true }));
+        const journal = page.getByRole('dialog', { name: '唱片日记', exact: true }); await journal.waitFor(); await noOverflow(page);
+        await page.keyboard.press('Escape'); await journal.waitFor({ state: 'hidden' });
+        for (const entry of entries(page)) await reachable(entry);
       });
-      await run('window-opens-room-settings', async (page, shot) => {
-        const windowButton = page.getByRole('button', { name: '窗外天气与时间设置', exact: true });
-        await reachable(windowButton); await windowButton.click();
+      await run('drawer-pull-opens-the-drawer-and-settings', async (page, shot) => {
+        const pull = page.locator('.desk-pull');
+        await press(pull);
+        const drawer = page.getByRole('group', { name: '抽屉', exact: true });
+        for (const name of ['唱片日记', '伙伴', '随手记', '窗外与天气', '备份与恢复']) await reachable(drawer.getByRole('button', { name, exact: true }));
+        const settingsThing = drawer.getByRole('button', { name: '设置', exact: true }); await reachable(settingsThing);
+        await shot('drawer'); await settingsThing.click();
         const settings = page.getByRole('dialog', { name: '设置', exact: true });
         await settings.waitFor();
-        assert.equal(await settings.getByRole('tab', { name: '小屋与奶糖', exact: true }).getAttribute('aria-selected'), 'true');
-        await settings.getByRole('heading', { name: '窗外', exact: true }).waitFor();
+        assert.equal(await settings.getByRole('tab', { selected: true }).count(), 1);
         await noOverflow(page); await shot('settings');
         await page.keyboard.press('Escape'); await settings.waitFor({ state: 'hidden' });
-        await reachable(windowButton);
+        await reachable(pull);
       });
-      await run('hearth-toggle-and-persistence', async (page, shot) => {
-        const hearth = page.getByRole('button', { name: '壁炉声音', exact: true });
-        await reachable(hearth); assert.equal(await hearth.getAttribute('aria-pressed'), 'false');
-        await hearth.click();
-        await page.waitForFunction(() => document.querySelector('.cabin-hearth')?.getAttribute('aria-pressed') === 'true');
-        assert.equal(await page.evaluate(key => JSON.parse(localStorage.getItem(key)).tracks.fire, SOUND_KEY), .3);
-        await noOverflow(page); await shot('fire-on');
-        await hearth.click();
-        await page.waitForFunction(() => document.querySelector('.cabin-hearth')?.getAttribute('aria-pressed') === 'false');
-        assert.equal(await page.evaluate(key => JSON.parse(localStorage.getItem(key)).tracks.fire, SOUND_KEY), 0);
-      });
-      const compact = viewport.width <= 900 || viewport.height <= 650;
-      await run(compact ? 'compact-focus-opens-notes' : 'welcome-opens-notes', async (page, shot) => {
+      await run('focus-opens-notes-and-keeps-them', async (page, shot) => {
         const openNotes = async () => {
-          if (compact) {
-            assert.equal(await page.locator('.cabin-welcome').isVisible(), false, 'the compact layout intentionally hides the welcome note');
-            await page.locator('.cabin-toolbar .focus-badge').click();
-            await page.getByRole('tab', { name: '这一段', exact: true }).click();
-          } else {
-            const write = page.getByRole('button', { name: '写两句', exact: true });
-            await reachable(write); await write.click();
-          }
+          await page.locator('.focus-badge').click();
+          await page.getByRole('tab', { name: '随手记', exact: true }).click();
         };
         await openNotes();
         const notes = page.getByRole('textbox', { name: '随手记内容', exact: true });
         await notes.waitFor();
-        assert.equal(await page.getByRole('tab', { name: '这一段', exact: true }).getAttribute('aria-selected'), 'true');
+        assert.equal(await page.getByRole('tab', { name: '随手记', exact: true }).getAttribute('aria-selected'), 'true');
         await notes.pressSequentially('A quiet evening.', { delay: 25 }); await notes.press('Enter');
         await notes.pressSequentially('Two lines for today.', { delay: 25 });
         const text = 'A quiet evening.\nTwo lines for today.';
@@ -181,33 +173,13 @@ export async function verifyBenchmarkCabin(browser, origin, { output, check = ()
         await openNotes();
         assert.equal(await page.getByRole('textbox', { name: '随手记内容', exact: true }).inputValue(), text);
       });
-      await run('cat-reacts-to-real-input', async (page, shot) => {
-        await page.locator('.cabin-toolbar .focus-badge').click();
-        await page.getByRole('tab', { name: '这一段', exact: true }).click();
-        const notes = page.getByRole('textbox', { name: '随手记内容', exact: true });
-        await notes.click();
-        await page.waitForFunction(() => {
-          const cat = document.querySelector('.room-cat');
-          return cat?.dataset.clicking === 'true' && cat.dataset.pose === 'click';
-        });
-        await page.waitForFunction(() => !document.querySelector('.room-cat')?.dataset.clicking && document.querySelector('.room-cat')?.dataset.pose !== 'click');
-        await notes.pressSequentially('The cat is typing with me.', { delay: 35 });
-        await page.waitForFunction(() => {
-          const cat = document.querySelector('.room-cat');
-          return cat?.dataset.typing === 'true' && cat.dataset.pose === 'typing' && cat.querySelector('.pixel-cat')?.dataset.pose === 'typing';
-        });
-        assert.match(await page.locator('.room-cat').getAttribute('aria-label'), /奶糖/);
-        await shot('typing'); await noOverflow(page);
-        await page.waitForFunction(() => !document.querySelector('.room-cat')?.dataset.typing && document.querySelector('.room-cat')?.dataset.pose !== 'typing');
-      });
-      await run('cat-double-click-and-dress', async (page, shot) => {
-        const cat = page.locator('.room-cat[data-pet-id="cat"]');
-        await reachable(cat); await cat.dblclick();
+      await run('drawer-companion-opens-the-panel-and-dresses', async (page, shot) => {
+        await press(page.locator('.desk-pull'));
+        await press(page.getByRole('group', { name: '抽屉', exact: true }).getByRole('button', { name: '伙伴', exact: true }));
         const panel = page.locator('.cat-panel');
         await panel.waitFor();
         await panel.getByRole('heading', { name: '小猫', exact: true }).waitFor();
-        await panel.getByText('奶糖', { exact: true }).waitFor();
-        assert.equal(await cat.getAttribute('aria-expanded'), 'true');
+        await panel.locator('.cat-collar', { hasText: '奶糖' }).waitFor();
         const headphones = panel.getByRole('button', { name: '小猫耳机', exact: true });
         await headphones.click();
         await page.waitForFunction(key => JSON.parse(localStorage.getItem(key)).rewards.equipped.accessory === 'headphones', FOCUS_KEY);
@@ -215,8 +187,7 @@ export async function verifyBenchmarkCabin(browser, origin, { output, check = ()
         assert.equal(await panel.locator('.cat-portrait .pixel-cat').getAttribute('data-accessory'), 'headphones');
         await noOverflow(page); await shot('dressed');
         await page.keyboard.press('Escape'); await panel.waitFor({ state: 'hidden' });
-        assert.equal(await cat.locator('.pixel-cat').getAttribute('data-accessory'), 'headphones');
-        assert.equal(await cat.getAttribute('aria-expanded'), 'false');
+        await reachable(page.locator('.desk-pull'));
       });
     } finally { await context.close(); }
   }

@@ -116,8 +116,28 @@ function normalizeTask(value, factory) {
   return { id: text(value.id, 40) || makeId(factory), text: text(value.text, 120), done: value.done === true, pomodoros: clamp(value.pomodoros, 0, 999, 0), createdAt: clamp(value.createdAt, 0, 9e15, 0), doneAt: value.done === true ? clamp(value.doneAt, 0, 9e15, 0) : 0,
     // 今天 / 之后; plannedFor: the day a 今天 task is planned for (`carried`: how often it rolled over).
     estimate: clamp(value.estimate, 0, 20, 0), list: value.list === 'later' ? 'later' : 'today', plannedFor: typeof value.plannedFor === 'string' && DAY_KEY.test(value.plannedFor) && value.list !== 'later' ? value.plannedFor : '',
-    carried: clamp(value.carried, 0, 999, 0), subtasks: normalizeSubtasks(value.subtasks, factory) };
+    carried: clamp(value.carried, 0, 999, 0), subtasks: normalizeSubtasks(value.subtasks, factory),
+    // 3.1 planner: `at` makes a task a 计划 with a time ('09:00' or '14:30-16:00'); `color` is the sticky pad it was written on (0-5).
+    ...(planTime(value.at) ? { at: planTime(value.at) } : {}), ...(Number.isInteger(value.color) && value.color >= 0 && value.color < 6 ? { color: value.color } : {}) };
 }
+// '9:00' → '09:00', '14:30-16' → '', '14:30 - 16:00' → '14:30-16:00'. Empty when it is not a time (or a from-until).
+const HHMM = /^([01]?\d|2[0-3]):([0-5]\d)$/;
+export function planTime(value) {
+  if (typeof value !== 'string') return '';
+  const parts = value.replace(/\s+/g, '').split(/[-–~]/).filter(Boolean);
+  if (!parts.length || parts.length > 2 || !parts.every((part) => HHMM.test(part))) return '';
+  const norm = parts.map((part) => { const [, h, m] = part.match(HHMM); return `${h.padStart(2, '0')}:${m}`; });
+  return norm.length === 2 && norm[1] <= norm[0] ? norm[0] : norm.join('-');
+}
+// Is this a thing for today? A 今天 task planned for a later day waits on its day (台历), and a 之后 task is not today's
+// either. Finished tasks count on the day they were finished. Widgets, the corner, the postcard and the planner agree on this.
+export function isTodayTask(task, now) {
+  if (!task || task.list === 'later') return false;
+  const today = dayKey(now);
+  if (task.done) return task.doneAt ? dayKey(task.doneAt) === today : !task.plannedFor || task.plannedFor <= today;
+  return !task.plannedFor || task.plannedFor <= today;
+}
+export const todayTasks = (tasks, now) => (Array.isArray(tasks) ? tasks : []).filter((task) => isTodayTask(task, now));
 // One tap during a focus round: when, and on which task. Shown in the statistics.
 function normalizeDistraction(value) {
   const at = clamp(value?.at, 0, 9e15, 0);
@@ -324,8 +344,9 @@ export function removeDistraction(state, at) {
   return distractions.length === state.distractions.length ? state : { ...state, distractions };
 }
 
-export function addTask(state, value, now, { makeId: factory, list = 'today', estimate = 0 } = {}) {
-  const task = normalizeTask({ text: value, createdAt: now, list, estimate, plannedFor: list === 'later' ? '' : dayKey(now) }, factory); if (!task || state.tasks.length >= 200) return state;
+export function addTask(state, value, now, { makeId: factory, list = 'today', estimate = 0, plannedFor = '', at = '', color } = {}) {
+  const day = list === 'later' ? '' : plannedFor && plannedFor > dayKey(now) ? plannedFor : dayKey(now);
+  const task = normalizeTask({ text: value, createdAt: now, list, estimate, plannedFor: day, at, color }, factory); if (!task || state.tasks.length >= 200) return state;
   return { ...state, tasks: [...state.tasks, task] };
 }
 // The next open task after `taskId` in the same list (wrapping), or ''.

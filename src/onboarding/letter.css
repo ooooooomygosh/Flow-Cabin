@@ -1,0 +1,102 @@
+@layer guards, reset, features, skin, overrides;
+@layer overrides {
+/* The first-run guide and the 新功能 sheet as a letter on typewriter paper (docs/v3-desk-design.md):
+   bone-white sheet folded in thirds, a typed letterhead, the text in a typewriter face, a rubber stamp
+   for the version, a photograph held on by tape, a handwritten sign-off. After DEsk's letters and post box
+   (https://github.com/fyzugx/DEsk, MIT, (c) 2026 The DEsk authors, docs/screenshots/post-box.jpg).
+   Lit by the one lamp (--sx/--sy/--lamp-k). The three steps and everything on them are unchanged. */
+
+.onboarding {
+  --type: 'Courier Prime', 'Courier New', ui-monospace, monospace;
+  --hand: 'Kaiti SC', 'STKaiti', 'KaiTi', 'LXGW WenKai', var(--ui-font-display);
+  --typed: #2b2723;
+  --pen: #233a66;
+  --stamp: #a3301d;
+}
+
+/* the sheet: whiter than the desk's cream, creased where it was folded in three */
+.onboarding.cabin-dialog:not(.is-full)::before {
+  background:
+    linear-gradient(180deg, transparent calc(33.3% - 1px), rgba(60, 50, 30, .1) 33.3%, rgba(255, 255, 255, .55) calc(33.3% + 1px), transparent calc(33.3% + 2px)),
+    linear-gradient(180deg, transparent calc(66.6% - 1px), rgba(60, 50, 30, .1) 66.6%, rgba(255, 255, 255, .55) calc(66.6% + 1px), transparent calc(66.6% + 2px)),
+    var(--paper-grain, none) 0 0 / 96px, linear-gradient(rgba(255, 255, 255, .5), rgba(255, 255, 255, .5)), var(--paper-tile, none) 0 0 / 128px, linear-gradient(172deg, #fbf9f3, #f4f0e5);
+}
+.onboarding.cabin-dialog:not(.is-full) .cabin-dialog-header { min-height: 44px; padding: 12px 56px 4px 28px; justify-content: flex-start; }
+.onboarding.cabin-dialog:not(.is-full) .cabin-dialog-header::after { display: none; }
+.onboarding.cabin-dialog:not(.is-full) .cabin-dialog-header h2 { justify-content: flex-start; font: 400 12px/1.4 var(--type); letter-spacing: .3em; color: var(--ui-text-2); }
+.onboarding .cabin-dialog-body { padding: 0 34px 26px; }
+
+/* the letterhead, typed */
+.onboarding .letter-head { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; margin: 0 0 6px; padding: 4px 0 9px; border-bottom: 1px solid rgba(43, 39, 35, .5); color: var(--typed); }
+.onboarding .letter-head::before { content: attr(data-name) '　' attr(data-note); font: 700 14px/1.4 var(--type); letter-spacing: .26em; }
+.onboarding .letter-head::after { content: attr(data-date); flex: none; font: 400 13px/1.4 var(--type); letter-spacing: .05em; }
+
+/* the text: a typewriter's, inked a little unevenly */
+.onboarding .cabin-dialog-body :where(p, small, li, dt, dd, summary, label, strong, em, .onboarding-eyebrow, .onboarding-text) { font-family: var(--type); text-shadow: 0 0 .6px rgba(43, 39, 35, .45); }
+.onboarding .onboarding-step p, .onboarding .whats-new-gap { color: var(--ui-text); font-size: 14px; line-height: 1.95; }
+.onboarding .onboarding-step h3, .onboarding .whats-new-title { margin: 8px 0 12px; color: var(--typed); font: 700 21px/1.5 var(--type); letter-spacing: .02em; -webkit-font-smoothing: auto; text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 7px; }
+.onboarding .onboarding-eyebrow { display: inline-block; padding: 2px 10px 1px; color: var(--stamp); border: 1.5px solid var(--stamp); border-radius: var(--ui-radius-sm); font: 700 12px/1.5 var(--type); letter-spacing: .2em; opacity: .88; transform: rotate(-2deg); }
+
+/* progress: typed "1. 音源  2. 伙伴  3. 试听", the page you are on underlined */
+.onboarding .onboarding-progress { gap: 6px 22px; padding: 12px 0 14px; color: var(--ui-text-2); font: 400 13px/1.4 var(--type); }
+.onboarding .onboarding-progress li > span { display: inline; width: auto; height: auto; border: 0; background: none; color: inherit; font: 700 13px/1 var(--type); }
+.onboarding .onboarding-progress li > span::after { content: '.'; }
+.onboarding .onboarding-progress .is-done { color: var(--ui-good); }
+.onboarding .onboarding-progress .is-done > span::after { content: ''; }
+.onboarding .onboarding-progress [aria-current=step] { color: var(--typed); font-weight: 700; text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 6px; }
+.onboarding .onboarding-progress [aria-current=step] > span { background: none; border: 0; color: var(--typed); }
+
+/* the photograph that came with it, held on with a strip of tape */
+.onboarding .onboarding-scene {
+  min-height: 250px; padding: 0; overflow: visible; background: #fffdf6; border: 0; border-radius: 0; image-rendering: auto; transform: rotate(2.2deg);
+  box-shadow: inset 0 0 0 1px rgba(95, 72, 40, .18), calc(var(--sx, 2) * 5px) calc(var(--sy, 3) * 5px) 9px rgba(15, 10, 8, calc(.34 * var(--lamp-k, .6)));
+}
+.onboarding .onboarding-scene > img { inset: 9px 9px 40px; width: calc(100% - 18px); height: calc(100% - 49px); opacity: 1; image-rendering: auto; box-shadow: 0 0 0 1px rgba(0, 0, 0, .35); }
+.onboarding .onboarding-scene > .pixel-cat { bottom: 62px; }
+.onboarding .onboarding-scene > span { padding: 0 8px 9px; background: none; color: #3a2c12; font: 400 17px/1.3 var(--hand); letter-spacing: .06em; }
+.onboarding .onboarding-scene::before { content: ''; position: absolute; z-index: 2; top: -9px; left: 50%; width: 62px; height: 20px; margin-left: -31px; background: rgba(247, 224, 120, .78); box-shadow: 0 1px 2px rgba(0, 0, 0, .3); transform: rotate(-3deg); }
+
+/* choices are lines on a form: a pencil highlight on the one ticked */
+.onboarding .onboarding-layout { margin-top: 12px; }
+.onboarding .onboarding-sources { gap: 2px 18px; margin-bottom: 12px; }
+.onboarding .onboarding-sources button { padding: 8px 28px 8px 8px; background: none; border: 0; border-bottom: 1px dashed rgba(43, 39, 35, .35); border-radius: 0; box-shadow: none; }
+.onboarding .onboarding-sources button:hover:not(:disabled) { background: var(--ui-surface-hover); }
+.onboarding .onboarding-sources button[aria-checked=true] { background: linear-gradient(transparent 50%, rgba(247, 214, 90, .5) 50%); box-shadow: none; border-bottom-color: rgba(43, 39, 35, .35); }
+.onboarding .onboarding-sources button:focus-visible, .onboarding .onboarding-text:focus-visible { outline: var(--ui-focus-ring); outline-offset: 2px; }
+.onboarding .onboarding-connect, .onboarding .onboarding-permissions li, .onboarding .onboarding-summary { background: none; border: 0; border-bottom: 1px dashed rgba(43, 39, 35, .35); border-radius: 0; }
+.onboarding .onboarding-summary { padding: 8px 0; }
+.onboarding .onboarding-hint { color: var(--ui-text-2); background: rgba(120, 84, 40, .08); border-left-color: var(--stamp); }
+.onboarding .onboarding-optional { background: none; border: 1px dashed rgba(43, 39, 35, .4); border-radius: 0; }
+
+/* the 新功能 lines: typed, each with a dash */
+.onboarding .whats-new-list { gap: 0; }
+.onboarding .whats-new-list li { padding: 7px 0 7px 26px; background: none; border: 0; border-bottom: 1px dotted rgba(43, 39, 35, .35); border-radius: 0; font-size: 14px; line-height: 1.8; }
+.onboarding .whats-new-list li::before { content: '—'; left: 2px; top: 7px; width: auto; height: auto; background: none; color: var(--stamp); font: 700 14px/1.8 var(--type); }
+.onboarding .onboarding-release { background: none; border: 0; border-left: 2px solid var(--stamp); border-radius: 0; }
+.onboarding .onboarding-release header span { color: var(--ui-accent-text); background: var(--stamp); border-radius: var(--ui-radius-sm); font-family: var(--type); }
+
+/* the foot of the letter: a line in pen, then the name */
+.onboarding .letter-sign { margin: 10px 4px 0 0; color: var(--pen); text-align: right; transform: rotate(-1.4deg); transform-origin: 100% 50%; }
+.onboarding .letter-sign::before { content: attr(data-line); display: block; font: 400 19px/1.4 var(--hand); letter-spacing: .06em; }
+.onboarding .letter-sign::after { content: '—— 奶糖'; display: inline-block; margin-top: 2px; font: 400 25px/1.3 var(--hand); letter-spacing: .08em; text-decoration: underline wavy rgba(35, 58, 102, .55); text-decoration-thickness: 1.5px; text-underline-offset: 6px; }
+.onboarding .onboarding-footer { margin-top: 12px; border-top: 1px dotted rgba(43, 39, 35, .45); }
+
+/* a short window: the letter loses its sign-off and tightens, so the buttons never leave the window */
+@media (max-height: 700px) {
+  .onboarding .letter-sign { display: none; }
+  .onboarding .letter-head { padding: 0 0 6px; }
+  .onboarding.cabin-dialog:not(.is-full) .cabin-dialog-header { min-height: 36px; padding-top: 8px; }
+  .onboarding .onboarding-progress { padding: 8px 0; }
+  .onboarding .onboarding-layout { margin-top: 6px; }
+  .onboarding .onboarding-scene { min-height: 190px; }
+  .onboarding .onboarding-step h3, .onboarding .whats-new-title { margin: 4px 0 8px; font-size: 18px; }
+  .onboarding .cabin-dialog-body { padding-bottom: 14px; }
+}
+@media (max-width: 760px) {
+  .onboarding .cabin-dialog-body { padding: 0 18px 20px; }
+  .onboarding .letter-head::before { letter-spacing: .12em; font-size: 13px; }
+  .onboarding .letter-head::after { font-size: 12px; }
+  .onboarding .onboarding-step h3, .onboarding .whats-new-title { font-size: 19px; }
+  .onboarding .letter-sign::before { font-size: 17px; }
+}
+}

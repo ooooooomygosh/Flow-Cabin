@@ -4,11 +4,15 @@ import { createPlayerAdapter } from '../onboarding/onboarding-adapter.mjs';
 import { desktopCommand } from '../desktop-client';
 import { musicRequest } from '../room-playback.mjs';
 import { version as currentVersion } from '../../package.json';
+import { releaseFor } from '../onboarding/releases.mjs';
+import { welcomeLetter, releaseLetter } from '../desk/post.mjs';
+import { postLetter, afterDeskLit } from '../desk/usePost';
 
 // First-run guide and the settings hub (section '' = closed; 'music/accounts'
 // is 音源 › 账户与文件夹), plus the window events and companion commands that open them.
-// Both homes show the same short guide on a first run and the 新功能 sheet once
-// after an update.
+// 3.1: nothing pops over the desk on launch. As on DEsk, a first run gets a welcome letter in the post
+// box 2.5 s after the desk is lit (its three steps open the guide at that step, as 设置 › 重新引导
+// does), and a new version gets a letter with its notes, once.
 export default function useOnboardingFlow({ client, loading, loadError, firstVisit, itemCount, hubRequest, notify }) {
   const [hub, setHub] = useState('');
   const env = useMemo(() => onboardingModel.detectEnv(window), [client]);
@@ -25,10 +29,21 @@ export default function useOnboardingFlow({ client, loading, loadError, firstVis
     // A resumed guide keeps its saved step; an update only remembers which
     // version the 新功能 sheet compares against.
     const next = onboardingModel.applyLaunchPlan(current.current, plan, currentVersion);
+    if (plan.mode === 'update') {
+      // The version's letter goes in the box; the version counts as seen (the whole history is in 设置 › 关于).
+      postLetter(releaseLetter(releaseFor(currentVersion) || { version: currentVersion }));
+      saveOnboarding(onboardingModel.dismissUpdate(next, currentVersion));
+      return;
+    }
     if (next !== current.current) saveOnboarding(next);
-    setWizardMode(plan.mode);
-    setWizard(true);
+    // A first run, or a guide not finished last time: the welcome letter (only once; one thrown away stays away).
+    // (not cancelled with the room: a letter posted after it is gone is still in the box next time)
+    afterDeskLit(() => postLetter(welcomeLetter()), 2500);
   }, [loading, loadError, firstVisit, itemCount]);
+  // The welcome letter's steps: the guide, open at that step.
+  const openStep = useCallback((step) => { setHub(''); saveOnboarding(onboardingModel.goTo(current.current, onboardingModel.STEPS.includes(step) ? step : onboardingModel.STEPS[0])); setWizardMode('manual'); setWizard(true); }, [saveOnboarding]);
+  const stepRef = useRef(openStep); stepRef.current = openStep;
+  useEffect(() => { const on = (event) => stepRef.current(event.detail?.step); window.addEventListener('cabin:onboarding-step', on); return () => window.removeEventListener('cabin:onboarding-step', on); }, []);
   // An external request is an event, not persistent desired dialog state.
   // Effect replay (including Fast Refresh) must not reopen a dismissed request.
   const consumedHubRequest = useRef(null);
@@ -56,5 +71,5 @@ export default function useOnboardingFlow({ client, loading, loadError, firstVis
     window.addEventListener('album-companion-command', receive); window.addEventListener('cabin-open-settings', open); window.addEventListener('cabin-open-music-settings', music);
     return () => { window.removeEventListener('album-companion-command', receive); window.removeEventListener('cabin-open-settings', open); window.removeEventListener('cabin-open-music-settings', music); };
   }, []);
-  return { env, playerAdapter, hub, setHub, onboarding, saveOnboarding, wizard, closeWizard, restartOnboarding, openMusicSettings };
+  return { env, playerAdapter, hub, setHub, onboarding, saveOnboarding, wizard, closeWizard, restartOnboarding, openMusicSettings, openStep };
 }

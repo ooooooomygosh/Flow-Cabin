@@ -7,7 +7,9 @@ import { spawn } from 'node:child_process';
 import { launchChromium } from './launch-browser.mjs';
 import { hasViteLocalOrigin } from './vite-readiness.mjs';
 import { onboardingSeed } from './app-version.mjs';
-import { openAddToShelf } from './settings-actions.mjs';
+import { openAddToShelf, openLibrary, closeLibrary, takeBinder, openFocus } from './settings-actions.mjs';
+// The record on the deck (window.__cabinDeckItem, docs/events.md): the desk has no now-playing strip.
+const onDeck = (page, title) => page.waitForFunction((name) => window.__cabinDeckItem?.title === name, title);
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const output = path.join(root, 'desktop/test-results/journey');
 const port = Number(process.env.JOURNEY_PORT || 4285), origin = `http://127.0.0.1:${port}`;
@@ -55,16 +57,19 @@ try {
   await page.getByRole('button', { name: '放上唱片架', exact: true }).click();
   await page.getByText('《留给自己的晚风》已放上唱片架。', { exact: true }).waitFor();
   await page.getByRole('dialog', { name: '添加到唱片架', exact: true }).getByRole('button', { name: /关闭/ }).click();
-  assert.equal(items.length, 1); await page.locator('.room-record').waitFor();
+  assert.equal(items.length, 1);
+  await takeBinder(page, '唱片').then(sheet => sheet.getByRole('button', { name: '播放 留给自己的晚风', exact: true }).waitFor());
   check('add-record-and-confirm-real-shelf-update');
-  const record = page.locator('.room-record'); await record.focus(); await page.keyboard.press('Enter');
-  await page.locator('.room-turntable[data-loaded-id="journey-0"]').waitFor();
-  assert.equal(await record.getAttribute('aria-pressed'), 'true');
+  // 唱片架 › 唱片: the record's cover button is a real button; the first Enter loads it on the deck.
+  const record = (await takeBinder(page, '唱片')).getByRole('button', { name: '播放 留给自己的晚风', exact: true }); await record.focus(); await page.keyboard.press('Enter');
+  await onDeck(page, '留给自己的晚风');
+  await closeLibrary(page);
   check('keyboard-loads-record-on-the-first-enter');
-  await page.locator('.focus-badge').click();
+  await openFocus(page);
   await page.getByRole('button', { name: '开始专注', exact: true }).click();
   assert.equal(await page.locator('.focus-display').count(), 0, 'starting work leaves the record in view by default');
-  await page.locator('.focus-badge.is-running').waitFor();
+  // The desk's LED clock counts the round down.
+  await page.waitForFunction(() => /专注中/.test(document.querySelector('.desk-clock-face')?.getAttribute('aria-label') || ''));
   check('focus-start-retains-the-room-and-record');
   const timer = await page.evaluate(key => JSON.parse(localStorage.getItem(key)).timer, KEY);
   // Deterministic elapsed work, without waiting a real minute or touching private data.
@@ -86,13 +91,12 @@ try {
   await page.screenshot({ path: path.join(output, 'journal.png'), animations: 'disabled' });
   check('journal-shows-the-round-and-its-record');
   await page.getByRole('button', { name: '返回小屋', exact: true }).click();
-  await page.reload(); await page.locator('.cabin-return-note').waitFor();
-  assert.match(await page.locator('.cabin-return-note').innerText(), /上次陪你专注：《留给自己的晚风》/);
+  // After a reload the deck still holds the record (重启后接着上次的歌) and the round was not duplicated.
+  await page.reload(); await page.locator('.desk-home').waitFor(); await onDeck(page, '留给自己的晚风');
   assert.equal((await page.evaluate(log => JSON.parse(localStorage.getItem(log)), LOG)).length, 1);
   await page.screenshot({ path: path.join(output, 'return.png'), animations: 'disabled' });
   check('return-after-reload-remembers-the-record-without-duplicating-the-round');
   // Modal background and return focus, including keyboard-open with BODY focus.
-  await page.getByRole('button', { name: '收起专注工具', exact: true }).click();
   await page.locator('.focus-badge').focus(); await page.keyboard.press('z');
   const display = page.getByRole('dialog', { name: '专注画面', exact: true }); await display.waitFor();
   assert.equal(await display.evaluate(node => node.matches(':modal')), true);
@@ -108,11 +112,11 @@ try {
   await page.keyboard.press('Escape'); await corner.waitFor({ state: 'detached' });
   assert.equal(await page.locator('.focus-badge').evaluate(node => node === document.activeElement), true);
   check('keyboard-opened-listening-corner-has-a-stable-focus-return');
-  await page.locator('.focus-badge').click(); await page.getByRole('tab', { name: '这一段', exact: true }).click();
+  await openFocus(page); await page.getByRole('tab', { name: '这一段', exact: true }).click();
   // Narrow controls still fit, without clipping interactive targets.
   for (const viewport of [{ width: 1280, height: 720 }, { width: 960, height: 600 }]) {
     await page.setViewportSize(viewport); await page.screenshot({ path: path.join(output, `compact-${viewport.width}.png`), animations: 'disabled' });
-    const button = await page.locator('.focus-dock-close').boundingBox();
+    const button = await page.getByRole('dialog', { name: '专注', exact: true }).getByRole('button', { name: '收起专注工具', exact: true }).boundingBox();
     assert(button && button.x >= 0 && button.y >= 0 && button.x + button.width <= viewport.width && button.y + button.height <= viewport.height);
   }
   check('focus-controls-fit-compact-windows');

@@ -12,7 +12,6 @@
 .listening-corner[open] { display: block; }
 .listening-corner.is-dusk { --corner-paper: #e6c9ad; --corner-paper-2: #d4b092; --corner-paper-3: #b98f72; --corner-ink-2: #6e4636; --corner-wood: #4d2a1c; --corner-wood-hi: #8c5536; --corner-wood-lo: #311a12; --corner-floor: #160a08; --corner-lamp: #ff9a6a; --corner-beam: #24100e; }
 .listening-corner.is-night { --corner-paper: #b9ab92; --corner-paper-2: #a5967c; --corner-paper-3: #877a63; --corner-ink: #241a14; --corner-ink-2: #4a3a2c; --corner-wood: #2c1a10; --corner-wood-hi: #4f311d; --corner-wood-lo: #1d110a; --corner-floor: #07060b; --corner-lamp: #e7c48a; --corner-beam: #0e0d16; }
-:root.room-corner-open .cabin-toolbar, :root.room-corner-open .room-now-playing, :root.room-corner-open .room-turntable .turntable-console { visibility: hidden; }
 
 /* ── the room ── */
 .corner-room { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
@@ -162,7 +161,6 @@ button[aria-current=true] > .corner-groove { background: var(--px-accent-lo); }
 .record-flight-disc { z-index: 1; inset: 4%; border-radius: 50%; background: radial-gradient(circle, transparent 0 31%, #0000 31%), repeating-radial-gradient(circle, color-mix(in srgb, var(--flight-vinyl) 100%, #000 20%) 0 2px, var(--flight-vinyl) 2px 4px); box-shadow: 0 0 0 2px var(--px-shadow), 3px 3px 0 #0d080580; }
 .record-flight-disc i { position: absolute; inset: 33%; border-radius: 50%; background: var(--px-ink-dim) center / cover; box-shadow: 0 0 0 2px var(--px-shadow); }
 .record-flight.is-queue .record-flight-sleeve { border-width: 1px; }
-.scene-deck.is-awaiting-record .scene-deck-record { opacity: 0; animation: none; }
 
 @keyframes corner-in { from { opacity: 0; } }
 @keyframes corner-sleeve-in { from { opacity: 0; transform: translateY(8px); } }

@@ -27,6 +27,6 @@
 
 `npm run screenshots:readme` 生成 README 中番茄钟、待办与统计的特写（演示用固定专注数据），输出到 `docs/assets/screenshots`。
 
-`SHOWCASE_TOUR=1 npm run screenshots:product` 额外录制实际界面操作为 MP4（需要 ffmpeg）。这段录像展示三步指南、打开并开始专注、切换场景与伙伴、进入沉浸；没有音轨，不是平台账号播放验收。截图默认减少动态；录像使用正常动画。
+`SHOWCASE_TOUR=1 npm run screenshots:product` 额外录制实际界面操作为 MP4（需要 ffmpeg）。这段录像展示三步指南、打开并开始专注、在「设置 › 小屋与奶糖」换伙伴、进入沉浸；没有音轨，不是平台账号播放验收。截图默认减少动态；录像使用正常动画。
 
 旧 `docs/images` 文件保留历史验收证据。README 展示的当前图片在 `docs/assets`（截图、GIF、MP4、封面）；`docs/images/showcase` 为上一版展示图。脚本默认输出到 `docs/images/showcase`，更新 README 时用 `SHOWCASE_OUTPUT=docs/assets/screenshots`。

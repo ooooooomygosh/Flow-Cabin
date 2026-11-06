@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
-const { openAddToShelf } = require('./ui-fixture.cjs');
+const { binderSpine, openAddToShelf, openSettingsTab, closeLibrary, takeBinder } = require('./ui-fixture.cjs');
 const desktop = path.resolve(process.env.ALBUM_QA_DESKTOP || path.join(__dirname, '..'));
 const output = path.resolve(process.env.ALBUM_QA_EVIDENCE || path.join(desktop, 'test-results/backup-profile-ui'));
 fs.mkdirSync(output, { recursive: true });
@@ -49,18 +49,19 @@ async function launch(profile) {
   assert.ok(site);
   site.on('pageerror', error => report.pageErrors.push(error.message));
   assert.equal(await app.evaluate(({ app }) => app.getPath('userData')), profile);
-  await site.locator('.app-titlebar').waitFor();
+  await site.locator('.desk-home').waitFor();
   const onboarding = site.getByRole('dialog', { name: '新手引导', exact: true });
   const needsOnboarding = await site.evaluate(() => {
     const state = JSON.parse(localStorage.getItem('flow-cabin-onboarding-v1') || 'null');
     return !state || ['new', 'active'].includes(state.status);
   });
-  if (needsOnboarding) await onboarding.waitFor();
+  // 3.1: a first run gets the welcome letter in the post box, not the guide over the desk (as ui-fixture.cjs mountFixture).
+  if (needsOnboarding) await onboarding.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {});
   if (await onboarding.isVisible()) {
     await onboarding.getByRole('button', { name: '跳过引导', exact: true }).click();
     await onboarding.waitFor({ state: 'hidden' });
   }
-  await site.locator('.cabin-room').waitFor();
+  await site.locator('.desk-home').waitFor();
 }
 async function close() { await app.close(); app = null; site = null; }
 async function snapshot(name, profile) {
@@ -75,8 +76,7 @@ async function snapshot(name, profile) {
   save(name + '.json', result); return result;
 }
 async function openBackup() {
-  await site.getByRole('button', { name: '设置', exact: true }).click();
-  await site.getByRole('tab', { name: '数据', exact: true }).click();
+  await openSettingsTab(site, '数据');
   await site.getByRole('button', { name: '收藏与备份', exact: true }).click();
   const dialog = site.getByRole('dialog', { name: '收藏与备份', exact: true });
   await dialog.waitFor(); return dialog;
@@ -138,7 +138,7 @@ function compareStores(stage, expected, actual) {
   await add.getByLabel('曲目').fill('First song\nSecond song');
   await add.getByRole('button', { name: /放上唱片架/ }).click();
   await add.locator('.add-notice', { hasText: 'QA profile transfer' }).waitFor();
-  await add.getByRole('button', { name: '关闭添加到唱片架' }).click();
+  await add.getByRole('button', { name: '关闭添加到唱片架' }).click(); await closeLibrary(site);
   const items = await site.evaluate(async () => (await (await fetch('/api/items')).json()).items);
   assert.equal(items.length, 1);
   const at = Date.now() - 60000, album = items[0];
@@ -171,7 +171,10 @@ function compareStores(stage, expected, actual) {
   const journalRows = journal.readJournalRecords({ getItem: () => JSON.stringify(rawJournalRows) });
   assert.equal(journalRows.length, rawJournalRows.length, 'Journal fixture must not lose records');
   assert.deepEqual(journalRows.map(({ id }) => id), ['qa-trash', 'qa-page', 'qa-second-page', 'qa-first-page']);
-  const writingDays = [...new Set(journalRows.map(({ createdAt }) => care.dayKey(createdAt)))].sort();
+  // Souvenirs key a writing day by the shared local calendar (src/lib/local-calendar.mjs, zero-padded and sortable),
+  // not by cat-care's own unpadded care-day key, which only matched while the fixture dates had two-digit days.
+  const { dayKey: calendarDay } = await moduleAt('lib/local-calendar.mjs');
+  const writingDays = [...new Set(journalRows.map(({ createdAt }) => calendarDay(createdAt)))].sort();
   assert.equal(writingDays.length, 3, 'Journal fixture must represent three distinct local writing days');
   const rawPlaybackRows = [
     { id: 'qa-listen-a', start: at - 700000, end: at - 370000, durationMs: 330000, reason: 'pause',
@@ -215,7 +218,7 @@ function compareStores(stage, expected, actual) {
   save('souvenir-fixture.json', { keys: souvenirDomains, records: souvenirState.records,
     sourceEvidence: { focusSession: record.id, playbackSessions: playbackRows.map(({ id }) => id),
       sentLetter: 'qa-sent', journalEntries: journalRows.map(({ id }) => id) } });
-  await site.reload(); await site.locator('.room-record').first().waitFor();
+  await site.reload(); await site.locator('.desk-home').waitFor();
   const before = await snapshot('source-before-export', sourceProfile);
   for (const domain of Object.keys(seed)) compare('seed-loaded:' + domain, seed[domain], before.stores[domain]);
   const sourceSouvenirs = souvenirs.normalizeSouvenirs({ version: 1,
@@ -223,7 +226,7 @@ function compareStores(stage, expected, actual) {
   compare('seed:souvenirs', souvenirState, sourceSouvenirs);
   await openBackup();
   const exported = await exportBackup('source-export.json');
-  assert.equal(exported.version, 4);
+  assert.equal(exported.version, 5); // the backup format is v5 since 2.1 (src/backup-model.mjs BACKUP_VERSION)
   compare('export:collection', before.items, exported.items);
   for (const domain of ['library', 'study']) compare('export:' + domain, before.stores[domain], exported[domain]);
   for (const domain of ['focusSessions', 'catMood', 'catCare', 'letters', 'journalEntries', 'playbackSessions'])
@@ -270,8 +273,8 @@ function compareStores(stage, expected, actual) {
   compareStores('after-restart', before, restarted);
   compare('after-restart:souvenirs', sourceSouvenirs, souvenirs.normalizeSouvenirs({ version: 1,
     records: Object.keys(souvenirDomains).map((domain) => restarted.stores[domain]) }));
-  await site.locator('.room-record').first().waitFor();
-  assert.match(await site.locator('.app-brand small').innerText(), /1 张唱片/);
+  await site.locator('.desk-home').waitFor();
+  assert.match(await (await takeBinder(site, '唱片'), binderSpine(site)).getAttribute('aria-label'), /1 /); await closeLibrary(site);
   await site.screenshot({ path: path.join(output, 'target-restarted-room.png') });
   check('target-profile-persists-after-real-electron-restart');
   assert.deepEqual(report.pageErrors, []);

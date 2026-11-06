@@ -171,3 +171,13 @@ Cross-window `storage` events for the key also trigger a re-read.
 ```
 
 每天摸摸的次数和已经加过心情的专注记录，另存在 `flow-cabin-cat-care-meta-v1`（只供内部使用）。规则见 `docs/cat-care.md`。
+
+## 信箱（书桌上的邮筒）
+
+书桌的邮筒仿照 DEsk 的 post box（https://github.com/fyzugx/DEsk，MIT）：程序的信都放进这里。模型在 `src/desk/post.mjs`（纯函数，有测试），页面里的读写在 `src/desk/usePost.js`。
+
+- `cabin:post`：信箱里的信变了（来信、读过、丢掉）时在 `window` 上触发，无 `detail`。存储 `localStorage['flow-cabin-post-v1']`：`{ letters: [{ id, kind, from, title, body, at, read, tone?, steps?, actions? }], gone: [id] }`，最多 50 封，`gone` 记住丢掉的信，同一封（欢迎信、某个版本的信）不会再来。`kind` 为 `welcome | release | notice | mail`。
+- `cabin:desk-lit`：书桌的灯亮起时触发一次（`window.__cabinDeskLit` 同时为 `true`）。第一次打开时，欢迎信在灯亮后 2.5 秒寄到。
+- `cabin:onboarding-step`（输入）：`detail` 为 `{ step: 'source' | 'room' | 'test' }`，打开新手引导的那一步。欢迎信上的三件小事发这个事件。
+- `notify(text, { tone: 'error' })` 和 `notify(text, { keep: true })` 除了弹出纸条，也作为一封信放进信箱（10 分钟内同样的话只算一封）。
+- 开启「实验室 › 小屋来信」时，小屋寄来的信（`flow-cabin-letters-v1`，方向为 `in`）也站在信箱里；在这里读过会同步标为已读，「回信」打开日记里的信件。

@@ -7,8 +7,11 @@ import { readJournalRecords } from '../journal-entries.mjs';
 import LetterJournalPicker from './LetterJournalPicker.jsx';
 import { readPlaybackSessions } from '../../player/playback-log.mjs';
 import { readCatMood, subscribeCatMood } from './cat-mood-source.mjs';
-import { hasArt, LETTER_PLACEHOLDER, sprite } from './journal-art.mjs';
+import { LETTER_PLACEHOLDER, sprite } from './journal-art.mjs';
+import PostBox from './PostBox.jsx';
+import { playSfx } from '../../props/sfx.mjs';
 import './mailbox.css';
+import './post-box.css';
 
 const minuteKey = (time) => Math.floor(time / 60000);
 const clock = (time) => {
@@ -43,8 +46,7 @@ function Evidence({ items = [] }) {
 }
 
 function LetterBody({ letter, reduced = false }) {
-  return <div className={`fs-mail-paper ${letter.source === 'ai' ? 'is-ai' : ''}`}
-    style={{ backgroundImage: `url(${sprite('letter-paper')}), url(${LETTER_PLACEHOLDER['letter-paper']})` }}>
+  return <div className={`fs-mail-paper ${letter.source === 'ai' ? 'is-ai' : ''}`}>
     <header>
       <span>{SOURCE_LABEL[letter.source] || '小屋来信'}</span>
       <time dateTime={new Date(letter.at).toISOString()}>{clock(letter.at)}</time>
@@ -201,6 +203,11 @@ export default function Mailbox({ sessions, state, now, reduced = false }) {
     setStatus(result.ok ? action === 'trash' ? '已移到回收站，原信与回信都保留着。' : action === 'restore' ? '这封信已放回信箱。' : '收藏状态已保存。' : result.error);
     if (result.ok && action !== 'favorite') setSelectedId('');
   };
+  // The words behind a letter's turned-down corner.
+  const act = (action, row) => {
+    if (action === 'read') { letters.markRead(row.direction === 'out' ? row.reply.id : row.letter.id); return; }
+    organize(row.id, action === 'restore' ? 'restore' : 'trash');
+  };
   const send = async () => {
     if (!cleanUserLetter(text).length || sending) return;
     if (selectedJournal.length && shareContext) {
@@ -229,10 +236,10 @@ export default function Mailbox({ sessions, state, now, reduced = false }) {
     setFilter('out'); setQuery(''); setSelectedId(result.outgoing.id);
     setStatus(result.notice || '信已经寄出，回信也落在这一页了。');
   };
-  const canUsePaper = hasArt('paper');
 
-  return <div className="fs-spread fs-mail-spread" role="tabpanel" aria-label="信箱">
-    <section className="fs-page fs-mail-side" aria-label="信件列表">
+  useEffect(() => { playSfx('post-open'); return () => playSfx('post-close'); }, []);
+  return <div className="fs-spread paper fs-mail-spread" role="tabpanel" aria-label="信箱">
+    <section className="fs-page is-turning fs-mail-side" aria-label="信件列表">
       <header className="fs-mail-side-head">
         <div className="fs-mail-title"><MailArt/><div><h3>信箱</h3><p>{letters.unread ? `${letters.unread} 封来信还没拆` : '来信与寄出的信都收在这里'}</p></div></div>
         <button type="button" className="fs-mail-write" onClick={openComposer}>写一封信</button>
@@ -242,14 +249,8 @@ export default function Mailbox({ sessions, state, now, reduced = false }) {
         {[['all', '全部'], ['in', '来信'], ['out', '寄出'], ['favorites', '收藏'], ['trash', '回收站']].map(([id, label]) => <button key={id} type="button" aria-pressed={filter === id} onClick={() => { setFilter(id); setPage(1); setSelectedId(''); }}>{label}</button>)}
       </div>
       {letters.draft && !compose && <button type="button" className="fs-mail-draft" onClick={openComposer}><span>未写完</span><strong>{letters.draft.lines[0]}</strong><small>继续写 ›</small></button>}
-      {paged.rows.length ? <ol className="fs-mail-list">{paged.rows.map((row) => <li key={row.id}>
-        <button type="button" aria-current={row.id === selectedId ? 'true' : undefined} className={`${row.id === selectedId ? 'is-selected' : ''} ${row.unread ? 'is-unread' : ''}`} onClick={() => choose(row)}>
-          <span className={`fs-mail-direction is-${row.direction}`}>{row.direction === 'out' ? '寄' : '来'}</span>
-          <span className="fs-mail-row-copy"><strong>{row.title}</strong><small>{row.pending ? '正在等奶糖读信…' : row.preview || '一页没有写字的信'}</small></span>
-          <time dateTime={new Date(row.latestAt).toISOString()}>{clock(row.latestAt).split(' ')[0]}</time>
-          {row.unread && <i className="fs-mail-unread-dot" aria-label="未读"/>}
-        </button>
-      </li>)}</ol> : <div className="fs-mail-list-empty"><JournalSprite name="cat-wait" width={96} height={96}/><p>{query ? '没有找到这句话。' : filter === 'trash' ? '回收站是空的。' : filter === 'favorites' ? '还没有收藏的信。' : filter === 'out' ? '还没寄出过信。' : filter === 'in' ? '小屋还没有来信。' : '信箱里空空的。'}</p><small>{filter === 'all' && !query ? '想说话的时候，随时可以写一封。' : '换个筛选或关键词看看。'}</small></div>}
+      <PostBox rows={paged.rows} selectedId={selectedId} unread={letters.unread} reduced={reduced} clock={clock} onChoose={choose} onAct={act}
+        empty={<div className="fs-mail-list-empty"><JournalSprite name="cat-wait" width={96} height={96}/><p>{query ? '没有找到这句话。' : filter === 'trash' ? '回收站是空的。' : filter === 'favorites' ? '还没有收藏的信。' : filter === 'out' ? '还没寄出过信。' : filter === 'in' ? '小屋还没有来信。' : '信箱里空空的。'}</p><small>{filter === 'all' && !query ? '想说话的时候，随时可以写一封。' : '换个筛选或关键词看看。'}</small></div>}/>
       {paged.totalPages > 1 && <nav className="fs-mail-pages" aria-label="信件分页">
         <button type="button" disabled={paged.page <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))}>‹</button>
         <span>{paged.page} / {paged.totalPages} · 第 {paged.from + 1}–{paged.to} 封</span>
@@ -257,8 +258,8 @@ export default function Mailbox({ sessions, state, now, reduced = false }) {
       </nav>}
       <p className="fs-mail-draft-state" role="status">{compose ? draftState : ''}</p>
     </section>
-    <div className={`fs-spine ${canUsePaper ? 'has-art' : ''}`} aria-hidden="true"/>
-    <section className={`fs-page fs-mail-main ${canUsePaper ? 'has-paper' : ''} ${reduced ? 'is-reduced' : ''}`} aria-label="信件内容">
+    <div className="fs-spine" aria-hidden="true"/>
+    <section className={`fs-page is-turning fs-mail-main ${reduced ? 'is-reduced' : ''}`} aria-label="信件内容">
       {status && <p className={`fs-mail-toast ${statusError ? 'is-error' : ''}`} role={statusError ? 'alert' : 'status'}>{status}</p>}
       {filter === 'trash' && !compose && purging && selectedRow?.id === purging.id && selectedRow.letter.trashed && <div role="group" aria-label="确认永久删除往来信">
         <p>永久删除这封原信和它的全部回信，包括正文、标题和附带近况？未完成寄信中与原信相同的旧草稿也会删除。此操作不能撤销，已获得的纪念物保留。</p>

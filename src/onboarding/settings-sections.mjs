@@ -8,9 +8,9 @@ export const HUB_SECTIONS = Object.freeze([
 ]);
 export const HUB_IDS = Object.freeze(HUB_SECTIONS.map((item) => item.id));
 
-// 旧 id → [新分区, 分区里的锚点（DOM id）]。'beta' 是 2.1 的首页选择。
+// 旧 id → [新分区, 分区里的锚点（DOM id）]。'beta' 是 2.1 的首页选择（3.1 起只有生活小屋，落在「房间」）。
 export const LEGACY_SECTIONS = Object.freeze({
-  beta: ['room', 'hub-home'], companion: ['room', 'hub-companion'], sky: ['room', 'hub-sky'], weather: ['room', 'hub-sky'],
+  beta: ['room', 'hub-room'], companion: ['room', 'hub-companion'], sky: ['room', 'hub-sky'], weather: ['room', 'hub-sky'],
   sync: ['labs', 'hub-sync'], ai: ['labs', 'hub-ai'], about: ['labs', 'hub-about'], diagnostics: ['data', 'hub-diagnostics']
 });
 

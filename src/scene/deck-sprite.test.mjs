@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { readFileSync } from 'node:fs';
-import { ARM_FRAMES, DECK_BODY, DECK_COLOURS, DECK_H, DECK_PALETTES, DECK_SHADOW, DECK_W, HEADS, PLATTER, PLINTH, deckPalette, liftLabel, recordRuns } from './deck-sprite.mjs';
+import { ARM_FRAMES, DECK_BODY, DECK_COLOURS, DECK_H, DECK_SHADOW, DECK_W, HEADS, PLATTER, PLINTH, deckPalette, liftLabel, recordRuns } from './deck-sprite.mjs';
 
 const cells = (list) => { const g = Array.from({ length: DECK_H }, () => Array(DECK_W).fill(null)); for (const r of list) for (let i = 0; i < r.w; i++) g[r.y][r.x + i] = r.fill; return g; };
 const key = (fill) => /^var\(--deck-(\d+),/.exec(fill || '')?.[1];
@@ -10,11 +9,7 @@ test('deck body fills are per-scene CSS variables over the walnut defaults', () 
   for (const run of DECK_BODY) assert.match(run.fill, /^var\(--deck-\d+, #[\da-f]{6}\)$/);
   assert.deepEqual(deckPalette('pixel'), DECK_COLOURS);
   assert.equal(deckPalette('forest')[9], DECK_COLOURS[9], 'brass is shared');
-  const css = readFileSync(new URL('./scene-deck.css', import.meta.url), 'utf8');
-  for (const [look, palette] of Object.entries(DECK_PALETTES)) {
-    const rule = css.match(new RegExp(`\\[data-room-look='${look}'\\] \\.scene-deck \\{ (--deck-[^}]+)\\}`))?.[1] || '';
-    for (const [key, hex] of Object.entries(palette)) assert.ok(rule.includes(`--deck-${key}: ${hex};`), `${look} --deck-${key}`);
-  }
+  // (The per-scene CSS mirror, scene-deck.css, went with the isometric room renderer in 3.1.)
 });
 test('every scene gets its own rim light, and it is not the plinth colour', () => {
   for (const look of ['pixel', 'warm', 'night-study', 'forest', 'seaside', 'starlight']) {

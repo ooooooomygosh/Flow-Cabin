@@ -40,7 +40,7 @@ test('progress persists and resumes; skip and done never auto-open', () => {
 
 test('the first-run guide is three steps and its last step is the finish line', () => {
   assert.deepEqual(m.STEPS, ['source', 'room', 'test']);
-  assert.deepEqual(m.STEPS.map((id) => m.STEP_LABELS[id]), ['音源', '房间与伙伴', '试听']);
+  assert.deepEqual(m.STEPS.map((id) => m.STEP_LABELS[id]), ['音源', '伙伴', '试听']);
   assert.equal(m.initialState().step, 'source');
   assert.equal(m.isLastStep('test'), true);
   assert.equal(m.isLastStep('room'), false);
