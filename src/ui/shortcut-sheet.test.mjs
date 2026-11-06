@@ -32,6 +32,6 @@ test('every shortcut appears exactly once, grouped by where it works', () => {
   assert.deepEqual(groups.map((group) => group.id), SCOPES.map((scope) => scope.id).filter((id) => SHORTCUTS.some((entry) => (entry.scope || 'room') === id)));
   assert.ok(shortcut('help'), 'the sheet lists its own key');
   const app = groupShortcuts(SHORTCUTS, { desktop: true }).find((group) => group.id === 'app');
-  assert.equal(app.entries.find((entry) => entry.id === 'settings').action, '打开设置', 'inside the desktop app the 桌面版 note is noise');
+  assert.equal(app.entries.find((entry) => entry.id === 'settings').action, '显示与字体', 'inside the desktop app the 桌面版 note is noise');
   assert.match(groupShortcuts().find((group) => group.id === 'app').entries.find((entry) => entry.id === 'settings').action, /桌面版/);
 });
