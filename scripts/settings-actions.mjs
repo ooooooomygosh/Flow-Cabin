@@ -32,6 +32,8 @@ export async function backToDesk(page) {
     await page.locator('.desk-look.is-there, .desk-look.is-up').first().waitFor({ timeout: 3000 }).catch(() => {});
     await page.keyboard.press('Escape'); await page.locator('.desk-look').waitFor({ state: 'detached', timeout: 4000 }).catch(() => {});
   }
+  // Settled: the desk ignores its keys while any sheet is still open (closing is animated) or a view is up.
+  await page.waitForFunction(() => !document.querySelector('dialog[open]') && !document.querySelector('.desk-look'), null, { timeout: 8000 });
 }
 // Look up (the plate at the back edge, as A / C / N do) and press one thing in the view.
 const PLATE = { shelf: /^唱片架 · 抬头看书柜/, console: /^唱机 · 抬头看控制面板/, post: /^信箱/ };

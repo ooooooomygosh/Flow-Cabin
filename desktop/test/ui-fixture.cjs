@@ -99,6 +99,8 @@ async function backToDesk(site) {
     await site.locator('.desk-look.is-there, .desk-look.is-up').first().waitFor({ timeout: 3000 }).catch(() => {});
     await site.keyboard.press('Escape'); await site.locator('.desk-look').waitFor({ state: 'detached', timeout: 4000 }).catch(() => {});
   }
+  // Settled: the desk ignores its keys while any sheet is still open (closing is animated) or a view is up.
+  await site.waitForFunction(() => !document.querySelector('dialog[open]') && !document.querySelector('.desk-look'), null, { timeout: 8000 });
 }
 const PLATE = { shelf: /^唱片架 · 抬头看书柜/, console: /^唱机 · 抬头看控制面板/, post: /^信箱/ };
 async function lookUp(site, which) {

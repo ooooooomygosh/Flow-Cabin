@@ -148,7 +148,7 @@ export default function DeskHome({ reduced = false, focusOpen = false, shelf = n
 
   // ----- looking up, and back down -----
   const lookTo = useCallback((which) => {
-    if (look) return;
+    if (look && look.phase !== 'gone') return;
     setDrawer(false);
     if (lying) return;
     playSfx(which === 'post' ? 'post-open' : 'binder-lift');
@@ -174,7 +174,7 @@ export default function DeskHome({ reduced = false, focusOpen = false, shelf = n
   }, [look, lookTo]);
   useEffect(() => {
     if (look?.phase !== 'gone') return;
-    setLook(null);
+    setLook((l) => (l?.phase === 'gone' ? null : l));
     // taken out of the box: back down at the desk, and it lies there (DEsk: lookTo(null, lay the letter))
     if (taking.current) { setLying(taking.current); taking.current = null; }
   }, [look]);
@@ -215,23 +215,24 @@ export default function DeskHome({ reduced = false, focusOpen = false, shelf = n
   }, [look?.which, look?.phase]);
 
   // ----- keys: A the bookcase, C the Control Panel, N the post box, D the drawer, Esc back -----
-  useEffect(() => {
-    const key = (event) => {
-      if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || event.repeat) return;
-      if (event.key === 'Escape') return; // the back stack has it
-      if (document.querySelector('dialog[open]') || typing(event.target)) return;
-      if (look?.which === 'post' && look.phase === 'there' && letters.length) {
-        const turn = { ArrowUp: 1, PageUp: 1, ArrowDown: -1, PageDown: -1 }[event.key];
-        if (turn) { event.preventDefault(); flip(turn); return; }
-      }
-      const act = deskKey(event.key, { look: Boolean(look) || Boolean(lying), drawer });
-      if (!act || (zen && act.type === 'drawer')) return;
-      event.preventDefault();
-      if (act.type === 'drawer') setDrawer(act.open);
-      else if (act.type === 'look') lookTo(act.which);
-    };
-    addEventListener('keydown', key); return () => removeEventListener('keydown', key);
-  }, [look, drawer, lookTo, lying, letters.length, front, zen]);
+  // One listener for the life of the desk, reading the state of the latest render (keyRef): a key pressed
+  // between a render and the effects after it is never answered by a handler that still sees the view up.
+  const keyRef = useRef(null);
+  keyRef.current = (event) => {
+    if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || event.repeat) return;
+    if (event.key === 'Escape') return; // the back stack has it
+    if (document.querySelector('dialog[open]') || typing(event.target)) return;
+    if (look?.which === 'post' && look.phase === 'there' && letters.length) {
+      const turn = { ArrowUp: 1, PageUp: 1, ArrowDown: -1, PageDown: -1 }[event.key];
+      if (turn) { event.preventDefault(); flip(turn); return; }
+    }
+    const act = deskKey(event.key, { look: (Boolean(look) && look.phase !== 'gone') || Boolean(lying), drawer });
+    if (!act || (zen && act.type === 'drawer')) return;
+    event.preventDefault();
+    if (act.type === 'drawer') setDrawer(act.open);
+    else if (act.type === 'look') lookTo(act.which);
+  };
+  useEffect(() => { const key = (event) => keyRef.current?.(event); addEventListener('keydown', key); return () => removeEventListener('keydown', key); }, []);
   useEffect(() => { if (zen) setDrawer(false); }, [zen]);
 
   const open = (action) => { setDrawer(false); commands.open(action); };
