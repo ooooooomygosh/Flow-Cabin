@@ -59,12 +59,11 @@ try {
   await page.waitForFunction(()=>document.querySelector('.desk-pull').getBoundingClientRect().bottom<=891.5);
   for(const selector of ['.desk-clock-face','.desk-console-plate','.desk-post, .desk-post-plate','.desk-shelf-plate']){const box=await page.locator(selector).boundingBox();assert.ok(box.y>=48,`${selector} ${JSON.stringify(box)}`);}
   { const pull=await page.locator('.desk-pull').boundingBox();assert.ok(pull.y+pull.height<=891.5&&pull.y>=48,JSON.stringify(pull)); }
-  // The phone reaches 随手记 the way a user does: the LED clock opens the 专注 panel, 这一段 holds the memo pad.
-  await page.locator('.focus-badge').click();await page.getByRole('tab',{name:'这一段',exact:true}).click();await page.getByRole('textbox',{name:'随手记内容',exact:true}).waitFor();
-  const sheet=page.getByRole('dialog',{name:'专注',exact:true}),inner=sheet.locator('.focus-dock');assert.equal(await inner.evaluate(n=>getComputedStyle(n).position),'static');
-  const heading=await sheet.locator('.cabin-dialog-header').boundingBox(),innerRect=await inner.boundingBox();assert.ok(innerRect.y>=heading.y+heading.height-1);
-  { const box=await sheet.boundingBox();assert.ok(box.y>=48&&box.y+box.height<=892,JSON.stringify(box)); }
-  await sheet.locator('.cabin-dialog-close').click();
+  // The phone reaches 随手记 the way a user does: the LED clock opens the 专注 panel, 随手记 is its own page.
+  await page.locator('.focus-badge').click();await page.getByRole('tab',{name:'随手记',exact:true}).click();await page.getByRole('textbox',{name:'随手记内容',exact:true}).waitFor();
+  // 3.1: 专注 is a close-up over the whole window (the paper on the walnut); its tabs, 放回 and the memo pad stay clear of both bars.
+  for(const [name,loc] of [['tabs',page.locator('.focus-closeup .closeup-tabs')],['back',page.locator('.focus-closeup .closeup-back')],['memo',page.getByRole('textbox',{name:'随手记内容',exact:true})]]){const box=await loc.boundingBox();assert.ok(box&&box.y>=48&&box.y+box.height<=892,`${name} ${JSON.stringify(box)}`);}
+  await page.keyboard.press('Escape');await page.locator('.focus-closeup').waitFor({state:'detached'});
   // The drawer opens above the gesture bar.
   await page.locator('.desk-pull').click();await drawer(page).waitFor();
   for(const name of ['唱片日记','设置']){const box=await drawer(page).getByRole('button',{name,exact:true}).boundingBox();assert.ok(box.y>=48&&box.y+box.height<=891.5,`${name} ${JSON.stringify(box)}`);}
