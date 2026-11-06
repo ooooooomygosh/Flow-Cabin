@@ -156,3 +156,37 @@ export function boxCards(count, front = 0) {
   }
   return cards;
 }
+
+// The records on the desk (src/desk/RecordDesk.jsx): sleeves laid out in a grid on the left, the
+// turntable on the right, a paper slip under it. Everything between the back edge and the drawer's pull.
+// A phone: the turntable as a band across the top, the sleeves two to a row under it, scrolling.
+export function recordDeskLayout(lay) {
+  const { width, height } = lay, top = lay.top + 18 * (lay.phone ? 1 : lay.s), bottom = height - lay.pull - 14;
+  const room = Math.max(120, bottom - top);
+  if (lay.phone) {
+    const tt = { x: 16, y: top, w: width - 32, h: Math.min((width - 32) * 0.78, 240) };
+    const gy = tt.y + tt.h + 14, cols = 2, gap = 14, size = Math.floor((width - 32 - gap * (cols - 1)) / cols);
+    return { phone: true, turntable: tt, slip: null, grid: { x: 16, y: gy, w: width - 32, h: bottom - gy, cols, rows: 0, size, gap, scroll: true } };
+  }
+  const s = lay.s, margin = 56 * s;
+  const ttW = Math.min(width * 0.34, room * 0.92, 520 * s), ttH = ttW * 0.78;
+  const tt = { x: width - margin - ttW, y: top + Math.max(0, (room - ttH - 110 * s) * 0.32), w: ttW, h: ttH };
+  const slip = { x: tt.x + ttW * 0.06, y: tt.y + ttH + 18 * s, w: ttW * 0.88, h: 92 * s };
+  const gridW = tt.x - margin * 1.6 - margin, gap = 22 * s, footer = 44 * s;
+  // as many columns as fit at a sleeve of 150-230 px; rows to fill the height
+  let cols = Math.max(2, Math.min(6, Math.round((gridW + gap) / (165 * s + gap))));
+  let size = Math.floor((gridW - gap * (cols - 1)) / cols);
+  let rows = Math.max(1, Math.floor((room - footer + gap) / (size + gap)));
+  if (rows * (size + gap) - gap > room - footer) size = Math.floor((room - footer - gap * (rows - 1)) / rows);
+  if (size > 196 * s) size = Math.floor(196 * s);
+  const used = cols * size + gap * (cols - 1), gh = rows * size + gap * (rows - 1);
+  const grid = { x: margin + (gridW - used) / 2, y: top + Math.max(0, (room - footer - gh) / 2), w: used, h: gh, cols, rows, size, gap, scroll: false };
+  return { phone: false, turntable: tt, slip, grid };
+}
+
+// A small, stable tilt for each sleeve (degrees, -1.6..1.6), so the spread looks laid by hand.
+export function sleeveTilt(id = '') {
+  let h = 2166136261;
+  for (const ch of String(id)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); }
+  return ((h >>> 0) % 33 - 16) / 10;
+}

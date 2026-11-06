@@ -145,3 +145,19 @@ test('the letter lies where DEsk lays it, and goes back to the slot', async () =
   assert(cards[1].y < cards[0].y && cards[1].w < cards[0].w);
   assert.deepEqual(boxCards(0), []);
 });
+
+test('the records on the desk: a spread of sleeves left of the player, clear of the back edge and the drawer pull', async () => {
+  const { recordDeskLayout, sleeveTilt } = await import('./layout.mjs');
+  for (const [w, h] of [[1440, 900], [1280, 800], [1920, 1080], [1024, 768]]) {
+    const lay = deskLayout(w, h), r = recordDeskLayout(lay), g = r.grid;
+    assert(g.cols >= 3 && g.rows >= 2, `${w}: at least 3x2 sleeves`);
+    assert(g.size >= 110, `${w}: sleeves big enough to read a cover`);
+    assert(g.x >= 0 && g.x + g.w < r.turntable.x, `${w}: spread left of the player`);
+    assert(g.y >= lay.top && g.y + g.h + 44 * lay.s <= h - lay.pull, `${w}: between back edge and pull`);
+    assert(r.slip.y + r.slip.h <= h - lay.pull, `${w}: slip above the pull`);
+  }
+  const phone = recordDeskLayout(deskLayout(390, 844));
+  assert(phone.phone && phone.grid.cols === 2 && phone.grid.scroll && phone.turntable.w <= 390);
+  assert.equal(sleeveTilt('a'), sleeveTilt('a'));
+  assert(Math.abs(sleeveTilt('x')) <= 1.6);
+});

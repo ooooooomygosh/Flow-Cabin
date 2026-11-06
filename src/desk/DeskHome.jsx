@@ -10,6 +10,7 @@ import { deskLayout, viewLayout, filmStep, clockFace, PLATES, letterLayout, putA
 import { EDGE, VIEWS, CLOCK_KEYS, drawerItems, drawerPlaces, deskKey, autoMode } from './desk-model.mjs';
 import { deskImage, deskUrl, whenDeskImages, FIRST, VIEW_IMAGES } from './images.mjs';
 import ClockFace from './ClockFace';
+import RecordDesk from './RecordDesk';
 import ShelfView from './ShelfView';
 import usePost, { announceDeskLit } from './usePost';
 import { BoxCard, LyingLetter } from './PostLetters';
@@ -254,6 +255,7 @@ export default function DeskHome({ reduced = false, focusOpen = false, shelf = n
   return <section className={`desk-home ${ready ? 'is-lit' : ''} ${lay.phone ? 'is-phone' : ''} ${drawer ? 'is-drawer-out' : ''} ${reduced ? 'is-reduced' : ''}`} aria-label="书桌" data-look={look?.which || undefined} style={{ '--desk-s': lay.s, '--desk-lamp': lamp.brightness }}>
     <div className="desk-wood" style={{ backgroundImage: `url(${deskUrl('desk-wood.webp')})` }} aria-hidden="true"/>
     <div className="desk-top" ref={deskRef} style={{ transform: lift ? `translateY(${-lift.toFixed(1)}px)` : undefined }} inert={look?.phase === 'there' || undefined}>
+      <RecordDesk lay={lay} shelf={shelf} reduced={reduced} hidden={Boolean(look) || drawer}/>
       {lay.console && <img className="desk-piece" src={deskUrl('edge-console.webp')} alt="" style={style(lay.console)} draggable="false"/>}
       <img className="desk-piece" src={deskUrl('edge-clock.webp')} alt="" style={style(lay.clock)} draggable="false"/>
       {lay.post && <img className="desk-piece" src={deskUrl('edge-post.webp')} alt="" style={style(lay.post)} draggable="false"/>}
