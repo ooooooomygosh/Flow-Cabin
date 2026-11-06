@@ -126,7 +126,7 @@ export default function SettingsHub({ section = 'music', setSection, close, env,
           <button type="button" className="hub-back" onClick={() => setSection('music')}><ChevronLeft size={14}/>音乐</button>
           <MusicAccounts/>
         </div>}
-        {tab === 'focus' && <><Part id="hub-timer" note="计时"><p className="personalization-intro">番茄钟的时长和提醒。计时本身在顶栏的「专注」里。</p><FocusSettingsForm className="hub-focus-settings"/></Part><Part id="hub-goal" note="目标"><DailyGoalField/></Part></>}
+        {tab === 'focus' && <><Part id="hub-timer" note="计时"><p className="personalization-intro">番茄钟的时长和提醒。计时本身在书桌的台钟上：点钟面开始一段专注。</p><FocusSettingsForm className="hub-focus-settings"/></Part><Part id="hub-goal" note="目标"><DailyGoalField/></Part></>}
         {tab === 'room' && <>
           <Part id="hub-room" note="伙伴">
             <p className="personalization-intro">选一位安静的伙伴，它住在抽屉里的照片上，也会出门到桌面上散步。换伙伴不会打断音乐和专注。</p>
@@ -262,7 +262,7 @@ function CompanionSection({ env, player }) {
     {env.desktop
       ? <InputCompanionSettings player={player} env={env}/>
       : <div className="onboarding-hint">{env.mobile ? '手机版的小猫在小屋内陪伴你；跨应用键鼠统计与独立桌宠需要电脑桌面版。' : '跨应用键鼠陪伴需要心流小屋桌面版。网页版仍会在小屋窗口内回应键盘和鼠标。'}</div>}
-    {env.desktop && <Row title="统计位置" hint="今天的键盘、点击与最近 7 天，也在奶糖的小猫面板和顶栏的「日记」里。"/>}
+    {env.desktop && <Row title="统计位置" hint="今天的键盘、点击与最近 7 天，也在奶糖的小猫面板和抽屉里的「唱片日记」里。"/>}
   </>;
 }
 
@@ -301,7 +301,7 @@ function LabsSection({ env, openNews, restartOnboarding }) {
     <section id="hub-about" className="hub-block" data-note="版本" aria-label="关于"><h3>关于</h3>
       <UpdatePanel version={version} desktop={Boolean(env.desktop)}/>
       <Row title="新功能" hint={`看看 v${version} 带来了什么，也可以翻到更早的版本。`}><button type="button" className="pixel-button" onClick={openNews}>查看新功能</button></Row>
-      <Row title="重新引导" hint="再走一遍三步引导（音源、房间与伙伴、试听），之前的选择会保留。"><button type="button" className="pixel-button" onClick={restartOnboarding}>重新引导</button></Row>
+      <Row title="重新引导" hint="再走一遍三步引导（音源、伙伴、试听），之前的选择会保留。"><button type="button" className="pixel-button" onClick={restartOnboarding}>重新引导</button></Row>
     </section>
   </div>;
 }

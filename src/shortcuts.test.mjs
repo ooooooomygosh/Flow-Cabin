@@ -5,7 +5,7 @@ import { SHORTCUTS, ariaKeys, shortcut } from './shortcuts.mjs';
 test('the shortcut table covers every handled key once and pairs each key with its action', () => {
   const ids = SHORTCUTS.map((entry) => entry.id);
   assert.equal(new Set(ids).size, ids.length);
-  for (const id of ['play', 'seek', 'track', 'volume', 'mute', 'repeat', 'shuffle', 'shelf', 'load', 'zen', 'tools', 'corner', 'back', 'fullscreen', 'desktop', 'settings']) assert.ok(ids.includes(id), id);
+  for (const id of ['play', 'seek', 'track', 'volume', 'mute', 'repeat', 'shuffle', 'shelf', 'lookShelf', 'lookConsole', 'lookPost', 'drawer', 'load', 'zen', 'tools', 'corner', 'back', 'fullscreen', 'desktop', 'settings']) assert.ok(ids.includes(id), id);
   const pairs = SHORTCUTS.map((entry) => `${entry.label} ${entry.action}`);
   for (const part of ['空格 播放 / 暂停', 'Z 沉浸', 'T 唱机特写', 'H 收起 / 恢复工具', 'Shift+← → 上一首 / 下一首', 'Esc 返回 / 退出沉浸']) assert.ok(pairs.includes(part), part);
   for (const entry of SHORTCUTS) assert.ok(entry.label && entry.action && entry.keys, entry.id);
@@ -31,10 +31,10 @@ test('the global focus shortcuts match what the desktop shell registers', async 
   for (const id of ['focusToggle', 'focusSkip']) { assert.equal(shortcut(id).desktop, true); assert.match(shortcut(id).action, /桌面版/); }
 });
 test('the printed label never hides a key the entry really has', () => {
-  // 设置 › 快捷键 prints `label`; the shelf row also answers to Home and End.
+  // 设置 › 快捷键 prints `label`; the records row also answers to PageUp and PageDown.
   const shelf = shortcut('shelf');
-  assert.match(shelf.keys, /Home/); assert.match(shelf.keys, /End/);
-  assert.match(shelf.label, /Home/); assert.match(shelf.label, /End/);
+  assert.match(shelf.keys, /PageUp/); assert.match(shelf.keys, /PageDown/);
+  assert.match(shelf.label, /PageUp/); assert.match(shelf.label, /PageDown/);
 });
 test('the modifiers are written in the ARIA order: Control → Alt → Shift → Meta', () => {
   // aria-keyshortcuts 会被读屏和自动化按字面比对。规范说修饰键顺序不影响语义，

@@ -50,7 +50,7 @@ export const VIEWS = Object.freeze({
       { id: 'memo', name: '随手记（便签本）', rect: [350, 498, 140, 132], action: 'notes' },
       { id: 'calendar', name: '待办与日程（台历）', rect: [518, 505, 178, 128], action: 'tasks' },
       { id: 'clock', name: '专注（座钟）', rect: [772, 500, 140, 142], action: 'timer' },
-      { id: 'post', name: '信箱', rect: [944, 596, 132, 142], action: 'mail' },
+      { id: 'post', name: '信箱', rect: [944, 596, 132, 142], action: 'post' },
     ],
   },
   // The Control Panel is the record player's console: its parts are drawn and handled by

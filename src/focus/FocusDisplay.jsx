@@ -11,7 +11,6 @@ const OFFER_TITLES = { pause: '专注已暂停', done: '这一轮专注结束了
 import { readCabinFullscreen, requestCabinFullscreen } from '../desktop/fullscreen-client.mjs';
 import { useDesktopFullscreen } from '../desktop-client';
 import { roomCovered } from '../room/useRoomChrome';
-import { getRoomScene } from '../scene-catalog.mjs';
 import RecordNowPlaying, { useNowPlaying, playerCommand } from './RecordNowPlaying';
 import { PressCard, usePress } from './PressCard';
 import { ledFace, deskFace } from './desk/clock-model.mjs';
@@ -31,7 +30,7 @@ const typing = (target) => target?.closest?.('input,textarea,select,[contentedit
 export function FacePicker() {
   const look = useSceneLook(), [display, setDisplay] = useFocusDisplay(), current = faceFor(display, look);
   return <section className="face-picker" aria-label="专注画面">
-    <header><strong>专注画面</strong><small>{display.mode ? '桌面挂件和壁纸上的计时、时钟用这个画面。' : `正在跟随「${getRoomScene(look).label}」的默认画面，选一个就固定下来。`}沉浸（Z）放大书桌上的红色台钟；选「唱片计时」则是一张转动的唱片。</small>
+    <header><strong>专注画面</strong><small>{display.mode ? '桌面挂件和壁纸上的计时、时钟用这个画面。' : '现在用的是默认画面，选一个就固定下来。'}沉浸（Z）放大书桌上的红色台钟；选「唱片计时」则是一张转动的唱片。</small>
       {display.mode && <button type="button" className="face-picker-reset" onClick={() => setDisplay({ mode: '' })}>跟随场景</button>}</header>
     <Segmented className="face-grid" label="专注画面" value={current} onChange={(mode) => setDisplay({ mode })}
       items={FACE_IDS.map((id) => ({ id, title: FACE_HINTS[id], label: <><FocusFace face={id} look={look} still variant="thumb"/><span>{FACE_LABELS[id]}</span></> }))}/>
