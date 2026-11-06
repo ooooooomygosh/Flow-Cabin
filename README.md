@@ -6,7 +6,7 @@
 
 **听一张喜欢的唱片，安心做完这一轮，再把日子轻轻收好。**
 
-<sub>一间会下雪、会亮灯、会等你回来的像素小屋。</sub>
+<sub>一张胡桃木书桌：唱片摊在桌上，唱机在右手边，台钟在后沿，抽屉里放着日记和伙伴。</sub>
 
 <p>
   <a href="https://github.com/ooooooomygosh/Flow-Cabin/releases/latest"><b>下载最新版 ↓</b></a>
@@ -26,55 +26,41 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0--only-blue" alt="GPL-3.0-only 许可证" height="20"></a>
 </p>
 
-<img src="docs/assets/screenshots/cabin-v21.png" width="100%" alt="生活小屋首页：听歌、工作与生活三个区域">
+<img src="docs/assets/screenshots/desk-home.jpg" width="100%" alt="心流小屋 3.1 的首页：俯视的胡桃木书桌，左边摊着十二张专辑封面，右边一台唱机正放着《小宇宙》，后沿是唱机铜牌、红色 LED 台钟、信箱和唱片架铜牌">
 
 </div>
 
 ---
 
-<details>
-<summary>功能演示（3.0 之前的界面）</summary>
-
-<img src="docs/assets/cabin-tour.gif" width="100%" alt="心流小屋功能演示：房间、唱片、专注与小猫">
-
-[观看视频版本](docs/assets/cabin-tour.mp4)
-
-</details>
-
 ## 里面有什么
 
-Android 适配版包含 Portable 同源的 QQ / 网易云登录音乐服务、全面屏布局和本地保存，安装与构建见 [Android 说明](docs/android.md)。手机版本仍待真实账号和真机验收；支持范围也在其中列出。
+3.1 起，首页是一张从上往下看的书桌。画面、材质、灯光和转场照搬开源项目 [DEsk](https://github.com/fyzugx/DEsk)（MIT），内容是心流小屋自己的：唱片、专注、唱片日记和伙伴。整个界面只有两种视角：低头看桌面，抬头看一件东西。
 
-- **生活小屋是唯一的首页** —— 听歌、工作与生活角各有全屏近景，手机可滑动换区。3.1 起原版唱片架首页已移除；唱片墙成了小屋里的「唱片架」，专辑墙仍在其中，收藏和记录原样保留。
-- **唱片库与唱机** —— 搜专辑、贴 QQ 音乐链接或手填；封面上的播放按钮直接继续音乐。曲库、队列、歌词和笔记在小屋内打开，切角落不打断播放。
-- **智能唱片机** —— 说一句「学习 50 分钟，帮我搭配音乐」，AI 排一整张歌单；可以只收进唱片架，也可以收下并直接开始这一轮。
-- **专注与学习** —— 四档番茄节奏、待办、连续天数、7 天趋势、一年热力图；15 本词书用 FSRS 复习，还能加自己的考试倒计时。
-- **八个房间** —— 像素、琥珀、月夜、林间、海边、星光、雨夜列车和温室；各有听歌、工作、休息预设，可吸附布置、撤销、另存与恢复。天气可请求系统大致位置，也可搜索城市。
-- **五位伙伴** —— 24 类实际绘制动作；选择和配饰同步到首页、独立桌宠和支持的系统表面。macOS 有彩色菜单栏小宠物，点击可控制音乐和专注。
-- **自己的设备与场景** —— 配对后遥控音乐、查看歌词、接力专注；保存场景、睡前淡出、导出小屋明信片。备份 v5 包含布局与导入宠物素材。
-- **奶糖** —— 桌面版在别的窗口打字或点鼠标时，它会落爪回应；只统计次数，不读按键内容。
-- **小屋日记** —— 随手记、手记和小屋来信都存在本机；近 7 天、时段分布、一年热力图和周报都能导出成图片。
+- **唱片就摊在桌上** —— 专辑封面一叠十二张铺在胡桃木上，右手边是唱机。双击封面、按回车，或者把它拖到唱机上就开始放；唱机下的纸条写着正在放什么，可以上一首、暂停、下一首。PageUp / PageDown 翻到下一叠。
+- **抬头看唱片架（A）** —— 一整面书柜：活页夹是唱片盒（全部、我喜欢、最近播放和你自己建的），深蓝色的索引本按 A–Z 找唱片；下层的台历、便签本、时钟和邮筒分别通向待办、随手记、番茄钟和信箱。
+- **抬头看唱机（C）** —— 一台电子管控制台：圆形荧光屏显示歌名和歌词，两只表随音乐摆动，旋钮调音量，拨杆切随机和循环，推子调台灯和环境音，钥匙换音源。
+- **LED 台钟** —— 后沿的红色台钟平时报时；按键可以换成日期、正在放的歌或专注倒计时。点钟面开始一段专注。
+- **专注** —— 一张纸上写「这一段做什么」，四档番茄节奏、待办、随手记、环境音和学习都在旁边几页；沉浸专注是一只满屏的大钟。做完一段会压成一张唱片，留在唱片日记里。
+- **抽屉（D）** —— 唱片日记、伙伴的照片、随手记、窗外与天气、备份和设置（那把螺丝刀）。实验室打开后还有词书、明信片、场景配方和睡前模式。
+- **信箱（N）** —— 新手引导、版本说明和提示都是寄来的信。
+- **纸** —— 每个面板都是一张纸，掀起折角可以收起成一个纸包放在桌上、铺满整个桌面，或者放回去。按下去有纸、抽屉和按键的声音，设置里可关。
+- **音源** —— 本地音乐、QQ 音乐 / 网易云（非官方接口）、系统正在播放、Music Assistant，或者只看唱片转不出声。
+- **智能唱片机** —— 说一句「学习 50 分钟，帮我搭配音乐」，AI 排一整张歌单（实验室功能，需要自己配置 AI）。
+- **五位伙伴** —— 桌面版有独立的桌宠和 macOS 菜单栏小宠物；「沉入桌面」会把这张书桌铺在所有窗口下面。
+- **手机** —— 窄屏时台钟在上，三块铜牌一排，唱机在中间，封面两列往下滚，抽屉在最下面。Android 版见 [Android 说明](docs/android.md)，仍待真机验收。
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/assets/screenshots/focus.jpg" alt="专注面板：番茄钟、待办、统计、学习、声音、随手记六个标签"><br><sub>专注 · 待办 · 统计 · 学习 · 声音 · 随手记</sub></td>
-    <td width="50%"><img src="docs/assets/screenshots/journal/journal-overview-1440x900.png" alt="小屋日记概览：近 7 天专注柱状图、一年热力图、时段分布与最近的专注记录"><br><sub>小屋日记 · 近 7 天 · 一年热力图 · 时段分布</sub></td>
+    <td width="50%"><img src="docs/assets/screenshots/desk-shelf.jpg" alt="抬头看唱片架：上层是一排活页夹和深蓝色的 A–Z 索引本，下层是便签本、台历、时钟和红色邮筒"><br><sub>唱片架 · 活页夹与 A–Z 索引本</sub></td>
+    <td width="50%"><img src="docs/assets/screenshots/desk-console.jpg" alt="抬头看唱机控制台：荧光屏上是正在放的歌，两只表、音量旋钮、随机与循环拨杆、台灯与环境音推子、上一首播放下一首按钮和音源钥匙"><br><sub>唱机 · 电子管控制台</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/assets/screenshots/smart-turntable.jpg" alt="智能唱片机：根据学习 50 分钟的计划生成完整歌单，提供只收进唱片架与收进唱片架并开始这一轮两种选择"><br><sub>智能唱片机 · 按计划编排一张完整歌单</sub></td>
-    <td width="50%"><img src="docs/assets/screenshots/work-corner-v21.png" alt="全屏工作角：真实专注钟、任务板与随手记"><br><sub>全屏工作角 · 专注 · 任务 · 随手记</sub></td>
+    <td width="50%"><img src="docs/assets/screenshots/desk-focus.jpg" alt="专注：胡桃木上的一张纸，50:00 的计时、这一段做什么、开始专注和休息一下"><br><sub>专注 · 这一段做什么</sub></td>
+    <td width="50%"><img src="docs/assets/screenshots/desk-drawer.jpg" alt="拉开抽屉：绿色毛毡上放着日记本、伙伴照片、便签本、指南针、卡片盒、明信片、场景配方卡、小夜灯、文件夹和螺丝刀"><br><sub>抽屉 · 日记、伙伴、设置都在这里</sub></td>
   </tr>
 </table>
 
----
-
-## 八间房
-
-3.1 起首页是一张书桌：顶部的铜牌、LED 台钟和铜旋钮就是入口。
-
-<img src="docs/assets/screenshots/rooms-grid.webp" width="100%" alt="八间房中的六间：像素小屋、琥珀小屋、月夜书桌、林间书屋、海边慢屋、星夜阁楼">
-
-<sub>像素小屋 · 琥珀小屋 · 月夜书桌 · 林间书屋 · 海边慢屋 · 星夜阁楼</sub>
+<p align="center"><img src="docs/assets/screenshots/desk-phone.jpg" width="300" alt="手机上的书桌：台钟、三块铜牌、唱机和两列专辑封面"></p>
 
 ---
 
@@ -129,7 +115,7 @@ Android 适配版包含 Portable 同源的 QQ / 网易云登录音乐服务、�
 ## 常见问题
 
 - **被系统拦住了怎么办？** 核对官方来源，按[下载指南](docs/DOWNLOAD-GUIDE.md)处理系统提示；不需要关闭系统安全保护。
-- **网页版和桌面版差在哪里？** 网页版适合先体验房间、收藏、专注与手记；平台登录、桌宠和系统集成请使用桌面版，详见[使用边界](docs/limitations.md)。
+- **网页版和桌面版差在哪里？** 网页版适合先体验书桌、收藏、专注与手记；平台登录、桌宠和系统集成请使用桌面版，详见[使用边界](docs/limitations.md)。
 - **唱片转了，为什么没有声音？** 默认的「仅展示」不播放音频。到「设置 › 音源」选择实际音源；平台版权、账号与地区也会影响可播范围。
 
 ## 跑起来
@@ -166,8 +152,10 @@ Copyright © 2026 心流小屋 · Flow Cabin contributors。
 
 专辑封面版权归各唱片公司 / 艺术家所有，仅用于界面展示，不包含在项目许可范围内。
 
-灵感来自 [Bongo Cat](https://github.com/ayangweb/BongoCat) 的跨应用键鼠陪伴思路，以及 Chill Pulse、lofi-engine 等作品；角色与场景美术均为本项目原创。感谢 [Tone.js](https://tonejs.github.io/)、[Simple Music](https://github.com/Yyyangshenghao/simple-music)、[Music Assistant](https://github.com/music-assistant/server) 与像素字体 [Fusion Pixel](https://github.com/TakWolf/fusion-pixel-font)。
+3.1 的书桌（桌面、后沿的控制面板 / 台钟 / 邮筒、书柜、抽屉的预渲染图，以及抬头低头的转场、纸张折角和台钟数码管的做法）来自 [DEsk](https://github.com/fyzugx/DEsk)，MIT 许可，© 2026 The DEsk authors，许可文本见 [public/licenses/DEsk-MIT.txt](public/licenses/DEsk-MIT.txt)；移植的文件头部都写了出处。唱机、唱片封套、日记本、卡片盒等新物件照 DEsk 的画法由本项目绘制。
+
+跨应用键鼠陪伴的思路来自 [Bongo Cat](https://github.com/ayangweb/BongoCat)，也受 Chill Pulse、lofi-engine 等作品启发；伙伴角色为本项目原创。感谢 [Tone.js](https://tonejs.github.io/)、[Simple Music](https://github.com/Yyyangshenghao/simple-music)、[Music Assistant](https://github.com/music-assistant/server) 与像素字体 [Fusion Pixel](https://github.com/TakWolf/fusion-pixel-font)。
 
 <div align="center">
-<sub>Made with ☕ and lo-fi in a small pixel cabin.</sub>
+<sub>Made with ☕ and lo-fi at a walnut desk.</sub>
 </div>
