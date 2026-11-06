@@ -1,7 +1,7 @@
 /** Silent, offline state/data regression pass. Native fullscreen is a mock. */
 import assert from 'node:assert/strict';
 import { launchChromium } from './launch-browser.mjs';
-import { openSettingsSection, openLibrary, closeLibrary, openAlbumWall, openFocus as openDeskFocus, openDrawerThing } from './settings-actions.mjs';
+import { openSettingsSection, openLibrary, closeLibrary, openAlbumWall, openFocus as openDeskFocus, openDrawerThing, libraryDialog } from './settings-actions.mjs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -525,7 +525,7 @@ try {
     await page.evaluate(()=>{document.documentElement.dataset.desktopFullscreen='true';window.dispatchEvent(new CustomEvent('album-desktop-fullscreen',{detail:true}));});
     await page.keyboard.press('h');await page.getByRole('button',{name:'显示工具',exact:true}).click();
     await openAlbumWall(page);await page.getByRole('dialog',{name:'专辑墙编辑器',exact:true}).waitFor();await screenshot(page,'album-wall-over-shelf');await page.keyboard.press('Escape');
-    assert.equal(await page.locator('.album-wall-overlay').count(),0);assert.equal(await page.getByRole('dialog',{name:'唱片架'}).count(),1,'only the top album-wall modal should close');
+    assert.equal(await page.locator('.album-wall-overlay').count(),0);assert.equal(await libraryDialog(page).count(),1,'only the top album-wall modal should close');assert.equal(await page.locator('.desk-look.is-there').count(),1,'the view of the bookcase stays under the shelf');
     assert.equal(await page.evaluate(()=>document.documentElement.classList.contains('room-zen')),true);assert.equal(await page.evaluate(()=>window.__nativeCommands.some(x=>x.endsWith('/fullscreen-exit'))),false);
     await openAlbumWall(page);await page.getByRole('dialog',{name:'专辑墙编辑器',exact:true}).waitFor();
     await page.getByRole('button',{name:'关闭专辑墙编辑器',exact:true}).dispatchEvent('keydown',{key:'Escape',repeat:true});assert.equal(await page.locator('.album-wall-overlay').count(),1,'held Escape must not unwind layers');

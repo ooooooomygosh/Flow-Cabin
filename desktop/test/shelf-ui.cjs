@@ -37,7 +37,7 @@ let app, site;
   await site.screenshot({ path: path.join(output, 'record-card.png') });
   await card.locator('.record-card-tracks button').nth(1).click(); await card.waitFor({ state: 'detached' });
   await closeLibrary(site);
-  assert.equal((await deckRecord(site)).id, 'shelf-1'); assert.match(await (await openConsole(site)).locator('.console-track').innerText(), /^02 ·/); await closeConsole(site); check('record-card-notes-and-play-from-a-track');
+  assert.equal((await deckRecord(site)).id, 'shelf-1'); await (await openConsole(site)).locator('.console-track', { hasText: /^\s*02 ·/ }).waitFor(); await closeConsole(site); check('record-card-notes-and-play-from-a-track');
 
   { const again = await openRecordCard(site, items[1].title); await again.getByRole('button', { name: '移除' }).click(); await again.getByRole('button', { name: '确认移除' }).click();
     await site.locator('.app-toast', { hasText: '已从唱片架移除' }).waitFor(); await closeLibrary(site);
