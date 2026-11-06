@@ -29,7 +29,8 @@ const check = (name) => { report.checks.push({ name, passed: true }); console.lo
   await site.getByRole('button', { name: /^选择曲目/ }).click(); await site.getByRole('listbox', { name: '唱机展示曲目', exact: true }).getByRole('option').nth(2).click(); await site.waitForFunction(() => document.querySelector('.console-status').textContent.includes('会员权限')); assert.equal(await site.evaluate(() => [...document.querySelectorAll('[data-cabin-audio-host] audio')].some((a) => !a.paused)), false); assert.equal(await site.locator('audio[data-deck="active"]').getAttribute('src'), null); check('restricted-source-never-claims-playing');
   await choose(site, 'visual'); assert.ok((await site.locator('.console-status').innerText()).includes('无音频')); assert.equal(await site.locator('audio[data-deck="active"]').getAttribute('src'), null); check('visual-mode-does-not-play-audio');
   await site.getByRole('button', { name: /^选择曲目/ }).click(); await site.getByRole('listbox', { name: '唱机展示曲目', exact: true }).getByRole('option').nth(0).click(); await choose(site, 'netease');
-  await site.waitForFunction(() => { const a = document.querySelector('audio[data-deck="active"]'); return a && a.currentTime > .2 && !a.paused; });
+  // The deck has switched to 网易云 and its active deck is playing (the two <audio> decks swap, so the first one is not always it).
+  await site.waitForFunction(() => { const a = document.querySelector('audio[data-deck="active"]'); return document.querySelector('.console')?.dataset.provider === 'netease' && /网易云/.test(document.querySelector('.console')?.textContent || '') && a && a.currentTime > .2 && !a.paused; });
   report.neteaseSelection = {
     ...await site.evaluate(() => ({ selectedProvider: document.querySelector('.console')?.dataset.provider,
       status: document.querySelector('.console-status')?.textContent,

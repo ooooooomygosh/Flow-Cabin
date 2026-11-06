@@ -152,7 +152,8 @@ async function chooseSource(site, id) {
   await openSourceSettings(site);
   const radio = settingsDialog(site).getByRole('radiogroup', { name: '唱机音源', exact: true }).getByRole('radio', { name: providerLabel(id), exact: true });
   await radio.click();
-  await site.waitForFunction((el) => el.getAttribute('aria-checked') === 'true', await radio.elementHandle()).catch(() => {});
+  // The deck follows the choice (it is saved as the deck's provider) before anything else is asked of it.
+  await site.waitForFunction((id) => localStorage.getItem('album-circle-room-player-v1') === id, id).catch(() => {});
   if (await radio.getAttribute('aria-checked') !== 'true') throw new Error(`唱机音源 ${id} was not selected`);
   await closeSettings(site);
 }
