@@ -67,7 +67,7 @@ export async function verifyAppleHandoff({ browser, origin, output, check }) {
     const unadopted = async () => { assert.equal(await progressNow(), 0); if (await progress.count()) assert.equal(await progress.first().evaluate(element => element.disabled === true || element.getAttribute('role') === 'progressbar'), true, 'never an adjustable rail'); };
     const pollAgain = async () => { const previous = polls; for (let i = 0; i < 40 && polls <= previous; i++) await page.waitForTimeout(100); assert.ok(polls > previous); await page.waitForTimeout(100); stableBuild(); };
     try {
-      await page.goto(origin); await page.locator('.cabin-home').waitFor();
+      await page.goto(origin); await page.locator('.desk-home').waitFor();
       assert.equal(await page.evaluate(() => /mac/i.test(navigator.userAgentData?.platform || navigator.platform)), true, 'settings and player both receive the Mac fixture platform');
       assert.equal(await page.evaluate(() => document.documentElement.dataset.desktopClient), 'true');
       assert.deepEqual(errors, []);

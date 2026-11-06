@@ -39,7 +39,7 @@ async function connect() {
     await pause(300);
   }
   if (!socket) throw Error('Install and launch the debug APK first.');
-  await until('Boolean(window.albumMobile && document.querySelector(".cabin-home"))');
+  await until('Boolean(window.albumMobile && document.querySelector(".desk-home"))');
 }
 function send(method, params = {}) {
   return new Promise((resolve, reject) => {
@@ -72,7 +72,7 @@ async function layout(name) {
     const safe=Object.fromEntries(['left','right','top','bottom'].map(s=>[s,parseFloat(css.getPropertyValue('--safe-area-inset-'+s))||0]));
     return {name:${JSON.stringify(name)},viewport:[innerWidth,innerHeight],screen:[screen.width,screen.height],safe,
       keyboard:document.documentElement.dataset.mobileKeyboard,
-      controls:['.home-header','.home-shortcuts','.listen-bar','nav.home-zones'].map(s=>({selector:s,rect:rect(s)}))};})()`);
+      controls:['.desk-console-plate','.desk-clock-face','.desk-post','.desk-shelf-plate','.desk-pull'].map(s=>({selector:s,rect:rect(s)}))};})()`);
   const { safe, viewport: [width, height] } = value;
   report.layouts.push(value);
   assert.ok(Math.abs(width - value.screen[0]) <= 2 && Math.abs(height - value.screen[1]) <= 2, name + ': WebView does not fill display');
@@ -98,12 +98,12 @@ try {
   await openSocket(target);
   await until('Boolean(window.albumMobile)');
   await evaluate(`(async()=>{const items=Array.from({length:29},(_,i)=>({id:'android-qa-'+i,type:'album',title:'全面屏测试 '+(i+1),artist:'模拟器测试',tracks:['测试曲目'],addedAt:new Date(2026,0,1,i).toISOString()}));localStorage.setItem('flow-cabin-web-collection-v1',JSON.stringify({version:1,items}));localStorage.setItem('flow-cabin-onboarding-v1',${JSON.stringify(onboardingSeed())});await window.albumMobile.flushStorage();return true;})()`);
-  await send('Page.reload'); await until('Boolean(document.querySelector(".cabin-home"))');
+  await send('Page.reload'); await until('Boolean(document.querySelector(".desk-home"))');
   await layout('portrait');
   const service = await evaluate(`window.albumMobile.musicRequest('/config').then(v=>({ready:true,qqLoggedIn:v.qqLoggedIn,neteaseLoggedIn:v.neteaseLoggedIn}))`);
   assert.equal(service.ready, true); check('android-embedded-music-engine-starts');
-  // 唱片架 (the top-bar plate) holds all 29 records in its 唱片 binder; each cover is a real, reachable button.
-  await evaluate(`[...document.querySelectorAll('.home-shortcuts button')].find(b=>/^唱片架/.test(b.textContent)).click()`);
+  // 唱片架 (the desk's plate, then the binders in the view) holds all 29 records in its 唱片 binder; each cover is a real, reachable button.
+  await evaluate(`document.querySelector('.desk-shelf-plate').click()`); await until('Boolean(document.querySelector(".desk-look.is-there .desk-spot"))'); await evaluate(`document.querySelector('.desk-look.is-there .desk-spot').click()`);
   await until('document.querySelectorAll(".listen-grid-cover").length === 29');
   const reached = await evaluate(`[...document.querySelectorAll('.listen-grid-cover')].map(e=>{e.scrollIntoView({block:'center'});const r=e.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return e===hit||e.contains(hit);}).filter(Boolean).length`);
   assert.equal(reached, 29); check('all-29-albums-reachable-in-the-native-webview-shelf');
@@ -122,7 +122,7 @@ try {
     await evaluate('window.albumMobile.setFullscreen(false)');
   }
   adb('shell', 'settings', 'put', 'system', 'user_rotation', '0'); await until('innerHeight > innerWidth');
-  await evaluate(`[...document.querySelectorAll('.home-shortcuts button')].find(b=>/^唱片架/.test(b.textContent)).click()`);
+  await evaluate(`document.querySelector('.desk-shelf-plate').click()`); await until('Boolean(document.querySelector(".desk-look.is-there .desk-spot"))'); await evaluate(`document.querySelector('.desk-look.is-there .desk-spot').click()`);
   await until('Boolean(document.querySelector(".listen-grid-title"))'); await evaluate(`document.querySelector('.listen-grid-title').click()`);
   await until('Boolean(document.querySelector(".record-card-notes textarea"))');
   for (const rotation of [0, 1]) {

@@ -8,6 +8,7 @@ import { launchChromium } from './launch-browser.mjs';
 import { hasViteLocalOrigin } from './vite-readiness.mjs';
 import { JOURNAL_BODY_LIMIT, JOURNAL_KEY } from '../src/focus/journal-entries.mjs';
 import { onboardingSeed } from './app-version.mjs';
+import { openFocus as openDeskFocus } from './settings-actions.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const output = process.env.JOURNAL_OUTPUT || path.join(root, 'desktop/test-results/journal-entries');
@@ -35,7 +36,7 @@ async function waitForBody(page, body) {
 async function openFocus(page, tab = '这一段') { // 3.0: 随手记 is the 便签 in 这一段
   const badge = page.locator('.focus-badge');
   await badge.waitFor({ timeout: 30000 });
-  if (await badge.getAttribute('aria-expanded') === 'false') await badge.click();
+  if (await badge.getAttribute('aria-expanded') === 'false') await openDeskFocus(page);
   const dock = page.locator('.focus-dock');
   await dock.waitFor();
   await dock.getByRole('tab', { name: tab, exact: true }).click();

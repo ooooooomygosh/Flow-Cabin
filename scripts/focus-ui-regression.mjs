@@ -1,7 +1,7 @@
 /** Silent, offline state/data regression pass. Native fullscreen is a mock. */
 import assert from 'node:assert/strict';
 import { launchChromium } from './launch-browser.mjs';
-import { openSettingsSection, openLibrary, closeLibrary, openAlbumWall } from './settings-actions.mjs';
+import { openSettingsSection, openLibrary, closeLibrary, openAlbumWall, openFocus as openDeskFocus, openDrawerThing } from './settings-actions.mjs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -20,7 +20,7 @@ let browser, server;
 const focusState = page => page.evaluate(key => JSON.parse(localStorage.getItem(key) || '{}'), KEY);
 // 专辑墙 opens from 整理唱片架 (the console's shelf panel).
 // 3.0: 这一段 / 待办 / 声音 (+ 学习 with the study lab). 随手记 is the 便签 inside 这一段.
-const openFocus = async (page, tab = '这一段') => { tab = { 番茄钟: '这一段', 随手记: '这一段' }[tab] || tab; const badge = page.locator('.focus-badge'); await badge.waitFor({timeout:30000}); if (await badge.getAttribute('aria-expanded') === 'false') await badge.click(); await page.locator('.focus-dock').waitFor(); await page.locator('.focus-dock').getByRole('tab', { name: tab, exact: true }).click(); };
+const openFocus = async (page, tab = '这一段') => { tab = { 番茄钟: '这一段', 随手记: '这一段' }[tab] || tab; const badge = page.locator('.focus-badge'); await badge.waitFor({timeout:30000}); if (await badge.getAttribute('aria-expanded') === 'false') await openDeskFocus(page); await page.locator('.focus-dock').waitFor(); await page.locator('.focus-dock').getByRole('tab', { name: tab, exact: true }).click(); };
 const closeDialogs = async page => { for (let i = 0; i < 4 && await page.locator('dialog[open]').count(); i++) await page.keyboard.press('Escape'); };
 const screenshot = async (page, name) => { for (const [width, height] of [[1440,900],[960,600]]) { await page.setViewportSize({width,height}); await page.screenshot({ path: path.join(output, `${name}-${width}x${height}.png`), animations:'disabled', timeout:15000 }); } };
 // screenshot() resizes the window twice, and the cat panel follows the repositioned cat asynchronously.
@@ -486,15 +486,15 @@ try {
     await page.evaluate(end=>{const real=Date.now.bind(Date),offset=end+60000-real();Date.now=()=>real()+offset;window.dispatchEvent(new Event('focus'));},state.timer.endsAt);
     await page.waitForFunction(key=>JSON.parse(localStorage.getItem(key)).timer.due===true,KEY);
     state=await focusState(page);assert.equal(state.timer.phase,'focus','overtime keeps the round going');assert.equal(state.rewards.fish,0);
-    await page.locator('.focus-badge.is-running').waitFor(); // the LED clock keeps the round on its face (it has no separate overtime '+')
+    await page.waitForFunction(()=>/专注中/.test(document.querySelector('.desk-clock-face')?.getAttribute('aria-label')||'')); // the LED clock keeps the round on its face (it has no separate overtime '+')
     await page.getByRole('button',{name:'结束这一轮，去休息'}).click();
     await page.waitForFunction(key=>JSON.parse(localStorage.getItem(key)).rewards?.fish===1,KEY);
     state=await focusState(page);assert.equal(state.sessions.at(-1).completed,true);assert.ok(state.sessions.at(-1).end-state.sessions.at(-1).start>=7*60000,'the extra minute counts');
   });
   await run('pomodoro-start-and-zen-enter-focus-display-tools-hide-separately',async page=>{
     const shown=()=>page.locator('.focus-display').count();
-    // 开始这一段 on the console strip starts a round with nothing covering the room, so the display opens by itself (inside the 专注 panel the panel covers the room).
-    await page.getByRole('button',{name:'开始这一段',exact:true}).click();await page.locator('.focus-display').waitFor();await screenshot(page,'focus-display-auto-enter');
+    // A round started with nothing covering the room (here the desktop pet's 开始专注; the desk's old console strip had a 开始这一段 key) opens the display by itself (inside the 专注 panel the panel covers the room).
+    await page.evaluate(()=>window.dispatchEvent(new CustomEvent('album-companion-command',{detail:{command:'focus-start'}})));await page.locator('.focus-display').waitFor();await screenshot(page,'focus-display-auto-enter');
     const bar=page.getByRole('navigation',{name:'专注画面工具'});await bar.getByRole('button',{name:'暂停专注'}).click();await page.getByRole('group',{name:'专注已暂停'}).waitFor();await screenshot(page,'focus-display-pause-offer');
     await page.getByRole('button',{name:'留在这里',exact:true}).click();assert.equal(await page.getByRole('group',{name:'专注已暂停'}).count(),0);assert.equal(await shown(),1,'staying keeps the display');
     await bar.getByRole('button',{name:'继续专注'}).click();await bar.getByRole('button',{name:'暂停专注'}).click();await page.getByRole('button',{name:'返回小屋',exact:true}).first().click();assert.equal(await shown(),0,'the pause offer returns to the cabin');
@@ -546,11 +546,11 @@ try {
   let calls=0,pending;
   await run('collection-error-retry-has-distinct-states',async page=>{
     await page.getByRole('alert').filter({hasText:'模拟收藏读取失败'}).waitFor();assert.equal(await page.getByRole('status').count(),0,'failed collection is not still loading');
-    assert.equal(await page.locator('.cabin-home').count(),0,'migration does not mount mutating providers before collection and recovery point are ready');
+    assert.equal(await page.locator('.desk-home').count(),0,'migration does not mount mutating providers before collection and recovery point are ready');
     assert.equal(await page.locator('.onboarding-wizard').count(),0);await screenshot(page,'collection-error');
     await page.getByRole('button',{name:'重试',exact:true}).click();await page.waitForFunction(()=>document.querySelector('.app-startup-error button')?.disabled);
     assert.match(await page.getByRole('status').innerText(),/正在重新读取/);await screenshot(page,'collection-retrying');await pending.fulfill({json:{items}});
-    await page.locator('.cabin-home').waitFor();assert.equal(await page.locator('.app-startup-error, .app-error').count(),0);await screenshot(page,'collection-retry-success');
+    await page.locator('.desk-home').waitFor();assert.equal(await page.locator('.app-startup-error, .app-error').count(),0);await screenshot(page,'collection-retry-success');
   },{firstVisit:true,collection:route=>++calls===1?route.fulfill({status:503,json:{error:'模拟收藏读取失败'}}):(pending=route,undefined)});
   const STUDY_KEY = 'album-circle-study-v1:local-owner';
   const studyState = page => page.evaluate(key => JSON.parse(localStorage.getItem(key) || '{}'), STUDY_KEY);
@@ -608,7 +608,7 @@ try {
     assert.equal(await nav.getByRole('tab',{name:'专注',exact:true}).getAttribute('aria-selected'),'true');assert.equal(await page.evaluate(()=>document.activeElement?.id),'hub-tab-focus');assert.equal(await nav.locator('[tabindex="0"]').count(),1);await screenshot(page,'settings-keyboard-focus');
     await page.keyboard.press('End');assert.equal(await page.evaluate(()=>document.activeElement?.id),'hub-tab-labs');await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>document.activeElement?.id),'hub-tab-music');await page.keyboard.press('ArrowLeft');assert.equal(await page.evaluate(()=>document.activeElement?.id),'hub-tab-labs');await page.keyboard.press('Home');assert.equal(await page.evaluate(()=>document.activeElement?.id),'hub-tab-music');
     await page.setViewportSize({width:640,height:600});await page.waitForFunction(()=>document.querySelector('[aria-label="设置分区"]')?.getAttribute('aria-orientation')==='horizontal');await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>document.activeElement?.id),'hub-tab-focus');await page.screenshot({path:path.join(output,'settings-keyboard-640x600.png'),animations:'disabled'});await page.keyboard.press('Home');
-    await page.keyboard.press('Tab');assert.equal(await page.locator('#hub-tab-panel').evaluate(e=>e.contains(document.activeElement)),true);await page.keyboard.press('Escape');assert.equal(await page.getByRole('dialog',{name:'设置',exact:true}).count(),0);assert.equal(await page.getByRole('button',{name:'设置',exact:true}).evaluate(e=>e===document.activeElement),true);
+    await page.keyboard.press('Tab');assert.equal(await page.locator('#hub-tab-panel').evaluate(e=>e.contains(document.activeElement)),true);await page.keyboard.press('Escape');assert.equal(await page.getByRole('dialog',{name:'设置',exact:true}).count(),0);assert.equal(await page.evaluate(()=>{const e=document.activeElement;return Boolean(e&&e!==document.body&&document.querySelector('.desk-home').contains(e)&&!e.closest('[inert]'));}),true,'Esc returns the focus to the desk');
   });
   await run('productivity-settings-sections-and-shortcut-return',async page=>{
     await openFocus(page,'随手记');await page.getByLabel('随手记内容').fill('设置面板往返保留');await openSettingsSection(page,'音乐');
@@ -618,18 +618,21 @@ try {
     await hub.getByLabel('专注（分）').fill('31');await hub.getByLabel('专注（分）').press('Enter');await page.keyboard.press('Escape');assert.equal(await hub.count(),0);
     await openFocus(page);assert.match(await page.locator('.focus-timer').innerText(),/31/,'a 设置 change reaches the timer');await openFocus(page,'随手记');assert.equal(await page.getByLabel('随手记内容').inputValue(),'设置面板往返保留');await screenshot(page,'settings-shortcut-restored');
   });
-  await run('desk-rail-stays-reachable-at-compact-widths',async page=>{
+  await run('desk-entries-stay-reachable-at-compact-widths',async page=>{
     await page.evaluate(()=>document.fonts.ready);
     for(const width of [1440,960,640]) {
-      await page.setViewportSize({width,height:600});
-      const rail=await page.locator('.home-header').evaluate(header=>{const items=[...header.querySelectorAll('button')].filter(b=>b.getClientRects().length);return items.map(b=>{const r=b.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return {name:b.getAttribute('aria-label')||b.textContent.trim(),left:r.left,right:r.right,top:r.top,bottom:r.bottom,reachable:b===hit||b.contains(hit)};});});
-      await page.screenshot({path:path.join(output,`compact-header-${width}x600.png`),animations:'disabled'});
-      assert.ok(rail.length>=7,JSON.stringify(rail));assert.ok(rail.every(b=>b.left>=0&&b.right<=width&&b.top>=0&&b.bottom<=600&&b.reachable),JSON.stringify(rail));
-      for(let i=0;i<rail.length;i++)for(let j=i+1;j<rail.length;j++){const a=rail[i],c=rail[j];assert.ok(a.right<=c.left+1||c.right<=a.left+1||a.bottom<=c.top+1||c.bottom<=a.top+1,`rail items overlap at ${width}: ${a.name} / ${c.name}`);}
+      await page.setViewportSize({width,height:600});await page.locator('.desk-home.is-lit').waitFor();
+      // The back edge (唱机 plate, LED clock and its keys, post box), the 唱片架 plate, the window controls and the drawer pull.
+      const rail=await page.locator('.desk-home').evaluate(home=>{const items=[...home.querySelectorAll('.desk-plate,.desk-clock-face,.desk-post,.desk-window button,.desk-pull')].filter(b=>b.getClientRects().length);return items.map(b=>{const r=b.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return {name:b.getAttribute('aria-label')||b.textContent.trim(),left:r.left,right:r.right,top:r.top,bottom:r.bottom,reachable:b===hit||b.contains(hit)};});});
+      await page.screenshot({path:path.join(output,`compact-desk-${width}x600.png`),animations:'disabled'});
+      assert.ok(rail.length>=6,JSON.stringify(rail));assert.ok(rail.every(b=>b.left>=0&&b.right<=width+0.5&&b.top>=0&&b.bottom<=600.5&&b.reachable),JSON.stringify(rail));
+      for(let i=0;i<rail.length;i++)for(let j=i+1;j<rail.length;j++){const a=rail[i],c=rail[j];if(/抽屉/.test(a.name+c.name))continue;assert.ok(a.right<=c.left+1||c.right<=a.left+1||a.bottom<=c.top+1||c.bottom<=a.top+1,`desk entries overlap at ${width}: ${a.name} / ${c.name}`);}
     }
     await page.setViewportSize({width:1440,height:900});
     const shelf=await openLibrary(page);await shelf.getByRole('button',{name:'添加到唱片架',exact:true}).click();await page.getByRole('dialog',{name:'添加到唱片架',exact:true}).waitFor();await page.keyboard.press('Escape');assert.equal(await shelf.getByRole('button',{name:'添加到唱片架',exact:true}).evaluate(e=>e===document.activeElement),true,'Esc returns to the plate that opened it');await closeLibrary(page);
-    await page.getByRole('button',{name:'设置',exact:true}).click();await page.getByRole('button',{name:'全部设置',exact:true}).click();await page.getByRole('dialog',{name:'设置',exact:true}).waitFor();await page.keyboard.press('Escape');assert.equal(await page.getByRole('button',{name:'设置',exact:true}).evaluate(e=>e===document.activeElement),true,'Esc returns to the brass knob');
+    // 设置 is in the drawer, which slides shut as it opens; Esc lands on the desk (Dialog's stable anchor, the LED clock), not on <body>.
+    await openDrawerThing(page,'设置');await page.getByRole('dialog',{name:'设置',exact:true}).waitFor();await page.keyboard.press('Escape');await page.getByRole('dialog',{name:'设置',exact:true}).waitFor({state:'hidden'});
+    assert.equal(await page.evaluate(()=>{const e=document.activeElement;return Boolean(e&&e!==document.body&&document.querySelector('.desk-home').contains(e)&&!e.closest('[inert]'));}),true,'Esc returns the focus to the desk');
   });
   await run('stale-cat-mood-on-load-is-rewritten-and-announced',async page=>{
     // 72/happy saved 30 h ago decays to 42 (droopy): storage is rewritten and cabin:cat-mood fires.

@@ -48,7 +48,7 @@ const report = { fixtureData: true, checks: [], pageErrors: [] }; let app, site;
     // The record on the deck hands its style to the wallpaper snapshot (the cabin paints the disc on a canvas, not DOM).
     await playRecord(site, scenario);
     await site.waitForFunction((expected) => window.albumRoomSnapshot?.().recordStyle?.base === expected, expected);
-    await site.reload(); await site.locator('.cabin-home').waitFor(); await playRecord(site, scenario);
+    await site.reload(); await site.locator('.desk-home').waitFor(); await playRecord(site, scenario);
     await site.waitForFunction((expected) => window.albumRoomSnapshot?.().recordStyle?.base === expected, expected);
     report.checks.push(testCase); console.log('PASS delayed-cover-' + testCase);
   }

@@ -14,7 +14,7 @@ const items = Array.from({ length: 24 }, (_, i) => ({ ...albums[i % albums.lengt
   site.on('pageerror', (error) => report.pageErrors.push(error.message)); await mountFixture(app, site, { items }); await useWarmCabin(site);
   // 3.1: the life cabin is the main window; its old scene-fill / shelf-key / 3D deck / drag checks left with the original home.
   // This suite keeps what still has a native side: 沉入桌面 puts the wallpaper (the room scene renderer) behind the icons.
-  await site.locator('.cabin-home').waitFor();
+  await site.locator('.desk-home').waitFor();
   await playRecord(site, items[2].title);
   await site.screenshot({ path: path.join(output, 'immersive-room.png') });
   await openSettingsTab(site, '桌面'); await site.getByRole('checkbox', { name: '沉入桌面' }).check();

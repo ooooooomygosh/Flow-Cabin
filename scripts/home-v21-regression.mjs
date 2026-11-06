@@ -4,6 +4,7 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { launchChromium } from './launch-browser.mjs';
 import { onboardingSeed } from './app-version.mjs';
+import { openLibrary, closeLibrary, openConsole, backToDesk, lookUp, openDrawerThing, openFocus } from './settings-actions.mjs';
 const origin = process.env.HOME_TEST_ORIGIN || 'http://127.0.0.1:4292';
 const minutes = Number(process.env.SOAK_MINUTES || 0), duration = Math.max(180, Math.ceil(minutes * 60 + 60));
 const output = path.resolve('desktop/test-results/home-v21' + (minutes ? '-soak' : ''));
@@ -41,31 +42,32 @@ try {
     } };
   }, { fixture, seed: onboardingSeed() });
   const page = await context.newPage(); page.on('pageerror', e => report.errors.push(e.message));
-  await page.goto(origin); await page.locator('.home-world canvas').waitFor();
+  await page.goto(origin); await page.locator('.desk-home').waitFor();
   const intro = page.getByRole('button', { name: '知道了', exact: true }); if (await intro.isVisible()) await intro.click();
-  await page.locator('.home-shortcuts').getByRole('button', { name: '唱片架', exact: true }).click();
+  const shelfOf = () => page.locator('dialog[open].shelf-dialog');
+  await openLibrary(page);
   await page.getByRole('button', { name: '播放 雨天练习', exact: true }).click();
   await page.waitForFunction(() => [...document.querySelectorAll('[data-cabin-audio-host] audio')].some(a => !a.paused && a.currentTime > .1));
-  await page.locator('.cabin-dialog-close').last().click();
+  await closeLibrary(page);
   await page.evaluate(() => { window.soakAudio = [...document.querySelectorAll('[data-cabin-audio-host] audio')].find(a => !a.paused); });
-  // 3.0 正在播放条 (src/listen/NowPlayingBar.jsx): the song, one line of lyric, ♥ in one click, Space still plays / pauses.
-  const bar = page.getByRole('region', { name: '正在播放', exact: true });
-  await bar.getByRole('button', { name: '暂停播放', exact: true }).waitFor();
-  assert.match(await bar.locator('.listen-meta strong').innerText(), /长时间播放/);
-  await bar.locator('.listen-line.is-lyric').waitFor();
-  const heart = bar.getByRole('button', { name: '喜欢这首歌', exact: true });
-  await heart.click(); assert.equal(await heart.getAttribute('aria-pressed'), 'true');
-  assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('flow-cabin-liked-songs-v1'))[0].title), '长时间播放');
-  await heart.click(); assert.equal(await heart.getAttribute('aria-pressed'), 'false');
+  // The desk (since 3.1) has no now-playing strip: Space plays / pauses from the desk itself, the LED clock shows the
+  // music, and 唱机旁 (the 唱机 plate) shows the song, hearts it in one click and has one progress rail.
   await page.evaluate(() => document.activeElement?.blur()); await page.keyboard.press('Space');
-  await page.waitForFunction(() => window.soakAudio.paused); await bar.getByRole('button', { name: '继续播放', exact: true }).waitFor();
+  await page.waitForFunction(() => window.soakAudio.paused);
   await page.keyboard.press('Space'); await page.waitForFunction(() => !window.soakAudio.paused);
-  assert.equal(await bar.getByRole('progressbar').count() + await bar.getByRole('slider', { name: '播放进度' }).count(), 1, 'one progress bar');
-  report.checks.push('the now-playing bar shows the song and a lyric line, hearts in one click and keeps Space as play / pause');
+  await page.waitForFunction(() => document.querySelector('.desk-clock-key.is-on')?.textContent === '音乐');
+  const panel = await openConsole(page);
+  assert.match(await panel.locator('.console-track').innerText(), /长时间播放/);
+  const heart = panel.getByRole('button', { name: '喜欢这首', exact: true });
+  await heart.click(); await panel.getByRole('button', { name: '取消喜欢这首', exact: true }).waitFor();
+  assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('flow-cabin-liked-songs-v1'))[0].title), '长时间播放');
+  await panel.getByRole('button', { name: '取消喜欢这首', exact: true }).click(); await heart.waitFor();
+  assert.equal(await panel.getByRole('progressbar').count() + await panel.getByRole('slider', { name: '音乐播放进度' }).count(), 1, 'one progress rail');
+  report.checks.push('Space plays / pauses on the desk, the clock shows the music, 唱机旁 shows the song, hearts it in one click and has one progress rail');
   // 唱片架 three views: 我喜欢 lists the heart and plays it, 最近播放 lists what really played.
   await heart.click();
-  await bar.locator('.listen-meta').click(); await page.getByRole('dialog', { name: '唱机旁', exact: true }).getByRole('button', { name: '打开唱片架', exact: true }).click();
-  const shelf = page.getByRole('dialog', { name: '唱片架', exact: true });
+  await panel.getByRole('button', { name: '打开唱片架', exact: true }).click();
+  const shelf = shelfOf();
   await shelf.getByRole('radio', { name: '唱片', exact: true }).waitFor();
   assert.equal(await shelf.getByRole('button', { name: '筛选', exact: true }).count(), 0, 'a one-record shelf has no filter button');
   await shelf.getByRole('radio', { name: '我喜欢', exact: true }).click();
@@ -76,25 +78,20 @@ try {
   await shelf.getByRole('radio', { name: '我喜欢', exact: true }).click();
   await shelf.getByRole('button', { name: '取消喜欢《长时间播放》', exact: true }).click();
   await shelf.getByText('还没有喜欢的歌', { exact: false }).waitFor();
-  await page.locator('.cabin-dialog-close').last().click();
+  await backToDesk(page);
   report.checks.push('唱片架: 我喜欢 plays and un-hearts a song, 最近播放 lists it, no 筛选 under 12 records');
-  const zones = page.getByRole('navigation', { name: '房间区域' });
-  for (let i = 0; i < 50; i++) {
-    const name = ['听歌角', '工作角', '生活角', '返回全屋'][i % 4];
-    await zones.getByRole('button', { name, exact: true }).click();
-    if (i % 4 !== 3) await page.locator(`[data-corner="${['music','work','life'][i % 4]}"] .corner-art`).waitFor();
-    await page.waitForTimeout(100);
+  // Looking up and back down (the bookcase, the Control Panel, the post box) never touches the playing record.
+  for (let i = 0; i < 24; i++) {
+    await lookUp(page, ['shelf', 'console', 'post'][i % 3]);
+    await backToDesk(page);
     assert.equal(await page.evaluate(() => document.contains(window.soakAudio) && !window.soakAudio.paused && document.querySelectorAll('[data-cabin-audio-host] audio').length === 2), true);
   }
-  report.checks.push('50 corner switches preserve the same playing audio element and exactly two decks');
-  await page.screenshot({ path: path.join(output, 'desktop-corner.png') });
-  // 3.0: 随手记 left the top bar; the desk's 笔记本 still opens it from the home.
-  await page.locator('.home-accessible-furniture summary').click();
-  await page.locator('.home-accessible-furniture').getByRole('button', { name: '笔记本', exact: true }).click();
-  const note = page.getByRole('textbox').filter({ visible: true });
-  // Read the actual note surface, and report its opening separately from storage tests.
-  assert.ok(await page.getByRole('dialog').count()); report.checks.push('notes open directly from the home');
-  await page.locator('.cabin-dialog-close').last().click();
+  report.checks.push('24 looks up and back preserve the same playing audio element and exactly two decks');
+  await page.screenshot({ path: path.join(output, 'desktop-desk.png') });
+  // 随手记 is the notepad in the desk's drawer.
+  await openDrawerThing(page, '随手记');
+  assert.equal(await page.getByRole('textbox', { name: '随手记内容' }).count(), 1); report.checks.push('notes open directly from the home');
+  await backToDesk(page);
   const started = Date.now();
   while (Date.now() - started < minutes * 60000) {
     await page.waitForTimeout(Math.min(30000, minutes * 60000 - (Date.now() - started)));
@@ -104,11 +101,11 @@ try {
     console.log(`Playing ${Math.round((Date.now() - started) / 60000)} min, ${sample.position.toFixed(1)} s, heap ${sample.heap}`);
   }
   if (minutes) report.checks.push(`${minutes} minutes continuous playback in actual home`);
-  // 「开始这一段」 starts the focus timer through the existing focus command, without touching the music.
-  await bar.getByRole('button', { name: '开始这一段', exact: true }).click();
-  await bar.locator('.listen-focus.is-running').waitFor();
+  // The LED clock starts a round through the existing focus command, without touching the music.
+  await openFocus(page); await page.getByRole('button', { name: '开始专注', exact: true }).click();
+  await page.waitForFunction(() => /专注中/.test(document.querySelector('.desk-clock-face')?.getAttribute('aria-label') || ''));
   assert.equal(await page.evaluate(() => !window.soakAudio.paused), true);
-  report.checks.push('开始这一段 starts focus from the bar while the record keeps playing');
+  report.checks.push('the clock starts focus while the record keeps playing');
   assert.deepEqual(report.errors, []); report.passed = true;
 } catch (error) { report.failure = error.stack; process.exitCode = 1; console.error(error); }
 finally { report.finishedAt = new Date().toISOString(); await fs.writeFile(path.join(output, 'report.json'), JSON.stringify(report, null, 2)); await browser.close(); server?.kill(); }

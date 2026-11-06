@@ -45,7 +45,7 @@ export async function verifyPlaylistPagination({ browser, origin, check }) {
   const count = n => page.waitForFunction(expected => document.querySelector('.playlist-facts b')?.textContent === String(expected), n);
   const waitPending = async () => { for (let i = 0; i < 100 && !pending; i++) await new Promise(resolve => setTimeout(resolve, 20)); assert(pending, 'next page request started'); };
   try {
-    await page.goto(origin); await page.locator('.cabin-home').waitFor();
+    await page.goto(origin); await page.locator('.desk-home').waitFor();
     await openAddToShelf(page, '我的歌单');
     await page.getByLabel('正在读取歌单').waitFor();
     for (let i = 0; i < 100 && !listPending; i++) await new Promise(resolve => setTimeout(resolve, 20)); assert(listPending);

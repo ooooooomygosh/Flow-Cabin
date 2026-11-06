@@ -18,7 +18,7 @@ let app, site;
   const shelf = await takeBinder(site, '唱片');
   assert.equal(await shelf.locator('.listen-grid li').count(), 14); assert.match(await shelf.getByRole('button', { name: /^唱片活页夹/ }).getAttribute('aria-label'), /14/);
   await closeLibrary(site);
-  await site.locator('.cabin-home.theme-pixel').waitFor();
+  await site.locator('.desk-home').waitFor();
   await chooseRoomScene(site, 'warm');
   await chooseRoomScene(site, 'pixel'); check('every-record-filed-and-both-cabin-looks');
 
@@ -53,11 +53,12 @@ let app, site;
   await add.getByRole('button', { name: '关闭添加到唱片架' }).click(); assert.match(await site.locator('.listen-grid-title').first().innerText(), /自己的磁带/); await closeLibrary(site); check('add-from-catalog-and-by-hand');
 
   const cdp = await site.context().newCDPSession(site);
+  const innerHeightFor = (width) => Math.round(width * .5625);
   for (const width of [1024, 1920, 3840]) {
     await cdp.send('Emulation.setDeviceMetricsOverride', { width, height: Math.round(width * .5625), deviceScaleFactor: 1, mobile: false });
     await site.waitForFunction((w) => innerWidth === w, width);
-    const metrics = await site.evaluate(() => { const bar = document.querySelector('.home-header').getBoundingClientRect(), tools = document.querySelector('.listen-bar').getBoundingClientRect(); return { scrollWidth: document.documentElement.scrollWidth, barRight: bar.right, toolsBottom: tools.bottom }; });
-    assert.ok(metrics.scrollWidth <= width + 1 && metrics.barRight <= width + 1, JSON.stringify(metrics));
+    const metrics = await site.evaluate(() => { const shelf = document.querySelector('.desk-shelf-plate').getBoundingClientRect(), pull = document.querySelector('.desk-pull').getBoundingClientRect(); return { scrollWidth: document.documentElement.scrollWidth, barRight: shelf.right, toolsBottom: pull.bottom }; });
+    assert.ok(metrics.scrollWidth <= width + 1 && metrics.barRight <= width + 1 && metrics.toolsBottom <= innerHeightFor(width) + 1, JSON.stringify(metrics));
     check(`layout-fits-${width}`, metrics);
   }
   await cdp.send('Emulation.clearDeviceMetricsOverride'); await cdp.detach();

@@ -33,10 +33,10 @@ let app, site, host;
   await site.getByRole('button', { name: '下一首展示曲目' }).click(); await site.waitForFunction((id) => document.querySelector('audio[data-deck="active"]')?.getAttribute('src')?.endsWith(id), local.trackDetails[1].providerId); check('local-next-track-switches-file');
 
   await choose(site, 'system');
-  await site.locator('.console-track', { hasText: '晴天' }).waitFor(); await site.locator('.listen-bar.is-playing').waitFor();
+  await site.locator('.console-track', { hasText: '晴天' }).waitFor(); await site.getByRole('button', { name: '暂停系统播放器' }).waitFor();
   assert.equal(await site.locator('audio[data-deck="active"]').getAttribute('src'), null); assert.ok((await site.locator('.console-status').innerText()).includes('Spotify · 正在播放'));
   check('system-player-mirrors-onto-the-deck-without-local-audio');
-  await site.getByRole('button', { name: '暂停系统播放器' }).click(); await site.locator('.listen-bar:not(.is-playing)').waitFor();
+  await site.getByRole('button', { name: '暂停系统播放器' }).click(); await site.getByRole('button', { name: '继续系统播放器' }).waitFor();
   await site.getByRole('button', { name: '系统播放器下一首' }).click();
   await site.waitForFunction(async () => true); assert.deepEqual(await app.evaluate(() => globalThis.__qaSystemCommands), ['toggle', 'next']); check('system-transport-controls-reach-the-player');
   await site.screenshot({ path: path.join(output, 'sources-system.png') });

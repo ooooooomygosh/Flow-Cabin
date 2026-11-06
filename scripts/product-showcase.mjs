@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { launchChromium } from './launch-browser.mjs';
 import { showcaseAlbums } from './showcase-albums.mjs';
 import { verifyOnboarding } from './onboarding-checks.mjs';
-import { openRoomSettings, closeSettings, openLibrary, closeLibrary, playRecord } from './settings-actions.mjs';
+import { openRoomSettings, closeSettings, openLibrary, closeLibrary, playRecord, openDrawerThing } from './settings-actions.mjs';
 import { spawn, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import fs from 'node:fs/promises';
@@ -57,26 +57,26 @@ try {
   await context.route('**/*', routeHandler);
   await verifyOnboarding({ browser, origin, routeHandler, evidence, output, check });
   page = await context.newPage(); page.setDefaultTimeout(10000); page.on('pageerror', e => report.errors.push(e.message)); page.on('console', m => { if (m.type() === 'error') report.errors.push(m.text()); });
-  await page.goto(origin); await page.locator('.cabin-home').waitFor(); await page.evaluate(() => document.fonts.ready);
-  // An empty cabin offers two paths with nothing set up first: put a record on (放一张唱片) or start a round (开始这一段).
+  await page.goto(origin); await page.locator('.desk-home').waitFor(); await page.evaluate(() => document.fonts.ready);
+  // An empty desk offers two paths with nothing set up first: the 唱片架 plate (A) or a round from the LED clock.
   for (const viewport of [{ width: 1440, height: 900 }, { width: 960, height: 600 }]) {
     await page.setViewportSize(viewport);
-    for (const name of ['放一张唱片', '开始这一段']) await fits(page.getByRole('button', { name, exact: true }));
+    for (const entry of [page.getByRole('button', { name: /^唱片架 · / }), page.locator('.desk-clock-face')]) await fits(entry);
     await shot(`welcome-${viewport.width}x${viewport.height}`);
     await page.locator('.focus-badge').click(); await page.getByRole('button', { name: '开始专注', exact: true }).waitFor();
     assert.equal(await page.getByRole('tab', { name: '这一段' }).getAttribute('aria-selected'), 'true'); assert.equal(await page.locator('.focus-badge').getAttribute('aria-expanded'), 'true');
     await fits(page.getByRole('button', { name: '开始专注', exact: true })); await page.keyboard.press('Escape');
-    await page.getByRole('button', { name: '放一张唱片', exact: true }).click(); await page.getByRole('dialog', { name: '唱片架' }).waitFor(); await closeLibrary(page);
+    await openLibrary(page); await closeLibrary(page);
     check(`empty-cabin-two-paths-and-visible-controls-${viewport.width}x${viewport.height}`);
   }
-  items = albums; await page.setViewportSize({ width: 1440, height: 900 }); await page.reload(); await page.locator('.cabin-home').waitFor();
+  items = albums; await page.setViewportSize({ width: 1440, height: 900 }); await page.reload(); await page.locator('.desk-home').waitFor();
   await playRecord(page, albums[5].title); await page.getByRole('button', { name: new RegExp('^打开唱机特写：') }).waitFor();
   await page.waitForTimeout(400); await shot('cabin', true);
   { const shelf = await openLibrary(page); await shelf.locator('.listen-grid li').first().waitFor(); assert.equal(await shelf.locator('.listen-grid li').count(), albums.length); await shot('record-shelf', true); await closeLibrary(page); }
   check('every-album-stands-on-the-shelf-and-the-bar-shows-the-record');
   // The pet portrait on the desk opens 伙伴与装扮.
-  await page.locator('.home-pet-portrait').click(); await page.locator('.cat-panel[open]').waitFor(); check('partner-portrait-opens-the-panel'); await page.keyboard.press('Escape');
-  await page.locator('.focus-badge').click(); await page.getByRole('button', { name: '开始专注', exact: true }).click(); await page.keyboard.press('Escape'); await page.locator('.focus-badge.is-running').waitFor();
+  await openDrawerThing(page, '伙伴'); await page.locator('.cat-panel[open]').waitFor(); check('drawer-companion-opens-the-panel'); await page.keyboard.press('Escape');
+  await page.locator('.focus-badge').click(); await page.getByRole('button', { name: '开始专注', exact: true }).click(); await page.keyboard.press('Escape'); await page.waitForFunction(() => /专注中/.test(document.querySelector('.desk-clock-face')?.getAttribute('aria-label') || ''));
   await page.locator('.focus-badge').click(); await page.getByRole('button', { name: '暂停', exact: true }).click(); check('focus-start-and-pause-from-visible-tool'); await page.keyboard.press('Escape');
   await openRoomSettings(page);
   await page.locator('.scene-choice img').evaluateAll(images => Promise.all(images.map(image => image.decode())));
@@ -89,7 +89,7 @@ try {
   for (const scene of ROOM_SCENES) {
     await openRoomSettings(page); await page.getByRole('button', { name: `选择场景 ${scene.label}`, exact: true }).click(); await closeSettings(page); await shot(`scene-${scene.id}-960x600`);
     for (const name of ['设置', '进入全屏模式']) await fits(page.getByRole('button', { name, exact: true }));
-    await fits(page.locator('.home-shortcuts').getByRole('button', { name: '唱片架' }));
+    await fits(page.getByRole('button', { name: /^唱片架 · / }));
   }
   check('all-eight-scenes-compact-controls-fit');
   if (process.env.SHOWCASE_TOUR === '1') {
@@ -101,9 +101,9 @@ try {
     });
     const demo = await tour.newPage();
     demo.on('pageerror', error => report.errors.push(error.message));
-    await demo.goto(origin); await demo.locator('.cabin-home').waitFor();
+    await demo.goto(origin); await demo.locator('.desk-home').waitFor();
     await playRecord(demo, albums[5].title); await demo.waitForTimeout(2000);
-    await demo.getByRole('button', { name: '设置', exact: true }).click(); await demo.getByRole('button', { name: '全部设置', exact: true }).click(); await demo.waitForTimeout(1300);
+    await openDrawerThing(demo, '设置'); await demo.waitForTimeout(1300);
     await demo.getByRole('tab', { name: '实验室', exact: true }).click(); await demo.waitForTimeout(900);
     await demo.getByRole('button', { name: '重新引导', exact: true }).click(); await demo.waitForTimeout(1800);
     await demo.getByRole('button', { name: '下一步', exact: true }).click(); await demo.waitForTimeout(2200);

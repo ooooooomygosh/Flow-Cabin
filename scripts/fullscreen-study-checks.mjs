@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { onboardingSeed } from './app-version.mjs';
-import { playRecord, openAddToShelf, closeLibrary } from './settings-actions.mjs';
+import { playRecord, openAddToShelf, closeLibrary, openFocus, openDrawerThing, focusDialog } from './settings-actions.mjs';
 export async function verifyFullscreenStudy({ browser, origin, output, check }) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'zh-CN', reducedMotion: 'reduce' });
   const errors = [], commands = [];
@@ -36,15 +36,13 @@ export async function verifyFullscreenStudy({ browser, origin, output, check }) 
   const shot = async name => { if (output) await page.screenshot({ path: path.join(output, name+'.png'), animations: 'disabled' }); };
   // 学习 is a tab of the 专注 panel, opened from the desk's LED clock (the one entry, also in immersive + 显示工具).
   const openStudy = async () => {
-    // Wait for the rail to mount before deciding whether to toggle.
-    const badge = page.locator('.focus-badge');
-    await badge.waitFor();
-    if (await badge.getAttribute('aria-expanded') !== 'true') await badge.click();
+    await page.locator('.focus-badge').waitFor();
+    await openFocus(page);
     await page.getByRole('tab', { name: '学习', exact: true }).click();
   };
   const studyState = () => page.evaluate(() => JSON.parse(localStorage.getItem('album-circle-study-v1:local-owner') || '{}'));
   try {
-    await page.goto(origin); await page.locator('.cabin-home').waitFor();
+    await page.goto(origin); await page.locator('.desk-home').waitFor();
     await page.getByRole('button', { name: '进入全屏模式', exact: true }).click();
     assert.match(await page.evaluate(() => window.__commands.at(-1)), /action\/fullscreen$/);
     await state(true); await page.getByRole('button', { name: '退出全屏模式', exact: true }).waitFor();
@@ -55,15 +53,15 @@ export async function verifyFullscreenStudy({ browser, origin, output, check }) 
     await page.keyboard.press('Escape'); assert.equal(await page.evaluate(() => document.documentElement.dataset.desktopFullscreen), 'true');
     await closeLibrary(page); assert.equal(await page.evaluate(() => document.documentElement.dataset.desktopFullscreen), 'true');
     assert.equal(await page.evaluate(() => window.__commands.some(x => x.endsWith('/fullscreen-exit'))), false);
-    await page.locator('.home-pet-portrait').click(); await page.locator('.cat-panel').waitFor(); await shot('fullscreen-normal'); await page.keyboard.press('Escape'); await page.locator('.cat-panel').waitFor({ state: 'hidden' });
+    await openDrawerThing(page, '伙伴'); await page.locator('.cat-panel').waitFor(); await shot('fullscreen-normal'); await page.keyboard.press('Escape'); await page.locator('.cat-panel').waitFor({ state: 'hidden' });
     check('fullscreen-normal-record-playlist-pet-and-dialog-remain-interactive');
     await page.getByRole('button', { name: '收起工具', exact: true }).click();
-    assert.equal(await page.locator('.home-shortcuts .brass-plate').first().isVisible(), false, '收起工具 puts the plates away'); assert.equal(await page.locator('.focus-badge').isVisible(), true, 'the LED clock stays');
+    assert.equal(await page.locator('.focus-badge').isVisible(), true, 'the LED clock stays');
     await page.getByRole('button', { name: '显示工具', exact: true }).waitFor(); await shot('fullscreen-immersive');
     await page.getByRole('button', { name: '显示工具', exact: true }).click();
-    await page.locator('.home-shortcuts .brass-plate').first().waitFor(); await openAddToShelf(page, '我的歌单'); await page.keyboard.press('Escape'); await closeLibrary(page);
+    await page.locator('.desk-shelf-plate').waitFor(); await openAddToShelf(page, '我的歌单'); await page.keyboard.press('Escape'); await closeLibrary(page);
     assert.equal(await page.getByRole('toolbar', { name: '全屏与沉浸工具' }).getByRole('button', { name: '学习' }).count(), 0, 'immersive tools do not duplicate the dock tabs');
-    await openStudy(); await page.getByLabel('词书', { exact: true }).waitFor();
+    await openStudy(); await focusDialog(page).getByLabel('词书', { exact: true }).waitFor();
     await shot('fullscreen-immersive-tools-study'); check('immersive-tools-recovery-playlists-and-study');
     await page.evaluate(() => document.activeElement?.blur()); await page.keyboard.press('Escape');
     await page.getByRole('dialog', { name: '专注', exact: true }).waitFor({ state: 'hidden' });
@@ -82,7 +80,7 @@ export async function verifyFullscreenStudy({ browser, origin, output, check }) 
     assert.equal((await studyState()).cards.length, 1);
     await page.getByRole('button', { name: '翻面 · 空格', exact: true }).click(); await page.getByRole('button', { name: /^记得/ }).click();
     const saved = (await studyState()).cards.find(card => card.memory); assert(saved.memory.reps > 0);
-    await page.keyboard.press('Escape'); await page.getByLabel('词书', { exact: true }).selectOption('book-music');
+    await page.keyboard.press('Escape'); await focusDialog(page).getByLabel('词书', { exact: true }).selectOption('book-music');
     await page.getByRole('button', { name: '开始学习 / 复习', exact: true }).click();
     await page.getByRole('button', { name: '翻到背面（空格）', exact: true }).waitFor(); await shot('study-review');
     assert.deepEqual((await studyState()).cards.find(card => card.id === saved.id), saved);

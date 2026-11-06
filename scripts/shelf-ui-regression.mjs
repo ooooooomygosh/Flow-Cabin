@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
 import { hasViteLocalOrigin } from './vite-readiness.mjs';
 import { showcaseAlbums } from './showcase-albums.mjs';
-import { openLibrary, closeLibrary, takeBinder, openSettingsSection, libraryDialog } from './settings-actions.mjs';
+import { openLibrary, closeLibrary, takeBinder, openSettingsSection, libraryDialog, openDrawerThing } from './settings-actions.mjs';
 import { onboardingSeed } from './app-version.mjs';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const output = process.env.SHELF_OUTPUT || path.join(root, 'desktop/test-results/shelf-ui');
@@ -37,7 +37,7 @@ try {
     },native);
     await context.route('**/*',route=>{const u=new URL(route.request().url()),p=u.pathname;if(u.origin!==origin){report.unexpectedRequests.push(u.href);return route.abort();}if(p==='/api/items')return route.fulfill({json:{items:collectionItems}});if(p==='/desktop-music/lyrics')return route.fulfill({json:{text:'',source:'fixture',reason:'No fixture lyrics'}});if(p==='/desktop-music/config')return route.fulfill({json:{qqLoggedIn:false,neteaseLoggedIn:false}});if(p==='/desktop-music/now-playing'||p==='/desktop-music/apple/permission')return route.fulfill({json:{available:false}});if(p==='/desktop-music/local/summary')return route.fulfill({json:{folders:[],albumCount:0,trackCount:0}});if(p.startsWith('/api/')||p.startsWith('/desktop-music/')){report.unexpectedRequests.push(p);return route.fulfill({status:500,json:{error:'Unimplemented fixture'}});}return route.continue();});
     const page=await context.newPage();page.setDefaultTimeout(12000);page.on('pageerror',e=>report.pageErrors.push(e.message));
-    try{await page.goto(origin,{waitUntil:'domcontentloaded'});await page.locator('.cabin-home').waitFor();await test(page);report.checks.push({name,passed:true});console.log(`PASS ${name}`);}
+    try{await page.goto(origin,{waitUntil:'domcontentloaded'});await page.locator('.desk-home').waitFor();await test(page);report.checks.push({name,passed:true});console.log(`PASS ${name}`);}
     catch(e){const state=await page.evaluate(()=>({fullscreen:Boolean(document.fullscreenElement),native:document.documentElement.dataset.desktopFullscreen,client:document.documentElement.dataset.desktopClient,zen:document.documentElement.classList.contains('room-zen'),dock:document.querySelector('.focus-badge')?.getAttribute('aria-expanded'),active:document.activeElement?.getAttribute('aria-label'),trace:window.__fullscreenTrace})).catch(()=>null);report.checks.push({name,passed:false,error:e.stack,state});await shot(page,`${name}-failure`).catch(()=>{});console.error(`FAIL ${name}: ${e.message}`);}
     finally{await context.close();}
   };
@@ -90,14 +90,14 @@ try {
   },{dpr:2});
   await run('chrome-single-settings-and-native-fullscreen',async page=>{
     await shot(page,'header-before-interaction');
-    assert.equal(await page.locator('.home-header').getByRole('button',{name:/^(设置|软件设置|显示与字体)$/}).count(),1,'one settings gear');
+    // One way into 设置 on the whole desk: the screwdriver in the drawer (the window controls carry none).
+    assert.equal(await page.locator('.desk-home').getByRole('button',{name:/^(设置|软件设置|显示与字体)$/,includeHidden:true}).count(),1,'one settings entry');
     assert.equal(await page.getByRole('button',{name:'最大化或还原窗口',exact:true}).count(),0,'no second square');
-    const settings=page.getByRole('button',{name:'设置',exact:true});assert.equal((await settings.innerText()).trim(),'','settings is icon-only');
-    // The brass knob pulls the drawer; 全部设置 opens the hub, whose 桌面 page has the native 显示与字体 command.
-    await settings.focus();await page.keyboard.press('Enter');await page.getByRole('button',{name:'全部设置',exact:true}).click();await page.getByRole('tab',{name:'桌面',exact:true}).click();await page.getByRole('button',{name:'打开显示与字体',exact:true}).click();assert.match(await page.evaluate(()=>window.__nativeCommands.at(-1)),/\/settings$/);await page.keyboard.press('Escape');await settings.waitFor();
+    // 设置 › 桌面 has the native 显示与字体 command.
+    await openDrawerThing(page,'设置');await page.getByRole('tab',{name:'桌面',exact:true}).click();await page.getByRole('button',{name:'打开显示与字体',exact:true}).click();assert.match(await page.evaluate(()=>window.__nativeCommands.at(-1)),/\/settings$/);await page.keyboard.press('Escape');await page.locator('.desk-pull').waitFor();
     const enter=page.getByRole('button',{name:'进入全屏模式',exact:true});await enter.click();assert.match(await page.evaluate(()=>window.__nativeCommands.at(-1)),/\/fullscreen$/);assert.equal(await enter.getAttribute('aria-pressed'),'false','wait for native confirmation');
     await page.evaluate(()=>{document.documentElement.dataset.desktopFullscreen='true';window.dispatchEvent(new CustomEvent('album-desktop-fullscreen',{detail:true}));});
-    assert.equal(await page.getByRole('button',{name:'退出全屏模式',exact:true}).getAttribute('aria-pressed'),'true');assert.equal(await page.getByRole('button',{name:/^退出全屏(模式)?$/}).count(),1);await page.getByRole('button',{name:'收起工具',exact:true}).click();assert.equal(await page.locator('.home-shortcuts .brass-plate').first().isVisible(),false,'收起工具 puts the plates away');assert.equal(await page.locator('.focus-badge').isVisible(),true,'the LED clock stays');assert.equal(await page.getByRole('button',{name:/^退出全屏(模式)?$/}).count(),1);await page.getByRole('button',{name:'显示工具',exact:true}).click();assert.equal(await page.getByRole('button',{name:/^退出全屏(模式)?$/}).count(),1);await page.getByRole('button',{name:'隐藏工具',exact:true}).click();await page.getByRole('button',{name:'退出全屏',exact:true}).click();assert.match(await page.evaluate(()=>window.__nativeCommands.at(-1)),/\/fullscreen-exit$/);await shot(page,'immersive-fullscreen-recovery');
+    assert.equal(await page.getByRole('button',{name:'退出全屏模式',exact:true}).getAttribute('aria-pressed'),'true');assert.equal(await page.getByRole('button',{name:/^退出全屏(模式)?$/}).count(),1);await page.getByRole('button',{name:'收起工具',exact:true}).click();assert.equal(await page.locator('.focus-badge').isVisible(),true,'the LED clock stays');assert.equal(await page.getByRole('button',{name:/^退出全屏(模式)?$/}).count(),1);await page.getByRole('button',{name:'显示工具',exact:true}).click();assert.equal(await page.getByRole('button',{name:/^退出全屏(模式)?$/}).count(),1);await page.getByRole('button',{name:'隐藏工具',exact:true}).click();await page.getByRole('button',{name:'退出全屏',exact:true}).click();assert.match(await page.evaluate(()=>window.__nativeCommands.at(-1)),/\/fullscreen-exit$/);await shot(page,'immersive-fullscreen-recovery');
   });
   await run('chrome-browser-fullscreen-and-escape',async page=>{
     await page.evaluate(()=>{window.__fullscreenTrace=[];document.addEventListener('keydown',e=>window.__fullscreenTrace.push({type:'key',key:e.key,prevented:e.defaultPrevented,fullscreen:Boolean(document.fullscreenElement)}));document.addEventListener('fullscreenchange',()=>window.__fullscreenTrace.push({type:'change',fullscreen:Boolean(document.fullscreenElement)}));});

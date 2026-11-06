@@ -1,5 +1,5 @@
 'use strict';
-const { chooseRoomScene, openAddToShelf, openRecordTools, closeRecordCard, openLibrary, closeLibrary, takeBinder, playRecord, openRecordCard, openSettingsTab, libraryDialog, addDialog } = require('./ui-fixture.cjs');
+const { chooseRoomScene, openAddToShelf, openRecordTools, closeRecordCard, openLibrary, closeLibrary, takeBinder, playRecord, openRecordCard, openSettingsTab, libraryDialog, addDialog, openFocus } = require('./ui-fixture.cjs');
 const { _electron: electron } = require('playwright');
 const assert = require('node:assert/strict'), fs = require('node:fs'), os = require('node:os'), path = require('node:path');
 const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'album-client-ui-'));
@@ -12,7 +12,7 @@ async function launch() {
   await application.evaluate(async ({ webContents }) => { const started = Date.now(); while (!webContents.getAllWebContents().some((contents) => contents.getURL().startsWith('https://album-circle.vercel.app'))) { if (Date.now() - started > 30000) throw new Error('Site view did not open'); await new Promise((resolve) => setTimeout(resolve, 100)); } });
   site = await application.waitForEvent('window', { predicate: (page) => page.url().startsWith('https://album-circle.vercel.app'), timeout: 5000 }).catch(() => application.windows().find((page) => page.url().startsWith('https://album-circle.vercel.app')));
   assert.ok(site); site.on('pageerror', (error) => report.pageErrors.push(error.message));
-  await site.locator('.cabin-home').waitFor({ timeout: 30000 });
+  await site.locator('.desk-home').waitFor({ timeout: 30000 });
   // A fresh profile opens the 新手引导 (PR #16); this test checks the cabin itself, so skip it.
   const onboarding = site.getByRole('dialog', { name: '新手引导', exact: true });
   await onboarding.waitFor({ timeout: 15000 }).catch(() => {});
@@ -23,7 +23,7 @@ async function launch() {
 const check = (value) => report.checks.push(value);
 (async () => {
   await launch();
-  await site.locator('.cabin-home.theme-pixel').waitFor(); await site.getByRole('button', { name: '放一张唱片', exact: true }).waitFor();
+  await site.locator('.desk-home.is-lit').waitFor();
   assert.match(await (await openLibrary(site)).getByRole('button', { name: /^唱片活页夹/ }).getAttribute('aria-label'), /0 /); await site.locator('.listen-empty-shelf', { hasText: '架子还空着' }).waitFor(); await closeLibrary(site);
   check('fresh-start-opens-the-pixel-cabin-without-an-account');
   const add = await openAddToShelf(site, '手动填写');
@@ -37,7 +37,7 @@ const check = (value) => report.checks.push(value);
   await chooseRoomScene(site, 'warm');
   await chooseRoomScene(site, 'pixel');
   await playRecord(site, '本地验证专辑');
-  await site.locator('.listen-bar.is-playing').waitFor(); check('cabin-looks-and-turntable');
+  await site.waitForFunction(() => [...document.querySelectorAll('[data-cabin-audio-host] audio')].some((a) => !a.paused)); check('cabin-looks-and-turntable');
   const card = await openRecordCard(site, '本地验证专辑');
   await card.getByPlaceholder(/第一次听的场景/).fill('安装后的第一张'); await card.locator('.record-card-saved', { hasText: '已保存' }).waitFor();
   await card.getByRole('button', { name: '关闭唱片卡片' }).click(); await closeLibrary(site); check('record-card-notes');
@@ -82,8 +82,8 @@ const check = (value) => report.checks.push(value);
   // 学习 is a tab of the 专注 panel, reached from the LED clock (the desk rail stays under 显示工具).
   // 词书学习 is a lab (设置 › 实验室): switch it on for this journey.
   await site.evaluate(() => { const labs = JSON.parse(localStorage.getItem('flow-cabin-labs-v1') || '{}'); localStorage.setItem('flow-cabin-labs-v1', JSON.stringify({ ...labs, study: true })); window.dispatchEvent(new CustomEvent('cabin:labs-changed')); });
-  if (!await site.getByRole('dialog', { name: '专注', exact: true }).count()) await site.locator('.focus-badge').click();
-  await site.getByRole('tab', { name:'学习', exact:true }).click(); await site.getByLabel('词书', { exact:true }).waitFor();
+  if (!await site.getByRole('dialog', { name: '专注', exact: true }).count()) await openFocus(site);
+  await site.getByRole('tab', { name:'学习', exact:true }).click(); await site.getByRole('dialog', { name: '专注', exact: true }).getByLabel('词书', { exact:true }).waitFor();
   await site.screenshot({ path:path.join(output, 'native-fullscreen-study.png') });
   await site.getByLabel('新卡组名称').fill('模板验收'); await site.getByRole('button',{name:'新建',exact:true}).click();
   const templateDeck = site.locator('.study-decks li',{hasText:'模板验收'});
@@ -122,7 +122,7 @@ const check = (value) => report.checks.push(value);
   } else report.limitations.push('Native desktop wallpaper attachment skipped by ALBUM_QA_SKIP_WALLPAPER=1');
   await site.screenshot({ path: path.join(output, 'cabin.png') });
   await application.close(); application = null;
-  await launch(); await site.locator('.cabin-home.theme-pixel').waitFor();
+  await launch(); await site.locator('.desk-home').waitFor();
   const saved = JSON.parse(fs.readFileSync(path.join(profile, 'collection.json'), 'utf8'));
   assert.equal(saved.items[0].title, '本地验证专辑'); assert.equal(saved.items[0].notes, '安装后的第一张'); check('collection-notes-and-style-survive-restart');
   assert.equal(report.pageErrors.length, 0, JSON.stringify(report.pageErrors)); report.passed = true;

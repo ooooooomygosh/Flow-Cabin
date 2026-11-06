@@ -61,15 +61,17 @@ try {
   for (const [width, height] of [[360, 640], [390, 844], [412, 915], [844, 390], [800, 1280]]) {
     await page.setViewportSize({ width, height }); await page.waitForTimeout(350);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
-    for (const selector of ['.home-header', '.listen-bar', 'nav.home-zones', '.home-shortcuts']) await assertWithin(selector);
-    // 唱片架 and 专注 stay reachable by touch (>= 44 px) in the rail.
-    for (const name of ['唱片架', '专注', '日记']) { const box = await page.locator('.home-shortcuts').getByRole('button', { name: new RegExp('^' + name) }).boundingBox(); assert.ok(box && box.height >= 44 - 1 && box.x >= 0 && box.x + box.width <= width + 1, name + ' touch target at ' + width + 'x' + height); }
+    const desk = ['.desk-console-plate', '.desk-clock-face', '.desk-post', '.desk-shelf-plate', '.desk-pull'];
+    for (const selector of desk) await assertWithin(selector);
+    // The desk's entries stay reachable by touch: the drawer pull is 44 px; the plates DEsk drew are at least 24 px each way (WCAG 2.5.8).
+    for (const selector of desk) { const box = await page.locator(selector).boundingBox(); assert.ok(box && Math.min(box.width, box.height) >= 24 - 1 && box.x >= 0 && box.x + box.width <= width + 1, selector + ' touch target at ' + width + 'x' + height + ' ' + JSON.stringify(box)); }
+    assert.ok((await page.locator('.desk-pull').boundingBox()).height >= 44 - 1, 'the drawer pull is a 44 px touch target');
     await page.screenshot({ path: path.join(output, `android-layout-${width}x${height}.png`), animations: 'disabled' }); check(`phone-tablet-layout-${width}x${height}`);
   }
   await page.setViewportSize({ width: 390, height: 844 }); await openRecordCard(page, '手机里的唱片');
   await page.getByLabel('我的笔记').fill('重启后也留下的手机笔记'); await page.getByLabel('我的笔记').blur(); await page.getByText('已保存在这台手机', { exact: true }).waitFor();
   await page.screenshot({ path: path.join(output, 'android-record-card.png'), animations: 'disabled' }); await closeRecordCard(page); await closeLibrary(page);
-  await page.reload(); await page.locator('.cabin-home').waitFor(); assert.match(db.get('flow-cabin-web-collection-v1'), /重启后也留下的手机笔记/); check('reload-restores-native-collection-and-notes');
+  await page.reload(); await page.locator('.desk-home').waitFor(); assert.match(db.get('flow-cabin-web-collection-v1'), /重启后也留下的手机笔记/); check('reload-restores-native-collection-and-notes');
   await openSettingsSection(page, '数据');
   await page.getByText('这台手机的小屋', { exact: true }).waitFor(); await page.getByRole('button', { name: '收藏与备份', exact: true }).tap();
   await page.getByRole('button', { name: '导出备份', exact: true }).tap(); await page.getByText('备份已保存到你选择的位置。', { exact: true }).waitFor();
@@ -81,7 +83,7 @@ try {
   await openAddToShelf(page, '本地音乐');
   assert.equal(await page.getByRole('button', { name: '添加音乐文件夹', exact: true }).count(), 0);
   await page.getByRole('button', { name: '选择手机音乐', exact: true }).tap(); await page.getByRole('button', { name: '放上唱片架', exact: true }).tap();
-  await page.getByText('《手机离线专辑》已放上唱片架。', { exact: true }).waitFor(); await page.keyboard.press('Escape'); await closeLibrary(page); await page.reload(); await page.locator('.cabin-home').waitFor();
+  await page.getByText('《手机离线专辑》已放上唱片架。', { exact: true }).waitFor(); await page.keyboard.press('Escape'); await closeLibrary(page); await page.reload(); await page.locator('.desk-home').waitFor();
   await (await takeBinder(page, '唱片')).getByRole('button', { name: '播放 手机离线专辑', exact: true }).waitFor(); await closeLibrary(page);
   assert.match(db.get('flow-cabin-android-music-v1'), /content:\/\/qa\/music\/2.wav/); check('system-picked-music-mapping-survives-renderer-reload');
   await openSettingsSection(page, '音乐');
@@ -95,9 +97,9 @@ try {
   check('restored-phone-uri-plays-and-track-dropdown-autoplays-through-the-native-player');
   for (const [width, height, left, right, top, bottom] of [[393, 852, 0, 0, 44, 28], [852, 393, 44, 0, 0, 24], [852, 393, 0, 44, 0, 24], [360, 740, 0, 0, 32, 48]]) {
     await page.setViewportSize({ width, height }); await page.evaluate(({ left, right, top, bottom }) => { for (const [side, value] of Object.entries({left,right,top,bottom})) document.documentElement.style.setProperty('--safe-area-inset-' + side, value + 'px'); window.dispatchEvent(new Event('resize')); }, {left,right,top,bottom}); await page.waitForTimeout(300);
-    // The desk rail and the footer strip refit inside the cutout and system bars; the LED clock and the play key stay uncovered.
-    for (const selector of ['.home-header', '.home-shortcuts', '.listen-bar', 'nav.home-zones']) { const box = await page.locator(selector).first().boundingBox(); assert.ok(box.x >= left - 1 && box.x + box.width <= width - right + 1 && box.y >= top - 1 && box.y + box.height <= height - bottom + 1, 'safe-area ' + selector + JSON.stringify({ box, left, right, top, bottom })); }
-    for (const selector of ['.focus-badge', '.listen-play, .listen-primary']) { const hit = await page.locator(selector).first().evaluate(e => { const r = e.getBoundingClientRect(), top = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2); return { ok: e === top || e.contains(top), box: [r.x, r.y, r.width, r.height].map(Math.round), top: top && top.tagName + '.' + String(top.className).slice(0, 40) }; }); assert.equal(hit.ok, true, selector + ' is covered or clipped: ' + JSON.stringify({ hit, width, height, left, right })); }
+    // The desk refits inside the cutout and system bars; the LED clock and the drawer pull stay uncovered.
+    for (const selector of ['.desk-console-plate', '.desk-clock-face', '.desk-post', '.desk-shelf-plate', '.desk-pull']) { const box = await page.locator(selector).first().boundingBox(); assert.ok(box.x >= left - 1 && box.x + box.width <= width - right + 1 && box.y >= top - 1 && box.y + box.height <= height - bottom + 1, 'safe-area ' + selector + JSON.stringify({ box, left, right, top, bottom })); }
+    for (const selector of ['.focus-badge', '.desk-pull']) { const hit = await page.locator(selector).first().evaluate(e => { const r = e.getBoundingClientRect(), top = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2); return { ok: e === top || e.contains(top), box: [r.x, r.y, r.width, r.height].map(Math.round), top: top && top.tagName + '.' + String(top.className).slice(0, 40) }; }); assert.equal(hit.ok, true, selector + ' is covered or clipped: ' + JSON.stringify({ hit, width, height, left, right })); }
     await page.screenshot({ path: path.join(output, `android-cutout-${width}x${height}-${left}-${right}.png`), animations:'disabled' }); check(`loaded-player-cutout-${width}x${height}-${left}-${right}`);
   }
   await page.setViewportSize({width:393,height:852}); await page.evaluate(() => { document.documentElement.style.setProperty('--safe-area-inset-left','0px');document.documentElement.style.setProperty('--safe-area-inset-right','0px'); });
@@ -116,7 +118,7 @@ try {
   const fixtureItems = Array.from({length:29},(_,index)=>({id:`mobile-page-${index}`,type:'album',title:`全面屏唱片 ${index+1}`,artist:'布局测试',tracks:['测试曲目'],addedAt:new Date(2026,0,1,index).toISOString()}));
   db.set('flow-cabin-web-collection-v1',JSON.stringify({version:1,items:fixtureItems}));
   for (const [width,height] of [[393,852],[852,393]]) {
-    await page.setViewportSize({width,height}); await page.reload(); await page.locator('.cabin-home').waitFor(); await page.waitForTimeout(300);
+    await page.setViewportSize({width,height}); await page.reload(); await page.locator('.desk-home').waitFor(); await page.waitForTimeout(300);
     await page.waitForFunction(() => !document.querySelector('.app-toast'), null, { timeout: 20000 }); // a passing toast may cover a cover for a moment
     const shelf = await takeBinder(page, '唱片'); const covers = shelf.locator('.listen-grid-cover');
     assert.equal(await covers.count(), fixtureItems.length, `${width}x${height}: every record is filed`);

@@ -1,4 +1,4 @@
-import { openRoomSettings, openSettingsSection, closeSettings } from './settings-actions.mjs';
+import { openRoomSettings, openSettingsSection, closeSettings, waitForSavedRoom } from './settings-actions.mjs';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { releasesBetween } from '../src/onboarding/releases.mjs';
@@ -57,7 +57,7 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
     assert.equal(await wizard.locator('.room-pickers.is-compact').getByRole('button', { name: '选择场景 像素小屋', exact: true }).locator('img').getAttribute('src'), '/room-scenes/v21/pixel/shell.webp');
     await button(page, '选择场景 林间书屋').click(); await button(page, '选择桌宠 枫糖').click();
     assert.equal(await button(page, '选择场景 林间书屋').getAttribute('aria-pressed'), 'true');
-    await page.locator('.cabin-home.theme-forest').waitFor();
+    await waitForSavedRoom(page, { look: 'forest', petId: 'fox' });
     await button(page, '下一步').click();
     await heading(page).filter({ hasText: '放一段声音试试' }).waitFor();
     assert.equal(await page.locator('audio[src]').count(), 0, 'no sound before 播放测试');
@@ -69,11 +69,11 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
     await button(page, '允许 系统通知').waitFor();
     assert.equal(await button(page, '下一步').count(), 0, 'the last step ends the guide');
     await button(page, '进入小屋').click(); await wizard.waitFor({ state: 'hidden' });
-    assert.equal(await page.locator('.focus-badge.is-running').count(), 0);
-    await page.reload(); await button(page, '放一张唱片').waitFor();
+    assert.doesNotMatch(await page.locator('.desk-clock-face').getAttribute('aria-label'), /专注中/, 'entering the cabin starts no round');
+    await page.reload(); await page.locator('.desk-home').waitFor();
     assert.equal(await wizardOf(page).count(), 0);
-    await page.locator('.cabin-home.theme-forest').waitFor();
-    assert.equal(await page.locator('.home-pet-portrait .pixel-cat').getAttribute('data-pet-id'), 'fox');
+    // The desk draws neither the room nor the pet: the choice is what the wallpaper and the desktop pet read.
+    await waitForSavedRoom(page, { look: 'forest', petId: 'fox' });
     assert.equal(await page.evaluate(() => localStorage.getItem('album-circle-room-player-v1')), 'local');
     check('wizard-full-flow-persists-source-room-companion-and-does-not-reopen');
 
@@ -110,7 +110,7 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
     await page.reload(); await wizardOf(page).waitFor();
     await heading(page).filter({ hasText: '选一个房间，再挑个伙伴' }).waitFor();
     // 4. 跳过引导 is final until 重新引导.
-    await button(page, '跳过引导').click(); await page.reload(); await button(page, '放一张唱片').waitFor();
+    await button(page, '跳过引导').click(); await page.reload(); await page.locator('.desk-home').waitFor();
     assert.equal(await wizardOf(page).count(), 0);
     check('wizard-resumes-after-close-and-skip-is-remembered');
 
@@ -118,7 +118,7 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
     await openRoomSettings(page); await hubOf(page).waitFor();
     assert.equal(await page.getByRole('tab', { name: '小屋与奶糖' }).getAttribute('aria-selected'), 'true');
     await button(page, '选择场景 海边慢屋').click();
-    await page.locator('.cabin-home.theme-seaside').waitFor();
+    await waitForSavedRoom(page, { look: 'seaside' });
     await page.screenshot({ path: path.join(evidence, 'settings-hub-room.png'), animations: 'disabled' });
     await closeSettings(page);
     // The deck's 音源设置 event opens 设置 › 音源 (web: only 仅动画展示 and 本地音乐 can be chosen).
@@ -175,7 +175,7 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
     assert.equal(await sheet.locator('.onboarding-progress').count(), 0);
     await page.screenshot({ path: path.join(evidence, 'whats-new.png'), animations: 'disabled' });
     await button(page, '知道了').click(); await sheet.waitFor({ state: 'hidden' });
-    await page.reload(); await button(page, '放一张唱片').waitFor();
+    await page.reload(); await page.locator('.desk-home').waitFor();
     assert.equal(await wizardOf(page, '新功能').count(), 0, 'one 知道了 is enough');
     check('legacy-welcome-cabin-sees-the-whats-new-sheet-once');
     assert.deepEqual(failures, []);
@@ -198,7 +198,7 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
   try {
     await returning.route('**/*', routeHandler);
     await returning.addInitScript(() => { if (location.origin === 'null') return; localStorage.setItem('album-circle-focus-dock-v1', JSON.stringify({ open: false, tab: 'timer' })); });
-    const page = await returning.newPage(); await page.goto(origin); await button(page, '放一张唱片').waitFor();
+    const page = await returning.newPage(); await page.goto(origin); await page.locator('.desk-home').waitFor();
     assert.equal(await page.getByRole('dialog').count(), 0);
     check('returning-empty-collection-is-not-interrupted');
   } finally { await returning.close(); }
