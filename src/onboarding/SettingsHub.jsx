@@ -52,7 +52,7 @@ export { HUB_SECTIONS, hubTab };
 // https://github.com/fyzugx/DEsk, MIT, (c) 2026 The DEsk authors): the six sections are index tabs,
 // the open one holds a wire-bound pad, and every part of the page has a sticky note on the pad's
 // edge that turns the page to it. The tablist, the search box and every setting keep their roles and names.
-export default function SettingsHub({ section = 'music', setSection, close, env, player, provider, useSource, look, petId, onRoomChange, reduceMotion, error, desktop, openBackup, restartOnboarding, openStudio }) {
+export default function SettingsHub({ section = 'music', setSection, close, env, player, provider, useSource, look, petId, onRoomChange, reduceMotion, error, desktop, openBackup, restartOnboarding }) {
   const tab = hubTab(section);
   const [query, setQuery] = useState(''), [found, setFound] = useState(null), [news, setNews] = useState(false);
   const [scanned, setScanned] = useState({ key: '', list: [] }), [here, setHere] = useState('');
@@ -129,7 +129,6 @@ export default function SettingsHub({ section = 'music', setSection, close, env,
         {tab === 'room' && <>
           <Part id="hub-room" note="房间">
             <p className="personalization-intro">选一个今天想待着的地方，再找一位安静的伙伴。换装不会打断音乐和专注。</p>
-            <Row title="布置小屋" hint="调整家具位置，或套用听歌、工作、休息预设。也可以从首页的房间名打开。"><button type="button" className="pixel-button" onClick={openStudio}>布置小屋</button></Row>
             <RoomPickers look={look} petId={petId} onChange={onRoomChange} reduceMotion={reduceMotion}/>
           </Part>
           <Part id="hub-pet" note="伙伴"><PetBehaviourSettings desktop={Boolean(env.desktop)}/></Part>

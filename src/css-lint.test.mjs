@@ -53,7 +53,7 @@ test('every animation names a keyframe that exists', () => {
 // reduced transparency switch off in one place (perf-low.css). The 2.2 lyric surfaces
 // and the shell sheets other streams own keep their own soft design for now.
 const RADIUS = /^(?:0|0px|50%|var\(--ui-radius[\w-]*(?:,\s*[^()]*(?:\([^()]*\))?[^()]*)?\))$/;
-const UI_CHROME = new Set(['app.css', 'styles/pixel-ui.css', 'styles/perf-low.css', 'home/home.css', 'home/home-tools.css', 'ui/record-sleeve.css', 'ui/shortcut-sheet.css']);
+const UI_CHROME = new Set(['app.css', 'styles/pixel-ui.css', 'styles/perf-low.css', 'home/home-tools.css', 'ui/record-sleeve.css', 'ui/shortcut-sheet.css']);
 const SOFT_DESIGN = new Set(['lyrics/lyrics.css', 'lyrics/desk/desk-lyrics.css']);
 const radii = (css) => [...css.matchAll(/border(?:-[a-z]+)*-radius\s*:\s*([^;}]+)/g)].map((m) => m[1].replace(/!important/, '').trim());
 test('chrome corners and glass come from the --ui-* tokens', () => {

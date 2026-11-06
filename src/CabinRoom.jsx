@@ -70,7 +70,7 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
   const { record, provider, playback, player, deckItem, effectiveSpin } = deck;
   const focus = useFocusState(), sound = useSoundscape();
   useCatCareHost();
-  const [tool, setTool] = useState(''), [lyricsOpen, setLyricsOpen] = useState(false), [editRequest, setEditRequest] = useState(0);
+  const [tool, setTool] = useState(''), [lyricsOpen, setLyricsOpen] = useState(false);
   const [catPanelOpen, setCatPanelOpen] = useState(false);
   const [smartOpen, setSmartOpen] = useState(false);
   const closeSmart = useCallback(() => setSmartOpen(false), []);
@@ -216,7 +216,7 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
       <CatPanel open={catPanelOpen} onClose={() => setCatPanelOpen(false)} onChoosePet={() => { setCatPanelOpen(false); setTool('companions'); }}/>
       <SmartTurntable open={smartOpen} close={closeSmart} items={items} onStart={startSmartSession} onSave={saveToShelf} onNeedAiSettings={() => { setSmartOpen(false); flow.setHub('ai'); }}/>
       {corner && <Suspense fallback={<Dialog title="唱机特写" close={() => chrome.setCorner(false)}><p role="status">正在点亮唱机旁的台灯…</p></Dialog>}><ListeningCorner item={deckItem} items={visible} vinyl={recordStyle} provider={provider} spinning={effectiveSpin} trackIndex={deck.shownTrackIndex} setTrackIndex={deck.setTrackIndex} playback={playback} player={player} toggleVisual={deck.toggleVisual} load={deck.load} close={() => chrome.setCorner(false)} reduceMotion={reduced}/></Suspense>}
-      {flow.hub && <SettingsHub openStudio={() => { flow.setHub(''); setEditRequest(value => value + 1); }} section={flow.hub} setSection={flow.setHub} close={() => flow.setHub('')} env={flow.env} player={flow.playerAdapter} provider={provider} useSource={deck.chooseProvider} look={look} petId={petId} onRoomChange={personalizeRoom} reduceMotion={appearance.reduceMotion} error={library?.error} desktop={chrome.desktop} openBackup={() => { flow.setHub(''); openBackup?.(); }} restartOnboarding={flow.restartOnboarding}/>}
+      {flow.hub && <SettingsHub section={flow.hub} setSection={flow.setHub} close={() => flow.setHub('')} env={flow.env} player={flow.playerAdapter} provider={provider} useSource={deck.chooseProvider} look={look} petId={petId} onRoomChange={personalizeRoom} reduceMotion={appearance.reduceMotion} error={library?.error} desktop={chrome.desktop} openBackup={() => { flow.setHub(''); openBackup?.(); }} restartOnboarding={flow.restartOnboarding}/>}
       {flow.wizard && <OnboardingWizard state={flow.onboarding} update={flow.saveOnboarding} env={flow.env} player={flow.playerAdapter} look={look} petId={petId} onRoomChange={personalizeRoom} useSource={deck.chooseProvider} openMusicSettings={flow.openMusicSettings} openAdd={() => { flow.closeWizard('later'); openAdd(); }} close={flow.closeWizard} reduceMotion={appearance.reduceMotion} error={library?.error}/>}
     </Suspense>
   </CabinRuntimeProvider>;

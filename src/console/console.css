@@ -3,9 +3,9 @@
 /* The player as a valve-era console (docs/v3-desk-design.md): black enamel, brass edges, cream and
    black bakelite push keys, a lit amber screen, red LED glass, fluted knobs, cream-faced meters.
    One lamp lights it all (--sx / --sy / --lamp-k from src/props/lamp.mjs). Material recipes after
-   DEsk (https://github.com/fyzugx/DEsk, MIT, (c) 2026 The DEsk authors). Used by the footer strip
-   (src/listen/NowPlayingBar.jsx) and the 唱机旁 close-up (src/console/ConsolePanel.jsx). */
-.listen-bar-host, .console-shell {
+   DEsk (https://github.com/fyzugx/DEsk, MIT, (c) 2026 The DEsk authors). Used by the 唱机旁 close-up
+   (src/console/ConsolePanel.jsx). */
+.console-shell {
   --c-brass: repeating-linear-gradient(0deg, rgba(255, 245, 219, .07) 0 1px, transparent 1px 2px), linear-gradient(180deg, #b1965c 0%, #8f743f 34%, #785f30 52%, #9e834c 100%);
   --c-brass-ink: #2a1c0a;
   --c-enamel: linear-gradient(180deg, rgba(255, 244, 226, .08), rgba(255, 244, 226, 0) 26%), linear-gradient(180deg, #25201b, #120e0b);
@@ -23,39 +23,37 @@
 /* ── shared pieces ─────────────────────────────────────────────────────── */
 
 /* piano-style push keys: the cap goes down, the stem shows less */
-:is(.listen-bar-host, .console) .c-key { position: relative; display: block; flex: none; width: 46px; height: 46px; min-height: 0; padding: 0; border: 0; border-radius: var(--ui-radius-sm); background: none; color: #2a1f14; cursor: pointer; box-shadow: none; text-shadow: none; }
-:is(.listen-bar-host, .console) .c-key-cap { position: absolute; inset: 0 0 6px; display: grid; place-items: center; border-radius: var(--ui-radius-sm); background: var(--c-cream); color: #2a1f14;
+.console .c-key { position: relative; display: block; flex: none; width: 46px; height: 46px; min-height: 0; padding: 0; border: 0; border-radius: var(--ui-radius-sm); background: none; color: #2a1f14; cursor: pointer; box-shadow: none; text-shadow: none; }
+.console .c-key-cap { position: absolute; inset: 0 0 6px; display: grid; place-items: center; border-radius: var(--ui-radius-sm); background: var(--c-cream); color: #2a1f14;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .8), inset 0 -3px 0 rgba(120, 98, 55, .22), 0 5px 0 #8c7d58, 0 5px 0 1px rgba(30, 22, 10, .55), calc(var(--sx, 2) * 2px) calc(var(--sy, 3) * 2px + 5px) 5px rgba(8, 5, 3, calc(.5 * var(--lamp-k, .6)));
   transition: transform calc(.07s * var(--pace, 1)) linear, box-shadow calc(.07s * var(--pace, 1)) linear; }
-:is(.listen-bar-host, .console) .c-key.is-black .c-key-cap { background: var(--c-bake); color: #efe4c8; box-shadow: inset 0 1px 0 rgba(255, 244, 226, .22), inset 0 -3px 0 rgba(0, 0, 0, .5), 0 5px 0 #070504, 0 5px 0 1px rgba(255, 244, 226, .08), calc(var(--sx, 2) * 2px) calc(var(--sy, 3) * 2px + 5px) 5px rgba(8, 5, 3, calc(.5 * var(--lamp-k, .6))); }
-:is(.listen-bar-host, .console) .c-key svg { width: 16px; height: 16px; }
-:is(.listen-bar-host, .console) .c-key:hover:not(:disabled) { filter: brightness(1.07); background: none; }
-:is(.listen-bar-host, .console) .c-key:active:not(:disabled) .c-key-cap, :is(.listen-bar-host, .console) .c-key.is-lit .c-key-cap { transform: translateY(4px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .5), inset 0 2px 3px rgba(60, 40, 10, .3), 0 1px 0 #8c7d58, 0 1px 0 1px rgba(30, 22, 10, .55), 0 3px 3px rgba(8, 5, 3, calc(.4 * var(--lamp-k, .6))); }
-:is(.listen-bar-host, .console) .c-key.is-black:active:not(:disabled) .c-key-cap, :is(.listen-bar-host, .console) .c-key.is-black.is-lit .c-key-cap { box-shadow: inset 0 1px 0 rgba(255, 244, 226, .14), inset 0 2px 4px rgba(0, 0, 0, .6), 0 1px 0 #070504, 0 1px 0 1px rgba(255, 244, 226, .08), 0 3px 3px rgba(8, 5, 3, calc(.4 * var(--lamp-k, .6))); }
-:is(.listen-bar-host, .console) .c-key:focus-visible { outline: 2px solid var(--c-amber); outline-offset: 2px; }
-:is(.listen-bar-host, .console) .c-key:disabled { opacity: .42; cursor: default; }
-:is(.listen-bar-host, .console) .c-key-lamp { position: absolute; z-index: 1; top: 6px; right: 6px; width: 6px; height: 6px; border-radius: 50%; background: #3a2610; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .6); transition: background-color var(--c-t), box-shadow var(--c-t); }
-:is(.listen-bar-host, .console) .c-key.is-lit .c-key-lamp { background: radial-gradient(circle at 40% 35%, #fff4c8, var(--c-amber) 55%, #c9791a); box-shadow: 0 0 6px 2px var(--c-amber-glow), 0 0 0 1px rgba(60, 30, 5, .6); }
+.console .c-key.is-black .c-key-cap { background: var(--c-bake); color: #efe4c8; box-shadow: inset 0 1px 0 rgba(255, 244, 226, .22), inset 0 -3px 0 rgba(0, 0, 0, .5), 0 5px 0 #070504, 0 5px 0 1px rgba(255, 244, 226, .08), calc(var(--sx, 2) * 2px) calc(var(--sy, 3) * 2px + 5px) 5px rgba(8, 5, 3, calc(.5 * var(--lamp-k, .6))); }
+.console .c-key svg { width: 16px; height: 16px; }
+.console .c-key:hover:not(:disabled) { filter: brightness(1.07); background: none; }
+.console .c-key:active:not(:disabled) .c-key-cap, .console .c-key.is-lit .c-key-cap { transform: translateY(4px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .5), inset 0 2px 3px rgba(60, 40, 10, .3), 0 1px 0 #8c7d58, 0 1px 0 1px rgba(30, 22, 10, .55), 0 3px 3px rgba(8, 5, 3, calc(.4 * var(--lamp-k, .6))); }
+.console .c-key.is-black:active:not(:disabled) .c-key-cap, .console .c-key.is-black.is-lit .c-key-cap { box-shadow: inset 0 1px 0 rgba(255, 244, 226, .14), inset 0 2px 4px rgba(0, 0, 0, .6), 0 1px 0 #070504, 0 1px 0 1px rgba(255, 244, 226, .08), 0 3px 3px rgba(8, 5, 3, calc(.4 * var(--lamp-k, .6))); }
+.console .c-key:focus-visible { outline: 2px solid var(--c-amber); outline-offset: 2px; }
+.console .c-key:disabled { opacity: .42; cursor: default; }
+.console .c-key-lamp { position: absolute; z-index: 1; top: 6px; right: 6px; width: 6px; height: 6px; border-radius: 50%; background: #3a2610; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .6); transition: background-color var(--c-t), box-shadow var(--c-t); }
+.console .c-key.is-lit .c-key-lamp { background: radial-gradient(circle at 40% 35%, #fff4c8, var(--c-amber) 55%, #c9791a); box-shadow: 0 0 6px 2px var(--c-amber-glow), 0 0 0 1px rgba(60, 30, 5, .6); }
 
 /* brass plates: a toggle or a name stamped on metal; pressed in with its lamp lit when it is on */
-:is(.listen-bar-host, .console) .c-plate { position: relative; display: inline-flex; flex: none; align-items: center; justify-content: center; gap: 6px; min-width: 38px; min-height: 36px; padding: 0 10px; border: 0; border-radius: var(--ui-radius-sm); background: var(--c-brass); color: var(--c-brass-ink); font: 600 12px/1 var(--ui-font); letter-spacing: .12em; text-shadow: 0 1px 0 rgba(255, 239, 199, .34); white-space: nowrap; cursor: pointer;
+.console .c-plate { position: relative; display: inline-flex; flex: none; align-items: center; justify-content: center; gap: 6px; min-width: 38px; min-height: 36px; padding: 0 10px; border: 0; border-radius: var(--ui-radius-sm); background: var(--c-brass); color: var(--c-brass-ink); font: 600 12px/1 var(--ui-font); letter-spacing: .12em; text-shadow: 0 1px 0 rgba(255, 239, 199, .34); white-space: nowrap; cursor: pointer;
   box-shadow: inset 0 0 0 1px rgba(255, 239, 204, .42), 0 0 0 1px rgba(36, 23, 8, .6), var(--c-drop); transition: filter var(--c-t); }
-:is(.listen-bar-host, .console) .c-plate:hover:not(:disabled) { filter: brightness(1.13); background: var(--c-brass); }
-:is(.listen-bar-host, .console) .c-plate:active:not(:disabled), :is(.listen-bar-host, .console) .c-plate[aria-pressed=true] { filter: brightness(.86); transform: translateY(1px); box-shadow: inset 0 2px 4px rgba(20, 12, 3, .55), inset 0 0 0 1px rgba(36, 23, 8, .5), 0 0 0 1px rgba(36, 23, 8, .6); }
-:is(.listen-bar-host, .console) .c-plate:focus-visible { outline: 2px solid #fff3cf; outline-offset: 2px; }
-:is(.listen-bar-host, .console) .c-plate:disabled { opacity: .5; cursor: default; }
-:is(.listen-bar-host, .console) .c-plate svg { width: 16px; height: 16px; flex: none; }
-:is(.listen-bar-host, .console) .c-plate-lamp { position: absolute; top: 4px; right: 4px; width: 5px; height: 5px; border-radius: 50%; background: #4a3010; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .55); }
-:is(.listen-bar-host, .console) .c-plate[aria-pressed=true] .c-plate-lamp { background: radial-gradient(circle at 40% 35%, #ffd2c8, #ff3b2f 60%, #a0150c); box-shadow: 0 0 6px 2px rgba(255, 59, 47, .7); }
-:is(.listen-bar-host, .console) .c-plate.is-primary { padding: 0 20px; letter-spacing: .14em; }
-:is(.listen-bar-host, .console) .c-plate.is-primary::before, :is(.listen-bar-host, .console) .c-plate.is-primary::after { content: ''; position: absolute; top: 50%; width: 5px; height: 5px; margin-top: -2.5px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #e7d29b, #6e5528 70%); box-shadow: 0 0 0 .5px rgba(30, 18, 4, .6); }
-:is(.listen-bar-host, .console) .c-plate.is-primary::before { left: 7px; }
-:is(.listen-bar-host, .console) .c-plate.is-primary::after { right: 7px; }
+.console .c-plate:hover:not(:disabled) { filter: brightness(1.13); background: var(--c-brass); }
+.console .c-plate:active:not(:disabled), .console .c-plate[aria-pressed=true] { filter: brightness(.86); transform: translateY(1px); box-shadow: inset 0 2px 4px rgba(20, 12, 3, .55), inset 0 0 0 1px rgba(36, 23, 8, .5), 0 0 0 1px rgba(36, 23, 8, .6); }
+.console .c-plate:focus-visible { outline: 2px solid #fff3cf; outline-offset: 2px; }
+.console .c-plate:disabled { opacity: .5; cursor: default; }
+.console .c-plate svg { width: 16px; height: 16px; flex: none; }
+.console .c-plate.is-primary { padding: 0 20px; letter-spacing: .14em; }
+.console .c-plate.is-primary::before, .console .c-plate.is-primary::after { content: ''; position: absolute; top: 50%; width: 5px; height: 5px; margin-top: -2.5px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #e7d29b, #6e5528 70%); box-shadow: 0 0 0 .5px rgba(30, 18, 4, .6); }
+.console .c-plate.is-primary::before { left: 7px; }
+.console .c-plate.is-primary::after { right: 7px; }
 
 /* the amber screen: black glass, lit text, a fine dot grid over it */
-:is(.listen-bar-host, .console) .c-screen { position: relative; min-width: 0; border-radius: var(--ui-radius-sm); background: radial-gradient(120% 140% at 30% 0%, #1b1208, var(--c-glass) 70%); color: var(--c-amber); text-align: left; text-shadow: 0 0 6px var(--c-amber-glow);
+.console .c-screen { position: relative; min-width: 0; border-radius: var(--ui-radius-sm); background: radial-gradient(120% 140% at 30% 0%, #1b1208, var(--c-glass) 70%); color: var(--c-amber); text-align: left; text-shadow: 0 0 6px var(--c-amber-glow);
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .9), inset 0 2px 6px rgba(0, 0, 0, .8), 0 0 0 1px rgba(255, 233, 200, .1), 0 1px 0 1px rgba(255, 233, 200, .08); overflow: hidden; }
-:is(.listen-bar-host, .console) .c-screen::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle at center, transparent 0 52%, rgba(0, 0, 0, .34) 58%) 0 0 / 3px 3px, linear-gradient(165deg, rgba(255, 255, 255, .08), rgba(255, 255, 255, 0) 38%); }
+.console .c-screen::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle at center, transparent 0 52%, rgba(0, 0, 0, .34) 58%) 0 0 / 3px 3px, linear-gradient(165deg, rgba(255, 255, 255, .08), rgba(255, 255, 255, 0) 38%); }
 .c-screen-text { display: block; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .c-screen-run { display: inline-block; white-space: nowrap; }
 .c-screen-text.is-long { text-overflow: clip; }
@@ -63,10 +61,10 @@
 @keyframes c-marquee { 0%, 14% { transform: translateX(0); } 86%, 100% { transform: translateX(calc(-1 * var(--shift, 0px))); } }
 
 /* a framed photograph: brass frame, cream mat */
-:is(.listen-bar-host, .console) .c-frame { position: relative; flex: none; padding: 2px; border: 0; border-radius: var(--ui-radius-sm); background: var(--c-brass); cursor: pointer; box-shadow: inset 0 0 0 1px rgba(255, 239, 204, .4), 0 0 0 1px rgba(36, 23, 8, .65), var(--c-drop); }
-:is(.listen-bar-host, .console) .c-frame .listen-cover { border: 3px solid #efe4c8; border-radius: 0; box-sizing: border-box; box-shadow: inset 0 0 0 1px rgba(60, 40, 15, .5); }
-:is(.listen-bar-host, .console) .c-frame:hover:not(:disabled) { filter: brightness(1.1); background: var(--c-brass); }
-:is(.listen-bar-host, .console) .c-frame:focus-visible { outline: 2px solid #fff3cf; outline-offset: 2px; }
+.console .c-frame { position: relative; flex: none; padding: 2px; border: 0; border-radius: var(--ui-radius-sm); background: var(--c-brass); cursor: pointer; box-shadow: inset 0 0 0 1px rgba(255, 239, 204, .4), 0 0 0 1px rgba(36, 23, 8, .65), var(--c-drop); }
+.console .c-frame .listen-cover { border: 3px solid #efe4c8; border-radius: 0; box-sizing: border-box; box-shadow: inset 0 0 0 1px rgba(60, 40, 15, .5); }
+.console .c-frame:hover:not(:disabled) { filter: brightness(1.1); background: var(--c-brass); }
+.console .c-frame:focus-visible { outline: 2px solid #fff3cf; outline-offset: 2px; }
 
 /* the progress rail: a brass strip, a dark groove, a row of LED blocks lit up to the playhead */
 .c-rail-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px; height: 26px; min-width: 0; }
@@ -112,101 +110,6 @@ html[data-perf='low'] .c-rail-lit { filter: none; }
 html[data-perf='low'] .c-knob-index { filter: none; }
 .c-knob-legend { position: absolute; left: 50%; bottom: -20px; transform: translateX(-50%); font: 600 12px/1 var(--ui-font); letter-spacing: .18em; color: rgba(236, 222, 190, .8); text-shadow: 0 1px 0 rgba(0, 0, 0, .8); white-space: nowrap; }
 
-/* ── the footer strip ──────────────────────────────────────────────────── */
-/* It stands 26 px off the bottom and must stay under 80 px tall: the corner's action pill sits at 110 px. */
-
-.listen-bar-host .listen-bar[role=region] { grid-template-columns: auto minmax(0, 1.4fr) minmax(210px, 1fr) auto; gap: 12px; min-height: 0; padding: 6px 12px 6px 8px; border: 2px solid transparent; border-radius: var(--ui-radius-sm); color: #efe4c8; backdrop-filter: none;
-  background: var(--c-enamel) padding-box, var(--c-brass) border-box; box-shadow: 0 0 0 1px rgba(0, 0, 0, .85), inset 0 0 0 1px rgba(0, 0, 0, .8), inset 0 -3px 0 rgba(0, 0, 0, .4), var(--c-drop-lg); }
-.listen-bar-host .listen-bar.is-empty[role=region] { grid-template-columns: minmax(0, 1fr) auto; }
-.listen-bar-host .listen-now { display: contents; }
-.listen-bar-host .listen-bar .listen-cover-button { grid-column: 1; width: 58px; height: 58px; min-height: 0; padding: 2px; align-self: center; }
-.listen-bar-host .listen-bar .listen-meta { grid-column: 2; align-self: center; display: flex; flex-direction: column; justify-content: center; gap: 2px; min-width: 0; height: 54px; padding: 5px 12px; border: 0; border-radius: var(--ui-radius-sm); cursor: pointer; color: var(--c-amber); }
-.listen-bar-host .listen-bar .listen-meta:hover:not(:disabled) { background: radial-gradient(120% 140% at 30% 0%, #251a0b, var(--c-glass) 70%); filter: brightness(1.12); border: 0; }
-.listen-bar-host .listen-bar .listen-meta:focus-visible { outline: 2px solid var(--c-amber); outline-offset: 2px; }
-.listen-bar-host .listen-meta strong { position: relative; z-index: 1; display: block; font-size: 15px; font-weight: 600; line-height: 1.35; letter-spacing: .03em; color: #ffc766; }
-.listen-bar-host .listen-meta .listen-artist { font-weight: 400; color: #e29a3a; }
-.listen-bar-host .listen-meta .listen-fade { position: relative; z-index: 1; height: 18px; font-size: 12px; line-height: 18px; color: rgba(255, 179, 71, .72); letter-spacing: .02em; }
-.listen-bar-host .listen-meta .listen-fade.is-lyric { color: #ffd38a; }
-.listen-bar-host .listen-meta .listen-fade.is-error { color: #ff8a78; text-shadow: 0 0 6px rgba(255, 70, 50, .5); }
-
-.listen-bar-host .listen-transport { grid-column: 3; display: flex; flex-direction: column; align-items: stretch; gap: 2px; min-width: 0; }
-.listen-bar-host .listen-keys { display: flex; align-items: center; justify-content: center; gap: 10px; }
-.listen-bar-host .listen-keys .c-key { width: 42px; height: 40px; }
-.listen-bar-host .listen-keys .c-key-cap { inset: 0 0 5px; }
-.listen-bar-host .listen-keys .listen-play { width: 54px; }
-.listen-bar-host .listen-keys .listen-play svg { width: 18px; height: 18px; }
-.listen-bar-host .listen-rail { position: static; display: grid; height: 22px; }
-.listen-bar-host .listen-rail .c-rail { height: 18px; }
-.listen-bar-host .listen-rail .c-rail-groove { inset: 4px 5px; }
-.listen-bar-host .listen-rail .c-ledtime { height: 16px; }
-.listen-bar-host .listen-rail input[type=range]::-webkit-slider-thumb { height: 22px; margin-top: -2px; }
-.listen-bar-host .listen-rail input[type=range]::-moz-range-thumb { height: 22px; }
-
-.listen-bar-host .listen-actions { grid-column: 4; display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
-.listen-bar-host .listen-actions .c-plate { min-height: 34px; }
-.listen-bar-host .listen-bar .c-plate { border: 0; }
-.listen-bar-host .listen-bar .c-plate:hover:not(:disabled) { background: var(--c-brass); border: 0; }
-.listen-bar-host .listen-bar .listen-like .listen-heart { color: #3a2410; }
-.listen-bar-host .listen-bar .listen-like[aria-pressed=true] { color: var(--c-brass-ink); }
-.listen-bar-host .listen-bar .listen-like[aria-pressed=true] .listen-heart { color: #b0170c; }
-.listen-bar-host .listen-badge { position: absolute; top: -6px; right: -6px; z-index: 2; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 50%; background: #e8301f; color: #fff4e8; font: 700 12px/16px var(--ui-font); text-align: center; box-shadow: 0 0 0 1px rgba(40, 5, 0, .7), 0 0 6px rgba(255, 59, 47, .6); }
-.listen-bar-host .listen-actions .listen-volume-knob { width: 50px; height: 50px; margin: 0 4px 0 2px; }
-.listen-bar-host .listen-focus { padding: 0 10px; font-size: 12px; letter-spacing: .1em; }
-.listen-bar-host .listen-focus span { display: none; }
-.listen-bar-host .listen-focus.is-running span { display: inline; }
-@container listen (min-width: 960px) {
-  .listen-bar-host .listen-focus span { display: inline; }
-  .listen-bar-host .listen-focus { padding: 0 14px; }
-}
-.listen-bar-host .listen-focus.is-running { box-shadow: inset 0 2px 4px rgba(20, 12, 3, .45), inset 0 0 0 1px rgba(36, 23, 8, .5), 0 0 0 1px rgba(36, 23, 8, .6); }
-.listen-bar-host .listen-focus time { font-variant-numeric: tabular-nums; color: #5a1208; }
-
-/* empty: a quiet screen, covers as framed photos, one brass plate */
-.listen-bar-host .listen-empty { display: flex; align-items: center; gap: 14px; min-width: 0; padding: 0; }
-.listen-bar-host .listen-empty-text.c-screen { flex: 1; height: 54px; padding: 7px 14px; justify-content: center; }
-.listen-bar-host .listen-empty-text strong { position: relative; z-index: 1; font-size: 15px; font-weight: 600; color: #ffc766; }
-.listen-bar-host .listen-empty-text small { position: relative; z-index: 1; color: rgba(255, 179, 71, .7); }
-.listen-bar-host .listen-bar .listen-recent-cover { width: 50px; height: 50px; min-height: 0; padding: 2px; }
-.listen-bar-host .listen-recent-cover > svg { background: rgba(13, 8, 5, .7); color: #efe4c8; }
-.listen-bar-host .listen-bar .listen-primary { min-height: 38px; background: var(--c-brass); color: var(--c-brass-ink); }
-.listen-bar-host .listen-bar .listen-primary:hover:not(:disabled) { background: var(--c-brass); color: var(--c-brass-ink); }
-
-/* 待播: the popover is a roll of paper strips (console-panel.css) */
-.listen-bar-host .listen-queue { bottom: calc(100% + 26px); width: min(340px, calc(100vw - 32px)); max-height: min(62vh, 480px); }
-
-@container listen (max-width: 760px) {
-  .listen-bar-host .listen-bar[role=region] { grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 10px; }
-  .listen-bar-host .listen-bar.is-empty[role=region] { grid-template-columns: minmax(0, 1fr) auto; }
-  .listen-bar-host .listen-actions { gap: 6px; }
-  .listen-bar-host .listen-rail .c-ledtime { display: none; }
-  .listen-bar-host .listen-rail .c-rail-row, .listen-bar-host .c-rail-row.listen-rail { grid-template-columns: minmax(0, 1fr); }
-}
-/* narrow: one row. The rail becomes a thin strip of LED blocks along the bottom edge. */
-@container listen (max-width: 560px) {
-  .listen-bar-host .listen-bar[role=region] { grid-template-columns: auto minmax(0, 1fr) auto auto; padding-bottom: 14px; }
-  .listen-bar-host .listen-lyrics, .listen-bar-host .listen-actions .listen-pop-anchor, .listen-bar-host .listen-focus.is-running time, .listen-bar-host .listen-volume-knob, .listen-bar-host .listen-focus { display: none; }
-  .listen-bar-host .listen-transport { grid-column: 3; }
-  .listen-bar-host .listen-actions { grid-column: 4; }
-  .listen-bar-host .listen-rail { position: absolute; left: 10px; right: 10px; bottom: 3px; height: 9px; display: block; }
-  .listen-bar-host .listen-rail .c-rail { height: 9px; box-shadow: 0 0 0 1px rgba(36, 23, 8, .7); }
-  .listen-bar-host .listen-rail .c-rail-groove { inset: 1px; box-shadow: none; }
-  .listen-bar-host .listen-rail .c-rail-ghost, .listen-bar-host .listen-rail .c-rail-lit { top: 1px; bottom: 1px; }
-  .listen-bar-host .listen-rail input[type=range] { top: -14px; bottom: -4px; height: auto; }
-  .listen-bar-host .listen-rail input[type=range]::-webkit-slider-thumb { width: 6px; height: 13px; margin-top: -2px; }
-  .listen-bar-host .listen-rail input[type=range]::-moz-range-thumb { width: 6px; height: 13px; }
-  .listen-bar-host .listen-bar.is-empty[role=region] { padding-bottom: 6px; }
-}
-@container listen (max-width: 430px) {
-  .listen-bar-host .listen-bar[role=region] { gap: 8px; padding: 6px 8px 14px 6px; }
-  .listen-bar-host .listen-bar.is-empty[role=region] { padding-bottom: 6px; }
-  .listen-bar-host .listen-bar .listen-cover-button { width: 50px; height: 50px; }
-  .listen-bar-host .listen-bar .listen-meta { height: 50px; padding: 4px 10px; }
-  .listen-bar-host .listen-meta strong { font-size: 14px; }
-  .listen-bar-host .listen-keys .listen-skip { display: none; }
-  .listen-bar-host .listen-keys .c-key { height: 44px; }
-  .listen-bar-host .listen-keys .listen-play { width: 54px; }
-  .listen-bar-host .listen-actions .c-plate { min-width: 44px; min-height: 44px; }
-}
 html[data-perf='low'] .c-screen-text.is-long .c-screen-run { animation: none; }
 @media (prefers-reduced-motion: reduce) {
   .c-screen-text.is-long .c-screen-run { animation: none; }
@@ -214,7 +117,7 @@ html[data-perf='low'] .c-screen-text.is-long .c-screen-run { animation: none; }
   .c-key-cap, .c-knob-turn { transition: none; }
 }
 
-/* 待播: strips of paper. The roll in the console and the pop-up over the footer strip share them
+/* 待播: strips of paper. The roll in the console wears them
    (QueuePanel keeps its own markup; it is only dressed here). */
 .c-roll {
   --pl-ink: #2e2318; --pl-dim: #54452f; --pl-accent: #7d5019; --pl-accent-2: #7d5019; --pl-warn: #a3301d; --pl-surface: transparent; --pl-surface-2: #e6d8b9; --pl-shadow: #2e2318; --pl-border: rgba(95, 72, 40, .4);
@@ -224,7 +127,6 @@ html[data-perf='low'] .c-screen-text.is-long .c-screen-run { animation: none; }
   box-shadow: inset 0 0 0 1px rgba(95, 72, 40, .16), calc(var(--sx, 2) * 8px) calc(var(--sy, 3) * 8px) 14px rgba(0, 0, 0, calc(.5 * var(--lamp-k, .6)));
   -webkit-mask: linear-gradient(#000 0 0) top / 100% calc(100% - 6px) no-repeat, conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / 12px 6px repeat-x;
   mask: linear-gradient(#000 0 0) top / 100% calc(100% - 6px) no-repeat, conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / 12px 6px repeat-x; }
-.listen-bar-host .listen-queue.c-paper { padding: 14px 12px 20px; overflow: auto; }
 .c-roll .player-queue { margin: 0; padding: 0; background: none; box-shadow: none; animation: none; font-size: 13px; color: #2e2318; }
 .c-roll .player-queue-header { margin-bottom: 8px; padding-bottom: 6px; border-bottom: 3px double rgba(76, 58, 30, .34); }
 .c-roll .player-queue-tabs button { min-height: 32px; padding: 0 8px; font-size: 13px; letter-spacing: .1em; color: #54452f; }

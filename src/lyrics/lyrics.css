@@ -8,13 +8,6 @@
   .karaoke-fill { position: absolute; inset: 0 auto auto 0; color: var(--lyric-fill, currentColor); paint-order: stroke fill; -webkit-text-stroke: var(--lyric-stroke-width, 0) var(--lyric-stroke, transparent); text-shadow: 0 0 .35em var(--lyric-glow, transparent); clip-path: inset(-30% calc((1 - var(--p, 0)) * 100%) -30% -10%); pointer-events: none; }
   .karaoke-roman, .karaoke-translation { font-size: .56em; line-height: 1.35; color: var(--lyric-base, currentColor); opacity: .78; letter-spacing: .02em; }
 
-  /* Room readout on the lyric book / projection. */
-  .lyric-readout { display: flex; flex-direction: column; gap: .35em; font-family: var(--lyric-font); }
-  .lyric-readout .karaoke-line { animation: lyric-readout-in .45s cubic-bezier(.2, .8, .2, 1) both; }
-  .lyric-readout-next { opacity: .55; font-size: .78em; }
-  .lyric-readout.is-reduced .karaoke-line { animation: none; }
-  @keyframes lyric-readout-in { from { opacity: 0; transform: translateY(.5em); filter: blur(2px); } to { opacity: 1; transform: none; filter: none; } }
-
   /* Fullscreen stage (LyricsStage.jsx). */
   .lyrics-stage-dialog { background: #050505; color: #f5f0e6; overflow: clip; }
   .lyrics-stage { position: relative; width: 100%; height: 100%; display: grid; grid-template-columns: minmax(300px, 36%) 1fr; grid-template-rows: auto 1fr; overflow: clip; color: var(--lyric-base); font-family: var(--lyric-font); background: linear-gradient(160deg, var(--lyric-backdrop-a), var(--lyric-backdrop-b)); isolation: isolate; }
@@ -121,15 +114,5 @@
   }
   .lyrics-stage.is-reduced .lyrics-stage-backdrop, .lyrics-stage.is-reduced .lyrics-stage-settings { animation: none; }
   .lyrics-stage.is-reduced .lyrics-stage-art { transition: none; transform: none; }
-  @media (prefers-reduced-motion: reduce) { .lyrics-stage-backdrop, .lyrics-stage-settings, .lyric-readout .karaoke-line { animation: none; } }
-}
-@layer overrides {
-  /* home.css (overrides layer) styles every span in the room readout; the karaoke parts keep their own boxes. */
-  .home-lyrics-readout.lyric-readout .karaoke-line { display: inline-flex; overflow: visible; -webkit-line-clamp: unset; }
-  .home-lyrics-readout.lyric-readout .karaoke-words { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
-  .home-lyrics-readout.lyric-readout .karaoke-word { display: inline-block; overflow: visible; }
-  .home-lyrics-readout.lyric-readout .karaoke-base { display: inline; overflow: visible; }
-  .home-lyrics-readout.lyric-readout .karaoke-fill { display: inline; position: absolute; overflow: visible; text-shadow: 0 0 .2em var(--lyric-glow); }
-  .corner-lyrics .home-lyrics-readout.lyric-readout { font-size: 22px; line-height: 1.45; font-weight: 600; }
-  .corner-lyrics .home-lyrics-readout.lyric-readout .lyric-readout-next { font-size: 15px; font-weight: 400; }
+  @media (prefers-reduced-motion: reduce) { .lyrics-stage-backdrop, .lyrics-stage-settings { animation: none; } }
 }
