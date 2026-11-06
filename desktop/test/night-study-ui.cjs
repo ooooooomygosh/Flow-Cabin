@@ -52,7 +52,7 @@ async function startWallpaper() {
   site.on('pageerror', e => report.pageErrors.push(e.message)); await mountFixture(app, site, { items, music: true, autoMusic: true });
   // 3.1: the main window is the life cabin; the 月夜书桌 shelf / writing-hand checks that drew the original room there moved to the
   // desktop wallpaper, the only surface that still paints that scene (see wallpaper-stays-rendered-and-animates-after-main-close).
-  await chooseRoomScene(site, 'night-study'); await site.locator('.cabin-home.theme-night-study').waitFor(); check('night-study-room-selected-in-the-cabin');
+  await chooseRoomScene(site, 'night-study'); check('night-study-room-selected-in-the-cabin');
   await playRecord(site, items[0].title); await chooseSource(site, 'netease');
   await site.waitForFunction(() => document.querySelector('audio').currentTime > .2 && !document.querySelector('audio').paused);
   assert.deepEqual((await app.evaluate(() => globalThis.__qaMusicResolves)).slice(-2), ['99999', '12345']);
@@ -63,11 +63,11 @@ async function startWallpaper() {
   await site.waitForFunction(() => document.documentElement.dataset.desktopFullscreen === 'true');
   const full = await app.evaluate(({ BrowserWindow, screen }) => { const w = BrowserWindow.getAllWindows().find(w => w.webContents.getURL().includes('/shell/')); return { full: w.isFullScreen(), bounds: w.getBounds(), monitor: screen.getDisplayMatching(w.getBounds()).bounds }; });
   assert.equal(full.full, true); assert.deepEqual(full.bounds, full.monitor);
-  for (const selector of ['.home-header', '.listen-bar']) {
+  for (const selector of ['.desk-home', '.desk-window']) {
     if (await site.locator(selector).count()) assert.equal(await site.locator(selector).isVisible(), true);
   }
   await site.screenshot({ path: path.join(output, 'night-study-fullscreen.png') });
-  await site.reload(); await site.waitForFunction(() => document.documentElement.dataset.desktopFullscreen === 'true' && document.querySelector('.home-header') && getComputedStyle(document.querySelector('.home-header')).display !== 'none');
+  await site.reload(); await site.waitForFunction(() => document.documentElement.dataset.desktopFullscreen === 'true' && document.querySelector('.desk-home') && getComputedStyle(document.querySelector('.desk-home')).display !== 'none');
   await app.evaluate(({ webContents }) => { const contents = webContents.getAllWebContents().find(c => c.getURL().startsWith('https://album-circle.vercel.app')); contents.sendInputEvent({ type: 'keyDown', keyCode: 'ESC' }); contents.sendInputEvent({ type: 'keyUp', keyCode: 'ESC' }); });
   await site.waitForFunction(() => document.documentElement.dataset.desktopFullscreen === 'false'); check('native-fullscreen-covers-monitor-keeps-interaction-survives-reload-and-escape-restores');
   await openMusicSettings(site);

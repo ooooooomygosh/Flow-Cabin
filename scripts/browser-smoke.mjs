@@ -4,7 +4,7 @@ import { verifyFullscreenStudy } from './fullscreen-study-checks.mjs';
 import { verifyBenchmarkCabin } from './benchmark-cabin-checks.mjs';
 import { verifyAppleHandoff } from './apple-handoff-checks.mjs';
 import { hasViteLocalOrigin } from './vite-readiness.mjs';
-import { openRoomSettings, openMusicSettings, chooseSource, openSettingsSection, closeSettings, settingsDialog, accountsRegion, openAddToShelf, addDialog, openAlbumWall, openLibrary, closeLibrary, libraryDialog, takeBinder, playRecord, openRecordCard, closeRecordCard, openConsole, closeConsole, consoleDialog, deckRecord } from './settings-actions.mjs';
+import { openRoomSettings, openMusicSettings, chooseSource, openSettingsSection, closeSettings, settingsDialog, accountsRegion, openAddToShelf, addDialog, openAlbumWall, openLibrary, closeLibrary, libraryDialog, takeBinder, playRecord, openRecordCard, closeRecordCard, openConsole, closeConsole, consoleDialog, deckRecord, openFocus, waitForSavedRoom, backToDesk } from './settings-actions.mjs';
 /** Offline renderer integration suite. Run: node scripts/browser-smoke.mjs
  * Requires root+desktop npm ci and Chromium (BROWSER_EXECUTABLE overrides path).
  * Native OS integration, real accounts, and live platform playback are NOT tested.
@@ -105,8 +105,8 @@ try {
   context.on('page', watched => { watched.on('pageerror', error => report.pageErrors.push(error.stack || error.message)); watched.on('console', message => { if (message.type() === 'error') report.consoleErrors.push(message.text()); }); watched.on('requestfailed', request => { if (request.failure()?.errorText !== 'net::ERR_ABORTED') report.failedRequests.push({ url: request.url(), error: request.failure()?.errorText }); }); });
   page = await context.newPage(); page.setDefaultTimeout(12000); await page.clock.install({ time: new Date('2026-10-08T10:00:00Z') });
   /* context captures errors across the main, wallpaper and pet renderers. */
-  await page.goto(origin); await page.locator('.cabin-home').waitFor();
-  { const shelf = await openLibrary(page); await shelf.locator('.listen-grid li').first().waitFor(); assert.equal(await shelf.locator('.listen-grid li').count(), items.length, 'the whole offline collection stands on the shelf'); await closeLibrary(page); }
+  await page.goto(origin); await page.locator('.desk-home').waitFor();
+  { const shelf = await takeBinder(page, '唱片'); await shelf.locator('.listen-grid li').first().waitFor(); assert.equal(await shelf.locator('.listen-grid li').count(), items.length, 'the whole offline collection stands on the shelf'); await closeLibrary(page); }
   check('renderer-mounts-with-offline-collection');
   await verifyCabinLayout({ page, check }); await verifyCabinToolActions({ page, check });
   for (const [width, height] of [[1440, 900], [960, 600]]) { await page.setViewportSize({ width, height }); await screenshot(`cabin-${width}x${height}`); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `no horizontal page overflow at ${width}x${height}`); }
@@ -114,18 +114,10 @@ try {
   const { ROOM_SCENES } = await import('../src/scene-catalog.mjs');
   const { PETS } = await import('../src/pet/pet-catalog.mjs');
   assert.equal(ROOM_SCENES.length, 8); assert.equal(PETS.length, 5);
+  // 设置 › 小屋与奶糖 picks the companion; the room scene is chosen in the first-run guide only (R5: the desk has no room picture).
   await openRoomSettings(page);
-  { const rows = await page.locator('.scene-options > button').evaluateAll(buttons => { const tops = {}; for (const button of buttons) { const top = Math.round(button.getBoundingClientRect().top); tops[top] = (tops[top] || 0) + 1; } return Object.values(tops); });
-    assert(rows.length <= 2 && new Set(rows).size === 1, `all eight rooms sit in balanced rows: ${rows}`); }
-  for (const scene of ROOM_SCENES) {
-    await page.getByRole('button', { name: `选择场景 ${scene.label}`, exact: true }).click();
-    await page.locator(`.cabin-home.theme-${scene.id}`).waitFor();
-    assert.equal(await page.getByRole('button', { name: `选择场景 ${scene.label}`, exact: true }).getAttribute('aria-pressed'), 'true');
-  }
-  for (const pet of PETS) { await page.getByRole('button', { name: `选择桌宠 ${pet.name || pet.label}`, exact: true }).click(); await page.locator(`.home-pet-portrait .pixel-cat[data-pet-id="${pet.id}"]`).waitFor(); }
-  // The picker shows each room's shell render.
-  assert.deepEqual(await page.locator('.scene-choice img').evaluateAll(images => images.map(image => image.getAttribute('src'))), ROOM_SCENES.map(scene => `/room-scenes/v21/${scene.id}/shell.webp`));
-  await page.waitForFunction(() => [...document.querySelectorAll('.scene-choice img')].every(image => image.complete && image.naturalWidth > 0), null, { timeout: 5000 });
+  assert.equal(await settingsDialog(page).locator('.scene-options').count(), 0, '设置 has no room-scene picker');
+  for (const pet of PETS) { await page.getByRole('button', { name: `选择桌宠 ${pet.name || pet.label}`, exact: true }).click(); await waitForSavedRoom(page, { petId: pet.id }); }
   await screenshot('room-personalization');
   // One fixed dialog size: switching sections never resizes 设置.
   for (const [width, height] of [[1440, 900], [960, 600]]) {
@@ -135,8 +127,7 @@ try {
   }
   await openRoomSettings(page); check('settings-dialog-has-one-fixed-size');
   await screenshot('room-personalization-960x600'); await closeSettings(page);
-  for (const scene of ROOM_SCENES) { await openRoomSettings(page); await page.getByRole('button', { name: `选择场景 ${scene.label}`, exact: true }).click(); await closeDialog(); await screenshot(`scene-${scene.id}-960x600`); }
-  await page.reload(); await page.locator(`.cabin-home.theme-${ROOM_SCENES.at(-1).id}`).waitFor(); await page.locator(`.home-pet-portrait .pixel-cat[data-pet-id="${PETS.at(-1).id}"]`).waitFor(); check('room-and-pet-choices-survive-reload');
+  await page.reload(); await page.locator('.desk-home').waitFor(); await waitForSavedRoom(page, { petId: PETS.at(-1).id }); await openRoomSettings(page); assert.equal(await page.getByRole('button', { name: `选择桌宠 ${PETS.at(-1).name || PETS.at(-1).label}`, exact: true }).getAttribute('aria-pressed'), 'true'); await closeSettings(page); check('room-and-pet-choices-survive-reload');
   await page.setViewportSize({ width: 1440, height: 900 });
   await openAddToShelf(page, '手动填写'); await page.getByLabel('专辑名', { exact: true }).fill('QA 新唱片'); await page.getByLabel('歌手', { exact: true }).fill('QA Artist'); await page.getByLabel('曲目', { exact: true }).fill('第一首\n第二首'); await page.getByRole('button', { name: '放上唱片架' }).click(); await page.getByText('《QA 新唱片》已放上唱片架。', { exact: true }).waitFor(); await closeDialog(); assert(items.some(i => i.title === 'QA 新唱片')); assert.match(items.find(i => i.title === 'QA 新唱片').cover, /^data:image\/png;base64,/, 'manual album without cover gets a pixel cover'); check('collection-create-manual');
   await closeLibrary(page);
@@ -244,14 +235,14 @@ try {
   const fileAlbum = page.locator('.file-import .add-results li').first(); await fileAlbum.locator('img.add-cover').waitFor(); await fileAlbum.getByText('Fixture Band · 2 首').waitFor(); await screenshot('file-import');
   await fileAlbum.getByRole('button', { name: '放上唱片架' }).click(); await page.getByText('《未命名专辑》已放上唱片架。', { exact: true }).waitFor(); await closeDialog(); await closeLibrary(page);
   const picked = items.find(i => i.externalIds?.fileAlbum); assert(picked, 'picked-file album saved'); assert.match(picked.cover, /^data:image\/png;base64,/); assert.deepEqual(picked.tracks, ['晨雾', '夜灯']); assert(picked.trackDetails[0].lengthMillis > 10000);
-  await page.reload(); await page.locator('.cabin-home').waitFor();
+  await page.reload(); await page.locator('.desk-home').waitFor();
   check('files-import-with-tags-from-names-durations-and-pixel-cover');
   // After a reload the object URLs are gone: the deck explains instead of failing silently.
   await playRecord(page, '未命名专辑'); await (await openConsole(page)).getByRole('alert').filter({ hasText: '重新打开小屋后需要再选一次文件' }).waitFor(); await closeConsole(page); check('session-files-explain-reload-honestly');
   await openAddToShelf(page, '本地音乐');
   await page.getByLabel('选择音乐文件', { exact: true }).setInputFiles([{ name: '01 - Fixture Band - 晨雾.wav', mimeType: 'audio/wav', buffer: wav }, { name: '02 - Fixture Band - 夜灯.wav', mimeType: 'audio/wav', buffer: wav }]);
   await page.getByRole('button', { name: '重新连上文件' }).click(); await page.locator('.add-notice').waitFor(); await closeDialog(); await closeLibrary(page);
-  await (await openConsole(page)).getByRole('button', { name: '重试' }).click(); await page.waitForFunction(() => { const a = document.querySelector('audio[data-deck="active"]'); return a.src.startsWith('blob:') && !a.paused && a.currentTime > .2; });
+  await (await openConsole(page)).getByRole('button', { name: '重试', exact: true }).click(); await page.waitForFunction(() => { const a = document.querySelector('audio[data-deck="active"]'); return a.src.startsWith('blob:') && !a.paused && a.currentTime > .2; });
   await closeConsole(page);
   check('relinked-session-files-play-from-blob');
   { const card = await openRecordCard(page, '测试唱片 4'); await card.getByRole('button', { name: '像素封面' }).click();
@@ -259,7 +250,7 @@ try {
     const pixelled = items.find(i => i.originalCover); assert.match(pixelled.cover, /^data:image\/png;base64,/); assert.equal(pixelled.originalCover, cover);
     await page.getByRole('button', { name: '恢复原封面' }).click(); await page.getByText('已恢复原封面。', { exact: true }).waitFor(); assert.equal(pixelled.cover, cover); await closeRecordCard(page); await closeLibrary(page); }
   check('record-card-pixel-cover-preview-apply-and-restore');
-  items = items.filter(i => !i.externalIds?.fileAlbum); await page.reload(); await page.locator('.cabin-home').waitFor(); // later checks count the 18 fixture albums
+  items = items.filter(i => !i.externalIds?.fileAlbum); await page.reload(); await page.locator('.desk-home').waitFor(); // later checks count the 18 fixture albums
   await chooseSource(page, 'system'); await (await openConsole(page)).locator('.console-track', { hasText: '系统测试歌曲' }).waitFor(); assert.deepEqual(await page.locator('audio').evaluateAll(decks => decks.map(a => a.getAttribute('src'))), [null, null]); await page.getByRole('button', { name: '暂停系统播放器' }).click(); await page.getByRole('button', { name: '继续系统播放器' }).waitFor();
   // The next command is a fetch; wait for the mocked response before asserting the relayed command.
   await Promise.all([
@@ -282,16 +273,20 @@ try {
   await page.locator('.console-status', { hasText: '320k MP3' }).waitFor(); check('qq-rematch-plays-best-candidate-automatically-and-shows-actual-quality');
   rematch = 'all-fail'; await page.getByRole('button', { name: '下一首展示曲目' }).click(); await page.getByRole('button', { name: '在 QQ 音乐中打开' }).click(); await page.locator('.console-local-app', { hasText: '小屋不显示进度' }).waitFor(); assert.equal(localOpens[0].provider, 'qq'); assert.equal(await page.evaluate(() => document.querySelector('audio[data-deck="active"]').paused), true, 'the hand-off never pretends the cabin is playing'); check('local-app-fallback-labelled-after-failure');
   rematch = ''; await closeConsole(page); await chooseSource(page, sourceBefore);
-  await page.locator('.focus-badge').click(); await page.getByRole('tab', { name: '待办', exact: true }).click(); await page.getByLabel('新的待办').fill('浏览器测试待办'); await page.getByRole('button', { name: '添加待办' }).click(); await page.getByRole('checkbox', { name: '完成：浏览器测试待办' }).check(); assert.equal(await page.locator('.focus-task-list li.is-done').count(), 1); check('focus-tasks-create-and-complete');
-  // 3.0: 随手记 is the 便签 inside 这一段.
-  await page.getByRole('tab', { name: '这一段', exact: true }).click(); await page.getByLabel('随手记内容').fill('QA 随手记备份内容'); check('quick-notes-save-local-text');
-  await page.getByRole('button', { name: '计时设置' }).click(); await page.getByLabel('专注（分）').fill('2'); await page.getByLabel('专注（分）').blur(); await page.getByRole('button', { name: '开始专注', exact: true }).click(); await page.getByRole('dialog', { name: '专注', exact: true }).getByRole('button', { name: '关闭专注', exact: true }).click(); await page.locator('.focus-badge').focus(); await page.keyboard.press('z'); await page.locator('.focus-display').waitFor(); await page.keyboard.press('Escape'); await page.locator('.focus-display').waitFor({ state: 'detached' }); await page.clock.fastForward(121000); await page.locator('.focus-badge').click(); await page.locator('.focus-phase', { hasText: '短休息' }).waitFor(); await page.getByRole('dialog', { name: '专注', exact: true }).getByRole('button', { name: '关闭专注', exact: true }).click();
+  await openFocus(page); await page.getByRole('tab', { name: '待办', exact: true }).click(); await page.getByLabel('新的待办').fill('浏览器测试待办'); await page.getByRole('button', { name: '添加待办' }).click(); await page.getByRole('checkbox', { name: '完成：浏览器测试待办' }).check(); assert.equal(await page.locator('.focus-task-list li.is-done').count(), 1); check('focus-tasks-create-and-complete');
+  // 3.1: 随手记 is its own tab of the 专注 close-up again (这一段 / 待办 / 随手记 / 声音).
+  await page.getByRole('tab', { name: '随手记', exact: true }).click(); await page.getByLabel('随手记内容').fill('QA 随手记备份内容'); check('quick-notes-save-local-text');
+  await page.getByRole('tab', { name: '这一段', exact: true }).click();
+  await page.getByRole('button', { name: '计时设置' }).click(); await page.getByLabel('专注（分）').fill('2'); await page.getByLabel('专注（分）').blur(); await page.getByRole('button', { name: '开始专注', exact: true }).click();
+  // 开始专注 with 沉浸 on puts the sheet back and the clock fills the window; otherwise the sheet stays and is closed.
+  { await page.waitForTimeout(300); if (await page.locator('.focus-display').count()) { await page.keyboard.press('Escape'); await page.locator('.focus-display').waitFor({ state: 'detached' }); } else { await page.keyboard.press('Escape'); await page.getByRole('dialog', { name: '专注', exact: true }).waitFor({ state: 'hidden' }); } }
+  await page.locator('.focus-badge').focus(); await page.keyboard.press('z'); await page.locator('.focus-display').waitFor(); await page.keyboard.press('Escape'); await page.locator('.focus-display').waitFor({ state: 'detached' }); await page.clock.fastForward(121000); await openFocus(page); await page.locator('.focus-phase', { hasText: '短休息' }).waitFor(); await page.keyboard.press('Escape'); await page.getByRole('dialog', { name: '专注', exact: true }).waitFor({ state: 'hidden' });
   // 3.0: 统计 moved from the focus panel into 唱片日记 › 统计.
   await page.evaluate(() => window.dispatchEvent(new CustomEvent('cabin:open-journal', { detail: {} }))); const statsJournal = page.getByRole('dialog', { name: '唱片日记' }); await statsJournal.waitFor(); await statsJournal.getByRole('tab', { name: '统计' }).click(); assert.match(await statsJournal.locator('.fs-today-num').first().innerText(), /2 分钟/); await screenshot('focus-statistics'); check('focus-timer-completes-and-records-session'); await page.keyboard.press('Escape'); await statsJournal.waitFor({ state: 'hidden' });
   // 学习: a deck, pasted cards, a keyboard review (Space flips, 1–4 rate), a countdown.
   // 3.0: 学习 is the 词书学习 lab (设置 › 实验室); switch it on for this journey.
   await page.evaluate(() => { const labs = JSON.parse(localStorage.getItem('flow-cabin-labs-v1') || '{}'); localStorage.setItem('flow-cabin-labs-v1', JSON.stringify({ ...labs, study: true })); window.dispatchEvent(new CustomEvent('cabin:labs-changed')); });
-  await page.locator('.focus-badge').click(); await page.getByRole('tab', { name: '学习', exact: true }).click();
+  await openFocus(page); await page.getByRole('tab', { name: '学习', exact: true }).click();
   await page.getByLabel('新卡组名称').fill('QA 单词'); await page.getByRole('button', { name: '新建', exact: true }).click();
   const studyDeck = page.locator('.study-decks li', { hasText: 'QA 单词' });
   await studyDeck.getByText('0 张 · 空词书 · 添加或导入词条后开始', { exact: true }).waitFor();
@@ -326,14 +321,14 @@ try {
   assert.equal(await page.evaluate(() => document.querySelector('audio[data-deck="active"]')?.paused ?? true), true, 'Space in a review does not start music');
   await page.keyboard.press(' '); await page.keyboard.press('3'); await page.locator('.study-done').waitFor(); await page.getByRole('button', { name: '回到词书架', exact: true }).click();
   await page.getByLabel('倒计时名称').fill('期末'); await page.getByLabel('倒计时日期').fill('2026-12-20'); await page.getByRole('button', { name: '添加倒计时' }).click(); await page.locator('.study-countdowns li', { hasText: '期末' }).getByText('73 天').waitFor();
-  check('study-flashcards-fsrs-keyboard-review-and-countdown'); await page.getByRole('dialog', { name: '专注', exact: true }).getByRole('button', { name: '关闭专注', exact: true }).click();
+  check('study-flashcards-fsrs-keyboard-review-and-countdown'); await page.getByRole('dialog', { name: '专注', exact: true }).getByRole('button', { name: '收起专注工具', exact: true }).click();
   await openSettingsSection(page, '数据'); await page.getByRole('button', { name: '收藏与备份', exact: true }).click(); const downloadPromise = page.waitForEvent('download'); await page.getByRole('button', { name: '导出备份', exact: true }).click(); const download = await downloadPromise; await download.saveAs(path.join(output, 'fixture-backup.json')); const backup = JSON.parse(await fs.readFile(path.join(output, 'fixture-backup.json'))); assert.equal(backup.kind, 'FlowCabinBackup'); assert.equal(backup.items.length, 18); assert.equal(backup.focus.tasks.length, 1); assert.equal(backup.focus.notes, 'QA 随手记备份内容'); assert.equal(backup.study.cards.length, 2); assert.equal(backup.study.countdowns[0].title, '期末'); check('backup-exports-collection-and-focus');
   await page.getByLabel('导入备份文件').setInputFiles({ name: 'bad.json', mimeType: 'application/json', buffer: Buffer.from('{invalid') }); await page.getByText('文件内容无法读取。', { exact: true }).waitFor(); check('backup-rejects-malformed-input');
   const imported = { kind: 'FlowCabinBackup', items: [{ ...items[0], id: 'backup-imported', title: '备份导入唱片' }] };
   await page.getByLabel('导入备份文件').setInputFiles({ name: 'fixture.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(imported)) }); await page.getByText('导入完成：新增 1 张唱片，唱片架现在共有 19 张。', { exact: true }).waitFor(); assert(items.some(i => i.id === 'backup-imported')); check('backup-import-merges-new-album'); await closeDialog();
   assert.equal(await (await openLibrary(page)).getByRole('button', { name: '专辑墙', exact: true }).count(), 1, 'the album wall hangs on the shelf'); await closeLibrary(page); await openAlbumWall(page); await page.locator('.wall-library-album').first().click(); await page.waitForFunction(() => { const c = document.querySelector('.wall-canvas-wrap canvas'); return c?.width > 300 && !document.querySelector('.wall-preview-bar').textContent.includes('正在更新'); }); await screenshot('album-wall');
   const pngPromise = page.waitForEvent('download'); await page.getByRole('button', { name: '下载 PNG', exact: true }).click(); const png = await pngPromise; await png.saveAs(path.join(output, 'fixture-album-wall.png')); const pngBytes = await fs.readFile(path.join(output, 'fixture-album-wall.png')); assert.equal(pngBytes.subarray(1, 4).toString(), 'PNG'); assert(pngBytes.length > 1000); check('album-wall-paints-and-downloads-real-png'); await closeDialog();
-  for (let i = 0; i < 4 && await page.locator('dialog[open]').count(); i++) await page.keyboard.press('Escape'); await page.keyboard.press('h'); assert(await page.evaluate(() => document.documentElement.classList.contains('room-zen'))); await screenshot('zen-mode'); await page.keyboard.press('Escape'); check('zen-mode-keyboard');
+  await backToDesk(page); await page.keyboard.press('h'); assert(await page.evaluate(() => document.documentElement.classList.contains('room-zen'))); await screenshot('zen-mode'); await page.keyboard.press('Escape'); assert.equal(await page.evaluate(() => document.documentElement.classList.contains('room-zen')), false, 'Esc leaves 收起工具'); check('zen-mode-keyboard');
   // 我的歌单: account playlists, link import, file import; a playlist plays like an album.
   neteaseLoggedIn = true;
   await openAddToShelf(page, '我的歌单');
@@ -401,7 +396,6 @@ try {
   await page.evaluate(() => { window.cabinDesktopStatus = { active: true, busy: false, supported: true, via: 'window', reason: '桌面背景层暂时无法挂载' }; window.dispatchEvent(new CustomEvent('cabin:desktop-mode', { detail: window.cabinDesktopStatus })); document.documentElement.dataset.desktopMode = 'true'; window.dispatchEvent(new CustomEvent('album-desktop-mode', { detail: { active: true } })); }); // the shell's fallback answer
   await page.locator('.desktop-widgets').waitFor();
   assert(await page.evaluate(() => document.documentElement.classList.contains('room-desktop')));
-  assert.equal(await page.locator('.home-header').isVisible(), false, 'the desk rail steps aside for the widgets'); assert.equal(await page.locator('.listen-bar').isVisible(), false);
   for (const name of ['时钟', '正在播放', '专注', '待办']) await page.getByRole('region', { name, exact: true }).waitFor();
   await page.getByLabel('桌面待办', { exact: true }).fill('桌面上的待办'); await page.keyboard.press('Enter'); await page.locator('.desktop-widgets').getByText('桌面上的待办', { exact: true }).waitFor();
   await page.getByRole('button', { name: /移动小组件：待办/ }).focus(); await page.keyboard.press('ArrowLeft');
@@ -409,10 +403,10 @@ try {
   await screenshot('desktop-mode');
   await page.getByRole('button', { name: '浮出桌面', exact: true }).click(); assert(await page.evaluate(() => window.__desktopCommands.at(-1) === 'album-desktop://action/desktop-sink-exit'));
   await page.evaluate(() => { window.cabinDesktopStatus = { active: false, busy: false, supported: true, via: '', reason: '' }; window.dispatchEvent(new CustomEvent('cabin:desktop-mode', { detail: window.cabinDesktopStatus })); document.documentElement.dataset.desktopMode = 'false'; window.dispatchEvent(new CustomEvent('album-desktop-mode', { detail: { active: false } })); });
-  await page.locator('.desktop-widgets').waitFor({ state: 'detached' }); await page.locator('.home-header').waitFor();
+  await page.locator('.desktop-widgets').waitFor({ state: 'detached' }); await page.locator('.desk-home').waitFor();
   check('desktop-mode-widgets-todo-and-layout');
   await (await openConsole(page)).getByRole('button', { name: '取下唱片' }).click(); await closeConsole(page);
-  items = items.filter(i => i.type !== 'playlist'); neteaseLoggedIn = false; await page.reload(); await page.locator('.cabin-home').waitFor();
+  items = items.filter(i => i.type !== 'playlist'); neteaseLoggedIn = false; await page.reload(); await page.locator('.desk-home').waitFor();
   const companion = await page.evaluate(() => window.albumCompanionSnapshot());
   assert.equal(companion.petId, PETS.at(-1).id); assert(companion.room.items.length > 0); check('companion-snapshot-carries-selected-pet-and-room');
   await context.addInitScript(({ companion }) => {
@@ -569,7 +563,7 @@ try {
     return route.fulfill({ json: { audioPath: '/desktop-music/local/audio/' + id } });
   });
   await failurePage.goto(origin); await playRecord(failurePage, '失败跳过回归'); await openConsole(failurePage);
-  await failurePage.getByRole('button', { name: '播放模式：单曲循环', exact: true }).waitFor();
+  await failurePage.getByRole('switch', { name: '播放模式：单曲循环', exact: true }).waitFor();
   await failurePage.waitForFunction(() => { const audio = document.querySelector('audio[data-deck="active"]'); return audio && !audio.paused && audio.src.endsWith('bbbbbbbbbbbbbbbb'); });
   assert.equal(failures, 1, 'the failed recording was not retried by repeat-one');
   await failurePage.close(); check('unplayable-track-advances-under-repeat-one');

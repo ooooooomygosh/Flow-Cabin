@@ -13,7 +13,7 @@ let app, site, host;
   app = await _electron.launch({ executablePath, args: process.env.ALBUM_QA_EXE ? [] : [desktop], env }); app.context().setDefaultTimeout(18000); await app.firstWindow();
   for (let i = 0; i < 100; i++) { site = app.context().pages().find((p) => p.url().startsWith('https://album-circle.vercel.app')); host = app.context().pages().find((p) => p.url() === 'album-desktop://shell/index.html'); if (site && host) break; await new Promise((r) => setTimeout(r, 100)); }
   site.on('pageerror', (error) => report.pageErrors.push(error.message));
-  await mountFixture(app, site, { showroom: 'room' }); await site.locator('.home-pet-portrait').waitFor();
+  await mountFixture(app, site, { showroom: 'room' }); await site.locator('.desk-home').waitFor();
   // 伙伴出门 / 让伙伴回家 live in 设置 › 小屋与奶糖 › 伙伴的脾气 (the original room's toolbar toggle is gone).
   const petToggle = async (name) => { await openRoomSettings(site); return site.getByRole('dialog', { name: '设置', exact: true }).getByRole('button', { name, exact: true }); };
 
@@ -42,7 +42,7 @@ let app, site, host;
       rewards: { fish: 6, xp: 130, bought: [], equipped: { accessory: '', weather: 'snow' } }
     }));
   });
-  await site.reload(); await site.locator('.cabin-home').waitFor(); await site.locator('.home-pet-portrait').waitFor();
+  await site.reload(); await site.locator('.desk-home').waitFor();
   const opened = app.waitForEvent('window', (page) => page.url() === 'album-desktop://pet/pet.html');
   { const out = await petToggle('伙伴出门'); assert.equal(await out.getAttribute('aria-pressed'), 'false'); await out.click(); await closeSettings(site); }
   const pet = await opened; pet.on('pageerror', (error) => report.pageErrors.push('pet: ' + error.message));
@@ -108,12 +108,12 @@ let app, site, host;
   check('pet-panel-restores-the-compact-window', { compact: compactBounds.width, expanded: expandedBounds.width });
 
   await pet.evaluate(() => window.albumPet.command('focus-start'));
-  await site.locator('.focus-badge.is-running').waitFor();
+  await site.waitForFunction(() => /专注中/.test(document.querySelector('.desk-clock-face')?.getAttribute('aria-label') || ''));
   // Since 2.1 the focusing pet cycles through its work poses rather than one 'focus' pose.
   await pet.locator(['focus', 'read', 'write', 'think'].map(pose => `.pixel-cat[data-pose="${pose}"]`).join(', ')).first().waitFor(); await pet.locator('.pet-bubble', { hasText: '开始专注啦' }).waitFor(); // 2.2: the bubble speaks at the start, not the whole round
   check('pet-starts-focus-and-mirrors-it');
   await pet.evaluate(() => window.albumPet.command('evil-command')); await pet.evaluate(() => window.albumPet.command('focus-pause'));
-  await site.locator('.focus-badge[aria-label*="暂停"]').waitFor(); assert.equal(await site.evaluate(() => window.albumCompanionSnapshot().focus.paused), true); check('pet-commands-are-whitelisted');
+  await site.locator('.desk-clock-face[aria-label*="暂停"]').waitFor(); assert.equal(await site.evaluate(() => window.albumCompanionSnapshot().focus.paused), true); check('pet-commands-are-whitelisted');
   const before = await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find((w) => w.webContents.getURL().includes('pet.html')).getBounds());
   await pet.evaluate(() => window.albumPet.moveBy(-40, -30)); await pet.evaluate(() => window.albumPet.dragEnd()); await new Promise((r) => setTimeout(r, 500));
   const after = await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find((w) => w.webContents.getURL().includes('pet.html')).getBounds());
@@ -127,7 +127,7 @@ let app, site, host;
   await pet.screenshot({ path: path.join(output, 'pet-window.png') });
 
   await site.keyboard.press('Escape'); await site.locator('.focus-display').waitFor({ state: 'detached' });
-  await (await petToggle('让伙伴回家')).click(); await closeSettings(site); await site.locator('.home-pet-portrait').waitFor();
+  await (await petToggle('让伙伴回家')).click(); await closeSettings(site);
   assert.equal(await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().some((w) => w.webContents.getURL().includes('pet.html'))), false); check('pet-returns-home');
   assert.deepEqual(report.pageErrors, []);
   report.passed = true;

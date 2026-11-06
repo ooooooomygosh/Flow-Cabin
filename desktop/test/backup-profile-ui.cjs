@@ -49,7 +49,7 @@ async function launch(profile) {
   assert.ok(site);
   site.on('pageerror', error => report.pageErrors.push(error.message));
   assert.equal(await app.evaluate(({ app }) => app.getPath('userData')), profile);
-  await site.locator('.cabin-home').waitFor();
+  await site.locator('.desk-home').waitFor();
   const onboarding = site.getByRole('dialog', { name: '新手引导', exact: true });
   const needsOnboarding = await site.evaluate(() => {
     const state = JSON.parse(localStorage.getItem('flow-cabin-onboarding-v1') || 'null');
@@ -60,7 +60,7 @@ async function launch(profile) {
     await onboarding.getByRole('button', { name: '跳过引导', exact: true }).click();
     await onboarding.waitFor({ state: 'hidden' });
   }
-  await site.locator('.cabin-home').waitFor();
+  await site.locator('.desk-home').waitFor();
 }
 async function close() { await app.close(); app = null; site = null; }
 async function snapshot(name, profile) {
@@ -214,7 +214,7 @@ function compareStores(stage, expected, actual) {
   save('souvenir-fixture.json', { keys: souvenirDomains, records: souvenirState.records,
     sourceEvidence: { focusSession: record.id, playbackSessions: playbackRows.map(({ id }) => id),
       sentLetter: 'qa-sent', journalEntries: journalRows.map(({ id }) => id) } });
-  await site.reload(); await site.locator('.cabin-home').waitFor();
+  await site.reload(); await site.locator('.desk-home').waitFor();
   const before = await snapshot('source-before-export', sourceProfile);
   for (const domain of Object.keys(seed)) compare('seed-loaded:' + domain, seed[domain], before.stores[domain]);
   const sourceSouvenirs = souvenirs.normalizeSouvenirs({ version: 1,
@@ -269,7 +269,7 @@ function compareStores(stage, expected, actual) {
   compareStores('after-restart', before, restarted);
   compare('after-restart:souvenirs', sourceSouvenirs, souvenirs.normalizeSouvenirs({ version: 1,
     records: Object.keys(souvenirDomains).map((domain) => restarted.stores[domain]) }));
-  await site.locator('.cabin-home').waitFor();
+  await site.locator('.desk-home').waitFor();
   assert.match(await (await takeBinder(site, '唱片')).getByRole('button', { name: /^唱片活页夹/ }).getAttribute('aria-label'), /1 /); await closeLibrary(site);
   await site.screenshot({ path: path.join(output, 'target-restarted-room.png') });
   check('target-profile-persists-after-real-electron-restart');

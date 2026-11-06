@@ -68,7 +68,7 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
   const { record, provider, playback, player, deckItem, effectiveSpin } = deck;
   const focus = useFocusState(), sound = useSoundscape();
   useCatCareHost();
-  const [tool, setTool] = useState(''), [lyricsOpen, setLyricsOpen] = useState(false), [editRequest, setEditRequest] = useState(0);
+  const [tool, setTool] = useState(''), [lyricsOpen, setLyricsOpen] = useState(false);
   const [catPanelOpen, setCatPanelOpen] = useState(false);
   const [smartOpen, setSmartOpen] = useState(false);
   const closeSmart = useCallback(() => setSmartOpen(false), []);

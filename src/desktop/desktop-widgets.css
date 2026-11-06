@@ -4,7 +4,7 @@
 @layer guards {
 /* 桌面模式 hides the room chrome outright (the cabin's desk rail, footer strip and hints; the widgets
    replace them). */
-:root.room-desktop :is(.room-now-playing, .focus-dock, .home-header, .home-footer, .home-room-caption, .home-intro, .home-corner-ui) { display: none !important; }
+:root.room-desktop :is(.room-now-playing, .focus-dock) { display: none !important; }
 /* The clock is a face, not a card: no panel behind it, even in 流畅模式 (perf-low). */
 .desktop-widget.is-clock { background: transparent !important; }
 /* The zen clock ignores its saved inline position (only !important beats an inline style) and sits bottom-right. */
@@ -86,11 +86,4 @@
 
 @keyframes widget-in { from { opacity: 0; transform: translateY(6px); } }
 @media (max-width: 760px) { .desktop-widget { width: min(300px, calc(100vw - 32px)); } }
-}
-@layer overrides {
-/* 收起工具 (H): the desk rail's plates and knobs, the footer strip and the hints step aside, leaving the room and the LED clock
-   (the way into 专注); 显示工具 brings them back. These sit in the overrides layer because desk.css draws the rail there. */
-:root.room-zen:not(.room-zen-tools) .cabin-home .home-header::before { opacity: 0; }
-:root.room-zen:not(.room-zen-tools) .cabin-home .home-header :is(.home-pet-portrait, .home-room-menu, .desktop-controls, .home-shortcuts > :not(.focus-badge), .home-finish-editing),
-:root.room-zen:not(.room-zen-tools) .cabin-home :is(.home-footer, .home-room-caption, .home-intro) { opacity: 0; visibility: hidden; pointer-events: none; }
 }

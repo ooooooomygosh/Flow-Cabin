@@ -34,7 +34,7 @@ try {
   await page.addInitScript({ path:path.join(root,'scripts/preview-fixture.js') });
   await page.route('**/*', r => new URL(r.request().url()).origin === origin ? r.continue() : r.abort());
   page.on('pageerror', e => report.errors.push(e.message));
-  await page.goto(origin); await page.locator('.cabin-home').waitFor();
+  await page.goto(origin); await page.locator('.desk-home').waitFor();
   await verifyCabinToolActions({page});
   for (const [width,height] of [[1440,900],[960,600],[1920,1080],[2560,1440]]) for (const zoom of [.75,1,1.25,1.5]) {
     await electron.evaluate(({BrowserWindow},size) => { const w=BrowserWindow.getAllWindows()[0]; w.setContentSize(size.width,size.height); w.webContents.setZoomFactor(size.zoom); }, {width,height,zoom});

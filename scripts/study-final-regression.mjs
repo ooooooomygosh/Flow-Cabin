@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { launchChromium } from './launch-browser.mjs';
 import { hasViteLocalOrigin } from './vite-readiness.mjs';
 import { onboardingSeed } from './app-version.mjs';
+import { openFocus as openDeskFocus } from './settings-actions.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const output = process.env.STUDY_OUTPUT || path.join(root, 'desktop/test-results/study-ui');
@@ -71,7 +72,7 @@ async function shot(page, name) {
 async function openDock(page, tab = '学习') {
   const badge = page.locator('.focus-badge');
   await badge.waitFor({ timeout: 30000 });
-  if (await badge.getAttribute('aria-expanded') === 'false') await badge.click();
+  if (await badge.getAttribute('aria-expanded') === 'false') await openDeskFocus(page);
   const dock = page.locator('.focus-dock');
   await dock.waitFor();
   await dock.getByRole('tab', { name: tab, exact: true }).click();
@@ -80,7 +81,7 @@ async function openDock(page, tab = '学习') {
 
 async function openStudy(page) {
   const dock = await openDock(page, '学习');
-  await page.locator('.focus-dock').getByLabel('词书', { exact: true }).waitFor();
+  await page.getByRole('dialog', { name: '专注', exact: true }).getByLabel('词书', { exact: true }).waitFor();
   return dock;
 }
 

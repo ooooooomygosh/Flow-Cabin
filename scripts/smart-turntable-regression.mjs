@@ -162,7 +162,7 @@ try {
 
     try {
       await page.goto(origin, { waitUntil: 'domcontentloaded', timeout: 30000 });
-      await page.locator('.cabin-home').waitFor({ timeout: 30000 });
+      await page.locator('.desk-home').waitFor({ timeout: 30000 });
       await page.locator('.focus-badge').waitFor();
       await test(page, () => savedPlaylist);
       report.checks.push({ name, passed: true });

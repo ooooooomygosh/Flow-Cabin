@@ -67,8 +67,8 @@ async function mountFixture(application, site, options = {}) {
       return router(request);
     });
   }, { items, results: options.searchResults || [items[0]], slowCover: options.slowCover === true, music: options.music === true, coverResponse: options.coverResponse, autoMusic: options.autoMusic === true });
-  // The life cabin is the only home (3.1): nothing is pinned.
-  await site.reload(); await site.locator('.cabin-home').waitFor();
+  // DEsk's desk is the only home (3.1): nothing is pinned.
+  await site.reload(); await site.locator('.desk-home').waitFor();
   // Interaction fixtures run against the cabin, not the first-run tutorial.
   const onboarding = site.getByRole('dialog', { name: '新手引导', exact: true });
   await onboarding.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {});
@@ -86,22 +86,52 @@ async function chooseRoomScene(site, sceneId) {
   if (scene.id !== sceneId) throw new Error(`Unknown scene in test: ${sceneId}`);
   await openRoomSettings(site);
   const picker = site.getByRole('dialog', { name: '设置', exact: true }); // 设置 › 小屋与奶糖 (3.0; was 房间与桌宠)
-  await picker.getByRole('button', { name: `选择场景 ${scene.label}`, exact: true }).click();
+  const choice = picker.getByRole('button', { name: `选择场景 ${scene.label}`, exact: true });
+  await choice.click();
+  // The scene is the 沉入桌面 wallpaper's room (the desk itself does not change): the picker shows it saved.
+  await site.waitForFunction((label) => document.querySelector(`.scene-choice[aria-label="选择场景 ${label}"]`)?.getAttribute('aria-pressed') === 'true', scene.label);
   await picker.getByRole('button', { name: '关闭设置', exact: true }).click(); await picker.waitFor({ state: 'hidden' });
-  await site.locator(`.cabin-home.theme-${sceneId}`).waitFor();
 }
 async function useWarmCabin(site) { await chooseRoomScene(site, 'warm'); }
 // The old 布置小屋 / 音源设置 buttons are gone; both live in the settings hub.
 async function openRoomSettings(site) { await openSettingsTab(site, '小屋与奶糖'); }
-// 设置 is the brass knob → 小屋日常 drawer → 全部设置.
-async function openSettingsTab(site, tab) {
-  if (!await site.getByRole('dialog', { name: '设置', exact: true }).isVisible()) {
-    for (let i = 0; i < 4 && await site.locator('dialog[open]').count(); i++) await site.keyboard.press('Escape');
-    await site.getByRole('button', { name: '设置', exact: true }).click();
-    const all = site.getByRole('button', { name: '全部设置', exact: true });
-    await all.or(site.getByRole('dialog', { name: '设置', exact: true })).first().waitFor();
-    if (await all.isVisible()) await all.click();
+// ---- the desk (src/desk/DeskHome.jsx); the same helpers as scripts/settings-actions.mjs ----
+// Close every dialog and look back down from the bookcase / console / post box.
+async function backToDesk(site) {
+  for (let i = 0; i < 4 && await site.locator('dialog[open]').count(); i++) await site.keyboard.press('Escape');
+  for (let i = 0; i < 2 && await site.locator('.desk-look').count(); i++) {
+    await site.locator('.desk-look.is-there, .desk-look.is-up').first().waitFor({ timeout: 3000 }).catch(() => {});
+    await site.keyboard.press('Escape'); await site.locator('.desk-look').waitFor({ state: 'detached', timeout: 4000 }).catch(() => {});
   }
+}
+const PLATE = { shelf: /^唱片架 · 抬头看书柜/, console: /^唱机 · 抬头看控制面板/, post: /^信箱/ };
+async function lookUp(site, which) {
+  const view = site.locator(`.desk-home[data-look="${which}"] .desk-look.is-there`);
+  if (!await view.count()) { await backToDesk(site); await site.locator('.desk-home').getByRole('button', { name: PLATE[which] }).first().click(); }
+  await view.waitFor(); return view;
+}
+async function pressSpot(site, which, name) { const view = await lookUp(site, which); await view.getByRole('button', { name, exact: true }).click(); }
+// The drawer (D, or the pull at the bottom): 唱片日记, 伙伴, 随手记, 窗外与天气, 备份与恢复, 设置, and lab things.
+async function openDrawerThing(site, name) {
+  await backToDesk(site);
+  const pull = site.locator('.desk-pull');
+  // The pull runs the width of the desk's front edge; take it near its left end (收起工具's clock sits bottom-right).
+  if (await pull.getAttribute('aria-expanded') !== 'true') await pull.click({ position: { x: 24, y: 8 } });
+  await site.getByRole('group', { name: '抽屉', exact: true }).getByRole('button', { name, exact: true }).click();
+}
+// 专注: the LED clock (its 专注 key first, so a playing record does not turn the face into the track).
+const focusDialog = (site) => site.getByRole('dialog', { name: '专注', exact: true });
+async function openFocus(site) {
+  if (await focusDialog(site).isVisible()) return focusDialog(site);
+  await backToDesk(site);
+  const key = site.getByRole('radiogroup', { name: '台钟显示', exact: true }).getByRole('radio', { name: '专注' });
+  if (await key.getAttribute('aria-checked') !== 'true') await key.click();
+  await site.locator('.desk-clock-face').click();
+  await focusDialog(site).waitFor(); return focusDialog(site);
+}
+// 设置 is the screwdriver in the desk's drawer.
+async function openSettingsTab(site, tab) {
+  if (!await site.getByRole('dialog', { name: '设置', exact: true }).isVisible()) await openDrawerThing(site, '设置');
   await site.getByRole('dialog', { name: '设置', exact: true }).getByRole('tab', { name: tab, exact: true }).click();
 }
 // 设置 › 音乐 (3.0; was 音源) › 账户与文件夹: logins, local folders and Music Assistant, a page inside 设置.
@@ -122,19 +152,26 @@ async function chooseSource(site, id) {
   await openSourceSettings(site);
   const radio = settingsDialog(site).getByRole('radiogroup', { name: '唱机音源', exact: true }).getByRole('radio', { name: providerLabel(id), exact: true });
   await radio.click();
-  await site.waitForFunction((value) => document.querySelector('.listen-bar')?.dataset.provider === value || !document.querySelector('.listen-bar:not(.is-empty)'), id);
+  // The deck follows the choice (it is saved as the deck's provider) before anything else is asked of it.
+  await site.waitForFunction((id) => localStorage.getItem('album-circle-room-player-v1') === id, id).catch(() => {});
   if (await radio.getAttribute('aria-checked') !== 'true') throw new Error(`唱机音源 ${id} was not selected`);
   await closeSettings(site);
 }
-// 唱片架: DEsk's bookcase, looked up at from the desk (the brass plate on the wall). Its binders are the record boxes and
-// 唱片 / 我喜欢 / 最近播放; taking one carries it down to the desk as a sheet (Dialog "<name>活页夹"; the index book is 索引本).
-// 播放 loads a record on the deck, the title opens its 唱片卡片, the plate 添加到唱片架 holds every way onto the shelf.
+// 唱片架: DEsk's bookcase, looked up at from the desk (the 唱片架 plate, or A; src/desk/ShelfView.jsx). The look is a dialog
+// named 唱片架; its binders are the record boxes and 唱片 / 我喜欢 / 最近播放 (唱片活页夹，N 张 …) and the 索引本 book; taking
+// one carries it down to the desk as a sheet (Dialog "<name>活页夹"; the index book is 索引本). 播放 loads a record on the
+// deck, the title opens its 唱片卡片, the brass plate 添加到唱片架 holds every way onto the shelf.
 const libraryDialog = (site) => site.getByRole('dialog', { name: /^唱片(库|架)$/ });
 async function openLibrary(site) {
-  if (!await libraryDialog(site).isVisible()) await site.getByRole('button', { name: /^唱片架 ·/ }).click();
+  if (!await libraryDialog(site).isVisible()) await lookUp(site, 'shelf');
   await libraryDialog(site).waitFor(); await libraryDialog(site).locator('.shelf-stand').first().waitFor(); return libraryDialog(site);
 }
-async function closeLibrary(site) { for (let i = 0; i < 4 && await libraryDialog(site).isVisible(); i++) { await site.keyboard.press('Escape'); await libraryDialog(site).waitFor({ state: 'hidden', timeout: 1500 }).catch(() => {}); } await libraryDialog(site).waitFor({ state: 'hidden' }); }
+async function closeLibrary(site) {
+  // In the index book Esc first clears what was typed, so more presses may be needed; then look back down at the desk.
+  for (let i = 0; i < 4 && await libraryDialog(site).isVisible(); i++) { await site.keyboard.press('Escape'); await libraryDialog(site).waitFor({ state: 'hidden', timeout: 1500 }).catch(() => {}); }
+  await libraryDialog(site).waitFor({ state: 'hidden' });
+  await backToDesk(site);
+}
 const shelfSheet = (site, name) => site.getByRole('dialog', { name: name === '索引本' ? /^索引本/ : `${name}活页夹`, exact: name !== '索引本' });
 async function takeBinder(site, name = '唱片') {
   const sheet = shelfSheet(site, name);
@@ -147,7 +184,7 @@ async function takeBinder(site, name = '唱片') {
 async function playRecord(site, title, { keepOpen = false } = {}) {
   const dialog = await takeBinder(site, '唱片');
   await dialog.getByRole('button', { name: `播放 ${title}`, exact: true }).click();
-  await site.locator('.listen-bar:not(.is-empty)').waitFor();
+  await site.waitForFunction((name) => window.__cabinDeckItem?.title === name, title);
   if (!keepOpen) await closeLibrary(site);
 }
 const recordCard = (site) => site.getByRole('dialog', { name: /^唱片卡片/ });
@@ -160,10 +197,17 @@ async function closeRecordCard(site) {
   const card = recordCard(site);
   if (await card.isVisible()) { await card.getByRole('button', { name: '关闭唱片卡片', exact: true }).click(); await card.waitFor({ state: 'hidden' }); }
 }
-// 唱机旁 (the console close-up) carries the deck's transport and queue; it opens from the 正在播放 strip.
-const consoleDialog = (site) => site.getByRole('dialog', { name: '唱机旁', exact: true });
-async function openConsole(site) { if (!await consoleDialog(site).isVisible()) await site.locator('.listen-meta').click(); await consoleDialog(site).waitFor(); return consoleDialog(site); }
-async function closeConsole(site) { if (!await consoleDialog(site).isVisible()) return; await site.keyboard.press('Escape'); await consoleDialog(site).waitFor({ state: 'hidden' }); }
+// 唱机: the record player's console is DEsk's Control Panel at the back of the desk (src/desk/views/ConsoleView.jsx), looked
+// up at with the 唱机 plate (or C, or commands.open('music')). The look is a dialog named 唱机 holding `.console-view`.
+const consoleDialog = (site) => site.getByRole('dialog', { name: '唱机', exact: true });
+async function openConsole(site) {
+  if (!await consoleDialog(site).isVisible()) await lookUp(site, 'console');
+  await consoleDialog(site).locator('.console-view').waitFor(); return consoleDialog(site);
+}
+async function closeConsole(site) {
+  for (let i = 0; i < 3 && await consoleDialog(site).isVisible(); i++) { await site.keyboard.press('Escape'); await consoleDialog(site).waitFor({ state: 'detached', timeout: 2500 }).catch(() => {}); }
+  await backToDesk(site);
+}
 const deckRecord = (site) => site.evaluate(() => window.__cabinDeckItem || null);
 // 添加到唱片架 holds every way onto the shelf: 曲库搜索, 我的歌单, 本地音乐, 手动填写.
 const addDialog = (site) => site.getByRole('dialog', { name: '添加到唱片架', exact: true });
@@ -183,4 +227,4 @@ async function openRecordTools(site, title) {
   await card.getByRole('button', { name: '自定义唱片', exact: true }).click();
   return site.getByRole('dialog', { name: '自定义唱片' });
 }
-module.exports = { mountFixture, albums, chooseRoomScene, useWarmCabin, openRoomSettings, openSettingsTab, openMusicSettings, openSourceSettings, closeSettings, chooseSource, openAddToShelf, openRecordTools, closeRecordCard, settingsDialog, accountsRegion, openLibrary, closeLibrary, takeBinder, playRecord, openRecordCard, openConsole, closeConsole, deckRecord, libraryDialog, addDialog, consoleDialog };
+module.exports = { backToDesk, lookUp, pressSpot, openDrawerThing, openFocus, focusDialog, mountFixture, albums, chooseRoomScene, useWarmCabin, openRoomSettings, openSettingsTab, openMusicSettings, openSourceSettings, closeSettings, chooseSource, openAddToShelf, openRecordTools, closeRecordCard, settingsDialog, accountsRegion, openLibrary, closeLibrary, takeBinder, playRecord, openRecordCard, openConsole, closeConsole, deckRecord, libraryDialog, addDialog, consoleDialog };

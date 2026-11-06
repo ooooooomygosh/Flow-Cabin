@@ -55,7 +55,7 @@ const ROOM = 'local-room';
   check('custom-vinyl-is-stored-and-genres-filter');
 
   await chooseRoomScene(site, 'warm');
-  await site.reload(); await site.locator('.cabin-home.theme-warm').waitFor(); assert.equal((await saved()).rooms[ROOM].look, 'warm');
+  await site.reload(); await site.locator('.desk-home').waitFor(); assert.equal((await saved()).rooms[ROOM].look, 'warm');
   await chooseRoomScene(site, 'pixel');
   check('cabin-look-persists');
 
@@ -70,7 +70,7 @@ const ROOM = 'local-room';
   // A real restart with the same user directory keeps every preference.
   await app.close(); app = await _electron.launch({ executablePath, args: process.env.ALBUM_QA_EXE ? [] : [desktop], env }); await app.firstWindow();
   for (let i = 0; i < 100; i++) { site = app.context().pages().find((p) => p.url().startsWith('https://album-circle.vercel.app')); if (site) break; await new Promise((r) => setTimeout(r, 100)); }
-  await mountFixture(app, site, { items }); await site.locator('.cabin-home.theme-pixel').waitFor();
+  await mountFixture(app, site, { items }); await site.locator('.desk-home').waitFor();
   const after = await saved();
   assert.equal(after.rooms[ROOM].boxes[0].name, '周末唱片'); assert.equal(after.styles['qq:' + items[0].externalIds.qqAlbumMid].opacity, 62); assert.deepEqual(after.genres['qq:' + items[0].externalIds.qqAlbumMid], ['爵士', '电子']);
   check('restart-retains-boxes-genres-vinyl-and-look');

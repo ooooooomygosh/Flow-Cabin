@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { launchChromium } from './launch-browser.mjs';
 import { onboardingSeed } from './app-version.mjs';
 import { hasViteLocalOrigin } from './vite-readiness.mjs';
+import { openSettingsSection } from './settings-actions.mjs';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'), port = 4299, origin = `http://127.0.0.1:${port}`;
 let browser, server, page, log = ''; const errors = [], external = [], checks = [];
 const output = path.join(root, 'desktop/test-results/devices-ui'); await fs.mkdir(output, { recursive: true });
@@ -33,7 +34,7 @@ try {
  });
  page = await context.newPage(); page.setDefaultTimeout(12000); page.on('pageerror', e => errors.push(e.stack)); await page.goto(origin);
  const intro=page.getByRole('button',{name:'知道了',exact:true});if(await intro.isVisible())await intro.click();
- await page.getByRole('button', { name: '设置', exact: true }).click(); await page.getByRole('button',{name:'全部设置',exact:true}).click(); await page.getByRole('tab', { name: '实验室', exact: true }).click();
+ await openSettingsSection(page, '实验室'); // 设置 is the screwdriver in the desk's drawer
  // 3.0: 同步与设备 sits in 实验室 behind the 设备联动 switch (off for people who never paired).
  const sync = page.getByRole('region', { name: '同步与设备', exact: true }); assert.equal(await sync.getByRole('button', { name: '开启局域网接收', exact: true }).count(), 0, 'pairing is hidden while the lab is off');
  await page.getByRole('checkbox', { name: '设备联动', exact: true }).check(); assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('flow-cabin-labs-v1')).devices), true);
@@ -46,9 +47,7 @@ try {
  await page.getByRole('tab', { name: '小屋与奶糖', exact: true }).click();
  await page.getByRole('region', { name: '宠物动画包', exact: true }).waitFor();
  assert.equal(await page.locator('input[type=file][accept*=".zip"]').isEnabled(), true); pass('pet-pack JSON and ZIP import is wired into real settings');
- await page.getByRole('button', { name: '布置小屋', exact: true }).click(); await page.getByRole('dialog', { name: '布置小屋', exact: true }).waitFor();
- await page.locator('.home-canvas[data-art-ready=true]').waitFor(); assert.equal(await page.locator('.room2-header').count(), 0); pass('production settings entry opens the immersive scene without the old control bar');
- await page.keyboard.press('Escape'); assert.equal(await page.getByRole('dialog', { name: '布置小屋', exact: true }).count(), 0);
+ assert.equal(await page.getByRole('button', { name: '布置小屋', exact: true }).count(), 0, 'no room editor: the desk is not arranged'); pass('settings no longer offers the retired room editor');
  assert.deepEqual(errors, []); assert.deepEqual(external, []); pass('no runtime errors or external requests');
  await fs.writeFile(path.join(output, 'report.json'), JSON.stringify({ passed: true, fixtureData: true, checks, errors, external }, null, 2));
 } catch(error) { console.error('DEVICE SETTINGS FAILURE', errors, await page?.locator('body').innerText()); throw error; } finally { await browser?.close(); server?.kill(); }

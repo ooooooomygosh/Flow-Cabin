@@ -1,4 +1,4 @@
-import { openRoomSettings, openSettingsSection, closeSettings } from './settings-actions.mjs';
+import { openRoomSettings, openSettingsSection, closeSettings, waitForSavedRoom } from './settings-actions.mjs';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { releasesBetween } from '../src/onboarding/releases.mjs';
@@ -140,8 +140,10 @@ export async function verifyOnboarding({ browser, origin, routeHandler, evidence
     // 5. Settings hub: shortcuts route to their section.
     await openRoomSettings(page); await hubOf(page).waitFor();
     assert.equal(await page.getByRole('tab', { name: '小屋与奶糖' }).getAttribute('aria-selected'), 'true');
-    await button(page, '选择场景 海边慢屋').click();
-    await roomIs(page, 'seaside');
+    // The room scene is chosen in the guide only (R5): 设置 picks the companion.
+    assert.equal(await hubOf(page).locator('.scene-options').count(), 0, '设置 has no room-scene picker');
+    await button(page, '选择桌宠 奶糖').click(); for (let i = 0; i < 40 && (await room(page)).petId !== 'cat'; i++) await page.waitForTimeout(100);
+    assert.equal((await room(page)).petId, 'cat');
     await page.screenshot({ path: path.join(evidence, 'settings-hub-room.png'), animations: 'disabled' });
     await closeSettings(page);
     // The deck's 音源设置 event opens 设置 › 音源 (web: only 仅动画展示 and 本地音乐 can be chosen).

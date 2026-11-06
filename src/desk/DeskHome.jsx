@@ -20,6 +20,7 @@ import { DRAWER, PET_WINDOW } from './desk-model.mjs';
 import useDeskLamp from './useDeskLamp';
 import { VIEW_BODY } from './views';
 import { consoleLayout } from './views/console-model.mjs';
+import { DesktopControls } from '../desktop-client';
 import './desk.css';
 
 // The home: DEsk's desk (https://github.com/fyzugx/DEsk, MIT, (c) 2026 The DEsk authors), seen from
@@ -35,9 +36,16 @@ const LOOK_DUR = { shelf: 0.80, console: 0.84, post: 0.86 };
 const typing = (target) => target?.closest?.('input,textarea,select,[contenteditable="true"],[contenteditable=""],[role=slider]');
 const pace = () => PACES[readPace()] || 1;
 
-function useWindowSize() {
+// The desk's own box: the window, less the system bars on Android (desk.css insets it by the safe areas).
+function useDeskSize(ref) {
   const [size, setSize] = useState(() => ({ width: innerWidth, height: innerHeight }));
-  useEffect(() => { const update = () => setSize({ width: innerWidth, height: innerHeight }); addEventListener('resize', update); return () => removeEventListener('resize', update); }, []);
+  useLayoutEffect(() => {
+    const node = ref.current;
+    const update = () => setSize((old) => { const width = node?.clientWidth || innerWidth, height = node?.clientHeight || innerHeight; return old.width === width && old.height === height ? old : { width, height }; });
+    update(); addEventListener('resize', update);
+    const observer = typeof ResizeObserver === 'function' && node ? new ResizeObserver(update) : null; observer?.observe(node);
+    return () => { removeEventListener('resize', update); observer?.disconnect(); };
+  }, []);
   return size;
 }
 
@@ -58,9 +66,9 @@ function usePlaybackClock() {
 const postView = (which, count) => which === 'post' ? (count ? 'view-post-box.webp' : 'view-post-empty.webp') : `view-${which}.webp`;
 
 export default function DeskHome({ reduced = false, focusOpen = false, shelf = null }) {
-  const { deck, commands, identity } = useCabinRuntime(), focus = useFocus(), labs = useLabs();
+  const { deck, commands, identity, notify, sceneCapture } = useCabinRuntime(), focus = useFocus(), labs = useLabs();
   const petPhoto = identity?.builtinId ? `/pet-art/v21/${identity.builtinId}/avatar-256.png` : '';
-  const { width, height } = useWindowSize(), lay = useMemo(() => deskLayout(width, height), [width, height]);
+  const homeRef = useRef(null), { width, height } = useDeskSize(homeRef), lay = useMemo(() => deskLayout(width, height), [width, height]);
   const [ready, setReady] = useState(false), [drawer, setDrawer] = useState(false), [hot, setHot] = useState('');
   const [mode, setMode] = useState(''), [keysUp, setKeysUp] = useState(false);
   const [look, setLook] = useState(null); // { which, phase: 'up' | 'there' | 'down' }
@@ -81,6 +89,19 @@ export default function DeskHome({ reduced = false, focusOpen = false, shelf = n
   // A letter through the slot: DEsk's brass flap and the paper dropping in.
   const seen = useRef(unread);
   useEffect(() => { if (unread > seen.current && ready) playSfx('letter-arrive'); seen.current = unread; }, [unread, ready]);
+
+  // The picture 小屋明信片 prints (sceneCapture, src/home/Postcard.jsx): the desk as DEsk lays it at 1440x900, in 1200x800.
+  useEffect(() => sceneCapture?.register(async () => {
+    await whenDeskImages(FIRST);
+    const canvas = document.createElement('canvas'); canvas.width = 1200; canvas.height = 800;
+    const g = canvas.getContext('2d'), at = deskLayout(PLATES.w, PLATES.h), s = 800 / PLATES.h, ox = (1200 - PLATES.w * s) / 2;
+    g.fillStyle = '#2a1a10'; g.fillRect(0, 0, 1200, 800);
+    const draw = (name, r) => { const image = r && deskImage(name); if (image) g.drawImage(image, ox + r.x * s, r.y * s, r.w * s, r.h * s); };
+    draw('desk-wood.webp', { x: 0, y: 0, w: PLATES.w, h: PLATES.h });
+    draw('edge-console.webp', at.console); draw('edge-clock.webp', at.clock); draw('edge-post.webp', at.post);
+    draw('plate-console.webp', at.consolePlate); draw('plate-shelf.webp', at.shelfPlate); draw(unread ? 'post-letter.webp' : 'post0.webp', at.postBox);
+    return canvas;
+  }), [sceneCapture, unread]);
 
   // ----- the clock -----
   const timer = focus?.state.timer, playing = Boolean(deck.audible);
@@ -236,10 +257,10 @@ export default function DeskHome({ reduced = false, focusOpen = false, shelf = n
     else if (action.id === 'mail') commands.open('mail');
   };
   const pick = (thing) => { playSfx('felt-pick'); open(thing.action); };
-  const vl = viewLayout(width, height);
+  const vl = viewLayout(innerWidth, innerHeight); // the views cover the whole window (.desk-look is fixed)
   // A window narrower than the picture (a phone) slides along it: the view is a strip that scrolls
   // sideways, opening on its middle, as the film ended. Wider windows place it as DEsk does.
-  const pan = PLATES.w * vl.s > width + 1;
+  const pan = PLATES.w * vl.s > innerWidth + 1;
   const place = (r) => { const p = vl.place(r); return pan ? { ...p, x: p.x - vl.ox } : p; };
   const panRef = useCallback((node) => { if (node && pan) node.scrollLeft = -vl.ox; }, [pan, look?.which]); // eslint-disable-line react-hooks/exhaustive-deps
   const style = (r) => ({ left: r.x, top: r.y, width: r.w, height: r.h });
@@ -252,7 +273,7 @@ export default function DeskHome({ reduced = false, focusOpen = false, shelf = n
     </button>
   );
   const Body = look && VIEW_BODY[look.which];
-  return <section className={`desk-home ${ready ? 'is-lit' : ''} ${lay.phone ? 'is-phone' : ''} ${drawer ? 'is-drawer-out' : ''} ${reduced ? 'is-reduced' : ''}`} aria-label="书桌" data-look={look?.which || undefined} style={{ '--desk-s': lay.s, '--desk-lamp': lamp.brightness }}>
+  return <section ref={homeRef} className={`desk-home ${ready ? 'is-lit' : ''} ${lay.phone ? 'is-phone' : ''} ${drawer ? 'is-drawer-out' : ''} ${reduced ? 'is-reduced' : ''}`} aria-label="书桌" data-look={look?.which || undefined} style={{ '--desk-s': lay.s, '--desk-lamp': lamp.brightness }}>
     <div className="desk-wood" style={{ backgroundImage: `url(${deskUrl('desk-wood.webp')})` }} aria-hidden="true"/>
     <div className="desk-top" ref={deskRef} style={{ transform: lift ? `translateY(${-lift.toFixed(1)}px)` : undefined }} inert={look?.phase === 'there' || undefined}>
       <RecordDesk lay={lay} shelf={shelf} reduced={reduced} hidden={Boolean(look) || drawer}/>
@@ -310,7 +331,7 @@ export default function DeskHome({ reduced = false, focusOpen = false, shelf = n
     </button>
     {look && <div ref={lookRef} className={`desk-look is-${look.phase}`} role="dialog" aria-modal="true" aria-label={VIEWS[look.which].name} onClick={(e) => { if (e.target === e.currentTarget || e.target.classList.contains('desk-view') || e.target.classList.contains('desk-pan-strip')) lookBack(); }}>
       <canvas ref={film} className="desk-film" aria-hidden="true"/>
-      {look.phase === 'there' && Body && <Body back={lookBack} layout={consoleLayout(width, height)} reduced={reduced}/>}
+      {look.phase === 'there' && Body && <Body back={lookBack} layout={consoleLayout(innerWidth, innerHeight)} reduced={reduced}/>}
       {look.phase === 'there' && !Body && <>
         <div className={`desk-pan ${pan ? 'is-panning' : ''}`} ref={panRef}>
           <div className="desk-pan-strip" style={{ width: pan ? PLATES.w * vl.s : '100%' }}>
@@ -334,6 +355,8 @@ export default function DeskHome({ reduced = false, focusOpen = false, shelf = n
         {look.which !== 'shelf' && <button type="button" className="desk-look-back" onClick={lookBack}>{VIEWS[look.which].back}</button>}
       </>}
     </div>}
+    {/* The window is frameless on the desktop: a grip to drag it by, full screen, minimise and close (设置 is in the drawer). */}
+    <div className="desk-window" style={{ top: Math.max(...[lay.shelfPlate, lay.postBox || lay.postPlate].filter(Boolean).map((r) => r.y + r.h)) + 6 }}><DesktopControls onError={(text) => notify?.(text, { tone: 'error' })}/></div>
     {!ready && <div className="desk-dark" aria-hidden="true"/>}
   </section>;
 }

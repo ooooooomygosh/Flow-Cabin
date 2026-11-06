@@ -126,6 +126,12 @@
 /* the desk lamp (the console's 台灯 fader, useDeskLamp) */
 .desk-home.is-lit .desk-wood, .desk-home.is-lit .desk-top, .desk-home.is-lit .desk-drawer, .desk-home .desk-view { filter: brightness(var(--desk-lamp, 1)); }
 
+.desk-window { position: absolute; right: 8px; z-index: 4; display: flex; padding: 2px 2px 2px 14px; border-radius: var(--ui-radius-sm, 2px); background: rgba(18, 10, 5, .42); -webkit-app-region: drag; }
+.desk-window .desktop-controls button { color: rgba(246, 236, 210, .78); }
+/* 收起工具 (H) leaves the room and the clock: the window buttons step aside (the tool strip keeps 退出全屏). */
+:root.room-zen:not(.room-zen-tools) .desk-window { visibility: hidden; }
+/* Android draws edge to edge: the desk keeps clear of the status bar, the gesture bar and a side cutout (src/mobile/mobile.css). */
+:root[data-platform=android] .desk-home { top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px)); bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)); left: var(--safe-area-inset-left, env(safe-area-inset-left, 0px)); right: var(--safe-area-inset-right, env(safe-area-inset-right, 0px)); }
 .desk-home .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
 /* A phone: the drawer is narrower than the window's width allows a whole band, so its felt is centred. */
