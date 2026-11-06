@@ -126,19 +126,23 @@ async function chooseSource(site, id) {
   if (await radio.getAttribute('aria-checked') !== 'true') throw new Error(`唱机音源 ${id} was not selected`);
   await closeSettings(site);
 }
-// 唱片架 (top-bar plate): a bookcase close-up (Dialog variant=full). Its 唱片 binder is taken down first; 播放 loads a record on the
-// deck, the title opens its 唱片卡片, the cornice plate 添加到唱片架 holds every way onto the shelf.
+// 唱片架: DEsk's bookcase, looked up at from the desk (the brass plate on the wall). Its binders are the record boxes and
+// 唱片 / 我喜欢 / 最近播放; taking one carries it down to the desk as a sheet (Dialog "<name>活页夹"; the index book is 索引本).
+// 播放 loads a record on the deck, the title opens its 唱片卡片, the plate 添加到唱片架 holds every way onto the shelf.
 const libraryDialog = (site) => site.getByRole('dialog', { name: /^唱片(库|架)$/ });
 async function openLibrary(site) {
-  if (!await libraryDialog(site).isVisible()) await site.locator('.home-shortcuts').getByRole('button', { name: '唱片架', exact: true }).click();
-  await libraryDialog(site).waitFor(); return libraryDialog(site);
+  if (!await libraryDialog(site).isVisible()) await site.getByRole('button', { name: /^唱片架 ·/ }).click();
+  await libraryDialog(site).waitFor(); await libraryDialog(site).locator('.shelf-stand').first().waitFor(); return libraryDialog(site);
 }
-async function closeLibrary(site) { if (!await libraryDialog(site).isVisible()) return; await site.keyboard.press('Escape'); await libraryDialog(site).waitFor({ state: 'hidden' }); }
+async function closeLibrary(site) { for (let i = 0; i < 4 && await libraryDialog(site).isVisible(); i++) { await site.keyboard.press('Escape'); await libraryDialog(site).waitFor({ state: 'hidden', timeout: 1500 }).catch(() => {}); } await libraryDialog(site).waitFor({ state: 'hidden' }); }
+const shelfSheet = (site, name) => site.getByRole('dialog', { name: name === '索引本' ? /^索引本/ : `${name}活页夹`, exact: name !== '索引本' });
 async function takeBinder(site, name = '唱片') {
+  const sheet = shelfSheet(site, name);
+  if (await sheet.isVisible()) return sheet;
   const dialog = await openLibrary(site);
   const spine = name === '索引本' ? dialog.getByRole('button', { name: /^索引本/ }) : dialog.getByRole('button', { name: new RegExp(`^${name}活页夹`) });
   if (await spine.getAttribute('aria-expanded') !== 'true') await spine.click();
-  await dialog.locator('.shelf-object').waitFor(); return dialog;
+  await sheet.locator('.shelf-object').waitFor(); return sheet;
 }
 async function playRecord(site, title, { keepOpen = false } = {}) {
   const dialog = await takeBinder(site, '唱片');
@@ -166,7 +170,7 @@ const addDialog = (site) => site.getByRole('dialog', { name: '添加到唱片架
 async function openAddToShelf(site, tab = '曲库搜索') {
   const dialog = await openLibrary(site);
   const plate = dialog.getByRole('button', { name: '添加到唱片架', exact: true });
-  if (await plate.count()) await plate.click(); else await dialog.locator('.listen-empty-shelf .listen-primary').click();
+  if (await plate.count()) await plate.click(); else await dialog.locator('.shelf-letter-note').click();
   await addDialog(site).waitFor();
   if (tab !== '曲库搜索') await addDialog(site).getByRole('tab', { name: tab, exact: true }).click();
   return addDialog(site);

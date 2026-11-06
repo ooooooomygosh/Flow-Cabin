@@ -10,6 +10,7 @@ import { deskLayout, viewLayout, filmStep, clockFace, PLATES } from './layout.mj
 import { EDGE, VIEWS, CLOCK_KEYS, drawerItems, drawerPlaces, deskKey, autoMode } from './desk-model.mjs';
 import { deskImage, deskUrl, whenDeskImages, FIRST, VIEW_IMAGES } from './images.mjs';
 import ClockFace from './ClockFace';
+import ShelfView from './ShelfView';
 import './desk.css';
 
 // The home: DEsk's desk (https://github.com/fyzugx/DEsk, MIT, (c) 2026 The DEsk authors), seen from
@@ -40,7 +41,7 @@ function usePlaybackClock() {
   return p;
 }
 
-export default function DeskHome({ reduced = false, focusOpen = false, guiding = false, unread = 0 }) {
+export default function DeskHome({ reduced = false, focusOpen = false, guiding = false, unread = 0, shelf = null }) {
   const { deck, commands } = useCabinRuntime(), focus = useFocus(), labs = useLabs();
   const { width, height } = useWindowSize(), lay = useMemo(() => deskLayout(width, height), [width, height]);
   const [ready, setReady] = useState(false), [drawer, setDrawer] = useState(false), [hot, setHot] = useState('');
@@ -103,7 +104,24 @@ export default function DeskHome({ reduced = false, focusOpen = false, guiding =
     setLook((l) => l && ({ ...l, phase: reduced ? 'gone' : 'down' }));
   }, [look, reduced]);
   useBackLayer(Boolean(look), lookBack, 'look');
+  // Asked from elsewhere (放一张唱片, 打开唱片架…): look up at the bookcase, or straight across to it.
+  useEffect(() => {
+    const ask = (event) => {
+      const which = event.detail;
+      if (!VIEWS[which]) return;
+      if (!look) lookTo(which);
+      else if (look.which !== which) setLook({ which, phase: 'there' });
+    };
+    addEventListener('desk:look', ask); return () => removeEventListener('desk:look', ask);
+  }, [look, lookTo]);
   useEffect(() => { if (look?.phase === 'gone') setLook(null); }, [look]);
+  // The hand goes where the eye went: onto the first thing in the view, and back to what was pressed.
+  const lookRef = useRef(null), lookedFrom = useRef(null);
+  useEffect(() => {
+    if (look?.phase === 'up' || (look?.phase === 'there' && !lookedFrom.current)) lookedFrom.current = document.activeElement;
+    if (look?.phase === 'there') lookRef.current?.querySelector('[data-autofocus]')?.focus({ preventScroll: true });
+    if (!look && lookedFrom.current) { const back = lookedFrom.current; lookedFrom.current = null; if (back.isConnected && back !== document.body) back.focus?.({ preventScroll: true }); }
+  }, [look?.phase, look?.which]); // eslint-disable-line react-hooks/exhaustive-deps
   // The film: DEsk's frames of the move, mixed over the desk as it slides away, then the view itself.
   useLayoutEffect(() => {
     if (!look || (look.phase !== 'up' && look.phase !== 'down')) return undefined;
@@ -151,6 +169,11 @@ export default function DeskHome({ reduced = false, focusOpen = false, guiding =
   const open = (action) => { setDrawer(false); commands.open(action); };
   const pick = (thing) => { playSfx('felt-pick'); open(thing.action); };
   const vl = viewLayout(width, height);
+  // A window narrower than the picture (a phone) slides along it: the view is a strip that scrolls
+  // sideways, opening on its middle, as the film ended. Wider windows place it as DEsk does.
+  const pan = PLATES.w * vl.s > width + 1;
+  const place = (r) => { const p = vl.place(r); return pan ? { ...p, x: p.x - vl.ox } : p; };
+  const panRef = useCallback((node) => { if (node && pan) node.scrollLeft = -vl.ox; }, [pan, look?.which]); // eslint-disable-line react-hooks/exhaustive-deps
   const style = (r) => ({ left: r.x, top: r.y, width: r.w, height: r.h });
   const viewSrc = look && (look.which === 'post' && !unread ? 'view-post-empty.webp' : `view-${look.which}.webp`);
   const engraving = { fontSize: Math.max(12, 13 * lay.s) };
@@ -192,12 +215,17 @@ export default function DeskHome({ reduced = false, focusOpen = false, guiding =
     <button type="button" className="desk-pull" style={{ height: lay.pull, bottom: lift }} aria-label={drawer ? '推回抽屉（D）' : '拉开抽屉（D）'} aria-expanded={drawer} onClick={() => setDrawer((v) => !v)}>
       <span className="desk-pull-handle" aria-hidden="true"/>
     </button>
-    {look && <div className={`desk-look is-${look.phase}`} role="dialog" aria-modal="true" aria-label={VIEWS[look.which].name} onClick={(e) => { if (e.target === e.currentTarget || e.target.classList.contains('desk-view')) lookBack(); }}>
+    {look && <div ref={lookRef} className={`desk-look is-${look.phase}`} role="dialog" aria-modal="true" aria-label={VIEWS[look.which].name} onClick={(e) => { if (e.target === e.currentTarget || e.target.classList.contains('desk-view') || e.target.classList.contains('desk-pan-strip')) lookBack(); }}>
       <canvas ref={film} className="desk-film" aria-hidden="true"/>
       {look.phase === 'there' && <>
-        <img className="desk-view" src={deskUrl(viewSrc)} alt="" draggable="false" style={{ left: vl.ox, top: vl.oy, width: PLATES.w * vl.s, height: PLATES.h * vl.s }}/>
-        {VIEWS[look.which].spots.map((spot, i) => <button type="button" key={spot.id} className="desk-spot" data-autofocus={i === 0 || undefined} style={style(vl.place(spot.rect))} aria-label={spot.name} onClick={() => { playSfx('binder-lift'); commands.open(spot.action); }}/>)}
-        <button type="button" className="desk-look-back" onClick={lookBack}>{VIEWS[look.which].back}</button>
+        <div className={`desk-pan ${pan ? 'is-panning' : ''}`} ref={panRef}>
+          <div className="desk-pan-strip" style={{ width: pan ? PLATES.w * vl.s : '100%' }}>
+            <img className="desk-view" src={deskUrl(viewSrc)} alt="" draggable="false" style={{ left: pan ? 0 : vl.ox, top: vl.oy, width: PLATES.w * vl.s, height: PLATES.h * vl.s }}/>
+            {look.which === 'shelf' && <ShelfView place={place} s={vl.s} shelf={shelf} lookBack={lookBack}/>}
+            {VIEWS[look.which].spots.map((spot, i) => <button type="button" key={spot.id} className="desk-spot" data-autofocus={(look.which !== 'shelf' && i === 0) || undefined} style={style(place(spot.rect))} aria-label={spot.name} onClick={() => { playSfx('binder-lift'); commands.open(spot.action); }}/>)}
+          </div>
+        </div>
+        {look.which !== 'shelf' && <button type="button" className="desk-look-back" onClick={lookBack}>{VIEWS[look.which].back}</button>}
       </>}
     </div>}
     {!ready && <div className="desk-dark" aria-hidden="true"/>}

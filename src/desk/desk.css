@@ -53,6 +53,55 @@
 .desk-spot:hover { background: rgba(255, 236, 190, .06); box-shadow: 0 0 0 1px rgba(255, 228, 170, .22) inset; }
 .desk-look-back { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); padding: 6px 14px; border: 0; border-radius: var(--ui-radius-sm, 2px); background: rgba(18, 10, 5, .55); color: rgba(246, 236, 210, .9); font: 500 13px/1.2 var(--ui-font-display, Georgia), serif; letter-spacing: .1em; cursor: pointer; }
 
+/* A view wider than the window (a phone) is a strip that slides sideways. */
+.desk-pan { position: absolute; inset: 0; overflow: hidden; }
+.desk-pan.is-panning { overflow-x: auto; overflow-y: hidden; scrollbar-width: none; overscroll-behavior-x: contain; }
+.desk-pan.is-panning::-webkit-scrollbar { display: none; }
+.desk-pan-strip { position: relative; height: 100%; }
+
+/* The bookcase (ShelfView.jsx): every binder is a slice of DEsk's picture over itself, clipped to its
+   outline. Under the hand it comes forward off the board, as DEsk's do (larger, lower, its shadow longer
+   toward the lamp's far side); taken down, it stays pulled out until it is put back. */
+.shelf-view { position: absolute; inset: 0; pointer-events: none; }
+.shelf-stand { position: absolute; padding: 0; border: 0; border-radius: 0; background: none; cursor: pointer; pointer-events: none; transform-origin: 50% 0; transition: transform .22s cubic-bezier(.2, .8, .3, 1.15), filter .22s; }
+.shelf-stand-slice { position: absolute; inset: 0; display: block; background-repeat: no-repeat; pointer-events: auto; }
+.shelf-stand:hover, .shelf-stand:focus-visible { z-index: 2; transform: translateY(1.6%) scale(1.045); filter: drop-shadow(-6px 10px 9px rgba(5, 3, 1, .62)) brightness(1.08); }
+.shelf-stand.is-taken { z-index: 2; transform: translateY(5%) scale(1.07); filter: drop-shadow(-9px 16px 12px rgba(5, 3, 1, .7)) brightness(.92); }
+.shelf-stand:focus-visible { outline: 0; }
+.shelf-stand:focus-visible .shelf-stand-slice { box-shadow: inset 0 0 0 2px rgba(255, 214, 140, .95); }
+
+/* the label card in the binder's pocket: typed once, the name over a rule and the count in red */
+.shelf-card { position: absolute; display: grid; grid-template-rows: 54% 40%; justify-items: center; align-items: center; padding: 0 8px; box-sizing: border-box; color: rgba(41, 30, 22, .8); transform-origin: 0 0; }
+.shelf-card::after { content: ''; position: absolute; left: 22%; right: 22%; top: 57%; height: 1px; background: rgba(77, 56, 38, .5); }
+.shelf-card-name { display: block; max-width: 100%; align-self: end; padding-bottom: 6%; font-family: 'Courier Prime', 'Courier New', 'STFangsong', 'FangSong', 'Songti SC', serif; font-size: 12.5px; font-weight: 700; line-height: 1.15; letter-spacing: 0; text-align: center; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; word-break: break-all; text-shadow: 0 0 .6px rgba(41, 30, 22, .5); }
+.shelf-card-count { display: block; font-family: 'Courier Prime', 'Courier New', ui-monospace, monospace; font-size: 13px; font-style: normal; font-weight: 700; line-height: 1; color: rgba(107, 36, 26, .9); letter-spacing: .08em; }
+
+/* the index book's spine: gold tooled on the red lettering-piece and between the rules */
+.shelf-spine-label, .shelf-spine-count { position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; color: #e6c46a; text-shadow: 0 1px 0 rgba(40, 10, 4, .7); font-family: 'Songti SC', 'Noto Serif CJK SC', 'STSong', serif; font-weight: 700; line-height: 1; transform-origin: 0 0; pointer-events: none; }
+.shelf-spine-label b { font-size: 12px; letter-spacing: .1em; }
+.shelf-spine-count b { font-size: 13px; font-family: Georgia, 'Times New Roman', serif; }
+.shelf-spine-count small { font-size: 12px; transform: scale(.75); opacity: .85; }
+
+/* the empty library: a letter left on the desk under the bookcase */
+.shelf-letter-note { position: absolute; display: flex; flex-direction: column; gap: 6px; padding: 12px 16px 12px; box-sizing: border-box; border: 0; border-radius: 0; cursor: pointer; pointer-events: auto; text-align: left; color: #3a2c1c; transform: rotate(-2.2deg);
+  font-family: 'Kaiti SC', 'STKaiti', 'KaiTi', 'LXGW WenKai', 'Songti SC', serif; line-height: 1.5;
+  background: linear-gradient(transparent 0 calc(100% - 1px), rgba(79, 110, 150, .12) 0) 0 10px / 100% 1.5em, linear-gradient(172deg, #f6efdd, #e9dcbc);
+  box-shadow: -6px 9px 10px rgba(5, 3, 1, .55), inset 0 0 0 1px rgba(110, 85, 50, .25); transition: transform .2s, box-shadow .2s; }
+.shelf-letter-note:hover, .shelf-letter-note:focus-visible { transform: rotate(-1.4deg) translateY(-3px); box-shadow: -8px 13px 14px rgba(5, 3, 1, .6), inset 0 0 0 1px rgba(110, 85, 50, .25); }
+.shelf-letter-note:focus-visible { outline: 2px solid rgba(255, 214, 140, .95); outline-offset: 3px; }
+.shelf-letter-to { font-size: 12px; letter-spacing: .3em; color: #8c2615; }
+.shelf-letter-sign { align-self: flex-end; font-weight: 700; color: #8c2615; }
+
+/* brass plates screwed to the desk's front edge: what else the bookcase is for */
+.shelf-view-plates { position: fixed; left: 0; right: 0; bottom: 12px; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 10px; padding: 0 16px; pointer-events: none; }
+.shelf-view-plate { min-width: 124px; height: 32px; padding: 0 24px; border: 0; border-radius: 0; background: center / 100% 100% no-repeat; cursor: pointer; pointer-events: auto; white-space: nowrap;
+  font: 600 13px/32px var(--ui-font, system-ui), sans-serif; letter-spacing: .08em; color: rgba(38, 24, 6, .94); text-shadow: 0 1px 0 rgba(255, 238, 196, .45), 0 -1px 0 rgba(30, 18, 4, .25); filter: drop-shadow(-2px 3px 3px rgba(5, 3, 1, .55)); }
+.shelf-view-plate:hover { filter: drop-shadow(-2px 3px 3px rgba(5, 3, 1, .55)) brightness(1.1); }
+.shelf-view-plate:focus-visible { outline: 2px solid rgba(255, 214, 140, .95); outline-offset: 2px; }
+.desk-home.is-phone .shelf-view-plates { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; pointer-events: auto; scrollbar-width: none; padding-bottom: env(safe-area-inset-bottom, 0px); }
+.desk-home.is-phone .shelf-view-plate { flex: none; min-width: 112px; height: 44px; line-height: 44px; }
+.desk-home.is-reduced .shelf-stand, .desk-home.is-reduced .shelf-letter-note { transition: none; }
+
 /* The lamp coming up (DEsk: the room starts dark and the lamp comes up as it is made). */
 .desk-dark { position: absolute; inset: 0; z-index: 30; background: radial-gradient(ellipse at 75% 82%, rgba(18, 10, 5, .55), #050302 70%); pointer-events: none; }
 .desk-home .desk-wood, .desk-home .desk-piece, .desk-home .desk-plate, .desk-home .desk-post, .desk-home .desk-drawer { transition: filter .9s ease-out; }

@@ -6,15 +6,11 @@
    DEsk's shelf (https://github.com/fyzugx/DEsk, MIT, (c) 2026 The DEsk authors, draw.c). */
 
 .shelf-dialog {
-  --wood-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='480' height='80'%3E%3Cfilter id='g' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.003 .34' numOctaves='3' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 .13 0 0 0 0 .07 0 0 0 0 .03 0 0 0 1.1 -.38'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
-  --plank-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='240'%3E%3Cfilter id='g' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.0025 .22' numOctaves='3' seed='19'/%3E%3CfeColorMatrix values='0 0 0 0 .10 0 0 0 0 .05 0 0 0 0 .02 0 0 0 1.2 -.42'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
   --leather-dark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' seed='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1.5 -.5'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.6'/%3E%3C/svg%3E");
   --leather-light: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.045 .6' numOctaves='3' seed='11' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 .86 0 0 0 0 .7 0 0 0 1.3 -.62'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");
-  --brass-face: repeating-linear-gradient(0deg, rgba(255, 245, 219, .07) 0 1px, transparent 1px 2px), linear-gradient(180deg, #b1965c 0%, #8f743f 34%, #785f30 52%, #9e834c 100%);
   --lamp-drop: calc(var(--sx, 2) * 3px) calc(var(--sy, 3) * 3px) 5px rgba(8, 5, 3, calc(.5 * var(--lamp-k, .6)));
   --kaiti: 'Kaiti SC', 'STKaiti', 'KaiTi', 'LXGW WenKai', 'Songti SC', serif;
   --serif: 'Songti SC', 'Noto Serif CJK SC', 'Source Han Serif SC', 'STSong', 'SimSun', Georgia, 'Times New Roman', serif;
-  --bay: clamp(196px, 31vh, 300px);
   --ui-radius-sm: 2px; --ui-radius: 3px;
   position: fixed; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0; border: 0; overflow: hidden;
   color: #efe6d3; background: #150d08;
@@ -23,112 +19,17 @@
 .shelf-dialog[open] { display: block; animation-name: shelf-dim; animation-duration: calc(.3s * var(--pace, 1)); animation-timing-function: ease-out; animation-fill-mode: both; }
 @keyframes shelf-dim { from { opacity: 0; } to { opacity: 1; } }
 
-/* ── the room: wall, lit from the lamp's side ─────────────────────────── */
+/* ── the desk the binder is carried down to: DEsk's walnut, lit from the lamp low on the right ── */
 .shelf-room {
   position: absolute; inset: 0; display: flex; flex-direction: column; min-height: 0; isolation: isolate;
-  background: radial-gradient(120% 90% at 22% -20%, rgba(255, 196, 120, .17), transparent 58%), linear-gradient(180deg, #25170e, #130b06 70%);
+  background: radial-gradient(90% 80% at 75% 82%, rgba(255, 196, 120, .12), transparent 70%), var(--desk-wood, none) center / cover no-repeat, #2a1a10;
 }
 .shelf-room button { font: inherit; }
 
-/* ── the cornice: walnut, brass plates standing on it ─────────────────── */
-.shelf-cornice {
-  position: relative; z-index: 3; flex: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 58px; padding: max(8px, var(--safe-area-inset-top, env(safe-area-inset-top, 0px))) 24px 8px; margin: 0 auto; width: min(1500px, 100%);
-  background: linear-gradient(180deg, rgba(255, 226, 180, .13), rgba(0, 0, 0, .32)), var(--wood-grain), linear-gradient(90deg, #4b2d18, #5b3921 38%, #48291a 72%, #583620);
-  border-bottom: 1px solid rgba(20, 10, 4, .75);
-  box-shadow: inset 0 1px 0 rgba(255, 222, 176, .18), inset 0 -3px 0 rgba(0, 0, 0, .38), calc(var(--sx, 2) * 3px) calc(var(--sy, 3) * 3px + 4px) 14px rgba(8, 5, 3, calc(.7 * var(--lamp-k, .6)));
-}
-.shelf-plates { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 12px; }
-.shelf-room .brass-plate { min-height: 30px; padding: 7px 22px; background: var(--brass-face); color: #2a1c0a; }
-.shelf-room button.brass-plate:hover { filter: brightness(1.13); }
-.shelf-room .brass-plate .brass-plate-arrow { font-size: 14px; }
-.shelf-room .cabin-dialog-close { display: inline-flex; width: auto; height: auto; min-height: 30px; padding: 7px 22px; border-radius: var(--ui-radius-sm); color: #2a1c0a; background: var(--brass-face); }
-.shelf-room .cabin-dialog-close:hover { color: #2a1c0a; background: var(--brass-face); }
-
-/* ── the case: posts, back panel, one board with binders standing on it ─ */
-.shelf-bay {
-  position: relative; z-index: 2; flex: none; height: var(--bay); width: min(1500px, 100%); margin: 0 auto; box-sizing: border-box; padding: 0 30px;
-  background: linear-gradient(90deg, #3b2314 0, #5a3a22 22px, #2d1a0f 30px, transparent 30px calc(100% - 30px), #2d1a0f calc(100% - 30px), #5a3a22 calc(100% - 22px), #3b2314 100%),
-    radial-gradient(70% 120% at 22% 0%, rgba(255, 190, 110, .15), transparent 70%), linear-gradient(180deg, #1c1009, #0f0804);
-  box-shadow: inset 0 14px 22px -8px rgba(0, 0, 0, .75);
-}
-.shelf-row { position: absolute; inset: 0 30px 20px; display: flex; align-items: flex-end; gap: 10px; padding: 26px 14px 0; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; scrollbar-color: #6a4a2c transparent; }
-.shelf-binders, .shelf-fixtures { display: flex; align-items: flex-end; gap: 5px; margin: 0; padding: 0; list-style: none; flex: none; }
-.shelf-fixtures { position: sticky; right: 0; margin-left: auto; gap: 14px; padding-left: 18px; background: linear-gradient(90deg, transparent, #170d07 22px); }
-.shelf-binders li, .shelf-fixtures li { display: flex; align-items: flex-end; }
-.shelf-board {
-  position: absolute; left: 0; right: 0; bottom: 0; height: 22px;
-  background: linear-gradient(180deg, rgba(255, 226, 180, .22), rgba(0, 0, 0, .0) 40%, rgba(0, 0, 0, .35)), var(--wood-grain), linear-gradient(90deg, #5a3921, #6a4529 40%, #4e301c);
-  box-shadow: inset 0 1px 0 rgba(255, 226, 180, .3), 0 calc(var(--sy, 3) * 4px + 3px) 14px rgba(0, 0, 0, calc(.75 * var(--lamp-k, .6)));
-}
-
-/* a binder, spine to the room */
-.shelf-binder {
-  --w: 68px; --h: 94; --tilt: 0deg;
-  position: relative; flex: none; width: var(--w); height: calc((var(--bay) - 60px) * var(--h) / 100); padding: 0; border: 0; border-radius: var(--ui-radius-sm) var(--ui-radius-sm) 0 0; cursor: pointer; color: #2e2318; transform: rotate(var(--tilt)); transform-origin: 50% 100%;
-  background:
-    linear-gradient(90deg, rgba(0, 0, 0, .58) 0, rgba(255, 255, 255, .09) 13%, rgba(255, 255, 255, 0) 38%, rgba(0, 0, 0, .14) 74%, rgba(0, 0, 0, .62) 100%),
-    linear-gradient(180deg, rgba(255, 235, 205, .20) 0, rgba(255, 235, 205, 0) 22%, rgba(0, 0, 0, 0) 80%, rgba(0, 0, 0, .35)),
-    var(--leather-light), var(--leather-dark), var(--spine);
-  background-blend-mode: normal, normal, soft-light, normal, normal;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .35), inset 0 2px 0 rgba(255, 224, 190, .14), calc(var(--sx, 2) * 7px) 0 11px rgba(0, 0, 0, calc(.8 * var(--lamp-k, .6)));
-  transition: translate calc(.32s * var(--pace, 1)) var(--ease-drawer, ease-out), opacity calc(.3s * var(--pace, 1)) ease-out, filter .2s;
-}
-.shelf-binder::before { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 10px; background: linear-gradient(180deg, transparent, rgba(0, 0, 0, .5)); pointer-events: none; }
-.shelf-binder::after { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: var(--worn); opacity: .6; pointer-events: none; }
-.shelf-binder:hover { translate: 0 -9px; filter: brightness(1.14); }
-.shelf-binder:focus-visible, .shelf-book:focus-visible, .shelf-frame:focus-visible { outline: 2px solid #fff3cf; outline-offset: 3px; }
-.shelf-binder.is-taken { translate: 0 -22px; opacity: .1; filter: saturate(0); }
-.shelf-label {
-  position: absolute; left: 7px; right: 7px; top: 20px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; gap: 6px; min-height: 86px; padding: 8px 3px 6px; box-sizing: border-box;
-  background: var(--paper-grain, none) 0 0 / 96px, linear-gradient(rgba(243, 235, 218, .35), rgba(243, 235, 218, .35)), linear-gradient(170deg, #e9dfc4, #d6c6a0);
-  box-shadow: inset 0 0 0 1px rgba(95, 72, 40, .5), inset 0 0 0 3px #e6dbbf, inset 0 0 0 4px rgba(120, 95, 55, .35), 0 1px 2px rgba(0, 0, 0, .55);
-  transform: rotate(-.6deg);
-}
-.shelf-label b { max-width: 100%; max-height: 3.9em; overflow: hidden; font: 400 15px/1.28 var(--kaiti); letter-spacing: .02em; text-align: center; color: #2e2318; overflow-wrap: anywhere; }
-.shelf-label i { font: 700 13px/1 'Courier New', ui-monospace, monospace; font-style: normal; letter-spacing: .02em; color: #8c2615; }
-
-/* the index book: navy morocco, red label, gilt */
-.shelf-book {
-  position: relative; flex: none; width: 86px; height: calc(var(--bay) - 46px); padding: 0; border: 0; border-radius: var(--ui-radius-sm) var(--ui-radius-sm) 0 0; cursor: pointer; color: #e6c46a;
-  background:
-    linear-gradient(90deg, rgba(0, 0, 0, .6) 0, rgba(255, 255, 255, .10) 12%, rgba(255, 255, 255, 0) 36%, rgba(0, 0, 0, .14) 72%, rgba(0, 0, 0, .65) 100%),
-    linear-gradient(180deg, rgba(190, 205, 255, .16), rgba(190, 205, 255, 0) 24%, rgba(0, 0, 0, 0) 82%, rgba(0, 0, 0, .4)),
-    var(--leather-light), var(--leather-dark), #1f2a44;
-  background-blend-mode: normal, normal, soft-light, normal, normal;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .45), inset 0 2px 0 rgba(190, 205, 255, .14), calc(var(--sx, 2) * 8px) 0 12px rgba(0, 0, 0, calc(.85 * var(--lamp-k, .6)));
-  transition: translate calc(.32s * var(--pace, 1)) var(--ease-drawer, ease-out), opacity calc(.3s * var(--pace, 1)) ease-out, filter .2s;
-}
-.shelf-book::before, .shelf-book::after { content: ''; position: absolute; left: 6px; right: 6px; height: 5px; border-top: 1px solid #c9a24a; border-bottom: 1px solid #c9a24a; opacity: .85; pointer-events: none; }
-.shelf-book::before { top: 10px; }
-.shelf-book::after { bottom: 12px; }
-.shelf-book:hover { translate: 0 -9px; filter: brightness(1.14); }
-.shelf-book.is-taken { translate: 0 -22px; opacity: .1; filter: saturate(0); }
-.shelf-book-label { position: absolute; inset: 26px 6px 24px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; gap: 6px; }
-.shelf-book-label b { display: block; width: 100%; padding: 5px 0 4px; font: 700 14px/1 var(--serif); letter-spacing: .3em; text-indent: .3em; text-align: center; color: #ffe9a8; background: linear-gradient(180deg, #a3301d, #7a2013); box-shadow: inset 0 0 0 1px rgba(255, 216, 140, .6), 0 1px 2px rgba(0, 0, 0, .6); }
-.shelf-book-label svg { color: #e6c46a; }
-.shelf-book-label em { font: 700 20px/1 var(--serif); font-style: normal; letter-spacing: .02em; color: #e6c46a; text-shadow: 0 1px 0 rgba(0, 0, 0, .6); }
-.shelf-book-label small { font: 700 13px/1 'Courier New', ui-monospace, monospace; letter-spacing: .06em; color: #d8c08a; }
-
-/* the album wall, framed, leaning on the shelf */
-.shelf-frame {
-  position: relative; flex: none; display: flex; flex-direction: column; align-items: center; gap: 6px; width: 148px; padding: 11px 11px 6px; margin-bottom: 1px; border: 0; border-radius: 0; cursor: pointer; transform: rotate(1.4deg); transform-origin: 50% 100%;
-  background: var(--wood-grain), linear-gradient(135deg, #6a4529, #3d2415 55%, #55371f);
-  box-shadow: inset 0 0 0 1px rgba(255, 220, 170, .22), inset 0 0 0 4px rgba(0, 0, 0, .28), calc(var(--sx, 2) * 9px) calc(var(--sy, 3) * 3px) 12px rgba(0, 0, 0, calc(.85 * var(--lamp-k, .6)));
-  transition: translate calc(.32s * var(--pace, 1)) var(--ease-drawer, ease-out), filter .2s;
-}
-.shelf-frame:hover { translate: 0 -6px; filter: brightness(1.12); }
-.shelf-frame-mat { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; width: 100%; aspect-ratio: 1; padding: 8px; box-sizing: border-box; background: linear-gradient(160deg, #f2ead6, #e0d3b4); box-shadow: inset 0 0 0 1px rgba(95, 72, 40, .4), inset 0 2px 5px rgba(60, 40, 15, .35); }
-.shelf-frame-mat img, .shelf-frame-mat i { display: block; width: 100%; height: 100%; aspect-ratio: 1; object-fit: cover; }
-.shelf-frame-mat b { grid-column: 1 / -1; align-self: center; text-align: center; font: 400 16px/1 var(--kaiti); color: #8a7658; }
-.shelf-frame-plate { padding: 3px 12px; font: 600 12px/1.2 var(--ui-font, sans-serif); letter-spacing: .24em; text-indent: .24em; color: #2a1c0a; background: var(--brass-face); box-shadow: inset 0 0 0 1px rgba(255, 239, 204, .42), 0 0 0 1px rgba(36, 23, 8, .55); }
-
 /* ── the desk: where what you took down lies ──────────────────────────── */
 .shelf-desk {
-  position: relative; z-index: 1; flex: 1 1 auto; min-height: 0; display: grid; place-items: center; padding: 24px 46px 26px 30px; box-sizing: border-box;
-  background: radial-gradient(60% 90% at 26% 0%, rgba(255, 200, 130, .26), transparent 72%), linear-gradient(180deg, rgba(0, 0, 0, .0), rgba(0, 0, 0, .28)), var(--plank-grain), repeating-linear-gradient(0deg, rgba(0, 0, 0, .0) 0 118px, rgba(0, 0, 0, .35) 118px 120px), linear-gradient(90deg, #5d3b22, #6c4527 45%, #55361f);
-  box-shadow: inset 0 16px 24px -10px rgba(0, 0, 0, .8);
+  position: relative; z-index: 1; flex: 1 1 auto; min-height: 0; display: grid; place-items: center; padding: 28px 46px 28px 30px; box-sizing: border-box;
 }
-.shelf-hint { max-width: 17em; margin: 0; padding: 16px 20px 20px; color: #3a2c12; background: linear-gradient(180deg, #f3d760 0 14%, #fce066 14%); font: 400 18px/1.55 var(--kaiti); letter-spacing: .05em; transform: rotate(-1.4deg); box-shadow: calc(var(--sx, 2) * 4px) calc(var(--sy, 3) * 4px) 8px rgba(8, 5, 3, calc(.5 * var(--lamp-k, .6))), inset 0 -10px 12px -10px rgba(120, 90, 10, .35); }
 
 /* ── what is open: a binder or the book, lying on the desk ────────────── */
 .shelf-object {
@@ -293,13 +194,21 @@
 .listen-empty-heart { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; background: rgba(163, 48, 29, .1); color: #a3301d; }
 
 /* ── the index book ──────────────────────────────────────────────────── */
+.shelf-open-book .shelf-page.is-left::after, .shelf-open-book .shelf-page.is-right::before { display: none; }
+.shelf-open-book .shelf-page { padding-bottom: 34px; }
+.shelf-page > .shelf-folio { position: absolute; bottom: 12px; font: 400 14px/1 Georgia, var(--serif); color: #6e675b; pointer-events: none; }
+.shelf-page > .shelf-folio.is-left { left: 28px; }
+.shelf-page > .shelf-folio.is-right { right: 28px; }
 .shelf-open-book .shelf-page-foot { position: absolute; top: 22px; right: 40px; margin: 0; padding: 0; }
-.shelf-book-title { margin: 2px 0 0; font: 700 26px/1.1 var(--serif); letter-spacing: .34em; color: #a3301d; }
-.shelf-book-sub { margin: 4px 0 14px; font: italic 400 14px/1.4 var(--kaiti); color: #54452f; }
-.shelf-typing { display: flex; align-items: center; gap: 10px; margin: 0; color: #54452f; }
+.shelf-book-title { margin: 6px 0 0; font: 800 24px/1.1 'Helvetica Neue', Arial, var(--ui-font, sans-serif); letter-spacing: .3em; color: #9c2318; }
+.shelf-book-sub { margin: 6px 0 16px; font: italic 400 14px/1.4 Georgia, var(--kaiti); color: #5d5446; }
+.shelf-typing { display: flex; align-items: center; gap: 10px; margin: 0; color: #4f4a42; }
+.shelf-typing svg { width: 22px; height: 22px; }
+.shelf-open-book .shelf-typing input, .shelf-open-book .shelf-typing input:focus-visible { border-bottom: 1px solid #6e675b; box-shadow: none; font-family: Georgia, var(--serif); }
+.shelf-open-book .shelf-typing input::placeholder { color: #8b8478; }
 .shelf-typing svg { flex: none; }
 .shelf-typing input { font-size: 20px; font-style: normal; }
-.shelf-found { margin: 14px 0 6px; font: 700 12px/1 var(--serif); letter-spacing: .2em; color: #5f4f37; }
+.shelf-found { margin: 16px 0 8px; font: 700 12px/1 'Helvetica Neue', Arial, var(--ui-font, sans-serif); letter-spacing: .22em; color: #6a6252; }
 .shelf-entries { flex: 1 1 auto; min-height: 0; margin: 0 -8px 0 -6px; padding: 0 8px 0 6px; list-style: none; overflow: auto; scrollbar-width: thin; scrollbar-color: #a8956a transparent; }
 .shelf-letter-head { display: flex; align-items: center; gap: 10px; margin: 12px 0 4px; }
 .shelf-letter-head:first-child { margin-top: 2px; }
@@ -316,12 +225,12 @@
 .shelf-entry-tag { flex: none; font: 700 12px/1 var(--serif); letter-spacing: .1em; color: #8c2615; }
 .shelf-entry.is-playing .shelf-entry-name strong::after { content: ' ♪'; color: #a3301d; }
 .shelf-letters { position: absolute; z-index: 0; top: 12px; bottom: 12px; right: -30px; display: flex; flex-direction: column; justify-content: space-between; width: 40px; }
-.shelf-letter { flex: 1 1 0; min-height: 15px; max-height: 24px; margin: 1px 0; padding: 0 0 0 4px; border: 0; border-radius: 0 var(--ui-radius-sm) var(--ui-radius-sm) 0; cursor: pointer; text-align: left; font: 700 12px/1 var(--serif); letter-spacing: .02em; color: #f1e7cd; background: linear-gradient(180deg, #3c4e7a, #26345a); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(200, 215, 255, .3), calc(var(--sx, 2) * 2px) calc(var(--sy, 3) * 2px) 3px rgba(0, 0, 0, calc(.5 * var(--lamp-k, .6))); transition: translate calc(.18s * var(--pace, 1)) var(--ease-drawer, ease-out); }
-.shelf-letter:disabled { color: rgba(241, 231, 205, .5); background: linear-gradient(180deg, #232f4c, #18223a); cursor: default; }
+.shelf-letter { flex: 1 1 0; min-height: 15px; max-height: 24px; margin: 1px 0; padding: 0 0 0 8px; border: 0; border-radius: 0 var(--ui-radius-sm) var(--ui-radius-sm) 0; cursor: pointer; text-align: center; font: 400 12px/1 Georgia, var(--serif); letter-spacing: .02em; color: #e9e2cf; background: linear-gradient(180deg, #262c43, #171b2c); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(200, 215, 255, .3), calc(var(--sx, 2) * 2px) calc(var(--sy, 3) * 2px) 3px rgba(0, 0, 0, calc(.5 * var(--lamp-k, .6))); transition: translate calc(.18s * var(--pace, 1)) var(--ease-drawer, ease-out); }
+.shelf-letter:disabled { color: rgba(233, 226, 207, .3); background: linear-gradient(180deg, #20253a, #151827); cursor: default; }
 .shelf-letter:not(:disabled):hover { translate: 3px 0; }
-.shelf-letter.is-here { translate: 7px 0; color: #ffe08a; background: linear-gradient(180deg, #3a4a72, #232f50); }
+.shelf-letter.is-here { translate: 7px 0; color: #f3c96a; background: linear-gradient(180deg, #30375a, #1d223a); }
 .shelf-letter:focus-visible { outline: 2px solid #fff3cf; outline-offset: 1px; }
-.shelf-record-card { position: relative; display: flex; flex-direction: column; align-items: center; flex: 1; min-height: 0; margin: 0; padding: 12px 28px 12px; box-sizing: border-box; text-align: center; box-shadow: inset 0 0 0 1.5px #a3301d, inset 0 0 0 5px rgba(0, 0, 0, 0), inset 0 0 0 6.5px rgba(163, 48, 29, .55); overflow: auto; scrollbar-width: thin; }
+.shelf-record-card { position: relative; display: flex; flex-direction: column; align-items: center; flex: 1; min-height: 0; margin: 0; padding: 12px 28px 12px; box-sizing: border-box; text-align: center; box-shadow: inset 0 0 0 1px rgba(156, 35, 24, .85), inset 0 0 0 5px #efe8d6, inset 0 0 0 6px rgba(156, 35, 24, .7); overflow: auto; scrollbar-width: thin; }
 .shelf-diamond { position: absolute; width: 9px; height: 9px; background: #a3301d; transform: rotate(45deg); }
 .shelf-diamond.is-tl { left: 0; top: 0; }
 .shelf-diamond.is-tr { right: 0; top: 0; }
@@ -344,23 +253,21 @@
 .shelf-record-card.is-blank { justify-content: center; }
 .shelf-record-card.is-blank .shelf-card-actions { margin-top: 14px; }
 
+/* ── 更多: the eighth binder, the boxes there was no room for filed in it as dividers ── */
+.shelf-more .cabin-dialog-body { display: flex; flex-direction: column; gap: 12px; }
+.shelf-more-note { margin: 0; font: 400 14px/1.6 'Songti SC', 'Noto Serif CJK SC', serif; color: #54452f; }
+.shelf-more-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; }
+.shelf-more-list button { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 44px; padding: 6px 10px; border: 0; border-bottom: 1px solid rgba(95, 72, 40, .22); border-radius: 0; background: transparent; color: #2e2318; cursor: pointer; text-align: left; }
+.shelf-more-list button:hover { background: rgba(120, 84, 40, .08); }
+.shelf-more-list button:focus-visible { outline: 2px solid rgba(125, 80, 25, .9); outline-offset: -2px; }
+.shelf-more-name { font: 600 16px/1.3 'Courier Prime', 'Courier New', 'STFangsong', 'FangSong', serif; }
+.shelf-more-list .shelf-leader { flex: 1; min-width: 12px; margin: 0 2px 4px; border-bottom: 2px dotted rgba(110, 90, 60, .55); }
+.shelf-more-count { font: 700 14px/1 'Courier Prime', 'Courier New', monospace; color: #8c2615; }
+
 /* ── phones ──────────────────────────────────────────────────────────── */
 @media (max-width: 699px) {
-  .shelf-dialog { --bay: 188px; }
-  .shelf-cornice { padding: max(8px, var(--safe-area-inset-top, env(safe-area-inset-top, 0px))) 12px 8px; gap: 8px; }
-  .shelf-name { display: none; }
-  .shelf-plates { width: 100%; gap: 8px; justify-content: space-between; }
-  .shelf-room .brass-plate, .shelf-room .cabin-dialog-close { min-height: 44px; padding: 7px 12px; flex: 1 1 auto; justify-content: center; }
-  .shelf-bay { padding: 0 8px; }
-  .shelf-row { inset: 0 8px 20px; gap: 6px; padding: 22px 8px 0; }
-  .shelf-binder { width: calc(var(--w) - 22px); }
-  .shelf-fixtures { position: static; background: none; padding-left: 8px; gap: 10px; }
-  .shelf-book { width: 70px; }
-  .shelf-frame { width: 112px; padding: 8px 8px 5px; }
-  .shelf-label b { font-size: 14px; }
   .shelf-desk { padding: 40px 12px 14px 8px; }
-  .shelf-hint { font-size: 16px; }
-  .shelf-object { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); padding: 10px 10px 12px; max-height: none; }
+    .shelf-object { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); padding: 10px 10px 12px; max-height: none; }
   .shelf-page { padding: 14px 16px 12px; }
   .shelf-page.is-left { border-radius: var(--ui-radius-sm) var(--ui-radius-sm) 0 0; box-shadow: inset 0 -16px 14px -12px rgba(60, 40, 15, .42), 0 5px 3px rgba(0, 0, 0, .35); }
   .shelf-page.is-right { border-radius: 0 0 var(--ui-radius-sm) var(--ui-radius-sm); padding: 14px 14px 18px; box-shadow: inset 0 16px 14px -12px rgba(60, 40, 15, .42), 0 1px 0 #d8caa6, 0 2px 0 #b9a77c, 0 3px 3px rgba(0, 0, 0, .4); }
@@ -391,6 +298,8 @@
   .shelf-open-book .shelf-page-foot { top: 12px; right: 14px; }
   .shelf-book-title { font-size: 20px; letter-spacing: .24em; }
   .shelf-book-sub { display: none; }
+  .shelf-page > .shelf-folio { display: none; }
+  .shelf-open-book .shelf-page { padding-bottom: 12px; }
   .shelf-found { margin-top: 8px; }
   .shelf-record-card { display: grid; grid-template-columns: 64px minmax(0, 1fr); grid-template-areas: 'cover name' 'cover artist' 'actions actions'; grid-template-rows: auto auto auto; align-items: center; gap: 0 12px; padding: 4px 4px 2px; text-align: left; box-shadow: none; overflow: visible; }
   .shelf-diamond, .shelf-rule, .shelf-card-facts, .shelf-card-code, .shelf-card-hint { display: none; }
@@ -406,9 +315,7 @@
   .shelf-letter:not(:disabled):hover, .shelf-letter.is-here { translate: 0 -4px; }
   .shelf-entry { min-height: 48px; }
 }
-@media (max-width: 699px) and (max-height: 700px) { .shelf-dialog { --bay: 150px; } .shelf-binder { height: calc((var(--bay) - 56px) * var(--h) / 100); } .shelf-book { height: calc(var(--bay) - 44px); } }
 @media (min-width: 700px) and (max-height: 780px) {
-  .shelf-label { min-height: 70px; top: 14px; }
   .shelf-record-card:not(.is-blank) { display: grid; grid-template-columns: 104px minmax(0, 1fr); grid-template-areas: 'code code' 'cover name' 'cover artist' 'cover facts' 'actions actions' 'hint hint'; grid-template-rows: auto auto auto 1fr auto auto; align-items: start; gap: 0 18px; padding: 10px 28px 10px; text-align: left; }
   .shelf-record-card:not(.is-blank) .shelf-card-code { grid-area: code; justify-self: center; margin: 2px 0 10px; }
   .shelf-record-card:not(.is-blank) .shelf-card-cover { grid-area: cover; width: 104px; padding: 4px; }
@@ -428,6 +335,5 @@ html[data-perf='low'] .shelf-room * { filter: none; }
 html[data-perf='low'] .shelf-page, html[data-perf='low'] .shelf-object { background-blend-mode: normal; }
 @media (prefers-reduced-motion: reduce) {
   .shelf-dialog[open] { animation-name: none; }
-  .shelf-binder, .shelf-book, .shelf-frame, .shelf-tabs button, .shelf-letter, .listen-grid-cover .listen-cover { transition: none; }
 }
 }

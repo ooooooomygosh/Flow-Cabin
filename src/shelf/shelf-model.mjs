@@ -44,6 +44,17 @@ export function shelfBinders({ boxes = [], items = [], counts = {} } = {}) {
 }
 export const binderById = (binders, id) => binders.find((binder) => binder.id === id) || null;
 
+// DEsk's bookcase has eight binders on its top board. When there are more, the eighth is 更多: it holds
+// the rest, and taking it down shows them filed inside it, each to be taken out in turn.
+export const SHELF_SLOTS = 8;
+export function shelfSlots(binders, slots = SHELF_SLOTS) {
+  const list = Array.isArray(binders) ? binders : [];
+  if (list.length <= slots) return { standing: list, rest: [] };
+  const rest = list.slice(slots - 1);
+  const more = { id: 'more', kind: 'more', view: 'records', label: '更多', box: '', count: rest.length, unit: '盒', colour: binderColour(slots - 1) };
+  return { standing: [...list.slice(0, slots - 1), more], rest };
+}
+
 // ── the index: initials ──────────────────────────────────────────────────────────
 export const INITIALS = Object.freeze([...'ABCDEFGHIJKLMNOPQRSTUVWXYZ', '#']);
 

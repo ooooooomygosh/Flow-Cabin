@@ -34,13 +34,12 @@ export function drawerPlaces(n) {
 }
 
 // The views the camera looks up to, and what each part of them is (in the view's 1440x900 picture).
-// Clicking anywhere that is not one of them looks back down at the desk.
+// Clicking anywhere that is not one of them looks back down at the desk. On the bookcase the binders
+// and the index book are the record library itself (src/desk/ShelfView.jsx, geometry in plates.json).
 export const VIEWS = Object.freeze({
   shelf: {
     name: '唱片架', back: '回到书桌',
     spots: [
-      { id: 'binders', name: '唱片盒（活页夹）', rect: [262, 125, 935, 266], action: 'library' },
-      { id: 'index', name: '所有唱片（索引本）', rect: [1158, 125, 100, 266], action: 'library' },
       { id: 'memo', name: '随手记（便签本）', rect: [350, 498, 140, 132], action: 'notes' },
       { id: 'calendar', name: '待办与日程（台历）', rect: [518, 505, 178, 128], action: 'tasks' },
       { id: 'clock', name: '专注（座钟）', rect: [772, 500, 140, 142], action: 'timer' },

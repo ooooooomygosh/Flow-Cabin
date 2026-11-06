@@ -1,4 +1,4 @@
-/** Offline 唱片架 (bookcase close-up) and desk-chrome regressions. Synthetic covers, muted Chromium, native window bridge mocked. */
+/** Offline 唱片架 (DEsk's bookcase, looked up at from the desk) and desk-chrome regressions. Synthetic covers, muted Chromium, native window bridge mocked. */
 import assert from 'node:assert/strict';
 import { launchChromium } from './launch-browser.mjs';
 import fs from 'node:fs/promises';
@@ -37,37 +37,51 @@ try {
     },native);
     await context.route('**/*',route=>{const u=new URL(route.request().url()),p=u.pathname;if(u.origin!==origin){report.unexpectedRequests.push(u.href);return route.abort();}if(p==='/api/items')return route.fulfill({json:{items:collectionItems}});if(p==='/desktop-music/lyrics')return route.fulfill({json:{text:'',source:'fixture',reason:'No fixture lyrics'}});if(p==='/desktop-music/config')return route.fulfill({json:{qqLoggedIn:false,neteaseLoggedIn:false}});if(p==='/desktop-music/now-playing'||p==='/desktop-music/apple/permission')return route.fulfill({json:{available:false}});if(p==='/desktop-music/local/summary')return route.fulfill({json:{folders:[],albumCount:0,trackCount:0}});if(p.startsWith('/api/')||p.startsWith('/desktop-music/')){report.unexpectedRequests.push(p);return route.fulfill({status:500,json:{error:'Unimplemented fixture'}});}return route.continue();});
     const page=await context.newPage();page.setDefaultTimeout(12000);page.on('pageerror',e=>report.pageErrors.push(e.message));
-    try{await page.goto(origin,{waitUntil:'domcontentloaded'});await page.locator('.cabin-home').waitFor();await test(page);report.checks.push({name,passed:true});console.log(`PASS ${name}`);}
+    try{await page.goto(origin,{waitUntil:'domcontentloaded'});await page.locator('.desk-home.is-lit').waitFor();await test(page);report.checks.push({name,passed:true});console.log(`PASS ${name}`);}
     catch(e){const state=await page.evaluate(()=>({fullscreen:Boolean(document.fullscreenElement),native:document.documentElement.dataset.desktopFullscreen,client:document.documentElement.dataset.desktopClient,zen:document.documentElement.classList.contains('room-zen'),dock:document.querySelector('.focus-badge')?.getAttribute('aria-expanded'),active:document.activeElement?.getAttribute('aria-label'),trace:window.__fullscreenTrace})).catch(()=>null);report.checks.push({name,passed:false,error:e.stack,state});await shot(page,`${name}-failure`).catch(()=>{});console.error(`FAIL ${name}: ${e.message}`);}
     finally{await context.close();}
   };
-  // The bookcase: ring binders and the index book stand inside the window at every size; taking one down opens it on
-  // the desk without overflow, and the record covers (cover button → deck, title → 唱片卡片, index book + Enter) work.
+  // The bookcase: DEsk's binders (唱片 / 我喜欢 / 最近播放 and one per 唱片盒) and the index book stand on its top board at
+  // every size, their label cards typed with name and count; taking one carries it down to the desk as a sheet without
+  // overflow, and the record covers (cover button → deck, title → 唱片卡片, index book + Enter) work.
   await run('shelf-bookcase-fits-and-plays-at-three-sizes',async page=>{
     for(const [width,height] of [[1440,900],[960,600],[640,600]]){
       await page.setViewportSize({width,height});const dialog=await openLibrary(page);await shot(page,`bookcase-${width}x${height}`);
-      const spines=await dialog.locator('.shelf-binder, .shelf-book, .shelf-frame').evaluateAll(nodes=>nodes.map(n=>{const r=n.getBoundingClientRect();return {name:n.getAttribute('aria-label'),left:r.left,right:r.right,top:r.top,bottom:r.bottom};}));
-      assert(spines.length>=5,`binders, index book and wall frame stand on the shelf (${spines.length})`);
-      report.measurements.push({shelf:'bookcase',width,height,spines});
-      await takeBinder(page,'唱片');
-      const cells=await dialog.locator('.listen-grid li').evaluateAll(nodes=>nodes.map(n=>{const r=n.getBoundingClientRect();return {left:r.left,right:r.right,bottom:r.bottom,top:r.top,w:r.width};}));
+      const stands=await dialog.locator('.shelf-stand').evaluateAll(nodes=>nodes.map(n=>{const r=n.getBoundingClientRect();return {name:n.getAttribute('aria-label'),left:r.left,right:r.right,top:r.top,bottom:r.bottom};}));
+      assert(stands.length>=4,`three binders and the index book stand on the shelf (${stands.length})`);
+      for(const s of stands)assert(s.top>=-1&&s.bottom<=height+1,`${s.name} stands inside the window's height`);
+      assert.match(stands[0].name,/^唱片活页夹，8 张/,'the 唱片 binder is labelled with its count');
+      assert.match(await dialog.locator('.shelf-card').first().innerText(),/唱片\s*8/,'its label card is typed with name and count');
+      assert.match(stands.at(-1).name,/^索引本 · 所有唱片，8 张/,'the index book is all records');
+      report.measurements.push({shelf:'bookcase',width,height,stands});
+      const sheet=await takeBinder(page,'唱片');
+      const cells=await sheet.locator('.listen-grid li').evaluateAll(nodes=>nodes.map(n=>{const r=n.getBoundingClientRect();return {left:r.left,right:r.right,bottom:r.bottom,top:r.top,w:r.width};}));
       assert.equal(cells.length,8,'every record is filed in the 唱片 binder');
       assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`no horizontal page overflow at ${width}x${height}`);
-      assert(await dialog.locator('.shelf-object').evaluate(o=>{const r=o.getBoundingClientRect();return r.left>=-1&&r.right<=innerWidth+1&&r.top>=-1;}),'the open binder sits inside the window');
+      assert(await sheet.locator('.shelf-object').evaluate(o=>{const r=o.getBoundingClientRect();return r.left>=-1&&r.right<=innerWidth+1&&r.top>=-1;}),'the open binder sits inside the window');
       await closeLibrary(page);
     }
     await page.setViewportSize({width:1440,height:900});
-    const dialog=await takeBinder(page,'唱片');
-    await dialog.locator('.listen-grid-cover').nth(1).click();
+    const sheet=await takeBinder(page,'唱片');
+    await sheet.locator('.listen-grid-cover').nth(1).click();
     await page.waitForFunction(()=>window.__cabinDeckItem?.title==='OCEAN STUDY');
-    const title=dialog.locator('.listen-grid-title').first();await title.click();
+    const title=sheet.locator('.listen-grid-title').first();await title.click();
     const card=page.getByRole('dialog',{name:/^唱片卡片/});await card.waitFor();await page.keyboard.press('Escape');await card.waitFor({state:'hidden'});
+    // 放回: Esc puts the binder back on the shelf; the bookcase is still there.
+    await page.keyboard.press('Escape');await sheet.waitFor({state:'hidden'});assert(await libraryDialog(page).isVisible(),'the bookcase stays after a binder is put back');
     // 索引本: typing finds a record, Enter puts it on the deck.
     const book=await takeBinder(page,'索引本');
-    const search=book.getByRole('combobox',{name:'搜索唱片架'});await search.fill('MORNING');await search.press('Enter');
+    const search=book.getByRole('combobox',{name:'搜索唱片架'});await search.fill('MORNING');await shot(page,'index-book-search');await search.press('Enter');
     await page.waitForFunction(()=>window.__cabinDeckItem?.title==='MORNING LIGHT');
     await closeLibrary(page);
   });
+  // An empty library: the binders still stand (empty), and a letter on the desk leads to 添加到唱片架.
+  await run('shelf-empty-letter-leads-to-add',async page=>{
+    const dialog=await openLibrary(page);
+    assert.match(await dialog.getByRole('button',{name:/^唱片活页夹/}).getAttribute('aria-label'),/，0 张/);
+    await dialog.locator('.shelf-letter-note',{hasText:'添加第一张专辑'}).click();
+    await page.getByRole('dialog',{name:'添加到唱片架',exact:true}).waitFor();await shot(page,'empty-add');
+  },{collectionItems:[]});
   const photos=await showcaseAlbums();
   await run('shelf-photographic-covers-and-fine-type',async page=>{
     await page.setViewportSize({width:2560,height:1600});const dialog=await takeBinder(page,'唱片');

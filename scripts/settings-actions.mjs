@@ -40,25 +40,32 @@ export async function chooseSource(page, value) {
 // The cabin's 唱片架 (top-bar plate) is a bookcase close-up (Dialog variant=full, aria-label 唱片架): ring binders
 // 唱片 / 我喜欢 / 最近播放 / one per 唱片盒, an A–Z 索引本 and the 专辑墙 frame. The 唱片 binder is taken down first.
 export const libraryDialog = (page) => page.getByRole('dialog', { name: /^唱片(库|架)$/ });
+// 唱片架 is DEsk's bookcase, looked up at from the desk (the brass plate on the wall, or A).
 export async function openLibrary(page) {
-  if (!await libraryDialog(page).isVisible()) await page.locator('.home-shortcuts').getByRole('button', { name: '唱片架', exact: true }).click();
+  if (!await libraryDialog(page).isVisible()) await page.getByRole('button', { name: /^唱片架 ·/ }).click();
   await libraryDialog(page).waitFor();
+  await libraryDialog(page).locator('.shelf-stand').first().waitFor();
   return libraryDialog(page);
 }
 export const openCabinLibrary = openLibrary;
-// 放回: Esc puts the shelf back (also the corner plate and a press on the bare wall).
+// 放回 / 回到书桌: Esc puts a binder back, then looks back down at the desk.
 export async function closeLibrary(page) {
-  // In the index book Esc first clears what was typed, so a second press may be needed.
-  for (let i = 0; i < 3 && await libraryDialog(page).isVisible(); i++) { await page.keyboard.press('Escape'); await libraryDialog(page).waitFor({ state: 'hidden', timeout: 1500 }).catch(() => {}); }
+  // In the index book Esc first clears what was typed, so more presses may be needed.
+  for (let i = 0; i < 4 && await libraryDialog(page).isVisible(); i++) { await page.keyboard.press('Escape'); await libraryDialog(page).waitFor({ state: 'hidden', timeout: 1500 }).catch(() => {}); }
   await libraryDialog(page).waitFor({ state: 'hidden' });
 }
+// The sheet a binder (or the index book) becomes once it is carried down to the desk.
+export const shelfSheet = (page, name) => page.getByRole('dialog', { name: name === '索引本' ? /^索引本/ : `${name}活页夹`, exact: name !== '索引本' });
 // Take one binder or the index book down (names: the box name, 唱片, 我喜欢, 最近播放; 索引本 for the book).
+// Returns the sheet on the desk.
 export async function takeBinder(page, name) {
+  const sheet = shelfSheet(page, name);
+  if (await sheet.isVisible()) return sheet;
   const dialog = await openLibrary(page);
   const spine = name === '索引本' ? dialog.getByRole('button', { name: /^索引本/ }) : dialog.getByRole('button', { name: new RegExp(`^${name}活页夹`) });
   if (await spine.getAttribute('aria-expanded') !== 'true') await spine.click();
-  await dialog.locator('.shelf-object').waitFor();
-  return dialog;
+  await sheet.locator('.shelf-object').waitFor();
+  return sheet;
 }
 // 播放 a record by its title from the 唱片 binder; the shelf is put back afterwards unless `keepOpen`.
 export async function playRecord(page, title, { keepOpen = false } = {}) {
@@ -81,15 +88,15 @@ export async function closeRecordCard(page) {
 export const addDialog = (page) => page.getByRole('dialog', { name: '添加到唱片架', exact: true });
 export async function openAddToShelf(page, tab = '曲库搜索') {
   const dialog = await openLibrary(page);
-  // An empty 唱片架 shows its own 手动添加 / 搜索添加; otherwise the plate in the cornice.
+  // The brass plate on the desk under the bookcase (an empty shelf also has its letter, 添加第一张专辑).
   const plate = dialog.getByRole('button', { name: '添加到唱片架', exact: true });
   if (await plate.count()) await plate.click();
-  else await dialog.locator('.listen-empty-shelf .listen-primary').click();
+  else await dialog.locator('.shelf-letter-note').click();
   await addDialog(page).waitFor();
   if (tab !== '曲库搜索') await addDialog(page).getByRole('tab', { name: tab, exact: true }).click();
   return addDialog(page);
 }
-// 专辑墙 hangs on the shelf as a framed poster (the frame opens the editor).
+// 专辑墙: a brass plate on the desk under the bookcase opens the editor.
 export async function openAlbumWall(page) {
   const dialog = await openLibrary(page);
   await dialog.getByRole('button', { name: '专辑墙', exact: true }).click();
