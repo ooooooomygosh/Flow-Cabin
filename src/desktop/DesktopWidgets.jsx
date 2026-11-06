@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useFocusState } from '../focus/useFocus';
 import { useStudy } from '../study/useStudy';
 import { nextCountdown } from '../study/study-model.mjs';
-import { PHASE_LABELS } from '../focus/focus-model.mjs';
+import { PHASE_LABELS, todayTasks } from '../focus/focus-model.mjs';
 import { trackNames } from '../room-model.mjs';
 import { trackArtist } from '../track-meta.mjs';
 import { usePlaybackDuration, usePlaybackPosition } from '../deck/usePlaybackClock';
@@ -123,7 +123,7 @@ function FocusWidget({ layout, move }) {
 function TodoWidget({ layout, move }) {
   const focus = useFocusState(), [text, setText] = useState('');
   if (!focus) return null;
-  const open = focus.state.tasks.filter((task) => !task.done).slice(0, 6), doneToday = focus.state.tasks.filter((task) => task.done && task.doneAt && new Date(task.doneAt).toDateString() === new Date().toDateString()).length;
+  const today = todayTasks(focus.state.tasks, Date.now()), open = today.filter((task) => !task.done).slice(0, 6), doneToday = today.filter((task) => task.done).length;
   return <Widget id="todo" title="待办" icon={<ListBullet size={13}/>} layout={layout} move={move}>
     <form className="desktop-todo-add" onSubmit={(event) => { event.preventDefault(); if (text.trim()) { if (focus.addTask(text.trim())) setText(''); } }}><input aria-label="桌面待办" placeholder="接下来要做…" value={text} maxLength={120} onChange={(event) => setText(event.target.value)}/><button type="submit" aria-label="添加桌面待办"><Plus size={14}/></button></form>
     {focus.error && <p className="record-error" role="alert">{focus.error}</p>}

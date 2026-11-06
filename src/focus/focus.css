@@ -22,7 +22,6 @@
 .focus-check{display:flex;align-items:center;gap:8px;font-size:12px}.focus-check input{accent-color:var(--px-accent)}
 .stats-chart-well{margin:14px 0 0;padding:12px;background:var(--px-surface-inset);border:2px solid var(--px-border-subtle);box-shadow:var(--px-shadow-inset)}
 .focus-rewards{display:grid;gap:7px;margin-top:14px;padding-top:12px;border-top:2px dashed #5d3d24}
-.focus-badge-paused{margin-left:4px;vertical-align:-1px}
 .focus-rewards header span{display:inline-flex;align-items:center;gap:4px}
 .focus-rewards header{display:flex;justify-content:space-between;align-items:center}.focus-rewards header strong{color:var(--px-accent-hi)}
 .focus-rewards small{color:var(--px-ink-dim);font-size:12px}

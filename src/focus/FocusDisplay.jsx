@@ -1,12 +1,12 @@
 import Dialog from '../Dialog';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import FocusFace, { faceFocus } from './FocusFace';
 import { useFocusDisplay, useSceneLook } from './useFocusDisplay';
-import { FACE_IDS, FACE_LABELS, FACE_HINTS, SHOW_MODES, cycleFace, faceFor } from './focus-display.mjs';
-import { PHASE_LABELS, currentRound } from './focus-model.mjs';
+import { FACE_IDS, FACE_LABELS, FACE_HINTS, SHOW_MODES, faceFor } from './focus-display.mjs';
+import { PHASE_LABELS, currentRound, dayKey } from './focus-model.mjs';
 import { useFocusState } from './useFocus';
 import { Segmented } from '../ui/Roving';
-import { ChevronLeft, ChevronRight, Expand, Contract, Play, Pause, X, Check } from '../icons';
+import { Expand, Contract, Play, Pause, X, Check } from '../icons';
 const OFFER_TITLES = { pause: '专注已暂停', done: '这一轮专注结束了', due: '时间到了，还在继续计时' };
 import { readCabinFullscreen, requestCabinFullscreen } from '../desktop/fullscreen-client.mjs';
 import { useDesktopFullscreen } from '../desktop-client';
@@ -14,6 +14,10 @@ import { roomCovered } from '../room/useRoomChrome';
 import { getRoomScene } from '../scene-catalog.mjs';
 import RecordNowPlaying, { useNowPlaying, playerCommand } from './RecordNowPlaying';
 import { PressCard, usePress } from './PressCard';
+import { ledFace, deskFace } from './desk/clock-model.mjs';
+import { createKeyFeel } from './desk/key-feel.mjs';
+import { paintClock } from '../desk/ClockFace';
+import { deskUrl, whenDeskImages } from '../desk/images.mjs';
 import './desk/desk-display.css';
 
 // 专注画面: one face, chosen by the user (or the scene's own until they pick),
@@ -27,7 +31,7 @@ const typing = (target) => target?.closest?.('input,textarea,select,[contentedit
 export function FacePicker() {
   const look = useSceneLook(), [display, setDisplay] = useFocusDisplay(), current = faceFor(display, look);
   return <section className="face-picker" aria-label="专注画面">
-    <header><strong>专注画面</strong><small>{display.mode ? '计时和时钟都用这个画面。按 Z 进入沉浸，或在下方开启自动进入。' : `正在跟随「${getRoomScene(look).label}」的默认画面，选一个就固定下来。`}</small>
+    <header><strong>专注画面</strong><small>{display.mode ? '桌面挂件和壁纸上的计时、时钟用这个画面。' : `正在跟随「${getRoomScene(look).label}」的默认画面，选一个就固定下来。`}沉浸（Z）放大书桌上的红色台钟；选「唱片计时」则是一张转动的唱片。</small>
       {display.mode && <button type="button" className="face-picker-reset" onClick={() => setDisplay({ mode: '' })}>跟随场景</button>}</header>
     <Segmented className="face-grid" label="专注画面" value={current} onChange={(mode) => setDisplay({ mode })}
       items={FACE_IDS.map((id) => ({ id, title: FACE_HINTS[id], label: <><FocusFace face={id} look={look} still variant="thumb"/><span>{FACE_LABELS[id]}</span></> }))}/>
@@ -40,25 +44,41 @@ export function FacePicker() {
   </section>;
 }
 
-// The dock header's quick switch: ‹ face › and 沉浸.
-export function FaceSwitch() {
-  const look = useSceneLook(), [display, setDisplay] = useFocusDisplay(), id = faceFor(display, look);
-  return <div className="face-switch" role="group" aria-label="专注画面">
-    <span className="face-switch-title">画面</span>
-    <button type="button" aria-label="上一个专注画面" title="上一个画面" onClick={() => setDisplay({ mode: cycleFace(id, -1) })}><ChevronLeft size={16}/></button>
-    <strong aria-live="polite" title={FACE_HINTS[id]}>{FACE_LABELS[id]}</strong>
-    <button type="button" aria-label="下一个专注画面" title="下一个画面" onClick={() => setDisplay({ mode: cycleFace(id, 1) })}><ChevronRight size={16}/></button>
-    <button type="button" className="face-switch-full" aria-keyshortcuts="F" title="沉浸：窗口变成专注画面 · Z / F" onClick={() => openFocusDisplay()}><Expand size={16}/><span>沉浸</span></button>
+// 沉浸's clock: the desk's red LED clock (DEsk's clock picture: the housing, the glass and its digits
+// photographed a cell at a time — src/desk/ClockFace.jsx), held up close and filling the window.
+const LED_PARTS = ['edge-clock.webp', 'clock-face.webp', 'clock-digits.webp', 'clock-keys.webp'];
+export function DeskLed({ state, show = 'auto', seconds = false }) {
+  const canvas = useRef(null), [now, setNow] = useState(Date.now), [ready, setReady] = useState(false), [width, setWidth] = useState(0);
+  useEffect(() => { let alive = true; whenDeskImages(LED_PARTS).then(() => alive && setReady(true)); return () => { alive = false; }; }, []);
+  useEffect(() => { const id = setInterval(() => { if (!document.hidden) setNow(Date.now()); }, 500); return () => clearInterval(id); }, []);
+  useLayoutEffect(() => {
+    const el = canvas.current; if (!el) return undefined;
+    const measure = () => setWidth(el.clientWidth);
+    measure(); const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure); observer?.observe(el);
+    return () => observer?.disconnect();
+  }, []);
+  const led = ledFace({ now, focus: faceFocus(state), show, seconds }), today = dayKey(now);
+  const rounds = (state?.sessions || []).filter((session) => session.completed && dayKey(session.end) === today).length;
+  const face = deskFace(led, { now, rounds }), key = `${face.digits}|${face.colon}|${face.word}|${face.bar === null ? '-' : Math.round(face.bar * 12)}|${width}|${ready}`;
+  // A whole number of pixels to a picture pixel, or the digit cells show seams; the browser scales the rest.
+  useEffect(() => { if (ready && width) paintClock(canvas.current, face, Math.ceil(width * (window.devicePixelRatio || 1) / 456) / (window.devicePixelRatio || 1), 6); }, [key]);
+  return <div className="display-led" role="img" aria-label={led.label}>
+    <img className="display-led-body" src={deskUrl('edge-clock.webp')} alt="" draggable="false"/>
+    <canvas ref={canvas} className="display-led-glass" aria-hidden="true"/>
+    <img className="display-led-keys" src={deskUrl('clock-keys.webp')} alt="" draggable="false"/>
+    <span className="display-led-print" aria-hidden="true">专注</span>
   </div>;
 }
+// What 沉浸 can show: the red clock, or the record that turns while a round runs.
+const STAGES = Object.freeze([{ id: 'desk', label: '红色台钟', title: '书桌上的红色 LED 台钟，放大到整个窗口' }, { id: 'record', label: FACE_LABELS.record, title: FACE_HINTS.record }]);
 
 // The whole-window display (沉浸). Esc or a click on the dimmed room returns; ←/→ skip
 // tracks; the bar's tabs change the face; Space still plays / pauses the deck behind it.
 // Who opens and closes it, and what it excludes: docs/entry-map.md.
 export default function FocusDisplayStage() {
-  const [open, setOpen] = useState(false), [flash, setFlash] = useState(''), [idle, setIdle] = useState(false), [offer, setOffer] = useState('');
+  const [open, setOpen] = useState(false), [flash, setFlash] = useState(''), [idle, setIdle] = useState(false), [offer, setOffer] = useState(''), [keyFeel] = useState(createKeyFeel);
   const now = useNowPlaying(), press = usePress(open ? 'display' : '');
-  const focus = useFocusState(), look = useSceneLook(), [display, setDisplay] = useFocusDisplay(), id = faceFor(display, look);
+  const focus = useFocusState(), look = useSceneLook(), [display, setDisplay] = useFocusDisplay(), id = display.mode === 'record' ? 'record' : 'desk';
   const fullscreen = useDesktopFullscreen(), ownFullscreen = useRef(false), stage = useRef(null), live = useRef(id); live.current = id;
   const close = () => { setOpen(false); setOffer(''); };
   const autoEnter = useRef(display.autoEnter); autoEnter.current = display.autoEnter;
@@ -119,7 +139,7 @@ export default function FocusDisplayStage() {
   const toggleFullscreen = () => { const exit = readCabinFullscreen(); ownFullscreen.current = !exit; requestCabinFullscreen({ exit }).catch(() => {}); };
   return <Dialog variant="full" title="专注画面" close={close} initialFocus={stage} returnFocus=".focus-badge" className="focus-display-shell" deckKeys><div ref={stage} className={`focus-display${idle ? ' is-idle' : ''}`} data-face={id} tabIndex={-1} onClick={(event) => { if (!event.target.closest('.focus-display-bar, .focus-display-offer, .focus-display-press')) close(); }}>
     <div className="focus-display-stage">
-      <FocusFace face={id} look={look} focus={faceFocus(state)} show={display.show} seconds={display.seconds} variant="full" maxScale={8} caption={id !== 'record'} music={id === 'record' ? { playing: now.playing } : null}>{id === 'record' ? <RecordNowPlaying now={now}/> : null}</FocusFace>
+      {id === 'record' ? <FocusFace face="record" look={look} focus={faceFocus(state)} show={display.show} seconds={display.seconds} variant="full" maxScale={8} music={{ playing: now.playing }}><RecordNowPlaying now={now}/></FocusFace> : <DeskLed state={state} show={display.show} seconds={display.seconds}/>}
       {note && <p className="focus-display-note">{note}</p>}
     </div>
     {flash && <p className="focus-display-flash" role="status">{flash}</p>}
@@ -140,8 +160,8 @@ export default function FocusDisplayStage() {
       <button type="button" onClick={close}><X size={16}/>返回小屋</button>
       <button type="button" onClick={() => setOffer('')}>{offer === 'due' ? '继续计时' : '留在这里'}</button>
     </div>}
-    <nav className="focus-display-bar" aria-label="专注画面工具">
-      <Segmented className="face-tabs" label="画面样式" value={id} onChange={(mode) => { setDisplay({ mode }); setFlash(FACE_LABELS[mode]); }} items={FACE_IDS.map((value) => ({ id: value, label: FACE_LABELS[value], title: FACE_HINTS[value] }))}/>
+    <nav className="focus-display-bar" aria-label="专注画面工具" {...keyFeel}>
+      <Segmented className="face-tabs" label="画面样式" value={id} onChange={(stage) => { if (stage === 'record') setDisplay({ mode: 'record' }); else if (display.mode === 'record') setDisplay({ mode: '' }); setFlash(STAGES.find((item) => item.id === stage).label); }} items={STAGES}/>
       <Segmented className="face-show" label="画面显示" value={display.show} onChange={(show) => setDisplay({ show })} items={SHOW_MODES.map(([value, label]) => ({ id: value, label }))}/>
       {focus && <button type="button" onClick={focus.toggle}>{!running ? <><Play size={16}/>开始专注</> : timer.paused ? <><Play size={16}/>{timer.phase === 'focus' ? '继续专注' : '继续休息'}</> : <><Pause size={16}/>{timer.phase === 'focus' ? '暂停专注' : '暂停休息'}</>}</button>}
       {focus && running && <button type="button" title="这一轮再加 5 分钟" onClick={() => focus.extend()}>+5 分钟</button>}

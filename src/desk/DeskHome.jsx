@@ -165,7 +165,7 @@ export default function DeskHome({ reduced = false, focusOpen = false, guiding =
         <span className="desk-engraving" style={engraving}>唱机 ↑</span>
       </button>
       <div className={`desk-clock ${keysUp ? 'is-awake' : ''}`} style={style({ x: lay.clockFace.x, y: lay.clockFace.y, w: lay.clockFace.w, h: lay.clockFace.h })} onPointerEnter={() => setKeysUp(true)} onPointerLeave={() => setKeysUp(false)} onFocus={() => setKeysUp(true)} onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setKeysUp(false); }}>
-        <button type="button" className="focus-badge desk-clock-face" aria-expanded={focusOpen} aria-label={clockLabel} title="专注" onClick={() => { playSfx('key-press'); open(shown === 'music' ? 'music' : shown === 'date' ? 'tasks' : 'timer'); }}>
+        <button type="button" className={`focus-badge desk-clock-face${timer && timer.phase !== 'idle' ? ` is-running phase-${timer.phase}${timer.paused ? ' is-paused' : ''}` : ''}`} aria-expanded={focusOpen} aria-label={clockLabel} title="专注" onClick={() => { playSfx('key-press'); open(shown === 'music' ? 'music' : shown === 'date' ? 'tasks' : 'timer'); }}>
           <ClockFace face={ready ? face : { ...face, digits: '000000', word: 'LOAD' }} scale={lay.s}/>
         </button>
         <div className="desk-clock-keys" style={{ left: (PLATES.clock.keysAt[0] - PLATES.clock.faceAt[0]) / PLATES.clock.faceAt[2] * 100 + '%', width: PLATES.clock.keysAt[2] / PLATES.clock.faceAt[2] * 100 + '%', backgroundImage: `url(${deskUrl('clock-keys.webp')})` }} role="radiogroup" aria-label="台钟显示">

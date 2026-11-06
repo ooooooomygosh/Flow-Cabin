@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useCabinRuntime } from '../runtime/CabinRuntime';
+import { todayTasks } from '../focus/focus-model.mjs';
 import PixelCat from '../pet/PixelCat';
 import { useCatBehaviour } from '../pet/RoomCat';
 import { useLife } from './useLife';
@@ -46,7 +47,7 @@ export default function HomeCorner({ zone, active = true, viewport, reduced, dim
   const image = cornerUrl(look, view.image);
   const camera = cornerCamera(viewport.width, viewport.height, manifest.sourceSize, viewport.width < 700 ? view.portraitFocalPoint : view.focalPoint, landscapeRange(view, zone));
   const style = { width:manifest.sourceSize.width, height:manifest.sourceSize.height, transform:`translate(${camera.x}px, ${camera.y}px) scale(${camera.scale})` };
-  const taskCards = focus.state.tasks.filter(t => !t.done).slice(0,3);
+  const taskCards = todayTasks(focus.state.tasks, Date.now()).filter(t => !t.done).slice(0,3);
   const albums = [deck.deckItem, ...items].filter((v,i,a) => v?.cover && a.findIndex(x => x?.id === v.id) === i).slice(0,2);
   const weather = sky.settings.realWeather && sky.real;
   const record = view.movingElements?.record;

@@ -208,7 +208,8 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
     <HomePanels tool={tool} close={() => setTool('')} filters={filters} setFilters={setFilters} visible={visible} recordStyle={recordStyle} openAdd={openAdd} openRecord={openRecord} openWall={openWall} openSmart={smartEntry && (() => { setTool(''); openSmart(); })} onRoomChange={personalizeRoom}/>{/* the panel is modal: close it, or the smart turntable opens inert behind it */}
     {focus && <CabinJournal/>}
     {focus && <FocusDock open={false}/>}
-    {focus && dock.open && <Dialog title="专注" close={() => saveDock({ open: false })} className="home-tool home-focus-dialog" size="lg"><FocusDock embedded open tab={dock.tab} setTab={tab => saveDock({ tab })} close={() => saveDock({ open: false })} onOpenSmart={smartEntry}/></Dialog>}
+    {/* 专注 is a close-up of the desk (calendar and planner, memo pad, a sheet for the timer): it fills the window. */}
+    {focus && dock.open && <Dialog variant="full" title="专注" close={() => saveDock({ open: false })} className="focus-closeup-dialog"><FocusDock embedded open tab={dock.tab} setTab={tab => saveDock({ tab })} close={() => saveDock({ open: false })} onOpenSmart={smartEntry}/></Dialog>}
     {lyricsOpen && <HomeLyrics close={() => setLyricsOpen(false)}/>}
     {desktopMode ? <DesktopWidgets mode="desktop" exit={chrome.toggleDesktopMode} item={deckItem} provider={provider} playback={playback} player={player} spinning={effectiveSpin} toggleVisual={deck.toggleVisual} trackIndex={deck.shownTrackIndex}/> : zen && !chrome.zenTools && <DesktopWidgets mode="zen"/>}
     {!desktopMode && <ImmersiveChrome zen={zen} fullscreen={fullscreen} exitFullscreen={chrome.exitFullscreen} toggleZen={chrome.toggleZen} tools={chrome.zenTools} setTools={chrome.setZenTools}/>}

@@ -21,6 +21,7 @@
 /* The clock: its glass is a canvas (ClockFace.jsx); its four keys show when the hand comes near, as on DEsk. */
 .desk-clock { position: absolute; }
 .desk-clock-face { position: absolute; inset: 0 25% 0 0; padding: 0; border: 0; border-radius: 0; background: none; cursor: pointer; }
+.desk-clock-face.focus-badge::before { content: none; }  /* the clock's own glass says it runs: no lamp of the toolbar badge */
 .desk-clock-glass { display: block; position: absolute; left: 0; top: 0; width: 133.33%; height: 100%; pointer-events: none; }
 .desk-clock-keys { position: absolute; top: 0; height: 100%; background: center / 100% 100% no-repeat; opacity: 0; transition: opacity .2s; }
 .desk-clock.is-awake .desk-clock-keys, .desk-clock:focus-within .desk-clock-keys { opacity: 1; }

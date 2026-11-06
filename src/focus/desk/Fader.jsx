@@ -1,11 +1,9 @@
 import React from 'react';
-import { LedGlass, LedDigits } from '../../props/Led';
 import { playSfx } from '../../props/sfx.mjs';
 
-// One channel strip of the mixing desk: a little red readout, a vertical fader in a brass slot with
-// an engraved scale, and the channel's name. The fader is the native range input (turned upright),
-// so it keeps role=slider, the arrow / Home / End / PageUp keys and touch dragging.
-const readout = (value) => String(Math.round(value * 100)).padStart(3, ' ');
+// One channel of the mixer, printed on the sheet: the channel's name, an ink rule with a pencil mark
+// for the level, and the level as a number. The control is the native range input, so it keeps
+// role=slider, the arrow / Home / End / PageUp keys and touch dragging; each tenth clicks like a knob.
 export const FADER_TICKS = 10;
 
 export default function Fader({ label, name, value, onChange, tone = '' }) {
@@ -15,12 +13,9 @@ export default function Fader({ label, name, value, onChange, tone = '' }) {
     if (tick !== lastTick.current) { lastTick.current = tick; playSfx('knob-tick'); }
     onChange(next);
   };
-  return <label className={`sound-slider sound-fader ${tone}`} style={{ '--level': value }}>
-    <LedGlass className="fader-led" width={52} height={28}><LedDigits text={readout(value)} x={4} y={4} w={12} h={20} gap={3} colon={false}/></LedGlass>
-    <span className="fader-rail">
-      <span className="fader-scale" aria-hidden="true"/>
-      <input className="fader-input" type="range" min="0" max="1" step=".01" aria-label={name || `${label}音量`} aria-valuetext={`${Math.round(value * 100)}%`} value={value} onChange={change}/>
-    </span>
+  return <label className={`sound-fader ${tone}`} style={{ '--level': value }}>
     <span className="fader-name">{label}</span>
+    <input className="fader-input" type="range" min="0" max="1" step=".01" aria-label={name || `${label}音量`} aria-valuetext={`${Math.round(value * 100)}%`} value={value} onChange={change}/>
+    <span className="fader-value" aria-hidden="true">{Math.round(value * 100)}</span>
   </label>;
 }

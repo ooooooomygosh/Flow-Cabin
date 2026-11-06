@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { monthGrid, shiftMonth, heatLevel, dayStats, monthTotals, formatSpan, taskBucket, listOf, scheduleChange, noteColor, NOTE_COLORS, shortDate, ringPath } from './calendar-model.mjs';
+import { monthGrid, shiftMonth, heatLevel, dayStats, monthTotals, formatSpan, taskBucket, listOf, scheduleChange, noteColor, taskColor, NOTE_COLORS, shortDate, ringPath, dayPage, planLabel, weekOf, daySessions, clockTime } from './calendar-model.mjs';
 
 const MIN = 60000, DAY = 24 * 60 * MIN, NOW = new Date(2026, 10, 5, 15).getTime();   // Thursday 5 November 2026
 
@@ -99,4 +99,41 @@ test('plan stamps and the red pen ring', () => {
   assert.equal(ringPath(20, 20, 16, 14), d, 'deterministic');
   const [x0, y0] = d.slice(1).split('L')[0].split(' ').map(Number), [x1, y1] = d.split('L').at(-1).split(' ').map(Number);
   assert.ok(Math.hypot(x1 - x0, y1 - y0) > 1, 'the pen ends a little past where it began');
+});
+
+test('the planner page of a day: plans by time, to-dos as they were written; a past page shows what was done', () => {
+  const today = '2026-11-05', tasks = [
+    { id: 'a', text: '买牛奶', list: 'today', plannedFor: today, done: false },
+    { id: 'b', text: '看牙医', list: 'today', plannedFor: today, done: false, at: '10:00-11:00' },
+    { id: 'c', text: '开会', list: 'today', plannedFor: today, done: false, at: '09:00' },
+    { id: 'd', text: '下周的事', list: 'today', plannedFor: '2026-11-12', done: false },
+    { id: 'e', text: '之后', list: 'later', plannedFor: '', done: false },
+    { id: 'f', text: '前天做完', list: 'today', plannedFor: '2026-11-03', done: true, doneAt: new Date(2026, 10, 3, 20).getTime() }
+  ];
+  const page = dayPage(tasks, today, today);
+  assert.deepEqual(page.plans.map((task) => task.id), ['c', 'b']);
+  assert.deepEqual(page.todos.map((task) => task.id), ['a', 'f'], 'a finished note stays on today\'s page until it is cleared');
+  assert.equal(page.today, true);
+  assert.deepEqual(dayPage(tasks, '2026-11-12', today).todos.map((task) => task.id), ['d']);
+  const past = dayPage(tasks, '2026-11-03', today);
+  assert.equal(past.past, true); assert.deepEqual(past.todos.map((task) => task.id), ['f']);
+  assert.equal(planLabel('10:00-11:00'), '10:00–11:00');
+});
+
+test('a picked pad colour wins over the colour for life', () => {
+  assert.equal(taskColor({ id: 'x', color: 4 }), 4);
+  assert.equal(taskColor({ id: 'x', color: 9 }), noteColor('x'));
+  assert.equal(taskColor({ id: 'x' }), noteColor('x'));
+});
+
+test('the week of a day runs Monday to Sunday, across a month end', () => {
+  const week = weekOf('2026-11-01', NOW);
+  assert.deepEqual(week.map((day) => day.key), ['2026-10-26', '2026-10-27', '2026-10-28', '2026-10-29', '2026-10-30', '2026-10-31', '2026-11-01']);
+  assert.equal(weekOf('2026-11-05', NOW).find((day) => day.today).key, '2026-11-05');
+});
+
+test('a day\'s rounds come in order with their minutes', () => {
+  const at = (h, m) => new Date(2026, 10, 5, h, m).getTime();
+  const rounds = daySessions([{ start: at(14, 0), end: at(14, 25), taskText: '写稿' }, { start: at(9, 0), end: at(9, 50), completed: false }, { start: new Date(2026, 10, 4, 9).getTime(), end: new Date(2026, 10, 4, 10).getTime() }], '2026-11-05');
+  assert.deepEqual(rounds.map((round) => [clockTime(round.start), round.minutes, round.completed, round.text]), [['09:00', 50, false, ''], ['14:00', 25, true, '写稿']]);
 });

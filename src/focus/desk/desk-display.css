@@ -1,22 +1,30 @@
 @layer guards, reset, features, skin, overrides;
 @layer overrides {
-/* 沉浸 and the pressed record, as objects on the desk: the controls are a black console of
-   bakelite keys and brass strips, what to do next is a slip of paper, the task is a sticky note.
-   The faces themselves (the pixel clocks) are untouched. Recipes follow DEsk
+/* 沉浸 as the desk seen close: the clock is DEsk's red LED clock (its picture, enlarged), the controls a
+   black console of bakelite keys, what to do next a slip of paper, the task a sticky note. One material to
+   each: the LED only on the clock, bakelite on the console, paper and ink on the slips. Recipes follow DEsk
    (https://github.com/fyzugx/DEsk, MIT, (c) 2026 The DEsk authors). */
 
 .focus-display {
   --d-ink: #2e2318; --d-ink-2: #54452f; --d-red: #a3301d; --d-pen: #1c2a66;
   --d-hand: 'Kaiti SC', 'STKaiti', 'KaiTi', 'LXGW WenKai', var(--ui-font-display, serif);
   --d-drop: calc(var(--sx, 2) * 6px) calc(var(--sy, 3) * 6px) 14px rgba(0, 0, 0, calc(.5 * var(--lamp-k, .6)));
-  --d-brass: repeating-linear-gradient(0deg, rgba(255, 245, 219, .07) 0 1px, transparent 1px 2px), linear-gradient(180deg, #bda367 0%, #a58848 48%, #b39858 100%);
   --d-sheet: var(--paper-tile, none) 0 0 / 128px, linear-gradient(172deg, #faf4e4, #f1e8d4 60%, #e8dcc0);
 }
 
 /* the task, written on a sticky note */
 .focus-display-note { max-width: min(80vw, 640px); padding: 10px 20px 12px; color: #3a2c12; font: 400 20px/1.4 var(--d-hand); letter-spacing: .04em; text-shadow: none; text-overflow: ellipsis; background: linear-gradient(180deg, #f3d760 0 14%, #fce066 14%); box-shadow: var(--d-drop), inset 0 -10px 12px -10px rgba(120, 90, 10, .35); transform: rotate(-1deg); }
-/* a message that comes and goes: a small brass plate */
-.focus-display-flash { padding: 8px 22px; color: #2a1c0a; font: 600 18px/1.3 var(--ui-font); letter-spacing: .2em; text-shadow: 0 1px 0 rgba(255, 239, 199, .34); background: var(--d-brass); border: 0; border-radius: var(--ui-radius-sm); box-shadow: inset 0 0 0 1px rgba(255, 239, 204, .42), 0 0 0 1px rgba(36, 23, 8, .55), var(--d-drop); }
+/* a message that comes and goes: a slip of paper */
+.focus-display-flash { padding: 8px 22px; color: var(--d-ink); font: 600 16px/1.3 var(--ui-font); letter-spacing: .2em; background: var(--d-sheet); border: 0; border-radius: 0; box-shadow: var(--d-drop); }
+
+/* the red clock: DEsk's housing, its glass with the digits cell by cell, its four keys */
+.display-led { position: relative; width: min(92vw, 1180px, calc(68vh * 486 / 90)); aspect-ratio: 486 / 90; filter: drop-shadow(0 18px 30px rgba(0, 0, 0, .55)); }
+.display-led-body, .display-led-glass, .display-led-keys { position: absolute; display: block; }
+.display-led-body { inset: 0; width: 100%; height: 100%; }
+.display-led-glass { left: 3.292%; top: 0; width: 93.827%; height: 73.333%; }
+.display-led-keys { left: 73.457%; top: 0; width: 23.457%; height: 73.333%; }
+.display-led-print { position: absolute; left: 87.1%; top: 36.7%; width: 9.6%; height: 36.6%; display: grid; place-items: center; color: rgba(222, 182, 132, .82); font: 600 clamp(12px, 1.5vw, 20px)/1 var(--ui-font); text-shadow: 0 0 3px rgba(255, 150, 90, .35); }
+.focus-display:has(.display-led) { background: radial-gradient(ellipse 70% 60% at 50% 46%, rgba(30, 20, 12, .86), rgba(14, 9, 5, .96) 70%); }
 
 /* the console along the bottom */
 .focus-display-bar {
@@ -37,10 +45,11 @@
 .focus-display-bar > button:hover { color: #fff6e2; background: linear-gradient(180deg, #4a443c 0%, #302a24 48%, #1e1a16 100%); }
 .focus-display-bar > button:active, .focus-display-offer button:active { transform: translateY(3px); box-shadow: inset 0 1px 0 rgba(255, 244, 222, .2), 0 0 0 1px #000, 0 1px 2px rgba(0, 0, 0, .5); }
 .focus-display-bar > button:focus-visible, .focus-display-offer button:focus-visible { outline: 2px solid #fff3cf; outline-offset: 3px; }
-.focus-display-bar .face-tabs, .focus-display-bar .face-show { display: inline-flex; gap: 3px; padding: 4px; background: var(--d-brass); border: 0; border-radius: var(--ui-radius-sm); box-shadow: inset 0 0 0 1px rgba(255, 239, 204, .42), 0 0 0 1px rgba(36, 23, 8, .55); }
-.focus-display-bar .face-tabs button, .focus-display-bar .face-show button { min-height: 40px; padding: 0 12px; margin: 0; color: #2a1c0a; font: 600 13px/1 var(--ui-font); letter-spacing: .06em; background: transparent; border: 0; border-radius: var(--ui-radius-sm); box-shadow: none; text-shadow: 0 1px 0 rgba(255, 239, 199, .4); cursor: pointer; }
-.focus-display-bar .face-tabs button:hover, .focus-display-bar .face-show button:hover { background: rgba(255, 245, 219, .24); }
-.focus-display-bar .face-tabs button[aria-checked=true], .focus-display-bar .face-show button[aria-checked=true] { color: #ff7061; background: linear-gradient(180deg, #0c0807, #1f1813); box-shadow: inset 0 2px 5px #000, 0 1px 0 rgba(255, 239, 204, .5); text-shadow: 0 0 6px rgba(255, 59, 47, .55); }
+.focus-display-bar .face-tabs, .focus-display-bar .face-show { display: inline-flex; gap: 6px; padding: 0; background: none; border: 0; box-shadow: none; }
+.focus-display-bar .face-tabs button, .focus-display-bar .face-show button { min-height: 44px; padding: 0 12px; margin: 0; color: #cfc3aa; font: 600 13px/1 var(--ui-font); letter-spacing: .08em; text-shadow: 0 1px 0 rgba(0, 0, 0, .75); background: linear-gradient(180deg, #403a33 0%, #28231e 48%, #191512 100%); border: 0; border-radius: var(--ui-radius-sm); box-shadow: inset 0 1px 0 rgba(255, 244, 222, .3), inset 0 -3px 0 rgba(0, 0, 0, .5), 0 0 0 1px #000, 0 3px 0 #000; cursor: pointer; }
+.focus-display-bar .face-tabs button:hover, .focus-display-bar .face-show button:hover { color: #fff6e2; }
+/* a key that stays down: pushed in, its letters lit from inside */
+.focus-display-bar .face-tabs button[aria-checked=true], .focus-display-bar .face-show button[aria-checked=true] { color: #fff3d6; transform: translateY(3px); background: linear-gradient(180deg, #1c1814, #2a241f); box-shadow: inset 0 2px 4px #000, 0 0 0 1px #000, 0 1px 0 #000; }
 
 /* what to do next: a slip of paper with paper-card buttons */
 .focus-display-offer { flex-wrap: wrap; justify-content: center; gap: 10px; max-width: min(92vw, 720px); padding: 14px 18px; color: var(--d-ink); background: var(--d-sheet); border: 0; border-radius: 0; box-shadow: inset 0 0 0 1px rgba(95, 72, 40, .2), var(--d-drop); transform: translateX(0) rotate(-.4deg); }
