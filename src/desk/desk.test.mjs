@@ -112,3 +112,14 @@ test('every view thing lies inside its picture and leads somewhere', () => {
     assert(spot.action && spot.name);
   }
 });
+
+test('the bookcase: eight binders on the top board, each label card in its own binder, the book at the end', () => {
+  const { binders, cards, book, bookLabel, bookCount } = PLATES.shelf;
+  assert.equal(binders.length, 8);
+  assert.equal(cards.length, 8);
+  const inside = ([x, y], quad) => x >= Math.min(...quad.map((p) => p[0])) && x <= Math.max(...quad.map((p) => p[0])) && y >= Math.min(...quad.map((p) => p[1])) && y <= Math.max(...quad.map((p) => p[1]));
+  cards.forEach(([x, y, w, h], i) => assert(inside([x + w / 2, y + h / 2], binders[i]), `card ${i} sits on binder ${i}`));
+  for (const r of [bookLabel, bookCount]) assert(inside([r[0] + r[2] / 2, r[1] + r[3] / 2], book));
+  assert(Math.min(...book.map((p) => p[0])) > Math.max(...binders[6].map((p) => p[0])), 'the book stands past the binders');
+  assert(!VIEWS.shelf.spots.some((spot) => spot.action === 'library'), 'the binders themselves are the library');
+});

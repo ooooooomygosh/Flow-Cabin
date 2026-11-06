@@ -197,12 +197,14 @@ export default function CabinRoom({ items, loading, loadError = '', reload, open
     if (action === 'pet') { setTool(''); setCatPanelOpen(true); return; }
     if (action === 'settings' || action === 'music-settings') { setTool(''); flow.setHub('music'); return; }
     if (action === 'lyrics') { setLyricsOpen(true); return; }
+    // 唱片架 is DEsk's bookcase: look up at it from the desk (src/desk/ShelfView.jsx).
+    if (action === 'library') { setTool(''); window.dispatchEvent(new CustomEvent('desk:look', { detail: 'shelf' })); return; }
     // 日记 (top bar, the 窝/日记本 hotspot): the journal's own first page, the same as L.
     if (action === 'diary') { openJournal(); return; }
     if (action === 'journal' || action === 'mail') { window.dispatchEvent(new CustomEvent('cabin:open-journal', { detail: { tab: action === 'mail' && labs.letters ? 'letters' : 'entries' } })); return; }    setTool(action);
   };
   return <CabinRuntimeProvider deck={deck} items={items} look={look} onNavigate={openTool} onRoomChange={personalizeRoom} notify={notify}>
-    <DeskHome reduced={appearance.reduceMotion || reduced} focusOpen={dock.open} guiding={flow.wizard || !guideDone}/>
+    <DeskHome reduced={appearance.reduceMotion || reduced} focusOpen={dock.open} guiding={flow.wizard || !guideDone} shelf={{ visible, filters, setFilters, openAdd, openRecord, openWall, openSmart: smartEntry && openSmart }}/>
     <LifeReminder/>
     {library?.error && <p className="home-layout-error" role="alert">设置未保存：{library.error}</p>}
     <HomePanels tool={tool} close={() => setTool('')} filters={filters} setFilters={setFilters} visible={visible} recordStyle={recordStyle} openAdd={openAdd} openRecord={openRecord} openWall={openWall} openSmart={smartEntry && (() => { setTool(''); openSmart(); })} onRoomChange={personalizeRoom}/>{/* the panel is modal: close it, or the smart turntable opens inert behind it */}

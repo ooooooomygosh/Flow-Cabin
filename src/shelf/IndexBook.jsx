@@ -12,7 +12,7 @@ import { INITIALS, VIA_LABEL, cardCode, groupByInitial, indexOrder, initialFor, 
 // records in book order (or ranked by what you typed) under it, thumb tabs down the edge,
 // and the record card of whatever is highlighted on the right page. Typing is on from the
 // first moment; ↑/↓ walk the list, Enter puts the record on the deck.
-// The layout follows DEsk's index book (https://github.com/fyzugx/DEsk, MIT, (c) 2026 The DEsk authors).
+// The layout follows DEsk's ALL APPS book (book.jpg, book-search.jpg) (https://github.com/fyzugx/DEsk, MIT, (c) 2026 The DEsk authors).
 const KIND = { album: '专辑', song: '单曲', playlist: '歌单' };
 const kindOf = (item) => KIND[item?.type] || '专辑';
 
@@ -68,13 +68,13 @@ const IndexBook = forwardRef(function IndexBook({ items, openRecord, openAdd, on
       <span className="shelf-entry-tag">{entry.via ? `${VIA_LABEL[entry.via]}` : kindOf(record)}</span>
     </li>;
   };
-  const found = searching ? (entries.length ? `找到 ${entries.length} 条` : '没有找到') : `共 ${items.length} 张`;
+  const found = searching ? (entries.length ? `找到 ${entries.length} 条` : '没有找到') : `${items.length} 张唱片`;
   const empty = !items.length;
 
   return <section ref={ref} id={id} className="shelf-object shelf-open-book" aria-label="索引本">
     <div className="shelf-page is-left paper">
-      <h2 className="shelf-book-title">唱片索引</h2>
-      <p className="shelf-book-sub">架上每一张唱片，按首字母排好</p>
+      <h2 className="shelf-book-title">所有唱片</h2>
+      <p className="shelf-book-sub">架上的每一张唱片，从 A 到 Z</p>
       <label className="shelf-typing"><Search size={18}/><input ref={inputRef} type="text" role="combobox" aria-label="搜索唱片架" aria-autocomplete="list" aria-expanded="true" aria-controls={listId} aria-activedescendant={current ? optionId(current) : undefined} placeholder="写下名字，或是它是什么" autoComplete="off" spellCheck="false" value={query} disabled={empty} onChange={(event) => setQuery(event.target.value)} onKeyDown={keyDown}/></label>
       <p className="shelf-found" role="status">{empty ? '索引还是空白的' : found}</p>
       <ul ref={listRef} id={listId} className="shelf-entries" role="listbox" aria-label={searching ? '搜索结果' : '唱片索引'}>
@@ -84,8 +84,10 @@ const IndexBook = forwardRef(function IndexBook({ items, openRecord, openAdd, on
         </React.Fragment>)}
       </ul>
       <div className="shelf-page-foot"><button type="button" className="shelf-link" onClick={onPutBack}>放回架上</button></div>
+      <span className="shelf-folio is-left" aria-hidden="true">1</span>
     </div>
     <div className="shelf-page is-right paper">
+      <span className="shelf-folio is-right" aria-hidden="true">2</span>
       {item ? <article className="shelf-record-card" aria-label={`唱片卡：${item.title}`}>
         <i className="shelf-diamond is-tl" aria-hidden="true"/><i className="shelf-diamond is-tr" aria-hidden="true"/><i className="shelf-diamond is-bl" aria-hidden="true"/><i className="shelf-diamond is-br" aria-hidden="true"/>
         <p className="shelf-card-code">{kindOf(item)} · {cardCode(active, entries.length)}</p>

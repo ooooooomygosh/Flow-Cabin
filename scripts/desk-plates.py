@@ -12,7 +12,10 @@ public/desk/ and makes the few changes Flow Cabin needs:
     the app can engrave its own;
   - the clock's volume read-out is cleared, the app lights its own;
   - the drawer's felt is emptied and the five things in it are cut out, so
-    the drawer holds what Flow Cabin puts in it.
+    the drawer holds what Flow Cabin puts in it;
+  - on the bookcase the binders' label cards are wiped (the card, its typed
+    frame and its corners stay) and the index book's red lettering-piece and
+    its count are cleared, so the app types its own record boxes and counts.
 
 The numbers (where each thing sits on the 1440x900 desk) go to
 src/desk/plates.json. Run it from the repository:
@@ -50,6 +53,67 @@ def carry(im, col, x0, x1, y0, y1):
     return Image.fromarray(a)
 
 
+def lift(im, box, k, dark=True):
+    """Lift the type off a card: the paper under it, found by closing (dark ink on light paper) or
+    opening (gold on cloth) with a k-pixel square, laid over the box with a 2px feathered edge."""
+    x0, y0, x1, y1 = box
+    pad = k + 2
+    reg = im.crop((x0 - pad, y0 - pad, x1 + pad, y1 + pad))
+    if dark:
+        est = reg.filter(ImageFilter.MaxFilter(k)).filter(ImageFilter.MinFilter(k))
+    else:
+        est = reg.filter(ImageFilter.MinFilter(k)).filter(ImageFilter.MaxFilter(k))
+    est = np.array(est.filter(ImageFilter.GaussianBlur(1.6))).astype(np.float32)[pad:-pad, pad:-pad]
+    a = np.array(im).astype(np.float32)
+    h, w = y1 - y0, x1 - x0
+    m = np.ones((h, w), np.float32)
+    for i in range(w):
+        m[:, i] *= min(1, (i + .5) / 2, (w - i - .5) / 2)
+    for j in range(h):
+        m[j, :] *= min(1, (j + .5) / 2, (h - j - .5) / 2)
+    a[y0:y1, x0:x1] = a[y0:y1, x0:x1] * (1 - m[..., None]) + est * m[..., None]
+    return Image.fromarray(np.clip(a, 0, 255).astype(np.uint8))
+
+
+# The bookcase (view-shelf, 1440x900): the eight binders on the top board, as the quadrilaterals they
+# stand in (top-left, top-right, bottom-right, bottom-left; they lean), their label cards (the paper's
+# bounding box), and the index book at the end of the row with its lettering-piece and its count.
+SHELF = {
+    'binders': [
+        [[265, 138], [371, 140], [385, 390], [287, 390]],
+        [[369, 126], [475, 126], [487, 390], [390, 390]],
+        [[477, 126], [585, 126], [592, 390], [495, 390]],
+        [[590, 126], [697, 126], [697, 390], [600, 390]],
+        [[742, 134], [845, 134], [840, 390], [746, 390]],
+        [[850, 126], [960, 126], [960, 390], [847, 390]],
+        [[965, 126], [1077, 127], [1070, 390], [952, 390]],
+        [[1080, 126], [1190, 126], [1160, 390], [1057, 390]],
+    ],
+    'cards': [[278, 195, 73, 79], [387, 201, 73, 76], [499, 193, 71, 76], [611, 198, 69, 77],
+              [760, 194, 68, 77], [870, 200, 70, 76], [981, 193, 72, 76], [1090, 198, 74, 77]],
+    'book': [[1190, 125], [1260, 145], [1217, 390], [1160, 390]],
+    'bookLabel': [1199, 199, 44, 23],
+    'bookCount': [1186, 313, 37, 27],
+}
+
+
+def blank_shelf(im):
+    im = im.convert('RGB')
+    for (x, y, w, h) in SHELF['cards']:
+        im = lift(im, (x + int(w * .15), y + int(h * .14), x + w - int(w * .15), y + h - int(h * .14)), 13)
+    x, y, w, h = SHELF['bookLabel']
+    im = lift(im, (x, y, x + w, y + h), 9, dark=False)
+    # the count sits between gold rules on the cloth: each column is filled with its own navy (the
+    # darker half of the cloth above and below it, where only rules and words are lighter)
+    a = np.array(im).astype(np.float32)
+    x, y, w, h = SHELF['bookCount']
+    for col in range(x - 2, x + w + 1):
+        cloth = a[250:345, col]
+        lum = cloth.sum(axis=1)
+        a[y:y + h, col] = cloth[lum <= np.percentile(lum, 45)].mean(axis=0)
+    return Image.fromarray(a.astype(np.uint8))
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     os.makedirs(os.path.join(OUT, 'drawer'), exist_ok=True)
@@ -58,10 +122,11 @@ def main():
 
     # the room, the views and the films: as they are
     for rel, name in [('common/room.webp', 'room.webp'), ('common/clock-digits.webp', 'clock-digits.webp'),
-                      ('zh/view-shelf.webp', 'view-shelf.webp'), ('zh/view-console.webp', 'view-console.webp'),
+                      ('zh/view-console.webp', 'view-console.webp'),
                       ('zh/view-post.webp', 'view-post.webp'), ('zh/view-post-empty.webp', 'view-post-empty.webp'),
                       ('zh/sheets/editor-curl.webp', 'curl.webp'), ('zh/letter.webp', 'letter.webp')]:
         shutil.copyfile(os.path.join(TRY, rel), os.path.join(OUT, name))
+    save(blank_shelf(load('zh/view-shelf.webp')), 'view-shelf.webp', 92)
     for which in ('shelf', 'console', 'post'):
         shutil.copyfile(os.path.join(TRY, 'common', f'film-{which}.webp'), os.path.join(OUT, f'film-{which}.webp'))
 
@@ -178,6 +243,7 @@ def main():
         'drawer': {'bandY': zh['drawer']['band_y'], 'bandH': zh['drawer']['band_h'], 'objects': objects},
         'postLetter': zh['post_letter'], 'letter': zh['letter']['at'],
         'films': {k: {'frames': v['frames'], 'fw': v['fw'], 'fh': v['fh'], 'steps': v['steps']} for k, v in common['films'].items()},
+        'shelf': SHELF,
         'curl': {k: sheet['curl'][k] for k in ('rest', 'open', 'box', 'items', 'sizes', 'hot_sizes', 'rects')},
     }
     with open(os.path.join(ROOT, 'src', 'desk', 'plates.json'), 'w') as f:

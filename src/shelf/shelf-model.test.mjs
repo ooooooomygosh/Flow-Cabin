@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { albumKey } from '../record-library.mjs';
-import { binderColour, binderShape, boxItems, byTitle, cardCode, groupByInitial, hasPinyin, indexOrder, initialFor, keepHighlight, lettersWith, moveHighlight, rankRecords, shelfBinders, seedOf, INITIALS, TIERS } from './shelf-model.mjs';
+import { binderColour, binderShape, boxItems, byTitle, cardCode, groupByInitial, hasPinyin, indexOrder, initialFor, keepHighlight, lettersWith, moveHighlight, rankRecords, shelfBinders, shelfSlots, seedOf, INITIALS, TIERS } from './shelf-model.mjs';
 
 const rec = (id, title, artist = '某人', extra = {}) => ({ id, type: 'album', title, artist, tracks: [], ...extra });
 
@@ -128,4 +128,16 @@ test('binder looks are stable and bounded', () => {
 test('card numbers are zero-padded', () => {
   assert.equal(cardCode(13, 57), '014 / 057');
   assert.equal(cardCode(0, 1), '001 / 001');
+});
+test('eight binders stand on the board; past eight, the last one is 更多 and holds the rest', () => {
+  const make = (n) => Array.from({ length: n }, (_, i) => ({ id: `b${i}`, label: `盒${i}` }));
+  assert.deepEqual(shelfSlots(make(3)), { standing: make(3), rest: [] });
+  assert.equal(shelfSlots(make(8)).standing.length, 8);
+  assert.equal(shelfSlots(make(8)).rest.length, 0);
+  const many = shelfSlots(make(11));
+  assert.equal(many.standing.length, 8);
+  assert.deepEqual(many.standing.slice(0, 7).map((b) => b.id), ['b0', 'b1', 'b2', 'b3', 'b4', 'b5', 'b6']);
+  assert.deepEqual([many.standing[7].id, many.standing[7].label, many.standing[7].count, many.standing[7].unit], ['more', '更多', 4, '盒']);
+  assert.deepEqual(many.rest.map((b) => b.id), ['b7', 'b8', 'b9', 'b10']);
+  assert.deepEqual(shelfSlots(undefined), { standing: [], rest: [] });
 });
